@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-salsa-500 hover:bg-salsa-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-salsa-500 transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-salsa-500 transition-colors duration-200;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100;
+  }
+  
+  .input-field {
+    @apply block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-salsa-500 focus:border-salsa-500 transition-colors duration-200;
+  }
+  
+  .hero-gradient {
+    background: linear-gradient(135deg, #e53e3e 0%, #f59e0b 100%);
+  }
+  
+  .text-gradient {
+    @apply bg-gradient-to-r from-salsa-600 to-chile-600 bg-clip-text text-transparent;
+  }
+}
+
+@layer utilities {
+  .animation-delay-200 {
+    animation-delay: 0.2s;
+  }
+  
+  .animation-delay-400 {
+    animation-delay: 0.4s;
+  }
+  
+  .animation-delay-600 {
+    animation-delay: 0.6s;
+  }
+}
