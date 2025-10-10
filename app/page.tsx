@@ -1,47 +1,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { Navigation } from '@/components/store/navigation'
+import { Footer } from '@/components/store/footer'
 
 export default function Home() {
   return (
     <main className="min-h-screen">
       {/* Navigation Header */}
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Image
-                src="https://cdn11.bigcommerce.com/s-dsk4gx4/images/stencil/250x100/jose_madrid_1408752734__82485.original.png"
-                alt="Jose Madrid Salsa"
-                width={125}
-                height={50}
-                className="h-10 w-auto"
-              />
-            </div>
-            <div className="hidden md:block">
-              <div className="ml-10 flex items-baseline space-x-8">
-                <Link href="/salsas" className="text-gray-900 hover:text-salsa-600 px-3 py-2 text-sm font-medium transition-colors">
-                  Shop Salsas
-                </Link>
-                <Link href="/about" className="text-gray-900 hover:text-salsa-600 px-3 py-2 text-sm font-medium transition-colors">
-                  About
-                </Link>
-                <Link href="/fundraising" className="text-gray-900 hover:text-salsa-600 px-3 py-2 text-sm font-medium transition-colors">
-                  Fundraising
-                </Link>
-                <Link href="/wholesale" className="text-gray-900 hover:text-salsa-600 px-3 py-2 text-sm font-medium transition-colors">
-                  Wholesale
-                </Link>
-                <Link href="/contact" className="text-gray-900 hover:text-salsa-600 px-3 py-2 text-sm font-medium transition-colors">
-                  Contact
-                </Link>
-                <Link href="/cart" className="btn-primary">
-                  Cart (0)
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Hero Section */}
       <section className="hero-gradient relative overflow-hidden">
@@ -215,53 +181,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="col-span-1 md:col-span-2">
-              <Image
-                src="https://cdn11.bigcommerce.com/s-dsk4gx4/images/stencil/250x100/jose_madrid_1408752734__82485.original.png"
-                alt="Jose Madrid Salsa"
-                width={200}
-                height={80}
-                className="h-12 w-auto mb-4 brightness-0 invert"
-              />
-              <p className="text-gray-400 mb-4">
-                Premium gourmet salsas made with the finest ingredients in Ohio.
-              </p>
-              <div className="text-gray-400">
-                <p>P.O. Box 1061</p>
-                <p>Zanesville, OH 43702</p>
-                <p className="mt-2">Phone: (740) 521-4304</p>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Quick Links</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/salsas" className="hover:text-white transition-colors">Shop Salsas</Link></li>
-                <li><Link href="/about" className="hover:text-white transition-colors">About Jose</Link></li>
-                <li><Link href="/recipes" className="hover:text-white transition-colors">Recipes</Link></li>
-                <li><Link href="/find-us" className="hover:text-white transition-colors">Find Us Locally</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Business</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/fundraising" className="hover:text-white transition-colors">Fundraising</Link></li>
-                <li><Link href="/wholesale" className="hover:text-white transition-colors">Wholesale</Link></li>
-                <li><Link href="/testimonials" className="hover:text-white transition-colors">Testimonials</Link></li>
-                <li><Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-            <p>&copy; {new Date().getFullYear()} Jose Madrid Salsa. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </main>
   )
 }

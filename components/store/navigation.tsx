@@ -1,0 +1,294 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Search, ShoppingCart, Menu, X, User, Heart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuLink, NavigationMenuContent, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
+import { Badge } from "@/components/ui/badge";
+import { useCartStore } from "@/lib/store/cart";
+import { cn } from "@/lib/utils";
+
+const salsaCategories = [
+  { name: "Mild & Sweet", href: "/salsas?category=mild", description: "Perfect for beginners and families" },
+  { name: "Medium Heat", href: "/salsas?category=medium", description: "Just the right kick" },
+  { name: "Hot & Spicy", href: "/salsas?category=hot", description: "For the brave souls" },
+  { name: "Gourmet Fruit", href: "/salsas?category=gourmet", description: "Unique fruit-infused flavors" },
+  { name: "Bundle Deals", href: "/bundles", description: "Mix & match your favorites" },
+];
+
+const navigationItems = [
+  {
+    title: "Salsas",
+    href: "/salsas",
+    megaMenu: salsaCategories,
+  },
+  {
+    title: "About Jose",
+    href: "/about",
+  },
+  {
+    title: "Find Us",
+    href: "/find-us",
+  },
+  {
+    title: "Fundraising",
+    href: "/fundraising",
+  },
+  {
+    title: "Wholesale",
+    href: "/wholesale",
+  },
+  {
+    title: "Where is Jose?",
+    href: "/where-is-jose",
+  },
+];
+
+export function Navigation() {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const router = useRouter();
+  const { items, toggleCart } = useCartStore();
+  
+  const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+    }
+  };
+
+  return (
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full border-b transition-all duration-300",
+        isScrolled
+          ? "bg-white/95 backdrop-blur-md shadow-lg border-gray-200"
+          : "bg-white border-gray-100"
+      )}
+    >
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center justify-between lg:h-20">
+          {/* Logo */}
+          <Link 
+            href="/" 
+            className="flex items-center space-x-2 font-serif font-bold text-xl lg:text-2xl"
+          >
+            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-salsa-500 to-chile-500 flex items-center justify-center text-white font-bold text-sm lg:text-base">
+              JM
+            </div>
+            <span className="text-gradient">Jose Madrid Salsa</span>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex lg:items-center lg:space-x-6">
+            <NavigationMenu>
+              <NavigationMenuList className="space-x-1">
+                {navigationItems.map((item) => (
+                  <NavigationMenuItem key={item.title}>
+                    {item.megaMenu ? (
+                      <>
+                        <NavigationMenuTrigger className="h-auto p-2 text-sm font-medium hover:text-salsa-600 data-[state=open]:text-salsa-600">
+                          {item.title}
+                        </NavigationMenuTrigger>
+                        <NavigationMenuContent>
+                          <div className="grid w-96 gap-3 p-6">
+                            <div className="row-span-3">
+                              <NavigationMenuLink asChild>
+                                <Link
+                                  href={item.href}
+                                  className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-salsa-50 to-chile-50 p-6 no-underline outline-none focus:shadow-md"
+                                >
+                                  <div className="mb-2 mt-4 text-lg font-medium text-salsa-700">
+                                    All Salsas
+                                  </div>
+                                  <p className="text-sm leading-tight text-muted-foreground">
+                                    Browse our complete collection of handcrafted salsas
+                                  </p>
+                                </Link>
+                              </NavigationMenuLink>
+                            </div>
+                            {item.megaMenu.map((category) => (
+                              <NavigationMenuLink key={category.name} asChild>
+                                <Link
+                                  href={category.href}
+                                  className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                                >
+                                  <div className="text-sm font-medium leading-none">{category.name}</div>
+                                  <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                                    {category.description}
+                                  </p>
+                                </Link>
+                              </NavigationMenuLink>
+                            ))}
+                          </div>
+                        </NavigationMenuContent>
+                      </>
+                    ) : (
+                      <NavigationMenuLink asChild>
+                        <Link
+                          href={item.href}
+                          className="group inline-flex h-9 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:text-salsa-600 focus:text-salsa-600 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+                        >
+                          {item.title}
+                        </Link>
+                      </NavigationMenuLink>
+                    )}
+                  </NavigationMenuItem>
+                ))}
+              </NavigationMenuList>
+            </NavigationMenu>
+          </div>
+
+          {/* Search Bar */}
+          <div className="hidden md:flex flex-1 max-w-md mx-6">
+            <form onSubmit={handleSearch} className="flex w-full">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  type="search"
+                  placeholder="Search salsas..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 h-9 rounded-l-lg rounded-r-none border-r-0 focus:ring-salsa-500 focus:border-salsa-500"
+                />
+              </div>
+              <Button
+                type="submit"
+                size="sm"
+                className="rounded-l-none rounded-r-lg h-9 px-4 bg-salsa-500 hover:bg-salsa-600"
+              >
+                Search
+              </Button>
+            </form>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center space-x-2 lg:space-x-4">
+            {/* Search Icon (Mobile) */}
+            <Button variant="ghost" size="sm" className="md:hidden p-2">
+              <Search className="w-5 h-5" />
+            </Button>
+
+            {/* Account */}
+            <Button variant="ghost" size="sm" className="hidden lg:flex p-2">
+              <User className="w-5 h-5" />
+            </Button>
+
+            {/* Wishlist */}
+            <Button variant="ghost" size="sm" className="hidden lg:flex p-2 relative">
+              <Heart className="w-5 h-5" />
+            </Button>
+
+            {/* Cart */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleCart}
+              className="relative p-2"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              {cartItemCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center p-0 text-xs bg-salsa-500"
+                >
+                  {cartItemCount}
+                </Badge>
+              )}
+            </Button>
+
+            {/* Mobile Menu */}
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="lg:hidden p-2">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-80">
+                <SheetHeader>
+                  <SheetTitle className="text-left font-serif text-gradient">
+                    Jose Madrid Salsa
+                  </SheetTitle>
+                </SheetHeader>
+                
+                <div className="mt-6 space-y-6">
+                  {/* Mobile Search */}
+                  <form onSubmit={handleSearch} className="space-y-2">
+                    <Input
+                      type="search"
+                      placeholder="Search salsas..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full focus:ring-salsa-500 focus:border-salsa-500"
+                    />
+                    <Button type="submit" className="w-full bg-salsa-500 hover:bg-salsa-600">
+                      Search
+                    </Button>
+                  </form>
+
+                  {/* Mobile Navigation */}
+                  <nav className="space-y-4">
+                    {navigationItems.map((item) => (
+                      <div key={item.title}>
+                        <Link
+                          href={item.href}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="block py-2 px-1 text-lg font-medium hover:text-salsa-600 transition-colors"
+                        >
+                          {item.title}
+                        </Link>
+                        {item.megaMenu && (
+                          <div className="ml-4 mt-2 space-y-2">
+                            {item.megaMenu.map((category) => (
+                              <Link
+                                key={category.name}
+                                href={category.href}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="block py-1 text-sm text-gray-600 hover:text-salsa-600 transition-colors"
+                              >
+                                {category.name}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </nav>
+
+                  {/* Mobile Account Actions */}
+                  <div className="pt-4 border-t space-y-2">
+                    <Button variant="outline" className="w-full justify-start">
+                      <User className="w-4 h-4 mr-2" />
+                      My Account
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start">
+                      <Heart className="w-4 h-4 mr-2" />
+                      Wishlist
+                    </Button>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
