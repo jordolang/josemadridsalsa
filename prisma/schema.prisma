@@ -1,0 +1,485 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String?
+  password        String?
+  role            UserRole @default(CUSTOMER)
+  isEmailVerified Boolean  @default(false)
+  
+  // Customer profile
+  phone           String?
+  dateOfBirth     DateTime?
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastLoginAt     DateTime?
+  
+  // Relations
+  addresses       Address[]
+  orders          Order[]
+  reviews         Review[]
+  cartItems       CartItem[]
+  wishlistItems   WishlistItem[]
+  
+  // Wholesale account
+  wholesaleAccount WholesaleAccount?
+  
+  @@map("users")
+}
+
+model Address {
+  id          String      @id @default(cuid())
+  userId      String
+  type        AddressType @default(SHIPPING)
+  
+  firstName   String
+  lastName    String
+  company     String?
+  street      String
+  city        String
+  state       String
+  zipCode     String
+  country     String      @default("US")
+  phone       String?
+  
+  isDefault   Boolean     @default(false)
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Orders using this address
+  shippingOrders Order[] @relation("ShippingAddress")
+  billingOrders  Order[] @relation("BillingAddress")
+  
+  @@map("addresses")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  image       String?
+  
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  
+  // Display
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  products    Product[]
+  
+  @@map("categories")
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  description String?
+  
+  // Salsa specific
+  heatLevel   HeatLevel
+  ingredients String[]
+  
+  // Pricing
+  price       Decimal     @db.Decimal(10, 2)
+  compareAtPrice Decimal? @db.Decimal(10, 2)
+  costPrice   Decimal?    @db.Decimal(10, 2)
+  
+  // Inventory
+  sku         String      @unique
+  barcode     String?
+  inventory   Int         @default(0)
+  lowStockThreshold Int   @default(5)
+  
+  // Images
+  images      String[]
+  featuredImage String?
+  
+  // Attributes
+  weight      Decimal?    @db.Decimal(8, 2)
+  dimensions  Json?       // {length, width, height}
+  
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  searchKeywords  String[]
+  
+  // Display
+  isActive    Boolean     @default(true)
+  isFeatured  Boolean     @default(false)
+  sortOrder   Int         @default(0)
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // Relations
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id])
+  
+  orderItems  OrderItem[]
+  cartItems   CartItem[]
+  reviews     Review[]
+  wishlistItems WishlistItem[]
+  fundraiserProducts FundraiserProduct[]
+  
+  @@map("products")
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  quantity  Int
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, productId])
+  @@map("cart_items")
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, productId])
+  @@map("wishlist_items")
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  
+  // Customer
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id])
+  
+  // Guest checkout info
+  guestEmail      String?
+  guestPhone      String?
+  
+  // Addresses
+  shippingAddressId String?
+  billingAddressId  String?
+  shippingAddress   Address? @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  billingAddress    Address? @relation("BillingAddress", fields: [billingAddressId], references: [id])
+  
+  // Order details
+  status          OrderStatus @default(PENDING)
+  
+  // Pricing
+  subtotal        Decimal     @db.Decimal(10, 2)
+  shippingCost    Decimal     @default(0) @db.Decimal(10, 2)
+  tax             Decimal     @default(0) @db.Decimal(10, 2)
+  discountAmount  Decimal     @default(0) @db.Decimal(10, 2)
+  total           Decimal     @db.Decimal(10, 2)
+  
+  // Shipping
+  shippingMethod  String?
+  trackingNumber  String?
+  estimatedDelivery DateTime?
+  actualDelivery  DateTime?
+  
+  // Payment
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentMethod   String?
+  stripePaymentId String?
+  
+  // Notes
+  customerNotes   String?
+  adminNotes      String?
+  
+  // Timestamps
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  
+  // Relations
+  items           OrderItem[]
+  
+  // Fundraiser connection
+  fundraiserId    String?
+  fundraiser      Fundraiser? @relation(fields: [fundraiserId], references: [id])
+  
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String
+  
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(10, 2)
+  totalPrice  Decimal @db.Decimal(10, 2)
+  
+  // Product snapshot (in case product details change)
+  productName String
+  productSku  String
+  productImage String?
+  
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id])
+  
+  @@map("order_items")
+}
+
+model Review {
+  id          String      @id @default(cuid())
+  userId      String
+  productId   String
+  
+  rating      Int         // 1-5 stars
+  title       String?
+  comment     String?
+  isVerified  Boolean     @default(false) // Verified purchase
+  
+  // Moderation
+  status      ReviewStatus @default(PENDING)
+  moderatedAt DateTime?
+  moderatedBy String?
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, productId]) // One review per user per product
+  @@map("reviews")
+}
+
+model Fundraiser {
+  id                String      @id @default(cuid())
+  name              String
+  slug              String      @unique
+  description       String?
+  
+  organizationName  String
+  contactEmail      String
+  contactPhone      String?
+  
+  // Fundraiser details
+  startDate         DateTime
+  endDate           DateTime
+  goal              Decimal?    @db.Decimal(10, 2)
+  commissionRate    Decimal     @db.Decimal(5, 2) // Percentage
+  
+  // Status
+  status            FundraiserStatus @default(DRAFT)
+  isActive          Boolean     @default(false)
+  
+  // Tracking
+  totalOrders       Int         @default(0)
+  totalRevenue      Decimal     @default(0) @db.Decimal(10, 2)
+  totalCommission   Decimal     @default(0) @db.Decimal(10, 2)
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  // Relations
+  orders            Order[]
+  products          FundraiserProduct[]
+  
+  @@map("fundraisers")
+}
+
+model FundraiserProduct {
+  id            String     @id @default(cuid())
+  fundraiserId  String
+  productId     String
+  
+  // Custom pricing for fundraiser
+  price         Decimal?   @db.Decimal(10, 2)
+  isActive      Boolean    @default(true)
+  
+  createdAt     DateTime   @default(now())
+  
+  // Relations
+  fundraiser    Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+  product       Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([fundraiserId, productId])
+  @@map("fundraiser_products")
+}
+
+model WholesaleAccount {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  
+  businessName    String
+  businessType    BusinessType
+  taxId           String?
+  resaleNumber    String?
+  
+  // Contact info
+  contactName     String
+  website         String?
+  
+  // Application details
+  yearsInBusiness Int?
+  estimatedVolume String?
+  
+  // Status
+  status          WholesaleStatus @default(PENDING)
+  approvedAt      DateTime?
+  approvedBy      String?
+  
+  // Wholesale pricing
+  discountRate    Decimal   @default(0) @db.Decimal(5, 2) // Percentage
+  minimumOrder    Decimal?  @db.Decimal(10, 2)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("wholesale_accounts")
+}
+
+model Analytics {
+  id        String      @id @default(cuid())
+  type      AnalyticsType
+  
+  // Event details
+  page      String?
+  action    String?
+  category  String?
+  label     String?
+  value     Int?
+  
+  // Session info
+  sessionId String?
+  userId    String?
+  ipAddress String?
+  userAgent String?
+  
+  // Geo location
+  country   String?
+  region    String?
+  city      String?
+  
+  createdAt DateTime    @default(now())
+  
+  @@index([type, createdAt])
+  @@index([page])
+  @@map("analytics")
+}
+
+// Enums
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  WHOLESALE
+}
+
+enum AddressType {
+  SHIPPING
+  BILLING
+  BOTH
+}
+
+enum HeatLevel {
+  MILD
+  MEDIUM
+  HOT
+  EXTRA_HOT
+  FRUIT // For fruit salsas
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum FundraiserStatus {
+  DRAFT
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+enum BusinessType {
+  RETAIL_STORE
+  RESTAURANT
+  DISTRIBUTOR
+  ONLINE_STORE
+  OTHER
+}
+
+enum WholesaleStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum AnalyticsType {
+  PAGE_VIEW
+  PRODUCT_VIEW
+  ADD_TO_CART
+  PURCHASE
+  SEARCH
+  CLICK
+  CUSTOM
+}

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import { Montserrat, Volkhov, Roboto_Mono } from 'next/font/google'
+import { CartSidebar } from '@/components/store/cart-sidebar'
+import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
 const montserrat = Montserrat({
@@ -75,6 +77,8 @@ export default function RootLayout({
     <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
       <body className="font-sans antialiased bg-white text-gray-900">
         {children}
+        <CartSidebar />
+        <Toaster />
       </body>
     </html>
   )
