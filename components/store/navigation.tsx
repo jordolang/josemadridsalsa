@@ -3,32 +3,42 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, ShoppingCart, Menu, X, User, Heart } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { Search, ShoppingCart, Menu, X, User, Heart, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuLink, NavigationMenuContent, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/lib/store/cart";
 import { cn } from "@/lib/utils";
 
 const salsaCategories = [
-  { name: "Mild & Sweet", href: "/salsas?category=mild", description: "Perfect for beginners and families" },
-  { name: "Medium Heat", href: "/salsas?category=medium", description: "Just the right kick" },
-  { name: "Hot & Spicy", href: "/salsas?category=hot", description: "For the brave souls" },
-  { name: "Gourmet Fruit", href: "/salsas?category=gourmet", description: "Unique fruit-infused flavors" },
-  { name: "Bundle Deals", href: "/bundles", description: "Mix & match your favorites" },
+  { name: "Mild & Sweet", href: "/products?heat=mild", description: "Perfect for beginners and families" },
+  { name: "Medium Heat", href: "/products?heat=medium", description: "Just the right kick" },
+  { name: "Hot & Spicy", href: "/products?heat=hot", description: "For the brave souls" },
+  { name: "Gourmet Fruit", href: "/products?heat=fruit", description: "Unique fruit-infused flavors" },
+  { name: "Bundle Deals", href: "/products", description: "Mix & match your favorites" },
 ];
 
 const navigationItems = [
   {
-    title: "Salsas",
-    href: "/salsas",
+    title: "Products",
+    href: "/products",
     megaMenu: salsaCategories,
+  },
+  {
+    title: "Recipes",
+    href: "/recipes",
   },
   {
     title: "About Jose",
     href: "/about",
+  },
+  {
+    title: "Our Story",
+    href: "/our-story",
   },
   {
     title: "Find Us",
@@ -53,6 +63,7 @@ export function Navigation() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
+  const { data: session, status } = useSession();
   const { items, toggleCart } = useCartStore();
   
   const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -116,7 +127,7 @@ export function Navigation() {
                                   className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-salsa-50 to-chile-50 p-6 no-underline outline-none focus:shadow-md"
                                 >
                                   <div className="mb-2 mt-4 text-lg font-medium text-salsa-700">
-                                    All Salsas
+                                    All Products
                                   </div>
                                   <p className="text-sm leading-tight text-muted-foreground">
                                     Browse our complete collection of handcrafted salsas
@@ -163,7 +174,7 @@ export function Navigation() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   type="search"
-                  placeholder="Search salsas..."
+                  placeholder="Search products..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 pr-4 h-9 rounded-l-lg rounded-r-none border-r-0 focus:ring-salsa-500 focus:border-salsa-500"
@@ -187,9 +198,63 @@ export function Navigation() {
             </Button>
 
             {/* Account */}
-            <Button variant="ghost" size="sm" className="hidden lg:flex p-2">
-              <User className="w-5 h-5" />
-            </Button>
+            {session ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="hidden lg:flex p-2 relative">
+                    <User className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium">{session.user?.name}</p>
+                      <p className="text-xs text-muted-foreground">{session.user?.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/account">
+                      <User className="mr-2 h-4 w-4" />
+                      My Account
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/account/orders">
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      Order History
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/account/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => signOut({ callbackUrl: '/' })}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="hidden lg:flex space-x-2">
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/auth/signin">
+                    Sign In
+                  </Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link href="/auth/signup">
+                    Sign Up
+                  </Link>
+                </Button>
+              </div>
+            )}
 
             {/* Wishlist */}
             <Button variant="ghost" size="sm" className="hidden lg:flex p-2 relative">
@@ -233,7 +298,7 @@ export function Navigation() {
                   <form onSubmit={handleSearch} className="space-y-2">
                     <Input
                       type="search"
-                      placeholder="Search salsas..."
+                      placeholder="Search products..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full focus:ring-salsa-500 focus:border-salsa-500"
@@ -274,14 +339,58 @@ export function Navigation() {
 
                   {/* Mobile Account Actions */}
                   <div className="pt-4 border-t space-y-2">
-                    <Button variant="outline" className="w-full justify-start">
-                      <User className="w-4 h-4 mr-2" />
-                      My Account
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start">
-                      <Heart className="w-4 h-4 mr-2" />
-                      Wishlist
-                    </Button>
+                    {session ? (
+                      <div className="space-y-2">
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <p className="text-sm font-medium">{session.user?.name}</p>
+                          <p className="text-xs text-muted-foreground">{session.user?.email}</p>
+                        </div>
+                        <Button variant="outline" className="w-full justify-start" asChild>
+                          <Link href="/account" onClick={() => setIsMobileMenuOpen(false)}>
+                            <User className="w-4 h-4 mr-2" />
+                            My Account
+                          </Link>
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start" asChild>
+                          <Link href="/account/orders" onClick={() => setIsMobileMenuOpen(false)}>
+                            <ShoppingCart className="w-4 h-4 mr-2" />
+                            Order History
+                          </Link>
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start">
+                          <Heart className="w-4 h-4 mr-2" />
+                          Wishlist
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={() => {
+                            setIsMobileMenuOpen(false);
+                            signOut({ callbackUrl: '/' });
+                          }}
+                        >
+                          <LogOut className="w-4 h-4 mr-2" />
+                          Sign Out
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Button className="w-full" asChild>
+                          <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)}>
+                            Sign Up
+                          </Link>
+                        </Button>
+                        <Button variant="outline" className="w-full" asChild>
+                          <Link href="/auth/signin" onClick={() => setIsMobileMenuOpen(false)}>
+                            Sign In
+                          </Link>
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start">
+                          <Heart className="w-4 h-4 mr-2" />
+                          Wishlist
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </SheetContent>
