@@ -5,24 +5,27 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Price formatting utility
-export function formatPrice(price: number | string | Decimal): string {
-  const numericPrice = typeof price === 'string' ? parseFloat(price) : Number(price)
+/**
+ * Formats a price number as currency string
+ */
+export function formatPrice(price: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-  }).format(numericPrice)
+  }).format(price)
 }
 
-// Heat level utilities
+/**
+ * Returns the appropriate color classes for heat level badges
+ */
 export function getHeatLevelColor(heatLevel: string): string {
-  switch (heatLevel?.toUpperCase()) {
+  switch (heatLevel.toUpperCase()) {
     case 'MILD':
-      return 'bg-verde-100 text-verde-800 border-verde-200'
+      return 'bg-green-100 text-green-800 border-green-200'
     case 'MEDIUM':
-      return 'bg-chile-100 text-chile-800 border-chile-200'
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200'
     case 'HOT':
-      return 'bg-salsa-100 text-salsa-800 border-salsa-200'
+      return 'bg-orange-100 text-orange-800 border-orange-200'
     case 'EXTRA_HOT':
       return 'bg-red-100 text-red-800 border-red-200'
     case 'FRUIT':
@@ -32,8 +35,11 @@ export function getHeatLevelColor(heatLevel: string): string {
   }
 }
 
+/**
+ * Returns the display text for heat levels
+ */
 export function getHeatLevelText(heatLevel: string): string {
-  switch (heatLevel?.toUpperCase()) {
+  switch (heatLevel.toUpperCase()) {
     case 'MILD':
       return 'Mild'
     case 'MEDIUM':
@@ -45,12 +51,6 @@ export function getHeatLevelText(heatLevel: string): string {
     case 'FRUIT':
       return 'Fruit'
     default:
-      return heatLevel || 'Unknown'
+      return 'Unknown'
   }
 }
-
-// Add Decimal type for TypeScript
-type Decimal = {
-  toString(): string;
-  valueOf(): number;
-};
