@@ -1,0 +1,34 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FF6B35;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D84315;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  
+  <!-- Bowl -->
+  <ellipse cx="400" cy="350" rx="150" ry="60" fill="#8D6E63" opacity="0.8"/>
+  <ellipse cx="400" cy="340" rx="150" ry="60" fill="#A0A0A0" opacity="0.3"/>
+  <ellipse cx="400" cy="330" rx="150" ry="60" fill="#FFFFFF" opacity="0.9"/>
+  
+  <!-- Salsa in bowl -->
+  <ellipse cx="400" cy="325" rx="130" ry="50" fill="#D32F2F"/>
+  <circle cx="370" cy="320" r="8" fill="#FF5722" opacity="0.7"/>
+  <circle cx="430" cy="330" r="6" fill="#4CAF50" opacity="0.8"/>
+  <circle cx="390" cy="335" r="4" fill="#FFC107" opacity="0.9"/>
+  <circle cx="420" cy="315" r="5" fill="#FF9800" opacity="0.8"/>
+  
+  <!-- Chips -->
+  <polygon points="250,450 300,400 350,450 320,480" fill="#FFD54F"/>
+  <polygon points="450,450 500,400 550,450 520,480" fill="#FFCC02"/>
+  <polygon points="300,500 350,450 400,500 370,530" fill="#FFF176"/>
+  
+  <!-- Text overlay -->
+  <text x="400" y="150" text-anchor="middle" fill="white" font-family="serif" font-size="48" font-weight="bold">
+    Jose Madrid Salsa
+  </text>
+  <text x="400" y="200" text-anchor="middle" fill="white" font-family="sans-serif" font-size="24" opacity="0.9">
+    Premium Gourmet Salsa
+  </text>
+</svg>
