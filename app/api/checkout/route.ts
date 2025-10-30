@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 
@@ -132,6 +132,8 @@ export async function POST(request: Request) {
         items: true,
       },
     })
+
+    const stripe = getStripe()
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(total * 100),

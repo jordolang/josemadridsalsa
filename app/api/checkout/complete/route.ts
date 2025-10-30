@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 
@@ -22,6 +22,8 @@ export async function POST(request: Request) {
     }
 
     const { orderId, paymentIntentId } = parsed.data
+
+    const stripe = getStripe()
 
     const [order, paymentIntent] = await Promise.all([
       prisma.order.findUnique({
