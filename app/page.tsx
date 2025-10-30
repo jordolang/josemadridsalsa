@@ -1,14 +1,9 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { Navigation } from '@/components/store/navigation'
-import { Footer } from '@/components/store/footer'
 
 export default function Home() {
   return (
     <main className="min-h-screen">
-      {/* Navigation Header */}
-      <Navigation />
-
       {/* Hero Section */}
       <section className="hero-gradient relative overflow-hidden">
         <div className="absolute inset-0 bg-black opacity-20"></div>
@@ -180,9 +175,6 @@ export default function Home() {
           </Link>
         </div>
       </section>
-
-      {/* Footer */}
-      <Footer />
     </main>
   )
 }

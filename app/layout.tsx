@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { Montserrat, Volkhov, Roboto_Mono } from 'next/font/google'
 import { CartSidebar } from '@/components/store/cart-sidebar'
 import { Toaster } from '@/components/ui/toaster'
+import { Navigation } from '@/components/store/navigation'
+import { Footer } from '@/components/store/footer'
 import { Providers } from './providers'
 import './globals.css'
 
@@ -78,7 +80,13 @@ export default function RootLayout({
     <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
       <body className="font-sans antialiased bg-white text-gray-900">
         <Providers>
-          {children}
+          <div className="flex min-h-screen flex-col">
+            <Navigation />
+            <div className="flex-1">
+              {children}
+            </div>
+            <Footer />
+          </div>
           <CartSidebar />
           <Toaster />
         </Providers>

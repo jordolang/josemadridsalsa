@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Navigation } from '@/components/store/navigation'
-import { Footer } from '@/components/store/footer'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -85,8 +83,6 @@ export default function SalsasPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <Navigation />
-      
       {/* Header */}
       <section className="bg-white py-12 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -248,8 +244,6 @@ export default function SalsasPage() {
           )}
         </div>
       </section>
-
-      <Footer />
     </main>
   )
 }
