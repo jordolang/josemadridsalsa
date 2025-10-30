@@ -1,0 +1,15 @@
+# About Jose
+
+Check out Mike's interview with [Spectrum News 1](https://spectrumnews1.com/columbus/news/2021/07/28/jose-madrid-salsa?firebaseString=true&cid=app_share)!
+
+![](https://cdn5.bigcommerce.com/s-dsk4gx4/product_images/uploaded_images/mz.gif?t=1409420655/)
+
+In 1976, Mike Zakany and his brother started a restaurant in downtown Zanesville, Ohio. After months of planning and building, Zak’s Restaurant was a reality. The contemporary casual restaurant was a welcome addition to the small urban center and was quite successful from the beginning. It was clear that the emerging ethnic food market was a logical niche for the Zakany brothers as their own Mexican heritage had a huge influence in the family kitchen. Estelle Zakany, the family matriarch, helped her sons integrate more authentic Mexican cuisine into the menu and life of the restaurant. 
+
+The Zakany family has always had a rich history as entrepreneurs. Mike’s paternal grandparents opened a butcher shop and grocery store in Zanesville in 1942. Mike’s father, uncle and entire family worked very hard to continue to grow the family business over the years. Zak’s Restaurant was a natural extension of the Zakany’s involvement and love for the food business. The restaurant quickly developed a strong clientele. Clearly, people liked the “New Mexico” style food, the phenomenal increase in the “to go” food sales and the additional increase in dining room business confirmed their niche in the “New Mexico” style of food on the menu. The demand for salsa was a key part of the complete menu; salsa enhanced the flavors of all the dishes served. It then became time to develop the salsa to meet the demand. Mike started an extensive marketing study that examined all kinds of spices and chili peppers. He read with great interest about the migration patterns of the European Spaniards to Mexico and the influence America’s native people had on the newcomer’s cuisine.
+
+Mike continued to work on the salsa recipes based on his research and experimentation. The restaurant customers were the critics for the salsa formulas born from Mike’s hard work in the kitchen.  Eventually, the “favorite” blend of spices, chili peppers and herbs were developed. These recipes came from the direct influence of his maternal grandfathers cooking culture. In 1987, José Madrid Salsa became a reality, named after the family icon and beloved grandfather from Clovis, New Mexico. Mike Zakany’s tribute to his grandfather celebrates his childhood memories of the larger than life man. 
+
+He could ride a horse and shoot a gun better than anyone else in the unsettled New Mexico Territory of the early 1900’s. José was the reason the family rallied together for summer vacations and reunions in Clovis, and the perfect namesake for the unique New Mexico style of salsa. José Madrid Salsa made its first sales in gourmet and grocery stores during the Christmas season of 1988. The legend of José Madrid lives on and continues to grow with a line of twenty five different salsas and more in development.
+
+ **_Es la verdad!_**

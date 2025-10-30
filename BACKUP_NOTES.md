@@ -1,0 +1,240 @@
+# Jose Madrid Salsa – Backup Notes
+
+## Backup Metadata
+- Backup folder path: /Users/jordanlang/Desktop/josemadridsalsa-backup
+- Backup creation time (local): 2025-10-13T04:19:23-0400
+- Report generated (UTC): 2025-10-13T08:21:38Z
+
+## Repository Information
+- Remote: https://github.com/jordolang/josemadridsalsa.git
+- Branch: development
+- HEAD commit: 6fe252bb66d6dd71703e5537ca90aa2172350a77 (short: 6fe252b)
+- Version tag: none (no tags found)
+
+## Recent Commits (last 20, newest first)
+- 6fe252bb 2025-10-13 Merge main into development - resolve image conflicts
+- e26fb107 2025-10-13 Fix: Add critical missing product images to resolve 404 errors
+- 1505a989 2025-10-13 Merge main into development - resolve auth route conflict
+- b4473558 2025-10-13 Fix: Resolve all product image loading errors - Add missing images, enhance error handling, create documentation
+- 6a905925 2025-10-12 Add missing pages: Salsas, Products, and Recipes
+- b821c5dd 2025-10-12 Restore real Jose Madrid Salsa product images from website
+- a9f2d8f6 2025-10-12 Restore public/images folder with all website images
+- ce788f12 2025-10-12 Fix Prisma initialization error for deployment
+- 11047fbe 2025-10-12 Fix build errors for deployment
+- beeda2f1 2025-10-12 Merge development into main - Add NextAuth and utility functions
+- 9386dea3 2025-10-12 Fix cart-sidebar import errors and configure NextAuth SessionProvider
+- 9343424f 2025-10-12 Fix image display issues: salsa bowl cropping and hero image optimization
+- 035a0abc 2025-10-12 Remove node_modules from repository
+- 1fc961de 2025-10-12 Restore Complete Jose Madrid Sales Website - All Pages, Components, and Functionality recovered
+- 3949dbec 2025-10-11 feat: Add all required website pages with content from markdown files
+- 310ad49e 2025-10-10 Implement comprehensive UI design system with modern components
+- ec63b6a8 2025-10-10 Implement comprehensive database schema, UI components, and cart functionality
+- c72ffc55 2025-10-10 Fix Tailwind CSS configuration and successful build
+- d9583bfd 2025-10-10 Fix package.json structure and complete basic Next.js setup
+- db69c4df 2025-10-10 Initial commit: Next.js project setup with modern design and TypeScript
+
+## Local Changes Snapshot
+
+### Staged Changes
+- None
+
+### Unstaged Changes
+- M .DS_Store
+- M .next/app-build-manifest.json
+- M .next/build-manifest.json
+- M .next/cache/webpack/client-development/0.pack.gz
+- M .next/cache/webpack/client-development/1.pack.gz
+- M .next/cache/webpack/client-development/index.pack.gz
+- M .next/cache/webpack/server-development/0.pack.gz
+- M .next/cache/webpack/server-development/1.pack.gz
+- M .next/cache/webpack/server-development/2.pack.gz
+- M .next/cache/webpack/server-development/index.pack.gz
+- M .next/cache/webpack/server-development/index.pack.gz.old
+- D .next/diagnostics/build-diagnostics.json
+- D .next/diagnostics/framework.json
+- M .next/server/app-paths-manifest.json
+- D .next/server/app/_not-found/page.js
+- D .next/server/app/_not-found/page.js.nft.json
+- D .next/server/app/_not-found/page_client-reference-manifest.js
+- D .next/server/app/about/page.js
+- D .next/server/app/about/page.js.nft.json
+- D .next/server/app/about/page_client-reference-manifest.js
+- D .next/server/app/api/products/featured/route.js
+- D .next/server/app/api/products/featured/route.js.nft.json
+- D .next/server/app/api/products/featured/route_client-reference-manifest.js
+- D .next/server/app/find-us/page.js
+- D .next/server/app/find-us/page.js.nft.json
+- D .next/server/app/find-us/page_client-reference-manifest.js
+- D .next/server/app/fundraising/page.js
+- D .next/server/app/fundraising/page.js.nft.json
+- D .next/server/app/fundraising/page_client-reference-manifest.js
+- D .next/server/app/our-story/page.js
+- D .next/server/app/our-story/page.js.nft.json
+- D .next/server/app/our-story/page_client-reference-manifest.js
+- D .next/server/app/page.js
+- D .next/server/app/page.js.nft.json
+- D .next/server/app/page_client-reference-manifest.js
+- D .next/server/app/where-is-jose/page.js
+- D .next/server/app/where-is-jose/page.js.nft.json
+- D .next/server/app/where-is-jose/page_client-reference-manifest.js
+- D .next/server/app/wholesale/page.js
+- D .next/server/app/wholesale/page.js.nft.json
+- D .next/server/app/wholesale/page_client-reference-manifest.js
+- D .next/server/chunks/586.js
+- D .next/server/chunks/611.js
+- D .next/server/chunks/845.js
+- D .next/server/chunks/945.js
+- D .next/server/chunks/989.js
+- M .next/server/interception-route-rewrite-manifest.js
+- M .next/server/middleware-build-manifest.js
+- M .next/server/middleware-react-loadable-manifest.js
+- M .next/server/next-font-manifest.js
+- M .next/server/next-font-manifest.json
+- D .next/server/pages/_app.js
+- D .next/server/pages/_app.js.nft.json
+- D .next/server/pages/_document.js
+- D .next/server/pages/_document.js.nft.json
+- D .next/server/pages/_error.js
+- D .next/server/pages/_error.js.nft.json
+- M .next/server/server-reference-manifest.json
+- D .next/server/webpack-runtime.js
+- D .next/static/chunks/158-646e8258d48bedfc.js
+- D .next/static/chunks/255-4efeec91c7871d79.js
+- D .next/static/chunks/4bd1b696-c023c6e3521b1417.js
+- D .next/static/chunks/57-bfadabc1718518ad.js
+- D .next/static/chunks/619-ba102abea3e3d0e4.js
+- D .next/static/chunks/685-f6fabd7cb2d06453.js
+- D .next/static/chunks/app/_not-found/page-e8a04137f094bf62.js
+- D .next/static/chunks/app/about/page-11a184759de62675.js
+- D .next/static/chunks/app/api/products/featured/route-fdd58145c444c310.js
+- D .next/static/chunks/app/find-us/page-fdd58145c444c310.js
+- D .next/static/chunks/app/fundraising/page-11a184759de62675.js
+- D .next/static/chunks/app/layout-a3a9219f6713aa78.js
+- D .next/static/chunks/app/our-story/page-11a184759de62675.js
+- D .next/static/chunks/app/page-599d2411c8681caa.js
+- D .next/static/chunks/app/where-is-jose/page-11a184759de62675.js
+- D .next/static/chunks/app/wholesale/page-11a184759de62675.js
+- D .next/static/chunks/framework-292291387d6b2e39.js
+- D .next/static/chunks/main-91b3fa0b94077dbb.js
+- D .next/static/chunks/main-app-239951142eab45e0.js
+- D .next/static/chunks/pages/_app-7d307437aca18ad4.js
+- D .next/static/chunks/pages/_error-cb2a52f75f2162e2.js
+- D .next/static/chunks/polyfills-42372ed130431b0a.js
+- D .next/static/chunks/webpack-1ac5cfa3a8b7766f.js
+- D .next/static/css/647a6edd96979421.css
+- D .next/static/dIvsBGfsP2DML8wk8Y_PP/_buildManifest.js
+- D .next/static/dIvsBGfsP2DML8wk8Y_PP/_ssgManifest.js
+- D .next/static/media/0ea4f4df910e6120-s.woff2
+- D .next/static/media/17e3eb4fb06f52f1-s.p.woff2
+- D .next/static/media/1f160ec2cb9962ef-s.woff2
+- D .next/static/media/1f173e5e25f3efee-s.woff2
+- D .next/static/media/2d0230d3305bff81-s.p.woff2
+- D .next/static/media/48e2044251ef3125-s.woff2
+- D .next/static/media/739c2d8941231bb4-s.p.woff2
+- D .next/static/media/904be59b21bd51cb-s.p.woff2
+- D .next/static/media/ad8a7e2c3c2c120b-s.woff2
+- D .next/static/media/b1f344208eb4edfe-s.woff2
+- D .next/static/media/bf24a9759715e608-s.woff2
+- D .next/static/media/cde148027b808b99-s.woff2
+- D .next/static/media/e61ae719f7cc4155-s.woff2
+- M .next/trace
+- D .next/types/app/about/page.ts
+- D .next/types/app/api/products/featured/route.ts
+- D .next/types/app/find-us/page.ts
+- D .next/types/app/fundraising/page.ts
+- D .next/types/app/layout.ts
+- D .next/types/app/our-story/page.ts
+- D .next/types/app/page.ts
+- D .next/types/app/where-is-jose/page.ts
+- D .next/types/app/wholesale/page.ts
+- M .next/types/routes.d.ts
+- M .next/types/validator.ts
+- M .vscode/settings.json
+- M app/api/products/featured/route.ts
+- M app/page.tsx
+- M app/recipes/page.tsx
+- M app/salsas/page.tsx
+- M prisma/seed.ts
+- D public/images/Hero-image.png
+- M public/images/jose_madrid_logo.png
+- D public/images/products/cherry-chocolate-hot.png
+- D public/images/products/chipotle-medium-1.jpg
+- D public/images/products/chipotle-queso-1.jpg
+- D public/images/products/extra-hot-1.jpg
+- D public/images/products/garden-cilantro-hot-1.jpg
+- D public/images/products/garden-cilantro-mild-1.jpg
+- D public/images/products/garden-mild-1.jpg
+- D public/images/products/garlic-olives-1.jpg
+- D public/images/products/hot-salsa-1.jpg
+- D public/images/products/mango-habanero-1.jpg
+- D public/images/products/mango-mild-1.jpg
+- D public/images/products/medium-salsa-1.jpg
+- D public/images/products/mild-salsa-1.jpg
+- D public/images/products/original-hot-1.jpg
+- D public/images/products/original-mild-1.jpg
+- D public/images/products/original-x-hot-1.jpg
+- D public/images/products/peach-jalapeno-1.jpg
+- D public/images/products/pineapple-cilantro-1.jpg
+- D public/images/products/pineapple-habanero-1.jpg
+- D public/images/products/raspberry-bbq-1.jpg
+- D public/images/products/raspberry-mild-1.jpg
+- D public/images/products/strawberry-mild-1.jpg
+- D public/images/products/verde-hot-1.jpg
+- D public/images/products/verde-xx-hot-1.jpg
+
+### Untracked Files
+- COMPLETED_WORK.md
+- IMAGE_UPDATES.md
+- PRODUCTS_RESTORED.md
+- PRODUCT_DATA_UPDATE_SUMMARY.md
+- REALPRODUCTS.md
+- RESTORATION_COMPLETE.md
+- app/api/products/route.ts
+- app/salsas/[slug]/
+- download-products.sh
+- generated-page-products.txt
+- generated-seed-products.txt
+- organized-products.json
+- prisma/dev.db
+- prisma/seed.backup-before-real-products.ts
+- prisma/seed.backup.ts
+- public/About Jose.md
+- public/Additions Required.md
+- public/Contact.md
+- public/Fundraise With Jose!.md
+- public/Fundraiser Testimonials.md
+- public/Jose Madrid Website.md
+- public/Recipes.md
+- public/Salsas.md
+- public/Wholesale.md
+- public/images/products-scraped/
+- public/images/products/black-bean-corn-poblano.jpg
+- public/images/products/cherry-chocolate-hot.jpg
+- public/images/products/cherry-mild.jpg
+- public/images/products/chipotle-hot.jpg
+- public/images/products/chipotle-queso.jpg
+- public/images/products/choose-3-gift-box.jpg
+- public/images/products/choose-5.jpg
+- public/images/products/choose-6.jpg
+- public/images/products/clovis-medium.jpg
+- public/images/products/garden-cilantro-hot.jpg
+- public/images/products/garden-cilantro-mild.jpg
+- public/images/products/ghost-of-clovis.jpg
+- public/images/products/jamaican-jerk.jpg
+- public/images/products/mango-habanero.jpg
+- public/images/products/mango-mild.jpg
+- public/images/products/original-hot.jpg
+- public/images/products/original-mild.jpg
+- public/images/products/original-x-hot.jpg
+- public/images/products/peach-mild.jpg
+- public/images/products/pineapple-mild.jpg
+- public/images/products/raspberry-bbq-chipotle.jpg
+- public/images/products/raspberry-mild.jpg
+- public/images/products/roasted-garlic-olives.jpg
+- public/images/products/roasted-pineapple-habanero-hot.jpg
+- public/images/products/spanish-verde-hot.jpg
+- public/images/products/spanish-verde-mild.jpg
+- public/images/products/spanish-verde-xx-hot.jpg
+- public/images/products/strawberry-mild.jpg
+- scraped-products.json
+- scripts/
