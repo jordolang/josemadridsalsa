@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Navigation } from '@/components/store/navigation'
@@ -8,112 +8,23 @@ import { Footer } from '@/components/store/footer'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { ShoppingCart } from 'lucide-react'
+import { ShoppingCart, Loader2 } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 import { formatPrice, getHeatLevelColor, getHeatLevelText } from '@/lib/utils'
 
-// Mock product data - in a real app this would come from your API/database
-const products = [
-  {
-    id: '1',
-    name: 'Jose Madrid Original Mild',
-    slug: 'jose-madrid-original-mild',
-    description: 'Our signature mild salsa made with fresh tomatoes, onions, and a perfect blend of spices.',
-    price: 8.99,
-    compareAtPrice: 10.99,
-    featuredImage: '/images/products/mild.png',
-    heatLevel: 'MILD',
-    sku: 'JMS-MILD-001',
-    inventory: 150,
-    isFeatured: true,
-  },
-  {
-    id: '2',
-    name: 'Clovis Medium Salsa',
-    slug: 'clovis-medium-salsa',
-    description: 'Our most popular medium heat salsa with the perfect balance of flavor and spice.',
-    price: 8.99,
-    compareAtPrice: 10.99,
-    featuredImage: '/images/products/clovis-medium.png',
-    heatLevel: 'MEDIUM',
-    sku: 'JMS-MED-001',
-    inventory: 200,
-    isFeatured: true,
-  },
-  {
-    id: '3',
-    name: 'Jose Madrid Hot Salsa',
-    slug: 'jose-madrid-hot-salsa',
-    description: 'For heat lovers! This bold salsa packs serious flavor with a kick that builds.',
-    price: 9.49,
-    compareAtPrice: 11.49,
-    featuredImage: '/images/products/hot.png',
-    heatLevel: 'HOT',
-    sku: 'JMS-HOT-001',
-    inventory: 80,
-    isFeatured: true,
-  },
-  {
-    id: '4',
-    name: 'X-Hot Extreme Salsa',
-    slug: 'x-hot-extreme-salsa',
-    description: 'Our hottest salsa yet! Fire-roasted peppers create intense heat and incredible flavor.',
-    price: 12.99,
-    featuredImage: '/images/products/x-hot.png',
-    heatLevel: 'EXTRA_HOT',
-    sku: 'JMS-XHOT-001',
-    inventory: 50,
-    isFeatured: false,
-  },
-  {
-    id: '5',
-    name: 'Mango Habanero Salsa',
-    slug: 'mango-habanero-salsa',
-    description: 'Sweet tropical mango meets spicy habanero in this gourmet fruit salsa.',
-    price: 11.99,
-    featuredImage: '/images/products/mango-habanero.png',
-    heatLevel: 'FRUIT',
-    sku: 'JMS-FRUIT-001',
-    inventory: 75,
-    isFeatured: true,
-  },
-  {
-    id: '6',
-    name: 'Peach Mild Salsa',
-    slug: 'peach-mild-salsa',
-    description: 'Juicy peaches create a delightfully sweet and slightly spicy gourmet salsa.',
-    price: 10.99,
-    featuredImage: '/images/products/peach-mild.png',
-    heatLevel: 'FRUIT',
-    sku: 'JMS-FRUIT-002',
-    inventory: 60,
-    isFeatured: false,
-  },
-  {
-    id: '7',
-    name: 'Ghost of Clovis',
-    slug: 'ghost-of-clovis',
-    description: 'An otherworldly hot salsa that will haunt your taste buds with incredible flavor.',
-    price: 13.99,
-    featuredImage: '/images/products/ghost-of-clovis.png',
-    heatLevel: 'EXTRA_HOT',
-    sku: 'JMS-GHOST-001',
-    inventory: 25,
-    isFeatured: false,
-  },
-  {
-    id: '8',
-    name: 'Black Bean Corn Poblano',
-    slug: 'black-bean-corn-poblano',
-    description: 'A hearty salsa with black beans, sweet corn, and roasted poblano peppers.',
-    price: 9.99,
-    featuredImage: '/images/products/black-bean-corn-poblano-salsa.png',
-    heatLevel: 'MEDIUM',
-    sku: 'JMS-BBCP-001',
-    inventory: 90,
-    isFeatured: false,
-  },
-]
+type Product = {
+  id: string
+  name: string
+  slug: string
+  description: string
+  price: number
+  compareAtPrice?: number
+  featuredImage: string
+  heatLevel: string
+  sku: string
+  inventory: number
+  isFeatured: boolean
+}
 
 const heatLevels = [
   { value: 'all', label: 'All Heat Levels' },
@@ -125,12 +36,32 @@ const heatLevels = [
 ]
 
 export default function SalsasPage() {
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedHeatLevel, setSelectedHeatLevel] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const addItem = useCartStore((state) => state.addItem)
   const openCart = useCartStore((state) => state.openCart)
 
-  const handleAddToCart = (product: typeof products[0]) => {
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/products')
+        if (!response.ok) throw new Error('Failed to fetch products')
+        const data = await response.json()
+        setProducts(data)
+      } catch (error) {
+        console.error('Error fetching products:', error)
+        setProducts([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchProducts()
+  }, [])
+
+  const handleAddToCart = (product: Product) => {
     addItem({
       id: product.id,
       name: product.name,
@@ -210,7 +141,12 @@ export default function SalsasPage() {
       {/* Products Grid */}
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {filteredProducts.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-salsa-500" />
+              <span className="ml-2 text-lg">Loading products...</span>
+            </div>
+          ) : filteredProducts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-500 text-lg">No salsas found matching your criteria.</p>
               <Button
