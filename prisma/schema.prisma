@@ -378,6 +378,28 @@ model WholesaleAccount {
   @@map("wholesale_accounts")
 }
 
+model Recipe {
+  id          String    @id @default(cuid())
+  title       String    @unique
+  slug        String    @unique
+  description String
+  category    String
+  difficulty  String
+  prepTime    String
+  cookTime    String
+  servings    Int
+  featured    Boolean   @default(false)
+  
+  featuredImage String
+  ingredients   String[]
+  instructions  String[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@map("recipes")
+}
+
 model Analytics {
   id        String      @id @default(cuid())
   type      AnalyticsType
