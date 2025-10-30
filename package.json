@@ -15,6 +15,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:recipes": "tsx scripts/seed-recipes.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
