@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const { prisma } = await import('@/lib/prisma')
+    // Import Prisma
+    const prismaModule = await import('@/lib/prisma')
+    const prisma = prismaModule.default || prismaModule.prisma
     
     const { searchParams } = new URL(request.url)
     const featured = searchParams.get('featured')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Navigation } from '@/components/store/navigation'
@@ -8,10 +8,25 @@ import { Footer } from '@/components/store/footer'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Clock, Users, ChefHat } from 'lucide-react'
+import { Clock, Users, ChefHat, Loader2 } from 'lucide-react'
 
-// Mock recipe data
-const recipes = [
+type Recipe = {
+  id: string
+  title: string
+  slug: string
+  description: string
+  category: string
+  difficulty: string
+  prepTime: string
+  cookTime: string
+  servings: number
+  featured: boolean
+  featuredImage: string
+  ingredients: string[]
+  instructions: string[]
+}
+
+const placeholderRecipes: Recipe[] = [
   {
     id: '1',
     title: 'Classic Salsa Chicken Tacos',
@@ -188,8 +203,9 @@ const categories = [
   { value: 'all', label: 'All Recipes' },
   { value: 'Main Course', label: 'Main Course' },
   { value: 'Seafood', label: 'Seafood' },
-  { value: 'Soup', label: 'Soups' },
+  { value: 'Side Dish', label: 'Side Dishes' },
   { value: 'Appetizer', label: 'Appetizers' },
+  { value: 'Salad', label: 'Salads' },
 ]
 
 const difficulties = [
@@ -200,9 +216,29 @@ const difficulties = [
 ]
 
 export default function RecipesPage() {
+  const [recipes, setRecipes] = useState<Recipe[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedDifficulty, setSelectedDifficulty] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
+
+  useEffect(() => {
+    const fetchRecipes = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/recipes')
+        if (!response.ok) throw new Error('Failed to fetch recipes')
+        const data = await response.json()
+        setRecipes(data)
+      } catch (error) {
+        console.error('Error fetching recipes:', error)
+        setRecipes(placeholderRecipes)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchRecipes()
+  }, [])
 
   // Filter recipes
   const filteredRecipes = recipes.filter((recipe) => {
@@ -243,6 +279,7 @@ export default function RecipesPage() {
       </section>
 
       {/* Featured Recipes Hero */}
+      {!loading && recipes.length > 0 && (
       <section className="bg-gradient-to-r from-salsa-500 to-chile-500 py-12 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center mb-8">Featured Recipes</h2>
@@ -266,6 +303,7 @@ export default function RecipesPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* Filters */}
       <section className="bg-white py-6 border-b">
@@ -322,7 +360,12 @@ export default function RecipesPage() {
       {/* Recipes Grid */}
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {filteredRecipes.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-salsa-500" />
+              <span className="ml-2 text-lg">Loading recipes...</span>
+            </div>
+          ) : filteredRecipes.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-500 text-lg">No recipes found matching your criteria.</p>
               <Button
