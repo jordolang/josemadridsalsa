@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { useCartStore } from '@/lib/store/cart'
 import { formatPrice, getHeatLevelColor, getHeatLevelText } from '@/lib/utils'
+import { useState } from 'react'
 
 interface Product {
   id: string
@@ -30,6 +31,7 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem)
   const openCart = useCartStore((state) => state.openCart)
+  const [imageError, setImageError] = useState(false)
 
   const handleAddToCart = () => {
     addItem({
@@ -57,11 +59,12 @@ export function ProductCard({ product }: ProductCardProps) {
         <Link href={`/salsas/${product.slug}`}>
           <div className="relative aspect-square overflow-hidden bg-gray-100">
             <Image
-              src={product.featuredImage || '/images/placeholder-salsa.jpg'}
+              src={imageError || !product.featuredImage ? '/images/placeholder-salsa.jpg' : product.featuredImage}
               alt={product.name}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              onError={() => setImageError(true)}
             />
             
             {/* Badges */}

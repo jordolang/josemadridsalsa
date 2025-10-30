@@ -1,0 +1,44 @@
+<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mildBg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E8F5E8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#C8E6C9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#mildBg2)"/>
+  
+  <!-- Different jar style -->
+  <rect x="140" y="80" width="120" height="200" fill="#F5F5F5" rx="8"/>
+  <rect x="135" y="75" width="130" height="210" fill="none" stroke="#BDBDBD" stroke-width="3" rx="12"/>
+  
+  <!-- Lid -->
+  <ellipse cx="200" cy="80" rx="70" ry="18" fill="#FFB300"/>
+  <ellipse cx="200" cy="75" rx="70" ry="18" fill="#FFA000"/>
+  <text x="200" y="80" text-anchor="middle" fill="white" font-family="sans-serif" font-size="8" font-weight="bold">FRESH</text>
+  
+  <!-- Salsa -->
+  <rect x="145" y="100" width="110" height="170" fill="#81C784" rx="5"/>
+  <circle cx="170" cy="130" r="6" fill="#66BB6A" opacity="0.8"/>
+  <circle cx="230" cy="150" r="4" fill="#A5D6A7" opacity="0.9"/>
+  <circle cx="185" cy="180" r="7" fill="#C8E6C9" opacity="0.7"/>
+  <circle cx="220" cy="210" r="5" fill="#E8F5E8" opacity="0.8"/>
+  
+  <!-- Label -->
+  <rect x="155" y="150" width="90" height="80" fill="white" opacity="0.95" rx="8"/>
+  <text x="200" y="170" text-anchor="middle" fill="#1B5E20" font-family="serif" font-size="14" font-weight="bold">
+    Jose Madrid
+  </text>
+  <text x="200" y="190" text-anchor="middle" fill="#2E7D32" font-family="sans-serif" font-size="12">
+    MILD SALSA
+  </text>
+  <text x="200" y="205" text-anchor="middle" fill="#388E3C" font-family="sans-serif" font-size="9">
+    Premium Quality
+  </text>
+  <text x="200" y="220" text-anchor="middle" fill="#4CAF50" font-family="sans-serif" font-size="10">
+    16 oz NET WT
+  </text>
+  
+  <text x="200" y="350" text-anchor="middle" fill="#1B5E20" font-family="serif" font-size="18" font-weight="bold">
+    Garden Fresh Mild
+  </text>
+</svg>

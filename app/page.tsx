@@ -35,10 +35,11 @@ export default function Home() {
             <div className="relative animate-slide-up animation-delay-200">
               <div className="relative w-full h-96 lg:h-[500px]">
                 <Image
-                  src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2670&q=80"
+                  src="/images/Hero-image.png"
                   alt="Fresh salsa with chips"
                   fill
-                  className="object-cover rounded-2xl shadow-2xl"
+                  className="object-cover object-center rounded-2xl shadow-2xl"
+                  priority
                 />
               </div>
             </div>
@@ -154,10 +155,10 @@ export default function Home() {
             <div className="relative">
               <div className="relative w-full h-96 lg:h-[500px]">
                 <Image
-                  src="https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2651&q=80"
+                  src="/images/salsa-bowl.png"
                   alt="Fresh ingredients for salsa"
                   fill
-                  className="object-cover rounded-2xl"
+                  className="object-contain rounded-2xl"
                 />
               </div>
             </div>
