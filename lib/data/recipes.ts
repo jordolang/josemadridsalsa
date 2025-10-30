@@ -25,7 +25,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '20 min',
     cookTime: '120 min',
     servings: 4,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/clovis-chili.jpeg',
     ingredients: [
       'Chunks of beef chuck',
       '1 jar José Madrid Roasted Garlic & Olives Salsa'
@@ -47,7 +47,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '15 min',
     cookTime: '25 min',
     servings: 6,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/White-Cheddar-Mashed-Potatoes.jpg',
     ingredients: [
       '3-1/2 pounds Russet potatoes, peeled, cut into 1-inch pieces',
       '2/3 cup of milk',
@@ -74,7 +74,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '10 min',
     cookTime: '45 min',
     servings: 4,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/Rasperry-Chicken.jpg',
     ingredients: [
       '1 12 oz. jar José Madrid Raspberry Salsa',
       '4 skinless chicken breasts',
@@ -99,7 +99,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '15 min',
     cookTime: '0 min',
     servings: 8,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/Three-Bean-Bean-Dip.webp',
     ingredients: [
       '1 14 oz. can of black beans, drained',
       '1 14 oz. can pinto beans, drained',
@@ -128,7 +128,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '10 min',
     cookTime: '15 min',
     servings: 6,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/peach-salsa.jpg',
     ingredients: [
       '1 12 oz. jar José Madrid Peach Salsa',
       '2 10 oz. packages cream cheese',
@@ -153,7 +153,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '15 min',
     cookTime: '15 min',
     servings: 4,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/spanish-verde-potato-omelet.jpg',
     ingredients: [
       '1 12 oz. jar of José Madrid Spanish Verdé (Mild, Hot or XX Hot)',
       '6 eggs',
@@ -182,7 +182,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '15 min',
     cookTime: '120 min',
     servings: 6,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/clovis-chili.jpeg',
     ingredients: [
       '1 12 oz. jar of José Madrid Clovis',
       '1 lb. of coarsely ground beef',
@@ -208,7 +208,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '15 min',
     cookTime: '0 min',
     servings: 4,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/taco-salad.jpg',
     ingredients: [
       'White Corn Tortilla Chips',
       'Shredded lettuce',
@@ -235,7 +235,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '15 min',
     cookTime: '45 min',
     servings: 6,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/Zesty-Tomato-Glazed-Meatloaf.jpg',
     ingredients: [
       '2 lbs. lean ground beef',
       '1/4 cup José Madrid\'s Roasted Garlic & Olive Salsa',
@@ -262,7 +262,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '20 min',
     cookTime: '20 min',
     servings: 6,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/tex-mex-shepherds-pie.webp',
     ingredients: [
       '8 oz. cooked diced chicken',
       '1 cup José Madrid\'s Salsa',
@@ -291,7 +291,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '10 min',
     cookTime: '15 min',
     servings: 4,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/roasted-garlic-olive-pasta.jpeg',
     ingredients: [
       '6 oz. José Madrid\'s Roasted Garlic and Olive Salsa',
       '2-3 oz. Heavy Cream',
@@ -317,7 +317,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '20 min',
     cookTime: '25 min',
     servings: 8,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/chipotle-potato-salad-recipe.jpg',
     ingredients: [
       '3 lbs cooked, diced and cooled redskin potatoes',
       '12 oz. cooked crisp bacon chopped',
@@ -348,7 +348,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '10 min',
     cookTime: '10 min',
     servings: 6,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/Roasted-Garlic-Bruschetta.jpg',
     ingredients: [
       '1 whole baguette sliced ½ inch thick on the bias',
       'José Madrid\'s Roasted Garlic and Olive Salsa',
@@ -373,7 +373,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '15 min',
     cookTime: '20 min',
     servings: 8,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/chili-con-queso.jpg',
     ingredients: [
       '¼ cup plus 2 Tablespoons (3/4 Stick) butter',
       '1 large onion, chopped',
@@ -405,7 +405,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '15 min',
     cookTime: '20 min',
     servings: 4,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/chipotle-potato-salad-recipe.jpg',
     ingredients: [
       '2 Tablespoons Vegetable oil',
       '½ cup chopped carrot',
@@ -436,7 +436,7 @@ export const recipeData: RecipeData[] = [
     prepTime: '15 min',
     cookTime: '0 min',
     servings: 4,
-    featuredImage: '/images/salsa-bowl.png',
+    featuredImage: '/images/recipes/taco-salad.jpg',
     ingredients: [
       '½ cup mayonnaise',
       '1 ½ tablespoon canned low-salt chicken broth',
