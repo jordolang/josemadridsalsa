@@ -40,7 +40,7 @@ Product images follow these patterns:
 ### Individual Salsa Products (26 images)
 1. `black-bean-corn-poblano-salsa.png`
 2. `cherry-hot.jpg`
-3. `chipotle-hot.png`
+3. `chipotle-hot.webp`
 4. `chipotle-queso-1.jpg`
 5. `clovis-medium.png`
 6. `garden-cilantro-hot-1.jpg`

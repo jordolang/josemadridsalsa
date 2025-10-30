@@ -36,7 +36,7 @@ image_map = {
     'original-x-hot': 'original-x-hot.jpg',
     'clovis-medium-original-medium-chunky': 'clovis-medium.png',
     'chipotle-con-queso': 'chipotle-queso.jpg',
-    'chipotle-hot': 'chipotle-hot.png',
+    'chipotle-hot': 'chipotle-hot.webp',
     'original-hot': 'original-hot.jpg',
     'cherry-mild': 'cherry-mild.jpg',
     'cherry-chocolate-hot': 'cherry-chocolate-hot.jpg',

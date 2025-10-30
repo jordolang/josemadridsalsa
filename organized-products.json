@@ -401,7 +401,7 @@
           "https://cdn11.bigcommerce.com/s-dsk4gx4/images/stencil/500x659/products/98/402/Hot__33236.1598640149.jpg"
         ],
         "heat_level": "HOT",
-        "local_image": "/images/products/chipotle-hot.png",
+        "local_image": "/images/products/chipotle-hot.webp",
         "full_description": "Smoky chipotle peppers deliver intense heat and deep, complex flavors."
       },
       {
@@ -1204,7 +1204,7 @@
         "https://cdn11.bigcommerce.com/s-dsk4gx4/images/stencil/500x659/products/98/402/Hot__33236.1598640149.jpg"
       ],
       "heat_level": "HOT",
-      "local_image": "/images/products/chipotle-hot.png",
+      "local_image": "/images/products/chipotle-hot.webp",
       "full_description": "Smoky chipotle peppers deliver intense heat and deep, complex flavors."
     },
     {

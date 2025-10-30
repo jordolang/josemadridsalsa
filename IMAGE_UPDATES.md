@@ -14,8 +14,8 @@ Updated 4 products that were using PNG placeholder images to use the actual JPG 
 - **Status:** ✅ Updated
 
 ### 2. Chipotle Hot ✅
-- **Before:** `/images/products/chipotle-hot.png`
-- **After:** `/images/products/chipotle-hot.jpg`
+- **Before:** `/images/products/chipotle-hot.webp`
+- **After:** `/images/products/chipotle-hot.webp`
 - **Image Info:** JPEG, 500x207px, baseline
 - **Status:** ✅ Updated
 
@@ -38,7 +38,7 @@ Updated 4 products that were using PNG placeholder images to use the actual JPG 
 All images verified as valid JPEG files:
 ```bash
 file public/images/products/spanish-verde-mild.jpg
-file public/images/products/chipotle-hot.jpg
+file public/images/products/chipotle-hot.webp
 file public/images/products/jamaican-jerk.jpg
 file public/images/products/pineapple-mild.jpg
 ```

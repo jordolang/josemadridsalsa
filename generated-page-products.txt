@@ -268,7 +268,7 @@
     slug: "chipotle-hot",
     description: "Smoky chipotle peppers deliver intense heat and deep, complex flavors.",
     price: 7.0,
-    featuredImage: "/images/products/chipotle-hot.png",
+    featuredImage: "/images/products/chipotle-hot.webp",
     heatLevel: 'HOT',
     sku: 'JMS-HOT-023',
     inventory: 100,

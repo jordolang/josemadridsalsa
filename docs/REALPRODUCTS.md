@@ -24,7 +24,7 @@ All products scraped from https://www.josemadridsalsa.com/purchase-salsa/
 13. **Original Hot** - `/images/products/original-hot.jpg`
 14. **Garden Fresh Cilantro Salsa Hot** - `/images/products/garden-cilantro-hot.jpg`
 15. **Spanish Verde Hot** - `/images/products/spanish-verde-hot.jpg`
-16. **Chipotle Hot** - `/images/products/chipotle-hot.jpg`
+16. **Chipotle Hot** - `/images/products/chipotle-hot.webp`
 17. **Cherry Hot** - `/images/products/cherry-hot.jpg`
 18. **Jamaican Jerk** - `/images/products/jamaican-jerk.jpg`
 19. **Roasted Pineapple Habanero Hot** - `/images/products/roasted-pineapple-habanero-hot.jpg`

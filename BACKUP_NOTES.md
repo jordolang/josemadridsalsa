@@ -211,7 +211,7 @@
 - public/images/products/black-bean-corn-poblano.jpg
 - public/images/products/cherry-chocolate-hot.jpg
 - public/images/products/cherry-mild.jpg
-- public/images/products/chipotle-hot.jpg
+- public/images/products/chipotle-hot.webp
 - public/images/products/chipotle-queso.jpg
 - public/images/products/choose-3-gift-box.jpg
 - public/images/products/choose-5.jpg

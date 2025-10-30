@@ -295,8 +295,8 @@ async function main() {
       inventory: 75,
       weight: 16.0,
       categoryId: hotCategory.id,
-      images: ['/images/products/chipotle-hot.png'],
-      featuredImage: '/images/products/chipotle-hot.png',
+      images: ['/images/products/chipotle-hot.webp'],
+      featuredImage: '/images/products/chipotle-hot.webp',
       searchKeywords: ['chipotle', 'smoky', 'hot', 'intense'],
     },
     {

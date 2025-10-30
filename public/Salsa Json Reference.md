@@ -139,7 +139,7 @@ Pure cocoa mixed with cherries combine to make your taste buds dance. Try this a
     slug: 'chipotle-hot-salsa',
     description: 'Smoked jalapenos are diced and mixed with a blend of thick and chunky tomatoes and spices. If you've ever tried smoking your own jalapenos and enjoy savory and spicy, this one's for you!',
     price: 7.00,
-    featuredImage: '/images/products/chipotle-hot.jpg',
+    featuredImage: '/images/products/chipotle-hot.webp',
     heatLevel: 'HOT',
     sku: 'JMS-HOT-004',
     inventory: 100,
