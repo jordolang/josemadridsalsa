@@ -48,32 +48,24 @@ export async function GET(request: NextRequest) {
         { sortOrder: 'asc' },
         { name: 'asc' }
       ],
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        price: true,
-        compareAtPrice: true,
-        featuredImage: true,
-        images: true,
-        heatLevel: true,
-        sku: true,
-        inventory: true,
-        isFeatured: true,
-        ingredients: true,
-        searchKeywords: true,
-        productType: true,
-        packSize: true,
-      },
     })
     
-    // Parse JSON fields for SQLite compatibility
+    // Convert Decimal prices to numbers and format response
     const parsedProducts = products.map(product => ({
-      ...product,
-      images: JSON.parse(product.images || '[]'),
-      ingredients: JSON.parse(product.ingredients || '[]'),
-      searchKeywords: JSON.parse(product.searchKeywords || '[]'),
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      price: parseFloat(String(product.price)),
+      compareAtPrice: product.compareAtPrice ? parseFloat(String(product.compareAtPrice)) : undefined,
+      featuredImage: product.featuredImage,
+      images: product.images || [],
+      heatLevel: product.heatLevel,
+      sku: product.sku,
+      inventory: product.inventory,
+      isFeatured: product.isFeatured,
+      ingredients: product.ingredients || [],
+      searchKeywords: product.searchKeywords || [],
     }))
 
     return NextResponse.json(parsedProducts)
