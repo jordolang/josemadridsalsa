@@ -2,6 +2,8 @@ import { RecipesClient } from './recipes-client'
 import prisma from '@/lib/prisma'
 import type { Recipe } from '@/types/recipe'
 
+export const revalidate = 0
+
 export default async function RecipesPage() {
   let recipes: Recipe[] = []
 

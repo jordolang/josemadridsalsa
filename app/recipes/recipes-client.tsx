@@ -10,184 +10,13 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Clock, Users, ChefHat } from 'lucide-react'
 import type { Recipe } from '@/types/recipe'
+import { recipeData } from '@/lib/data/recipes'
 
 type RecipesClientProps = {
   initialRecipes: Recipe[]
 }
 
-const placeholderRecipes: Recipe[] = [
-  {
-    id: '1',
-    title: 'Classic Salsa Chicken Tacos',
-    slug: 'classic-salsa-chicken-tacos',
-    description:
-      'Tender chicken cooked with our mild salsa, served in soft tortillas with fresh toppings.',
-    category: 'Main Course',
-    difficulty: 'Easy',
-    prepTime: '15 min',
-    cookTime: '25 min',
-    servings: 4,
-    featuredImage: '/images/salsa-bowl.png',
-    ingredients: [
-      '2 lbs chicken breast, diced',
-      '1 jar Jose Madrid Mild Salsa',
-      '8 soft flour tortillas',
-      '1 cup shredded cheese',
-      '1/2 cup diced onion',
-      'Fresh cilantro',
-      'Lime wedges',
-    ],
-    instructions: [
-      'Cook diced chicken in a large skillet over medium heat until no longer pink.',
-      'Add Jose Madrid Mild Salsa and simmer for 10 minutes.',
-      'Warm tortillas and fill with chicken mixture.',
-      'Top with cheese, onion, and cilantro. Serve with lime wedges.',
-    ],
-    featured: true,
-  },
-  {
-    id: '2',
-    title: 'Spicy Salsa Verde Enchiladas',
-    slug: 'spicy-salsa-verde-enchiladas',
-    description: 'Rolled corn tortillas filled with cheese and topped with our hot salsa verde.',
-    category: 'Main Course',
-    difficulty: 'Medium',
-    prepTime: '30 min',
-    cookTime: '35 min',
-    servings: 6,
-    featuredImage: '/images/salsa-bowl.png',
-    ingredients: [
-      '12 corn tortillas',
-      '2 cups shredded Monterey Jack cheese',
-      '1 jar Jose Madrid Hot Salsa',
-      '1/2 cup diced onion',
-      '1/4 cup fresh cilantro',
-      '1 cup sour cream',
-    ],
-    instructions: [
-      'Preheat oven to 375°F.',
-      'Fill tortillas with cheese and onion, then roll tightly.',
-      'Place in baking dish and top with hot salsa.',
-      'Bake for 25-30 minutes until bubbly.',
-      'Garnish with cilantro and serve with sour cream.',
-    ],
-    featured: false,
-  },
-  {
-    id: '3',
-    title: 'Mango Salsa Fish Tacos',
-    slug: 'mango-salsa-fish-tacos',
-    description: 'Grilled white fish topped with our tropical mango habanero salsa.',
-    category: 'Seafood',
-    difficulty: 'Medium',
-    prepTime: '20 min',
-    cookTime: '15 min',
-    servings: 4,
-    featuredImage: '/images/salsa-bowl.png',
-    ingredients: [
-      '1.5 lbs white fish fillets',
-      '1 jar Jose Madrid Mango Habanero Salsa',
-      '8 corn tortillas',
-      '2 cups coleslaw mix',
-      '1/4 cup mayonnaise',
-      '2 limes, juiced',
-      'Salt and pepper',
-    ],
-    instructions: [
-      'Season fish with salt, pepper, and lime juice.',
-      'Grill fish for 3-4 minutes per side until flaky.',
-      'Mix coleslaw with mayo and lime juice.',
-      'Warm tortillas and fill with fish, coleslaw, and mango salsa.',
-      'Serve immediately with extra lime wedges.',
-    ],
-    featured: true,
-  },
-  {
-    id: '4',
-    title: 'Salsa Stuffed Bell Peppers',
-    slug: 'salsa-stuffed-bell-peppers',
-    description: 'Bell peppers stuffed with ground beef, rice, and our medium salsa.',
-    category: 'Main Course',
-    difficulty: 'Easy',
-    prepTime: '25 min',
-    cookTime: '45 min',
-    servings: 4,
-    featuredImage: '/images/salsa-bowl.png',
-    ingredients: [
-      '4 large bell peppers, tops cut and seeds removed',
-      '1 lb ground beef',
-      '1 cup cooked rice',
-      '1 jar Jose Madrid Medium Salsa',
-      '1 cup shredded cheddar cheese',
-      '1/2 cup diced onion',
-    ],
-    instructions: [
-      'Preheat oven to 350°F.',
-      'Brown ground beef with onion, drain fat.',
-      'Mix beef with rice, half the salsa, and half the cheese.',
-      'Stuff peppers with mixture and top with remaining cheese.',
-      'Bake for 35-40 minutes until peppers are tender.',
-    ],
-    featured: false,
-  },
-  {
-    id: '5',
-    title: 'Salsa Verde Chicken Soup',
-    slug: 'salsa-verde-chicken-soup',
-    description: 'Hearty chicken soup with white beans and our signature salsa verde.',
-    category: 'Soup',
-    difficulty: 'Easy',
-    prepTime: '15 min',
-    cookTime: '30 min',
-    servings: 6,
-    featuredImage: '/images/salsa-bowl.png',
-    ingredients: [
-      '2 lbs chicken thighs, boneless',
-      '1 jar Jose Madrid Medium Salsa',
-      '2 cans white beans, drained',
-      '4 cups chicken broth',
-      '1 cup corn kernels',
-      '1/2 cup heavy cream',
-      'Fresh lime juice',
-    ],
-    instructions: [
-      'Cook chicken in a large pot until done, then shred.',
-      'Add salsa, beans, broth, and corn to pot.',
-      'Simmer for 20 minutes.',
-      'Stir in cream and lime juice.',
-      'Serve hot with fresh cilantro and lime wedges.',
-    ],
-    featured: false,
-  },
-  {
-    id: '6',
-    title: 'Peach Salsa Pork Tenderloin',
-    slug: 'peach-salsa-pork-tenderloin',
-    description: 'Grilled pork tenderloin glazed with our sweet peach mild salsa.',
-    category: 'Main Course',
-    difficulty: 'Medium',
-    prepTime: '10 min',
-    cookTime: '25 min',
-    servings: 4,
-    featuredImage: '/images/salsa-bowl.png',
-    ingredients: [
-      '2 pork tenderloins (about 1 lb each)',
-      '1 jar Jose Madrid Peach Mild Salsa',
-      '2 tbsp olive oil',
-      '1 tsp garlic powder',
-      '1 tsp smoked paprika',
-      'Salt and pepper',
-    ],
-    instructions: [
-      'Preheat grill to medium-high heat.',
-      'Season pork with oil, garlic powder, paprika, salt, and pepper.',
-      'Grill for 15-20 minutes, turning occasionally.',
-      'Brush with peach salsa during last 5 minutes of cooking.',
-      'Let rest 5 minutes before slicing and serving with extra salsa.',
-    ],
-    featured: true,
-  },
-]
+const fallbackRecipes = recipeData as Recipe[]
 
 const categories = [
   { value: 'all', label: 'All Recipes' },
@@ -206,7 +35,7 @@ const difficulties = [
 ]
 
 export function RecipesClient({ initialRecipes }: RecipesClientProps) {
-  const recipes = initialRecipes.length > 0 ? initialRecipes : placeholderRecipes
+  const recipes = initialRecipes.length > 0 ? initialRecipes : fallbackRecipes
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedDifficulty, setSelectedDifficulty] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
