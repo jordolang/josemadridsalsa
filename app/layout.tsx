@@ -4,6 +4,7 @@ import { CartSidebar } from '@/components/store/cart-sidebar'
 import { Toaster } from '@/components/ui/toaster'
 import { Navigation } from '@/components/store/navigation'
 import { Footer } from '@/components/store/footer'
+import { MessageWidget } from '@/components/messaging/message-widget'
 import { Providers } from './providers'
 import './globals.css'
 
@@ -89,6 +90,7 @@ export default function RootLayout({
           </div>
           <CartSidebar />
           <Toaster />
+          <MessageWidget />
         </Providers>
       </body>
     </html>

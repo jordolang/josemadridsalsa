@@ -43,14 +43,24 @@ export const ProductCreateSchema = ProductBaseSchema
 export const ProductUpdateSchema = ProductBaseSchema
 
 export const MessageStartSchema = z.object({
-  subject: z.string().optional().or(z.literal('')),
-  message: z.string().min(1),
+  subject: z
+    .string()
+    .max(120, { message: 'Subject must be 120 characters or fewer.' })
+    .optional()
+    .or(z.literal('')),
+  message: z
+    .string()
+    .min(1, { message: 'Message cannot be empty.' })
+    .max(1000, { message: 'Message must be 1000 characters or fewer.' }),
   email: z.string().email().optional(),
 })
 
 export const AdminReplySchema = z.object({
   conversationId: z.string().min(1),
-  message: z.string().min(1),
+  message: z
+    .string()
+    .min(1, { message: 'Message cannot be empty.' })
+    .max(1000, { message: 'Message must be 1000 characters or fewer.' }),
 })
 
 export const RefundRequestSchema = z.object({
