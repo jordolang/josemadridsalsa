@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { MapPin, Truck, Calendar, Store, Users, Compass, Mountain, Building, Utensils } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { GoogleScheduleMap } from './_components/GoogleScheduleMap';
 
 export const metadata: Metadata = {
   title: 'Where is Jose? - Jose Madrid Salsa',
@@ -74,6 +75,27 @@ export default function WhereIsJosePage() {
             <p className="text-xl lg:text-2xl text-chile-100 max-w-3xl mx-auto leading-relaxed">
               From our Ohio roots to tables across America, follow the journey of Jose Madrid Salsa and discover where authentic flavor lives.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* On the Move Schedule */}
+      <section className="py-16 bg-gradient-to-r from-white via-verde-50/40 to-chile-50/30">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-6xl space-y-12">
+            <div className="mx-auto max-w-3xl text-center">
+              <div className="mb-4 flex items-center justify-center gap-3 text-salsa-700">
+                <Truck className="h-6 w-6" />
+                <Calendar className="h-6 w-6" />
+              </div>
+              <h2 className="text-3xl font-serif font-bold text-salsa-800">On the Move Schedule</h2>
+              <p className="mt-4 text-lg text-gray-700">
+                Track Jose&apos;s farmers markets, retail demos, and special events in real time.
+                The map syncs directly from our Google Calendar—once your credentials are in place,
+                every new booking will appear automatically.
+              </p>
+            </div>
+            <GoogleScheduleMap />
           </div>
         </div>
       </section>
