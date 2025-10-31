@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { Search, ShoppingCart, Menu, X, User, Heart, LogOut, Settings } from "lucide-react";
@@ -94,28 +95,34 @@ export function Navigation() {
           : "bg-white border-gray-100"
       )}
     >
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between lg:h-20">
+      <div className="container mx-auto px-2 sm:px-4">
+        <div className="flex h-16 items-center justify-between gap-2">
           {/* Logo */}
           <Link 
             href="/" 
-            className="flex items-center space-x-2 font-serif font-bold text-xl lg:text-2xl"
+            className="flex items-center space-x-2 font-serif font-bold text-base lg:text-xl flex-shrink-0"
           >
-            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-salsa-500 to-chile-500 flex items-center justify-center text-white font-bold text-sm lg:text-base">
-              JM
+            <div className="relative w-10 h-10 lg:w-12 lg:h-12 flex-shrink-0">
+              <Image
+                src="/images/Hero-image.png"
+                alt="Jose Madrid Salsa Logo"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
-            <span className="text-gradient">Jose Madrid Salsa</span>
+            <span className="hidden sm:inline text-gradient">Jose Madrid Salsa</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex lg:items-center lg:space-x-6">
+          <div className="hidden lg:flex lg:items-center lg:gap-1">
             <NavigationMenu>
-              <NavigationMenuList className="space-x-1">
+              <NavigationMenuList className="gap-0">
                 {navigationItems.map((item) => (
                   <NavigationMenuItem key={item.title}>
                     {item.megaMenu ? (
                       <>
-                        <NavigationMenuTrigger className="h-auto p-2 text-sm font-medium hover:text-salsa-600 data-[state=open]:text-salsa-600">
+                        <NavigationMenuTrigger className="h-auto px-2 py-1.5 text-xs font-medium hover:text-salsa-600 data-[state=open]:text-salsa-600">
                           {item.title}
                         </NavigationMenuTrigger>
                         <NavigationMenuContent>
@@ -155,7 +162,7 @@ export function Navigation() {
                       <NavigationMenuLink asChild>
                         <Link
                           href={item.href}
-                          className="group inline-flex h-9 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:text-salsa-600 focus:text-salsa-600 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+                          className="group inline-flex h-auto w-max items-center justify-center rounded-md px-2 py-1.5 text-xs font-medium transition-colors hover:text-salsa-600 focus:text-salsa-600 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
                         >
                           {item.title}
                         </Link>
@@ -168,22 +175,22 @@ export function Navigation() {
           </div>
 
           {/* Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-md mx-6">
+          <div className="hidden md:flex flex-1 max-w-xs lg:max-w-sm mx-2 lg:mx-4">
             <form onSubmit={handleSearch} className="flex w-full">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   type="search"
-                  placeholder="Search products..."
+                  placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 h-9 rounded-l-lg rounded-r-none border-r-0 focus:ring-salsa-500 focus:border-salsa-500"
+                  className="pl-8 pr-2 h-8 text-sm rounded-l-lg rounded-r-none border-r-0 focus:ring-salsa-500 focus:border-salsa-500"
                 />
               </div>
               <Button
                 type="submit"
                 size="sm"
-                className="rounded-l-none rounded-r-lg h-9 px-4 bg-salsa-500 hover:bg-salsa-600"
+                className="rounded-l-none rounded-r-lg h-8 px-3 text-xs bg-salsa-500 hover:bg-salsa-600"
               >
                 Search
               </Button>
@@ -191,18 +198,18 @@ export function Navigation() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center space-x-2 lg:space-x-4">
+          <div className="flex items-center gap-1 lg:gap-2 flex-shrink-0">
             {/* Search Icon (Mobile) */}
-            <Button variant="ghost" size="sm" className="md:hidden p-2">
-              <Search className="w-5 h-5" />
+            <Button variant="ghost" size="sm" className="md:hidden p-1.5">
+              <Search className="w-4 h-4" />
             </Button>
 
             {/* Account */}
             {session ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="hidden lg:flex p-2 relative">
-                    <User className="w-5 h-5" />
+                  <Button variant="ghost" size="sm" className="hidden lg:flex p-1.5 relative">
+                    <User className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -242,13 +249,13 @@ export function Navigation() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="hidden lg:flex space-x-2">
-                <Button variant="ghost" size="sm" asChild>
+              <div className="hidden lg:flex gap-1">
+                <Button variant="ghost" size="sm" asChild className="h-8 px-2 text-xs">
                   <Link href="/auth/signin">
                     Sign In
                   </Link>
                 </Button>
-                <Button size="sm" asChild>
+                <Button size="sm" asChild className="h-8 px-2 text-xs">
                   <Link href="/auth/signup">
                     Sign Up
                   </Link>
@@ -257,8 +264,8 @@ export function Navigation() {
             )}
 
             {/* Wishlist */}
-            <Button variant="ghost" size="sm" className="hidden lg:flex p-2 relative">
-              <Heart className="w-5 h-5" />
+            <Button variant="ghost" size="sm" className="hidden lg:flex p-1.5 relative">
+              <Heart className="w-4 h-4" />
             </Button>
 
             {/* Cart */}
@@ -266,13 +273,13 @@ export function Navigation() {
               variant="ghost"
               size="sm"
               onClick={toggleCart}
-              className="relative p-2"
+              className="relative p-1.5"
             >
-              <ShoppingCart className="w-5 h-5" />
+              <ShoppingCart className="w-4 h-4" />
               {cartItemCount > 0 && (
                 <Badge
                   variant="destructive"
-                  className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center p-0 text-xs bg-salsa-500"
+                  className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center p-0 text-[10px] bg-salsa-500"
                 >
                   {cartItemCount}
                 </Badge>
@@ -282,8 +289,8 @@ export function Navigation() {
             {/* Mobile Menu */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="lg:hidden p-2">
-                  <Menu className="w-5 h-5" />
+                <Button variant="ghost" size="sm" className="lg:hidden p-1.5">
+                  <Menu className="w-4 h-4" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-80">
