@@ -81,6 +81,7 @@ model Category {
   // SEO
   metaTitle       String?
   metaDescription String?
+  ogImage         String?
   
   // Display
   isActive    Boolean   @default(true)
@@ -127,6 +128,7 @@ model Product {
   // SEO
   metaTitle       String?
   metaDescription String?
+  ogImage         String?
   searchKeywords  String[]
   
   // Display
@@ -146,6 +148,7 @@ model Product {
   reviews     Review[]
   wishlistItems WishlistItem[]
   fundraiserProducts FundraiserProduct[]
+  productTags ProductTag[]
 
   @@map("products")
 }
@@ -434,8 +437,16 @@ model Recipe {
   ingredients   String[]
   instructions  String[]
   
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  ogImage         String?
+  
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  recipeTags    RecipeTag[]
   
   @@map("recipes")
 }
@@ -469,11 +480,333 @@ model Analytics {
   @@map("analytics")
 }
 
+model Permission {
+  id          String              @id @default(cuid())
+  name        String              @unique // e.g., "orders:read", "products:write"
+  description String?
+  category    PermissionCategory
+  
+  createdAt   DateTime            @default(now())
+  
+  // Relations
+  rolePermissions RolePermission[]
+  
+  @@index([category])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String   @id @default(cuid())
+  role         UserRole
+  permissionId String
+  
+  createdAt    DateTime @default(now())
+  
+  // Relations
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([role, permissionId])
+  @@index([role])
+  @@map("role_permissions")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  type      TagType
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  productTags ProductTag[]
+  recipeTags  RecipeTag[]
+  mediaTags   MediaTag[]
+  eventTags   EventTag[]
+  
+  @@index([type])
+  @@map("tags")
+}
+
+model ProductTag {
+  id        String   @id @default(cuid())
+  productId String
+  tagId     String
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@unique([productId, tagId])
+  @@map("product_tags")
+}
+
+model RecipeTag {
+  id       String   @id @default(cuid())
+  recipeId String
+  tagId    String
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  recipe    Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  tag       Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@unique([recipeId, tagId])
+  @@map("recipe_tags")
+}
+
+model Media {
+  id          String   @id @default(cuid())
+  url         String
+  filename    String
+  mimeType    String
+  fileSize    Int      // bytes
+  
+  // Metadata
+  alt         String?
+  caption     String?
+  width       Int?
+  height      Int?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  mediaTags   MediaTag[]
+  socialMediaPosts SocialMediaPostMedia[]
+  
+  @@index([mimeType])
+  @@map("media")
+}
+
+model MediaTag {
+  id      String   @id @default(cuid())
+  mediaId String
+  tagId   String
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  media     Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  tag       Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@unique([mediaId, tagId])
+  @@map("media_tags")
+}
+
+model FeaturedEvent {
+  id                String    @id @default(cuid())
+  googleEventId     String?   @unique // Null if manually created
+  title             String
+  description       String?
+  location          String?
+  startDate         DateTime
+  endDate           DateTime?
+  
+  // Featured settings
+  featuredFrom      DateTime
+  featuredTo        DateTime?
+  isWhereIsJose     Boolean   @default(false)
+  customDescription String?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  eventTags         EventTag[]
+  
+  @@index([isWhereIsJose])
+  @@index([featuredFrom, featuredTo])
+  @@map("featured_events")
+}
+
+model EventTag {
+  id      String   @id @default(cuid())
+  eventId String
+  tagId   String
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  event     FeaturedEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tag       Tag           @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@unique([eventId, tagId])
+  @@map("event_tags")
+}
+
+model ServiceKey {
+  id             String   @id @default(cuid())
+  serviceName    String   // e.g., "stripe", "meta", "google_calendar"
+  keyName        String   // e.g., "api_key", "access_token", "refresh_token"
+  encryptedValue String   @db.Text
+  iv             String   // Initialization vector for AES-GCM
+  
+  isActive       Boolean  @default(true)
+  lastUsed       DateTime?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@unique([serviceName, keyName])
+  @@index([serviceName])
+  @@map("service_keys")
+}
+
+model SocialMediaPost {
+  id          String                   @id @default(cuid())
+  platforms   SocialMediaPlatform[]    // Array of platforms
+  content     String                   @db.Text
+  
+  scheduledAt DateTime?
+  status      SocialMediaPostStatus    @default(DRAFT)
+  
+  // External IDs after publishing
+  externalIds Json?                    // {facebook: "123", instagram: "456"}
+  
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  publishedAt DateTime?
+  
+  // Relations
+  media       SocialMediaPostMedia[]
+  
+  @@index([status])
+  @@index([scheduledAt])
+  @@map("social_media_posts")
+}
+
+model SocialMediaPostMedia {
+  id      String   @id @default(cuid())
+  postId  String
+  mediaId String
+  order   Int      @default(0)
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  post      SocialMediaPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  media     Media           @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  
+  @@unique([postId, mediaId])
+  @@map("social_media_post_media")
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  key       String   @unique  // e.g., "order_confirmation", "shipping_notification"
+  name      String
+  subject   String
+  html      String   @db.Text
+  text      String?  @db.Text
+  variables Json?    // {"name": "string", "orderNumber": "string"}
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("email_templates")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String   // e.g., "order.update", "user.impersonate", "product.delete"
+  entityType String?  // e.g., "Order", "Product", "User"
+  entityId   String?
+  changes    Json?    // Before/after snapshot
+  ipAddress  String?
+  userAgent  String?  @db.Text
+  
+  createdAt  DateTime @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Invoice {
+  id         String        @id @default(cuid())
+  number     String        @unique // e.g., "INV-2024-001"
+  
+  customerId String?
+  orderId    String?       // Optional link to Order
+  
+  status     InvoiceStatus @default(DRAFT)
+  dueDate    DateTime
+  total      Decimal       @db.Decimal(10, 2)
+  
+  lines      Json          // Array of line items
+  notes      String?       @db.Text
+  
+  sentAt     DateTime?
+  paidAt     DateTime?
+  
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  
+  @@index([customerId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("invoices")
+}
+
 // Enums
 enum UserRole {
   CUSTOMER
   ADMIN
+  DEVELOPER
+  STAFF
   WHOLESALE
+}
+
+enum PermissionCategory {
+  ORDERS
+  PRODUCTS
+  USERS
+  CONTENT
+  ANALYTICS
+  SETTINGS
+  FINANCIALS
+  API_KEYS
+  MESSAGING
+  SOCIAL_MEDIA
+}
+
+enum TagType {
+  PRODUCT
+  RECIPE
+  MEDIA
+  EVENT
+  GENERAL
+}
+
+enum SocialMediaPlatform {
+  FACEBOOK
+  INSTAGRAM
+  TWITTER
+  GOOGLE_MY_BUSINESS
+  TIKTOK
+}
+
+enum SocialMediaPostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
 }
 
 enum AddressType {

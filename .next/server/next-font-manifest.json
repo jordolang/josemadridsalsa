@@ -1,6 +1,49 @@
 {
-  "app": {},
-  "appUsingSizeAdjust": false,
+  "app": {
+    "[project]/app/_not-found/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/our-story/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/products/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/recipes/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/salsas/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/where-is-jose/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
   "pages": {},
   "pagesUsingSizeAdjust": false
 }

@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { ShoppingCart, Minus, Plus, Loader2 } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 import { formatPrice, getHeatLevelColor, getHeatLevelText } from '@/lib/utils'
+import { HeatGauge } from '@/components/store/heat-gauge'
+import { getSalsaHeatRating } from '@/lib/salsa-heat'
 
 type Product = {
   id: string
@@ -114,6 +116,8 @@ export default function ProductPage() {
     )
   }
 
+  const heatRating = getSalsaHeatRating(product.name, product.heatLevel)
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -188,6 +192,13 @@ export default function ProductPage() {
                 )}
               </div>
             </div>
+            
+            <HeatGauge
+              value={heatRating.value}
+              max={heatRating.max}
+              label={heatRating.label}
+              heatLevel={product.heatLevel}
+            />
             
             <p className="text-gray-600 text-lg leading-relaxed">
               {product.description}
