@@ -36,7 +36,7 @@ export async function POST(
   await prisma.message.create({ data: { conversationId: id, senderType: 'ADMIN', body: message } })
   const convo = await prisma.conversation.update({ where: { id }, data: { updatedAt: new Date() }, include: { user: { select: { email: true } } } })
   const { logAudit } = await import('@/lib/audit')
-  await logAudit({ action: 'ADMIN_REPLY', entity: 'Conversation', entityId: id })
+  await logAudit({ action: 'ADMIN_REPLY', entityType: 'Conversation', entityId: id })
 
   // Send email on admin reply
   const to = convo.user?.email || convo.email

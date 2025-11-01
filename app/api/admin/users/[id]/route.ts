@@ -14,11 +14,12 @@ const userUpdateSchema = z.object({
   isEmailVerified: z.boolean().optional(),
 })
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requirePermission('users:read')
+    const { id } = await params
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         email: true,
@@ -39,13 +40,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const currentUser = await requirePermission('users:write')
     const body = await req.json()
     const data = userUpdateSchema.parse(body)
+    const { id } = await params
 
-    const existing = await prisma.user.findUnique({ where: { id: params.id } })
+    const existing = await prisma.user.findUnique({ where: { id } })
     if (!existing) return fail('User not found', 404)
 
     // Hash password if provided
@@ -55,7 +57,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     const user = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     })
 
@@ -76,11 +78,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const currentUser = await requirePermission('users:write')
+    const { id } = await params
 
-    const existing = await prisma.user.findUnique({ where: { id: params.id } })
+    const existing = await prisma.user.findUnique({ where: { id } })
     if (!existing) return fail('User not found', 404)
 
     // Prevent deleting yourself
@@ -88,13 +91,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return fail('Cannot delete your own account', 400)
     }
 
-    await prisma.user.delete({ where: { id: params.id } })
+    await prisma.user.delete({ where: { id } })
 
     await logAudit({
       userId: currentUser.id,
       action: 'DELETE',
       entityType: 'User',
-      entityId: params.id,
+      entityId: id,
       changes: { email: existing.email },
     })
 

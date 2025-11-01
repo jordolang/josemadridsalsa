@@ -12,17 +12,15 @@ import { cn } from "@/lib/utils";
 interface Product {
   id: string;
   name: string;
-  description: string;
+  slug: string;
+  description: string | null;
   price: number;
-  originalPrice?: number;
-  imageUrl: string;
-  category: string;
-  heatLevel: "MILD" | "MEDIUM" | "HOT" | "EXTRA_HOT";
-  inStock: boolean;
-  featured: boolean;
-  rating?: number;
-  reviewCount?: number;
-  tags?: string[];
+  compareAtPrice?: number | null;
+  featuredImage: string | null;
+  heatLevel: string;
+  sku: string;
+  inventory: number;
+  isFeatured: boolean;
 }
 
 interface ProductGridProps {
@@ -89,17 +87,16 @@ export function ProductGrid({
     if (searchQuery) {
       filtered = filtered.filter((product) =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+        product.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    // Category filter
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter((product) => 
-        product.category.toLowerCase() === selectedCategory
-      );
-    }
+    // Category filter - skipped since Product doesn't have category field
+    // if (selectedCategory !== "all") {
+    //   filtered = filtered.filter((product) => 
+    //     product.category.toLowerCase() === selectedCategory
+    //   );
+    // }
 
     // Heat level filter
     if (selectedHeatLevel !== "all") {
@@ -110,7 +107,7 @@ export function ProductGrid({
 
     // Stock filter
     if (showOnlyInStock) {
-      filtered = filtered.filter((product) => product.inStock);
+      filtered = filtered.filter((product) => product.inventory > 0);
     }
 
     // Sort products
@@ -123,12 +120,12 @@ export function ProductGrid({
         case "price-high":
           return b.price - a.price;
         case "rating":
-          return (b.rating || 0) - (a.rating || 0);
+          return 0; // Would need a rating field
         case "newest":
           return 0; // Would need a createdAt field
         case "featured":
         default:
-          return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+          return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
       }
     });
 
@@ -331,8 +328,6 @@ export function ProductGrid({
             <ProductCard
               key={product.id}
               product={product}
-              variant={viewMode === "list" ? "horizontal" : "vertical"}
-              onClick={() => onProductClick?.(product)}
             />
           ))}
         </div>

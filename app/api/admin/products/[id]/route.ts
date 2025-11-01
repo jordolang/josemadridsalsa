@@ -10,13 +10,13 @@ import prisma from '@/lib/prisma';
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify permissions
     const user = await requirePermission('products:read');
 
-    const { id } = params;
+    const { id } = await params;
 
     // Fetch product with relations
     const product = await prisma.product.findUnique({
@@ -51,13 +51,13 @@ export async function GET(
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify permissions
     const user = await requirePermission('products:write');
 
-    const { id } = params;
+    const { id } = await params;
 
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
@@ -113,13 +113,13 @@ export async function PATCH(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify permissions
     const user = await requirePermission('products:delete');
 
-    const { id } = params;
+    const { id } = await params;
 
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({

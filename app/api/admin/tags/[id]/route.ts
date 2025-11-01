@@ -10,13 +10,13 @@ import prisma from '@/lib/prisma';
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify permissions
     const user = await requirePermission('content:read');
 
-    const { id } = params;
+    const { id } = await params;
 
     // Fetch tag with usage counts
     const tag = await prisma.tag.findUnique({
@@ -58,13 +58,13 @@ export async function GET(
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify permissions
     const user = await requirePermission('content:write');
 
-    const { id } = params;
+    const { id } = await params;
 
     // Check if tag exists
     const existingTag = await prisma.tag.findUnique({
@@ -117,13 +117,13 @@ export async function PATCH(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify permissions
     const user = await requirePermission('content:write');
 
-    const { id } = params;
+    const { id } = await params;
 
     // Check if tag exists
     const existingTag = await prisma.tag.findUnique({
