@@ -24,6 +24,9 @@ export default async function AccountLayout({ children }: Props) {
 
   const userRole = (session.user as any)?.role as string | undefined;
   const isStaff = userRole && ["ADMIN", "DEVELOPER", "STAFF"].includes(userRole);
+  
+  // Debug: log role info (remove after testing)
+  console.log("[Account Layout] User role:", userRole, "isStaff:", isStaff, "Full session.user:", session.user);
 
   return (
     <div className="container mx-auto grid grid-cols-12 gap-6 py-8">
