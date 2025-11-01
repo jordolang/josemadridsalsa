@@ -29,6 +29,21 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Protect /account routes
+  if (pathname.startsWith('/account')) {
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    })
+
+    // Not authenticated
+    if (!token) {
+      const signInUrl = new URL('/auth/signin', request.url)
+      signInUrl.searchParams.set('callbackUrl', pathname)
+      return NextResponse.redirect(signInUrl)
+    }
+  }
+
   // Protect /api/admin routes
   if (pathname.startsWith('/api/admin')) {
     const token = await getToken({
@@ -63,5 +78,6 @@ export const config = {
   matcher: [
     '/admin/:path*',
     '/api/admin/:path*',
+    '/account/:path*',
   ],
 }
