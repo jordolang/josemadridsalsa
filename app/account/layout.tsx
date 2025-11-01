@@ -5,7 +5,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { AccountBreadcrumbs } from "@/components/account/AccountBreadcrumbs";
+import { SignOutButton } from "@/components/account/SignOutButton";
 
 export const metadata: Metadata = {
   title: "My Account",
@@ -20,6 +22,9 @@ export default async function AccountLayout({ children }: Props) {
     redirect("/auth/signin?callbackUrl=/account");
   }
 
+  const userRole = (session.user as any)?.role as string | undefined;
+  const isStaff = userRole && ["ADMIN", "DEVELOPER", "STAFF"].includes(userRole);
+
   return (
     <div className="container mx-auto grid grid-cols-12 gap-6 py-8">
       <aside className="col-span-12 md:col-span-3">
@@ -32,7 +37,17 @@ export default async function AccountLayout({ children }: Props) {
             <Link href="/account" className="text-sm hover:underline">Dashboard</Link>
             <Link href="/account/orders" className="text-sm hover:underline">Orders</Link>
             <Link href="/account/settings" className="text-sm hover:underline">Settings</Link>
+            {isStaff && (
+              <>
+                <Separator className="my-2" />
+                <Link href="/admin" className="text-sm hover:underline font-medium text-blue-600">
+                  Admin Panel
+                </Link>
+              </>
+            )}
           </nav>
+          <Separator className="my-3" />
+          <SignOutButton />
         </Card>
       </aside>
       <main className="col-span-12 md:col-span-9">
