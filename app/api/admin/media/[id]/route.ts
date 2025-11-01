@@ -10,13 +10,13 @@ import prisma from '@/lib/prisma';
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify permissions
     const user = await requirePermission('content:read');
 
-    const { id } = params;
+    const { id } = await params;
 
     // Fetch media with tags
     const media = await prisma.media.findUnique({
@@ -55,13 +55,13 @@ export async function GET(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify permissions
     const user = await requirePermission('content:write');
 
-    const { id } = params;
+    const { id } = await params;
 
     // Check if media exists
     const existingMedia = await prisma.media.findUnique({

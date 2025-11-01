@@ -23,10 +23,11 @@ const recipeSchema = z.object({
   ogImage: z.string().url().nullable().optional(),
 })
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requirePermission('content:read')
-    const recipe = await prisma.recipe.findUnique({ where: { id: params.id } })
+    const { id } = await params
+    const recipe = await prisma.recipe.findUnique({ where: { id } })
     if (!recipe) return fail('Recipe not found', 404)
     return ok({ recipe })
   } catch (error: any) {
@@ -34,17 +35,18 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requirePermission('content:write')
     const body = await req.json()
     const data = recipeSchema.partial().parse(body)
+    const { id } = await params
 
-    const existing = await prisma.recipe.findUnique({ where: { id: params.id } })
+    const existing = await prisma.recipe.findUnique({ where: { id } })
     if (!existing) return fail('Recipe not found', 404)
 
     const recipe = await prisma.recipe.update({
-      where: { id: params.id },
+      where: { id },
       data,
     })
 
@@ -65,20 +67,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requirePermission('content:write')
+    const { id } = await params
 
-    const existing = await prisma.recipe.findUnique({ where: { id: params.id } })
+    const existing = await prisma.recipe.findUnique({ where: { id } })
     if (!existing) return fail('Recipe not found', 404)
 
-    await prisma.recipe.delete({ where: { id: params.id } })
+    await prisma.recipe.delete({ where: { id } })
 
     await logAudit({
       userId: user.id,
       action: 'DELETE',
       entityType: 'Recipe',
-      entityId: params.id,
+      entityId: id,
       changes: { title: existing.title },
     })
 

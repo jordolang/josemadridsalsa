@@ -73,16 +73,19 @@ export default function ProductPage() {
   const handleAddToCart = () => {
     if (!product) return
     
-    addItem({
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      price: product.price,
-      image: product.featuredImage,
-      sku: product.sku,
-      heatLevel: product.heatLevel,
-      maxQuantity: product.inventory,
-    }, quantity)
+    addItem(
+      {
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: product.featuredImage,
+        sku: product.sku,
+        heatLevel: product.heatLevel,
+        maxQuantity: product.inventory,
+        quantity,
+      }
+    )
     
     openCart()
   }
