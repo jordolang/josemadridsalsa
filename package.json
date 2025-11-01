@@ -18,6 +18,7 @@
     "db:seed:recipes": "tsx scripts/seed-recipes.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
+    "create-admin": "tsx scripts/create-admin.ts",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
     "fresh": "npm run clean && npm install && npm run dev"
   },
