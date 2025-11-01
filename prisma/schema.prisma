@@ -37,6 +37,7 @@ model User {
   // Wholesale account
   wholesaleAccount WholesaleAccount?
   conversations    Conversation[]
+  passwordResetTokens PasswordResetToken[]
   
   @@map("users")
 }
@@ -877,4 +878,19 @@ enum AnalyticsType {
   SEARCH
   CLICK
   CUSTOM
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
