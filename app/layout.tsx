@@ -4,7 +4,7 @@ import { CartSidebar } from '@/components/store/cart-sidebar'
 import { Toaster } from '@/components/ui/toaster'
 import { Navigation } from '@/components/store/navigation'
 import { Footer } from '@/components/store/footer'
-import { MessageWidget } from '@/components/messaging/message-widget'
+import { AiChatWidget } from '@/components/chat/ai-chat-widget'
 import { Providers } from './providers'
 import './globals.css'
 
@@ -27,11 +27,14 @@ const robotoMono = Roboto_Mono({
   variable: '--font-roboto-mono',
 })
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.josemadridsalsa.com'
+
 export const metadata: Metadata = {
   title: {
     template: '%s | Jose Madrid Salsa',
     default: 'Jose Madrid Salsa - Premium Gourmet Salsa',
   },
+  metadataBase: new URL(siteUrl),
   description: 'Premium gourmet salsas made with the finest ingredients. Order online for delivery or find us at local stores. Perfect for fundraising and wholesale.',
   keywords: ['salsa', 'gourmet', 'premium', 'mild', 'medium', 'hot', 'fundraising', 'wholesale', 'ohio'],
   authors: [{ name: 'Jose Madrid Salsa' }],
@@ -90,7 +93,7 @@ export default function RootLayout({
           </div>
           <CartSidebar />
           <Toaster />
-          <MessageWidget />
+          <AiChatWidget />
         </Providers>
       </body>
     </html>

@@ -1,12 +1,24 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client'
+import { DollarSign, Link2, Receipt, TrendingUp, Wallet } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { Card } from '@/components/ui/card'
 import { StatsCard } from '@/components/admin/StatsCard'
 import { formatPrice } from '@/lib/utils'
-import { DollarSign, Receipt, TrendingUp, Wallet } from 'lucide-react'
-import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { FinancialUploadPanel } from '@/components/admin/financials/financial-upload-panel'
+import {
+  financialIntegrations,
+  mapIntegrationStatus,
+  payrollRuns,
+  payrollEmployees,
+  expenseQueue,
+  taxPreparationTasks,
+  supportedUploadFormats,
+} from '@/lib/financials/config'
 
 type RangeKey = '30d' | '90d' | '365d'
 
@@ -283,6 +295,21 @@ export default async function FinancialsPage({ searchParams }: { searchParams: S
     : '30d'
 
   const data = await getFinancialOverview(activeRange)
+  const integrationRecords = await prisma.serviceKey.findMany({
+    where: {
+      serviceName: {
+        in: financialIntegrations.map((integration) => integration.serviceName),
+      },
+    },
+    select: {
+      serviceName: true,
+      lastUsed: true,
+      isActive: true,
+    },
+  })
+  const integrationStatus = mapIntegrationStatus(integrationRecords)
+  const nextPayroll = payrollRuns.find((run) => run.status !== 'paid')
+  const openTaxTasks = taxPreparationTasks.filter((task) => task.status !== 'completed')
   const maxRevenue = data.monthlyTrends.reduce((max, item) => Math.max(max, item.revenue), 0)
 
   return (
@@ -325,6 +352,74 @@ export default async function FinancialsPage({ searchParams }: { searchParams: S
           value={data.summary.orders.toLocaleString()}
           icon={Receipt}
         />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
+        <FinancialUploadPanel acceptedExtensions={supportedUploadFormats} />
+        <Card className="space-y-4 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase text-slate-500">Integrations</p>
+              <h2 className="text-xl font-semibold text-slate-900">Financial system connections</h2>
+              <p className="text-sm text-slate-600">
+                Connect QuickBooks, Quicken, Xero, or ADP to automate sync and reconciliation.
+              </p>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/admin/settings/integrations">Manage keys</Link>
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {integrationStatus.map((integration) => (
+              <div
+                key={integration.id}
+                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{integration.label}</p>
+                    <p className="text-xs text-slate-500">
+                      {integration.isConnected
+                        ? `Last synced ${integration.lastSyncedAt ? new Date(integration.lastSyncedAt).toLocaleString() : 'recently'}`
+                        : 'Not connected'}
+                    </p>
+                  </div>
+                  <Badge
+                    className={`text-xs ${integration.isConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}
+                  >
+                    {integration.isConnected ? 'Connected' : 'Needs setup'}
+                  </Badge>
+                </div>
+                <ul className="mt-3 space-y-1 text-xs text-slate-500">
+                  {integration.features.map((feature) => (
+                    <li key={feature}>• {feature}</li>
+                  ))}
+                </ul>
+                <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                  <a
+                    href={integration.docUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-salsa-600 hover:underline"
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
+                    Docs
+                  </a>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant={integration.isConnected ? 'outline' : 'default'}
+                  >
+                    <Link href={`/admin/settings/integrations?service=${integration.id}`}>
+                      {integration.isConnected ? 'View settings' : 'Connect'}
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
@@ -387,6 +482,154 @@ export default async function FinancialsPage({ searchParams }: { searchParams: S
           <div className="rounded-lg bg-slate-50 p-4 text-xs text-slate-500">
             Tax and shipping are calculated from paid orders during the selected range. Discounts show the total coupon and promo value applied.
           </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        <Card className="space-y-4 p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase text-slate-500">Payroll</p>
+              <h2 className="text-xl font-semibold text-slate-900">Upcoming pay run</h2>
+              <p className="text-sm text-slate-600">
+                Review hours, taxes, and net pay before exporting to ADP or QuickBooks Payroll.
+              </p>
+            </div>
+            <Badge className="bg-slate-100 text-slate-600">
+              {nextPayroll ? nextPayroll.status : 'No runs'}
+            </Badge>
+          </div>
+          {nextPayroll ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-900">{nextPayroll.period}</p>
+              <p className="text-xs text-slate-500">Pay date {new Date(nextPayroll.payDate).toLocaleDateString()}</p>
+              <div className="mt-3 grid grid-cols-3 gap-3 text-xs text-slate-500">
+                <div>
+                  <p className="font-semibold text-slate-900">{formatPrice(nextPayroll.grossPay)}</p>
+                  <p>Gross</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900">{formatPrice(nextPayroll.taxesWithheld)}</p>
+                  <p>Taxes</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900">{formatPrice(nextPayroll.netPay)}</p>
+                  <p>Net</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+              No pay runs are scheduled. Generate one or import from your POS.
+            </div>
+          )}
+          <div>
+            <p className="text-xs uppercase text-slate-500">Top earners this period</p>
+            <ul className="mt-2 space-y-2 text-sm text-slate-600">
+              {payrollEmployees.slice(0, 3).map((employee) => (
+                <li key={employee.id} className="flex items-center justify-between">
+                  <span>{employee.name}</span>
+                  <span className="text-xs text-slate-500">{formatPrice(employee.netPay)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/financials/payroll">Open payroll workspace</Link>
+          </Button>
+        </Card>
+
+        <Card className="space-y-4 p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase text-slate-500">Expenses</p>
+              <h2 className="text-xl font-semibold text-slate-900">Expense approvals</h2>
+              <p className="text-sm text-slate-600">
+                Approve reimbursements and sync approved spend to your accounting platform.
+              </p>
+            </div>
+            <Badge className="bg-slate-100 text-slate-600">
+              {expenseQueue.filter((expense) => expense.status === 'submitted').length} awaiting
+            </Badge>
+          </div>
+          <div className="space-y-3">
+            {expenseQueue.map((expense) => (
+              <div
+                key={expense.id}
+                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-slate-900">{expense.vendor}</p>
+                  <span className="text-sm font-semibold text-slate-900">{formatPrice(expense.amount)}</span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  {expense.category} • Submitted by {expense.submittedBy} on{' '}
+                  {new Date(expense.submittedAt).toLocaleDateString()}
+                </p>
+                <Badge
+                  className={`mt-3 text-xs ${
+                    expense.status === 'reimbursed'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : expense.status === 'approved'
+                        ? 'bg-sky-100 text-sky-700'
+                        : 'bg-amber-100 text-amber-700'
+                  }`}
+                >
+                  {expense.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/financials/expenses">Review expenses</Link>
+          </Button>
+        </Card>
+
+        <Card className="space-y-4 p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase text-slate-500">Tax prep</p>
+              <h2 className="text-xl font-semibold text-slate-900">Upcoming filings</h2>
+              <p className="text-sm text-slate-600">
+                Track compliance tasks, owners, and due dates for state and federal filings.
+              </p>
+            </div>
+            <Badge className="bg-slate-100 text-slate-600">
+              {openTaxTasks.length} open
+            </Badge>
+          </div>
+          <div className="space-y-3">
+            {taxPreparationTasks.map((task) => (
+              <div
+                key={task.id}
+                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-900">{task.label}</p>
+                  <Badge
+                    className={`text-xs ${
+                      task.status === 'completed'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : task.status === 'overdue'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    {task.status}
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Due {new Date(task.dueDate).toLocaleDateString()} • Owner {task.owner}
+                </p>
+                {task.notes ? (
+                  <p className="mt-2 text-xs text-slate-600">{task.notes}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/financials/taxes">Manage tasks</Link>
+          </Button>
         </Card>
       </div>
 

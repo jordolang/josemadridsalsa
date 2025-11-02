@@ -1,13 +1,19 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { CalendarDays, Clock, Share2 } from 'lucide-react'
-import { SocialMediaPostStatus } from '@prisma/client'
+import Link from 'next/link'
+import { CalendarDays, Clock, Share2, Facebook, Instagram, Store, Twitter, Music2 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { SocialMediaPostStatus, SocialMediaPlatform } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { logAudit } from '@/lib/audit'
+import { SocialPostComposer } from '@/components/admin/social-post-composer'
+import { createSocialPost } from './actions'
+import type { SocialPlatformOption } from '@/types/social'
+import { cn } from '@/lib/utils'
 
 type StatusSummary = {
   status: SocialMediaPostStatus
@@ -29,6 +35,62 @@ const platformLabels: Record<string, string> = {
   TIKTOK: 'TikTok',
 }
 
+const SOCIAL_PLATFORM_CONFIG: Array<{
+  value: SocialMediaPlatform
+  label: string
+  serviceName: string
+  description: string
+  handle: string
+  connectUrl: string
+  icon: LucideIcon
+}> = [
+  {
+    value: 'FACEBOOK',
+    label: 'Facebook Page',
+    serviceName: 'facebook',
+    description: 'Post to the Jose Madrid Salsa Facebook community with event highlights and shareable recipes.',
+    handle: process.env.NEXT_PUBLIC_FACEBOOK_HANDLE ?? '@JoseMadridSalsa',
+    connectUrl: '/admin/settings/integrations?service=facebook',
+    icon: Facebook,
+  },
+  {
+    value: 'INSTAGRAM',
+    label: 'Instagram',
+    serviceName: 'instagram',
+    description: 'Square and vertical media for stories, reels, and product spotlights.',
+    handle: process.env.NEXT_PUBLIC_INSTAGRAM_HANDLE ?? '@JoseMadridSalsa',
+    connectUrl: '/admin/settings/integrations?service=instagram',
+    icon: Instagram,
+  },
+  {
+    value: 'TWITTER',
+    label: 'X (Twitter)',
+    serviceName: 'twitter',
+    description: 'Short updates for market appearances, flash sales, and fundraiser milestones.',
+    handle: process.env.NEXT_PUBLIC_TWITTER_HANDLE ?? '@JoseMadridSalsa',
+    connectUrl: '/admin/settings/integrations?service=twitter',
+    icon: Twitter,
+  },
+  {
+    value: 'GOOGLE_MY_BUSINESS',
+    label: 'Google Business',
+    serviceName: 'google_my_business',
+    description: 'Keep the Google business profile fresh with offers, events, and review responses.',
+    handle: process.env.NEXT_PUBLIC_GMB_SHORTNAME ?? 'Jose Madrid Salsa',
+    connectUrl: '/admin/settings/integrations?service=google',
+    icon: Store,
+  },
+  {
+    value: 'TIKTOK',
+    label: 'TikTok',
+    serviceName: 'tiktok',
+    description: 'Short-form video ideas for behind-the-scenes batches, recipe quick hits, and community shoutouts.',
+    handle: process.env.NEXT_PUBLIC_TIKTOK_HANDLE ?? '@JoseMadridSalsa',
+    connectUrl: '/admin/settings/integrations?service=tiktok',
+    icon: Music2,
+  },
+]
+
 async function getSocialMediaData() {
   const [recentPosts, scheduledPosts, statusCounts] = await Promise.all([
     prisma.socialMediaPost.findMany({
@@ -48,12 +110,59 @@ async function getSocialMediaData() {
     }),
   ])
 
+  let serviceKeys: Array<{ serviceName: string; lastUsed: Date | null; isActive: boolean }> = []
+
+  try {
+    serviceKeys = await prisma.serviceKey.findMany({
+      where: {
+        serviceName: {
+          in: SOCIAL_PLATFORM_CONFIG.map((platform) => platform.serviceName),
+        },
+      },
+    })
+  } catch (error) {
+    console.error('[ADMIN_SOCIAL_INTEGRATIONS]', error)
+  }
+
   const platformFrequency = recentPosts.reduce<Record<string, number>>((acc, post) => {
     post.platforms.forEach((platform) => {
       acc[platform] = (acc[platform] || 0) + 1
     })
     return acc
   }, {})
+
+  const platformOptions: SocialPlatformOption[] = SOCIAL_PLATFORM_CONFIG.map((config) => {
+    const serviceKey = serviceKeys.find(
+      (key) => key.serviceName === config.serviceName && key.isActive,
+    )
+
+    return {
+      value: config.value,
+      label: config.label,
+      description: config.description,
+      handle: config.handle,
+      connectUrl: config.connectUrl,
+      isConnected: Boolean(serviceKey),
+      lastSyncedAt: serviceKey?.lastUsed ? serviceKey.lastUsed.toISOString() : null,
+    }
+  })
+
+  const integrationCards = SOCIAL_PLATFORM_CONFIG.map((config) => {
+    const serviceKey = serviceKeys.find(
+      (key) => key.serviceName === config.serviceName && key.isActive,
+    )
+
+    return {
+      id: config.value,
+      label: config.label,
+      description: config.description,
+      handle: config.handle,
+      icon: config.icon,
+      status: serviceKey ? 'connected' : 'not-connected',
+      connectUrl: config.connectUrl,
+      lastSyncedAt: serviceKey?.lastUsed ? serviceKey.lastUsed.toISOString() : null,
+    }
+  })
 
   return {
     recentPosts,
@@ -63,6 +172,8 @@ async function getSocialMediaData() {
       count: item._count._all,
     })),
     platformFrequency,
+    platformOptions,
+    integrationCards,
   }
 }
 
@@ -108,7 +219,8 @@ export default async function SocialMediaPage() {
   const canPublish = await hasPermission(user, 'social_media:publish')
   const canSchedule = await hasPermission(user, 'social_media:schedule')
 
-  const { recentPosts, scheduledPosts, statusCounts, platformFrequency } = await getSocialMediaData()
+  const { recentPosts, scheduledPosts, statusCounts, platformFrequency, platformOptions, integrationCards } =
+    await getSocialMediaData()
 
   return (
     <div className="space-y-6">
@@ -125,6 +237,62 @@ export default async function SocialMediaPage() {
           </div>
         )}
       </div>
+
+      <div className="grid gap-4 lg:grid-cols-5">
+        {integrationCards.map((integration) => {
+          const Icon = integration.icon
+          const isConnected = integration.status === 'connected'
+          return (
+            <Card
+              key={integration.id}
+              className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <span
+                  className={cn(
+                    'flex h-10 w-10 items-center justify-center rounded-full',
+                    isConnected ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500',
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-slate-900">{integration.label}</p>
+                  <p className="text-xs text-slate-500">{integration.handle}</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-600">{integration.description}</p>
+              <div className="mt-auto flex items-center justify-between text-xs">
+                <Badge
+                  className={cn(
+                    'px-2 py-1 text-[11px]',
+                    isConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700',
+                  )}
+                >
+                  {isConnected ? 'Connected' : 'Requires setup'}
+                </Badge>
+                <Button variant="link" size="sm" asChild className="px-0 text-xs">
+                  <Link href={integration.connectUrl}>Manage</Link>
+                </Button>
+              </div>
+              {integration.lastSyncedAt ? (
+                <p className="text-[11px] text-slate-400">
+                  Synced {new Date(integration.lastSyncedAt).toLocaleString()}
+                </p>
+              ) : (
+                <p className="text-[11px] text-slate-400">No sync recorded yet</p>
+              )}
+            </Card>
+          )
+        })}
+      </div>
+
+      <SocialPostComposer
+        action={createSocialPost}
+        platformOptions={platformOptions}
+        canSchedule={canSchedule}
+        canPublish={canPublish}
+      />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {statusCounts.map((item) => (

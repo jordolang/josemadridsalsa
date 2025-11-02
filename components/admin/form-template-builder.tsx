@@ -1,0 +1,579 @@
+'use client'
+
+import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Card } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { cn } from '@/lib/utils'
+import { renderFormHtml } from '@/lib/forms/render'
+import type {
+  BusinessFormCategory,
+  BusinessFormTemplate,
+  BusinessFormSection,
+} from '@/types/forms'
+import type { FormBlockLibraryItem } from '@/lib/forms/templates'
+import { Download, FileType2, Layers, Printer, Sparkles, Wand2 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { createFormTemplate, updateFormTemplate } from '@/app/admin/forms/actions'
+
+type TemplateSource = NonNullable<BusinessFormTemplate['source']>
+
+type BuilderTemplate = BusinessFormTemplate & {
+  source: TemplateSource
+  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+  version?: number
+  updatedAt?: string
+}
+
+type FormTemplateBuilderProps = {
+  templates: BuilderTemplate[]
+  categories: BusinessFormCategory[]
+  blockLibrary: FormBlockLibraryItem[]
+}
+
+const ensureSource = (template: BuilderTemplate): BuilderTemplate => ({
+  ...template,
+  source: template.source ?? 'library',
+})
+
+const defaultSectionSelection = (template: BuilderTemplate) =>
+  template.source === 'saved'
+    ? template.sections.map((section) => section.id)
+    : template.sections
+        .filter((section) => section.defaultIncluded !== false)
+        .map((section) => section.id)
+
+export function FormTemplateBuilder({ templates, categories, blockLibrary }: FormTemplateBuilderProps) {
+  const router = useRouter()
+  const { toast } = useToast()
+  const [isSaving, startSaving] = useTransition()
+
+  const initialTemplates = useMemo(() => templates.map(ensureSource), [templates])
+  const defaultTemplate = initialTemplates[0]
+
+  const [templateList, setTemplateList] = useState<BuilderTemplate[]>(initialTemplates)
+  const [activeCategory, setActiveCategory] = useState<string>('all')
+  const [activeSource, setActiveSource] = useState<'all' | TemplateSource>('all')
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(defaultTemplate?.id ?? '')
+  const [customTitle, setCustomTitle] = useState<string>(defaultTemplate?.name ?? '')
+  const [selectedSections, setSelectedSections] = useState<string[]>(
+    defaultTemplate ? defaultSectionSelection(defaultTemplate) : [],
+  )
+  const [activeBlocks, setActiveBlocks] = useState<string[]>([])
+  const [includeBranding, setIncludeBranding] = useState<boolean>(true)
+  const [notes, setNotes] = useState<string>('')
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    setTemplateList(initialTemplates)
+  }, [initialTemplates])
+
+  const filteredTemplates = useMemo(() => {
+    return templateList.filter((template) => {
+      const categoryMatch = activeCategory === 'all' || template.categoryId === activeCategory
+      const sourceMatch = activeSource === 'all' || template.source === activeSource
+      return categoryMatch && sourceMatch
+    })
+  }, [templateList, activeCategory, activeSource])
+
+  useEffect(() => {
+    if (filteredTemplates.some((template) => template.id === selectedTemplateId)) {
+      return
+    }
+    const fallbackId = filteredTemplates[0]?.id ?? templateList[0]?.id
+    if (fallbackId) {
+      setSelectedTemplateId(fallbackId)
+    }
+  }, [filteredTemplates, templateList, selectedTemplateId])
+
+  const selectedTemplate = useMemo(
+    () => templateList.find((template) => template.id === selectedTemplateId) ?? defaultTemplate,
+    [templateList, selectedTemplateId, defaultTemplate],
+  )
+
+  useEffect(() => {
+    if (!selectedTemplate) {
+      return
+    }
+    setCustomTitle(selectedTemplate.name)
+    setSelectedSections(defaultSectionSelection(selectedTemplate))
+    setActiveBlocks([])
+    setNotes('')
+  }, [selectedTemplate])
+
+  const blockMap = useMemo(
+    () => Object.fromEntries(blockLibrary.map((block) => [block.id, block])),
+    [blockLibrary],
+  )
+
+  const combinedSections = useMemo(() => {
+    if (!selectedTemplate) {
+      return []
+    }
+    const blockSections = activeBlocks
+      .map((blockId) => blockMap[blockId]?.section)
+      .filter(Boolean) as BusinessFormSection[]
+    return [...selectedTemplate.sections, ...blockSections]
+  }, [selectedTemplate, activeBlocks, blockMap])
+
+  const includeSectionsList = useMemo(
+    () => Array.from(new Set(selectedSections)),
+    [selectedSections],
+  )
+
+  const previewHtml = useMemo(() => {
+    if (!selectedTemplate) {
+      return ''
+    }
+    const sectionsToRender = combinedSections.filter((section) => includeSectionsList.includes(section.id))
+    return renderFormHtml(
+      {
+        ...selectedTemplate,
+        sections: sectionsToRender,
+      },
+      {
+        title: customTitle.trim() || selectedTemplate.name,
+        includeSections: includeSectionsList,
+        includeBranding,
+        notes: notes.trim() || undefined,
+      },
+    )
+  }, [selectedTemplate, combinedSections, includeSectionsList, customTitle, includeBranding, notes])
+
+  const transformTemplateFromServer = (template: any): BuilderTemplate => ({
+    id: template.id,
+    name: template.name,
+    categoryId: template.category,
+    description: template.description ?? '',
+    tags: template.tags ?? [],
+    estimatedCompletion: template.estimatedCompletion ?? '',
+    recommendedUses: template.recommendedUses ?? [],
+    sections: Array.isArray(template.structure?.sections) ? template.structure.sections : [],
+    publicSlug: template.slug,
+    status: template.status,
+    version: template.version,
+    source: 'saved',
+    updatedAt: template.updatedAt ?? new Date().toISOString(),
+  })
+
+  const persistTemplate = (status: 'DRAFT' | 'PUBLISHED') => {
+    if (!selectedTemplate) {
+      toast({
+        variant: 'destructive',
+        title: 'Select a template',
+        description: 'Choose a template before saving.',
+      })
+      return
+    }
+
+    const sectionsToPersist = combinedSections.filter((section) => includeSectionsList.includes(section.id))
+    if (sectionsToPersist.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Select at least one section',
+        description: 'Choose the sections you want to include before saving.',
+      })
+      return
+    }
+
+    startSaving(async () => {
+      try {
+        const payload = {
+          id: selectedTemplate.source === 'saved' ? selectedTemplate.id : undefined,
+          slug: selectedTemplate.source === 'saved' ? selectedTemplate.publicSlug : undefined,
+          name: customTitle.trim() || selectedTemplate.name,
+          description: selectedTemplate.description,
+          categoryId: selectedTemplate.categoryId,
+          tags: selectedTemplate.tags,
+          estimatedCompletion: selectedTemplate.estimatedCompletion,
+          recommendedUses: selectedTemplate.recommendedUses,
+          sections: sectionsToPersist.map((section) => ({
+            ...section,
+            fields: section.fields ?? [],
+          })) as BusinessFormSection[],
+          status,
+        }
+
+        const result =
+          selectedTemplate.source === 'saved'
+            ? await updateFormTemplate(selectedTemplate.id, payload)
+            : await createFormTemplate(payload)
+
+        const mapped = transformTemplateFromServer(result)
+
+        setTemplateList((prev) => {
+          const withoutCurrent = prev.filter((template) => template.id !== mapped.id)
+          return [mapped, ...withoutCurrent]
+        })
+        setSelectedTemplateId(mapped.id)
+        setSelectedSections(mapped.sections.map((section) => section.id))
+
+        toast({
+          title: status === 'PUBLISHED' ? 'Template published' : 'Draft saved',
+          description: `${mapped.name} is now ${status.toLowerCase()}.`,
+        })
+
+        router.refresh()
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'An unexpected error occurred.'
+        toast({
+          variant: 'destructive',
+          title: 'Save failed',
+          description: message,
+        })
+      }
+    })
+  }
+
+  const handleCopyTemplate = async () => {
+    if (!previewHtml) {
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(previewHtml)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2500)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  const handleDownloadTemplate = () => {
+    if (!previewHtml || !selectedTemplate) {
+      return
+    }
+    const blob = new Blob([previewHtml], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const safeTitle = (customTitle || selectedTemplate.name).toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    link.href = url
+    link.download = `${safeTitle}.html`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const handlePrintPreview = () => {
+    if (!previewHtml) {
+      return
+    }
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=960,height=800')
+    if (!printWindow) {
+      return
+    }
+    printWindow.document.open()
+    printWindow.document.write(previewHtml)
+    printWindow.document.close()
+    printWindow.focus()
+  }
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+      <div className="space-y-4">
+        <Card className="space-y-4 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-salsa-500">Templates</p>
+              <h2 className="font-serif text-xl font-semibold text-slate-900">Form library</h2>
+            </div>
+            <div className="flex gap-2">
+              <Select value={activeSource} onValueChange={(value: 'all' | TemplateSource) => setActiveSource(value)}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Filter by source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All sources</SelectItem>
+                  <SelectItem value="library">Library</SelectItem>
+                  <SelectItem value="saved">Saved</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={activeCategory} onValueChange={setActiveCategory}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All categories</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {filteredTemplates.map((template) => {
+              const isActive = selectedTemplate?.id === template.id
+              return (
+                <button
+                  key={template.id}
+                  type="button"
+                  className={cn(
+                    'w-full rounded-xl border px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-salsa-500',
+                    isActive
+                      ? 'border-salsa-200 bg-salsa-50'
+                      : 'border-slate-200 bg-white hover:border-salsa-200 hover:bg-salsa-50/50',
+                  )}
+                  onClick={() => setSelectedTemplateId(template.id)}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-900">{template.name}</p>
+                    <div className="flex flex-wrap gap-1">
+                      <Badge variant="outline" className="border-slate-200 text-xs text-slate-600">
+                        {categories.find((category) => category.id === template.categoryId)?.label ?? template.categoryId}
+                      </Badge>
+                      {template.estimatedCompletion ? (
+                        <Badge variant="outline" className="border-slate-200 text-xs text-slate-600">
+                          {template.estimatedCompletion}
+                        </Badge>
+                      ) : null}
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'border-slate-200 text-xs capitalize',
+                          template.source === 'saved' ? 'text-emerald-600 border-emerald-200' : 'text-slate-500',
+                        )}
+                      >
+                        {template.source === 'saved' ? 'Saved' : 'Library'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <p className="mt-1 text-xs uppercase tracking-wide text-salsa-500">{template.tags.join(' · ')}</p>
+                  <p className="mt-2 text-sm text-slate-600">{template.description}</p>
+                  {template.source === 'saved' ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      {template.status ? (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'border-slate-200 text-xs capitalize',
+                            template.status === 'PUBLISHED'
+                              ? 'text-emerald-600 border-emerald-200'
+                              : template.status === 'ARCHIVED'
+                                ? 'text-slate-500 border-slate-200'
+                                : 'text-amber-600 border-amber-200',
+                          )}
+                        >
+                          {template.status.toLowerCase()}
+                        </Badge>
+                      ) : null}
+                      {template.version ? <span>v{template.version}</span> : null}
+                      {template.updatedAt ? (
+                        <span>
+                          Updated{' '}
+                          {new Date(template.updatedAt).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </button>
+              )
+            })}
+          </div>
+        </Card>
+
+        <Card className="space-y-4 p-5">
+          <div className="flex items-center gap-2">
+            <Layers className="h-4 w-4 text-slate-500" />
+            <h3 className="font-serif text-lg font-semibold text-slate-900">Sections</h3>
+          </div>
+          <div className="space-y-3">
+            {combinedSections.map((section) => {
+              const included = includeSectionsList.includes(section.id)
+              return (
+                <label
+                  key={section.id}
+                  className={cn(
+                    'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition',
+                    included ? 'border-salsa-200 bg-salsa-50' : 'border-slate-200 bg-white hover:border-slate-300',
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={included}
+                    onChange={() =>
+                      setSelectedSections((prev) =>
+                        prev.includes(section.id) ? prev.filter((id) => id !== section.id) : [...prev, section.id],
+                      )
+                    }
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-salsa-600 focus:ring-salsa-500"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{section.label}</p>
+                    {section.description ? (
+                      <p className="mt-1 text-xs text-slate-500">{section.description}</p>
+                    ) : null}
+                  </div>
+                </label>
+              )
+            })}
+          </div>
+        </Card>
+
+        <Card className="space-y-4 p-5">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-slate-500" />
+            <h3 className="font-serif text-lg font-semibold text-slate-900">Blocks</h3>
+          </div>
+          <p className="text-sm text-slate-600">
+            Drop reusable blocks into any template: terms, payment receipts, marketing consent, and more.
+          </p>
+          <div className="space-y-3">
+            {blockLibrary.map((block) => {
+              const isActive = activeBlocks.includes(block.id)
+              return (
+                <div key={block.id} className="rounded-xl border border-slate-200 bg-white px-3 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{block.label}</p>
+                      <p className="text-xs text-slate-500">{block.description}</p>
+                    </div>
+                    <Button
+                      variant={isActive ? 'outline' : 'default'}
+                      size="sm"
+                      onClick={() =>
+                        setActiveBlocks((prev) => (isActive ? prev.filter((id) => id !== block.id) : [...prev, block.id]))
+                      }
+                    >
+                      {isActive ? 'Remove' : 'Add'}
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      </div>
+
+      <div className="space-y-4">
+        <Card className="space-y-5 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-salsa-500">Builder</p>
+              <h2 className="font-serif text-2xl font-semibold text-slate-900">
+                {selectedTemplate?.name ?? 'Select a template'}
+              </h2>
+              <p className="text-xs text-slate-500">
+                {selectedTemplate?.source === 'saved'
+                  ? `Version ${selectedTemplate.version ?? 1}`
+                  : 'Library template'}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={handleCopyTemplate}>
+                <FileType2 className="mr-2 h-4 w-4" />
+                {copied ? 'Copied!' : 'Copy HTML'}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </Button>
+              <Button variant="default" size="sm" onClick={handlePrintPreview}>
+                <Printer className="mr-2 h-4 w-4" />
+                Print preview
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700" htmlFor="form-title">
+                Form title
+              </label>
+              <Input
+                id="form-title"
+                value={customTitle}
+                onChange={(event) => setCustomTitle(event.target.value)}
+                placeholder="Wholesale order form"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700" htmlFor="branding-toggle">
+                Branding
+              </label>
+              <button
+                type="button"
+                id="branding-toggle"
+                onClick={() => setIncludeBranding((prev) => !prev)}
+                className={cn(
+                  'flex h-10 w-full items-center justify-center rounded-md border text-sm font-medium transition',
+                  includeBranding
+                    ? 'border-salsa-200 bg-salsa-50 text-salsa-600'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
+                )}
+              >
+                {includeBranding ? 'Branding enabled' : 'Branding hidden'}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700" htmlFor="form-notes">
+              Notes for the footer (optional)
+            </label>
+            <Textarea
+              id="form-notes"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              rows={3}
+              placeholder="Add instructions for volunteers, accounting notes, or pickup reminders."
+            />
+          </div>
+
+          {selectedTemplate ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Wand2 className="h-4 w-4 text-slate-500" />
+                Recommended uses
+              </h3>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                {selectedTemplate.recommendedUses.map((use) => (
+                  <li key={use}>{use}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => persistTemplate('DRAFT')}
+              disabled={isSaving}
+              className="bg-slate-900 hover:bg-slate-800"
+            >
+              {isSaving ? 'Saving…' : 'Save draft'}
+            </Button>
+            <Button onClick={() => persistTemplate('PUBLISHED')} disabled={isSaving}>
+              {isSaving ? 'Publishing…' : 'Publish'}
+            </Button>
+          </div>
+        </Card>
+
+        <Card className="overflow-hidden border border-slate-200">
+          <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
+            <h3 className="text-sm font-semibold text-slate-900">Live preview</h3>
+            <p className="text-xs text-slate-500">Scroll to review the printable layout exactly as it will export.</p>
+          </div>
+          <div className="max-h-[760px] overflow-auto bg-slate-100">
+            <div className="min-h-[640px] bg-white" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+          </div>
+        </Card>
+      </div>
+    </div>
+  )
+}

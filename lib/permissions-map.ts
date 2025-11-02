@@ -119,6 +119,12 @@ export const adminNavigation: NavItem[] = [
     ],
   },
   {
+    label: 'Forms',
+    href: '/admin/forms',
+    icon: 'FileText',
+    permission: 'content:read',
+  },
+  {
     label: 'Social Media',
     href: '/admin/social',
     icon: 'Share2',
@@ -138,6 +144,21 @@ export const adminNavigation: NavItem[] = [
       {
         label: 'Invoices',
         href: '/admin/invoices',
+        permission: 'financials:read',
+      },
+      {
+        label: 'Payroll',
+        href: '/admin/financials/payroll',
+        permission: 'financials:read',
+      },
+      {
+        label: 'Expenses',
+        href: '/admin/financials/expenses',
+        permission: 'financials:read',
+      },
+      {
+        label: 'Taxes',
+        href: '/admin/financials/taxes',
         permission: 'financials:read',
       },
     ],

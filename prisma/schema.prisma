@@ -697,6 +697,44 @@ model SocialMediaPostMedia {
   @@map("social_media_post_media")
 }
 
+model FormTemplate {
+  id                  String               @id @default(cuid())
+  slug                String               @unique
+  name                String
+  description         String?
+  category            String
+  tags                String[]
+  estimatedCompletion String?            @map("estimated_completion")
+  recommendedUses     String[]           @map("recommended_uses")
+  status              FormTemplateStatus   @default(DRAFT)
+  version             Int                  @default(1)
+  structure           Json
+  publishedAt         DateTime?            @map("published_at")
+
+  createdById         String?              @map("created_by_id")
+  updatedById         String?              @map("updated_by_id")
+
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+
+  versions            FormTemplateVersion[]
+
+  @@map("form_templates")
+}
+
+model FormTemplateVersion {
+  id          String         @id @default(cuid())
+  templateId  String         @map("template_id")
+  version     Int
+  structure   Json
+  createdAt   DateTime       @default(now()) @map("created_at")
+  createdById String?        @map("created_by_id")
+
+  template    FormTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  @@unique([templateId, version])
+  @@map("form_template_versions")
+}
+
 model EmailTemplate {
   id        String   @id @default(cuid())
   key       String   @unique  // e.g., "order_confirmation", "shipping_notification"
@@ -802,6 +840,12 @@ enum SocialMediaPostStatus {
   FAILED
 }
 
+enum FormTemplateStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 enum InvoiceStatus {
   DRAFT
   SENT
@@ -893,4 +937,29 @@ model PasswordResetToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("password_reset_tokens")
+}
+
+model RetailLocation {
+  id             String   @id @default(cuid())
+  businessName   String
+  address        String
+  city           String
+  state          String
+  zipCode        String?
+  phone          String?
+  website        String?
+  photoUrl       String?
+  googlePlacesId String?
+  county         String?
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([city])
+  @@index([state])
+  @@index([state, city])
+  @@index([isActive])
+  @@unique([businessName, address])
+  @@map("retail_locations")
 }

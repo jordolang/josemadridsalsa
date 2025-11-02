@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { Search, ShoppingCart, Menu, X, User, Heart, LogOut, Settings } from "lucide-react";
+import { Search, ShoppingCart, Menu, X, User, Heart, LogOut, Settings, Facebook, Twitter, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -28,6 +28,10 @@ const navigationItems = [
     title: "Products",
     href: "/products",
     megaMenu: salsaCategories,
+  },
+  {
+    title: "Merchandise",
+    href: "/merchandise",
   },
   {
     title: "Recipes",
@@ -56,6 +60,28 @@ const navigationItems = [
   {
     title: "Where is Jose?",
     href: "/where-is-jose",
+  },
+];
+
+const googleBusinessUrl =
+  process.env.NEXT_PUBLIC_GOOGLE_BUSINESS_URL ??
+  "https://g.page/jose-madrid-salsa/review";
+
+const socialLinks = [
+  {
+    name: "Facebook",
+    href: "https://www.facebook.com/josemadridsalsa",
+    icon: Facebook,
+  },
+  {
+    name: "X (Twitter)",
+    href: "https://twitter.com/josemadridsalsa",
+    icon: Twitter,
+  },
+  {
+    name: "Google Business",
+    href: googleBusinessUrl,
+    icon: Store,
   },
 ];
 
@@ -109,6 +135,7 @@ export function Navigation() {
                 fill
                 className="object-contain"
                 priority
+                sizes="(max-width: 640px) 2.5rem, 3rem"
               />
             </div>
             <span className="hidden sm:inline text-gradient">Jose Madrid Salsa</span>
@@ -199,10 +226,47 @@ export function Navigation() {
 
           {/* Actions */}
           <div className="flex items-center gap-1 lg:gap-2 flex-shrink-0">
+            {/* Social Links */}
+            <div className="hidden lg:flex items-center gap-1">
+              {socialLinks.map((social) => (
+                <Button
+                  key={social.name}
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="p-1.5 text-gray-600 hover:text-salsa-600"
+                >
+                  <a
+                    href={social.href}
+                    aria-label={`Visit our ${social.name} profile`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <social.icon className="w-4 h-4" />
+                  </a>
+                </Button>
+              ))}
+            </div>
+
             {/* Search Icon (Mobile) */}
             <Button variant="ghost" size="sm" className="md:hidden p-1.5">
               <Search className="w-4 h-4" />
             </Button>
+
+            {/* Account (Mobile) */}
+            {status === "authenticated" ? (
+              <Button variant="ghost" size="sm" asChild className="lg:hidden p-1.5">
+                <Link href="/account" aria-label="Go to your account">
+                  <User className="w-4 h-4" />
+                </Link>
+              </Button>
+            ) : (
+              <Button variant="ghost" size="sm" asChild className="lg:hidden p-1.5">
+                <Link href="/auth/signin" aria-label="Sign in to your account">
+                  <User className="w-4 h-4" />
+                </Link>
+              </Button>
+            )}
 
             {/* Account */}
             {session ? (
@@ -343,6 +407,33 @@ export function Navigation() {
                       </div>
                     ))}
                   </nav>
+
+                  {/* Mobile Social Links */}
+                  <div className="pt-4 border-t">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">
+                      Connect with us
+                    </p>
+                    <div className="flex items-center gap-3">
+                      {socialLinks.map((social) => (
+                        <Button
+                          key={social.name}
+                          variant="outline"
+                          size="sm"
+                          asChild
+                          className="h-9 w-9 rounded-full px-0 text-gray-600"
+                        >
+                          <a
+                            href={social.href}
+                            aria-label={`Open our ${social.name} profile`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <social.icon className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
 
                   {/* Mobile Account Actions */}
                   <div className="pt-4 border-t space-y-2">

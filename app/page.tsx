@@ -35,6 +35,7 @@ export default function Home() {
                   fill
                   className="object-cover object-center rounded-2xl shadow-2xl"
                   priority
+                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 45vw"
                 />
               </div>
             </div>
@@ -154,6 +155,7 @@ export default function Home() {
                   alt="Fresh ingredients for salsa"
                   fill
                   className="object-contain rounded-2xl"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 45vw, 40vw"
                 />
               </div>
             </div>
