@@ -334,8 +334,8 @@ export default function FundraisingPage() {
               </Button>
             </div>
             <p className="text-gray-600 mt-6">
-              Questions? Call us at <a href="tel:740-521-4304" className="font-semibold text-salsa-600 hover:text-salsa-700">740-521-4304</a> or email{' '}
-              <a href="mailto:fundraising@josemadridsalsa.com" className="font-semibold text-salsa-600 hover:text-salsa-700">fundraising@josemadridsalsa.com</a>
+              Questions? Call us at <a href="tel:740-521-4304" className="font-semibold text-salsa-600 hover:text-salsa-700">(740) 521-4304</a> or email{' '}
+              <a href="mailto:mike@josemadrid.net" className="font-semibold text-salsa-600 hover:text-salsa-700">mike@josemadrid.net</a>
             </p>
           </div>
         </div>

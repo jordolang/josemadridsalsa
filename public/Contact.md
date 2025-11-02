@@ -4,8 +4,10 @@ To contact us please fill in this inquiry form and one of our team members will 
 
 Or feel free to call or email directly.
 
-**email:** mike@josemadridsalsa.com
+**email:** mike@josemadrid.net
 
-**phone:** 740-521-4304 
+**phone:** (740) 521-4304
+
+**address:** 601 Putnam Ave, Zanesville, OH 43701
 
 Thanks!

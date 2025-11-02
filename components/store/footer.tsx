@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Facebook, 
-  Instagram, 
-  Twitter, 
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Facebook,
+  Instagram,
+  Twitter,
+  Store,
   Heart,
   Star,
   ArrowRight,
@@ -25,34 +26,29 @@ import { toast } from "@/hooks/use-toast";
 const footerLinks = {
   shop: [
     { label: "All Salsas", href: "/salsas" },
-    { label: "Mild & Sweet", href: "/salsas?category=mild" },
-    { label: "Medium Heat", href: "/salsas?category=medium" },
-    { label: "Hot & Spicy", href: "/salsas?category=hot" },
-    { label: "Gourmet Fruit", href: "/salsas?category=gourmet" },
-    { label: "Bundle Deals", href: "/bundles" },
+    { label: "Merchandise", href: "/merchandise" },
+    { label: "Fundraising Store", href: "/fundraising" },
+    { label: "Wholesale Ordering", href: "/wholesale" },
   ],
   company: [
     { label: "About Jose", href: "/about" },
-    { label: "Our Story", href: "/story" },
-    { label: "Find Us in Stores", href: "/find-us" },
+    { label: "Our Story", href: "/our-story" },
+    { label: "Find Us", href: "/find-us" },
     { label: "Where is Jose?", href: "/where-is-jose" },
     { label: "Recipes", href: "/recipes" },
-    { label: "Reviews", href: "/testimonials" },
   ],
   business: [
-    { label: "Fundraising", href: "/fundraising" },
-    { label: "Wholesale", href: "/wholesale" },
-    { label: "Success Stories", href: "/success-stories" },
-    { label: "Become a Partner", href: "/partner" },
-    { label: "Bulk Orders", href: "/bulk-orders" },
+    { label: "Fundraising Program", href: "/fundraising" },
+    { label: "Wholesale Program", href: "/wholesale" },
+    { label: "Retail Partners", href: "/find-us" },
+    { label: "Business Forms", href: "/forms" },
+    { label: "Admin Portal", href: "/admin" },
   ],
   support: [
-    { label: "Contact Us", href: "/contact" },
-    { label: "FAQ", href: "/faq" },
-    { label: "Shipping Info", href: "/shipping" },
-    { label: "Returns", href: "/returns" },
-    { label: "Track Order", href: "/track" },
-    { label: "Size Guide", href: "/size-guide" },
+    { label: "Customer Login", href: "/auth/signin" },
+    { label: "Track Orders", href: "/account/orders" },
+    { label: "Manage Subscription", href: "/account/settings" },
+    { label: "Contact Support", href: "mailto:support@josemadridsalsa.com" },
   ],
   legal: [
     { label: "Privacy Policy", href: "/privacy" },
@@ -61,6 +57,16 @@ const footerLinks = {
     { label: "Accessibility", href: "/accessibility" },
   ],
 };
+
+const supportPhone = process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "(740) 521-4304";
+const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "mike@josemadrid.net";
+const headquartersLocation = process.env.NEXT_PUBLIC_HQ_LOCATION ?? "601 Putnam Ave, Zanesville, OH 43701";
+
+const getPhoneHref = (value: string) => `tel:${value.replace(/[^+\d]/g, "")}`;
+
+const googleBusinessUrl =
+  process.env.NEXT_PUBLIC_GOOGLE_BUSINESS_URL ??
+  "https://g.page/jose-madrid-salsa/review";
 
 const socialLinks = [
   {
@@ -76,10 +82,16 @@ const socialLinks = [
     hoverColor: "hover:text-pink-500",
   },
   {
-    name: "Twitter",
+    name: "X (Twitter)",
     href: "https://twitter.com/josemadridsalsa", 
     icon: Twitter,
     hoverColor: "hover:text-blue-400",
+  },
+  {
+    name: "Google My Business",
+    href: googleBusinessUrl,
+    icon: Store,
+    hoverColor: "hover:text-emerald-400",
   },
 ];
 
@@ -211,21 +223,25 @@ export function Footer() {
 
             {/* Contact Info */}
             <div className="space-y-2 text-sm text-gray-300">
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-salsa-400" />
-                <a href="tel:+1-555-SALSA-JM" className="hover:text-white transition-colors">
-                  (555) SALSA-JM
-                </a>
-              </div>
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-salsa-400" />
-                <a href="mailto:hello@josemadridsalsa.com" className="hover:text-white transition-colors">
-                  hello@josemadridsalsa.com
-                </a>
-              </div>
+              {supportPhone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-salsa-400" />
+                  <a href={getPhoneHref(supportPhone)} className="hover:text-white transition-colors">
+                    {supportPhone}
+                  </a>
+                </div>
+              )}
+              {supportEmail && (
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-salsa-400" />
+                  <a href={`mailto:${supportEmail}`} className="hover:text-white transition-colors">
+                    {supportEmail}
+                  </a>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-salsa-400" />
-                <span>Ohio, USA</span>
+                <span>{headquartersLocation}</span>
               </div>
             </div>
           </div>

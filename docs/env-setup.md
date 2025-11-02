@@ -39,6 +39,39 @@ RESEND_API_KEY="re_..."
 FROM_EMAIL="orders@josemadridsalsa.com"
 ```
 
+## Customer Experience & Marketing
+
+### Public Site Contact + Reviews
+```bash
+NEXT_PUBLIC_SUPPORT_EMAIL="mike@josemadrid.net"                 # Footer contact email
+NEXT_PUBLIC_SUPPORT_PHONE="(740) 521-4304"                      # Footer phone number (format for tel:)
+NEXT_PUBLIC_HQ_LOCATION="601 Putnam Ave, Zanesville, OH 43701"  # Displayed in footer contact block
+NEXT_PUBLIC_GOOGLE_BUSINESS_URL="https://g.page/..."            # Review link for navigation/footer
+GOOGLE_REVIEW_URL="https://g.page/..."                          # Optional override for checkout review CTA
+NEXT_PUBLIC_FACEBOOK_HANDLE="@JoseMadridSalsa"                  # Displayed in social management + forms
+NEXT_PUBLIC_INSTAGRAM_HANDLE="@JoseMadridSalsa"
+NEXT_PUBLIC_TWITTER_HANDLE="@JoseMadridSalsa"
+NEXT_PUBLIC_TIKTOK_HANDLE="@JoseMadridSalsa"
+NEXT_PUBLIC_GMB_SHORTNAME="Jose Madrid Salsa"
+```
+
+### Merchandise Fulfillment
+```bash
+NEXT_PUBLIC_FULFILLMENT_PARTNER="SpiceLine Fulfillment"         # Print-on-demand partner name
+NEXT_PUBLIC_FULFILLMENT_EMAIL="partner-support@domain.com"      # Mailto used for setup requests
+NEXT_PUBLIC_FULFILLMENT_PORTAL_URL="https://portal.partner.com" # External portal for merch management
+```
+
+### AI Assistant
+```bash
+AI_CHAT_PROVIDER="openai"                                      # or "smileyface"
+NEXT_PUBLIC_AI_CHAT_PROVIDER="OpenAI"                          # Public-facing provider label
+OPENAI_API_KEY="sk-..."                                        # Required when AI_CHAT_PROVIDER=openai
+OPENAI_MODEL="gpt-4o-mini"                                     # Optional override
+SMILEYFACE_API_KEY="sf-..."                                    # Required when AI_CHAT_PROVIDER=smileyface
+SMILEYFACE_API_BASE="https://api.smileyface.ai/v1"             # Optional, defaults to SmileyFace production URL
+```
+
 ## File Upload
 
 ### UploadThing
