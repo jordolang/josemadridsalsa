@@ -26,7 +26,7 @@ export async function GET() {
   }
 
   try {
-    const response = await fetch(
+    const apiResponse = await fetch(
       `${PLACES_API_BASE}/places/${PLACE_ID}`,
       {
         method: 'GET',
@@ -38,16 +38,16 @@ export async function GET() {
       }
     )
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Google Places API error:', response.status, errorText)
+    if (!apiResponse.ok) {
+      const errorText = await apiResponse.text()
+      console.error('Google Places API error:', apiResponse.status, errorText)
       return NextResponse.json(
         { error: 'Failed to fetch reviews from Google' },
-        { status: response.status }
+        { status: apiResponse.status }
       )
     }
 
-    const data = await response.json()
+    const data = await apiResponse.json()
 
     // Extract reviews
     const reviews = data.reviews || []
