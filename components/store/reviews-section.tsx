@@ -31,7 +31,15 @@ export function ReviewsSection() {
           throw new Error('Failed to fetch reviews')
         }
         const data = await response.json()
-        setReviews(data.reviews || [])
+        const allReviews = data.reviews || []
+        
+        // Shuffle reviews client-side for true randomization on each page load
+        const shuffled = [...allReviews].sort(() => Math.random() - 0.5)
+        
+        // Select 9 random reviews
+        const selectedReviews = shuffled.slice(0, 9)
+        
+        setReviews(selectedReviews)
         setTotalRating(data.totalRating || 0)
         setTotalReviews(data.totalReviews || 0)
       } catch (err) {

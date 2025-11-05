@@ -52,11 +52,8 @@ export async function GET() {
     // Extract reviews
     const reviews = data.reviews || []
 
-    // Shuffle reviews to randomize
-    const shuffled = [...reviews].sort(() => Math.random() - 0.5)
-
-    // Return 9 random reviews
-    const selectedReviews = shuffled.slice(0, 9).map((review: any) => ({
+    // Return all reviews (client will randomize)
+    const allReviews = reviews.map((review: any) => ({
       authorName: review.authorAttribution?.displayName || 'Anonymous',
       rating: review.rating || 5,
       text: review.text?.text || '',
@@ -71,7 +68,7 @@ export async function GET() {
     }))
 
     const response = NextResponse.json({
-      reviews: selectedReviews,
+      reviews: allReviews,
       totalRating: data.rating || 0,
       totalReviews: data.userRatingCount || 0,
     })
