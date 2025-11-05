@@ -38,6 +38,10 @@ const navigationItems = [
     href: "/recipes",
   },
   {
+    title: "Gift Certificates",
+    href: "/gift-certificates/purchase",
+  },
+  {
     title: "About Jose",
     href: "/about",
   },
