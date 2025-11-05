@@ -98,7 +98,7 @@ GOOGLE_CLIENT_SECRET="..."
 
 ### Google Analytics
 ```bash
-GOOGLE_ANALYTICS_ID="G-XXXXXXXXXX"
+NEXT_PUBLIC_GOOGLE_ANALYTICS_ID="G-HG4QV5GFKH"  # Default: G-HG4QV5GFKH (hardcoded as fallback)
 ```
 
 ### Google My Business (Phase 4)
