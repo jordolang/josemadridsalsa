@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -11,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 
-export default function GiftCertificateSuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams()
   const [code, setCode] = useState<string | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
@@ -61,6 +62,32 @@ export default function GiftCertificateSuccessPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function GiftCertificateSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl text-center text-green-600">
+              Gift Certificate Purchase Successful!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="text-center space-y-4">
+              <div className="text-6xl">🎁</div>
+              <p className="text-lg text-gray-700">
+                Loading your gift certificate details...
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   )
 }
 
