@@ -67,19 +67,19 @@ export async function GET() {
       publishTime: review.publishTime || null,
     }))
 
-    const response = NextResponse.json({
+    const nextResponse = NextResponse.json({
       reviews: allReviews,
       totalRating: data.rating || 0,
       totalReviews: data.userRatingCount || 0,
     })
 
     // Cache for 2 hours
-    response.headers.set(
+    nextResponse.headers.set(
       'Cache-Control',
       'public, s-maxage=7200, stale-while-revalidate=86400'
     )
 
-    return response
+    return nextResponse
   } catch (error) {
     console.error('Error fetching Google reviews:', error)
     return NextResponse.json(
