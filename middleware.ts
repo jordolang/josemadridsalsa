@@ -5,6 +5,26 @@ import { getToken } from 'next-auth/jwt'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Block common WordPress probe paths (bots/scanners)
+  const wordpressPaths = [
+    '/wordpress',
+    '/wp-admin',
+    '/wp-content',
+    '/wp-includes',
+    '/wp-login.php',
+    '/wp-config.php',
+    '/xmlrpc.php',
+    '/wp-cron.php',
+    '/readme.html',
+    '/license.txt',
+    '/wp-load.php',
+    '/wp-blog-header.php',
+  ]
+
+  if (wordpressPaths.some((path) => pathname.startsWith(path))) {
+    return new NextResponse(null, { status: 404 })
+  }
+
   // Protect /admin routes
   if (pathname.startsWith('/admin')) {
     const token = await getToken({
