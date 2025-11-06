@@ -2,8 +2,7 @@ import { Metadata } from 'next';
 import { LocationCard } from './_components/LocationCard';
 import { parseFindUsMarkdown, readFindUsMarkdownAbsolute, buildStreetViewOrMapImageUrl } from '@/lib/find-us-parser';
 import { MapPin } from 'lucide-react';
-import fs from 'fs/promises';
-import path from 'path';
+import { prisma } from '@/lib/prisma';
 
 export const metadata: Metadata = {
   title: 'Find Us Locally - Jose Madrid Salsa',
@@ -34,24 +33,27 @@ type LocationsByCity = Record<string, Array<{
 type LocationsByState = Record<string, LocationsByCity>;
 
 export default async function FindUsPage() {
-  // Read and parse markdown into locations
-  const mdPath = await readFindUsMarkdownAbsolute();
-  const parsed = await parseFindUsMarkdown(mdPath);
+  // Load from database
+  const dbLocations = await prisma.retailLocation.findMany({
+    where: { isActive: true },
+    orderBy: [
+      { state: 'asc' },
+      { city: 'asc' },
+      { sortOrder: 'asc' },
+      { businessName: 'asc' },
+    ],
+  });
 
-  // Optional: overlay photo URLs from a pre-generated map (Google Places photos)
-  const photosMapPath = path.join(process.cwd(), 'public', 'location-photos.json');
-  let photosMap: Record<string, string> = {};
-  try {
-    const file = await fs.readFile(photosMapPath, 'utf-8');
-    photosMap = JSON.parse(file) as Record<string, string>;
-  } catch {
-    // no pre-generated photos map, fall back to Street View
-  }
-
-  // Enrich with photoUrl using pre-generated photo map or Street View fallback
-  const locations = parsed.map(loc => ({
-    ...loc,
-    photoUrl: photosMap[loc.id] || buildStreetViewOrMapImageUrl(loc.address, loc.city, loc.state),
+  const locations = dbLocations.map(loc => ({
+    id: loc.id,
+    businessName: loc.businessName,
+    address: loc.address,
+    city: loc.city,
+    state: loc.state,
+    zipCode: loc.zipCode,
+    phone: loc.phone,
+    website: loc.website,
+    photoUrl: loc.photoUrl || buildStreetViewOrMapImageUrl(loc.address, loc.city, loc.state),
   }));
 
   // Separate Ohio from other states
