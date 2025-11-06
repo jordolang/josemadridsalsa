@@ -54,21 +54,23 @@ const initialFormState: GiftCertificateFormState = {
   nonRefundableAgreement: false,
 }
 
-const CardElementOptions = {
+const getCardElementOptions = (isDark: boolean) => ({
   style: {
     base: {
-      color: '#1f2937',
+      color: isDark ? '#e5e7eb' : '#1f2937',
       fontSize: '16px',
       '::placeholder': {
         color: '#9ca3af',
       },
+      iconColor: isDark ? '#e5e7eb' : '#374151',
     },
     invalid: {
       color: '#ef4444',
+      iconColor: '#ef4444',
     },
   },
   hidePostalCode: true,
-}
+} as const)
 
 function GiftCertificatePurchaseForm() {
   const stripe = useStripe()
@@ -78,6 +80,10 @@ function GiftCertificatePurchaseForm() {
   const [formState, setFormState] = useState<GiftCertificateFormState>(initialFormState)
   const [isProcessing, setIsProcessing] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const isDark = useMemo(() => {
+    if (typeof document === 'undefined') return false
+    return document.documentElement.classList.contains('dark')
+  }, [])
 
   const amount = parseFloat(formState.amount) || 0
 
@@ -202,20 +208,20 @@ function GiftCertificatePurchaseForm() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Purchase Gift Certificate</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold text-foreground mb-2">Purchase Gift Certificate</h1>
+        <p className="text-muted-foreground">
           Give the gift of Jose Madrid Salsa! Your recipient will receive a gift certificate they can use anytime.
         </p>
       </div>
 
-      <Card>
+      <Card className="bg-card surface-shadow">
         <CardHeader>
           <CardTitle>Gift Certificate Details</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <section className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900">Your Information</h2>
+              <h2 className="text-xl font-semibold text-foreground">Your Information</h2>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Label htmlFor="purchaserName">Your Name *</Label>
@@ -242,7 +248,7 @@ function GiftCertificatePurchaseForm() {
             </section>
 
             <section className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900">Recipient Information</h2>
+              <h2 className="text-xl font-semibold text-foreground">Recipient Information</h2>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Label htmlFor="recipientName">Recipient&apos;s Name *</Label>
@@ -269,7 +275,7 @@ function GiftCertificatePurchaseForm() {
             </section>
 
             <section className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900">Gift Certificate Details</h2>
+              <h2 className="text-xl font-semibold text-foreground">Gift Certificate Details</h2>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Label htmlFor="amount">Amount *</Label>
@@ -284,7 +290,7 @@ function GiftCertificatePurchaseForm() {
                     placeholder="0.00"
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-1">Minimum amount: $1.00</p>
+                  <p className="text-xs text-muted-foreground mt-1">Minimum amount: $1.00</p>
                 </div>
                 <div>
                   <Label htmlFor="theme">Gift Certificate Theme *</Label>
@@ -326,7 +332,7 @@ function GiftCertificatePurchaseForm() {
                   name="nonRefundableAgreement"
                   checked={formState.nonRefundableAgreement}
                   onChange={handleInputChange}
-                  className="mt-1 h-4 w-4 rounded border-gray-300 text-salsa-600 focus:ring-salsa-500"
+                  className="mt-1 h-4 w-4 rounded border-border text-salsa-600 focus:ring-salsa-500"
                   required
                 />
                 <Label htmlFor="nonRefundableAgreement" className="font-normal">
@@ -336,14 +342,14 @@ function GiftCertificatePurchaseForm() {
             </section>
 
             <section className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900">Payment Details</h2>
-              <div className="rounded-md border border-gray-200 p-4">
-                <CardElement options={CardElementOptions} />
+              <h2 className="text-xl font-semibold text-foreground">Payment Details</h2>
+              <div className="rounded-md border border-border p-4 bg-card/60">
+                <CardElement options={getCardElementOptions(isDark)} />
               </div>
             </section>
 
             {errorMessage && (
-              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div className="rounded-md border border-red-200 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-200">
                 {errorMessage}
               </div>
             )}
@@ -356,7 +362,7 @@ function GiftCertificatePurchaseForm() {
               >
                 {isProcessing ? 'Processing...' : `Purchase Gift Certificate - ${formatPrice(amount)}`}
               </Button>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Your payment is secure and encrypted. The recipient will receive their gift certificate via email.
               </p>
             </div>
@@ -371,8 +377,8 @@ export default function GiftCertificatePurchasePage() {
   if (!stripePromise) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Checkout unavailable</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold text-foreground mb-4">Checkout unavailable</h1>
+        <p className="text-muted-foreground">
           Stripe is not configured. Please set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY and
           STRIPE_SECRET_KEY to enable payments.
         </p>
