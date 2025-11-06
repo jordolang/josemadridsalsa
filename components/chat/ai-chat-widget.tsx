@@ -96,7 +96,7 @@ export function AiChatWidget() {
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
       {isOpen && (
-        <div className="w-[340px] max-w-[calc(100vw-3rem)] overflow-hidden rounded-3xl border border-salsa-100 bg-white shadow-2xl ring-1 ring-black/5">
+        <div className="w-[480px] max-w-[calc(100vw-3rem)] overflow-hidden rounded-3xl border border-border bg-card shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
           <div className="flex items-center justify-between bg-gradient-to-r from-salsa-600 via-salsa-500 to-chile-500 px-4 py-3 text-white">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/80">AI assistant</p>
@@ -115,8 +115,8 @@ export function AiChatWidget() {
             </button>
           </div>
 
-          <div className="flex h-[360px] flex-col justify-between">
-            <div className="space-y-3 overflow-y-auto px-4 py-4 text-sm text-slate-700">
+          <div className="flex h-[600px] flex-col justify-between">
+            <div className="space-y-3 overflow-y-auto px-4 py-4 text-sm text-foreground">
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -126,11 +126,11 @@ export function AiChatWidget() {
                     className={`max-w-[90%] rounded-2xl px-4 py-3 ${
                       message.role === 'user'
                         ? 'bg-salsa-600 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-800'
+                        : 'bg-muted text-foreground'
                     }`}
                   >
                     {message.role === 'assistant' ? (
-                      <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         <Bot className="h-3.5 w-3.5" />
                         Jose Madrid Salsa
                       </div>
@@ -141,7 +141,7 @@ export function AiChatWidget() {
               ))}
               {isLoading ? (
                 <div className="flex justify-start">
-                  <div className="flex items-center gap-2 rounded-2xl bg-slate-100 px-4 py-2 text-xs text-slate-500">
+                  <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2 text-xs text-muted-foreground">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     Typing…
                   </div>
@@ -150,32 +150,32 @@ export function AiChatWidget() {
               <div ref={endRef} />
             </div>
 
-            <form onSubmit={handleSubmit} className="border-t border-slate-100 bg-white px-4 py-3">
-              <Textarea
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                placeholder="Ask about flavors, fundraising, or order support..."
-                rows={2}
-                maxLength={600}
-                className="resize-none bg-slate-50"
-              />
-              {error ? (
-                <p className="mt-2 text-xs text-red-600">{error}</p>
-              ) : (
-                <p className="mt-2 text-xs text-slate-400">
-                  Powered by {process.env.NEXT_PUBLIC_AI_CHAT_PROVIDER ?? 'OpenAI'} • Please avoid sharing sensitive info.
-                </p>
-              )}
-              <div className="mt-3 flex justify-end">
+            <form onSubmit={handleSubmit} className="border-t border-border bg-card px-4 py-3">
+              <div className="flex gap-2">
+                <Textarea
+                  value={input}
+                  onChange={(event) => setInput(event.target.value)}
+                  placeholder="Ask about flavors, fundraising, or order support..."
+                  rows={2}
+                  maxLength={600}
+                  className="resize-none bg-muted flex-1"
+                />
                 <Button
                   type="submit"
-                  className="bg-salsa-600 hover:bg-salsa-700"
+                  className="bg-salsa-600 hover:bg-salsa-700 self-end"
                   disabled={isLoading || !input.trim()}
+                  size="icon"
                 >
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                  {isLoading ? 'Sending...' : 'Send'}
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
               </div>
+              {error ? (
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>
+              ) : (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Powered by {process.env.NEXT_PUBLIC_AI_CHAT_PROVIDER ?? 'OpenAI'} • Avoid sharing sensitive info
+                </p>
+              )}
             </form>
           </div>
         </div>

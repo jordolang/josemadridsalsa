@@ -1,4 +1,8 @@
 import { NextResponse } from 'next/server'
+import { indexAllContent } from '@/lib/ai-rag/indexer'
+import { searchContent, formatContextForLLM } from '@/lib/ai-rag/retriever'
+
+export const runtime = 'nodejs' // Required for Prisma and file system access
 
 type ChatMessage = {
   role: 'system' | 'user' | 'assistant'
@@ -10,15 +14,40 @@ type ChatRequest = {
 }
 
 const PROVIDER = process.env.AI_CHAT_PROVIDER?.toLowerCase() ?? 'openai'
-const DEFAULT_SYSTEM_PROMPT =
-  'You are the Jose Madrid Salsa assistant. Help customers with product questions, fundraising, wholesale partnerships, and order support. Keep answers concise and friendly, and direct users to /fundraising, /wholesale, or /contact when helpful.'
+const BASE_SYSTEM_PROMPT =
+  'You are the Jose Madrid Salsa assistant. Help customers with product questions, fundraising, wholesale partnerships, and order support. Keep answers concise and friendly, and direct users to /fundraising, /wholesale, or /contact when helpful. Use the provided context information to answer questions accurately. If you don\'t know something, say so rather than making it up.'
 
-function withSystemPrompt(messages: ChatMessage[]): ChatMessage[] {
-  const hasSystemMessage = messages.some((message) => message.role === 'system')
-  if (hasSystemMessage) {
-    return messages
+// Cache for indexed content (refresh every 5 minutes)
+let contentCache: { content: Awaited<ReturnType<typeof indexAllContent>>; timestamp: number } | null = null
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+async function getIndexedContent() {
+  const now = Date.now()
+  if (contentCache && now - contentCache.timestamp < CACHE_TTL) {
+    return contentCache.content
   }
-  return [{ role: 'system', content: DEFAULT_SYSTEM_PROMPT }, ...messages]
+
+  const content = await indexAllContent()
+  contentCache = { content, timestamp: now }
+  return content
+}
+
+function withSystemPrompt(messages: ChatMessage[], context?: string): ChatMessage[] {
+  const hasSystemMessage = messages.some((message) => message.role === 'system')
+  
+  let systemContent = BASE_SYSTEM_PROMPT
+  if (context) {
+    systemContent += context
+  }
+
+  if (hasSystemMessage) {
+    // Replace existing system message with enhanced one
+    return messages.map((msg) => 
+      msg.role === 'system' ? { ...msg, content: systemContent } : msg
+    )
+  }
+  
+  return [{ role: 'system', content: systemContent }, ...messages]
 }
 
 async function callOpenAI(messages: ChatMessage[]) {
@@ -131,7 +160,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Include at least one user message.' }, { status: 400 })
     }
 
-    const chatMessages = withSystemPrompt(messages.filter((message) => message.content.trim().length > 0))
+    // Get the latest user message for RAG retrieval
+    const userMessages = messages.filter((m) => m.role === 'user')
+    const latestQuery = userMessages[userMessages.length - 1]?.content || ''
+
+    // Retrieve relevant context using RAG
+    let context = ''
+    try {
+      const allContent = await getIndexedContent()
+      const relevant = searchContent(latestQuery, allContent, 5)
+      context = formatContextForLLM(relevant)
+    } catch (ragError) {
+      console.error('[RAG_ERROR]', ragError)
+      // Continue without context if RAG fails
+    }
+
+    const chatMessages = withSystemPrompt(
+      messages.filter((message) => message.content.trim().length > 0),
+      context
+    )
 
     if (PROVIDER === 'smileyface') {
       return callSmileyFace(chatMessages)

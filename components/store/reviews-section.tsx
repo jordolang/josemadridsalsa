@@ -1,13 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Star } from 'lucide-react'
+import { Star, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
 const googleBusinessUrl =
   process.env.NEXT_PUBLIC_GOOGLE_BUSINESS_URL ??
   'https://g.page/jose-madrid-salsa/review'
+
+const facebookUrl =
+  process.env.NEXT_PUBLIC_FACEBOOK_URL ??
+  'https://www.facebook.com/josemadridsalsa'
 
 type Review = {
   authorName: string
@@ -36,8 +40,8 @@ export function ReviewsSection() {
         // Shuffle reviews client-side for true randomization on each page load
         const shuffled = [...allReviews].sort(() => Math.random() - 0.5)
         
-        // Select 9 random reviews
-        const selectedReviews = shuffled.slice(0, 9)
+        // Select 5 random reviews (we'll add a 6th "Load Reviews" card)
+        const selectedReviews = shuffled.slice(0, 5)
         
         setReviews(selectedReviews)
         setTotalRating(data.totalRating || 0)
@@ -210,6 +214,50 @@ export function ReviewsSection() {
               </div>
             </Card>
           ))}
+          
+          {/* Load Reviews Card */}
+          <Card className="p-6 h-full flex flex-col surface-shadow border-2 border-dashed border-border">
+            <div className="space-y-4 flex flex-col flex-1 items-center justify-center text-center">
+              <div className="w-16 h-16 rounded-full bg-salsa-100 dark:bg-salsa-900/30 flex items-center justify-center mb-4">
+                <Star className="w-8 h-8 text-salsa-600 fill-salsa-600" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">
+                Read More Reviews
+              </h3>
+              <p className="text-muted-foreground mb-6">
+                See what our customers are saying on Google and Facebook
+              </p>
+              <div className="flex flex-col gap-3 w-full">
+                <Button
+                  asChild
+                  className="w-full bg-salsa-600 hover:bg-salsa-700"
+                >
+                  <a
+                    href={googleBusinessUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Google Reviews
+                  </a>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="w-full border-salsa-600 text-salsa-600 hover:bg-salsa-50 dark:hover:bg-salsa-900/20"
+                >
+                  <a
+                    href={facebookUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Facebook Reviews
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </Card>
         </div>
 
         {/* View More Link */}

@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ReviewsSection } from '@/components/store/reviews-section'
+import { GiftBoxSelector } from '@/components/store/gift-box-selector'
 
 export default function Home() {
   return (
@@ -163,6 +164,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Gift Box Selector Section */}
+      <GiftBoxSelector />
 
       {/* Reviews Section */}
       <ReviewsSection />

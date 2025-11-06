@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { LocationCard } from './_components/LocationCard';
+import { LocationsMap } from './_components/LocationsMap';
 import { parseFindUsMarkdown, readFindUsMarkdownAbsolute, buildStreetViewOrMapImageUrl } from '@/lib/find-us-parser';
 import { MapPin } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
@@ -33,7 +34,11 @@ type LocationsByCity = Record<string, Array<{
 type LocationsByState = Record<string, LocationsByCity>;
 
 export default async function FindUsPage() {
-  // Load from database
+  // Load from markdown file to get all 155 locations
+  const mdPath = await readFindUsMarkdownAbsolute();
+  const parsedLocations = await parseFindUsMarkdown(mdPath);
+  
+  // Also load from database for photos
   const dbLocations = await prisma.retailLocation.findMany({
     where: { isActive: true },
     orderBy: [
@@ -44,17 +49,26 @@ export default async function FindUsPage() {
     ],
   });
 
-  const locations = dbLocations.map(loc => ({
-    id: loc.id,
-    businessName: loc.businessName,
-    address: loc.address,
-    city: loc.city,
-    state: loc.state,
-    zipCode: loc.zipCode,
-    phone: loc.phone,
-    website: loc.website,
-    photoUrl: loc.photoUrl || buildStreetViewOrMapImageUrl(loc.address, loc.city, loc.state),
-  }));
+  // Create a map of database locations by business name + address for photo lookup
+  const dbLocationMap = new Map(
+    dbLocations.map(loc => [`${loc.businessName}-${loc.address}`, loc])
+  );
+
+  // Merge markdown data with database photos
+  const locations = parsedLocations.map(loc => {
+    const dbLoc = dbLocationMap.get(`${loc.businessName}-${loc.address}`);
+    return {
+      id: loc.id,
+      businessName: loc.businessName,
+      address: loc.address,
+      city: loc.city,
+      state: loc.state,
+      zipCode: loc.zipCode,
+      phone: loc.phone || dbLoc?.phone || null,
+      website: loc.website || dbLoc?.website || null,
+      photoUrl: dbLoc?.photoUrl || buildStreetViewOrMapImageUrl(loc.address, loc.city, loc.state),
+    };
+  });
 
   // Separate Ohio from other states
   const ohioLocations = locations.filter(loc => loc.state === 'OH');
@@ -116,23 +130,8 @@ export default async function FindUsPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-7xl mx-auto">
             
-            {/* TODO: Ohio County Map - Coming Soon */}
-            {/* 
-              Future Feature: Interactive Ohio County Map
-              - Display clickable county map of Ohio
-              - On county click, filter and display only businesses in that county
-              - Requires county data for each location (currently null)
-              - Map implementation options: react-simple-maps, custom SVG, or map library
-            */}
-            <div className="mb-16 card surface-shadow border-2 border-dashed border-salsa-300 p-12 text-center">
-              <MapPin className="w-12 h-12 mx-auto mb-4 text-salsa-400" />
-              <h2 className="text-2xl font-serif font-bold text-foreground mb-2">
-                Ohio County Map
-              </h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                Interactive county map coming soon! Click on any Ohio county to see locations in that area.
-              </p>
-            </div>
+            {/* Interactive Map with All Locations */}
+            <LocationsMap locations={locations} />
 
             {/* Ohio Locations */}
             {ohioLocations.length > 0 && (

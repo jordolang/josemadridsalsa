@@ -161,19 +161,19 @@ export const merchMediaShowcase = [
     id: 'event-booth',
     title: 'Event booth kit',
     description: 'Table runner, tasting flight, and banner ready for fundraising nights or store demos.',
-    image: '/images/products/cherry-mild.jpg',
+    image: '/images/products/Event-Display.png',
   },
   {
     id: 'apparel-drop',
     title: 'Seasonal apparel drop',
     description: 'Garment-dyed tees with the 1982 Jose Madrid wordmark for superfans and team members.',
-    image: '/images/salsa-bowl.jpg',
+    image: '/images/products/Seasonal-Apparel.png',
   },
   {
     id: 'retail-display',
     title: 'Retail display set',
     description: 'Shelf talkers, coasters, and hang tags to merchandise jars and swag together.',
-    image: '/images/salsa-bowl.png',
+    image: '/images/products/Retail-Display.png',
   },
 ]
 

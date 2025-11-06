@@ -16,6 +16,10 @@ export function ThemeToggle({ className, size = 'sm' }: ThemeToggleProps) {
 
   const iconSize = size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'
 
+  // Prevent hydration mismatch by using consistent initial state
+  // On server, always render as if light mode (isDark = false)
+  const displayIsDark = isMounted ? isDark : false
+
   return (
     <Button
       type="button"
@@ -32,7 +36,7 @@ export function ThemeToggle({ className, size = 'sm' }: ThemeToggleProps) {
         className={cn(
           iconSize,
           'transition-all duration-300',
-          isDark ? '-translate-y-5 rotate-180 scale-0 opacity-0' : 'translate-y-0 rotate-0 scale-100 opacity-100',
+          displayIsDark ? '-translate-y-5 rotate-180 scale-0 opacity-0' : 'translate-y-0 rotate-0 scale-100 opacity-100',
           !isMounted && 'transition-none'
         )}
       />
@@ -40,7 +44,7 @@ export function ThemeToggle({ className, size = 'sm' }: ThemeToggleProps) {
         className={cn(
           iconSize,
           'absolute inset-0 m-auto transition-all duration-300',
-          isDark ? 'translate-y-0 rotate-0 scale-100 opacity-100' : 'translate-y-5 rotate-180 scale-0 opacity-0',
+          displayIsDark ? 'translate-y-0 rotate-0 scale-100 opacity-100' : 'translate-y-5 rotate-180 scale-0 opacity-0',
           !isMounted && 'transition-none'
         )}
       />
