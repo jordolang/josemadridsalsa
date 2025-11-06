@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/co
 import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuLink, NavigationMenuContent, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useCartStore } from "@/lib/store/cart";
 import { cn } from "@/lib/utils";
 
@@ -115,10 +116,9 @@ export function Navigation() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full border-b transition-all duration-300",
-        isScrolled
-          ? "bg-white/95 backdrop-blur-md shadow-lg border-gray-200"
-          : "bg-white border-gray-100"
+        "sticky top-0 z-50 w-full border-b border-transparent bg-background/70 backdrop-blur-sm transition-[background-color,box-shadow,border-color] duration-300",
+        isScrolled &&
+          "border-border bg-background/90 shadow-[0_12px_32px_rgba(15,23,42,0.08)] dark:shadow-[0_0_30px_rgba(229,62,62,0.35)]"
       )}
     >
       <div className="container mx-auto px-2 sm:px-4">
@@ -205,7 +205,7 @@ export function Navigation() {
           <div className="hidden md:flex flex-1 max-w-xs lg:max-w-sm mx-2 lg:mx-4">
             <form onSubmit={handleSearch} className="flex w-full">
               <div className="relative flex-1">
-                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground opacity-70" />
                 <Input
                   type="search"
                   placeholder="Search..."
@@ -226,20 +226,20 @@ export function Navigation() {
 
           {/* Actions */}
           <div className="flex items-center gap-1 lg:gap-2 flex-shrink-0">
-            {/* Social Links */}
-            <div className="hidden lg:flex items-center gap-1">
-              {socialLinks.map((social) => (
-                <Button
-                  key={social.name}
-                  variant="ghost"
-                  size="sm"
-                  asChild
-                  className="p-1.5 text-gray-600 hover:text-salsa-600"
-                >
-                  <a
-                    href={social.href}
-                    aria-label={`Visit our ${social.name} profile`}
-                    target="_blank"
+          {/* Social Links */}
+          <div className="hidden lg:flex items-center gap-1">
+            {socialLinks.map((social) => (
+              <Button
+                key={social.name}
+                variant="ghost"
+                size="sm"
+                asChild
+                className="p-1.5 text-muted-foreground hover:text-salsa-500 dark:hover:text-salsa-300"
+              >
+                <a
+                  href={social.href}
+                  aria-label={`Visit our ${social.name} profile`}
+                  target="_blank"
                     rel="noopener noreferrer"
                   >
                     <social.icon className="w-4 h-4" />
@@ -248,9 +248,11 @@ export function Navigation() {
               ))}
             </div>
 
+            <ThemeToggle size="sm" className="h-8 w-8 p-0" />
+
             {/* Search Icon (Mobile) */}
             <Button variant="ghost" size="sm" className="md:hidden p-1.5">
-              <Search className="w-4 h-4" />
+              <Search className="h-4 w-4 text-muted-foreground" />
             </Button>
 
             {/* Account (Mobile) */}
@@ -397,7 +399,7 @@ export function Navigation() {
                                 key={category.name}
                                 href={category.href}
                                 onClick={() => setIsMobileMenuOpen(false)}
-                                className="block py-1 text-sm text-gray-600 hover:text-salsa-600 transition-colors"
+                                className="block py-1 text-sm text-muted-foreground hover:text-salsa-600 transition-colors"
                               >
                                 {category.name}
                               </Link>
@@ -408,9 +410,17 @@ export function Navigation() {
                     ))}
                   </nav>
 
+                  <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Appearance</p>
+                      <p className="text-xs text-muted-foreground">Toggle light or dark theme</p>
+                    </div>
+                    <ThemeToggle size="default" className="h-10 w-10 p-0" />
+                  </div>
+
                   {/* Mobile Social Links */}
-                  <div className="pt-4 border-t">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">
+                  <div className="pt-4 border-t border-border">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
                       Connect with us
                     </p>
                     <div className="flex items-center gap-3">
@@ -420,7 +430,7 @@ export function Navigation() {
                           variant="outline"
                           size="sm"
                           asChild
-                          className="h-9 w-9 rounded-full px-0 text-gray-600"
+                          className="h-9 w-9 rounded-full px-0 text-muted-foreground"
                         >
                           <a
                             href={social.href}
@@ -436,11 +446,11 @@ export function Navigation() {
                   </div>
 
                   {/* Mobile Account Actions */}
-                  <div className="pt-4 border-t space-y-2">
+                  <div className="pt-4 border-t border-border space-y-2">
                     {session ? (
                       <div className="space-y-2">
-                        <div className="p-3 bg-gray-50 rounded-lg">
-                          <p className="text-sm font-medium">{session.user?.name}</p>
+                        <div className="rounded-lg bg-muted p-3">
+                          <p className="text-sm font-medium text-foreground">{session.user?.name}</p>
                           <p className="text-xs text-muted-foreground">{session.user?.email}</p>
                         </div>
                         <Button variant="outline" className="w-full justify-start" asChild>

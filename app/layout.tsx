@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import { Montserrat, Volkhov, Roboto_Mono } from 'next/font/google'
 import { CartSidebar } from '@/components/store/cart-sidebar'
 import { Toaster } from '@/components/ui/toaster'
 import { Navigation } from '@/components/store/navigation'
 import { Footer } from '@/components/store/footer'
 import { AiChatWidget } from '@/components/chat/ai-chat-widget'
+import { themeStorageKey } from '@/lib/constants/theme'
 import { Providers } from './providers'
 import './globals.css'
 
@@ -80,9 +82,27 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const themeInitializer = `
+    (function() {
+      try {
+        var storageKey = '${themeStorageKey}';
+        var stored = localStorage.getItem(storageKey);
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var theme = stored === 'light' || stored === 'dark' ? stored : (prefersDark ? 'dark' : 'light');
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+        document.documentElement.style.colorScheme = theme;
+      } catch (error) {
+        console.warn('Unable to load saved theme preference', error);
+      }
+    })();
+  `
+
   return (
-    <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
-      <body className="font-sans antialiased bg-white text-gray-900">
+    <html lang="en" suppressHydrationWarning className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
+      <body className="font-sans antialiased bg-background text-foreground transition-colors duration-300">
+        <Script id="theme-initializer" strategy="beforeInteractive">
+          {themeInitializer}
+        </Script>
         <Providers>
           <div className="flex min-h-screen flex-col">
             <Navigation />
