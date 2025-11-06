@@ -15,6 +15,9 @@ export const metadata: Metadata = {
   },
 };
 
+// Ensure Node.js runtime so fs access works on Vercel
+export const runtime = 'nodejs';
+
 // Type for grouped locations
 type LocationsByCity = Record<string, Array<{
   id: string;
