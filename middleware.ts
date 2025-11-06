@@ -2,6 +2,16 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
+const authSecret = process.env.NEXTAUTH_SECRET
+const STAFF_ROLES = ['ADMIN', 'DEVELOPER', 'STAFF']
+
+function buildCallbackUrl(request: NextRequest) {
+  const callbackPath = `${request.nextUrl.pathname}${request.nextUrl.search}`
+  const signInUrl = new URL('/auth/signin', request.url)
+  signInUrl.searchParams.set('callbackUrl', callbackPath)
+  return signInUrl
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -25,26 +35,26 @@ export async function middleware(request: NextRequest) {
     return new NextResponse(null, { status: 404 })
   }
 
+  // If the auth secret is not available (e.g. misconfigured environment),
+  // skip middleware-based enforcement and allow server components / API
+  // handlers to perform the authorization checks to avoid redirect loops.
+  if (!authSecret) {
+    return NextResponse.next()
+  }
+
   // Protect /admin routes
   if (pathname.startsWith('/admin')) {
     const token = await getToken({
       req: request,
-      secret: process.env.NEXTAUTH_SECRET,
+      secret: authSecret,
     })
 
-    // Not authenticated
     if (!token) {
-      const signInUrl = new URL('/auth/signin', request.url)
-      signInUrl.searchParams.set('callbackUrl', pathname)
-      return NextResponse.redirect(signInUrl)
+      return NextResponse.redirect(buildCallbackUrl(request))
     }
 
-    // Check if user has staff access
-    const role = token.role as string
-    const allowedRoles = ['ADMIN', 'DEVELOPER', 'STAFF']
-
-    if (!allowedRoles.includes(role)) {
-      // Redirect to unauthorized page or home
+    const role = token.role as string | undefined
+    if (!role || !STAFF_ROLES.includes(role)) {
       return NextResponse.redirect(new URL('/', request.url))
     }
   }
@@ -53,14 +63,11 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/account')) {
     const token = await getToken({
       req: request,
-      secret: process.env.NEXTAUTH_SECRET,
+      secret: authSecret,
     })
 
-    // Not authenticated
     if (!token) {
-      const signInUrl = new URL('/auth/signin', request.url)
-      signInUrl.searchParams.set('callbackUrl', pathname)
-      return NextResponse.redirect(signInUrl)
+      return NextResponse.redirect(buildCallbackUrl(request))
     }
   }
 
@@ -68,10 +75,9 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/admin')) {
     const token = await getToken({
       req: request,
-      secret: process.env.NEXTAUTH_SECRET,
+      secret: authSecret,
     })
 
-    // Not authenticated
     if (!token) {
       return NextResponse.json(
         { error: 'Unauthorized - authentication required' },
@@ -79,11 +85,9 @@ export async function middleware(request: NextRequest) {
       )
     }
 
-    // Check if user has staff access
-    const role = token.role as string
-    const allowedRoles = ['ADMIN', 'DEVELOPER', 'STAFF']
+    const role = token.role as string | undefined
 
-    if (!allowedRoles.includes(role)) {
+    if (!role || !STAFF_ROLES.includes(role)) {
       return NextResponse.json(
         { error: 'Forbidden - admin access required' },
         { status: 403 }
