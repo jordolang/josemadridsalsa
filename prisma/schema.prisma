@@ -281,6 +281,10 @@ model Order {
   fundraiserId    String?
   fundraiser      Fundraiser? @relation(fields: [fundraiserId], references: [id])
   
+  // Gift certificates
+  giftCertificates GiftCertificate[]
+  giftCertificateUsages GiftCertificateUsage[]
+  
   @@map("orders")
 }
 
@@ -924,6 +928,21 @@ enum AnalyticsType {
   CUSTOM
 }
 
+enum GiftCertificateTheme {
+  BIRTHDAY
+  BOY_CELEBRATION
+  CHRISTMAS
+  GENERAL
+  GIRL
+}
+
+enum GiftCertificateStatus {
+  ACTIVE
+  REDEEMED
+  EXPIRED
+  CANCELLED
+}
+
 model PasswordResetToken {
   id        String   @id @default(cuid())
   token     String   @unique
@@ -963,3 +982,73 @@ model RetailLocation {
   @@unique([businessName, address])
   @@map("retail_locations")
 }
+
+model GiftCertificate {
+  id              String                @id @default(cuid())
+  code            String                 @unique // e.g., "JMS-GC-XXXX-XXXX"
+  
+  // Purchase info
+  orderId         String?                // Link to order that created this
+  order           Order?                 @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  
+  // Amounts
+  originalAmount  Decimal                @db.Decimal(10, 2)
+  balance         Decimal                @db.Decimal(10, 2)
+  
+  // Purchaser info
+  purchaserName   String
+  purchaserEmail  String
+  
+  // Recipient info
+  recipientName   String
+  recipientEmail  String?
+  
+  // Gift certificate details
+  theme           GiftCertificateTheme
+  message         String?
+  
+  // Status
+  status          GiftCertificateStatus  @default(ACTIVE)
+  
+  // Expiration (optional)
+  expiresAt       DateTime?
+  
+  // Timestamps
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  redeemedAt      DateTime?
+  
+  // Relations
+  usages          GiftCertificateUsage[]
+  
+  @@index([code])
+  @@index([purchaserEmail])
+  @@index([recipientEmail])
+  @@index([status])
+  @@index([orderId])
+  @@map("gift_certificates")
+}
+
+model GiftCertificateUsage {
+  id                String           @id @default(cuid())
+  giftCertificateId String
+  giftCertificate   GiftCertificate  @relation(fields: [giftCertificateId], references: [id], onDelete: Cascade)
+  
+  // Order that used this certificate
+  orderId           String
+  order             Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  // Amount used
+  amount            Decimal          @db.Decimal(10, 2)
+  
+  // Balance after this usage
+  balanceAfter      Decimal          @db.Decimal(10, 2)
+  
+  createdAt         DateTime         @default(now())
+  
+  @@index([giftCertificateId])
+  @@index([orderId])
+  @@map("gift_certificate_usages")
+}
+
+// Update Order model to include gift certificate relation

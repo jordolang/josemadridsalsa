@@ -54,3 +54,38 @@ export function getHeatLevelText(heatLevel: string): string {
       return 'Unknown'
   }
 }
+
+/**
+ * Generates a unique gift certificate code
+ * Format: JMS-GC-XXXX-XXXX (8 alphanumeric characters)
+ */
+export function generateGiftCertificateCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  const randomPart1 = Array.from({ length: 4 }, () =>
+    chars.charAt(Math.floor(Math.random() * chars.length))
+  ).join('')
+  const randomPart2 = Array.from({ length: 4 }, () =>
+    chars.charAt(Math.floor(Math.random() * chars.length))
+  ).join('')
+  return `JMS-GC-${randomPart1}-${randomPart2}`
+}
+
+/**
+ * Formats gift certificate theme for display
+ */
+export function getGiftCertificateThemeText(theme: string): string {
+  switch (theme.toUpperCase()) {
+    case 'BIRTHDAY':
+      return 'Birthday'
+    case 'BOY_CELEBRATION':
+      return 'Boy Celebration'
+    case 'CHRISTMAS':
+      return 'Christmas'
+    case 'GENERAL':
+      return 'General'
+    case 'GIRL':
+      return 'Girl'
+    default:
+      return theme
+  }
+}

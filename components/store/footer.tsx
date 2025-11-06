@@ -27,6 +27,7 @@ const footerLinks = {
   shop: [
     { label: "All Salsas", href: "/salsas" },
     { label: "Merchandise", href: "/merchandise" },
+    { label: "Gift Certificates", href: "/gift-certificates/purchase" },
     { label: "Fundraising Store", href: "/fundraising" },
     { label: "Wholesale Ordering", href: "/wholesale" },
   ],
@@ -47,6 +48,7 @@ const footerLinks = {
   support: [
     { label: "Customer Login", href: "/auth/signin" },
     { label: "Track Orders", href: "/account/orders" },
+    { label: "Check Gift Certificate Balance", href: "/gift-certificates/balance" },
     { label: "Manage Subscription", href: "/account/settings" },
     { label: "Contact Support", href: "mailto:support@josemadridsalsa.com" },
   ],

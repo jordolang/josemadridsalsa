@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { ReviewsSection } from '@/components/store/reviews-section'
 
 export default function Home() {
   return (
@@ -162,6 +163,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Reviews Section */}
+      <ReviewsSection />
 
       {/* CTA Section */}
       <section className="py-20 bg-salsa-600">

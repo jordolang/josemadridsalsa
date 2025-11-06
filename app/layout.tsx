@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { Navigation } from '@/components/store/navigation'
 import { Footer } from '@/components/store/footer'
 import { AiChatWidget } from '@/components/chat/ai-chat-widget'
+import { GoogleAnalytics } from '@/components/analytics/google-analytics'
 import { Providers } from './providers'
 import './globals.css'
 
@@ -83,6 +84,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
       <body className="font-sans antialiased bg-white text-gray-900">
+        <GoogleAnalytics />
         <Providers>
           <div className="flex min-h-screen flex-col">
             <Navigation />

@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { Search, ShoppingCart, Menu, X, User, Heart, LogOut, Settings, Facebook, Twitter, Store } from "lucide-react";
+import { Search, ShoppingCart, Menu, X, User, Gift, LogOut, Settings, Facebook, Twitter, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -36,6 +36,10 @@ const navigationItems = [
   {
     title: "Recipes",
     href: "/recipes",
+  },
+  {
+    title: "Gift Certificates",
+    href: "/gift-certificates/purchase",
   },
   {
     title: "About Jose",
@@ -327,9 +331,11 @@ export function Navigation() {
               </div>
             )}
 
-            {/* Wishlist */}
-            <Button variant="ghost" size="sm" className="hidden lg:flex p-1.5 relative">
-              <Heart className="w-4 h-4" />
+            {/* Gift Certificates */}
+            <Button variant="ghost" size="sm" asChild className="hidden lg:flex p-1.5 relative">
+              <Link href="/gift-certificates/purchase" aria-label="Purchase Gift Certificate">
+                <Gift className="w-4 h-4" />
+              </Link>
             </Button>
 
             {/* Cart */}
@@ -455,9 +461,11 @@ export function Navigation() {
                             Order History
                           </Link>
                         </Button>
-                        <Button variant="outline" className="w-full justify-start">
-                          <Heart className="w-4 h-4 mr-2" />
-                          Wishlist
+                        <Button variant="outline" className="w-full justify-start" asChild>
+                          <Link href="/gift-certificates/purchase" onClick={() => setIsMobileMenuOpen(false)}>
+                            <Gift className="w-4 h-4 mr-2" />
+                            Gift Certificates
+                          </Link>
                         </Button>
                         <Button
                           variant="outline"
@@ -483,9 +491,11 @@ export function Navigation() {
                             Sign In
                           </Link>
                         </Button>
-                        <Button variant="outline" className="w-full justify-start">
-                          <Heart className="w-4 h-4 mr-2" />
-                          Wishlist
+                        <Button variant="outline" className="w-full justify-start" asChild>
+                          <Link href="/gift-certificates/purchase" onClick={() => setIsMobileMenuOpen(false)}>
+                            <Gift className="w-4 h-4 mr-2" />
+                            Gift Certificates
+                          </Link>
                         </Button>
                       </div>
                     )}
