@@ -12,7 +12,7 @@ const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
 
-const API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+const API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 const PLACES_API_BASE = 'https://places.googleapis.com/v1';
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -153,28 +153,60 @@ function pickBestPhoto(place) {
 async function searchPlace({ businessName, address, city, state }) {
   const textQuery = `${businessName} ${address} ${city} ${state}`.trim();
   const url = `${PLACES_API_BASE}/places:searchText`;
-  const res = await fetchWithRetry(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': API_KEY,
-      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.photos,places.types',
-    },
-    body: JSON.stringify({ textQuery }),
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  if (!data.places || data.places.length === 0) return null;
-  return data.places[0];
+  try {
+    const res = await fetchWithRetry(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': API_KEY,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.photos,places.types',
+      },
+      body: JSON.stringify({ textQuery }),
+    });
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`\nAPI error (${res.status}) for ${businessName}: ${errorText.substring(0, 200)}`);
+      return null;
+    }
+    
+    const data = await res.json();
+    if (!data.places || data.places.length === 0) {
+      return null;
+    }
+    return data.places[0];
+  } catch (error) {
+    console.error(`\nNetwork error for ${businessName}: ${error.message}`);
+    return null;
+  }
 }
 
 async function main() {
   if (!API_KEY) {
-    console.error('GOOGLE_PLACES_API_KEY is not set. Please set it in your environment and rerun.');
+    console.error('GOOGLE_PLACES_API_KEY or NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not set. Please set it in your environment and rerun.');
     process.exit(1);
   }
 
-  const mdPath = path.join(process.cwd(), 'public', 'Find Us Locally', 'Find Us Locally.md');
+  // Try kebab-case path first, then fallback to spaced path
+  const kebabPath = path.join(process.cwd(), 'public', 'find-us-locally', 'find-us-locally.md');
+  const spacedPath = path.join(process.cwd(), 'public', 'Find Us Locally', 'Find Us Locally.md');
+  
+  let mdPath;
+  try {
+    await fsp.access(kebabPath);
+    mdPath = kebabPath;
+    console.log('Using kebab-case markdown file:', mdPath);
+  } catch {
+    try {
+      await fsp.access(spacedPath);
+      mdPath = spacedPath;
+      console.log('Using spaced markdown file:', mdPath);
+    } catch {
+      console.error(`Neither markdown file found at:\n  ${kebabPath}\n  ${spacedPath}`);
+      process.exit(1);
+    }
+  }
+  
   const outPath = path.join(process.cwd(), 'public', 'location-photos.json');
 
   console.log('Parsing markdown for locations...');
@@ -197,7 +229,8 @@ async function main() {
       }
       await delay(120); // basic pacing
     } catch (e) {
-      // skip on error
+      console.error(`\nError processing ${loc.businessName}: ${e.message}`);
+      // continue to next location
     }
   }
 

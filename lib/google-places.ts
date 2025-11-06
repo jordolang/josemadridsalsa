@@ -1,7 +1,7 @@
 // Google Places API helper functions
-// Note: Requires GOOGLE_PLACES_API_KEY environment variable
+// Note: Requires GOOGLE_PLACES_API_KEY or NEXT_PUBLIC_GOOGLE_MAPS_API_KEY environment variable
 
-const API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+const API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 const PLACES_API_BASE = 'https://places.googleapis.com/v1';
 
 // Delay helper for rate limiting

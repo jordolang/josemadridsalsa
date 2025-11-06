@@ -19,6 +19,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:recipes": "tsx scripts/seed-recipes.ts",
     "locations:import": "tsx scripts/import-locations-from-markdown.ts",
+    "locations:photos": "node scripts/generate-location-photos.js",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
     "create-admin": "tsx scripts/create-admin.ts",
