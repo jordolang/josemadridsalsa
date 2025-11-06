@@ -26,9 +26,9 @@ export function LocationCard({
   const imageSrc = photoUrl || '/images/store-placeholder.png';
 
   return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden group">
+    <div className="card overflow-hidden group">
       {/* Image */}
-      <div className="relative aspect-[4/3] w-full bg-gray-100">
+      <div className="relative aspect-[4/3] w-full bg-gray-100 dark:bg-gray-800">
         <Image
           src={imageSrc}
           alt={`${businessName} storefront`}
@@ -41,19 +41,19 @@ export function LocationCard({
       {/* Content */}
       <div className="p-4">
         {/* Business Name */}
-        <h3 className="text-base font-semibold text-salsa-700 mb-2 line-clamp-2 min-h-[2.5rem]">
+        <h3 className="text-base font-semibold text-salsa-700 dark:text-salsa-300 mb-2 line-clamp-2 min-h-[2.5rem]">
           {businessName}
         </h3>
 
         {/* Address */}
-        <div className="flex items-start gap-1.5 mb-2 text-gray-600">
+        <div className="flex items-start gap-1.5 mb-2 text-gray-600 dark:text-gray-300">
           <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-verde-600" />
           <p className="text-xs leading-relaxed line-clamp-2">{fullAddress}</p>
         </div>
 
         {/* Phone */}
         {phone && (
-          <div className="flex items-center gap-1.5 mb-2 text-gray-600">
+          <div className="flex items-center gap-1.5 mb-2 text-gray-600 dark:text-gray-300">
             <Phone className="w-3.5 h-3.5 flex-shrink-0 text-verde-600" />
             <span className="text-xs">{phone}</span>
           </div>
@@ -61,7 +61,7 @@ export function LocationCard({
 
         {/* Website */}
         {website && (
-          <div className="flex items-center gap-1.5 mb-2 text-gray-600">
+          <div className="flex items-center gap-1.5 mb-2 text-gray-600 dark:text-gray-300">
             <ExternalLink className="w-3.5 h-3.5 flex-shrink-0 text-salsa-600" />
             <span className="text-xs truncate">{website.replace(/^https?:\/\//, '')}</span>
           </div>
@@ -73,7 +73,7 @@ export function LocationCard({
           {phone && (
             <a
               href={`tel:${phone.replace(/[^0-9+]/g, '')}`}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-gradient-to-r from-verde-600 to-verde-700 hover:from-verde-700 hover:to-verde-800 rounded-md transition-all duration-200 shadow-sm hover:shadow-md"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-gradient-to-r from-verde-600 to-verde-700 hover:from-verde-700 hover:to-verde-800 rounded-md transition-all duration-200"
             >
               <Phone className="w-3.5 h-3.5" />
               Call
@@ -86,7 +86,7 @@ export function LocationCard({
               href={website}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-gradient-to-r from-salsa-600 to-chile-600 hover:from-salsa-700 hover:to-chile-700 rounded-md transition-all duration-200 shadow-sm hover:shadow-md"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-gradient-to-r from-salsa-600 to-chile-600 hover:from-salsa-700 hover:to-chile-700 rounded-md transition-all duration-200"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               Website

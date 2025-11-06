@@ -77,15 +77,15 @@ export function RecipesClient({ initialRecipes }: RecipesClientProps) {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <section className="bg-white py-16 border-b">
+    <main className="min-h-screen bg-background">
+      <section className="bg-card py-16 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <ChefHat className="w-16 h-16 mx-auto mb-6 text-salsa-500" />
-            <h1 className="text-4xl font-bold font-serif text-gray-900 mb-4">
+            <h1 className="text-4xl font-bold font-serif text-foreground mb-4">
               Delicious <span className="text-gradient">Recipes</span>
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               Discover amazing recipes featuring Jose Madrid Salsa. From quick weeknight dinners to
               impressive weekend meals, our salsas make everything taste better.
             </p>
@@ -130,7 +130,7 @@ export function RecipesClient({ initialRecipes }: RecipesClientProps) {
         </section>
       )}
 
-      <section className="bg-white py-6 border-b">
+      <section className="bg-card py-6 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
             <div className="flex-1 max-w-md">
@@ -176,7 +176,7 @@ export function RecipesClient({ initialRecipes }: RecipesClientProps) {
             </div>
           </div>
 
-          <div className="mt-4 text-sm text-gray-600">
+          <div className="mt-4 text-sm text-muted-foreground">
             Showing {filteredRecipes.length} of {baseRecipesCount} recipes
           </div>
         </div>
@@ -186,7 +186,7 @@ export function RecipesClient({ initialRecipes }: RecipesClientProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {filteredRecipes.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No recipes found matching your criteria.</p>
+              <p className="text-muted-foreground text-lg">No recipes found matching your criteria.</p>
               <Button
                 onClick={() => {
                   setSearchTerm('')
@@ -203,10 +203,10 @@ export function RecipesClient({ initialRecipes }: RecipesClientProps) {
               {filteredRecipes.map((recipe) => (
                 <div
                   key={recipe.id}
-                  className="group bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                  className="group card surface-shadow transition-all duration-300 hover:-translate-y-1 overflow-hidden"
                 >
                   <Link href={`/recipes/${recipe.slug}`}>
-                    <div className="relative h-48 bg-gray-100">
+                    <div className="relative h-48 bg-gray-100 dark:bg-gray-800">
                       <Image
                         src={recipe.featuredImage}
                         alt={recipe.title}
@@ -229,14 +229,14 @@ export function RecipesClient({ initialRecipes }: RecipesClientProps) {
 
                   <div className="p-6">
                     <Link href={`/recipes/${recipe.slug}`}>
-                      <h3 className="font-semibold text-xl text-gray-900 hover:text-salsa-600 transition-colors line-clamp-2 mb-3">
+                      <h3 className="font-semibold text-xl text-foreground hover:text-salsa-600 transition-colors line-clamp-2 mb-3">
                         {recipe.title}
                       </h3>
                     </Link>
 
-                    <p className="text-gray-600 line-clamp-3 mb-4">{recipe.description}</p>
+                    <p className="text-muted-foreground line-clamp-3 mb-4">{recipe.description}</p>
 
-                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
                       <span className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
                         {(() => {

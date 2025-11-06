@@ -92,7 +92,7 @@ export default function ProductPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50">
+      <main className="min-h-screen bg-background">
         <div className="flex justify-center items-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-salsa-500" />
           <span className="ml-2 text-lg">Loading product...</span>
@@ -103,7 +103,7 @@ export default function ProductPage() {
 
   if (error || !product) {
     return (
-      <main className="min-h-screen bg-gray-50">
+      <main className="min-h-screen bg-background">
         <div className="text-center py-20">
           <p className="text-red-500 text-lg mb-4">
             {error || 'Product not found'}
@@ -122,12 +122,12 @@ export default function ProductPage() {
   const heatRating = getSalsaHeatRating(product.name, product.heatLevel)
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Product Images */}
           <div className="space-y-4">
-            <div className="aspect-square bg-white rounded-lg overflow-hidden">
+            <div className="aspect-square bg-card rounded-lg overflow-hidden surface-shadow">
               <Image
                 src={product.images[selectedImage] || product.featuredImage}
                 alt={product.name}
@@ -145,7 +145,7 @@ export default function ProductPage() {
                     key={index}
                     onClick={() => setSelectedImage(index)}
                     className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                      selectedImage === index ? 'border-salsa-500' : 'border-gray-200'
+                      selectedImage === index ? 'border-salsa-500' : 'border-border'
                     }`}
                   >
                     <Image
@@ -180,16 +180,16 @@ export default function ProductPage() {
                 )}
               </div>
               
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-3xl font-bold text-foreground mb-2">
                 {product.name}
               </h1>
               
               <div className="flex items-center gap-3 mb-4">
-                <span className="text-2xl font-bold text-gray-900">
+                <span className="text-2xl font-bold text-foreground">
                   {formatPrice(product.price)}
                 </span>
                 {product.compareAtPrice && (
-                  <span className="text-xl text-gray-500 line-through">
+                  <span className="text-xl text-muted-foreground line-through">
                     {formatPrice(product.compareAtPrice)}
                   </span>
                 )}
@@ -203,30 +203,30 @@ export default function ProductPage() {
               heatLevel={product.heatLevel}
             />
             
-            <p className="text-gray-600 text-lg leading-relaxed">
+            <p className="text-muted-foreground text-lg leading-relaxed">
               {product.description}
             </p>
             
             {/* Ingredients */}
             {product.ingredients.length > 0 && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   Ingredients
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   {product.ingredients.join(', ')}
                 </p>
               </div>
             )}
             
             {/* Product Details */}
-            <div className="bg-white rounded-lg p-4 space-y-2">
+            <div className="bg-card rounded-lg p-4 space-y-2 surface-shadow">
               <div className="flex justify-between">
-                <span className="text-gray-600">SKU:</span>
+                <span className="text-muted-foreground">SKU:</span>
                 <span className="font-medium">{product.sku}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">In Stock:</span>
+                <span className="text-muted-foreground">In Stock:</span>
                 <span className="font-medium text-green-600">
                   {product.inventory} available
                 </span>
@@ -237,19 +237,19 @@ export default function ProductPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <span className="text-lg font-medium">Quantity:</span>
-                <div className="flex items-center border border-gray-300 rounded-lg">
+                <div className="flex items-center border border-border rounded-lg">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="p-2 hover:bg-gray-100 transition-colors"
+                    className="p-2 hover:bg-accent transition-colors"
                   >
                     <Minus className="w-4 h-4" />
                   </button>
-                  <span className="px-4 py-2 border-x border-gray-300 min-w-[3rem] text-center">
+                  <span className="px-4 py-2 border-x border-border min-w-[3rem] text-center">
                     {quantity}
                   </span>
                   <button
                     onClick={() => setQuantity(Math.min(product.inventory, quantity + 1))}
-                    className="p-2 hover:bg-gray-100 transition-colors"
+                    className="p-2 hover:bg-accent transition-colors"
                   >
                     <Plus className="w-4 h-4" />
                   </button>

@@ -84,15 +84,15 @@ export default function SalsasPage() {
   })
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-background">
       {/* Header */}
-      <section className="bg-white py-12 border-b">
+      <section className="bg-card py-12 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h1 className="text-4xl font-bold font-serif text-gray-900 mb-4">
+            <h1 className="text-4xl font-bold font-serif text-foreground mb-4">
               Our Premium <span className="text-gradient">Salsas</span>
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Discover our complete collection of handcrafted salsas, from mild and family-friendly to scorching hot.
             </p>
           </div>
@@ -100,7 +100,7 @@ export default function SalsasPage() {
       </section>
 
       {/* Filters */}
-      <section className="bg-white py-6 border-b">
+      <section className="bg-card py-6 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             {/* Search */}
@@ -130,7 +130,7 @@ export default function SalsasPage() {
             </div>
           </div>
           
-          <div className="mt-4 text-sm text-gray-600">
+          <div className="mt-4 text-sm text-muted-foreground">
             Showing {filteredProducts.length} of {products.length} salsas
           </div>
         </div>
@@ -146,7 +146,7 @@ export default function SalsasPage() {
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No salsas found matching your criteria.</p>
+              <p className="text-muted-foreground text-lg">No salsas found matching your criteria.</p>
               <Button
                 onClick={() => {
                   setSearchTerm('')
@@ -165,10 +165,10 @@ export default function SalsasPage() {
                 return (
                   <div
                     key={product.id}
-                    className="group bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                    className="group card surface-shadow transition-all duration-300 hover:-translate-y-1 overflow-hidden"
                   >
                     <Link href={`/salsas/${product.slug}`}>
-                      <div className="relative aspect-square bg-gray-100">
+                      <div className="relative aspect-square bg-gray-100 dark:bg-gray-800">
                         <Image
                           src={product.featuredImage}
                           alt={product.name}
@@ -202,12 +202,12 @@ export default function SalsasPage() {
 
                     <div className="p-6">
                       <Link href={`/salsas/${product.slug}`}>
-                        <h3 className="font-semibold text-lg text-gray-900 hover:text-salsa-600 transition-colors line-clamp-2 mb-2">
+                        <h3 className="font-semibold text-lg text-foreground hover:text-salsa-600 transition-colors line-clamp-2 mb-2">
                           {product.name}
                         </h3>
                       </Link>
                       
-                      <p className="text-sm text-gray-600 line-clamp-2 mb-4">
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
                         {product.description}
                       </p>
 
@@ -221,11 +221,11 @@ export default function SalsasPage() {
 
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-gray-900">
+                          <span className="text-lg font-bold text-foreground">
                             {formatPrice(product.price)}
                           </span>
                           {product.compareAtPrice && (
-                            <span className="text-sm text-gray-500 line-through">
+                            <span className="text-sm text-muted-foreground line-through">
                               {formatPrice(product.compareAtPrice)}
                             </span>
                           )}

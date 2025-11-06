@@ -113,7 +113,7 @@ export default async function RecipePage({ params }: RecipePageProps) {
   const totalMinutes = getTotalMinutes(recipe.prepTime, recipe.cookTime)
 
   return (
-    <div className="bg-gray-50 pb-16">
+    <div className="bg-background pb-16">
       <section className="bg-gradient-to-r from-salsa-500 to-chile-500 text-white py-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col-reverse lg:flex-row items-center gap-10">
@@ -164,9 +164,9 @@ export default async function RecipePage({ params }: RecipePageProps) {
       </section>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-        <section className="bg-white shadow-lg rounded-2xl p-8 space-y-6">
-          <h2 className="text-2xl font-semibold text-gray-900">Instructions</h2>
-          <ol className="space-y-4 list-decimal list-inside text-gray-700 leading-relaxed">
+        <section className="bg-card surface-shadow rounded-2xl p-8 space-y-6">
+          <h2 className="text-2xl font-semibold text-foreground">Instructions</h2>
+          <ol className="space-y-4 list-decimal list-inside text-muted-foreground leading-relaxed">
             {recipe.instructions.map((step, index) => (
               <li key={`instruction-${index}`} className="pl-2">
                 {step}
@@ -176,11 +176,11 @@ export default async function RecipePage({ params }: RecipePageProps) {
         </section>
 
         <aside className="space-y-6">
-          <div className="bg-white shadow-lg rounded-2xl p-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+          <div className="bg-card surface-shadow rounded-2xl p-8">
+            <h2 className="text-2xl font-semibold text-foreground mb-4">
               Ingredients
             </h2>
-            <ul className="space-y-3 text-gray-700">
+            <ul className="space-y-3 text-foreground/90">
               {recipe.ingredients.map((ingredient, index) => (
                 <li key={`ingredient-${index}`} className="flex items-start gap-2">
                   <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-salsa-500" />
@@ -190,7 +190,7 @@ export default async function RecipePage({ params }: RecipePageProps) {
             </ul>
           </div>
 
-          <div className="bg-white shadow-lg rounded-2xl p-6 border border-dashed border-salsa-200 text-sm text-gray-600">
+          <div className="bg-card surface-shadow rounded-2xl p-6 border border-dashed border-salsa-200 text-sm text-muted-foreground">
             <p>
               Looking for more recipes featuring Jose Madrid Salsa? Explore the full
               collection for inspiration across every meal of the day.

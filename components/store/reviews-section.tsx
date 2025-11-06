@@ -94,13 +94,13 @@ export function ReviewsSection() {
 
   if (loading) {
     return (
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold font-serif text-gray-900 mb-4">
+            <h2 className="text-4xl font-bold font-serif text-foreground mb-4">
               What Our Customers Say
             </h2>
-            <p className="text-xl text-gray-600">Loading reviews...</p>
+            <p className="text-xl text-muted-foreground">Loading reviews...</p>
           </div>
         </div>
       </section>
@@ -109,13 +109,13 @@ export function ReviewsSection() {
 
   if (error || reviews.length === 0) {
     return (
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold font-serif text-gray-900 mb-4">
+            <h2 className="text-4xl font-bold font-serif text-foreground mb-4">
               What Our Customers Say
             </h2>
-            <p className="text-xl text-gray-600 mb-8">
+            <p className="text-xl text-muted-foreground mb-8">
               {error || 'No reviews available at this time.'}
             </p>
             <Button
@@ -137,11 +137,11 @@ export function ReviewsSection() {
   }
 
   return (
-    <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+    <section className="py-20 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold font-serif text-gray-900 mb-4">
+          <h2 className="text-4xl font-bold font-serif text-foreground mb-4">
             What Our Customers Say
           </h2>
           {totalRating > 0 && totalReviews > 0 && (
@@ -159,11 +159,11 @@ export function ReviewsSection() {
                     />
                   ))}
                 </div>
-                <span className="text-2xl font-bold text-gray-900">
+                <span className="text-2xl font-bold text-foreground">
                   {totalRating.toFixed(1)}
                 </span>
               </div>
-              <span className="text-lg text-gray-600">
+              <span className="text-lg text-muted-foreground">
                 Based on {totalReviews} {totalReviews === 1 ? 'review' : 'reviews'}
               </span>
             </div>
@@ -187,24 +187,24 @@ export function ReviewsSection() {
           {reviews.map((review, index) => (
             <Card
               key={index}
-              className="p-6 hover:shadow-lg transition-shadow duration-300 h-full flex flex-col"
+              className="p-6 h-full flex flex-col surface-shadow"
             >
               <div className="space-y-4 flex flex-col flex-1">
                 {/* Rating and Name */}
-                <div className="border-b border-gray-100 pb-3">
+                <div className="border-b border-border pb-3">
                   {renderStars(review.rating)}
-                  <p className="mt-2 font-semibold text-gray-900">
+                  <p className="mt-2 font-semibold text-foreground">
                     {review.authorName}
                   </p>
                   {review.relativePublishTime && (
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                       {review.relativePublishTime}
                     </p>
                   )}
                 </div>
 
                 {/* Review Text */}
-                <p className="text-gray-700 leading-relaxed flex-1">
+                <p className="text-foreground/90 leading-relaxed flex-1">
                   {review.text}
                 </p>
               </div>
@@ -217,7 +217,7 @@ export function ReviewsSection() {
           <Button
             variant="outline"
             asChild
-            className="text-salsa-600 border-salsa-600 hover:bg-salsa-50"
+            className="text-salsa-600 border-salsa-600 hover:bg-salsa-50 dark:hover:bg-salsa-900/20"
           >
             <a
               href={googleBusinessUrl}

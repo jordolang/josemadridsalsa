@@ -45,13 +45,13 @@ export default function Home() {
       </section>
 
       {/* Product Categories */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold font-serif text-gray-900 mb-4">
+            <h2 className="text-4xl font-bold font-serif text-foreground mb-4">
               Find Your Perfect <span className="text-gradient">Heat Level</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               From those who like it mild to the heat seekers, we have the perfect salsa for everyone.
             </p>
           </div>
@@ -59,11 +59,11 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Mild Salsa */}
             <div className="card p-8 text-center group hover:scale-105 transition-transform duration-300">
-              <div className="w-20 h-20 bg-verde-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+              <div className="w-20 h-20 bg-verde-100 dark:bg-verde-900/40 rounded-full mx-auto mb-6 flex items-center justify-center">
                 <span className="text-3xl">🌿</span>
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-gray-900">Mild</h3>
-              <p className="text-gray-600 mb-6">
+              <h3 className="text-2xl font-bold mb-4 text-foreground">Mild</h3>
+              <p className="text-muted-foreground mb-6">
                 Perfect for those who enjoy flavor without the heat. Great for kids and mild palates.
               </p>
               <Link href="/salsas?heat=mild" className="btn-secondary w-full">
@@ -73,11 +73,11 @@ export default function Home() {
 
             {/* Medium Salsa */}
             <div className="card p-8 text-center group hover:scale-105 transition-transform duration-300">
-              <div className="w-20 h-20 bg-chile-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+              <div className="w-20 h-20 bg-chile-100 dark:bg-chile-900/40 rounded-full mx-auto mb-6 flex items-center justify-center">
                 <span className="text-3xl">🌶️</span>
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-gray-900">Medium</h3>
-              <p className="text-gray-600 mb-6">
+              <h3 className="text-2xl font-bold mb-4 text-foreground">Medium</h3>
+              <p className="text-muted-foreground mb-6">
                 The perfect balance of flavor and heat. Our most popular choice for everyday enjoyment.
               </p>
               <Link href="/salsas?heat=medium" className="btn-secondary w-full">
@@ -87,11 +87,11 @@ export default function Home() {
 
             {/* Hot Salsa */}
             <div className="card p-8 text-center group hover:scale-105 transition-transform duration-300">
-              <div className="w-20 h-20 bg-salsa-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+              <div className="w-20 h-20 bg-salsa-100 dark:bg-salsa-900/30 rounded-full mx-auto mb-6 flex items-center justify-center">
                 <span className="text-3xl">🔥</span>
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-gray-900">Hot</h3>
-              <p className="text-gray-600 mb-6">
+              <h3 className="text-2xl font-bold mb-4 text-foreground">Hot</h3>
+              <p className="text-muted-foreground mb-6">
                 For those who love the heat! Bold flavors with a serious kick that builds with each bite.
               </p>
               <Link href="/salsas?heat=hot" className="btn-secondary w-full">
@@ -107,41 +107,41 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
-              <h2 className="text-4xl font-bold font-serif text-gray-900 mb-6">
+              <h2 className="text-4xl font-bold font-serif text-foreground mb-6">
                 More Than Just Great Taste
               </h2>
               <div className="space-y-8">
                 <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-salsa-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 bg-salsa-100 dark:bg-salsa-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
                     <span className="text-salsa-600 text-xl">🏪</span>
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Fundraising Made Easy</h3>
-                    <p className="text-gray-600">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Fundraising Made Easy</h3>
+                    <p className="text-muted-foreground">
                       Perfect for schools, churches, and organizations. High-profit margins and products people actually want.
                     </p>
                   </div>
                 </div>
                 
                 <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-verde-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 bg-verde-100 dark:bg-verde-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
                     <span className="text-verde-600 text-xl">🏭</span>
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Wholesale Options</h3>
-                    <p className="text-gray-600">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Wholesale Options</h3>
+                    <p className="text-muted-foreground">
                       Stock our premium salsas in your store. Competitive pricing with excellent support.
                     </p>
                   </div>
                 </div>
                 
                 <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-chile-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 bg-chile-100 dark:bg-chile-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
                     <span className="text-chile-600 text-xl">📍</span>
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Local Presence</h3>
-                    <p className="text-gray-600">
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Local Presence</h3>
+                    <p className="text-muted-foreground">
                       Find us at local stores throughout Ohio, or order online for delivery anywhere.
                     </p>
                   </div>

@@ -37,7 +37,7 @@ export function AdminTopbar({ user, onMenuClick }: AdminTopbarProps) {
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-white px-6">
+    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-border bg-card px-6">
       {/* Mobile menu button */}
       {onMenuClick && (
         <Button
@@ -53,7 +53,7 @@ export function AdminTopbar({ user, onMenuClick }: AdminTopbarProps) {
       {/* Search */}
       <div className="flex-1 max-w-md">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Search..."
@@ -74,22 +74,22 @@ export function AdminTopbar({ user, onMenuClick }: AdminTopbarProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                 <span className="text-sm font-medium">
                   {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="hidden text-left md:block">
                 <div className="text-sm font-medium">{user.name || 'User'}</div>
-                <div className="text-xs text-slate-500">{user.email}</div>
+                <div className="text-xs text-muted-foreground">{user.email}</div>
               </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium">{user.name || 'User'}</p>
-                <p className="text-xs text-slate-500">{user.email}</p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
                 <span
                   className={`inline-flex w-fit items-center rounded-full px-2 py-1 text-xs font-medium ${getRoleBadgeColor(
                     user.role

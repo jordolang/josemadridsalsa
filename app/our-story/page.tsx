@@ -81,7 +81,7 @@ const achievements = [
 
 export default function OurStoryPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-salsa-50/30 to-verde-50/30">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-verde-600 via-salsa-600 to-chile-600 text-white">
         <div className="absolute inset-0 bg-black/20"></div>
@@ -116,21 +116,21 @@ export default function OurStoryPage() {
       </section>
 
       {/* Timeline */}
-      <section className="py-16 bg-gradient-to-r from-salsa-50 to-chile-50">
+      <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-6">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
                 Our Journey Through Time
               </h2>
-              <p className="text-xl text-gray-700 max-w-3xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 From a small-town restaurant to a beloved regional brand, every step of our journey has been guided by family values and authentic flavor
               </p>
             </div>
 
             <div className="space-y-8">
               {timeline.map((milestone, index) => (
-                <Card key={index} className="bg-white border-0 shadow-lg">
+                <Card key={index} className="card surface-shadow">
                   <CardContent className="p-8">
                     <div className="flex items-start gap-6">
                       <div className="flex-shrink-0">
@@ -140,13 +140,13 @@ export default function OurStoryPage() {
                       </div>
                       <div className="flex-grow">
                         <div className="flex items-center gap-4 mb-3">
-                          <span className="text-2xl font-bold text-salsa-600">{milestone.year}</span>
+                          <span className="text-2xl font-bold text-salsa-500">{milestone.year}</span>
                           <div className="h-px bg-gradient-to-r from-salsa-300 to-transparent flex-grow"></div>
                         </div>
-                        <h3 className="text-2xl font-serif font-bold text-salsa-800 mb-3">
+                        <h3 className="text-2xl font-serif font-bold text-foreground mb-3">
                           {milestone.title}
                         </h3>
-                        <p className="text-gray-700 leading-relaxed">
+                        <p className="text-muted-foreground leading-relaxed">
                           {milestone.description}
                         </p>
                       </div>
@@ -164,27 +164,27 @@ export default function OurStoryPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-6">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
                 What We Stand For
               </h2>
-              <p className="text-xl text-gray-700 max-w-3xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Our values guide everything we do, from recipe development to customer service
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               {values.map((value, index) => (
-                <Card key={index} className="bg-white border-0 shadow-lg text-center hover:shadow-xl transition-shadow">
+                <Card key={index} className="card surface-shadow text-center transition-shadow">
                   <CardHeader className="pb-4">
                     <div className="w-16 h-16 bg-gradient-to-br from-salsa-500 to-chile-500 rounded-full flex items-center justify-center mx-auto mb-4">
                       <value.icon className="w-8 h-8 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold text-salsa-800">
+                    <h3 className="text-xl font-bold text-foreground">
                       {value.title}
                     </h3>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-700 leading-relaxed">
+                    <p className="text-muted-foreground leading-relaxed">
                       {value.description}
                     </p>
                   </CardContent>
@@ -230,20 +230,20 @@ export default function OurStoryPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-6">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
                 Proud Achievements
               </h2>
-              <p className="text-xl text-gray-700 max-w-2xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                 Milestones that reflect our dedication to quality, innovation, and community
               </p>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="card surface-shadow p-8">
               <div className="grid md:grid-cols-2 gap-6">
                 {achievements.map((achievement, index) => (
                   <div key={index} className="flex items-start gap-3">
                     <CheckCircle className="w-6 h-6 text-salsa-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700 leading-relaxed">{achievement}</span>
+                    <span className="text-foreground/90 leading-relaxed">{achievement}</span>
                   </div>
                 ))}
               </div>
@@ -253,44 +253,44 @@ export default function OurStoryPage() {
       </section>
 
       {/* Looking Forward */}
-      <section className="py-16 bg-gradient-to-r from-salsa-50 to-chile-50">
+      <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-8">
+            <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-8">
               Looking to the Future
             </h2>
-            <p className="text-xl text-gray-700 leading-relaxed mb-12 max-w-2xl mx-auto">
+            <p className="text-xl text-muted-foreground leading-relaxed mb-12 max-w-2xl mx-auto">
               As we continue to grow, we remain committed to the values and traditions that have guided us from the beginning. José Madrid's legacy lives on in every jar, and we're excited to share his authentic flavors with even more families and communities.
             </p>
 
             <div className="grid md:grid-cols-3 gap-8 mb-12">
-              <Card className="bg-white border-0 shadow-lg">
+              <Card className="card surface-shadow">
                 <CardContent className="p-6 text-center">
                   <div className="w-12 h-12 bg-gradient-to-br from-salsa-500 to-chile-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Target className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="font-bold text-salsa-800 mb-2">Innovation</h3>
-                  <p className="text-gray-700 text-sm">Developing new flavors while honoring traditional recipes</p>
+                  <h3 className="font-bold text-foreground mb-2">Innovation</h3>
+                  <p className="text-muted-foreground text-sm">Developing new flavors while honoring traditional recipes</p>
                 </CardContent>
               </Card>
 
-              <Card className="bg-white border-0 shadow-lg">
+              <Card className="card surface-shadow">
                 <CardContent className="p-6 text-center">
                   <div className="w-12 h-12 bg-gradient-to-br from-verde-500 to-salsa-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Users className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="font-bold text-salsa-800 mb-2">Community</h3>
-                  <p className="text-gray-700 text-sm">Expanding partnerships with schools, organizations, and retailers</p>
+                  <h3 className="font-bold text-foreground mb-2">Community</h3>
+                  <p className="text-muted-foreground text-sm">Expanding partnerships with schools, organizations, and retailers</p>
                 </CardContent>
               </Card>
 
-              <Card className="bg-white border-0 shadow-lg">
+              <Card className="card surface-shadow">
                 <CardContent className="p-6 text-center">
                   <div className="w-12 h-12 bg-gradient-to-br from-chile-500 to-salsa-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Heart className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="font-bold text-salsa-800 mb-2">Family</h3>
-                  <p className="text-gray-700 text-sm">Keeping family traditions alive for future generations</p>
+                  <h3 className="font-bold text-foreground mb-2">Family</h3>
+                  <p className="text-muted-foreground text-sm">Keeping family traditions alive for future generations</p>
                 </CardContent>
               </Card>
             </div>

@@ -62,7 +62,7 @@ const regions = [
 
 export default function WhereIsJosePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-chile-50/30 to-verde-50/30">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-chile-600 via-salsa-600 to-verde-600 text-white">
         <div className="absolute inset-0 bg-black/20"></div>
@@ -80,7 +80,7 @@ export default function WhereIsJosePage() {
       </section>
 
       {/* On the Move Schedule */}
-      <section className="py-16 bg-gradient-to-r from-white via-verde-50/40 to-chile-50/30">
+      <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-6xl space-y-12">
             <div className="mx-auto max-w-3xl text-center">
@@ -88,8 +88,8 @@ export default function WhereIsJosePage() {
                 <Truck className="h-6 w-6" />
                 <Calendar className="h-6 w-6" />
               </div>
-              <h2 className="text-3xl font-serif font-bold text-salsa-800">On the Move Schedule</h2>
-              <p className="mt-4 text-lg text-gray-700">
+              <h2 className="text-3xl font-serif font-bold text-foreground">On the Move Schedule</h2>
+              <p className="mt-4 text-lg text-muted-foreground">
                 Track Jose&apos;s farmers markets, retail demos, and special events in real time.
                 The map syncs directly from our Google Calendar—once your credentials are in place,
                 every new booking will appear automatically.
@@ -105,10 +105,10 @@ export default function WhereIsJosePage() {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-6">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
                 The Journey of Jose Madrid
               </h2>
-              <p className="text-xl text-gray-700 max-w-2xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                 Every jar carries the spirit of José Madrid from Clovis, New Mexico to kitchens everywhere
               </p>
             </div>
@@ -136,34 +136,34 @@ export default function WhereIsJosePage() {
       </section>
 
       {/* Where You'll Find Jose */}
-      <section className="py-16 bg-gradient-to-r from-verde-50 to-chile-50">
+      <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-6">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
                 Where You'll Find Jose Today
               </h2>
-              <p className="text-xl text-gray-700 max-w-3xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Jose Madrid Salsa has grown from a single restaurant to locations across the region and beyond
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
               {locations.map((location, index) => (
-                <Card key={index} className="bg-white border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <Card key={index} className="card surface-shadow hover:-translate-y-0.5 transition-transform">
                   <CardHeader className="pb-4">
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-salsa-500 to-chile-500 rounded-full flex items-center justify-center flex-shrink-0">
                         <location.icon className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-salsa-800 mb-2">{location.title}</h3>
-                        <p className="text-gray-600 text-sm">{location.description}</p>
+                        <h3 className="text-xl font-bold text-foreground mb-2">{location.title}</h3>
+                        <p className="text-muted-foreground text-sm">{location.description}</p>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-700 leading-relaxed">
+                    <p className="text-foreground/90 leading-relaxed">
                       {location.details}
                     </p>
                   </CardContent>
@@ -180,25 +180,25 @@ export default function WhereIsJosePage() {
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <MapPin className="w-12 h-12 mx-auto mb-4 text-salsa-600" />
-              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-6">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
                 Our Growing Reach
               </h2>
-              <p className="text-xl text-gray-700 max-w-3xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 From our Ohio home base, Jose Madrid Salsa is spreading authentic flavor across America
               </p>
             </div>
 
             <div className="space-y-8">
               {regions.map((region, index) => (
-                <Card key={index} className="bg-white border-0 shadow-lg">
+                <Card key={index} className="card surface-shadow">
                   <CardHeader>
                     <div className="flex items-center gap-3">
                       <div className="w-4 h-4 bg-gradient-to-r from-salsa-500 to-chile-500 rounded-full"></div>
-                      <h3 className="text-2xl font-serif font-bold text-salsa-800">{region.name}</h3>
+                      <h3 className="text-2xl font-serif font-bold text-foreground">{region.name}</h3>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-700 leading-relaxed mb-6">{region.description}</p>
+                    <p className="text-muted-foreground leading-relaxed mb-6">{region.description}</p>
                     <div className="flex flex-wrap gap-2">
                       {region.highlights.map((highlight, i) => (
                         <span key={i} className="px-3 py-1 bg-gradient-to-r from-salsa-100 to-chile-100 text-salsa-700 rounded-full text-sm font-medium">
@@ -261,48 +261,48 @@ export default function WhereIsJosePage() {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-6">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
                 Find Jose Near You
               </h2>
-              <p className="text-xl text-gray-700 max-w-2xl mx-auto mb-8">
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
                 Looking for Jose Madrid Salsa in your area? Here are the best ways to track down our authentic flavors.
               </p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
-              <Card className="text-center bg-gradient-to-br from-salsa-50 to-chile-50 border-0 shadow-lg">
+              <Card className="text-center card surface-shadow">
                 <CardHeader>
                   <Store className="w-12 h-12 mx-auto mb-4 text-salsa-600" />
-                  <h3 className="text-xl font-bold text-salsa-800">Retail Locations</h3>
+                  <h3 className="text-xl font-bold text-foreground">Retail Locations</h3>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-700 mb-4">Check with your local specialty food stores and independent grocers.</p>
+                  <p className="text-muted-foreground mb-4">Check with your local specialty food stores and independent grocers.</p>
                   <Button variant="outline" className="border-salsa-500 text-salsa-600 hover:bg-salsa-50" asChild>
                     <Link href="/wholesale">Become a Retailer</Link>
                   </Button>
                 </CardContent>
               </Card>
 
-              <Card className="text-center bg-gradient-to-br from-verde-50 to-salsa-50 border-0 shadow-lg">
+              <Card className="text-center card surface-shadow">
                 <CardHeader>
                   <Truck className="w-12 h-12 mx-auto mb-4 text-verde-600" />
-                  <h3 className="text-xl font-bold text-salsa-800">Online Ordering</h3>
+                  <h3 className="text-xl font-bold text-foreground">Online Ordering</h3>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-700 mb-4">Order directly from us with nationwide shipping available.</p>
+                  <p className="text-muted-foreground mb-4">Order directly from us with nationwide shipping available.</p>
                   <Button variant="outline" className="border-verde-500 text-verde-600 hover:bg-verde-50" asChild>
                     <Link href="/products">Shop Online</Link>
                   </Button>
                 </CardContent>
               </Card>
 
-              <Card className="text-center bg-gradient-to-br from-chile-50 to-salsa-50 border-0 shadow-lg">
+              <Card className="text-center card surface-shadow">
                 <CardHeader>
                   <Users className="w-12 h-12 mx-auto mb-4 text-chile-600" />
-                  <h3 className="text-xl font-bold text-salsa-800">Fundraising</h3>
+                  <h3 className="text-xl font-bold text-foreground">Fundraising</h3>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-700 mb-4">Bring Jose to your organization through our fundraising program.</p>
+                  <p className="text-muted-foreground mb-4">Bring Jose to your organization through our fundraising program.</p>
                   <Button variant="outline" className="border-chile-500 text-chile-600 hover:bg-chile-50" asChild>
                     <Link href="/fundraising">Start Fundraising</Link>
                   </Button>
@@ -311,11 +311,11 @@ export default function WhereIsJosePage() {
             </div>
 
             {/* Final Message */}
-            <div className="mt-16 text-center bg-white rounded-2xl shadow-xl p-8">
-              <h3 className="text-2xl font-serif font-bold text-salsa-800 mb-4">
+            <div className="mt-16 text-center card surface-shadow p-8">
+              <h3 className="text-2xl font-serif font-bold text-foreground mb-4">
                 The Spirit of Jose Lives On
               </h3>
-              <p className="text-gray-700 text-lg max-w-2xl mx-auto">
+              <p className="text-foreground/90 text-lg max-w-2xl mx-auto">
                 Whether you find us in a country store in Ohio, at a farmers market, or delivered to your door—every jar of Jose Madrid Salsa carries the authentic spirit of the legendary cowboy who inspired it all. <em>¡Es la verdad!</em>
               </p>
             </div>

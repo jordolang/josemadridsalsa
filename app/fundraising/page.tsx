@@ -49,7 +49,7 @@ const testimonials = [
 
 export default function FundraisingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-verde-50/30 to-salsa-50/30">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-verde-600 via-salsa-600 to-chile-600 text-white">
         <div className="absolute inset-0 bg-black/20"></div>
@@ -84,13 +84,13 @@ export default function FundraisingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-12 bg-white">
+      <section className="py-12 bg-card">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl lg:text-3xl font-serif font-bold text-salsa-800 mb-6">
+            <h2 className="text-2xl lg:text-3xl font-serif font-bold text-foreground mb-6">
               Ready to Get Started?
             </h2>
-            <p className="text-gray-700 text-lg mb-8">
+            <p className="text-muted-foreground text-lg mb-8">
               Visit our fundraising website for complete details or contact us directly.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
@@ -115,27 +115,27 @@ export default function FundraisingPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-6">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
                 How Our Fundraising Program Works
               </h2>
-              <p className="text-xl text-gray-700 max-w-3xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Our goal is to make your fundraiser as easy and profitable as possible!
               </p>
             </div>
 
             <div className="grid lg:grid-cols-2 gap-12 mb-16">
               {/* Online Fundraising */}
-              <Card className="bg-gradient-to-br from-salsa-50 to-chile-50 border-0 shadow-xl">
+              <Card className="card surface-shadow">
                 <CardHeader className="text-center pb-4">
                   <div className="w-16 h-16 bg-gradient-to-br from-salsa-500 to-chile-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Heart className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-2xl font-serif font-bold text-salsa-800">
+                  <h3 className="text-2xl font-serif font-bold text-foreground">
                     Online Fundraising
                   </h3>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-gray-700">
+                  <p className="text-muted-foreground">
                     For online sales, we'll add your group to our website with ordering instructions for friends, family, co-workers, and social media supporters.
                   </p>
                   <ul className="space-y-2">
@@ -160,17 +160,17 @@ export default function FundraisingPage() {
               </Card>
 
               {/* Community Fundraising */}
-              <Card className="bg-gradient-to-br from-verde-50 to-salsa-50 border-0 shadow-xl">
+              <Card className="card surface-shadow">
                 <CardHeader className="text-center pb-4">
                   <div className="w-16 h-16 bg-gradient-to-br from-verde-500 to-salsa-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Users className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-2xl font-serif font-bold text-salsa-800">
+                  <h3 className="text-2xl font-serif font-bold text-foreground">
                     Community Fundraising
                   </h3>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-gray-700">
+                  <p className="text-muted-foreground">
                     Download our forms and distribute to your group. Run for 2-3 weeks, tally totals, and place your bulk order.
                   </p>
                   <ul className="space-y-2">
@@ -196,7 +196,7 @@ export default function FundraisingPage() {
             </div>
 
             {/* Resources */}
-            <div className="bg-white rounded-2xl shadow-xl p-8 mb-16">
+            <div className="card surface-shadow p-8 mb-16">
               <h3 className="text-2xl font-serif font-bold text-salsa-800 mb-6 text-center">
                 Fundraising Resources
               </h3>
@@ -205,8 +205,8 @@ export default function FundraisingPage() {
                   <div className="w-12 h-12 bg-gradient-to-br from-salsa-500 to-chile-500 rounded-lg flex items-center justify-center mx-auto mb-3">
                     <Download className="w-6 h-6 text-white" />
                   </div>
-                  <h4 className="font-bold text-salsa-800 mb-2">Sample Flier</h4>
-                  <p className="text-sm text-gray-600 mb-3">Professional marketing materials ready to print</p>
+                  <h4 className="font-bold text-foreground mb-2">Sample Flier</h4>
+                  <p className="text-sm text-muted-foreground mb-3">Professional marketing materials ready to print</p>
                   <Button size="sm" variant="outline" className="text-xs">
                     Download PDF
                   </Button>
@@ -215,8 +215,8 @@ export default function FundraisingPage() {
                   <div className="w-12 h-12 bg-gradient-to-br from-verde-500 to-salsa-500 rounded-lg flex items-center justify-center mx-auto mb-3">
                     <ExternalLink className="w-6 h-6 text-white" />
                   </div>
-                  <h4 className="font-bold text-salsa-800 mb-2">Online Sign-up</h4>
-                  <p className="text-sm text-gray-600 mb-3">Register your organization for online fundraising</p>
+                  <h4 className="font-bold text-foreground mb-2">Online Sign-up</h4>
+                  <p className="text-sm text-muted-foreground mb-3">Register your organization for online fundraising</p>
                   <Button size="sm" variant="outline" className="text-xs">
                     Register Now
                   </Button>
@@ -225,8 +225,8 @@ export default function FundraisingPage() {
                   <div className="w-12 h-12 bg-gradient-to-br from-chile-500 to-salsa-500 rounded-lg flex items-center justify-center mx-auto mb-3">
                     <Download className="w-6 h-6 text-white" />
                   </div>
-                  <h4 className="font-bold text-salsa-800 mb-2">Order Forms</h4>
-                  <p className="text-sm text-gray-600 mb-3">Pre-made forms for 9, 16, or 25 flavor options</p>
+                  <h4 className="font-bold text-foreground mb-2">Order Forms</h4>
+                  <p className="text-sm text-muted-foreground mb-3">Pre-made forms for 9, 16, or 25 flavor options</p>
                   <Button size="sm" variant="outline" className="text-xs">
                     Download Forms
                   </Button>
@@ -235,8 +235,8 @@ export default function FundraisingPage() {
                   <div className="w-12 h-12 bg-gradient-to-br from-salsa-500 to-verde-500 rounded-lg flex items-center justify-center mx-auto mb-3">
                     <Heart className="w-6 h-6 text-white" />
                   </div>
-                  <h4 className="font-bold text-salsa-800 mb-2">Support</h4>
-                  <p className="text-sm text-gray-600 mb-3">We're always happy to help with questions</p>
+                  <h4 className="font-bold text-foreground mb-2">Support</h4>
+                  <p className="text-sm text-muted-foreground mb-3">We're always happy to help with questions</p>
                   <Button size="sm" variant="outline" className="text-xs">
                     Contact Us
                   </Button>
@@ -248,41 +248,41 @@ export default function FundraisingPage() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-16 bg-gradient-to-r from-salsa-50 to-chile-50">
+      <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-6">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
                 Success Stories
               </h2>
-              <p className="text-xl text-gray-700 max-w-3xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 See how organizations across the country have achieved their fundraising goals with Jose Madrid Salsa
               </p>
             </div>
 
             <div className="grid lg:grid-cols-2 gap-8">
               {testimonials.map((testimonial, index) => (
-                <Card key={index} className="bg-white border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <Card key={index} className="card surface-shadow hover:-translate-y-0.5 transition-transform">
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="font-bold text-salsa-800 text-lg leading-tight">
+                        <h3 className="font-bold text-foreground text-lg leading-tight">
                           {testimonial.organization}
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
-                          <Calendar className="w-4 h-4 text-gray-500" />
-                          <span className="text-sm text-gray-600">{testimonial.date}</span>
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">{testimonial.date}</span>
                         </div>
                       </div>
                       <Quote className="w-8 h-8 text-salsa-300 flex-shrink-0" />
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-700 leading-relaxed mb-4 italic">
+                    <p className="text-foreground/90 leading-relaxed mb-4 italic">
                       "{testimonial.content}"
                     </p>
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold text-salsa-700">
+                      <p className="font-semibold text-salsa-600">
                         - {testimonial.author}
                       </p>
                       <div className="flex items-center gap-1">
@@ -311,13 +311,13 @@ export default function FundraisingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-card">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-serif font-bold text-salsa-800 mb-6">
+            <h2 className="text-3xl font-serif font-bold text-foreground mb-6">
               Ready to Start Your Fundraiser?
             </h2>
-            <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto">
+            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
               Join hundreds of successful organizations who have raised funds with our delicious, authentic salsa. We're looking forward to working with you!
             </p>
             <div className="flex flex-wrap justify-center gap-6">
@@ -333,7 +333,7 @@ export default function FundraisingPage() {
                 </Link>
               </Button>
             </div>
-            <p className="text-gray-600 mt-6">
+            <p className="text-muted-foreground mt-6">
               Questions? Call us at <a href="tel:740-521-4304" className="font-semibold text-salsa-600 hover:text-salsa-700">(740) 521-4304</a> or email{' '}
               <a href="mailto:mike@josemadrid.net" className="font-semibold text-salsa-600 hover:text-salsa-700">mike@josemadrid.net</a>
             </p>

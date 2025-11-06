@@ -83,7 +83,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
-      <body className="font-sans antialiased bg-white text-gray-900">
+      <body className="font-sans antialiased bg-background text-foreground">
         <GoogleAnalytics />
         <Providers>
           <div className="flex min-h-screen flex-col">

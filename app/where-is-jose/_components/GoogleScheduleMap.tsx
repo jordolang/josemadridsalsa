@@ -364,14 +364,14 @@ export function GoogleScheduleMap() {
   const hasEventsToShow = events.some((event) => Boolean(event.location));
 
   return (
-    <Card className="border-0 bg-white shadow-xl">
+    <Card className="card surface-shadow">
       <CardContent className="p-0">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-6 py-5">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-5">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-salsa-600">
               On the Move
             </p>
-            <h3 className="text-2xl font-serif font-bold text-slate-900">
+            <h3 className="text-2xl font-serif font-bold text-foreground">
               Live schedule from Google Calendar
             </h3>
           </div>
@@ -379,7 +379,7 @@ export function GoogleScheduleMap() {
             {eventsError ? (
               <Badge variant="destructive">Offline</Badge>
             ) : (
-              <Badge className="bg-verde-100 text-verde-800">
+              <Badge className="bg-verde-100 text-verde-800 dark:bg-verde-900/30 dark:text-verde-300">
                 {eventsLoading && !events.length ? 'Loading...' : 'Synced'}
               </Badge>
             )}
@@ -400,30 +400,30 @@ export function GoogleScheduleMap() {
         </div>
 
         <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <div className="relative h-[420px] overflow-hidden rounded-3xl border border-slate-200 bg-slate-50">
+          <div className="relative h-[420px] overflow-hidden rounded-3xl border border-border bg-muted">
             <div ref={mapContainerRef} className="absolute inset-0" />
             {(!mapReady || eventsLoading) && !mapError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur">
-                <div className="flex flex-col items-center gap-3 text-slate-700">
+              <div className="absolute inset-0 flex items-center justify-center bg-card/80 backdrop-blur">
+                <div className="flex flex-col items-center gap-3 text-foreground/80">
                   <Loader2 className="h-6 w-6 animate-spin" />
                   <span className="text-sm font-medium">Synchronizing the route...</span>
                 </div>
               </div>
             )}
             {mapError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white px-6 text-center text-sm text-slate-600">
+              <div className="absolute inset-0 flex items-center justify-center bg-card px-6 text-center text-sm text-muted-foreground">
                 {mapError}
               </div>
             )}
             {mapReady && !mapError && !hasEventsToShow && !eventsLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/90 px-6 text-center text-sm text-slate-600">
+              <div className="absolute inset-0 flex items-center justify-center bg-card/90 px-6 text-center text-sm text-muted-foreground">
                 Calendar is configured, but there are no upcoming events with locations yet.
               </div>
             )}
           </div>
 
-          <div className="flex max-h-[420px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white">
-            <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-4 text-slate-700">
+          <div className="flex max-h-[420px] flex-col overflow-hidden rounded-3xl border border-border bg-card">
+            <div className="flex items-center gap-2 border-b border-border px-5 py-4 text-foreground/80">
               <Calendar className="h-4 w-4 text-salsa-600" />
               <span className="text-sm font-semibold uppercase tracking-widest">
                 Upcoming stops
@@ -434,14 +434,14 @@ export function GoogleScheduleMap() {
                 <div className="space-y-4">
                   {Array.from({ length: 3 }).map((_, index) => (
                     <div key={index} className="space-y-3">
-                      <Skeleton className="h-4 w-1/2" />
-                      <Skeleton className="h-3 w-2/3" />
-                      <Skeleton className="h-3 w-1/3" />
+                      <Skeleton className="h-4 w-1/2 bg-muted" />
+                      <Skeleton className="h-3 w-2/3 bg-muted" />
+                      <Skeleton className="h-3 w-1/3 bg-muted" />
                     </div>
                   ))}
                 </div>
               ) : !hasEventsToShow ? (
-                <div className="flex h-full items-center justify-center text-center text-sm text-slate-500">
+                <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
                   We&apos;ll sync Jose&apos;s next stops here as soon as they are on the calendar.
                 </div>
               ) : (
@@ -449,21 +449,21 @@ export function GoogleScheduleMap() {
                   {events
                     .filter((event) => Boolean(event.location))
                     .map((event) => (
-                      <li key={event.id} className="rounded-xl border border-slate-200 p-4 shadow-sm">
+                      <li key={event.id} className="rounded-xl border border-border p-4 surface-shadow">
                         <div className="flex items-start gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-salsa-600/10">
                             <MapPin className="h-5 w-5 text-salsa-600" />
                           </div>
                           <div className="space-y-2">
                             <div>
-                              <h4 className="text-base font-semibold text-slate-900">
+                              <h4 className="text-base font-semibold text-foreground">
                                 {event.title}
                               </h4>
-                              <p className="text-sm text-slate-500">
+                              <p className="text-sm text-muted-foreground">
                                 {formatEventDate(event, headingFormatter, allDayFormatter)}
                               </p>
                             </div>
-                            <p className="text-sm font-medium text-slate-700">{event.location}</p>
+                            <p className="text-sm font-medium text-foreground/90">{event.location}</p>
                             {event.link && (
                               <a
                                 href={event.link}
@@ -487,7 +487,7 @@ export function GoogleScheduleMap() {
         </div>
 
         {eventsError && (
-          <div className="border-t border-red-200 bg-red-50 px-6 py-4 text-sm text-red-700">
+          <div className="border-t border-red-200 bg-red-50 dark:bg-red-900/30 px-6 py-4 text-sm text-red-700 dark:text-red-200">
             {eventsError}
           </div>
         )}

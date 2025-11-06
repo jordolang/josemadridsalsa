@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 
 export default function MerchandisePage() {
   return (
-    <main className="bg-gray-50">
+    <main className="bg-background">
       <section className="relative overflow-hidden bg-gradient-to-br from-salsa-600 via-salsa-500 to-chile-500 py-20 text-white">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl space-y-6">
@@ -65,8 +65,8 @@ export default function MerchandisePage() {
         <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="space-y-4">
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-salsa-500">Lookbook</p>
-            <h2 className="font-serif text-3xl font-semibold text-gray-900">Ready-to-print mockups</h2>
-            <p className="text-base text-gray-600">
+            <h2 className="font-serif text-3xl font-semibold text-foreground">Ready-to-print mockups</h2>
+            <p className="text-base text-muted-foreground">
               Explore the latest Jose Madrid Salsa mockups for apparel, displays, and fundraising kits. Every asset is
               pre-sized for the {fulfillmentContact.partnerName} portal and ships within 72 hours once approved.
             </p>
@@ -81,9 +81,9 @@ export default function MerchandisePage() {
             {merchMediaShowcase.map((media) => (
               <figure
                 key={media.id}
-                className="flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+                className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card surface-shadow"
               >
-                <div className="relative aspect-[4/3] w-full bg-gray-100">
+                <div className="relative aspect-[4/3] w-full bg-gray-100 dark:bg-gray-800">
                   <Image
                     src={media.image}
                     alt={media.title}
@@ -93,8 +93,8 @@ export default function MerchandisePage() {
                   />
                 </div>
                 <figcaption className="space-y-1 px-4 pb-5 pt-3">
-                  <p className="text-sm font-semibold text-gray-900">{media.title}</p>
-                  <p className="text-xs text-gray-600">{media.description}</p>
+                  <p className="text-sm font-semibold text-foreground">{media.title}</p>
+                  <p className="text-xs text-muted-foreground">{media.description}</p>
                 </figcaption>
               </figure>
             ))}
@@ -107,14 +107,14 @@ export default function MerchandisePage() {
           {merchCollections.map((collection) => (
             <article
               key={collection.id}
-              className={`rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${collection.accent ? `bg-gradient-to-br ${collection.accent}` : ''}`}
+              className={`rounded-2xl border border-border bg-card surface-shadow transition hover:-translate-y-1 ${collection.accent ? `bg-gradient-to-br ${collection.accent}` : ''}`}
             >
               <div className="space-y-4 p-8">
-                <h2 className="text-2xl font-serif font-semibold text-gray-900">
+                <h2 className="text-2xl font-serif font-semibold text-foreground">
                   {collection.title}
                 </h2>
-                <p className="text-sm text-gray-600">{collection.description}</p>
-                <ul className="space-y-2 text-sm text-gray-700">
+                <p className="text-sm text-muted-foreground">{collection.description}</p>
+                <ul className="space-y-2 text-sm text-foreground/90">
                   {collection.items.map((item) => (
                     <li key={item} className="flex items-start gap-2">
                       <CheckCircle className="mt-0.5 h-4 w-4 text-salsa-500" />
@@ -128,15 +128,15 @@ export default function MerchandisePage() {
         </div>
       </section>
 
-      <section className="bg-white py-16">
+      <section className="bg-card py-16">
         <div className="container mx-auto px-4">
           <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] items-start">
             <div className="space-y-6">
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-salsa-500">Fulfilment workflow</p>
-              <h2 className="font-serif text-3xl sm:text-4xl font-bold text-gray-900">
+              <h2 className="font-serif text-3xl sm:text-4xl font-bold text-foreground">
                 Plug into a ready-to-run merch pipeline
               </h2>
-              <p className="text-base text-gray-600">
+              <p className="text-base text-muted-foreground">
                 From storefront sync to shipping labels, {fulfillmentContact.partnerName} keeps the back office moving so you can focus on engaging customers and supporters.
               </p>
               <div className="space-y-4">
@@ -145,23 +145,23 @@ export default function MerchandisePage() {
                   return (
                     <div
                       key={highlight.id}
-                      className="flex gap-4 rounded-xl border border-gray-200 bg-gray-50 p-5"
+                      className="flex gap-4 rounded-xl border border-border bg-muted p-5"
                     >
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-salsa-500 shadow-inner">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-card text-salsa-500 shadow-inner">
                         <Icon className="h-6 w-6" />
                       </div>
                       <div className="space-y-1">
-                        <h3 className="text-lg font-semibold text-gray-900">{highlight.title}</h3>
-                        <p className="text-sm text-gray-600">{highlight.description}</p>
+                        <h3 className="text-lg font-semibold text-foreground">{highlight.title}</h3>
+                        <p className="text-sm text-muted-foreground">{highlight.description}</p>
                       </div>
                     </div>
                   )
                 })}
               </div>
             </div>
-            <div className="rounded-3xl border border-salsa-100 bg-gradient-to-br from-salsa-50 via-white to-chile-50 p-8 shadow-sm">
+            <div className="rounded-3xl border border-salsa-200/50 bg-gradient-to-br from-salsa-50/10 via-card to-chile-50/10 p-8 surface-shadow">
               <h3 className="text-xl font-semibold text-salsa-700">How we get you live</h3>
-              <ol className="mt-4 space-y-4 text-sm text-gray-700">
+              <ol className="mt-4 space-y-4 text-sm text-foreground/90">
                 {merchSetupSteps.map((step, index) => (
                   <li key={step.id} className="flex gap-3">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-salsa-500 text-xs font-semibold text-white">
@@ -171,7 +171,7 @@ export default function MerchandisePage() {
                   </li>
                 ))}
               </ol>
-              <div className="mt-6 rounded-2xl border border-salsa-200 bg-white p-5 text-sm text-salsa-700">
+              <div className="mt-6 rounded-2xl border border-salsa-200 bg-card p-5 text-sm text-salsa-700">
                 <p>
                   Have an existing printer? We can connect them instead—our merch module supports custom SFTP or API feeds for live inventory sync.
                 </p>

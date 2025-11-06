@@ -120,7 +120,7 @@ export function Navigation() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full border-b border-transparent bg-background/70 backdrop-blur-sm transition-[background-color,box-shadow,border-color] duration-300",
+        "sticky top-0 z-50 w-full border-b border-transparent bg-background/70 backdrop-blur-sm transition-[background-color,box-shadow,border-color] duration-300 text-foreground",
         isScrolled &&
           "border-border bg-background/90 shadow-[0_12px_32px_rgba(15,23,42,0.08)] dark:shadow-[0_0_30px_rgba(229,62,62,0.35)]"
       )}

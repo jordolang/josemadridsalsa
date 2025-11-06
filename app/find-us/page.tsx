@@ -1,7 +1,9 @@
 import { Metadata } from 'next';
-import { prisma } from '@/lib/prisma';
 import { LocationCard } from './_components/LocationCard';
+import { parseFindUsMarkdown, readFindUsMarkdownAbsolute, buildStreetViewOrMapImageUrl } from '@/lib/find-us-parser';
 import { MapPin } from 'lucide-react';
+import fs from 'fs/promises';
+import path from 'path';
 
 export const metadata: Metadata = {
   title: 'Find Us Locally - Jose Madrid Salsa',
@@ -29,16 +31,25 @@ type LocationsByCity = Record<string, Array<{
 type LocationsByState = Record<string, LocationsByCity>;
 
 export default async function FindUsPage() {
-  // Fetch all active locations
-  const locations = await prisma.retailLocation.findMany({
-    where: { isActive: true },
-    orderBy: [
-      { state: 'asc' },
-      { city: 'asc' },
-      { sortOrder: 'asc' },
-      { businessName: 'asc' },
-    ],
-  });
+  // Read and parse markdown into locations
+  const mdPath = await readFindUsMarkdownAbsolute();
+  const parsed = await parseFindUsMarkdown(mdPath);
+
+  // Optional: overlay photo URLs from a pre-generated map (Google Places photos)
+  const photosMapPath = path.join(process.cwd(), 'public', 'location-photos.json');
+  let photosMap: Record<string, string> = {};
+  try {
+    const file = await fs.readFile(photosMapPath, 'utf-8');
+    photosMap = JSON.parse(file) as Record<string, string>;
+  } catch {
+    // no pre-generated photos map, fall back to Street View
+  }
+
+  // Enrich with photoUrl using pre-generated photo map or Street View fallback
+  const locations = parsed.map(loc => ({
+    ...loc,
+    photoUrl: photosMap[loc.id] || buildStreetViewOrMapImageUrl(loc.address, loc.city, loc.state),
+  }));
 
   // Separate Ohio from other states
   const ohioLocations = locations.filter(loc => loc.state === 'OH');
@@ -78,7 +89,7 @@ export default async function FindUsPage() {
   const sortedStates = Object.keys(otherByState).sort();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-verde-50/30 to-salsa-50/30">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-salsa-600 via-salsa-500 to-chile-600 text-white">
         <div className="absolute inset-0 bg-black/10"></div>
@@ -108,12 +119,12 @@ export default async function FindUsPage() {
               - Requires county data for each location (currently null)
               - Map implementation options: react-simple-maps, custom SVG, or map library
             */}
-            <div className="mb-16 bg-white rounded-2xl shadow-lg border-2 border-dashed border-salsa-300 p-12 text-center">
+            <div className="mb-16 card surface-shadow border-2 border-dashed border-salsa-300 p-12 text-center">
               <MapPin className="w-12 h-12 mx-auto mb-4 text-salsa-400" />
-              <h2 className="text-2xl font-serif font-bold text-salsa-700 mb-2">
+              <h2 className="text-2xl font-serif font-bold text-foreground mb-2">
                 Ohio County Map
               </h2>
-              <p className="text-gray-600 max-w-md mx-auto">
+              <p className="text-muted-foreground max-w-md mx-auto">
                 Interactive county map coming soon! Click on any Ohio county to see locations in that area.
               </p>
             </div>
@@ -122,11 +133,11 @@ export default async function FindUsPage() {
             {ohioLocations.length > 0 && (
               <div className="mb-16">
                 <div className="mb-10">
-                  <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-4">
+                  <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-4">
                     Ohio Locations
                   </h2>
                   <div className="h-1 w-24 bg-gradient-to-r from-salsa-500 to-chile-500 rounded-full"></div>
-                  <p className="mt-4 text-gray-600 text-lg">
+                  <p className="mt-4 text-muted-foreground text-lg">
                     {ohioLocations.length} locations across Ohio
                   </p>
                 </div>
@@ -137,9 +148,9 @@ export default async function FindUsPage() {
 
                   return (
                     <div key={cityKey} className="mb-12">
-                      <h3 className="text-2xl font-serif font-semibold text-salsa-700 mb-6">
+                      <h3 className="text-2xl font-serif font-semibold text-foreground mb-6">
                         {cityName}
-                        <span className="text-sm font-normal text-gray-500 ml-3">
+                        <span className="text-sm font-normal text-muted-foreground ml-3">
                           ({cityLocations.length} location{cityLocations.length > 1 ? 's' : ''})
                         </span>
                       </h3>
@@ -169,11 +180,11 @@ export default async function FindUsPage() {
             {otherLocations.length > 0 && (
               <div>
                 <div className="mb-10">
-                  <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-4">
+                  <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-4">
                     Additional Locations
                   </h2>
                   <div className="h-1 w-24 bg-gradient-to-r from-verde-500 to-salsa-500 rounded-full"></div>
-                  <p className="mt-4 text-gray-600 text-lg">
+                  <p className="mt-4 text-muted-foreground text-lg">
                     {otherLocations.length} locations in Pennsylvania, Kentucky, Michigan, Indiana, and Wisconsin
                   </p>
                 </div>
@@ -204,9 +215,9 @@ export default async function FindUsPage() {
 
                         return (
                           <div key={`${state}-${cityKey}`} className="mb-10">
-                            <h4 className="text-xl font-semibold text-gray-700 mb-4">
+                            <h4 className="text-xl font-semibold text-foreground mb-4">
                               {cityName}
-                              <span className="text-sm font-normal text-gray-500 ml-3">
+                              <span className="text-sm font-normal text-muted-foreground ml-3">
                                 ({cityLocations.length} location{cityLocations.length > 1 ? 's' : ''})
                               </span>
                             </h4>

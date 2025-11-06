@@ -32,7 +32,7 @@ export default async function AdminLayout({
   const filteredNav = filterNavByPermissions(adminNavigation, userPermissions)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-background text-foreground">
       {/* Sidebar */}
       <AdminSidebar navigation={filteredNav} className="hidden lg:block" />
 

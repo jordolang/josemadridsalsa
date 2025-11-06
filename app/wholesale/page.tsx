@@ -58,7 +58,7 @@ const storeTypes = [
 
 export default function WholesalePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-verde-50/30 to-salsa-50/30">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-salsa-600 via-chile-600 to-verde-600 text-white">
         <div className="absolute inset-0 bg-black/20"></div>
@@ -92,27 +92,27 @@ export default function WholesalePage() {
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-6">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
                 Two Ways to Order
               </h2>
-              <p className="text-xl text-gray-700 max-w-3xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 We make it easy for retailers to stock Jose Madrid Salsa with flexible ordering options
               </p>
             </div>
 
             <div className="grid lg:grid-cols-2 gap-12">
               {/* Faire Platform */}
-              <Card className="bg-gradient-to-br from-salsa-50 to-chile-50 border-0 shadow-xl">
+              <Card className="card surface-shadow">
                 <CardHeader className="text-center pb-4">
                   <div className="w-16 h-16 bg-gradient-to-br from-salsa-500 to-chile-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Store className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-2xl font-serif font-bold text-salsa-800">
+                  <h3 className="text-2xl font-serif font-bold text-foreground">
                     Order Through Faire
                   </h3>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-gray-700 leading-relaxed">
+                  <p className="text-muted-foreground leading-relaxed">
                     We have a selection of salsas available through Faire, the leading wholesale marketplace for independent retailers.
                   </p>
                   <ul className="space-y-3">
@@ -145,17 +145,17 @@ export default function WholesalePage() {
               </Card>
 
               {/* Direct Contact */}
-              <Card className="bg-gradient-to-br from-verde-50 to-salsa-50 border-0 shadow-xl">
+              <Card className="card surface-shadow">
                 <CardHeader className="text-center pb-4">
                   <div className="w-16 h-16 bg-gradient-to-br from-verde-500 to-salsa-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Users className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-2xl font-serif font-bold text-salsa-800">
+                  <h3 className="text-2xl font-serif font-bold text-foreground">
                     Contact Us Directly
                   </h3>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-gray-700 leading-relaxed">
+                  <p className="text-muted-foreground leading-relaxed">
                     Prefer to work directly with our team? We welcome direct inquiries from retailers interested in carrying our products.
                   </p>
                   <ul className="space-y-3">
@@ -191,31 +191,31 @@ export default function WholesalePage() {
       </section>
 
       {/* Why Partner With Us */}
-      <section className="py-16 bg-gradient-to-r from-salsa-50 to-chile-50">
+      <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-6">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
                 Why Partner with Jose Madrid Salsa?
               </h2>
-              <p className="text-xl text-gray-700 max-w-3xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 We're more than just a supplier—we're a partner committed to your success
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               {benefits.map((benefit, index) => (
-                <Card key={index} className="bg-white border-0 shadow-lg text-center">
+                <Card key={index} className="card surface-shadow text-center">
                   <CardHeader className="pb-4">
                     <div className="w-16 h-16 bg-gradient-to-br from-salsa-500 to-chile-500 rounded-full flex items-center justify-center mx-auto mb-4">
                       <benefit.icon className="w-8 h-8 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold text-salsa-800">
+                    <h3 className="text-xl font-bold text-foreground">
                       {benefit.title}
                     </h3>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-700 leading-relaxed">
+                    <p className="text-muted-foreground leading-relaxed">
                       {benefit.description}
                     </p>
                   </CardContent>
@@ -231,25 +231,25 @@ export default function WholesalePage() {
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-salsa-800 mb-6">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
                 Perfect for Your Store Type
               </h2>
-              <p className="text-xl text-gray-700 max-w-3xl mx-auto">
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Our authentic salsas are a great fit for various retail environments
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
               {storeTypes.map((type, index) => (
-                <Card key={index} className="bg-white border-0 shadow-lg">
+                <Card key={index} className="card surface-shadow">
                   <CardHeader>
-                    <h3 className="text-xl font-bold text-salsa-800 flex items-center gap-3">
+                    <h3 className="text-xl font-bold text-foreground flex items-center gap-3">
                       <div className="w-3 h-3 bg-gradient-to-r from-salsa-500 to-chile-500 rounded-full"></div>
                       {type.title}
                     </h3>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-700 leading-relaxed">
+                    <p className="text-muted-foreground leading-relaxed">
                       {type.description}
                     </p>
                   </CardContent>
@@ -308,10 +308,10 @@ export default function WholesalePage() {
       </section>
 
       {/* Bottom CTA */}
-      <section className="py-12 bg-white">
+      <section className="py-12 bg-card">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-4xl mx-auto">
-            <p className="text-gray-700 text-lg mb-6">
+            <p className="text-muted-foreground text-lg mb-6">
               Looking for our fundraising program instead?
             </p>
             <Button variant="outline" className="border-salsa-500 text-salsa-600 hover:bg-salsa-50" asChild>
