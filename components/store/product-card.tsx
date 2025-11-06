@@ -54,10 +54,10 @@ export function ProductCard({ product }: ProductCardProps) {
     : 0
 
   return (
-    <Card className="group overflow-hidden border-0 bg-white shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+    <Card className="group overflow-hidden transition-transform duration-300 hover:-translate-y-1">
       <div className="relative">
         <Link href={`/salsas/${product.slug}`}>
-          <div className="relative aspect-square overflow-hidden bg-gray-100">
+          <div className="relative aspect-square overflow-hidden bg-muted">
             <Image
               src={imageError || !product.featuredImage ? '/images/placeholder-salsa.jpg' : product.featuredImage}
               alt={product.name}
@@ -99,7 +99,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 <Button
                   size="sm"
                   variant="secondary"
-                  className="h-10 w-10 rounded-full p-0 bg-white/90 hover:bg-white"
+                  className="h-10 w-10 rounded-full p-0"
                   onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -131,24 +131,24 @@ export function ProductCard({ product }: ProductCardProps) {
 
       <CardContent className="p-4">
         <Link href={`/salsas/${product.slug}`}>
-          <h3 className="font-semibold text-lg text-gray-900 hover:text-salsa-600 transition-colors line-clamp-2">
+          <h3 className="text-lg font-semibold text-foreground transition-colors hover:text-salsa-600 line-clamp-2">
             {product.name}
           </h3>
         </Link>
         
         {product.description && (
-          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
             {product.description}
           </p>
         )}
 
         <div className="flex items-center justify-between mt-3">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-gray-900">
+            <span className="text-xl font-bold text-foreground">
               {formatPrice(product.price)}
             </span>
             {hasDiscount && (
-              <span className="text-sm text-gray-500 line-through">
+              <span className="text-sm text-muted-foreground line-through">
                 {formatPrice(product.compareAtPrice!)}
               </span>
             )}
