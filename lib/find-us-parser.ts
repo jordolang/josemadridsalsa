@@ -155,9 +155,21 @@ export function buildStreetViewOrMapImageUrl(address: string, city: string, stat
 }
 
 export async function readFindUsMarkdownAbsolute(): Promise<string> {
-  // Prefer the path with spaces/case as seen in repo
-  const absolutePath = path.join(process.cwd(), 'public', 'Find Us Locally', 'Find Us Locally.md');
-  return absolutePath;
+  const candidates = [
+    path.join(process.cwd(), 'public', 'find-us-locally', 'find-us-locally.md'), // kebab-case safe path
+    path.join(process.cwd(), 'public', 'Find Us Locally', 'Find Us Locally.md'), // original path with spaces
+    path.join(process.cwd(), 'public', 'find-us-locally.md'), // flat file fallback
+  ];
+  for (const candidate of candidates) {
+    try {
+      await fs.access(candidate);
+      return candidate;
+    } catch {
+      // try next
+    }
+  }
+  // As a last resort, throw a clear error
+  throw new Error('Find Us markdown file not found in any known location.');
 }
 
 
