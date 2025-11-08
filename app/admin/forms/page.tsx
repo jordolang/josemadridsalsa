@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
@@ -10,11 +11,13 @@ import {
 } from '@/lib/forms/templates'
 import { FormTemplateBuilder } from '@/components/admin/form-template-builder'
 import { ClipboardList, FileText, Users } from 'lucide-react'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Business Forms',
+export const metadata: Metadata = createMetadata({
+  title: 'Business Forms - Jose Madrid Salsa Admin',
   description: 'Build downloadable business forms for wholesale, fundraising, and operations.',
-}
+  pathname: '/admin/forms',
+})
 
 export default async function AdminFormsPage() {
   const user = await getCurrentUser()

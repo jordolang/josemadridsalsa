@@ -6,11 +6,13 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { createMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Order History",
-  description: "Your past orders",
-};
+export const metadata: Metadata = createMetadata({
+  title: "Order History - Jose Madrid Salsa",
+  description: "Review your previous Jose Madrid Salsa orders, statuses, and totals.",
+  pathname: "/account/orders",
+});
 
 function formatCurrency(v: number) {
   return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(v);

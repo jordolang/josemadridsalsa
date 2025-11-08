@@ -3,16 +3,13 @@ import Link from 'next/link';
 import { Store, Package, TrendingUp, ExternalLink, Mail, Phone, CheckCircle, Users, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { createMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createMetadata({
   title: 'Wholesale - Jose Madrid Salsa',
   description: 'Interested in carrying Jose Madrid Salsa in your store? Learn about our wholesale program, pricing, and how to become a retail partner.',
-  openGraph: {
-    title: 'Wholesale - Jose Madrid Salsa',
-    description: 'Partner with Jose Madrid Salsa for wholesale opportunities. Premium quality salsas for retail stores.',
-    images: ['/og-wholesale.jpg'],
-  },
-};
+  pathname: '/wholesale',
+});
 
 const benefits = [
   {

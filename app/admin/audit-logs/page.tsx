@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
@@ -7,11 +8,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { FileText, Search, Shield } from 'lucide-react'
 import Link from 'next/link'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Audit Logs | Admin',
-  description: 'View system audit trail',
-}
+export const metadata: Metadata = createMetadata({
+  title: 'Audit Logs - Jose Madrid Salsa Admin',
+  description: 'View the system audit trail.',
+  pathname: '/admin/audit-logs',
+})
 
 type SearchParams = {
   search?: string

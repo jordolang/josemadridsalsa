@@ -1,11 +1,14 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import TagForm from '@/components/admin/TagForm'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Add Tag | Admin',
-  description: 'Create a new tag',
-}
+export const metadata: Metadata = createMetadata({
+  title: 'Add Tag - Jose Madrid Salsa Admin',
+  description: 'Create a new tag for Jose Madrid Salsa content.',
+  pathname: '/admin/tags',
+})
 
 export default async function NewTagPage() {
   const user = await getCurrentUser()

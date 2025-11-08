@@ -1,15 +1,18 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { formatPrice } from '@/lib/utils'
 import { payrollRuns, payrollEmployees } from '@/lib/financials/config'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Payroll',
+export const metadata: Metadata = createMetadata({
+  title: 'Payroll - Jose Madrid Salsa Admin',
   description: 'Approve payroll, sync to ADP, and review employee earnings.',
-}
+  pathname: '/admin/financials/payroll',
+})
 
 export default async function PayrollPage() {
   const user = await getCurrentUser()

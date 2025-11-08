@@ -1,12 +1,15 @@
 import { redirect, notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import TagForm from '@/components/admin/TagForm'
 import prisma from '@/lib/prisma'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Edit Tag | Admin',
-  description: 'Edit tag details',
-}
+export const metadata: Metadata = createMetadata({
+  title: 'Edit Tag - Jose Madrid Salsa Admin',
+  description: 'Edit tag details.',
+  pathname: '/admin/tags',
+})
 
 async function getTag(tagId: string) {
   const tag = await prisma.tag.findUnique({

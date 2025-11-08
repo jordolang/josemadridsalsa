@@ -4,16 +4,13 @@ import { LocationsMap } from './_components/LocationsMap';
 import { parseFindUsMarkdown, readFindUsMarkdownAbsolute, buildStreetViewOrMapImageUrl } from '@/lib/find-us-parser';
 import { MapPin } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { createMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createMetadata({
   title: 'Find Us Locally - Jose Madrid Salsa',
   description: 'Find Jose Madrid Salsa at retail stores near you. Browse our locations by city and state across Ohio, Pennsylvania, Kentucky, Michigan, Indiana, and Wisconsin.',
-  openGraph: {
-    title: 'Find Us Locally - Jose Madrid Salsa',
-    description: 'Find Jose Madrid Salsa at retail stores near you. Browse our locations across multiple states.',
-    images: ['/og-find-us.jpg'],
-  },
-};
+  pathname: '/find-us',
+});
 
 // Ensure Node.js runtime so fs access works on Vercel
 export const runtime = 'nodejs';

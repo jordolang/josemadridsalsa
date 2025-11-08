@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -6,11 +7,13 @@ import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { formatPrice } from '@/lib/utils'
 import { expenseQueue, supportedUploadFormats } from '@/lib/financials/config'
 import { FinancialUploadPanel } from '@/components/admin/financials/financial-upload-panel'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Expenses',
+export const metadata: Metadata = createMetadata({
+  title: 'Expenses - Jose Madrid Salsa Admin',
   description: 'Approve reimbursements, sync receipts, and export to your accounting suite.',
-}
+  pathname: '/admin/financials/expenses',
+})
 
 export default async function ExpensesPage() {
   const user = await getCurrentUser()

@@ -7,11 +7,13 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { OrderCard } from "@/components/account/OrderCard";
+import { createMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Account Dashboard",
-  description: "Your account overview",
-};
+export const metadata: Metadata = createMetadata({
+  title: "Account Dashboard - Jose Madrid Salsa",
+  description: "Review your recent orders, profile details, and quick links to manage your Jose Madrid Salsa account.",
+  pathname: "/account",
+});
 
 export default async function AccountPage() {
   const session = await getServerSession(authOptions);

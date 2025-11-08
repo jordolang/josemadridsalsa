@@ -1,12 +1,15 @@
 import { redirect, notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import ProductForm from '@/components/admin/ProductForm'
 import prisma from '@/lib/prisma'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Edit Product | Admin',
-  description: 'Edit product details',
-}
+export const metadata: Metadata = createMetadata({
+  title: 'Edit Product - Jose Madrid Salsa Admin',
+  description: 'Edit product details.',
+  pathname: '/admin/products',
+})
 
 async function getFormData(productId: string) {
   const [product, categories] = await Promise.all([

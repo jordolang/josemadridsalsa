@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
@@ -7,11 +8,13 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Tag as TagIcon } from 'lucide-react'
 import Link from 'next/link'
 import TagActions from '@/components/admin/TagActions'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Tags | Admin',
-  description: 'Manage tags for products, recipes, media, and events',
-}
+export const metadata: Metadata = createMetadata({
+  title: 'Tags - Jose Madrid Salsa Admin',
+  description: 'Manage tags for products, recipes, media, and events.',
+  pathname: '/admin/tags',
+})
 
 type SearchParams = {
   type?: string

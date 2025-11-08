@@ -1,12 +1,15 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import ProductForm from '@/components/admin/ProductForm'
 import prisma from '@/lib/prisma'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Add Product | Admin',
-  description: 'Create a new product',
-}
+export const metadata: Metadata = createMetadata({
+  title: 'Add Product - Jose Madrid Salsa Admin',
+  description: 'Create a new product in the Jose Madrid Salsa catalog.',
+  pathname: '/admin/products',
+})
 
 async function getFormData() {
   const categories = await prisma.category.findMany({

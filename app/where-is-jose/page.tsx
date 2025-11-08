@@ -4,16 +4,13 @@ import { MapPin, Truck, Calendar, Store, Users, Compass, Mountain, Building, Ute
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { GoogleScheduleMap } from './_components/GoogleScheduleMap';
+import { createMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createMetadata({
   title: 'Where is Jose? - Jose Madrid Salsa',
   description: 'Follow Jose Madrid Salsa from our Ohio home base to retail locations, farmers markets, and tables across the region. Discover where you can find our authentic flavors.',
-  openGraph: {
-    title: 'Where is Jose? - Jose Madrid Salsa',
-    description: 'Discover where to find authentic Jose Madrid Salsa near you.',
-    images: ['/og-where-jose.jpg'],
-  },
-};
+  pathname: '/where-is-jose',
+});
 
 const locations = [
   {

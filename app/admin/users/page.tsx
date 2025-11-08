@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
@@ -8,11 +9,13 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Search, User, Users, ShieldAlert } from 'lucide-react'
 import Link from 'next/link'
 import { UserRole } from '@prisma/client'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Users | Admin',
-  description: 'Manage user accounts and permissions',
-}
+export const metadata: Metadata = createMetadata({
+  title: 'Users - Jose Madrid Salsa Admin',
+  description: 'Manage user accounts and permissions.',
+  pathname: '/admin/users',
+})
 
 type SearchParams = {
   search?: string

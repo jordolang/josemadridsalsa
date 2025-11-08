@@ -1,7 +1,16 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { ReviewsSection } from '@/components/store/reviews-section'
 import { GiftBoxSelector } from '@/components/store/gift-box-selector'
+import { createMetadata } from '@/lib/metadata'
+
+export const metadata: Metadata = createMetadata({
+  title: 'Jose Madrid Salsa - Premium Gourmet Salsa',
+  description:
+    'Discover artisan small-batch salsas crafted in Ohio. Shop mild to extra hot varieties, find fundraising programs, or explore wholesale partnerships.',
+  pathname: '/',
+})
 
 export default function Home() {
   return (

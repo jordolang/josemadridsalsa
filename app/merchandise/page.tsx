@@ -11,12 +11,14 @@ import {
   fulfillmentContact,
   merchMediaShowcase,
 } from '@/lib/merchandise/config'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata: Metadata = {
-  title: 'Merchandise',
+export const metadata: Metadata = createMetadata({
+  title: 'Merchandise - Jose Madrid Salsa',
   description:
     'Represent Jose Madrid Salsa with premium apparel and accessories delivered straight from our print partner.',
-}
+  pathname: '/merchandise',
+})
 
 export default function MerchandisePage() {
   return (

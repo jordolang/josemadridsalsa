@@ -6,11 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { prisma } from '@/lib/prisma'
 import type { BusinessFormTemplate } from '@/types/forms'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata: Metadata = {
-  title: 'Business Forms Library',
+export const metadata: Metadata = createMetadata({
+  title: 'Business Forms Library - Jose Madrid Salsa',
   description: 'Download printable order forms, fundraising tallies, payroll timesheets, and more from Jose Madrid Salsa.',
-}
+  pathname: '/forms',
+})
 
 type CatalogTemplate = BusinessFormTemplate & {
   source: 'library' | 'saved'

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
@@ -9,11 +10,13 @@ import { Upload, Search, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 import MediaGrid from '@/components/admin/MediaGrid'
 import MediaUploadDialog from '@/components/admin/MediaUploadDialog'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Media Library | Admin',
-  description: 'Manage images and media assets',
-}
+export const metadata: Metadata = createMetadata({
+  title: 'Media Library - Jose Madrid Salsa Admin',
+  description: 'Manage images and media assets.',
+  pathname: '/admin/media',
+})
 
 type SearchParams = {
   search?: string

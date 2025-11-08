@@ -3,11 +3,14 @@ import { getCurrentUser, getUserPermissions } from '@/lib/rbac'
 import { adminNavigation, filterNavByPermissions } from '@/lib/permissions-map'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { AdminTopbar } from '@/components/admin/AdminTopbar'
+import type { Metadata } from 'next'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
+export const metadata: Metadata = createMetadata({
   title: 'Admin Panel - Jose Madrid Salsa',
-  description: 'Administration panel for Jose Madrid Salsa',
-}
+  description: 'Administration panel for Jose Madrid Salsa staff and partners.',
+  pathname: '/admin',
+})
 
 export default async function AdminLayout({
   children,

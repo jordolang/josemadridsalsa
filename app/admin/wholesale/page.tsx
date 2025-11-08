@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
@@ -7,11 +8,13 @@ import { Badge } from '@/components/ui/badge'
 import { Building2, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { WholesaleStatus } from '@prisma/client'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Wholesale Accounts | Admin',
-  description: 'Manage wholesale customer accounts',
-}
+export const metadata: Metadata = createMetadata({
+  title: 'Wholesale Accounts - Jose Madrid Salsa Admin',
+  description: 'Manage wholesale customer accounts.',
+  pathname: '/admin/wholesale',
+})
 
 type SearchParams = {
   status?: string

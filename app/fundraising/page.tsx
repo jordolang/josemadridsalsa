@@ -3,16 +3,13 @@ import Link from 'next/link';
 import { Heart, Users, DollarSign, Truck, Download, ExternalLink, Quote, Star, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { createMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createMetadata({
   title: 'Fundraising - Jose Madrid Salsa',
   description: 'Partner with Jose Madrid Salsa for your fundraising goals! Earn 50% profit with free shipping, online and pre-sell options available.',
-  openGraph: {
-    title: 'Fundraising - Jose Madrid Salsa',
-    description: 'Healthy fundraising option with 50% profit and free shipping. Perfect for schools, sports teams, and organizations.',
-    images: ['/og-fundraising.jpg'],
-  },
-};
+  pathname: '/fundraising',
+});
 
 const testimonials = [
   {

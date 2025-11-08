@@ -1,18 +1,16 @@
-import { Metadata } from 'next';
-import Link from 'next/link';
-import { Heart, Award, Users, Leaf, Calendar, Target, Star, CheckCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Metadata } from 'next'
+import Link from 'next/link'
+import { Heart, Award, Users, Leaf, Calendar, Target, Star, CheckCircle } from 'lucide-react'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createMetadata({
   title: 'Our Story - Jose Madrid Salsa',
-  description: 'Discover the story behind Jose Madrid Salsa - from a family restaurant in Ohio to a regional favorite. Learn about our mission, values, and commitment to authentic flavors.',
-  openGraph: {
-    title: 'Our Story - Jose Madrid Salsa',
-    description: 'The story behind authentic Jose Madrid Salsa - family tradition, quality ingredients, and New Mexico-style flavor.',
-    images: ['/og-story.jpg'],
-  },
-};
+  description:
+    'Discover the story behind Jose Madrid Salsa - from a family restaurant in Ohio to a regional favorite. Learn about our mission, values, and commitment to authentic flavors.',
+  pathname: '/our-story',
+})
 
 const timeline = [
   {

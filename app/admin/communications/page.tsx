@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import {
   Mail,
   MessageSquare,
@@ -10,11 +11,13 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission, hasAnyPermission } from '@/lib/rbac'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Communications | Admin',
-  description: 'Messaging, email, and feedback management',
-}
+export const metadata: Metadata = createMetadata({
+  title: 'Communications - Jose Madrid Salsa Admin',
+  description: 'Messaging, email, and feedback management.',
+  pathname: '/admin/communications',
+})
 
 async function getCommunicationOverview() {
   const [

@@ -5,14 +5,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
 import { AccountBreadcrumbs } from "@/components/account/AccountBreadcrumbs";
 import { SignOutButton } from "@/components/account/SignOutButton";
+import { createMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "My Account",
-  description: "Manage your profile, orders, and settings",
-};
+export const metadata: Metadata = createMetadata({
+  title: "My Account - Jose Madrid Salsa",
+  description: "Manage your profile, orders, and account settings with Jose Madrid Salsa.",
+  pathname: "/account",
+});
 
 type Props = { children: React.ReactNode };
 

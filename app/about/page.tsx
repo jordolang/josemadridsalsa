@@ -1,16 +1,14 @@
-import { Metadata } from 'next';
-import Link from 'next/link';
-import { ExternalLink } from 'lucide-react';
+import { Metadata } from 'next'
+import Link from 'next/link'
+import { ExternalLink } from 'lucide-react'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createMetadata({
   title: 'About Jose - Jose Madrid Salsa',
-  description: 'Learn about Jose Madrid, the inspiration behind our authentic New Mexico-style salsas, and the rich family history that started it all in Zanesville, Ohio.',
-  openGraph: {
-    title: 'About Jose - Jose Madrid Salsa',
-    description: 'Learn about Jose Madrid, the inspiration behind our authentic New Mexico-style salsas.',
-    images: ['/og-about.jpg'],
-  },
-};
+  description:
+    'Learn about Jose Madrid, the inspiration behind our authentic New Mexico-style salsas, and the rich family history that started it all in Zanesville, Ohio.',
+  pathname: '/about',
+})
 
 export default function AboutPage() {
   return (

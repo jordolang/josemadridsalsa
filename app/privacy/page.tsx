@@ -1,7 +1,11 @@
-export const metadata = {
+import type { Metadata } from 'next';
+import { createMetadata } from '@/lib/metadata';
+
+export const metadata: Metadata = createMetadata({
   title: 'Privacy Policy - Jose Madrid Salsa',
   description: 'Learn how Jose Madrid Salsa collects, uses, and protects your personal information.',
-};
+  pathname: '/privacy',
+});
 
 export default function PrivacyPolicyPage() {
   return (

@@ -1,14 +1,17 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { taxPreparationTasks } from '@/lib/financials/config'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Taxes',
+export const metadata: Metadata = createMetadata({
+  title: 'Taxes - Jose Madrid Salsa Admin',
   description: 'Track tax filings, due dates, and compliance notes.',
-}
+  pathname: '/admin/financials/taxes',
+})
 
 export default async function TaxesPage() {
   const user = await getCurrentUser()

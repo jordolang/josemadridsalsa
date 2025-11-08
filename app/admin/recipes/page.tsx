@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
@@ -8,11 +9,13 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Search, ChefHat, Clock, Users } from 'lucide-react'
 import Link from 'next/link'
 import RecipeActions from '@/components/admin/RecipeActions'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Recipes | Admin',
-  description: 'Manage recipes and cooking content',
-}
+export const metadata: Metadata = createMetadata({
+  title: 'Recipes - Jose Madrid Salsa Admin',
+  description: 'Manage recipes and cooking content.',
+  pathname: '/admin/recipes',
+})
 
 type SearchParams = {
   search?: string

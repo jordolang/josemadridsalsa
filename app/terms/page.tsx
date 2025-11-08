@@ -1,7 +1,11 @@
-export const metadata = {
+import type { Metadata } from 'next';
+import { createMetadata } from '@/lib/metadata';
+
+export const metadata: Metadata = createMetadata({
   title: 'Terms of Service - Jose Madrid Salsa',
   description: 'Read the terms that govern the use of Jose Madrid Salsa’s website and services.',
-};
+  pathname: '/terms',
+});
 
 export default function TermsOfServicePage() {
   return (

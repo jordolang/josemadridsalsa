@@ -7,6 +7,7 @@ import { FormPublicToolbar } from '@/components/forms/form-public-toolbar'
 import { Sparkles } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import type { BusinessFormTemplate } from '@/types/forms'
+import { createMetadata } from '@/lib/metadata'
 
 type FormPageProps = {
   params: {
@@ -61,15 +62,18 @@ export async function generateMetadata({ params }: FormPageProps): Promise<Metad
   const template = await findTemplate(params.slug)
 
   if (!template) {
-    return {
-      title: 'Business Form',
-    }
+    return createMetadata({
+      title: 'Business Form - Jose Madrid Salsa',
+      description: 'Download Jose Madrid Salsa business form templates.',
+      pathname: `/forms/${params.slug}`,
+    })
   }
 
-  return {
+  return createMetadata({
     title: `${template.name} – Jose Madrid Salsa`,
     description: template.description,
-  }
+    pathname: `/forms/${params.slug}`,
+  })
 }
 
 export default async function FormDetailPage({ params }: FormPageProps) {

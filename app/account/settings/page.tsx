@@ -6,11 +6,13 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { ProfileForm } from "@/components/account/ProfileForm";
 import { AddressForm } from "@/components/account/AddressForm";
+import { createMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Account Settings",
-  description: "Update your profile and manage addresses",
-};
+export const metadata: Metadata = createMetadata({
+  title: "Account Settings - Jose Madrid Salsa",
+  description: "Update your Jose Madrid Salsa account details, saved addresses, and communication preferences.",
+  pathname: "/account/settings",
+});
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { createMetadata } from "@/lib/metadata";
 
 type PageProps = { params: { id: string } };
 
@@ -16,10 +17,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     select: { orderNumber: true },
   });
   const num = order?.orderNumber ?? params.id.slice(-6).toUpperCase();
-  return {
-    title: `Order #${num}`,
-    description: `Details for order #${num}`,
-  };
+  const title = `Order #${num} - Jose Madrid Salsa`;
+  const description = `Detailed summary for Jose Madrid Salsa order #${num}.`;
+
+  return createMetadata({
+    title,
+    description,
+    pathname: `/account/orders/${params.id}`,
+  });
 }
 
 function formatCurrency(v: number) {

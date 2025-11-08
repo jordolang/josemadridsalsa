@@ -1,11 +1,13 @@
 import { Metadata } from 'next'
 import { EmailTemplateGallery } from '@/components/admin/email-template-gallery'
 import { newsletterBlocks, newsletterTemplates } from '@/lib/email/templates'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata: Metadata = {
-  title: 'Email templates',
+export const metadata: Metadata = createMetadata({
+  title: 'Email Templates - Jose Madrid Salsa Admin',
   description: 'Preview and export Jose Madrid Salsa newsletter templates and reusable HTML building blocks.',
-}
+  pathname: '/admin/email-templates',
+})
 
 export default function AdminEmailTemplatesPage() {
   return (

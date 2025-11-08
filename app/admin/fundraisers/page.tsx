@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
@@ -7,11 +8,13 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, DollarSign, TrendingUp, Users } from 'lucide-react'
 import Link from 'next/link'
 import { FundraiserStatus } from '@prisma/client'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Fundraisers | Admin',
-  description: 'Manage fundraising campaigns',
-}
+export const metadata: Metadata = createMetadata({
+  title: 'Fundraisers - Jose Madrid Salsa Admin',
+  description: 'Manage fundraising campaigns.',
+  pathname: '/admin/fundraisers',
+})
 
 type SearchParams = {
   status?: string
