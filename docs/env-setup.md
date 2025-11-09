@@ -14,6 +14,7 @@ PRISMA_DATABASE_URL="prisma+postgres://..." # Prisma Accelerate URL (optional)
 ```bash
 NEXTAUTH_URL="http://localhost:3000"    # App URL (change for production)
 NEXTAUTH_SECRET="your-secret-key-here"  # Strong random string (32+ chars)
+NEXTAUTH_COOKIE_DOMAIN=".josemadrid.net" # (Optional) Share session cookies across apex + subdomains
 ```
 
 ### Encryption (Admin Panel)

@@ -1,0 +1,143 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: josemadridsalsa
+  title: Jose Madrid Salsa E-Commerce Platform
+  description: Modern e-commerce platform for Jose Madrid Salsa products with admin panel and business management features
+  annotations:
+    github.com/project-slug: jordolang/josemadridsalsa
+    backstage.io/source-location: url:https://github.com/jordolang/josemadridsalsa
+  tags:
+    - ecommerce
+    - nextjs
+    - food
+    - salsa
+  links:
+    - url: https://josemadridsalsa.com
+      title: Production Website
+      icon: web
+    - url: https://github.com/jordolang/josemadridsalsa
+      title: GitHub Repository
+      icon: github
+    - url: https://github.com/jordolang/josemadridsalsa/issues
+      title: GitHub Issues
+      icon: github
+    - url: https://github.com/jordolang/josemadridsalsa/pulls
+      title: Pull Requests
+      icon: github
+spec:
+  owner: user:default/jordolang
+  domain: ecommerce
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: josemadridsalsa-web
+  title: Jose Madrid Salsa Web Application
+  description: Next.js 15 web application with storefront and admin panel
+  annotations:
+    github.com/project-slug: jordolang/josemadridsalsa
+    backstage.io/techdocs-ref: dir:.
+    backstage.io/source-location: url:https://github.com/jordolang/josemadridsalsa/tree/main/
+    github.com/workflows: ci.yml
+  tags:
+    - nextjs
+    - typescript
+    - react
+    - tailwind
+  links:
+    - url: https://josemadridsalsa.com
+      title: Production
+      icon: web
+    - url: http://localhost:3000
+      title: Local Development
+      icon: dashboard
+    - url: https://github.com/jordolang/josemadridsalsa
+      title: View Source
+      icon: github
+spec:
+  type: website
+  lifecycle: production
+  owner: user:default/jordolang
+  system: josemadridsalsa
+  dependsOn:
+    - component:default/josemadridsalsa-api
+    - resource:default/josemadridsalsa-database
+  providesApis:
+    - josemadridsalsa-storefront-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: josemadridsalsa-api
+  title: Jose Madrid Salsa API
+  description: Next.js API routes handling authentication, orders, and business logic
+  annotations:
+    github.com/project-slug: jordolang/josemadridsalsa
+    backstage.io/source-location: url:https://github.com/jordolang/josemadridsalsa/tree/main/app/api
+  tags:
+    - api
+    - nextjs
+    - prisma
+    - stripe
+  links:
+    - url: https://github.com/jordolang/josemadridsalsa/tree/main/app/api
+      title: API Source Code
+      icon: github
+spec:
+  type: service
+  lifecycle: production
+  owner: user:default/jordolang
+  system: josemadridsalsa
+  dependsOn:
+    - resource:default/josemadridsalsa-database
+  providesApis:
+    - josemadridsalsa-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: josemadridsalsa-api
+  title: Jose Madrid Salsa REST API
+  description: RESTful API for e-commerce operations including products, orders, and user management
+  annotations:
+    github.com/project-slug: jordolang/josemadridsalsa
+  tags:
+    - rest
+    - nextjs
+    - openapi
+  links:
+    - url: https://josemadridsalsa.com/api
+      title: Production API
+      icon: api
+    - url: http://localhost:3000/api
+      title: Development API
+      icon: api
+spec:
+  type: openapi
+  lifecycle: production
+  owner: user:default/jordolang
+  system: josemadridsalsa
+  definition: |
+    openapi: 3.0.0
+    info:
+      title: Jose Madrid Salsa API
+      version: 1.0.0
+    paths: {}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: josemadridsalsa-database
+  title: Jose Madrid Salsa PostgreSQL Database
+  description: PostgreSQL database with Prisma ORM for products, orders, users, and business data
+  tags:
+    - postgresql
+    - prisma
+    - database
+spec:
+  type: database
+  lifecycle: production
+  owner: user:default/jordolang
+  system: josemadridsalsa
+  dependsOn: []

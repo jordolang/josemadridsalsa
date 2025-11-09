@@ -1,0 +1,19 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: josemadridsalsa-analytics-components
+  title: Jose Madrid Salsa Analytics Components
+  description: Analytics and tracking components for monitoring user behavior, conversions, and business metrics
+  annotations:
+    github.com/project-slug: jordolang/josemadridsalsa
+  tags:
+    - react
+    - analytics
+    - tracking
+    - metrics
+spec:
+  type: library
+  lifecycle: production
+  owner: user:default/jordolang
+  system: josemadridsalsa
+  subcomponentOf: component:default/josemadridsalsa-web

@@ -1,4 +1,5 @@
 import { PrismaClient, HeatLevel } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 import { recipeData } from '../lib/data/recipes'
 
 const prisma = new PrismaClient()
@@ -508,11 +509,23 @@ async function main() {
 
   console.log('✅ Created products')
 
+  // Prepare seeded credentials
+  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@josemadridsalsa.com'
+  const adminPassword =
+    process.env.SEED_ADMIN_PASSWORD ?? 'admin123456' // Change for production environments
+  const customerEmail = process.env.SEED_CUSTOMER_EMAIL ?? 'customer@example.com'
+  const customerPassword =
+    process.env.SEED_CUSTOMER_PASSWORD ?? 'customer123456'
+
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 12)
+  const customerPasswordHash = await bcrypt.hash(customerPassword, 12)
+
   // Create admin user
   const adminUser = await prisma.user.create({
     data: {
-      email: 'admin@josemadridsalsa.com',
+      email: adminEmail.toLowerCase(),
       name: 'Jose Madrid',
+      password: adminPasswordHash,
       role: 'ADMIN',
       isEmailVerified: true,
       phone: '740-521-4304',
@@ -522,8 +535,9 @@ async function main() {
   // Create sample customer
   const customer = await prisma.user.create({
     data: {
-      email: 'customer@example.com',
+      email: customerEmail.toLowerCase(),
       name: 'John Customer',
+      password: customerPasswordHash,
       role: 'CUSTOMER',
       isEmailVerified: true,
       phone: '555-123-4567',
@@ -618,6 +632,11 @@ async function main() {
 
   console.log('✅ Created recipes')
   console.log('🌱 Database has been seeded successfully!')
+  console.log('-----------------------------------')
+  console.log('Seeded login credentials:')
+  console.log(`Admin → ${adminEmail} / ${adminPassword}`)
+  console.log(`Customer → ${customerEmail} / ${customerPassword}`)
+  console.log('-----------------------------------')
 }
 
 main()

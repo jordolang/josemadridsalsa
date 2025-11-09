@@ -12,7 +12,8 @@ CREATE TABLE "conversations" (
     "email" TEXT,
     "status" "ConversationStatus" NOT NULL DEFAULT 'OPEN',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "conversations_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -22,7 +23,8 @@ CREATE TABLE "messages" (
     "senderType" "MessageSenderType" NOT NULL,
     "body" TEXT NOT NULL,
     "readAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "messages_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -33,9 +35,3 @@ ALTER TABLE "conversations" ADD CONSTRAINT "conversations_userId_fkey" FOREIGN K
 
 -- AddForeignKey
 ALTER TABLE "messages" ADD CONSTRAINT "messages_conversationId_fkey" FOREIGN KEY ("conversationId") REFERENCES "conversations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- CreatePrimaryKey
-ALTER TABLE "conversations" ADD CONSTRAINT "conversations_pkey" PRIMARY KEY ("id");
-
--- CreatePrimaryKey
-ALTER TABLE "messages" ADD CONSTRAINT "messages_pkey" PRIMARY KEY ("id");

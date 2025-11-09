@@ -50,7 +50,7 @@ function loadGoogleMaps(apiKey: string) {
 
     const script = document.createElement('script');
     script.id = MAP_SCRIPT_ID;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&v=weekly`;
     script.async = true;
     script.defer = true;
     script.addEventListener('load', () => resolve((window as any).google?.maps));

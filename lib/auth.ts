@@ -4,9 +4,47 @@ import type { NextAuthOptions } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
+const useSecureCookies = process.env.NEXTAUTH_URL?.startsWith('https://')
+const cookieDomain = process.env.NEXTAUTH_COOKIE_DOMAIN ?? process.env.NEXTAUTH_COOKIE_HOST
+const cookiePrefix = useSecureCookies ? '__Secure-' : ''
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
   session: { strategy: 'jwt' },
+  cookies: cookieDomain
+    ? {
+        sessionToken: {
+          name: `${cookiePrefix}next-auth.session-token`,
+          options: {
+            domain: cookieDomain,
+            httpOnly: true,
+            path: '/',
+            sameSite: 'lax',
+            secure: useSecureCookies,
+          },
+        },
+        callbackUrl: {
+          name: `${cookiePrefix}next-auth.callback-url`,
+          options: {
+            domain: cookieDomain,
+            httpOnly: true,
+            path: '/',
+            sameSite: 'lax',
+            secure: useSecureCookies,
+          },
+        },
+        csrfToken: {
+          name: `${cookiePrefix}next-auth.csrf-token`,
+          options: {
+            domain: cookieDomain,
+            httpOnly: true,
+            path: '/',
+            sameSite: 'lax',
+            secure: useSecureCookies,
+          },
+        },
+      }
+    : undefined,
   pages: {
     signIn: '/auth/signin',
   },

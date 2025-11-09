@@ -1,0 +1,24 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: jordolang
+  title: Jordan Lang
+  description: Developer and owner of Jose Madrid Salsa
+spec:
+  profile:
+    displayName: Jordan Lang
+    email: jordan@josemadridsalsa.com
+  memberOf: [josemadridsalsa-team]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: josemadridsalsa-team
+  title: Jose Madrid Salsa Team
+  description: Development and operations team for Jose Madrid Salsa platform
+spec:
+  type: team
+  profile:
+    displayName: Jose Madrid Salsa Team
+  children: []

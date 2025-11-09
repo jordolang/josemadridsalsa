@@ -1,0 +1,21 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: josemadridsalsa-chat-widget
+  title: Jose Madrid Salsa AI Chat Widget
+  description: AI-powered customer support chat widget for product inquiries and assistance
+  annotations:
+    github.com/project-slug: jordolang/josemadridsalsa
+  tags:
+    - react
+    - chat
+    - ai
+    - customer-support
+spec:
+  type: library
+  lifecycle: production
+  owner: user:default/jordolang
+  system: josemadridsalsa
+  subcomponentOf: component:default/josemadridsalsa-web
+  consumesApis:
+    - josemadridsalsa-api
