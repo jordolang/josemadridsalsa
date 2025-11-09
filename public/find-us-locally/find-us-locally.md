@@ -8,9 +8,6 @@ description:
 tags:
   - "clippings"
 ---
-
-<!-- This file duplicates the content of public/Find Us Locally/Find Us Locally.md for Vercel-safe pathing. -->
-
 **Ohio Stores (Pennsylvania Stores are below)**
 
 **Zanesville, OH**
@@ -658,4 +655,3 @@ New Lebanon, OH**
 **Eau Claire, WI**
 
 **Casey’s Creamery, 7650 S Channel Drive, 810-748-8805, [https://www.facebook.com/caseyscreamery/](https://www.facebook.com/caseyscreamery/)**
-

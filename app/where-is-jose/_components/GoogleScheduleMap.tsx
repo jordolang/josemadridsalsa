@@ -203,11 +203,17 @@ export function GoogleScheduleMap() {
 
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          throw new Error(
+          const errorMessage =
             typeof data?.message === 'string' && data.message.length
               ? data.message
-              : 'Failed to load schedule events.'
-          );
+              : 'Failed to load schedule events.';
+          
+          // Don't log 503 errors (not configured) to console - they're expected
+          if (response.status !== 503) {
+            console.error('Error loading schedule events', errorMessage);
+          }
+          
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();
@@ -217,13 +223,13 @@ export function GoogleScheduleMap() {
         if ((error as Error)?.name === 'AbortError') {
           return;
         }
-        console.error('Error loading schedule events', error);
+        // Only log non-expected errors (503 is expected when not configured)
+        const errorMessage = error instanceof Error ? error.message : 'Unable to load events. Please try again later.';
+        if (!errorMessage.includes('not configured')) {
+          console.error('Error loading schedule events', error);
+        }
         if (!mountedRef.current) return;
-        setEventsError(
-          error instanceof Error && error.message
-            ? error.message
-            : 'Unable to load events. Please try again later.'
-        );
+        setEventsError(errorMessage);
       } finally {
         if (!mountedRef.current) return;
         if (asRefresh) {

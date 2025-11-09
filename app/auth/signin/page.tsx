@@ -40,16 +40,26 @@ function SignInFormInner() {
       })
 
       if (result?.error) {
-        setError('Invalid email or password. Please try again.')
+        // Provide more specific error messages
+        if (result.error === 'CredentialsSignin') {
+          setError('Invalid email or password. Please try again.')
+        } else {
+          setError(`Sign in failed: ${result.error}. Please try again.`)
+        }
         setIsLoading(false)
         return
       }
 
-      router.push(callbackUrl)
-      router.refresh()
+      if (result?.ok) {
+        router.push(callbackUrl)
+        router.refresh()
+      } else {
+        setError('Unable to sign in. Please try again.')
+        setIsLoading(false)
+      }
     } catch (error) {
       console.error('Sign in error:', error)
-      setError('Unable to sign in. Please try again.')
+      setError('Unable to sign in. Please check your connection and try again.')
       setIsLoading(false)
     }
   }

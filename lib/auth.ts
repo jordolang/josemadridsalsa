@@ -10,6 +10,7 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/auth/signin',
   },
+  debug: process.env.NODE_ENV === 'development',
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -18,20 +19,45 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       authorize: async (credentials) => {
-        if (!credentials?.email || !credentials?.password) return null
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            console.error('[Auth] Missing credentials')
+            return null
+          }
 
-        const user = await prisma.user.findUnique({ where: { email: credentials.email } })
-        if (!user || !user.password) return null
+          console.log('[Auth] Attempting login for:', credentials.email)
+          
+          const user = await prisma.user.findUnique({ where: { email: credentials.email } })
+          if (!user) {
+            console.error('[Auth] User not found:', credentials.email)
+            return null
+          }
+          
+          if (!user.password) {
+            console.error('[Auth] User has no password set:', credentials.email)
+            return null
+          }
 
-        const isValid = await bcrypt.compare(credentials.password, user.password)
-        if (!isValid) return null
+          const isValid = await bcrypt.compare(credentials.password, user.password)
+          if (!isValid) {
+            console.error('[Auth] Invalid password for:', credentials.email)
+            return null
+          }
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name ?? undefined,
-          role: user.role,
-        } as any
+          console.log('[Auth] Login successful for:', credentials.email)
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name ?? undefined,
+            role: user.role,
+          } as any
+        } catch (error) {
+          console.error('[Auth] Authentication error:', error)
+          if (error instanceof Error) {
+            console.error('[Auth] Error details:', error.message, error.stack)
+          }
+          return null
+        }
       },
     }),
   ],

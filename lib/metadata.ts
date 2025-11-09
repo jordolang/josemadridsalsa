@@ -1,4 +1,3 @@
-++ lib/metadata.ts
 import type { Metadata } from 'next'
 
 const OG_IMAGE_BASE_PATH = '/images/OpenGraph'
