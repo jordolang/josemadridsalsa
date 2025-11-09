@@ -35,16 +35,36 @@ export default async function FindUsPage() {
   const mdPath = await readFindUsMarkdownAbsolute();
   const parsedLocations = await parseFindUsMarkdown(mdPath);
   
-  // Also load from database for photos
-  const dbLocations = await prisma.retailLocation.findMany({
-    where: { isActive: true },
-    orderBy: [
-      { state: 'asc' },
-      { city: 'asc' },
-      { sortOrder: 'asc' },
-      { businessName: 'asc' },
-    ],
-  });
+  // Try to load from database for photos, but fallback if database is unavailable (during build)
+  let dbLocations: Array<{
+    businessName: string;
+    address: string;
+    phone: string | null;
+    website: string | null;
+    photoUrl: string | null;
+  }> = [];
+  
+  try {
+    dbLocations = await prisma.retailLocation.findMany({
+      where: { isActive: true },
+      select: {
+        businessName: true,
+        address: true,
+        phone: true,
+        website: true,
+        photoUrl: true,
+      },
+      orderBy: [
+        { state: 'asc' },
+        { city: 'asc' },
+        { sortOrder: 'asc' },
+        { businessName: 'asc' },
+      ],
+    });
+  } catch (error) {
+    // Database not available during build - that's okay, we'll use markdown data only
+    console.log('Database not available during build, using markdown data only');
+  }
 
   // Create a map of database locations by business name + address for photo lookup
   const dbLocationMap = new Map(

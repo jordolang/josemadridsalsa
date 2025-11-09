@@ -41,3 +41,17 @@ gcloud/
 
 # Backstage
 backstage/
+josemadridsalsa/
+
+# Examples and docs
+examples/
+docs/backstage/
+
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
