@@ -1,1 +1,85 @@
-{"pages":{},"app":{"/Users/jordanlang/Repos/josemadridsalsa/app/layout":["static/media/739c2d8941231bb4-s.p.woff2","static/media/904be59b21bd51cb-s.p.woff2","static/media/17e3eb4fb06f52f1-s.p.woff2","static/media/2d0230d3305bff81-s.p.woff2"]},"appUsingSizeAdjust":true,"pagesUsingSizeAdjust":false}
+{
+  "app": {
+    "[project]/app/about/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/find-us/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/fundraising/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/gift-certificates/purchase/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/merchandise/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/our-story/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/products/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/recipes/[slug]/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/recipes/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/salsas/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/where-is-jose/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ],
+    "[project]/app/wholesale/page": [
+      "static/media/e8f2fbee2754df70-s.p.9b7a96b4.woff2",
+      "static/media/41d8eeb93b62572f-s.p.f3e685f7.woff2",
+      "static/media/40439aecabb3de41-s.p.bf180516.woff2",
+      "static/media/2f13ad8e538108e0-s.p.9b936cf7.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}
