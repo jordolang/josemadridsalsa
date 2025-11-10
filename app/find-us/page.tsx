@@ -15,6 +15,9 @@ export const metadata: Metadata = createMetadata({
 // Ensure Node.js runtime so fs access works on Vercel
 export const runtime = 'nodejs';
 
+// Force dynamic rendering to avoid prerender issues with file system access
+export const dynamic = 'force-dynamic';
+
 // Type for grouped locations
 type LocationsByCity = Record<string, Array<{
   id: string;
