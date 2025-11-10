@@ -4,6 +4,11 @@ import type { NextAuthOptions } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
+// Ensure NEXTAUTH_SECRET is set
+if (!process.env.NEXTAUTH_SECRET) {
+  throw new Error('NEXTAUTH_SECRET is not set in environment variables')
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
   session: { 
@@ -77,40 +82,56 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user, trigger }) {
-      console.log('[JWT Callback] Trigger:', trigger || 'initial')
-      
-      // On sign in
-      if (user) {
-        console.log('[JWT Callback] Sign in - User:', user.email, 'Role:', (user as any).role)
-        token.id = (user as any).id
-        token.role = (user as any).role
-      }
-
-      // Ensure role/id included on subsequent requests
-      if (!token.role && token.email) {
-        console.log('[JWT Callback] No role in token, fetching from DB for:', token.email)
-        const dbUser = await prisma.user.findUnique({
-          where: { email: token.email as string },
-          select: { id: true, role: true },
-        })
-        if (dbUser) {
-          console.log('[JWT Callback] Fetched role from DB:', dbUser.role)
-          token.id = dbUser.id
-          token.role = dbUser.role
+      try {
+        console.log('[JWT Callback] Trigger:', trigger || 'initial')
+        
+        // On sign in, add user data to token
+        if (user) {
+          console.log('[JWT Callback] Sign in - User:', user.email, 'Role:', (user as any).role)
+          token.id = (user as any).id
+          token.role = (user as any).role
         }
-      }
 
-      console.log('[JWT Callback] Returning token with role:', token.role)
-      return token
+        // Only fetch from DB if token is missing critical data and we have an email
+        // This should rarely happen since user object should have role on sign in
+        if (!token.role && token.email) {
+          console.log('[JWT Callback] No role in token, fetching from DB for:', token.email)
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { email: token.email as string },
+              select: { id: true, role: true },
+            })
+            if (dbUser) {
+              console.log('[JWT Callback] Fetched role from DB:', dbUser.role)
+              token.id = dbUser.id
+              token.role = dbUser.role
+            }
+          } catch (dbError) {
+            console.error('[JWT Callback] Database error:', dbError)
+            // Continue with existing token data
+          }
+        }
+
+        console.log('[JWT Callback] Returning token with role:', token.role)
+        return token
+      } catch (error) {
+        console.error('[JWT Callback] Unexpected error:', error)
+        return token
+      }
     },
     async session({ session, token }) {
-      console.log('[Session Callback] Token role:', token.role)
-      if (session.user) {
-        ;(session.user as any).id = token.id as string
-        ;(session.user as any).role = token.role as string
-        console.log('[Session Callback] Session user role:', (session.user as any).role)
+      try {
+        console.log('[Session Callback] Token role:', token.role)
+        if (session.user) {
+          ;(session.user as any).id = token.id as string
+          ;(session.user as any).role = token.role as string
+          console.log('[Session Callback] Session user role:', (session.user as any).role)
+        }
+        return session
+      } catch (error) {
+        console.error('[Session Callback] Error:', error)
+        return session
       }
-      return session
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
