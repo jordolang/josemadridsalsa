@@ -4,51 +4,27 @@ import type { NextAuthOptions } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
-const useSecureCookies = process.env.NEXTAUTH_URL?.startsWith('https://')
-const cookieDomain = process.env.NEXTAUTH_COOKIE_DOMAIN ?? process.env.NEXTAUTH_COOKIE_HOST
-const cookiePrefix = useSecureCookies ? '__Secure-' : ''
-
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
-  session: { strategy: 'jwt' },
-  cookies: cookieDomain
-    ? {
-        sessionToken: {
-          name: `${cookiePrefix}next-auth.session-token`,
-          options: {
-            domain: cookieDomain,
-            httpOnly: true,
-            path: '/',
-            sameSite: 'lax',
-            secure: useSecureCookies,
-          },
-        },
-        callbackUrl: {
-          name: `${cookiePrefix}next-auth.callback-url`,
-          options: {
-            domain: cookieDomain,
-            httpOnly: true,
-            path: '/',
-            sameSite: 'lax',
-            secure: useSecureCookies,
-          },
-        },
-        csrfToken: {
-          name: `${cookiePrefix}next-auth.csrf-token`,
-          options: {
-            domain: cookieDomain,
-            httpOnly: true,
-            path: '/',
-            sameSite: 'lax',
-            secure: useSecureCookies,
-          },
-        },
-      }
-    : undefined,
+  session: { 
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   pages: {
     signIn: '/auth/signin',
   },
-  debug: process.env.NODE_ENV === 'development',
+  debug: true, // Enable debug mode to see detailed logs
+  logger: {
+    error(code, metadata) {
+      console.error('[NextAuth Error]', code, metadata)
+    },
+    warn(code) {
+      console.warn('[NextAuth Warn]', code)
+    },
+    debug(code, metadata) {
+      console.log('[NextAuth Debug]', code, metadata)
+    },
+  },
   providers: [
     CredentialsProvider({
       name: 'Credentials',
