@@ -14,6 +14,8 @@ function buildCallbackUrl(request: NextRequest) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  
+  console.log('[Middleware] Request to:', pathname)
 
   // Block common WordPress probe paths (bots/scanners)
   const wordpressPaths = [
@@ -44,19 +46,32 @@ export async function middleware(request: NextRequest) {
 
   // Protect /admin routes
   if (pathname.startsWith('/admin')) {
+    console.log('[Middleware] Checking admin access for:', pathname)
+    console.log('[Middleware] Cookies:', request.cookies.getAll().map(c => c.name))
+    
     const token = await getToken({
       req: request,
       secret: authSecret,
     })
 
+    console.log('[Middleware] Token found:', !!token)
+    if (token) {
+      console.log('[Middleware] Token role:', token.role)
+      console.log('[Middleware] Token email:', token.email)
+    }
+
     if (!token) {
+      console.log('[Middleware] No token - redirecting to login')
       return NextResponse.redirect(buildCallbackUrl(request))
     }
 
     const role = token.role as string | undefined
     if (!role || !STAFF_ROLES.includes(role)) {
+      console.log('[Middleware] Invalid role - redirecting to home')
       return NextResponse.redirect(new URL('/', request.url))
     }
+    
+    console.log('[Middleware] Access granted to:', pathname)
   }
 
   // Protect /account routes

@@ -76,31 +76,39 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
+      console.log('[JWT Callback] Trigger:', trigger || 'initial')
+      
       // On sign in
       if (user) {
+        console.log('[JWT Callback] Sign in - User:', user.email, 'Role:', (user as any).role)
         token.id = (user as any).id
         token.role = (user as any).role
       }
 
       // Ensure role/id included on subsequent requests
       if (!token.role && token.email) {
+        console.log('[JWT Callback] No role in token, fetching from DB for:', token.email)
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email as string },
           select: { id: true, role: true },
         })
         if (dbUser) {
+          console.log('[JWT Callback] Fetched role from DB:', dbUser.role)
           token.id = dbUser.id
           token.role = dbUser.role
         }
       }
 
+      console.log('[JWT Callback] Returning token with role:', token.role)
       return token
     },
     async session({ session, token }) {
+      console.log('[Session Callback] Token role:', token.role)
       if (session.user) {
         ;(session.user as any).id = token.id as string
         ;(session.user as any).role = token.role as string
+        console.log('[Session Callback] Session user role:', (session.user as any).role)
       }
       return session
     },
