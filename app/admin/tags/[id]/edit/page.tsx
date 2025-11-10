@@ -26,15 +26,16 @@ async function getTag(tagId: string) {
 export default async function EditTagPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'content:write'))) {
     redirect('/admin/tags')
   }
 
-  const tag = await getTag(params.id)
+  const tag = await getTag(id)
 
   return (
     <div className="space-y-6">

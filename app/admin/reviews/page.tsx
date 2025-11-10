@@ -163,7 +163,8 @@ async function toggleVerified(reviewId: string, nextState: 'true' | 'false') {
   revalidatePath('/admin/reviews')
 }
 
-export default async function ReviewsPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function ReviewsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'content:read'))) {
@@ -171,9 +172,9 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Sear
   }
 
   const canModerate = await hasPermission(user, 'content:write')
-  const { reviews, total, page, totalPages, counts, averageRating } = await getReviews(searchParams)
+  const { reviews, total, page, totalPages, counts, averageRating } = await getReviews(params)
 
-  const statusCandidate = searchParams.status?.toUpperCase()
+  const statusCandidate = params.status?.toUpperCase()
   const activeStatus = STATUS_OPTIONS.some((option) => option.value === statusCandidate)
     ? (statusCandidate as 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED')
     : 'ALL'
@@ -210,7 +211,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Sear
             <Input
               type="search"
               name="q"
-              defaultValue={searchParams.q}
+              defaultValue={params.q}
               placeholder="Search by product, customer, or comment"
               className="pl-9"
             />
@@ -219,7 +220,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Sear
             <Button type="submit" variant="outline">
               Search
             </Button>
-            {searchParams.q && (
+            {params.q && (
               <Button asChild variant="ghost">
                 <Link href="/admin/reviews">Clear</Link>
               </Button>
@@ -231,9 +232,9 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Sear
             const isActive = option.value === activeStatus
             const href =
               option.value === 'ALL'
-                ? `/admin/reviews${searchParams.q ? `?q=${encodeURIComponent(searchParams.q)}` : ''}`
+                ? `/admin/reviews${params.q ? `?q=${encodeURIComponent(params.q)}` : ''}`
                 : `/admin/reviews?status=${option.value}${
-                    searchParams.q ? `&q=${encodeURIComponent(searchParams.q)}` : ''
+                    params.q ? `&q=${encodeURIComponent(params.q)}` : ''
                   }`
             return (
               <Link
@@ -380,8 +381,8 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Sear
             <div className="flex items-center gap-2">
               <Link
                 href={`/admin/reviews?page=${Math.max(page - 1, 1)}${
-                  searchParams.status ? `&status=${activeStatus}` : ''
-                }${searchParams.q ? `&q=${encodeURIComponent(searchParams.q)}` : ''}`}
+                  params.status ? `&status=${activeStatus}` : ''
+                }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
                 className={`rounded-md border px-3 py-1 ${
                   page === 1
                     ? 'pointer-events-none border-slate-200 text-slate-300'
@@ -392,8 +393,8 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Sear
               </Link>
               <Link
                 href={`/admin/reviews?page=${Math.min(page + 1, totalPages)}${
-                  searchParams.status ? `&status=${activeStatus}` : ''
-                }${searchParams.q ? `&q=${encodeURIComponent(searchParams.q)}` : ''}`}
+                  params.status ? `&status=${activeStatus}` : ''
+                }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
                 className={`rounded-md border px-3 py-1 ${
                   page === totalPages
                     ? 'pointer-events-none border-slate-200 text-slate-300'

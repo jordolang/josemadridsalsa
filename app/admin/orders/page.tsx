@@ -92,8 +92,9 @@ const statusColors = {
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: SearchParams
+  searchParams: Promise<SearchParams>
 }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'orders:read'))) {
@@ -101,7 +102,7 @@ export default async function OrdersPage({
   }
 
   const canExport = await hasPermission(user, 'orders:export')
-  const { orders, total, page, totalPages } = await getOrders(searchParams)
+  const { orders, total, page, totalPages } = await getOrders(params)
 
   return (
     <div className="space-y-6">
@@ -131,12 +132,12 @@ export default async function OrdersPage({
             <Input
               type="search"
               placeholder="Search by order number, customer..."
-              defaultValue={searchParams.search}
+              defaultValue={params.search}
               name="search"
               className="pl-9"
             />
           </div>
-          <Select defaultValue={searchParams.status || 'all'}>
+          <Select defaultValue={params.status || 'all'}>
             <SelectTrigger className="w-full md:w-48">
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
@@ -246,14 +247,14 @@ export default async function OrdersPage({
             <div className="flex gap-2">
               {page > 1 && (
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/admin/orders?page=${page - 1}${searchParams.status ? `&status=${searchParams.status}` : ''}${searchParams.search ? `&search=${searchParams.search}` : ''}`}>
+                  <Link href={`/admin/orders?page=${page - 1}${params.status ? `&status=${params.status}` : ''}${params.search ? `&search=${params.search}` : ''}`}>
                     Previous
                   </Link>
                 </Button>
               )}
               {page < totalPages && (
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/admin/orders?page=${page + 1}${searchParams.status ? `&status=${searchParams.status}` : ''}${searchParams.search ? `&search=${searchParams.search}` : ''}`}>
+                  <Link href={`/admin/orders?page=${page + 1}${params.status ? `&status=${params.status}` : ''}${params.search ? `&search=${params.search}` : ''}`}>
                     Next
                   </Link>
                 </Button>

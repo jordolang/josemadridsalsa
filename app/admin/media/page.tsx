@@ -67,15 +67,16 @@ async function getMedia(searchParams: SearchParams) {
 export default async function MediaPage({
   searchParams,
 }: {
-  searchParams: SearchParams
+  searchParams: Promise<SearchParams>
 }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'content:write'))) {
     redirect('/admin')
   }
 
-  const { media, total, page, totalPages } = await getMedia(searchParams)
+  const { media, total, page, totalPages } = await getMedia(params)
 
   // Calculate storage stats
   const totalSize = media.reduce((acc, m) => acc + m.fileSize, 0)
@@ -112,7 +113,7 @@ export default async function MediaPage({
             <Input
               type="search"
               placeholder="Search media..."
-              defaultValue={searchParams.search}
+              defaultValue={params.search}
               className="pl-9"
             />
           </div>
@@ -126,7 +127,7 @@ export default async function MediaPage({
             <ImageIcon className="mx-auto mb-4 h-12 w-12 text-slate-300" />
             <p className="text-lg font-medium">No media found</p>
             <p className="mt-1 text-sm">
-              {searchParams.search
+              {params.search
                 ? 'Try a different search term'
                 : 'Upload your first image to get started'}
             </p>
@@ -151,7 +152,7 @@ export default async function MediaPage({
                 asChild={page > 1}
               >
                 {page > 1 ? (
-                  <Link href={`/admin/media?page=${page - 1}${searchParams.search ? `&search=${searchParams.search}` : ''}`}>
+                  <Link href={`/admin/media?page=${page - 1}${params.search ? `&search=${params.search}` : ''}`}>
                     Previous
                   </Link>
                 ) : (
@@ -167,7 +168,7 @@ export default async function MediaPage({
                 asChild={page < totalPages}
               >
                 {page < totalPages ? (
-                  <Link href={`/admin/media?page=${page + 1}${searchParams.search ? `&search=${searchParams.search}` : ''}`}>
+                  <Link href={`/admin/media?page=${page + 1}${params.search ? `&search=${params.search}` : ''}`}>
                     Next
                   </Link>
                 ) : (

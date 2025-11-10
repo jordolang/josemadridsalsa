@@ -38,15 +38,16 @@ const statusInfo = {
 export default async function OrderDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'orders:read'))) {
     redirect('/admin/orders')
   }
 
-  const order = await getOrder(params.id)
+  const order = await getOrder(id)
 
   if (!order) {
     notFound()

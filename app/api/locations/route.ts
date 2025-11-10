@@ -17,13 +17,14 @@ const parseBoolean = (value: string | null) => {
 }
 
 function parseFilters(searchParams: URLSearchParams) {
-  const sortParam = searchParams.get('sort') === 'distance' ? 'distance' : 'alphabetical'
+  const sortParam = searchParams.get('sort')
+  const sort: 'alphabetical' | 'distance' = sortParam === 'distance' ? 'distance' : 'alphabetical'
 
   return {
     q: searchParams.get('q') ?? searchParams.get('search') ?? undefined,
     state: searchParams.get('state') ?? undefined,
     city: searchParams.get('city') ?? undefined,
-    sort: sortParam,
+    sort,
     lat: parseNumber(searchParams.get('lat') ?? searchParams.get('latitude')),
     lng: parseNumber(searchParams.get('lng') ?? searchParams.get('longitude')),
     hasWebsite: parseBoolean(searchParams.get('hasWebsite')),

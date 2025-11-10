@@ -79,14 +79,15 @@ const actionColors: Record<string, string> = {
   LOGOUT: 'bg-slate-100 text-slate-800',
 }
 
-export default async function AuditLogsPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function AuditLogsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'users:read'))) {
     redirect('/admin')
   }
 
-  const { logs, total, page, totalPages, entityTypes } = await getAuditLogs(searchParams)
+  const { logs, total, page, totalPages, entityTypes } = await getAuditLogs(params)
 
   return (
     <div className="space-y-6">
@@ -127,13 +128,13 @@ export default async function AuditLogsPage({ searchParams }: { searchParams: Se
             <Input
               type="search"
               placeholder="Search logs..."
-              defaultValue={searchParams.search}
+              defaultValue={params.search}
               className="pl-9"
             />
           </div>
           <select
             className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-            defaultValue={searchParams.action || 'all'}
+            defaultValue={params.action || 'all'}
           >
             <option value="all">All Actions</option>
             <option value="CREATE">Create</option>
@@ -142,7 +143,7 @@ export default async function AuditLogsPage({ searchParams }: { searchParams: Se
           </select>
           <select
             className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-            defaultValue={searchParams.entityType || 'all'}
+            defaultValue={params.entityType || 'all'}
           >
             <option value="all">All Entity Types</option>
             {entityTypes.map((type) => (

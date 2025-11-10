@@ -1,70 +1,25 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { slugify, ensureUniqueSlug } from '@/lib/forms/utils'
 import type { BusinessFormSection } from '@/types/forms'
 import type { FormTemplateStatus } from '@prisma/client'
+import { templatePayloadSchema } from '@/lib/forms/schema'
 
-const fieldSchema = z.object({
-  id: z.string().min(1, 'Field id is required'),
-  label: z.string().min(1, 'Field label is required'),
-  type: z.enum(['short-text', 'long-text', 'checkbox', 'table', 'signature', 'date', 'number']),
-  placeholder: z.string().optional(),
-  helperText: z.string().optional(),
-  columns: z.array(z.string().min(1)).optional(),
-  defaultRows: z.number().int().min(0).optional(),
-})
 
-const sectionSchema = z.object({
-  id: z.string().min(1),
-  label: z.string().min(1),
-  description: z.string().optional(),
-  defaultIncluded: z.boolean().optional(),
-  fields: z.array(fieldSchema).min(1, 'Add at least one field to each section'),
-})
-
-const templatePayloadSchema = z.object({
-  id: z.string().optional(),
-  slug: z.string().min(1).optional(),
-  name: z.string().min(1, 'Template name is required'),
-  description: z.string().optional(),
-  categoryId: z.string().min(1, 'Template category is required'),
-  tags: z.array(z.string().min(1)).default([]),
-  estimatedCompletion: z.string().optional(),
-  recommendedUses: z.array(z.string().min(1)).default([]),
-  sections: z.array(sectionSchema).min(1, 'Include at least one section'),
-  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).default('DRAFT'),
-})
-
-const slugify = (value: string) =>
-  value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-
-async function ensureUniqueSlug(baseSlug: string, existingId?: string | null) {
-  let slug = baseSlug || 'form-template'
-  let attempt = 1
-
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const match = await prisma.formTemplate.findFirst({
-      where: existingId
-        ? { slug, NOT: { id: existingId } }
-        : { slug },
-      select: { id: true },
-    })
-
-    if (!match) {
-      return slug
-    }
-
-    attempt += 1
-    slug = `${baseSlug}-${attempt}`
-  }
+const templateVersionHistoryInclude = {
+  versions: {
+    orderBy: { version: 'desc' as const },
+    take: 10,
+    select: {
+      version: true,
+      createdAt: true,
+      createdById: true,
+      changelogNotes: true,
+    },
+  },
 }
 
 export async function createFormTemplate(rawPayload: unknown) {
@@ -83,6 +38,8 @@ export async function createFormTemplate(rawPayload: unknown) {
       sections: payload.sections,
     }),
   ) as { sections: BusinessFormSection[] }
+
+  const changelogNotes = payload.changelogNotes?.trim() || ''
 
   const created = await prisma.$transaction(async (tx) => {
     const template = await tx.formTemplate.create({
@@ -107,10 +64,16 @@ export async function createFormTemplate(rawPayload: unknown) {
         version: template.version,
         structure,
         createdById: user.id,
+        changelogNotes: payload.status === 'PUBLISHED' && changelogNotes ? changelogNotes : null,
       },
     })
 
-    return template
+    const templateWithHistory = await tx.formTemplate.findUnique({
+      where: { id: template.id },
+      include: templateVersionHistoryInclude,
+    })
+
+    return templateWithHistory ?? template
   })
 
   revalidatePath('/admin/forms')
@@ -147,6 +110,8 @@ export async function updateFormTemplate(id: string, rawPayload: unknown) {
     }),
   ) as { sections: BusinessFormSection[] }
 
+  const changelogNotes = payload.changelogNotes?.trim() || ''
+
   const updated = await prisma.$transaction(async (tx) => {
     const template = await tx.formTemplate.update({
       where: { id },
@@ -172,10 +137,16 @@ export async function updateFormTemplate(id: string, rawPayload: unknown) {
         version: nextVersion,
         structure,
         createdById: user.id,
+        changelogNotes: payload.status === 'PUBLISHED' && changelogNotes ? changelogNotes : null,
       },
     })
 
-    return template
+    const templateWithHistory = await tx.formTemplate.findUnique({
+      where: { id: template.id },
+      include: templateVersionHistoryInclude,
+    })
+
+    return templateWithHistory ?? template
   })
 
   revalidatePath('/admin/forms')

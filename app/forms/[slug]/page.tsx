@@ -10,9 +10,9 @@ import type { BusinessFormTemplate } from '@/types/forms'
 import { createMetadata } from '@/lib/metadata'
 
 type FormPageProps = {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
 type CatalogTemplate = BusinessFormTemplate & {
@@ -59,25 +59,27 @@ const findTemplate = async (slug: string): Promise<CatalogTemplate | null> => {
 }
 
 export async function generateMetadata({ params }: FormPageProps): Promise<Metadata> {
-  const template = await findTemplate(params.slug)
+  const { slug } = await params;
+  const template = await findTemplate(slug);
 
   if (!template) {
     return createMetadata({
       title: 'Business Form - Jose Madrid Salsa',
       description: 'Download Jose Madrid Salsa business form templates.',
-      pathname: `/forms/${params.slug}`,
+      pathname: `/forms/${slug}`,
     })
   }
 
   return createMetadata({
     title: `${template.name} – Jose Madrid Salsa`,
     description: template.description,
-    pathname: `/forms/${params.slug}`,
+    pathname: `/forms/${slug}`,
   })
 }
 
 export default async function FormDetailPage({ params }: FormPageProps) {
-  const template = await findTemplate(params.slug)
+  const { slug } = await params;
+  const template = await findTemplate(slug);
 
   if (!template) {
     notFound()

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Clock, Users, ChefHat } from 'lucide-react'
 
 type RecipePageProps = {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 const textFallbacks = {
@@ -73,7 +73,8 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: RecipePageProps): Promise<Metadata> {
-  const recipe = await loadRecipe(params.slug)
+  const { slug } = await params;
+  const recipe = await loadRecipe(slug);
 
   if (!recipe) {
     return {
@@ -102,7 +103,8 @@ export async function generateMetadata({
 }
 
 export default async function RecipePage({ params }: RecipePageProps) {
-  const recipe = await loadRecipe(params.slug)
+  const { slug } = await params;
+  const recipe = await loadRecipe(slug);
 
   if (!recipe) {
     notFound()

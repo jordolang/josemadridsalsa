@@ -105,7 +105,7 @@ export async function parseCSV(buffer: Buffer): Promise<ImportResult> {
             totalRows: results.data.length,
           });
         },
-        error: (error) => {
+        error: (error: Error) => {
           resolve({
             success: false,
             errors: [`CSV parsing error: ${error.message}`],
@@ -243,7 +243,7 @@ export function validateProducts(
       const errors: string[] = [];
       
       if (error instanceof z.ZodError) {
-        errors.push(...error.errors.map(e => `${e.path.join('.')}: ${e.message}`));
+        errors.push(...error.issues.map(e => `${e.path.join('.')}: ${e.message}`));
       } else {
         errors.push(error.message);
       }

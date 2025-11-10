@@ -332,14 +332,15 @@ function getBarWidth(value: number, max: number) {
   return `${clamped}%`
 }
 
-export default async function AnalyticsPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'analytics:read'))) {
     redirect('/admin')
   }
 
-  const requestedRange = searchParams.range
+  const requestedRange = params.range
   const activeRange = RANGE_OPTIONS.some((option) => option.value === requestedRange)
     ? (requestedRange as RangeKey)
     : ('30d' as RangeKey)

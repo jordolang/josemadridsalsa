@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button'
 export default async function GiftCertificateDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'orders:read'))) {
@@ -18,7 +19,7 @@ export default async function GiftCertificateDetailPage({
   }
 
   const giftCertificate = await prisma.giftCertificate.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       order: {
         select: {
@@ -34,6 +35,7 @@ export default async function GiftCertificateDetailPage({
         include: {
           order: {
             select: {
+              id: true,
               orderNumber: true,
               createdAt: true,
             },

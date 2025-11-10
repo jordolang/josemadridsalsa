@@ -3,8 +3,9 @@ import { notFound } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import RecipeForm from '@/components/admin/RecipeForm'
 
-export default async function EditRecipePage({ params }: { params: { id: string } }) {
-  const recipe = await prisma.recipe.findUnique({ where: { id: params.id } })
+export default async function EditRecipePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const recipe = await prisma.recipe.findUnique({ where: { id } })
   if (!recipe) notFound()
 
   return (

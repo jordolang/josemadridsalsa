@@ -85,15 +85,16 @@ const statusColors = {
 export default async function GiftCertificatesPage({
   searchParams,
 }: {
-  searchParams: SearchParams
+  searchParams: Promise<SearchParams>
 }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'orders:read'))) {
     redirect('/admin')
   }
 
-  const { giftCertificates, total, page, totalPages } = await getGiftCertificates(searchParams)
+  const { giftCertificates, total, page, totalPages } = await getGiftCertificates(params)
 
   return (
     <div className="space-y-6">
@@ -115,13 +116,13 @@ export default async function GiftCertificatesPage({
                 <Input
                   name="search"
                   placeholder="Search by code, email, or name..."
-                  defaultValue={searchParams.search}
+                  defaultValue={params.search}
                   className="pl-10"
                 />
               </div>
               <Select
                 name="status"
-                defaultValue={searchParams.status || 'all'}
+                defaultValue={params.status || 'all'}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by status" />
@@ -138,7 +139,7 @@ export default async function GiftCertificatesPage({
                 Apply Filters
               </Button>
             </div>
-            {searchParams.search || (searchParams.status && searchParams.status !== 'all') ? (
+            {params.search || (params.status && params.status !== 'all') ? (
               <Button
                 type="button"
                 variant="outline"
@@ -248,14 +249,14 @@ export default async function GiftCertificatesPage({
               </div>
               <div className="flex gap-2">
                 {page > 1 && (
-                  <Link href={`?${new URLSearchParams({ ...searchParams, page: String(page - 1) })}`}>
+                  <Link href={`?${new URLSearchParams({ ...params, page: String(page - 1) })}`}>
                     <Button variant="outline" size="sm">
                       Previous
                     </Button>
                   </Link>
                 )}
                 {page < totalPages && (
-                  <Link href={`?${new URLSearchParams({ ...searchParams, page: String(page + 1) })}`}>
+                  <Link href={`?${new URLSearchParams({ ...params, page: String(page + 1) })}`}>
                     <Button variant="outline" size="sm">
                       Next
                     </Button>

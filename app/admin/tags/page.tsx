@@ -65,15 +65,16 @@ const tagTypeLabels = {
 export default async function TagsPage({
   searchParams,
 }: {
-  searchParams: SearchParams
+  searchParams: Promise<SearchParams>
 }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'content:write'))) {
     redirect('/admin')
   }
 
-  const tags = await getTags(searchParams)
+  const tags = await getTags(params)
 
   // Calculate total usage for each tag
   const tagsWithUsage = tags.map((tag) => ({
@@ -108,7 +109,7 @@ export default async function TagsPage({
         <div className="flex gap-2 overflow-x-auto">
           <Link href="/admin/tags?type=all">
             <Button
-              variant={!searchParams.type || searchParams.type === 'all' ? 'default' : 'outline'}
+              variant={!params.type || params.type === 'all' ? 'default' : 'outline'}
               size="sm"
             >
               All Tags ({tags.length})
@@ -119,7 +120,7 @@ export default async function TagsPage({
             return (
               <Link key={type} href={`/admin/tags?type=${type}`}>
                 <Button
-                  variant={searchParams.type === type ? 'default' : 'outline'}
+                  variant={params.type === type ? 'default' : 'outline'}
                   size="sm"
                 >
                   {label} ({count})

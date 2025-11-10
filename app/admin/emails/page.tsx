@@ -32,7 +32,8 @@ async function getEmailTemplates(searchParams: SearchParams) {
   }
 }
 
-export default async function EmailTemplatesPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function EmailTemplatesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasAnyPermission(user, ['content:read', 'content:write']))) {
@@ -41,7 +42,7 @@ export default async function EmailTemplatesPage({ searchParams }: { searchParam
 
   const canEdit = await hasAnyPermission(user, ['content:write'])
 
-  const { templates, total } = await getEmailTemplates(searchParams)
+  const { templates, total } = await getEmailTemplates(params)
 
   return (
     <div className="space-y-6">
@@ -70,7 +71,7 @@ export default async function EmailTemplatesPage({ searchParams }: { searchParam
               type="search"
               name="q"
               placeholder="Search templates by name, key, or subject"
-              defaultValue={searchParams.q}
+              defaultValue={params.q}
               className="pl-9"
             />
           </div>
@@ -78,7 +79,7 @@ export default async function EmailTemplatesPage({ searchParams }: { searchParam
             <Button type="submit" variant="outline">
               Search
             </Button>
-            {searchParams.q && (
+            {params.q && (
               <Button asChild variant="ghost">
                 <Link href="/admin/emails">Clear</Link>
               </Button>

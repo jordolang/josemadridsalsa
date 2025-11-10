@@ -21,6 +21,8 @@
     "locations:import": "tsx scripts/import-locations-from-markdown.ts",
     "locations:photos": "node scripts/generate-location-photos.js",
     "locations:geocode": "tsx scripts/backfill-location-coordinates.ts",
+    "templates:backfill-owners": "tsx scripts/backfill-form-template-owners.ts",
+    "api-keys:create": "tsx scripts/create-partner-api-key.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
     "create-admin": "tsx scripts/create-admin.ts",
@@ -82,11 +84,13 @@
     "tailwindcss": "^3.4.18",
     "tailwindcss-animate": "^1.0.7",
     "workflow": "^4.0.1-beta.6",
+    "xlsx": "^0.18.5",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@types/node": "^24.7.1",
+    "@types/papaparse": "^5.5.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.1",
     "@vitest/ui": "^4.0.6",

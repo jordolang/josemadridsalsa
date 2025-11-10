@@ -9,21 +9,22 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { createMetadata } from "@/lib/metadata";
 
-type PageProps = { params: { id: string } };
+type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
   const order = await prisma.order.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { orderNumber: true },
   });
-  const num = order?.orderNumber ?? params.id.slice(-6).toUpperCase();
+  const num = order?.orderNumber ?? id.slice(-6).toUpperCase();
   const title = `Order #${num} - Jose Madrid Salsa`;
   const description = `Detailed summary for Jose Madrid Salsa order #${num}.`;
 
   return createMetadata({
     title,
     description,
-    pathname: `/account/orders/${params.id}`,
+    pathname: `/account/orders/${id}`,
   });
 }
 
@@ -32,13 +33,14 @@ function formatCurrency(v: number) {
 }
 
 export default async function OrderDetailPage({ params }: PageProps) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    redirect(`/auth/signin?callbackUrl=/account/orders/${params.id}`);
+    redirect(`/auth/signin?callbackUrl=/account/orders/${id}`);
   }
 
   const order = await prisma.order.findFirst({
-    where: { id: params.id, userId: (session.user as any).id },
+    where: { id, userId: (session.user as any).id },
     include: {
       items: { include: { product: true } },
       shippingAddress: true,

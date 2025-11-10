@@ -2,16 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const location = await prisma.retailLocation.findUnique({ where: { id: params.id } })
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const location = await prisma.retailLocation.findUnique({ where: { id } })
   if (!location) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json(location)
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const body = await req.json()
   const updated = await prisma.retailLocation.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       businessName: body.businessName,
       address: body.address,
@@ -30,8 +32,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(updated)
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  await prisma.retailLocation.delete({ where: { id: params.id } })
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  await prisma.retailLocation.delete({ where: { id } })
   revalidateTag('locations')
   return NextResponse.json({ ok: true })
 }

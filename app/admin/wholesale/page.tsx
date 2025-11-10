@@ -78,7 +78,8 @@ const statusIcons = {
   SUSPENDED: AlertCircle,
 }
 
-export default async function WholesalePage({ searchParams }: { searchParams: SearchParams }) {
+export default async function WholesalePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'users:read'))) {
@@ -86,7 +87,7 @@ export default async function WholesalePage({ searchParams }: { searchParams: Se
   }
 
   const canWrite = await hasPermission(user, 'users:write')
-  const { accounts, total, page, totalPages, statusCounts } = await getWholesaleAccounts(searchParams)
+  const { accounts, total, page, totalPages, statusCounts } = await getWholesaleAccounts(params)
 
   return (
     <div className="space-y-6">
@@ -120,7 +121,7 @@ export default async function WholesalePage({ searchParams }: { searchParams: Se
         <div className="flex gap-4">
           <select
             className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-            defaultValue={searchParams.status || 'all'}
+            defaultValue={params.status || 'all'}
           >
             <option value="all">All Statuses</option>
             <option value="PENDING">Pending</option>

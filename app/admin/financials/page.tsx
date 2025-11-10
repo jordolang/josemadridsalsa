@@ -282,14 +282,15 @@ async function getFinancialOverview(range: RangeKey): Promise<FinancialOverview>
   }
 }
 
-export default async function FinancialsPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function FinancialsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'financials:read'))) {
     redirect('/admin')
   }
 
-  const requested = searchParams.range
+  const requested = params.range
   const activeRange = RANGE_OPTIONS.some((option) => option.value === requested)
     ? (requested as RangeKey)
     : '30d'

@@ -97,15 +97,16 @@ const difficultyColors = {
 export default async function RecipesPage({
   searchParams,
 }: {
-  searchParams: SearchParams
+  searchParams: Promise<SearchParams>
 }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'content:write'))) {
     redirect('/admin')
   }
 
-  const { recipes, total, page, totalPages, categories } = await getRecipes(searchParams)
+  const { recipes, total, page, totalPages, categories } = await getRecipes(params)
 
   return (
     <div className="space-y-6">
@@ -133,13 +134,13 @@ export default async function RecipesPage({
             <Input
               type="search"
               placeholder="Search recipes..."
-              defaultValue={searchParams.search}
+              defaultValue={params.search}
               className="pl-9"
             />
           </div>
           <select
             className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-            defaultValue={searchParams.category || 'all'}
+            defaultValue={params.category || 'all'}
           >
             <option value="all">All Categories</option>
             {categories.map((cat) => (
@@ -150,7 +151,7 @@ export default async function RecipesPage({
           </select>
           <select
             className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-            defaultValue={searchParams.difficulty || 'all'}
+            defaultValue={params.difficulty || 'all'}
           >
             <option value="all">All Difficulties</option>
             <option value="Easy">Easy</option>
@@ -159,7 +160,7 @@ export default async function RecipesPage({
           </select>
           <select
             className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-            defaultValue={searchParams.featured || 'all'}
+            defaultValue={params.featured || 'all'}
           >
             <option value="all">All Recipes</option>
             <option value="true">Featured Only</option>
@@ -198,7 +199,7 @@ export default async function RecipesPage({
             <ChefHat className="mx-auto mb-4 h-12 w-12 text-slate-300" />
             <p className="text-lg font-medium">No recipes found</p>
             <p className="mt-1 text-sm">
-              {searchParams.search
+              {params.search
                 ? 'Try a different search term'
                 : 'Create your first recipe to get started'}
             </p>

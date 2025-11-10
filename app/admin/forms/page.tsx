@@ -28,7 +28,37 @@ export default async function AdminFormsPage() {
 
   const savedTemplates = await prisma.formTemplate.findMany({
     orderBy: { updatedAt: 'desc' },
+    include: {
+      versions: {
+        orderBy: { version: 'desc' },
+        take: 10,
+        select: {
+          version: true,
+          createdAt: true,
+          createdById: true,
+          changelogNotes: true,
+        },
+      },
+    },
   })
+
+  const userIds = new Set<string>()
+  savedTemplates.forEach((template) => {
+    if (template.createdById) userIds.add(template.createdById)
+    if (template.updatedById) userIds.add(template.updatedById)
+    template.versions.forEach((version) => {
+      if (version.createdById) userIds.add(version.createdById)
+    })
+  })
+
+  const users = userIds.size
+    ? await prisma.user.findMany({
+        where: { id: { in: Array.from(userIds) } },
+        select: { id: true, name: true, email: true },
+      })
+    : []
+
+  const userDirectory = Object.fromEntries(users.map((owner) => [owner.id, owner]))
 
   const savedTemplateSummaries = savedTemplates.map((template) => ({
     id: template.id,
@@ -46,11 +76,20 @@ export default async function AdminFormsPage() {
     version: template.version,
     source: 'saved' as const,
     updatedAt: template.updatedAt.toISOString(),
+    history: template.versions.map((version) => ({
+      version: version.version,
+      createdAt: version.createdAt.toISOString(),
+      changelogNotes: version.changelogNotes,
+      authorName: version.createdById ? userDirectory[version.createdById]?.name ?? null : null,
+      authorEmail: version.createdById ? userDirectory[version.createdById]?.email ?? null : null,
+      authorId: version.createdById,
+    })),
   }))
 
   const libraryTemplates = businessFormTemplates.map((template) => ({
     ...template,
     source: 'library' as const,
+    history: [],
   }))
 
   const combinedTemplates = [...savedTemplateSummaries, ...libraryTemplates]
@@ -126,6 +165,7 @@ export default async function AdminFormsPage() {
         templates={combinedTemplates}
         categories={businessFormCategories}
         blockLibrary={formBlockLibrary}
+        currentUser={{ id: user.id, name: user.name ?? null, email: user.email ?? null }}
       />
     </div>
   )

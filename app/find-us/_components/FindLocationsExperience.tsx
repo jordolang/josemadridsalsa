@@ -86,7 +86,7 @@ export function FindLocationsExperience({
     }
     const nextView = params.get('view') === 'map' ? 'map' : 'list'
     setView(nextView)
-  }, [searchParams])
+  }, [searchParams, filters])
 
   useEffect(() => {
     const handler = window.setTimeout(() => {

@@ -92,15 +92,16 @@ async function getInvoices(searchParams: SearchParams) {
   }
 }
 
-export default async function InvoicesPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function InvoicesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'financials:read'))) {
     redirect('/admin')
   }
 
-  const { invoices, total, page, totalPages, statusSummary } = await getInvoices(searchParams)
-  const statusCandidate = searchParams.status?.toUpperCase()
+  const { invoices, total, page, totalPages, statusSummary } = await getInvoices(params)
+  const statusCandidate = params.status?.toUpperCase()
   const activeStatus = STATUS_OPTIONS.some((option) => option.value === statusCandidate)
     ? (statusCandidate as 'ALL' | 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'CANCELLED')
     : 'ALL'
@@ -145,7 +146,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Sea
             <Input
               type="search"
               name="q"
-              defaultValue={searchParams.q}
+              defaultValue={params.q}
               placeholder="Search invoices by number, note, or customer ID"
               className="pl-9"
             />
@@ -154,7 +155,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Sea
             <Button type="submit" variant="outline">
               Search
             </Button>
-            {searchParams.q && (
+            {params.q && (
               <Button asChild variant="ghost">
                 <Link href="/admin/invoices">Clear</Link>
               </Button>
@@ -166,9 +167,9 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Sea
             const isActive = option.value === activeStatus
             const href =
               option.value === 'ALL'
-                ? `/admin/invoices${searchParams.q ? `?q=${encodeURIComponent(searchParams.q)}` : ''}`
+                ? `/admin/invoices${params.q ? `?q=${encodeURIComponent(params.q)}` : ''}`
                 : `/admin/invoices?status=${option.value}${
-                    searchParams.q ? `&q=${encodeURIComponent(searchParams.q)}` : ''
+                    params.q ? `&q=${encodeURIComponent(params.q)}` : ''
                   }`
             return (
               <Link
@@ -260,8 +261,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Sea
             <div className="flex items-center gap-2">
               <Link
                 href={`/admin/invoices?page=${Math.max(page - 1, 1)}${
-                  searchParams.status ? `&status=${activeStatus}` : ''
-                }${searchParams.q ? `&q=${encodeURIComponent(searchParams.q)}` : ''}`}
+                  params.status ? `&status=${activeStatus}` : ''
+                }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
                 className={`rounded-md border px-3 py-1 ${
                   page === 1
                     ? 'pointer-events-none border-slate-200 text-slate-300'
@@ -272,8 +273,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Sea
               </Link>
               <Link
                 href={`/admin/invoices?page=${Math.min(page + 1, totalPages)}${
-                  searchParams.status ? `&status=${activeStatus}` : ''
-                }${searchParams.q ? `&q=${encodeURIComponent(searchParams.q)}` : ''}`}
+                  params.status ? `&status=${activeStatus}` : ''
+                }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
                 className={`rounded-md border px-3 py-1 ${
                   page === totalPages
                     ? 'pointer-events-none border-slate-200 text-slate-300'

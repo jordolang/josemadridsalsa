@@ -33,6 +33,7 @@ model User {
   reviews         Review[]
   cartItems       CartItem[]
   wishlistItems   WishlistItem[]
+  partnerApiKeys  PartnerApiKey[]
 
   // Wholesale account
   wholesaleAccount WholesaleAccount?
@@ -771,6 +772,7 @@ model FormTemplateVersion {
   structure   Json
   createdAt   DateTime       @default(now()) @map("created_at")
   createdById String?        @map("created_by_id")
+  changelogNotes String?     @map("changelog_notes")
 
   template    FormTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
   @@unique([templateId, version])
@@ -809,6 +811,22 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model PartnerApiKey {
+  id         String   @id @default(cuid())
+  name       String
+  keyHash    String   @unique @map("key_hash")
+  scopes     String[] @default([])
+  isActive   Boolean  @default(true) @map("is_active")
+  userId     String?  @map("user_id")
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  lastUsedAt DateTime? @map("last_used_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("partner_api_keys")
 }
 
 model Invoice {

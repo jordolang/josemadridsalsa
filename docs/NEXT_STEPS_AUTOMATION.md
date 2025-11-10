@@ -79,10 +79,10 @@ This document outlines the follow-up engineering work required after the latest 
 **Action Items**
 1. **Database Layer**
    - ✅ `FormTemplate` + `FormTemplateVersion` models now live (JSON structure, slug, status, version).
-   - TODO: backfill owner fields when authentication is ready; add changelog notes column if needed.
+   - ✅ Owner metadata now persists (see `npm run templates:backfill-owners` script) and template versions capture optional changelog notes for audit history.
 2. **Persistence API**
    - ✅ Server actions power create/update with Zod validation and slug management.
-   - TODO: expose REST endpoints if third parties will manage forms outside the admin UI.
+   - ✅ REST endpoints under `/api/forms` (API-key scoped) now provide list/read/update/version management for third parties.
 3. **Publishing Workflow**
    - Add approval step before forms become publicly accessible.
    - Generate signed URLs or static HTML files for published templates.

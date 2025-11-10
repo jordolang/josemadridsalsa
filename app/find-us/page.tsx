@@ -16,10 +16,10 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 type FindUsPageProps = {
-  searchParams?: Record<string, string | string[] | undefined>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-const extractParam = (params: FindUsPageProps['searchParams'], key: string) => {
+const extractParam = (params: Record<string, string | string[] | undefined> | undefined, key: string) => {
   const value = params?.[key]
   if (Array.isArray(value)) return value[0]
   return value ?? undefined
@@ -32,15 +32,16 @@ const parseNumberParam = (value?: string) => {
 }
 
 export default async function FindUsPage({ searchParams }: FindUsPageProps) {
+  const params = await searchParams;
   const rawFilters: LocationFilters = {
-    q: extractParam(searchParams, 'q'),
-    state: extractParam(searchParams, 'state'),
-    city: extractParam(searchParams, 'city'),
-    sort: extractParam(searchParams, 'sort') === 'distance' ? 'distance' : 'alphabetical',
-    lat: parseNumberParam(extractParam(searchParams, 'lat')),
-    lng: parseNumberParam(extractParam(searchParams, 'lng')),
-    hasWebsite: extractParam(searchParams, 'hasWebsite') === 'true' ? true : undefined,
-    hasPhone: extractParam(searchParams, 'hasPhone') === 'true' ? true : undefined,
+    q: extractParam(params, 'q'),
+    state: extractParam(params, 'state'),
+    city: extractParam(params, 'city'),
+    sort: extractParam(params, 'sort') === 'distance' ? 'distance' : 'alphabetical',
+    lat: parseNumberParam(extractParam(params, 'lat')),
+    lng: parseNumberParam(extractParam(params, 'lng')),
+    hasWebsite: extractParam(params, 'hasWebsite') === 'true' ? true : undefined,
+    hasPhone: extractParam(params, 'hasPhone') === 'true' ? true : undefined,
   }
 
   const initialFilters = normalizeFilters(rawFilters)
@@ -51,7 +52,7 @@ export default async function FindUsPage({ searchParams }: FindUsPageProps) {
   const totalLocations = allLocations.length
   const ohioLocations = allLocations.filter((location) => location.state === 'OH').length
   const uniqueStates = facets.states.length
-  const initialView = extractParam(searchParams, 'view') === 'map' ? 'map' : 'list'
+  const initialView = extractParam(params, 'view') === 'map' ? 'map' : 'list'
 
   return (
     <div className="min-h-screen bg-background">

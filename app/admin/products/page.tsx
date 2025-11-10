@@ -96,8 +96,9 @@ const heatLevelColors = {
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: SearchParams
+  searchParams: Promise<SearchParams>
 }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'products:read'))) {
@@ -108,7 +109,7 @@ export default async function ProductsPage({
   const canExport = await hasPermission(user, 'products:export')
   const canImport = await hasPermission(user, 'products:import')
 
-  const { products, total, page, totalPages, categories } = await getProducts(searchParams)
+  const { products, total, page, totalPages, categories } = await getProducts(params)
 
   return (
     <div className="space-y-6">
@@ -150,11 +151,11 @@ export default async function ProductsPage({
             <Input
               type="search"
               placeholder="Search products..."
-              defaultValue={searchParams.search}
+              defaultValue={params.search}
               className="pl-9"
             />
           </div>
-          <Select defaultValue={searchParams.category || 'all'}>
+          <Select defaultValue={params.category || 'all'}>
             <SelectTrigger>
               <SelectValue placeholder="All categories" />
             </SelectTrigger>
@@ -167,7 +168,7 @@ export default async function ProductsPage({
               ))}
             </SelectContent>
           </Select>
-          <Select defaultValue={searchParams.heatLevel || 'all'}>
+          <Select defaultValue={params.heatLevel || 'all'}>
             <SelectTrigger>
               <SelectValue placeholder="All heat levels" />
             </SelectTrigger>
@@ -180,7 +181,7 @@ export default async function ProductsPage({
               <SelectItem value="FRUIT">Fruit</SelectItem>
             </SelectContent>
           </Select>
-          <Select defaultValue={searchParams.active}>
+          <Select defaultValue={params.active}>
             <SelectTrigger>
               <SelectValue placeholder="All products" />
             </SelectTrigger>

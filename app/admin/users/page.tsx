@@ -87,7 +87,8 @@ const roleColors: Record<UserRole, string> = {
   WHOLESALE: 'bg-yellow-100 text-yellow-800',
 }
 
-export default async function UsersPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function UsersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'users:read'))) {
@@ -95,7 +96,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
   }
 
   const canWrite = await hasPermission(user, 'users:write')
-  const { users, total, page, totalPages, roleStats } = await getUsers(searchParams)
+  const { users, total, page, totalPages, roleStats } = await getUsers(params)
 
   return (
     <div className="space-y-6">
@@ -150,13 +151,13 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
             <Input
               type="search"
               placeholder="Search users..."
-              defaultValue={searchParams.search}
+              defaultValue={params.search}
               className="pl-9"
             />
           </div>
           <select
             className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-            defaultValue={searchParams.role || 'all'}
+            defaultValue={params.role || 'all'}
           >
             <option value="all">All Roles</option>
             <option value="CUSTOMER">Customer</option>
@@ -175,7 +176,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
             <User className="mx-auto mb-4 h-12 w-12 text-slate-300" />
             <p className="text-lg font-medium">No users found</p>
             <p className="mt-1 text-sm">
-              {searchParams.search ? 'Try a different search term' : 'Create your first user to get started'}
+              {params.search ? 'Try a different search term' : 'Create your first user to get started'}
             </p>
             {canWrite && (
               <Button className="mt-4" asChild>

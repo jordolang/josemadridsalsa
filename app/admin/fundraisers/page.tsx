@@ -77,7 +77,8 @@ const statusColors: Record<FundraiserStatus, string> = {
   CANCELLED: 'bg-red-100 text-red-800',
 }
 
-export default async function FundraisersPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function FundraisersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'orders:read'))) {
@@ -85,7 +86,7 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
   }
 
   const canWrite = await hasPermission(user, 'orders:write')
-  const { fundraisers, total, page, totalPages, stats } = await getFundraisers(searchParams)
+  const { fundraisers, total, page, totalPages, stats } = await getFundraisers(params)
 
   return (
     <div className="space-y-6">
@@ -140,7 +141,7 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
         <div className="flex gap-4">
           <select
             className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-            defaultValue={searchParams.status || 'all'}
+            defaultValue={params.status || 'all'}
           >
             <option value="all">All Statuses</option>
             <option value="DRAFT">Draft</option>

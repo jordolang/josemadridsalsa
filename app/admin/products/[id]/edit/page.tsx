@@ -36,15 +36,16 @@ async function getFormData(productId: string) {
 export default async function EditProductPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'products:write'))) {
     redirect('/admin/products')
   }
 
-  const { product, categories } = await getFormData(params.id)
+  const { product, categories } = await getFormData(id)
 
   return (
     <div className="space-y-6">

@@ -86,7 +86,8 @@ async function getConversations(searchParams: SearchParams) {
   }
 }
 
-export default async function MessagesPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function MessagesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'messaging:read'))) {
@@ -94,10 +95,10 @@ export default async function MessagesPage({ searchParams }: { searchParams: Sea
   }
 
   const { conversations, total, page, totalPages, openCount, unreadCount } = await getConversations(
-    searchParams
+    params
   )
 
-  const statusCandidate = searchParams.status?.toUpperCase()
+  const statusCandidate = params.status?.toUpperCase()
   const activeStatus = STATUS_OPTIONS.some((option) => option.value === statusCandidate)
     ? (statusCandidate as 'ALL' | 'OPEN' | 'CLOSED')
     : 'ALL'
@@ -139,7 +140,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Sea
               type="search"
               name="q"
               placeholder="Search by subject, customer, or email"
-              defaultValue={searchParams.q}
+              defaultValue={params.q}
               className="pl-9"
             />
           </div>
@@ -159,9 +160,9 @@ export default async function MessagesPage({ searchParams }: { searchParams: Sea
             const isActive = option.value === activeStatus
             const href =
               option.value === 'ALL'
-                ? `/admin/messages${searchParams.q ? `?q=${encodeURIComponent(searchParams.q)}` : ''}`
+                ? `/admin/messages${params.q ? `?q=${encodeURIComponent(params.q)}` : ''}`
                 : `/admin/messages?status=${option.value}${
-                    searchParams.q ? `&q=${encodeURIComponent(searchParams.q)}` : ''
+                    params.q ? `&q=${encodeURIComponent(params.q)}` : ''
                   }`
             return (
               <Link
@@ -274,8 +275,8 @@ export default async function MessagesPage({ searchParams }: { searchParams: Sea
             <div className="flex items-center gap-2">
               <Link
                 href={`/admin/messages?page=${Math.max(page - 1, 1)}${
-                  searchParams.status ? `&status=${activeStatus}` : ''
-                }${searchParams.q ? `&q=${encodeURIComponent(searchParams.q)}` : ''}`}
+                  params.status ? `&status=${activeStatus}` : ''
+                }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
                 className={`rounded-md border px-3 py-1 ${
                   page === 1
                     ? 'pointer-events-none border-slate-200 text-slate-300'
@@ -286,8 +287,8 @@ export default async function MessagesPage({ searchParams }: { searchParams: Sea
               </Link>
               <Link
                 href={`/admin/messages?page=${Math.min(page + 1, totalPages)}${
-                  searchParams.status ? `&status=${activeStatus}` : ''
-                }${searchParams.q ? `&q=${encodeURIComponent(searchParams.q)}` : ''}`}
+                  params.status ? `&status=${activeStatus}` : ''
+                }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
                 className={`rounded-md border px-3 py-1 ${
                   page === totalPages
                     ? 'pointer-events-none border-slate-200 text-slate-300'

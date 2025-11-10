@@ -1,25 +1,20 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 
-declare global {
-  interface Window {
-    google?: {
-      maps: {
-        importLibrary?: (library: string) => Promise<any>
-        Map?: any
-        LatLngBounds?: any
-        InfoWindow?: any
-      }
-      maps?: {
-        marker?: {
-          AdvancedMarkerElement?: any
-        }
-      }
+interface GoogleMapsWindow extends Window {
+  google?: {
+    maps?: {
+      importLibrary?: (library: string) => Promise<any>
+      Map?: any
+      LatLngBounds?: any
+      InfoWindow?: any
+      Marker?: any
+      SymbolPath?: any
     }
-    initMap?: () => Promise<void>
   }
+  initMap?: () => Promise<void>
 }
 
 type Location = {
@@ -54,7 +49,7 @@ export function LocationsMap({ locations, selectedLocationId, onSelect }: Locati
   const markerEntriesRef = useRef(new Map<string, { marker: any; infoWindow: any }>())
 
   // Generate 2-letter abbreviation from city name
-  function getCityAbbreviation(city: string): string {
+  const getCityAbbreviation = useCallback((city: string): string => {
     const words = city.trim().split(/\s+/)
     if (words.length === 1) {
       // Single word: take first 2 letters
@@ -63,15 +58,15 @@ export function LocationsMap({ locations, selectedLocationId, onSelect }: Locati
       // Multiple words: take first letter of first two words
       return (words[0][0] + (words[1]?.[0] || '')).toUpperCase()
     }
-  }
+  }, [])
 
   // Get first word of business name
-  function getFirstWord(text: string): string {
+  const getFirstWord = useCallback((text: string): string => {
     return text.trim().split(/\s+/)[0]
-  }
+  }, [])
 
   // Generate marker label based on city and business count
-  function generateMarkerLabel(location: Location, cityCount: number): string {
+  const generateMarkerLabel = useCallback((location: Location, cityCount: number): string => {
     const cityAbbr = getCityAbbreviation(location.city)
     if (cityCount === 1) {
       return cityAbbr
@@ -79,7 +74,7 @@ export function LocationsMap({ locations, selectedLocationId, onSelect }: Locati
       const firstWord = getFirstWord(location.businessName)
       return `${cityAbbr} - ${firstWord}`
     }
-  }
+  }, [getCityAbbreviation, getFirstWord])
 
   // Geocode addresses to get coordinates using Google Maps Geocoding API
 useEffect(() => {
@@ -447,7 +442,7 @@ useEffect(() => {
       }
       document.head.appendChild(script)
     }
-  }, [isLoading, geocodedLocations, onSelect])
+  }, [isLoading, geocodedLocations, onSelect, generateMarkerLabel])
 
   function buildMarkerContent(label: string) {
     const content = document.createElement('div')

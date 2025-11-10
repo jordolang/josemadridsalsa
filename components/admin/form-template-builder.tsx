@@ -22,23 +22,38 @@ import type {
   BusinessFormSection,
 } from '@/types/forms'
 import type { FormBlockLibraryItem } from '@/lib/forms/templates'
-import { Download, FileType2, Layers, Printer, Sparkles, Wand2 } from 'lucide-react'
+import { Download, FileType2, History, Layers, Printer, Sparkles, Wand2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { createFormTemplate, updateFormTemplate } from '@/app/admin/forms/actions'
 
 type TemplateSource = NonNullable<BusinessFormTemplate['source']>
+
+type TemplateHistoryEntry = {
+  version: number
+  createdAt: string
+  changelogNotes?: string | null
+  authorName?: string | null
+  authorEmail?: string | null
+  authorId?: string | null
+}
 
 type BuilderTemplate = BusinessFormTemplate & {
   source: TemplateSource
   status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
   version?: number
   updatedAt?: string
+  history?: TemplateHistoryEntry[]
 }
 
 type FormTemplateBuilderProps = {
   templates: BuilderTemplate[]
   categories: BusinessFormCategory[]
   blockLibrary: FormBlockLibraryItem[]
+  currentUser: {
+    id: string
+    name?: string | null
+    email?: string | null
+  }
 }
 
 const ensureSource = (template: BuilderTemplate): BuilderTemplate => ({
@@ -53,7 +68,7 @@ const defaultSectionSelection = (template: BuilderTemplate) =>
         .filter((section) => section.defaultIncluded !== false)
         .map((section) => section.id)
 
-export function FormTemplateBuilder({ templates, categories, blockLibrary }: FormTemplateBuilderProps) {
+export function FormTemplateBuilder({ templates, categories, blockLibrary, currentUser }: FormTemplateBuilderProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isSaving, startSaving] = useTransition()
@@ -72,6 +87,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary }: For
   const [activeBlocks, setActiveBlocks] = useState<string[]>([])
   const [includeBranding, setIncludeBranding] = useState<boolean>(true)
   const [notes, setNotes] = useState<string>('')
+  const [changelogNotes, setChangelogNotes] = useState<string>('')
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -109,6 +125,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary }: For
     setSelectedSections(defaultSectionSelection(selectedTemplate))
     setActiveBlocks([])
     setNotes('')
+    setChangelogNotes('')
   }, [selectedTemplate])
 
   const blockMap = useMemo(
@@ -150,6 +167,46 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary }: For
     )
   }, [selectedTemplate, combinedSections, includeSectionsList, customTitle, includeBranding, notes])
 
+  const versionHistory = selectedTemplate?.history ?? []
+
+  const formatHistoryTimestamp = (iso: string) =>
+    new Date(iso).toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    })
+
+  const resolveHistoryAuthor = (entry: TemplateHistoryEntry) => {
+    if (entry.authorName) {
+      return entry.authorName
+    }
+    if (entry.authorEmail) {
+      return entry.authorEmail
+    }
+    if (entry.authorId && entry.authorId === currentUser?.id) {
+      return currentUser.name ?? currentUser.email ?? 'You'
+    }
+    return 'Unknown author'
+  }
+
+  const normalizeHistoryEntries = (history?: any[]): TemplateHistoryEntry[] => {
+    if (!Array.isArray(history)) {
+      return []
+    }
+    return history.map((entry) => ({
+      version: Number(entry.version) || 1,
+      createdAt:
+        typeof entry.createdAt === 'string'
+          ? entry.createdAt
+          : entry.createdAt instanceof Date
+            ? entry.createdAt.toISOString()
+            : new Date(entry.createdAt ?? Date.now()).toISOString(),
+      changelogNotes: entry.changelogNotes ?? null,
+      authorName: entry.authorName ?? null,
+      authorEmail: entry.authorEmail ?? null,
+      authorId: entry.authorId ?? entry.createdById ?? null,
+    }))
+  }
+
   const transformTemplateFromServer = (template: any): BuilderTemplate => ({
     id: template.id,
     name: template.name,
@@ -164,6 +221,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary }: For
     version: template.version,
     source: 'saved',
     updatedAt: template.updatedAt ?? new Date().toISOString(),
+    history: normalizeHistoryEntries(template.history ?? template.versions),
   })
 
   const persistTemplate = (status: 'DRAFT' | 'PUBLISHED') => {
@@ -202,6 +260,8 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary }: For
             fields: section.fields ?? [],
           })) as BusinessFormSection[],
           status,
+          changelogNotes:
+            status === 'PUBLISHED' && changelogNotes.trim().length > 0 ? changelogNotes.trim() : undefined,
         }
 
         const result =
@@ -217,6 +277,9 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary }: For
         })
         setSelectedTemplateId(mapped.id)
         setSelectedSections(mapped.sections.map((section) => section.id))
+        if (status === 'PUBLISHED') {
+          setChangelogNotes('')
+        }
 
         toast({
           title: status === 'PUBLISHED' ? 'Template published' : 'Draft saved',
@@ -536,6 +599,22 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary }: For
             />
           </div>
 
+          {selectedTemplate?.source === 'saved' ? (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700" htmlFor="changelog-notes">
+                Changelog notes (optional)
+              </label>
+              <Textarea
+                id="changelog-notes"
+                value={changelogNotes}
+                onChange={(event) => setChangelogNotes(event.target.value)}
+                rows={3}
+                placeholder="Summarize what changed for auditing and rollbacks."
+              />
+              <p className="text-xs text-slate-500">Visible to staff reviewing version history.</p>
+            </div>
+          ) : null}
+
           {selectedTemplate ? (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
@@ -563,6 +642,36 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary }: For
             </Button>
           </div>
         </Card>
+
+        {selectedTemplate?.source === 'saved' ? (
+          <Card className="space-y-4 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Version history</p>
+                <h3 className="font-serif text-lg font-semibold text-slate-900">Recent changes</h3>
+              </div>
+              <History className="h-4 w-4 text-slate-400" />
+            </div>
+            {versionHistory.length === 0 ? (
+              <p className="text-sm text-slate-500">Publish updates to start building a changelog.</p>
+            ) : (
+              <ol className="space-y-3">
+                {versionHistory.map((entry) => (
+                  <li key={entry.version} className="rounded-2xl border border-slate-200 bg-white p-3">
+                    <div className="flex items-center justify-between text-sm font-semibold text-slate-900">
+                      <span>v{entry.version}</span>
+                      <span className="text-xs font-normal text-slate-500">{formatHistoryTimestamp(entry.createdAt)}</span>
+                    </div>
+                    <p className="text-xs text-slate-500">{resolveHistoryAuthor(entry)}</p>
+                    {entry.changelogNotes ? (
+                      <p className="mt-2 text-sm text-slate-700">{entry.changelogNotes}</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Card>
+        ) : null}
 
         <Card className="overflow-hidden border border-slate-200">
           <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
