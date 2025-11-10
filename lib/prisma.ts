@@ -2,25 +2,21 @@ import { PrismaClient } from '@prisma/client'
 import { withAccelerate } from '@prisma/extension-accelerate'
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: ReturnType<typeof createPrismaClient> | undefined
+  prisma: PrismaClient | undefined
 }
 
-function createPrismaClient() {
-  const client = new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  })
-  
-  // Only use Accelerate extension if DATABASE_URL is using the accelerate protocol
-  if (process.env.DATABASE_URL?.includes('prisma+postgres://')) {
-    return client.$extends(withAccelerate())
-  }
-  
-  return client
-}
+const baseClient = new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+})
+
+// Use Accelerate extension only if DATABASE_URL uses the accelerate protocol
+const clientWithAccelerate = process.env.DATABASE_URL?.includes('prisma+postgres://')
+  ? baseClient.$extends(withAccelerate())
+  : baseClient
 
 export const prisma =
   globalForPrisma.prisma ??
-  createPrismaClient()
+  (clientWithAccelerate as unknown as PrismaClient)
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma
