@@ -15,7 +15,10 @@ import { useLocations, type LocationsMeta } from '@/hooks/useLocations'
 import { LocationCard } from './LocationCard'
 import { LocationsMap } from './LocationsMap'
 
-const regionFormatter = typeof Intl !== 'undefined' ? new Intl.DisplayNames(['en'], { type: 'region' }) : null
+const regionFormatter =
+  typeof Intl !== 'undefined' && typeof (Intl as any).DisplayNames === 'function'
+    ? new Intl.DisplayNames(['en'], { type: 'region' })
+    : null
 
 const formatStateLabel = (code: string) => regionFormatter?.of(`US-${code}`) || regionFormatter?.of(code) || code
 
@@ -88,10 +91,12 @@ export function FindLocationsExperience({
   useEffect(() => {
     const handler = window.setTimeout(() => {
       setFilters((prev) => {
-        if ((prev.q ?? '') === (searchValue.trim() || undefined)) {
+        const trimmed = searchValue.trim()
+        const normalized = trimmed.length > 0 ? trimmed : undefined
+        if (prev.q === normalized) {
           return prev
         }
-        return { ...prev, q: searchValue.trim() || undefined }
+        return { ...prev, q: normalized }
       })
     }, 350)
 
@@ -127,7 +132,11 @@ export function FindLocationsExperience({
     setFilters((prev) => ({
       ...prev,
       ...patch,
-      city: patch.state ? undefined : patch.city ?? prev.city,
+      city: Object.prototype.hasOwnProperty.call(patch, 'state')
+        ? undefined
+        : Object.prototype.hasOwnProperty.call(patch, 'city')
+          ? patch.city
+          : prev.city,
     }))
   }
 
@@ -187,7 +196,7 @@ export function FindLocationsExperience({
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">State</span>
-                <Select value={appliedFilters.state} onValueChange={(value) => handleFiltersChange({ state: value || undefined })}>
+                <Select value={appliedFilters.state ?? ''} onValueChange={(value) => handleFiltersChange({ state: value || undefined })}>
                   <SelectTrigger>
                     <SelectValue placeholder="All states" />
                   </SelectTrigger>
@@ -205,7 +214,7 @@ export function FindLocationsExperience({
               <label className="space-y-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">City</span>
                 <Select
-                  value={appliedFilters.city}
+                  value={appliedFilters.city ?? ''}
                   onValueChange={(value) => handleFiltersChange({ city: value || undefined })}
                   disabled={!appliedFilters.state}
                 >

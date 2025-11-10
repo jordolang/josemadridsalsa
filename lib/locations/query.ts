@@ -57,8 +57,8 @@ export async function queryLocations(filters?: LocationFilters) {
   return filterLocations(locations, filters)
 }
 
-export async function getLocationFacets() {
-  const locations = await getAllLocations()
+export async function getLocationFacets(preloaded?: RetailLocationRecord[]) {
+  const locations = preloaded ?? (await getAllLocations())
   const stateCounts = new Map<string, number>()
   const citiesByState: Record<string, string[]> = {}
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -25,12 +26,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       sortOrder: body.sortOrder ?? 0,
     },
   })
+  revalidateTag('locations')
   return NextResponse.json(updated)
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   await prisma.retailLocation.delete({ where: { id: params.id } })
+  revalidateTag('locations')
   return NextResponse.json({ ok: true })
 }
-
 
