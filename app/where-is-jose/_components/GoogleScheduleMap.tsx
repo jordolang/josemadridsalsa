@@ -43,17 +43,34 @@ function loadGoogleMaps(apiKey: string) {
     const existingScript = document.getElementById(MAP_SCRIPT_ID) as HTMLScriptElement | null;
 
     if (existingScript) {
-      existingScript.addEventListener('load', () => resolve((window as any).google?.maps));
-      existingScript.addEventListener('error', reject);
+      // Check if already loaded
+      if ((window as any).google?.maps) {
+        resolve((window as any).google.maps);
+        return;
+      }
+      // Wait for callback
+      const timeout = setTimeout(() => {
+        reject(new Error('Timeout loading Google Maps'));
+      }, 10000);
+      
+      (window as any).__googleMapsCallback = () => {
+        clearTimeout(timeout);
+        resolve((window as any).google.maps);
+      };
       return;
     }
 
+    // Set up callback before loading script
+    (window as any).__googleMapsCallback = () => {
+      resolve((window as any).google.maps);
+    };
+
     const script = document.createElement('script');
     script.id = MAP_SCRIPT_ID;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&v=weekly`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&callback=__googleMapsCallback&loading=async&v=weekly`;
     script.async = true;
     script.defer = true;
-    script.addEventListener('load', () => resolve((window as any).google?.maps));
+    
     script.addEventListener('error', (error) => reject(error));
     document.head.appendChild(script);
   });
