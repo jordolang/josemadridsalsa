@@ -1,0 +1,39 @@
+[
+  {
+    "name": "Imported Mild Salsa",
+    "slug": "imported-mild-salsa",
+    "sku": "IMP-MILD-001",
+    "description": "A delicious mild salsa imported via JSON",
+    "price": 8.99,
+    "compareAtPrice": 10.99,
+    "inventory": 50,
+    "lowStockThreshold": 10,
+    "heatLevel": "MILD",
+    "ingredients": "Tomatoes, Onions, Cilantro, Lime Juice, Salt",
+    "categoryName": "Salsa",
+    "barcode": "123456789012",
+    "weight": 16,
+    "featuredImage": "https://example.com/mild-salsa.jpg",
+    "images": "https://example.com/mild-salsa-1.jpg,https://example.com/mild-salsa-2.jpg",
+    "isActive": true,
+    "isFeatured": false,
+    "sortOrder": 0,
+    "metaTitle": "Imported Mild Salsa - Fresh and Delicious",
+    "metaDescription": "Try our imported mild salsa made with fresh ingredients",
+    "searchKeywords": "mild,salsa,fresh,organic"
+  },
+  {
+    "name": "Imported Hot Salsa",
+    "slug": "imported-hot-salsa",
+    "sku": "IMP-HOT-001",
+    "description": "A spicy hot salsa imported via JSON",
+    "price": 9.99,
+    "inventory": 30,
+    "heatLevel": "HOT",
+    "ingredients": "Tomatoes, Habanero Peppers, Garlic, Lime Juice, Salt",
+    "categoryName": "Salsa",
+    "weight": 16,
+    "isActive": "true",
+    "isFeatured": "false"
+  }
+]

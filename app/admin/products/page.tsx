@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Plus, Download, Search, Eye, Edit } from 'lucide-react'
+import { Plus, Download, Upload, Search, Eye, Edit } from 'lucide-react'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ProductImportButton } from '@/components/admin/ProductImportButton'
 
 interface SearchParams {
   search?: string
@@ -105,6 +106,7 @@ export default async function ProductsPage({
 
   const canWrite = await hasPermission(user, 'products:write')
   const canExport = await hasPermission(user, 'products:export')
+  const canImport = await hasPermission(user, 'products:import')
 
   const { products, total, page, totalPages, categories } = await getProducts(searchParams)
 
@@ -128,6 +130,7 @@ export default async function ProductsPage({
               </a>
             </Button>
           )}
+          {canImport && <ProductImportButton />}
           {canWrite && (
             <Button asChild>
               <Link href="/admin/products/new">

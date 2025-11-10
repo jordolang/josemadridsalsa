@@ -19,6 +19,7 @@ const permissions: PermissionDef[] = [
   { name: 'products:write', description: 'Create, update, and delete products', category: 'PRODUCTS' },
   { name: 'products:bulk', description: 'Bulk product operations', category: 'PRODUCTS' },
   { name: 'products:export', description: 'Export products', category: 'PRODUCTS' },
+  { name: 'products:import', description: 'Import products from files', category: 'PRODUCTS' },
   
   // Users
   { name: 'users:read', description: 'View users', category: 'USERS' },
@@ -73,6 +74,7 @@ const rolePermissions: Record<UserRole, string[]> = {
     'products:read',
     'products:write',
     'products:bulk',
+    'products:import',
     // Users (read only)
     'users:read',
     // Content
