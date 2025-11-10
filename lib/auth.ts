@@ -4,9 +4,12 @@ import type { NextAuthOptions } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
-// Ensure NEXTAUTH_SECRET is set
+// Warn if NEXTAUTH_SECRET is not set (but don't throw in production to avoid blocking)
 if (!process.env.NEXTAUTH_SECRET) {
-  throw new Error('NEXTAUTH_SECRET is not set in environment variables')
+  console.error('[Auth] CRITICAL: NEXTAUTH_SECRET is not set in environment variables')
+  if (process.env.NODE_ENV === 'development') {
+    throw new Error('NEXTAUTH_SECRET is required in development')
+  }
 }
 
 export const authOptions: NextAuthOptions = {

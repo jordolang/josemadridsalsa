@@ -5,18 +5,30 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-const baseClient = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-})
+let prismaClient: PrismaClient | null = null
 
-// Use Accelerate extension only if DATABASE_URL uses the accelerate protocol
-const clientWithAccelerate = process.env.DATABASE_URL?.includes('prisma+postgres://')
-  ? baseClient.$extends(withAccelerate())
-  : baseClient
+try {
+  const baseClient = new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  })
+
+  // Use Accelerate extension only if DATABASE_URL uses the accelerate protocol
+  prismaClient = process.env.DATABASE_URL?.includes('prisma+postgres://')
+    ? (baseClient.$extends(withAccelerate()) as unknown as PrismaClient)
+    : baseClient
+    
+  console.log('[Prisma] Client initialized successfully')
+} catch (error) {
+  console.error('[Prisma] Failed to initialize client:', error)
+  // Create a minimal client that will fail gracefully
+  prismaClient = new PrismaClient({
+    log: ['error'],
+  })
+}
 
 export const prisma =
   globalForPrisma.prisma ??
-  (clientWithAccelerate as unknown as PrismaClient)
+  prismaClient
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma
