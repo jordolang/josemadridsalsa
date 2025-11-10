@@ -3,6 +3,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { parseFindUsMarkdown, readFindUsMarkdownAbsolute } from '@/lib/find-us-parser'
+import { TrainingDocumentStatus } from '@prisma/client'
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -388,16 +389,40 @@ export async function indexPages(): Promise<IndexedContent[]> {
   return pages
 }
 
+async function indexTrainingDocuments(): Promise<IndexedContent[]> {
+  const docs = await prisma.trainingDocument.findMany({
+    where: {
+      status: TrainingDocumentStatus.READY,
+      content: { not: null },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  return docs.map((doc) => ({
+    id: `training-${doc.id}`,
+    type: 'general' as const,
+    title: doc.title,
+    content: doc.content || '',
+    metadata: {
+      sourceType: doc.sourceType,
+      url: doc.url,
+      uploadedAt: doc.createdAt.toISOString(),
+      warnings: doc.warnings,
+    },
+  }))
+}
+
 /**
  * Index all content from the repository
  */
 export async function indexAllContent(): Promise<IndexedContent[]> {
-  const [products, recipes, pages, markdownPages, markdownLocations] = await Promise.all([
+  const [products, recipes, pages, markdownPages, markdownLocations, trainingDocs] = await Promise.all([
     safeIndex('index products', indexProducts, () => [] as IndexedContent[]),
     safeIndex('index recipes', indexRecipes, () => [] as IndexedContent[]),
     safeIndex('index static pages', indexPages, () => [] as IndexedContent[]),
     safeIndex('index public markdown content', indexPublicMarkdownContent, () => [] as IndexedContent[]),
     safeIndex('index markdown locations', indexMarkdownLocations, () => [] as IndexedContent[]),
+    safeIndex('index training documents', indexTrainingDocuments, () => [] as IndexedContent[]),
   ])
 
   let locations = await safeIndex('index database locations', indexLocations, () => [] as IndexedContent[])
@@ -415,5 +440,5 @@ export async function indexAllContent(): Promise<IndexedContent[]> {
     }
   }
 
-  return [...products, ...recipes, ...locations, ...pages, ...markdownPages]
+  return [...products, ...recipes, ...locations, ...pages, ...markdownPages, ...trainingDocs]
 }

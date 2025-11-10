@@ -1,5 +1,7 @@
 import Image from 'next/image';
-import { MapPin, Phone, ExternalLink } from 'lucide-react';
+import { MapPin, Phone, ExternalLink, Navigation2 } from 'lucide-react';
+import type { KeyboardEvent } from 'react';
+import { cn } from '@/lib/utils';
 
 interface LocationCardProps {
   businessName: string;
@@ -10,6 +12,9 @@ interface LocationCardProps {
   phone?: string | null;
   website?: string | null;
   photoUrl?: string | null;
+  distanceMiles?: number | null;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
 export function LocationCard({
@@ -21,12 +26,33 @@ export function LocationCard({
   phone,
   website,
   photoUrl,
+  distanceMiles,
+  isSelected = false,
+  onSelect,
 }: LocationCardProps) {
   const fullAddress = `${address}, ${city}, ${state}${zipCode ? ` ${zipCode}` : ''}`;
   const imageSrc = photoUrl || '/images/store-placeholder.png';
+  const handleSelect = () => onSelect?.();
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSelect?.();
+    }
+  };
 
   return (
-    <div className="card overflow-hidden group">
+    <div
+      className={cn(
+        'card overflow-hidden group transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-salsa-200',
+        isSelected ? 'ring-2 ring-salsa-500 shadow-lg' : 'ring-1 ring-transparent',
+      )}
+      role={onSelect ? 'button' : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      aria-pressed={onSelect ? isSelected : undefined}
+      onClick={onSelect ? handleSelect : undefined}
+      onKeyDown={onSelect ? handleKeyDown : undefined}
+    >
       {/* Image */}
       <div className="relative aspect-[4/3] w-full bg-gray-100 dark:bg-gray-800">
         <Image
@@ -44,6 +70,13 @@ export function LocationCard({
         <h3 className="text-base font-semibold text-salsa-700 dark:text-salsa-300 mb-2 line-clamp-2 min-h-[2.5rem]">
           {businessName}
         </h3>
+
+        {typeof distanceMiles === 'number' && (
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+            <Navigation2 className="w-3.5 h-3.5 text-chile-600" />
+            {distanceMiles.toFixed(1)} miles away
+          </div>
+        )}
 
         {/* Address */}
         <div className="flex items-start gap-1.5 mb-2 text-gray-600 dark:text-gray-300">

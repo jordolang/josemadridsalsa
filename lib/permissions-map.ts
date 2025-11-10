@@ -92,6 +92,11 @@ export const adminNavigation: NavItem[] = [
         href: '/admin/seo',
         permission: 'content:write',
       },
+      {
+        label: 'AI Training',
+        href: '/admin/training-data',
+        permission: 'content:write',
+      },
     ],
   },
   {

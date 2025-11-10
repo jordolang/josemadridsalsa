@@ -32,13 +32,18 @@ type Location = {
   phone: string | null
   website: string | null
   position?: { lat: number; lng: number }
+  latitude: number | null
+  longitude: number | null
+  distanceMiles?: number | null
 }
 
 type LocationsMapProps = {
   locations: Location[]
+  selectedLocationId?: string | null
+  onSelect?: (locationId: string) => void
 }
 
-export function LocationsMap({ locations }: LocationsMapProps) {
+export function LocationsMap({ locations, selectedLocationId, onSelect }: LocationsMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -46,6 +51,7 @@ export function LocationsMap({ locations }: LocationsMapProps) {
   const mapInstanceRef = useRef<any>(null)
   const markersRef = useRef<any[]>([])
   const infoWindowsRef = useRef<any[]>([])
+  const markerEntriesRef = useRef(new Map<string, { marker: any; infoWindow: any }>())
 
   // Generate 2-letter abbreviation from city name
   function getCityAbbreviation(city: string): string {
@@ -76,67 +82,94 @@ export function LocationsMap({ locations }: LocationsMapProps) {
   }
 
   // Geocode addresses to get coordinates using Google Maps Geocoding API
-  useEffect(() => {
-    async function geocodeLocations() {
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-      if (!apiKey) {
-        setError('Google Maps API key not configured')
-        setIsLoading(false)
-        return
+useEffect(() => {
+  let isSubscribed = true
+
+  async function geocodeLocations() {
+    setIsLoading(true)
+    setError(null)
+    const seeded = locations.map((loc) =>
+      loc.latitude != null && loc.longitude != null
+        ? { ...loc, position: { lat: loc.latitude, lng: loc.longitude } }
+        : { ...loc },
+    )
+
+    const withCoordinates = seeded.filter((loc) => loc.position)
+    if (withCoordinates.length > 0) {
+      setGeocodedLocations(withCoordinates as Location[])
+    }
+
+    const needsGeocode = seeded.filter((loc) => !loc.position)
+    if (needsGeocode.length === 0) {
+      setIsLoading(false)
+      return
+    }
+
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    if (!apiKey) {
+      setError('Google Maps API key not configured')
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const geocoded: Location[] = []
+      const batchSize = 10
+      const delay = 200
+
+      for (let i = 0; i < needsGeocode.length; i += batchSize) {
+        const batch = needsGeocode.slice(i, i + batchSize)
+        const batchResults = await Promise.all(
+          batch.map(async (loc) => {
+            const fullAddress = `${loc.address}, ${loc.city}, ${loc.state}${loc.zipCode ? ` ${loc.zipCode}` : ''}`
+
+            try {
+              const response = await fetch(
+                `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${apiKey}`,
+              )
+              const data = await response.json()
+
+              if (data.results && data.results.length > 0) {
+                const { lat, lng } = data.results[0].geometry.location
+                return { ...loc, position: { lat, lng } }
+              }
+            } catch (err) {
+              console.warn(`Failed to geocode ${loc.businessName}:`, err)
+            }
+
+            return loc
+          }),
+        )
+
+        geocoded.push(...batchResults)
+
+        if (i + batchSize < needsGeocode.length) {
+          await new Promise((resolve) => setTimeout(resolve, delay))
+        }
       }
 
-      try {
-        // Batch geocode with delays to respect rate limits
-        const geocoded: Location[] = []
-        const batchSize = 10
-        const delay = 200 // ms between batches
+      if (!isSubscribed) return
 
-        for (let i = 0; i < locations.length; i += batchSize) {
-          const batch = locations.slice(i, i + batchSize)
-          
-          const batchResults = await Promise.all(
-            batch.map(async (loc) => {
-              const fullAddress = `${loc.address}, ${loc.city}, ${loc.state}${loc.zipCode ? ` ${loc.zipCode}` : ''}`
-              
-              try {
-                const response = await fetch(
-                  `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${apiKey}`
-                )
-                const data = await response.json()
-                
-                if (data.results && data.results.length > 0) {
-                  const { lat, lng } = data.results[0].geometry.location
-                  return { ...loc, position: { lat, lng } }
-                }
-              } catch (err) {
-                console.warn(`Failed to geocode ${loc.businessName}:`, err)
-              }
-              
-              return loc
-            })
-          )
-
-          geocoded.push(...batchResults)
-
-          // Delay between batches to avoid rate limits
-          if (i + batchSize < locations.length) {
-            await new Promise(resolve => setTimeout(resolve, delay))
-          }
-        }
-
-        // Filter out locations without coordinates
-        const validLocations = geocoded.filter((loc) => loc.position)
-        setGeocodedLocations(validLocations)
-      } catch (err) {
-        console.error('Error geocoding locations:', err)
+      const combined = [...withCoordinates, ...geocoded].filter((loc) => loc.position) as Location[]
+      setGeocodedLocations(combined)
+    } catch (err) {
+      console.error('Error geocoding locations:', err)
+      if (isSubscribed) {
         setError('Failed to load location data')
-      } finally {
+      }
+    } finally {
+      if (isSubscribed) {
         setIsLoading(false)
       }
     }
+  }
 
-    geocodeLocations()
-  }, [locations])
+  geocodeLocations()
+
+  return () => {
+    isSubscribed = false
+  }
+}, [locations])
 
   // Initialize map once geocoding is complete
   useEffect(() => {
@@ -202,6 +235,7 @@ export function LocationsMap({ locations }: LocationsMapProps) {
             })
             markersRef.current = []
             infoWindowsRef.current = []
+            markerEntriesRef.current.clear()
 
             // Create markers with new API
             geocodedLocations.forEach((location) => {
@@ -232,10 +266,12 @@ export function LocationsMap({ locations }: LocationsMapProps) {
                   anchor: marker,
                   map,
                 })
+                onSelect?.(location.id)
               })
 
               markersRef.current.push(marker)
               infoWindowsRef.current.push(infoWindow)
+              markerEntriesRef.current.set(location.id, { marker, infoWindow })
               bounds.extend(location.position)
             })
 
@@ -287,6 +323,7 @@ export function LocationsMap({ locations }: LocationsMapProps) {
         })
         markersRef.current = []
         infoWindowsRef.current = []
+        markerEntriesRef.current.clear()
 
         // Create markers with classic API
         geocodedLocations.forEach((location) => {
@@ -326,10 +363,12 @@ export function LocationsMap({ locations }: LocationsMapProps) {
               iw.close()
             })
             infoWindow.open(map, marker)
+            onSelect?.(location.id)
           })
 
           markersRef.current.push(marker)
           infoWindowsRef.current.push(infoWindow)
+          markerEntriesRef.current.set(location.id, { marker, infoWindow })
           bounds.extend(location.position)
         })
 
@@ -408,7 +447,7 @@ export function LocationsMap({ locations }: LocationsMapProps) {
       }
       document.head.appendChild(script)
     }
-  }, [isLoading, geocodedLocations])
+  }, [isLoading, geocodedLocations, onSelect])
 
   function buildMarkerContent(label: string) {
     const content = document.createElement('div')
@@ -433,6 +472,7 @@ export function LocationsMap({ locations }: LocationsMapProps) {
             ${location.address}<br/>
             ${location.city}, ${location.state}${location.zipCode ? ` ${location.zipCode}` : ''}
           </p>
+          ${typeof location.distanceMiles === 'number' ? `<p class="info-window-distance"><strong>Distance:</strong> ${location.distanceMiles.toFixed(1)} miles</p>` : ''}
           ${location.phone ? `<p class="info-window-phone"><strong>Phone:</strong> <a href="tel:${location.phone}">${location.phone}</a></p>` : ''}
           ${location.website ? `<p class="info-window-website"><strong>Website:</strong> <a href="${location.website}" target="_blank" rel="noopener noreferrer">Visit Website</a></p>` : ''}
         </div>
@@ -440,6 +480,35 @@ export function LocationsMap({ locations }: LocationsMapProps) {
     `
     return content
   }
+
+  useEffect(() => {
+    if (!mapInstanceRef.current) return
+
+    if (!selectedLocationId) {
+      infoWindowsRef.current.forEach((iw) => iw.close())
+      return
+    }
+
+    const entry = markerEntriesRef.current.get(selectedLocationId)
+    if (!entry || !entry.infoWindow) return
+
+    infoWindowsRef.current.forEach((iw) => iw.close())
+
+    try {
+      if (typeof entry.infoWindow.open === 'function') {
+        if (entry.infoWindow.open.length > 1) {
+          entry.infoWindow.open({
+            anchor: entry.marker,
+            map: mapInstanceRef.current,
+          })
+        } else {
+          entry.infoWindow.open(mapInstanceRef.current)
+        }
+      }
+    } catch (err) {
+      console.warn('Unable to open info window for selected marker', err)
+    }
+  }, [selectedLocationId])
 
   if (error) {
     return (
@@ -536,6 +605,12 @@ export function LocationsMap({ locations }: LocationsMapProps) {
           margin: 0 0 8px 0;
           line-height: 1.5;
         }
+
+        .info-window-distance {
+          margin: 0 0 8px 0;
+          font-weight: 600;
+          color: #111827;
+        }
         
         .info-window-phone,
         .info-window-website {
@@ -556,4 +631,3 @@ export function LocationsMap({ locations }: LocationsMapProps) {
     </div>
   )
 }
-

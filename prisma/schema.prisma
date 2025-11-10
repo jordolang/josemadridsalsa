@@ -603,6 +603,44 @@ model MediaTag {
   @@map("media_tags")
 }
 
+enum TrainingDocumentSourceType {
+  UPLOAD
+  URL
+  NOTE
+}
+
+enum TrainingDocumentStatus {
+  PROCESSING
+  READY
+  NEEDS_REVIEW
+  FAILED
+  UNSUPPORTED
+}
+
+model TrainingDocument {
+  id            String                     @id @default(cuid())
+  title         String
+  description   String?
+  sourceType    TrainingDocumentSourceType @default(UPLOAD)
+  status        TrainingDocumentStatus     @default(PROCESSING)
+  fileName      String?
+  mimeType      String?
+  fileSize      Int?
+  url           String?
+  content       String?                    @db.Text
+  contentHash   String?                    @unique
+  warnings      String[]                   @default([])
+  notes         String?
+  error         String?
+  scrapedAt     DateTime?
+  ingestedAt    DateTime?
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+
+  @@index([status])
+  @@map("training_documents")
+}
+
 model FeaturedEvent {
   id                String    @id @default(cuid())
   googleEventId     String?   @unique // Null if manually created
@@ -969,6 +1007,8 @@ model RetailLocation {
   website        String?
   photoUrl       String?
   googlePlacesId String?
+  latitude       Decimal? @db.Decimal(10, 7)
+  longitude      Decimal? @db.Decimal(10, 7)
   county         String?
   isActive       Boolean  @default(true)
   sortOrder      Int      @default(0)
