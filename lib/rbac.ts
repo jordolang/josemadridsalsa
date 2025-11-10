@@ -112,12 +112,19 @@ export async function getUserPermissions(
 ): Promise<string[]> {
   if (!user) return []
 
-  const rolePermissions = await prisma.rolePermission.findMany({
-    where: { role: user.role },
-    include: { permission: true },
-  })
+  try {
+    const rolePermissions = await prisma.rolePermission.findMany({
+      where: { role: user.role },
+      include: { permission: true },
+    })
 
-  return rolePermissions.map((rp) => rp.permission.name)
+    return rolePermissions.map((rp) => rp.permission.name)
+  } catch (error) {
+    console.error('[RBAC] Error fetching user permissions:', error)
+    // Return empty array if permissions table doesn't exist or has issues
+    // This allows admins to still access the panel even without permissions configured
+    return []
+  }
 }
 
 /**
