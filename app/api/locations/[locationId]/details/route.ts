@@ -4,8 +4,8 @@ import { getLocationDetails } from '@/lib/locations/details'
 
 export const revalidate = 3600
 
-export async function GET(_request: NextRequest, { params }: { params: { locationId: string } }) {
-  const { locationId } = params
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ locationId: string }> }) {
+  const { locationId } = await params
   const location = await getLocationById(locationId)
 
   if (!location) {

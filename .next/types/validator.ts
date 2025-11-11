@@ -605,6 +605,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/find-us/[locationId]/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/find-us/[locationId]">> = Specific
+  const handler = {} as typeof import("../../app/find-us/[locationId]/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/find-us/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/find-us">> = Specific
@@ -1104,6 +1113,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/image-proxy">> = Specific
   const handler = {} as typeof import("../../app/api/image-proxy/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/locations/[locationId]/details/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/locations/[locationId]/details">> = Specific
+  const handler = {} as typeof import("../../app/api/locations/[locationId]/details/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

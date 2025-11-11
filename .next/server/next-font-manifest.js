@@ -1,1 +1,1 @@
-self.__NEXT_FONT_MANIFEST='{"pages":{},"app":{"/Users/jordanlang/Repos/josemadridsalsa/app/layout":["static/media/904be59b21bd51cb-s.p.woff2","static/media/739c2d8941231bb4-s.p.woff2","static/media/17e3eb4fb06f52f1-s.p.woff2","static/media/2d0230d3305bff81-s.p.woff2"]},"appUsingSizeAdjust":true,"pagesUsingSizeAdjust":false}';
+self.__NEXT_FONT_MANIFEST="{\n  \"app\": {},\n  \"appUsingSizeAdjust\": false,\n  \"pages\": {},\n  \"pagesUsingSizeAdjust\": false\n}"
