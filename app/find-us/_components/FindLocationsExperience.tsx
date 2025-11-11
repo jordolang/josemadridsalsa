@@ -196,12 +196,12 @@ export function FindLocationsExperience({
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">State</span>
-                <Select value={appliedFilters.state ?? ''} onValueChange={(value) => handleFiltersChange({ state: value || undefined })}>
+                <Select value={appliedFilters.state ?? 'all'} onValueChange={(value) => handleFiltersChange({ state: value === 'all' ? undefined : value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="All states" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All states</SelectItem>
+                    <SelectItem value="all">All states</SelectItem>
                     {facets.states.map((state) => (
                       <SelectItem key={state.code} value={state.code}>
                         {formatStateLabel(state.code)} ({state.count})
@@ -214,15 +214,15 @@ export function FindLocationsExperience({
               <label className="space-y-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">City</span>
                 <Select
-                  value={appliedFilters.city ?? ''}
-                  onValueChange={(value) => handleFiltersChange({ city: value || undefined })}
+                  value={appliedFilters.city ?? 'all'}
+                  onValueChange={(value) => handleFiltersChange({ city: value === 'all' ? undefined : value })}
                   disabled={!appliedFilters.state}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={appliedFilters.state ? 'All cities' : 'Select a state first'} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All cities</SelectItem>
+                    <SelectItem value="all">All cities</SelectItem>
                     {currentCities.map((city) => (
                       <SelectItem key={city} value={city}>
                         {city}
