@@ -1,4 +1,3 @@
-import { unstable_cache } from 'next/cache'
 import { parseFindUsMarkdown, readFindUsMarkdownAbsolute } from '@/lib/find-us-parser'
 import {
   filterLocations,
@@ -9,42 +8,55 @@ import {
   type LocationsQueryResult,
 } from './shared'
 
-// Load locations directly from markdown - simplified to avoid Prisma connection issues
-const loadAllLocations = unstable_cache(
-  async () => {
-    try {
-      console.log('[FindUs] Loading locations from markdown...')
-      const mdPath = await readFindUsMarkdownAbsolute()
-      const parsed = await parseFindUsMarkdown(mdPath)
-      
-      const locations = parsed
-        .filter(location => location.state && location.city && location.businessName)
-        .map((location) => ({
-          id: location.id,
-          businessName: location.businessName,
-          address: location.address || '',
-          city: location.city,
-          state: location.state.toUpperCase(),
-          zipCode: location.zipCode ?? null,
-          phone: location.phone ?? null,
-          website: location.website ?? null,
-          photoUrl: null,
-          latitude: null,
-          longitude: null,
-          distanceMiles: null,
-        }))
-      
-      console.log(`[FindUs] Successfully loaded ${locations.length} locations from markdown`)
-      return locations as RetailLocationRecord[]
-    } catch (error) {
-      console.error('[FindUs] Failed to load locations from markdown:', error)
-      // Return empty array instead of throwing to prevent page crash
-      return []
-    }
-  },
-  ['locations:all'],
-  { revalidate: 3600, tags: ['locations'] },
-)
+// Simple in-memory cache
+let cachedLocations: RetailLocationRecord[] | null = null
+let cacheTimestamp = 0
+const CACHE_TTL = 3600 * 1000 // 1 hour in milliseconds
+
+// Load locations directly from markdown
+async function loadAllLocations(): Promise<RetailLocationRecord[]> {
+  // Check cache
+  const now = Date.now()
+  if (cachedLocations && (now - cacheTimestamp) < CACHE_TTL) {
+    console.log('[FindUs] Returning cached locations')
+    return cachedLocations
+  }
+
+  try {
+    console.log('[FindUs] Loading locations from markdown...')
+    const mdPath = await readFindUsMarkdownAbsolute()
+    const parsed = await parseFindUsMarkdown(mdPath)
+    
+    const locations = parsed
+      .filter(location => location.state && location.city && location.businessName)
+      .map((location) => ({
+        id: location.id,
+        businessName: location.businessName,
+        address: location.address || '',
+        city: location.city,
+        state: location.state.toUpperCase(),
+        zipCode: location.zipCode ?? null,
+        phone: location.phone ?? null,
+        website: location.website ?? null,
+        photoUrl: null,
+        latitude: null,
+        longitude: null,
+        distanceMiles: null,
+      }))
+    
+    console.log(`[FindUs] Successfully loaded ${locations.length} locations from markdown`)
+    
+    // Update cache
+    cachedLocations = locations as RetailLocationRecord[]
+    cacheTimestamp = now
+    
+    return cachedLocations
+  } catch (error) {
+    console.error('[FindUs] Failed to load locations from markdown:', error)
+    // Return empty array instead of throwing to prevent page crash
+    return []
+  }
+}
 
 export type {
   LocationFilters,
