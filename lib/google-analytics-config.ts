@@ -116,6 +116,18 @@ function cloneDefaultCharts() {
   return DEFAULT_GA_CHARTS.map((chart) => ({ ...chart }))
 }
 
+function createFallbackAnalyticsSettings(): GoogleAnalyticsSettings {
+  return {
+    id: 'fallback-analytics-settings',
+    measurementId: process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID || null,
+    propertyId: null,
+    dataStreamId: null,
+    chartDefinitions: cloneDefaultCharts(),
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+  }
+}
+
 function hydrateCharts(value: unknown): GoogleAnalyticsChartDefinition[] {
   if (!Array.isArray(value)) {
     return cloneDefaultCharts()
@@ -184,8 +196,13 @@ function toSettingsPayload(record: { id: string; measurementId: string | null; p
 }
 
 export async function getGoogleAnalyticsSettings(): Promise<GoogleAnalyticsSettings> {
-  const record = await ensureSettingsRecord()
-  return toSettingsPayload(record)
+  try {
+    const record = await ensureSettingsRecord()
+    return toSettingsPayload(record)
+  } catch (error) {
+    console.warn('Could not load analytics settings from Prisma, using defaults instead.', error)
+    return createFallbackAnalyticsSettings()
+  }
 }
 
 export async function saveGoogleAnalyticsSettings({

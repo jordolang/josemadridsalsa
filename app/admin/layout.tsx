@@ -6,6 +6,9 @@ import { AdminTopbar } from '@/components/admin/AdminTopbar'
 import type { Metadata } from 'next'
 import { createMetadata } from '@/lib/metadata'
 
+export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+
 export const metadata: Metadata = createMetadata({
   title: 'Admin Panel - Jose Madrid Salsa',
   description: 'Administration panel for Jose Madrid Salsa staff and partners.',

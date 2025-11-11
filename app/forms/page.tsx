@@ -42,13 +42,20 @@ const libraryTemplates = businessFormTemplates.map<CatalogTemplate>((template) =
   status: 'PUBLISHED',
 }))
 
+type SavedTemplateRecord = Awaited<ReturnType<typeof prisma.formTemplate.findMany>>
+
 export default async function FormsLibraryPage() {
-  const savedTemplates = await prisma.formTemplate.findMany({
-    where: {
-      status: 'PUBLISHED',
-    },
-    orderBy: { updatedAt: 'desc' },
-  })
+  const savedTemplates: SavedTemplateRecord = await prisma.formTemplate
+    .findMany({
+      where: {
+        status: 'PUBLISHED',
+      },
+      orderBy: { updatedAt: 'desc' },
+    })
+    .catch((error) => {
+      console.warn('Could not load saved form templates from Prisma, continuing with library templates only.', error)
+      return []
+    })
 
   const savedMapped = savedTemplates.map(mapSavedTemplate)
 

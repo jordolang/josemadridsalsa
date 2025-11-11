@@ -38,12 +38,16 @@ const mapSavedTemplate = (template: any): CatalogTemplate => ({
 })
 
 const findTemplate = async (slug: string): Promise<CatalogTemplate | null> => {
-  const saved = await prisma.formTemplate.findFirst({
-    where: { slug, status: 'PUBLISHED' },
-  })
+  try {
+    const saved = await prisma.formTemplate.findFirst({
+      where: { slug, status: 'PUBLISHED' },
+    })
 
-  if (saved) {
-    return mapSavedTemplate(saved)
+    if (saved) {
+      return mapSavedTemplate(saved)
+    }
+  } catch (error) {
+    console.warn(`Could not load published form template "${slug}" from Prisma, checking library fallback.`, error)
   }
 
   const library = businessFormTemplates.find((template) => template.publicSlug === slug)
