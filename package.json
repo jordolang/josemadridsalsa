@@ -20,6 +20,7 @@
     "db:seed:recipes": "tsx scripts/seed-recipes.ts",
     "locations:import": "tsx scripts/import-locations-from-markdown.ts",
     "locations:photos": "node scripts/generate-location-photos.js",
+    "locations:update-photos": "node scripts/update-location-photos.mjs",
     "locations:geocode": "tsx scripts/backfill-location-coordinates.ts",
     "templates:backfill-owners": "tsx scripts/backfill-form-template-owners.ts",
     "api-keys:create": "tsx scripts/create-partner-api-key.ts",
