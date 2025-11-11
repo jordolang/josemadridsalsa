@@ -1,5 +1,6 @@
 import { parseFindUsMarkdown, readFindUsMarkdownAbsolute } from '@/lib/find-us-parser'
 import locationPhotos from '@/public/location-photos.json' assert { type: 'json' }
+import legacyLocations from '@/lib/locations/locations-data.json' assert { type: 'json' }
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import {
@@ -18,6 +19,70 @@ const CACHE_TTL = 3600 * 1000 // 1 hour in milliseconds
 
 const LOCATION_PHOTO_MAP = locationPhotos as Record<string, string>
 const DEFAULT_HOURS_SUMMARY = 'Call store for the latest hours'
+
+type LegacyLocationRecord = {
+  id?: string
+  businessName: string
+  address?: string | null
+  city: string
+  state: string
+  zipCode?: string | null
+  phone?: string | null
+  website?: string | null
+  photoUrl?: string | null
+  googlePlaceId?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  googleMapsUrl?: string | null
+  directionsUrl?: string | null
+  reviewRating?: number | null
+  reviewCount?: number | null
+  reviewSummary?: string | null
+  hours?: string[] | null
+  hoursSummary?: string | null
+}
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+const buildMetadataKey = (...parts: Array<string | null | undefined>) => {
+  const joined = parts.filter(Boolean).join('-')
+  return joined ? slugify(joined) : ''
+}
+
+const LEGACY_METADATA = new Map<string, LegacyLocationRecord>()
+;(legacyLocations as LegacyLocationRecord[]).forEach((entry) => {
+  const keys = new Set<string>()
+  if (entry.id) {
+    keys.add(slugify(entry.id))
+  }
+  keys.add(buildMetadataKey(entry.businessName, entry.address, entry.city, entry.state))
+  keys.add(buildMetadataKey(entry.businessName, entry.city, entry.state))
+  keys.forEach((key) => {
+    if (key && !LEGACY_METADATA.has(key)) {
+      LEGACY_METADATA.set(key, entry)
+    }
+  })
+})
+
+const findLegacyMetadataFor = (location: { id: string; businessName: string; address: string; city: string; state: string }) => {
+  const candidates = [
+    slugify(location.id),
+    buildMetadataKey(location.businessName, location.address, location.city, location.state),
+    buildMetadataKey(location.businessName, location.city, location.state),
+  ]
+  for (const key of candidates) {
+    if (!key) continue
+    const match = LEGACY_METADATA.get(key)
+    if (match) {
+      return match
+    }
+  }
+  return undefined
+}
 
 const formatFullAddress = (address: string, city: string, state: string, zipCode?: string | null) =>
   `${address}, ${city}, ${state}${zipCode ? ` ${zipCode}` : ''}`
@@ -53,8 +118,8 @@ const normalizePhoto = (id: string): { url: string; placeId: string | null } => 
 }
 
 const attachComputedFields = (
-  location: Pick<RetailLocationRecord, 'id' | 'address' | 'city' | 'state' | 'zipCode'> &
-    Partial<RetailLocationRecord>,
+  location: Pick<RetailLocationRecord, 'id' | 'address' | 'city' | 'state' | 'zipCode'> & Partial<RetailLocationRecord>,
+  metadata?: LegacyLocationRecord,
 ): Pick<
   RetailLocationRecord,
   | 'photoUrl'
@@ -71,12 +136,21 @@ const attachComputedFields = (
   const address = location.address || ''
   const stateCode = (location.state || '').toUpperCase()
   const zip = location.zipCode ?? null
-  const initialPhoto = location.photoUrl
-    ? { url: location.photoUrl, placeId: location.googlePlaceId ?? extractPlaceIdFromPhotoUrl(location.photoUrl) }
-    : normalizePhoto(location.id)
-  const reviewRating = location.reviewRating ?? null
-  const reviewCount = location.reviewCount ?? null
-  const reviewSummary = location.reviewSummary ?? null
+  const metadataPhoto =
+    metadata?.photoUrl && metadata.photoUrl.length > 0
+      ? { url: metadata.photoUrl, placeId: metadata.googlePlaceId ?? extractPlaceIdFromPhotoUrl(metadata.photoUrl) }
+      : null
+  const providedPhoto =
+    location.photoUrl && location.photoUrl.length > 0
+      ? { url: location.photoUrl, placeId: location.googlePlaceId ?? extractPlaceIdFromPhotoUrl(location.photoUrl) }
+      : null
+  const initialPhoto = metadataPhoto ?? providedPhoto ?? normalizePhoto(location.id)
+  const googlePlaceId = metadata?.googlePlaceId ?? location.googlePlaceId ?? initialPhoto.placeId ?? null
+  const reviewRating = metadata?.reviewRating ?? location.reviewRating ?? null
+  const reviewCount = metadata?.reviewCount ?? location.reviewCount ?? null
+  const reviewSummary = metadata?.reviewSummary ?? location.reviewSummary ?? null
+  const bundledHours = metadata?.hours ?? location.hours ?? null
+  const bundledHoursSummary = metadata?.hoursSummary ?? location.hoursSummary ?? DEFAULT_HOURS_SUMMARY
 
   return {
     photoUrl: initialPhoto.url,
@@ -86,14 +160,17 @@ const attachComputedFields = (
         : initialPhoto.url
           ? [initialPhoto.url]
           : [],
-    googlePlaceId: initialPhoto.placeId,
-    googleMapsUrl: location.googleMapsUrl ?? buildGoogleMapsUrl(address, location.city, stateCode, zip, initialPhoto.placeId),
-    directionsUrl: location.directionsUrl ?? buildDirectionsUrl(address, location.city, stateCode, zip),
+    googlePlaceId,
+    googleMapsUrl:
+      location.googleMapsUrl ??
+      metadata?.googleMapsUrl ??
+      buildGoogleMapsUrl(address, location.city, stateCode, zip, googlePlaceId),
+    directionsUrl: location.directionsUrl ?? metadata?.directionsUrl ?? buildDirectionsUrl(address, location.city, stateCode, zip),
     reviewRating,
     reviewCount,
     reviewSummary,
-    hours: location.hours ?? null,
-    hoursSummary: location.hoursSummary ?? DEFAULT_HOURS_SUMMARY,
+    hours: bundledHours,
+    hoursSummary: bundledHoursSummary,
   }
 }
 
@@ -120,6 +197,13 @@ async function loadAllLocations(): Promise<RetailLocationRecord[]> {
       .filter(location => location.state && location.city && location.businessName)
       .map((location) => {
         const address = location.address || ''
+        const metadata = findLegacyMetadataFor({
+          id: location.id,
+          businessName: location.businessName,
+          address,
+          city: location.city,
+          state: location.state,
+        })
         const baseRecord = {
           id: location.id,
           businessName: location.businessName,
@@ -127,16 +211,18 @@ async function loadAllLocations(): Promise<RetailLocationRecord[]> {
           city: location.city,
           state: location.state.toUpperCase(),
           zipCode: location.zipCode ?? null,
-          phone: location.phone ?? null,
-          website: location.website ?? null,
+          phone: location.phone ?? metadata?.phone ?? null,
+          website: location.website ?? metadata?.website ?? null,
+          photoUrl: metadata?.photoUrl ?? null,
+          googlePlaceId: metadata?.googlePlaceId ?? null,
         }
-        const computed = attachComputedFields(baseRecord)
+        const computed = attachComputedFields(baseRecord, metadata)
 
         return {
           ...baseRecord,
           ...computed,
-          latitude: null,
-          longitude: null,
+          latitude: typeof metadata?.latitude === 'number' ? metadata.latitude : null,
+          longitude: typeof metadata?.longitude === 'number' ? metadata.longitude : null,
           distanceMiles: null,
         }
       })
