@@ -19,11 +19,11 @@ async function loadLocationsFromMarkdown(): Promise<RetailLocationRecord[]> {
       businessName: location.businessName,
       address: location.address,
       city: location.city,
-      state: location.state.toUpperCase(),
+      state: location.state?.toUpperCase() || 'UNKNOWN',
       zipCode: location.zipCode ?? null,
       phone: location.phone ?? null,
       website: location.website ?? null,
-      photoUrl: buildStreetViewOrMapImageUrl(location.address, location.city, location.state),
+      photoUrl: null, // Skip image generation to avoid server errors
       latitude: null,
       longitude: null,
       distanceMiles: null,
@@ -36,7 +36,9 @@ async function loadLocationsFromMarkdown(): Promise<RetailLocationRecord[]> {
 
 const loadAllLocations = unstable_cache(
   async () => {
+    console.log('[FindUs] Loading locations...')
     try {
+      console.log('[FindUs] Attempting to load from database...')
       const locations = await prisma.retailLocation.findMany({
         where: { isActive: true },
         select: {
@@ -56,6 +58,7 @@ const loadAllLocations = unstable_cache(
       })
 
       if (locations.length > 0) {
+        console.log(`[FindUs] Successfully loaded ${locations.length} locations from database`)
         return locations.map((location) => ({
           ...location,
           latitude: location.latitude !== null ? Number(location.latitude) : null,
@@ -68,7 +71,9 @@ const loadAllLocations = unstable_cache(
       console.error('[FindUs] Failed to load retail locations from database, falling back to markdown data.', error)
     }
 
+    console.log('[FindUs] Loading from markdown fallback...')
     const fallback = await loadLocationsFromMarkdown()
+    console.log(`[FindUs] Markdown fallback loaded ${fallback.length} locations`)
     if (fallback.length === 0) {
       throw new Error('Unable to load retail locations from database or markdown fallback.')
     }
@@ -102,6 +107,11 @@ export async function getLocationFacets(preloaded?: RetailLocationRecord[]) {
   const citiesByState: Record<string, string[]> = {}
 
   locations.forEach((location) => {
+    // Defensive: skip locations with missing state or city
+    if (!location.state || !location.city) {
+      console.warn('[FindUs] Skipping location with missing state or city:', location)
+      return
+    }
     const state = location.state.toUpperCase()
     stateCounts.set(state, (stateCounts.get(state) ?? 0) + 1)
     if (!citiesByState[state]) {
