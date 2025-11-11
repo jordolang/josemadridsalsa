@@ -74,3 +74,5 @@
 [{"name":"next-dev","duration":1297497087,"timestamp":322813549241,"id":1,"tags":{},"startTime":1762808175117,"traceId":"a699d2dbb32f5c8b"}]
 [{"name":"hot-reloader","duration":71,"timestamp":335181255333,"id":3,"tags":{"version":"15.5.5"},"startTime":1762820543074,"traceId":"efde2d4178a5df2b"},{"name":"compile-path","duration":646463,"timestamp":335181855646,"id":4,"tags":{"trigger":"middleware"},"startTime":1762820543674,"traceId":"efde2d4178a5df2b"}]
 [{"name":"next-dev","duration":8124768,"timestamp":335179751634,"id":1,"tags":{},"startTime":1762820541570,"traceId":"efde2d4178a5df2b"}]
+[{"name":"hot-reloader","duration":103,"timestamp":335419317067,"id":3,"tags":{"version":"15.5.5"},"startTime":1762820781142,"traceId":"98b52d66a2d3a6f3"},{"name":"compile-path","duration":312689,"timestamp":335419901721,"id":4,"tags":{"trigger":"middleware"},"startTime":1762820781727,"traceId":"98b52d66a2d3a6f3"}]
+[{"name":"next-dev","duration":20026348,"timestamp":335417904040,"id":1,"tags":{},"startTime":1762820779729,"traceId":"98b52d66a2d3a6f3"}]
