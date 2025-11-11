@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 export interface CartItem {
   id: string
@@ -109,6 +109,21 @@ export const useCartStore = create<CartStore>()(
     {
       name: 'cart-storage',
       partialize: (state) => ({ items: state.items }),
+      storage:
+        typeof window !== 'undefined'
+          ? createJSONStorage(() => window.localStorage)
+          : createJSONStorage(() => {
+              const memoryStorage: Record<string, string> = {}
+              return {
+                getItem: (name: string) => memoryStorage[name] ?? null,
+                setItem: (name: string, value: string) => {
+                  memoryStorage[name] = value
+                },
+                removeItem: (name: string) => {
+                  delete memoryStorage[name]
+                },
+              }
+            }),
     }
   )
 )
