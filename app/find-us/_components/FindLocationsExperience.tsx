@@ -20,7 +20,16 @@ const regionFormatter =
     ? new Intl.DisplayNames(['en'], { type: 'region' })
     : null
 
-const formatStateLabel = (code: string) => regionFormatter?.of(`US-${code}`) || regionFormatter?.of(code) || code
+const formatStateLabel = (code: string) => {
+  if (!regionFormatter || !code) return code
+  try {
+    // Try with US- prefix first (ISO 3166-2 format)
+    return regionFormatter.of(`US-${code}`) || code
+  } catch {
+    // If that fails, just return the code as-is
+    return code
+  }
+}
 
 type LocationFacets = {
   states: Array<{ code: string; count: number }>
