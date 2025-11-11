@@ -91,6 +91,8 @@ async function searchPlace(location) {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': API_KEY,
           'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.photos,places.types',
+          'Referer': 'https://www.josemadrid.net',
+          'Origin': 'https://www.josemadrid.net',
         },
         body: JSON.stringify({
           textQuery,
