@@ -199,53 +199,56 @@ export default async function TrainingDataPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {documents.map((doc) => (
-                    <tr key={doc.id} className="align-top">
-                      <td className="py-4">
-                        <p className="font-medium">{doc.title}</p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {summarizeContent(doc.content)}
-                        </p>
-                        {doc.warnings.length > 0 && (
-                          <p className="mt-1 text-xs text-amber-600">
-                            Warnings: {doc.warnings.join('; ')}
+                  {documents.map((doc) => {
+                    const warnings = Array.isArray(doc.warnings) ? doc.warnings : []
+
+                    return (
+                      <tr key={doc.id} className="align-top">
+                        <td className="py-4">
+                          <p className="font-medium">{doc.title}</p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {summarizeContent(doc.content)}
                           </p>
-                        )}
-                        {doc.notes && (
-                          <p className="mt-1 text-xs text-slate-500">Notes: {doc.notes}</p>
-                        )}
-                      </td>
-                      <td className="py-4">
-                        <Badge variant="outline">
-                          {SOURCE_LABELS[doc.sourceType]}
-                        </Badge>
-                        {doc.url && (
-                          <p className="mt-1 truncate text-xs text-slate-500 max-w-xs">
-                            {doc.url}
+                          {warnings.length > 0 && (
+                            <p className="mt-1 text-xs text-amber-600">
+                              Warnings: {warnings.join('; ')}
+                            </p>
+                          )}
+                          {doc.notes && (
+                            <p className="mt-1 text-xs text-slate-500">Notes: {doc.notes}</p>
+                          )}
+                        </td>
+                        <td className="py-4">
+                          <Badge variant="outline">
+                            {SOURCE_LABELS[doc.sourceType]}
+                          </Badge>
+                          {doc.url && (
+                            <p className="mt-1 truncate text-xs text-slate-500 max-w-xs">
+                              {doc.url}
+                            </p>
+                          )}
+                          {doc.fileName && (
+                            <p className="mt-1 text-xs text-slate-500">{doc.fileName}</p>
+                          )}
+                        </td>
+                        <td className="py-4">
+                          <Badge className={STATUS_META[doc.status].badgeClass}>
+                            {STATUS_META[doc.status].label}
+                          </Badge>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {STATUS_META[doc.status].description}
                           </p>
-                        )}
-                        {doc.fileName && (
-                          <p className="mt-1 text-xs text-slate-500">{doc.fileName}</p>
-                        )}
-                      </td>
-                      <td className="py-4">
-                        <Badge className={STATUS_META[doc.status].badgeClass}>
-                          {STATUS_META[doc.status].label}
-                        </Badge>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {STATUS_META[doc.status].description}
-                        </p>
-                      </td>
-                      <td className="py-4">{formatBytes(doc.fileSize)}</td>
-                      <td className="py-4">
-                        <p>{formatDate(doc.createdAt)}</p>
-                        {doc.ingestedAt && (
-                          <p className="text-xs text-slate-500">
-                            Ready {formatDate(doc.ingestedAt)}
-                          </p>
-                        )}
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="py-4">{formatBytes(doc.fileSize)}</td>
+                        <td className="py-4">
+                          <p>{formatDate(doc.createdAt)}</p>
+                          {doc.ingestedAt && (
+                            <p className="text-xs text-slate-500">
+                              Ready {formatDate(doc.ingestedAt)}
+                            </p>
+                          )}
+                        </td>
+                      </tr>
                   ))}
                 </tbody>
               </table>
