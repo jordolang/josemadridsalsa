@@ -232,9 +232,9 @@ export default async function TrainingDataPage() {
                           )}
                         </td>
                         <td className="py-4">
-                          <Badge className={STATUS_META[doc.status].badgeClass}>
+                          <div className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${STATUS_META[doc.status].badgeClass}`}>
                             {STATUS_META[doc.status].label}
-                          </Badge>
+                          </div>
                           <p className="mt-1 text-xs text-slate-500">
                             {STATUS_META[doc.status].description}
                           </p>
