@@ -6,6 +6,7 @@ import { Navigation } from '@/components/store/navigation'
 import { Footer } from '@/components/store/footer'
 import { AiChatWidget } from '@/components/chat/ai-chat-widget'
 import { GoogleAnalytics } from '@/components/analytics/google-analytics'
+import { getPublicGoogleAnalyticsMeasurementId } from '@/lib/google-analytics-config'
 import { Providers } from './providers'
 import './globals.css'
 
@@ -76,15 +77,17 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const measurementId = await getPublicGoogleAnalyticsMeasurementId()
+
   return (
     <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
       <body className="font-sans antialiased bg-background text-foreground">
-        <GoogleAnalytics />
+        {measurementId && <GoogleAnalytics measurementId={measurementId} />}
         <Providers>
           <div className="flex min-h-screen flex-col">
             <Navigation />

@@ -1,10 +1,19 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
+import type { LucideIcon } from 'lucide-react'
 import {
   Activity,
+  AlertTriangle,
+  BarChart3,
   DollarSign,
+  LineChart,
   MousePointer2,
+  PieChart,
   ShoppingBag,
+  Timer,
+  TrendingDown,
+  UserPlus,
   Users,
 } from 'lucide-react'
 import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client'
@@ -12,26 +21,27 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { StatsCard } from '@/components/admin/StatsCard'
 import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { formatPrice } from '@/lib/utils'
-
-type RangeKey = '7d' | '30d' | '90d' | '365d'
+import {
+  addGoogleAnalyticsChartDefinition,
+  deleteGoogleAnalyticsChartDefinition,
+  getGoogleAnalyticsSettings,
+  saveGoogleAnalyticsSettings,
+  GOOGLE_ANALYTICS_CHART_COLORS,
+  GOOGLE_ANALYTICS_DIMENSION_OPTIONS,
+  GOOGLE_ANALYTICS_METRIC_OPTIONS,
+} from '@/lib/google-analytics-config'
+import { hasActiveServiceKey } from '@/lib/service-keys'
+import { getGoogleAnalyticsDashboard } from '@/lib/google-analytics-reports'
+import type { GoogleAnalyticsChartResult } from '@/types/analytics'
+import { RANGE_OPTIONS, getDateRange, type AnalyticsRangeKey } from '@/lib/analytics/date-range'
 
 type SearchParams = {
   range?: string
-}
-
-const RANGE_OPTIONS: Array<{ label: string; value: RangeKey }> = [
-  { label: '7 days', value: '7d' },
-  { label: '30 days', value: '30d' },
-  { label: '90 days', value: '90d' },
-  { label: '12 months', value: '365d' },
-]
-
-const RANGE_MAP: Record<RangeKey, number> = {
-  '7d': 7,
-  '30d': 30,
-  '90d': 90,
-  '365d': 365,
 }
 
 type ChartPoint = {
@@ -79,16 +89,103 @@ type AnalyticsOverview = {
   }>
 }
 
-function getDateRange(range: RangeKey) {
-  const end = new Date()
-  end.setHours(23, 59, 59, 999)
+type ChartColorConfig = (typeof GOOGLE_ANALYTICS_CHART_COLORS)[number]
 
-  const days = RANGE_MAP[range]
-  const start = new Date(end)
-  start.setDate(end.getDate() - (days - 1))
-  start.setHours(0, 0, 0, 0)
+const CHART_COLOR_MAP = GOOGLE_ANALYTICS_CHART_COLORS.reduce<Record<string, ChartColorConfig>>((acc, color) => {
+  acc[color.value] = color
+  return acc
+}, {})
 
-  return { start, end, days }
+const PIE_SEGMENT_COLORS = ['#4f46e5', '#22d3ee', '#f97316', '#22c55e', '#f43f5e', '#a855f7']
+
+const GA_SUMMARY_ICON_MAP: Record<string, LucideIcon> = {
+  sessions: BarChart3,
+  totalUsers: Users,
+  newUsers: UserPlus,
+  engagedSessions: LineChart,
+  bounceRate: TrendingDown,
+  averageSessionDuration: Timer,
+}
+
+async function saveGaSettingsAction(formData: FormData) {
+  'use server'
+
+  const user = await getCurrentUser()
+  if (!user || !(await hasPermission(user, 'analytics:export'))) {
+    throw new Error('Unauthorized')
+  }
+
+  const measurementId = String(formData.get('measurementId') || '').trim()
+  const propertyId = String(formData.get('propertyId') || '').trim()
+  const dataStreamId = String(formData.get('dataStreamId') || '').trim()
+
+  await saveGoogleAnalyticsSettings({
+    measurementId: measurementId || null,
+    propertyId: propertyId || null,
+    dataStreamId: dataStreamId || null,
+    updatedById: user.id,
+  })
+
+  revalidatePath('/admin/analytics')
+}
+
+function coerceChartType(value: string | null): 'line' | 'bar' | 'pie' {
+  if (value === 'bar' || value === 'pie' || value === 'line') {
+    return value
+  }
+  return 'line'
+}
+
+async function addGaChartAction(formData: FormData) {
+  'use server'
+
+  const user = await getCurrentUser()
+  if (!user || !(await hasPermission(user, 'analytics:export'))) {
+    throw new Error('Unauthorized')
+  }
+
+  const title = String(formData.get('title') || '').trim()
+  const description = String(formData.get('description') || '').trim()
+  const metric = String(formData.get('metric') || '').trim()
+  const dimension = String(formData.get('dimension') || '').trim()
+  const chartType = coerceChartType(String(formData.get('chartType') || '').trim())
+  const limitValue = formData.get('limit')
+  const colorRaw = String(formData.get('color') || '').trim()
+  const color = (GOOGLE_ANALYTICS_CHART_COLORS.find((option) => option.value === colorRaw)?.value) ?? 'indigo'
+
+  if (!metric || !dimension) {
+    throw new Error('Metric and dimension are required for a custom chart')
+  }
+
+  const limit = limitValue ? Number(limitValue) : null
+
+  await addGoogleAnalyticsChartDefinition({
+    title,
+    description: description || null,
+    metric,
+    dimension,
+    chartType,
+    limit: limit && Number.isFinite(limit) ? limit : null,
+    color,
+    updatedById: user.id,
+  })
+
+  revalidatePath('/admin/analytics')
+}
+
+async function deleteGaChartAction(formData: FormData) {
+  'use server'
+
+  const user = await getCurrentUser()
+  if (!user || !(await hasPermission(user, 'analytics:export'))) {
+    throw new Error('Unauthorized')
+  }
+
+  const chartId = String(formData.get('chartId') || '').trim()
+  if (!chartId) return
+
+  await deleteGoogleAnalyticsChartDefinition(chartId, user.id)
+  revalidatePath('/admin/analytics')
 }
 
 function toDateKey(date: Date) {
@@ -102,7 +199,7 @@ function formatDateLabel(date: Date) {
   })
 }
 
-async function getAnalyticsData(range: RangeKey): Promise<AnalyticsOverview> {
+async function getAnalyticsData(range: AnalyticsRangeKey): Promise<AnalyticsOverview> {
   const { start, end, days } = getDateRange(range)
   const createdAtRange = { gte: start, lte: end }
 
@@ -332,8 +429,143 @@ function getBarWidth(value: number, max: number) {
   return `${clamped}%`
 }
 
+function getChartColorConfig(key?: string): ChartColorConfig {
+  if (key && CHART_COLOR_MAP[key]) {
+    return CHART_COLOR_MAP[key]
+  }
+  return CHART_COLOR_MAP.indigo ?? GOOGLE_ANALYTICS_CHART_COLORS[0]
+}
+
+function ChartVisualization({ chart }: { chart: GoogleAnalyticsChartResult }) {
+  const color = getChartColorConfig(chart.definition.color)
+
+  if (chart.points.length === 0) {
+    return (
+      <p className="mt-4 text-sm text-slate-500">
+        No Google Analytics data returned for this metric and dimension within the selected range.
+      </p>
+    )
+  }
+
+  if (chart.definition.chartType === 'line') {
+    return renderLineChart(chart.points, color)
+  }
+
+  if (chart.definition.chartType === 'bar') {
+    return renderBarChart(chart.points, color)
+  }
+
+  return renderPieChart(chart.points)
+}
+
+function renderLineChart(
+  points: GoogleAnalyticsChartResult['points'],
+  color: ChartColorConfig
+) {
+  const maxValue = Math.max(...points.map((point) => point.value), 0)
+  const safeMax = maxValue === 0 ? 1 : maxValue
+  const denominator = Math.max(points.length - 1, 1)
+
+  const path = points
+    .map((point, index) => {
+      const x = (index / denominator) * 100
+      const y = 100 - (point.value / safeMax) * 100
+      return `${index === 0 ? 'M' : 'L'}${x},${y}`
+    })
+    .join(' ')
+  const areaPath = `${path} L100,100 L0,100 Z`
+
+  return (
+    <div className="mt-4">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-40 w-full">
+        <path d={areaPath} className={`${color.lineFill} opacity-70`} />
+        <path d={path} className={`${color.lineStroke} fill-none`} strokeWidth={2.2} strokeLinecap="round" />
+      </svg>
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
+        {points.map((point) => (
+          <div key={point.label}>
+            <p className="font-semibold text-slate-700">{point.label}</p>
+            <p>{point.value.toLocaleString()}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function renderBarChart(
+  points: GoogleAnalyticsChartResult['points'],
+  color: ChartColorConfig
+) {
+  const maxValue = Math.max(...points.map((point) => point.value), 0)
+  const safeMax = maxValue === 0 ? 1 : maxValue
+
+  return (
+    <div className="mt-4">
+      <div className="flex h-40 items-end gap-4">
+        {points.map((point) => (
+          <div key={point.label} className="flex flex-1 flex-col items-center gap-2 text-xs">
+            <div className="flex h-full w-full items-end rounded-t-lg bg-slate-100">
+              <div
+                className={`mx-auto w-3/4 rounded-t-lg ${color.barClass}`}
+                style={{ height: `${(point.value / safeMax) * 100}%` }}
+              />
+            </div>
+            <span className="text-slate-600">{point.label}</span>
+            <span className="font-semibold text-slate-900">{point.value.toLocaleString()}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function renderPieChart(points: GoogleAnalyticsChartResult['points']) {
+  const total = points.reduce((sum, point) => sum + point.value, 0)
+  const safeTotal = total === 0 ? 1 : total
+  let current = 0
+
+  const segments = points.map((point, index) => {
+    const percentage = (point.value / safeTotal) * 100
+    const start = current
+    const end = current + percentage
+    current = end
+    return `${PIE_SEGMENT_COLORS[index % PIE_SEGMENT_COLORS.length]} ${start}% ${end}%`
+  })
+
+  const gradient =
+    segments.length > 0 ? segments.join(', ') : `${PIE_SEGMENT_COLORS[0]} 0% 100%`
+
+  return (
+    <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-center">
+      <div
+        className="mx-auto h-40 w-40 rounded-full"
+        style={{
+          backgroundImage: `conic-gradient(${gradient})`,
+        }}
+      />
+      <ul className="flex-1 space-y-2 text-sm">
+        {points.map((point, index) => (
+          <li key={point.label} className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-block h-3 w-3 rounded-full"
+                style={{ backgroundColor: PIE_SEGMENT_COLORS[index % PIE_SEGMENT_COLORS.length] }}
+              />
+              <span className="text-slate-700">{point.label}</span>
+            </div>
+            <span className="font-semibold text-slate-900">
+              {((point.value / safeTotal) * 100).toFixed(1)}%
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const params = await searchParams;
+  const params = await searchParams
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'analytics:read'))) {
@@ -342,15 +574,32 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
 
   const requestedRange = params.range
   const activeRange = RANGE_OPTIONS.some((option) => option.value === requestedRange)
-    ? (requestedRange as RangeKey)
-    : ('30d' as RangeKey)
+    ? (requestedRange as AnalyticsRangeKey)
+    : ('30d' as AnalyticsRangeKey)
 
-  const data = await getAnalyticsData(activeRange)
+  const dataPromise = getAnalyticsData(activeRange)
+  const gaSettingsPromise = getGoogleAnalyticsSettings()
+  const gaDashboardPromise = getGoogleAnalyticsDashboard(activeRange)
+  const serviceAccountPromise = hasActiveServiceKey('google_analytics', 'service_account')
+  const canManageGaPromise = hasPermission(user, 'analytics:export')
+
+  const [data, gaSettings, gaDashboard, serviceAccountConfigured, canManageGa] = await Promise.all([
+    dataPromise,
+    gaSettingsPromise,
+    gaDashboardPromise,
+    serviceAccountPromise,
+    canManageGaPromise,
+  ])
 
   const maxOrders = data.chart.reduce((max, point) => Math.max(max, point.orders), 0)
   const maxRevenue = data.chart.reduce((max, point) => Math.max(max, point.revenue), 0)
   const maxTraffic = data.trafficSources.reduce((max, item) => Math.max(max, item.count), 0)
   const maxCountry = data.topCountries.reduce((max, item) => Math.max(max, item.count), 0)
+
+  const gaChartsById = new Map<string, GoogleAnalyticsChartResult>(
+    gaDashboard.charts.map((chart) => [chart.definition.id, chart])
+  )
+  const gaStatusIsReady = gaDashboard.status === 'ready'
 
   return (
     <div className="space-y-6">
@@ -378,6 +627,289 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           </div>
         </div>
       </div>
+
+      <Card className="p-6 space-y-6">
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Google Analytics configuration</h2>
+            <p className="text-sm text-slate-600">
+              Manage your GA4 property connection, Google Tag, and default chart definitions.
+            </p>
+          </div>
+          <Badge className={gaStatusIsReady ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}>
+            {gaStatusIsReady ? 'Connected' : 'Action required'}
+          </Badge>
+        </div>
+        <form action={canManageGa ? saveGaSettingsAction : undefined} className="grid gap-4 md:grid-cols-3">
+          <div className="space-y-1.5">
+            <label htmlFor="measurementId" className="text-sm font-medium text-slate-700">
+              Google Tag (Measurement ID)
+            </label>
+            <Input
+              id="measurementId"
+              name="measurementId"
+              placeholder="G-XXXXXXXXXX"
+              defaultValue={gaSettings.measurementId ?? ''}
+              disabled={!canManageGa}
+            />
+            <p className="text-xs text-slate-500">Used by the storefront to load the gtag snippet.</p>
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="propertyId" className="text-sm font-medium text-slate-700">
+              GA4 Property ID
+            </label>
+            <Input
+              id="propertyId"
+              name="propertyId"
+              placeholder="123456789"
+              defaultValue={gaSettings.propertyId ?? ''}
+              disabled={!canManageGa}
+            />
+            <p className="text-xs text-slate-500">Only numbers or the `properties/123` syntax are accepted.</p>
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="dataStreamId" className="text-sm font-medium text-slate-700">
+              Data stream ID (optional)
+            </label>
+            <Input
+              id="dataStreamId"
+              name="dataStreamId"
+              placeholder="345678901"
+              defaultValue={gaSettings.dataStreamId ?? ''}
+              disabled={!canManageGa}
+            />
+            <p className="text-xs text-slate-500">Helpful when you manage multiple storefront streams.</p>
+          </div>
+          <div className="md:col-span-3 flex justify-end">
+            <Button type="submit" disabled={!canManageGa}>
+              Save Google Analytics settings
+            </Button>
+          </div>
+        </form>
+        <div className="grid gap-2 text-sm text-slate-600 md:grid-cols-2">
+          <p>
+            <span className="font-semibold text-slate-700">Service account:</span>{' '}
+            {serviceAccountConfigured ? (
+              <span className="text-emerald-700">Connected</span>
+            ) : (
+              <span>
+                Missing — add <code className="rounded bg-slate-100 px-1">google_analytics / service_account</code> in{' '}
+                <Link href="/admin/settings/integrations" className="text-slate-900 underline">
+                  Integrations
+                </Link>
+              </span>
+            )}
+          </p>
+          <p>
+            <span className="font-semibold text-slate-700">Custom charts saved:</span>{' '}
+            {gaSettings.chartDefinitions.length}
+          </p>
+        </div>
+      </Card>
+
+      {gaDashboard.status !== 'ready' && gaDashboard.message && (
+        <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+          <AlertTriangle className="h-5 w-5" />
+          <AlertTitle>Google Analytics setup</AlertTitle>
+          <AlertDescription>{gaDashboard.message}</AlertDescription>
+        </Alert>
+      )}
+
+      <section className="space-y-4">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Google Analytics overview</h2>
+            <p className="text-sm text-slate-600">Live GA4 metrics for the selected range</p>
+          </div>
+          <Badge className={gaStatusIsReady ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}>
+            {gaStatusIsReady ? 'Live data' : 'Awaiting configuration'}
+          </Badge>
+        </div>
+        {gaDashboard.summaryCards.length === 0 ? (
+          <Card className="p-6 text-sm text-slate-500">
+            No Google Analytics metrics are available for this range yet.
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {gaDashboard.summaryCards.map((card) => {
+              const Icon = GA_SUMMARY_ICON_MAP[card.metric] ?? BarChart3
+              return (
+                <StatsCard key={card.metric} title={card.label} value={card.formattedValue} icon={Icon} />
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+      <Card className="p-6 space-y-6">
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Custom Google Analytics charts</h2>
+            <p className="text-sm text-slate-600">
+              Blend any GA metric + dimension and choose the visualization that best fits your reporting workflow.
+            </p>
+          </div>
+          <Badge className="bg-slate-100 text-slate-700">
+            {gaSettings.chartDefinitions.length} configured
+          </Badge>
+        </div>
+        {gaSettings.chartDefinitions.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            No custom charts yet. Use the builder below to create your first dashboard widget.
+          </p>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {gaSettings.chartDefinitions.map((definition) => {
+              const chart =
+                gaChartsById.get(definition.id) ??
+                ({ definition, points: [], total: 0 } as GoogleAnalyticsChartResult)
+              return (
+                <div key={definition.id} className="rounded-lg border bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+                        {definition.chartType === 'line' && <LineChart className="h-4 w-4" />}
+                        {definition.chartType === 'bar' && <BarChart3 className="h-4 w-4" />}
+                        {definition.chartType === 'pie' && <PieChart className="h-4 w-4" />}
+                        <span>{definition.chartType} chart</span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-slate-900">{definition.title}</h3>
+                      <p className="text-sm text-slate-500">
+                        {definition.description || `${definition.metric} • ${definition.dimension}`}
+                      </p>
+                    </div>
+                    {canManageGa && (
+                      <form action={deleteGaChartAction}>
+                        <input type="hidden" name="chartId" value={definition.id} />
+                        <Button variant="ghost" size="sm">
+                          Remove
+                        </Button>
+                      </form>
+                    )}
+                  </div>
+                  <ChartVisualization chart={chart} />
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {canManageGa && (
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">Add a custom chart</h3>
+            <p className="mb-4 text-sm text-slate-500">
+              Pick any GA metric + dimension combination, select the visualization style, and optionally cap the number
+              of rows returned.
+            </p>
+            <form action={addGaChartAction} className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label htmlFor="title" className="text-sm font-medium text-slate-700">
+                  Chart title
+                </label>
+                <Input id="title" name="title" placeholder="Sessions by source" required />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="description" className="text-sm font-medium text-slate-700">
+                  Description (optional)
+                </label>
+                <Input id="description" name="description" placeholder="Visible to admins only" />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="metric" className="text-sm font-medium text-slate-700">
+                  Metric
+                </label>
+                <select
+                  id="metric"
+                  name="metric"
+                  className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  required
+                  defaultValue=""
+                >
+                  <option value="" disabled>
+                    Select a metric
+                  </option>
+                  {GOOGLE_ANALYTICS_METRIC_OPTIONS.map((metric) => (
+                    <option key={metric.value} value={metric.value}>
+                      {metric.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="dimension" className="text-sm font-medium text-slate-700">
+                  Dimension
+                </label>
+                <select
+                  id="dimension"
+                  name="dimension"
+                  className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  required
+                  defaultValue=""
+                >
+                  <option value="" disabled>
+                    Select a dimension
+                  </option>
+                  {GOOGLE_ANALYTICS_DIMENSION_OPTIONS.map((dimension) => (
+                    <option key={dimension.value} value={dimension.value}>
+                      {dimension.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="chartType" className="text-sm font-medium text-slate-700">
+                  Chart type
+                </label>
+                <select
+                  id="chartType"
+                  name="chartType"
+                  className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  defaultValue="line"
+                >
+                  <option value="line">Line</option>
+                  <option value="bar">Bar</option>
+                  <option value="pie">Pie</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="color" className="text-sm font-medium text-slate-700">
+                  Color theme
+                </label>
+                <select
+                  id="color"
+                  name="color"
+                  className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  defaultValue="indigo"
+                >
+                  {GOOGLE_ANALYTICS_CHART_COLORS.map((color) => (
+                    <option key={color.value} value={color.value}>
+                      {color.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="limit" className="text-sm font-medium text-slate-700">
+                  Row limit (optional)
+                </label>
+                <Input
+                  id="limit"
+                  name="limit"
+                  type="number"
+                  min={1}
+                  placeholder="10"
+                  className="md:col-span-1"
+                />
+                <p className="text-xs text-slate-500">
+                  Leave blank to let GA decide. Ignored for date-based line charts.
+                </p>
+              </div>
+              <div className="md:col-span-2 flex justify-end">
+                <Button type="submit">Add chart</Button>
+              </div>
+            </form>
+          </div>
+        )}
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatsCard

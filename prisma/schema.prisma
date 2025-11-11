@@ -34,6 +34,7 @@ model User {
   cartItems       CartItem[]
   wishlistItems   WishlistItem[]
   partnerApiKeys  PartnerApiKey[]
+  analyticsSettings AnalyticsSetting[]
 
   // Wholesale account
   wholesaleAccount WholesaleAccount?
@@ -460,7 +461,7 @@ model Recipe {
 model Analytics {
   id        String      @id @default(cuid())
   type      AnalyticsType
-  
+
   // Event details
   page      String?
   action    String?
@@ -484,6 +485,21 @@ model Analytics {
   @@index([type, createdAt])
   @@index([page])
   @@map("analytics")
+}
+
+model AnalyticsSetting {
+  id               String   @id @default(cuid())
+  measurementId    String?
+  propertyId       String?
+  dataStreamId     String?
+  chartDefinitions Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  updatedById      String?
+
+  updatedBy        User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("analytics_settings")
 }
 
 model Permission {
