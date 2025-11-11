@@ -35,14 +35,14 @@ The following fields are required for each product:
 - `ingredients` - Comma-separated list of ingredients
 - `barcode` - Product barcode
 - `weight` - Product weight in ounces
-- `featuredImage` - URL to featured image
-- `images` - Comma-separated URLs to additional images
+- `featuredImage` - URL or relative path to featured image (e.g., `/images/products/mild.jpg`)
+- `images` - Comma-separated URLs or paths to additional images
 - `isActive` - Active status (true/false, yes/no, 1/0)
 - `isFeatured` - Featured status (true/false, yes/no, 1/0)
 - `sortOrder` - Sort order (numeric, default: 0)
 - `metaTitle` - SEO meta title
 - `metaDescription` - SEO meta description
-- `ogImage` - Open Graph image URL
+- `ogImage` - Open Graph image URL or relative path
 - `searchKeywords` - Comma-separated search keywords
 
 ## File Format Examples

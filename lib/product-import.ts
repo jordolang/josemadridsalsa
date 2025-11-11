@@ -19,8 +19,8 @@ export const ProductImportSchema = z.object({
   categoryName: z.string().optional(), // Alternative to categoryId
   barcode: z.string().optional().nullable(),
   weight: z.coerce.number().positive().optional().nullable(),
-  featuredImage: z.string().url().optional().nullable(),
-  images: z.string().optional(), // Comma-separated URLs
+  featuredImage: z.string().transform(val => val === '' ? null : val).optional().nullable(), // URL or relative path
+  images: z.string().optional(), // Comma-separated URLs or paths
   isActive: z.union([z.boolean(), z.string()]).transform(val => {
     if (typeof val === 'boolean') return val;
     return val.toLowerCase() === 'true' || val === '1' || val.toLowerCase() === 'yes';
@@ -32,7 +32,7 @@ export const ProductImportSchema = z.object({
   sortOrder: z.coerce.number().int().default(0),
   metaTitle: z.string().optional().nullable(),
   metaDescription: z.string().optional().nullable(),
-  ogImage: z.string().url().optional().nullable(),
+  ogImage: z.string().optional().nullable(), // URL or relative path
   searchKeywords: z.string().optional(), // Comma-separated keywords
 });
 
