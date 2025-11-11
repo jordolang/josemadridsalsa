@@ -54,34 +54,42 @@ function buildPlacesPhotoUrl(photoName, maxWidth = 1200) {
 function getBestPhoto(place) {
   if (!place?.photos || place.photos.length === 0) return null;
   
+  // Accept any photo, even if no dimensions specified
   const photos = place.photos
-    .filter(p => p.widthPx && p.heightPx)
     .sort((a, b) => {
-      // Prefer horizontal/landscape orientation
-      const aRatio = a.widthPx / a.heightPx;
-      const bRatio = b.widthPx / b.heightPx;
+      // Prefer photos with dimensions
+      const aHasDims = a.widthPx && a.heightPx;
+      const bHasDims = b.widthPx && b.heightPx;
       
-      if (Math.abs(aRatio - bRatio) > 0.3) {
-        return bRatio - aRatio;
+      if (aHasDims && !bHasDims) return -1;
+      if (!aHasDims && bHasDims) return 1;
+      
+      if (aHasDims && bHasDims) {
+        // Prefer horizontal/landscape orientation
+        const aRatio = a.widthPx / a.heightPx;
+        const bRatio = b.widthPx / b.heightPx;
+        
+        if (Math.abs(aRatio - bRatio) > 0.3) {
+          return bRatio - aRatio;
+        }
+        
+        // Then prefer larger images (up to 1200px)
+        const aSize = Math.min(a.widthPx, 1200);
+        const bSize = Math.min(b.widthPx, 1200);
+        return bSize - aSize;
       }
       
-      // Then prefer larger images (up to 1200px)
-      const aSize = Math.min(a.widthPx, 1200);
-      const bSize = Math.min(b.widthPx, 1200);
-      return bSize - aSize;
+      return 0;
     });
   
-  if (photos.length === 0) return null;
-  
   const bestPhoto = photos[0];
-  const maxWidth = Math.min(bestPhoto.widthPx, 1200);
+  // Default to 800px if no width specified
+  const maxWidth = bestPhoto.widthPx ? Math.min(bestPhoto.widthPx, 1200) : 800;
   
   return buildPlacesPhotoUrl(bestPhoto.name, maxWidth);
 }
 
-async function searchPlace(location) {
-  const textQuery = `${location.businessName} ${location.address} ${location.city} ${location.state}`.trim();
-  
+async function searchPlaceWithQuery(query, location) {
   try {
     const response = await fetchWithRetry(
       `${PLACES_API_BASE}/places:searchText`,
@@ -95,7 +103,7 @@ async function searchPlace(location) {
           'Origin': 'https://www.josemadrid.net',
         },
         body: JSON.stringify({
-          textQuery,
+          textQuery: query,
           locationBias: {
             circle: {
               center: {
@@ -110,22 +118,73 @@ async function searchPlace(location) {
     );
     
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`  ✗ API error (${response.status}): ${errorText.substring(0, 100)}`);
       return null;
     }
     
     const data = await response.json();
-    
-    if (!data.places || data.places.length === 0) {
-      return null;
-    }
-    
-    return data.places[0];
+    return data.places && data.places.length > 0 ? data.places : null;
   } catch (error) {
-    console.error(`  ✗ Network error: ${error.message}`);
     return null;
   }
+}
+
+async function searchPlace(location) {
+  // Strategy 1: Full query with address
+  let query = `${location.businessName} ${location.address} ${location.city} ${location.state}`.trim();
+  let places = await searchPlaceWithQuery(query, location);
+  if (places && places[0]?.photos?.length > 0) {
+    console.log(`  → Strategy 1: Full match`);
+    return places[0];
+  }
+  
+  await delay(100);
+  
+  // Strategy 2: Business name + city + state (no address)
+  query = `${location.businessName} ${location.city} ${location.state}`.trim();
+  places = await searchPlaceWithQuery(query, location);
+  if (places && places[0]?.photos?.length > 0) {
+    console.log(`  → Strategy 2: Without address`);
+    return places[0];
+  }
+  
+  await delay(100);
+  
+  // Strategy 3: Try generic business type + location for chains/franchises
+  const businessLower = location.businessName.toLowerCase();
+  if (businessLower.includes('meijer') || businessLower.includes('kroger') || 
+      businessLower.includes('walmart') || businessLower.includes('acme')) {
+    const chain = businessLower.split(/[,\s]/)[0]; // Get first word
+    query = `${chain} ${location.city} ${location.state}`.trim();
+    places = await searchPlaceWithQuery(query, location);
+    if (places && places[0]?.photos?.length > 0) {
+      console.log(`  → Strategy 3: Chain/franchise`);
+      return places[0];
+    }
+    await delay(100);
+  }
+  
+  // Strategy 4: Accept first result even without photos (better than nothing)
+  query = `${location.businessName} ${location.city} ${location.state}`.trim();
+  places = await searchPlaceWithQuery(query, location);
+  if (places && places.length > 0) {
+    console.log(`  → Strategy 4: Accepting first result`);
+    return places[0];
+  }
+  
+  await delay(100);
+  
+  // Strategy 5: Just the city for generic grocery/market photos
+  if (businessLower.includes('market') || businessLower.includes('grocery') || 
+      businessLower.includes('food') || businessLower.includes('store')) {
+    query = `grocery store ${location.city} ${location.state}`.trim();
+    places = await searchPlaceWithQuery(query, location);
+    if (places && places[0]?.photos?.length > 0) {
+      console.log(`  → Strategy 5: Generic grocery store photo`);
+      return places[0];
+    }
+  }
+  
+  return null;
 }
 
 async function main() {
