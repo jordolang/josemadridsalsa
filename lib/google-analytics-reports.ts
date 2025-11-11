@@ -232,7 +232,7 @@ async function fetchCustomCharts(
         dimensions: [{ name: definition.dimension }],
         orderBys: buildOrderBys(definition),
         keepEmptyRows: false,
-        limit,
+        limit: String(limit),
       }
 
       const report = await runReport({ propertyId, auth, requestBody })

@@ -123,7 +123,7 @@ async function saveGaSettingsAction(formData: FormData) {
     measurementId: measurementId || null,
     propertyId: propertyId || null,
     dataStreamId: dataStreamId || null,
-    updatedById: user.id,
+    updatedBy: user.id,
   })
 
   revalidatePath('/admin/analytics')
@@ -167,7 +167,7 @@ async function addGaChartAction(formData: FormData) {
     chartType,
     limit: limit && Number.isFinite(limit) ? limit : null,
     color,
-    updatedById: user.id,
+    updatedBy: user.id,
   })
 
   revalidatePath('/admin/analytics')

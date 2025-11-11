@@ -133,7 +133,7 @@ function hydrateCharts(value: unknown): GoogleAnalyticsChartDefinition[] {
     return cloneDefaultCharts()
   }
 
-  return value
+  const parsed = value
     .map((entry) => {
       if (typeof entry !== 'object' || entry === null) return null
       const raw = entry as Record<string, unknown>
@@ -157,7 +157,7 @@ function hydrateCharts(value: unknown): GoogleAnalyticsChartDefinition[] {
         color: (raw.color as GoogleAnalyticsChartColor) ?? DEFAULT_COLOR,
       } satisfies GoogleAnalyticsChartDefinition
     })
-    .filter((entry): entry is GoogleAnalyticsChartDefinition => Boolean(entry))
+    .filter((entry): entry is GoogleAnalyticsChartDefinition => entry !== null)
 
   if (parsed.length === 0) {
     return cloneDefaultCharts()
@@ -209,12 +209,12 @@ export async function saveGoogleAnalyticsSettings({
   measurementId,
   propertyId,
   dataStreamId,
-  updatedById,
+  updatedBy,
 }: {
   measurementId?: string | null
   propertyId?: string | null
   dataStreamId?: string | null
-  updatedById?: string | null
+  updatedBy?: string | null
 }) {
   const record = await ensureSettingsRecord()
   const data: Prisma.AnalyticsSettingUpdateInput = {}
@@ -228,8 +228,8 @@ export async function saveGoogleAnalyticsSettings({
   if (dataStreamId !== undefined) {
     data.dataStreamId = dataStreamId && dataStreamId.length > 0 ? dataStreamId : null
   }
-  if (updatedById !== undefined) {
-    data.updatedById = updatedById
+  if (updatedBy !== undefined && updatedBy !== null) {
+    data.updatedBy = { connect: { id: updatedBy } }
   }
 
   await prisma.analyticsSetting.update({
@@ -248,7 +248,7 @@ export async function addGoogleAnalyticsChartDefinition({
   chartType,
   limit,
   color,
-  updatedById,
+  updatedBy,
 }: {
   title: string
   description?: string | null
@@ -257,7 +257,7 @@ export async function addGoogleAnalyticsChartDefinition({
   chartType: GoogleAnalyticsChartDefinition['chartType']
   limit?: number | null
   color?: GoogleAnalyticsChartColor
-  updatedById?: string | null
+  updatedBy?: string | null
 }) {
   const record = await ensureSettingsRecord()
   const charts = hydrateCharts(record.chartDefinitions)
@@ -281,14 +281,14 @@ export async function addGoogleAnalyticsChartDefinition({
     where: { id: record.id },
     data: {
       chartDefinitions: serializeCharts(charts),
-      updatedById: updatedById ?? undefined,
+      updatedBy: updatedBy ? { connect: { id: updatedBy } } : undefined,
     },
   })
 
   return newChart
 }
 
-export async function deleteGoogleAnalyticsChartDefinition(chartId: string, updatedById?: string | null) {
+export async function deleteGoogleAnalyticsChartDefinition(chartId: string, updatedBy?: string | null) {
   if (!chartId) return
 
   const record = await ensureSettingsRecord()
@@ -299,7 +299,7 @@ export async function deleteGoogleAnalyticsChartDefinition(chartId: string, upda
     where: { id: record.id },
     data: {
       chartDefinitions: serializeCharts(nextCharts),
-      updatedById: updatedById ?? undefined,
+      updatedBy: updatedBy ? { connect: { id: updatedBy } } : undefined,
     },
   })
 }
