@@ -31,7 +31,12 @@ export function LocationCard({
   onSelect,
 }: LocationCardProps) {
   const fullAddress = `${address}, ${city}, ${state}${zipCode ? ` ${zipCode}` : ''}`;
-  const imageSrc = photoUrl || '/images/store-placeholder.png';
+  
+  // Use proxy for Google Places images to avoid CORS issues
+  const imageSrc = photoUrl?.startsWith('https://places.googleapis.com/')
+    ? `/api/image-proxy?url=${encodeURIComponent(photoUrl)}`
+    : photoUrl || '/images/store-placeholder.png';
+  
   const handleSelect = () => onSelect?.();
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
