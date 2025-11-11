@@ -17,8 +17,6 @@ let cacheTimestamp = 0
 const CACHE_TTL = 3600 * 1000 // 1 hour in milliseconds
 
 const LOCATION_PHOTO_MAP = locationPhotos as Record<string, string>
-const DEFAULT_REVIEW_RATING = 4.3
-const DEFAULT_REVIEW_COUNT = 149
 const DEFAULT_HOURS_SUMMARY = 'Call store for the latest hours'
 
 const formatFullAddress = (address: string, city: string, state: string, zipCode?: string | null) =>
@@ -76,10 +74,9 @@ const attachComputedFields = (
   const initialPhoto = location.photoUrl
     ? { url: location.photoUrl, placeId: location.googlePlaceId ?? extractPlaceIdFromPhotoUrl(location.photoUrl) }
     : normalizePhoto(location.id)
-  const reviewRating = location.reviewRating ?? DEFAULT_REVIEW_RATING
-  const reviewCount = location.reviewCount ?? DEFAULT_REVIEW_COUNT
-  const reviewSummary =
-    location.reviewSummary ?? `${reviewRating.toFixed(1)} out of 5 stars · ${reviewCount.toLocaleString()} Google reviews`
+  const reviewRating = location.reviewRating ?? null
+  const reviewCount = location.reviewCount ?? null
+  const reviewSummary = location.reviewSummary ?? null
 
   return {
     photoUrl: initialPhoto.url,
