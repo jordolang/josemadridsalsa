@@ -1,4 +1,5 @@
 import { parseFindUsMarkdown, readFindUsMarkdownAbsolute } from '@/lib/find-us-parser'
+import locationsData from './locations-data.json'
 import {
   filterLocations,
   normalizeFilters,
@@ -62,8 +63,13 @@ async function loadAllLocations(): Promise<RetailLocationRecord[]> {
     console.error('[FindUs] Error type:', error instanceof Error ? error.constructor.name : typeof error)
     console.error('[FindUs] Error message:', error instanceof Error ? error.message : String(error))
     console.error('[FindUs] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
-    // Return empty array instead of throwing to prevent page crash
-    return []
+    
+    // Fallback to bundled JSON data
+    console.log('[FindUs] Falling back to bundled JSON data...')
+    cachedLocations = locationsData as RetailLocationRecord[]
+    cacheTimestamp = now
+    console.log(`[FindUs] Loaded ${cachedLocations.length} locations from JSON fallback`)
+    return cachedLocations
   }
 }
 
