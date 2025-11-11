@@ -32,27 +32,58 @@ const parseNumberParam = (value?: string) => {
 }
 
 export default async function FindUsPage({ searchParams }: FindUsPageProps) {
-  const params = await searchParams;
-  const rawFilters: LocationFilters = {
-    q: extractParam(params, 'q'),
-    state: extractParam(params, 'state'),
-    city: extractParam(params, 'city'),
-    sort: extractParam(params, 'sort') === 'distance' ? 'distance' : 'alphabetical',
-    lat: parseNumberParam(extractParam(params, 'lat')),
-    lng: parseNumberParam(extractParam(params, 'lng')),
-    hasWebsite: extractParam(params, 'hasWebsite') === 'true' ? true : undefined,
-    hasPhone: extractParam(params, 'hasPhone') === 'true' ? true : undefined,
+  let allLocations, facets, initialResult, totalLocations, ohioLocations, uniqueStates, initialFilters, initialView;
+  
+  try {
+    console.log('[FindUsPage] Starting page render...');
+    const params = await searchParams;
+    const rawFilters: LocationFilters = {
+      q: extractParam(params, 'q'),
+      state: extractParam(params, 'state'),
+      city: extractParam(params, 'city'),
+      sort: extractParam(params, 'sort') === 'distance' ? 'distance' : 'alphabetical',
+      lat: parseNumberParam(extractParam(params, 'lat')),
+      lng: parseNumberParam(extractParam(params, 'lng')),
+      hasWebsite: extractParam(params, 'hasWebsite') === 'true' ? true : undefined,
+      hasPhone: extractParam(params, 'hasPhone') === 'true' ? true : undefined,
+    }
+
+    console.log('[FindUsPage] Normalizing filters...');
+    initialFilters = normalizeFilters(rawFilters)
+    
+    console.log('[FindUsPage] Calling getAllLocations...');
+    allLocations = await getAllLocations()
+    console.log('[FindUsPage] Got', allLocations.length, 'locations');
+    
+    if (!allLocations || allLocations.length === 0) {
+      console.warn('[FindUsPage] No locations returned, using empty array');
+      allLocations = [];
+    }
+    
+    console.log('[FindUsPage] Getting facets...');
+    facets = await getLocationFacets(allLocations)
+    
+    console.log('[FindUsPage] Filtering locations...');
+    initialResult = filterLocations(allLocations, initialFilters)
+
+    totalLocations = allLocations.length
+    ohioLocations = allLocations.filter((location) => location.state === 'OH').length
+    uniqueStates = facets.states.length
+    initialView = extractParam(params, 'view') === 'map' ? 'map' : 'list'
+    
+    console.log('[FindUsPage] Page render complete');
+  } catch (error) {
+    console.error('[FindUsPage] ERROR during page render:', error);
+    // Provide fallback values
+    allLocations = [];
+    facets = { states: [], citiesByState: {} };
+    initialFilters = normalizeFilters({});
+    initialResult = { locations: [], total: 0, appliedFilters: initialFilters };
+    totalLocations = 0;
+    ohioLocations = 0;
+    uniqueStates = 0;
+    initialView = 'list';
   }
-
-  const initialFilters = normalizeFilters(rawFilters)
-  const allLocations = await getAllLocations()
-  const facets = await getLocationFacets(allLocations)
-  const initialResult = filterLocations(allLocations, initialFilters)
-
-  const totalLocations = allLocations.length
-  const ohioLocations = allLocations.filter((location) => location.state === 'OH').length
-  const uniqueStates = facets.states.length
-  const initialView = extractParam(params, 'view') === 'map' ? 'map' : 'list'
 
   return (
     <div className="min-h-screen bg-background">
