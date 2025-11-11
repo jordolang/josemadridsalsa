@@ -1,6 +1,5 @@
 import { unstable_cache } from 'next/cache'
-import { prisma } from '@/lib/prisma'
-import { buildStreetViewOrMapImageUrl, parseFindUsMarkdown, readFindUsMarkdownAbsolute } from '@/lib/find-us-parser'
+import { parseFindUsMarkdown, readFindUsMarkdownAbsolute } from '@/lib/find-us-parser'
 import {
   filterLocations,
   normalizeFilters,
@@ -10,74 +9,38 @@ import {
   type LocationsQueryResult,
 } from './shared'
 
-async function loadLocationsFromMarkdown(): Promise<RetailLocationRecord[]> {
-  try {
-    const mdPath = await readFindUsMarkdownAbsolute()
-    const parsed = await parseFindUsMarkdown(mdPath)
-    return parsed.map((location) => ({
-      id: `md-${location.id}`,
-      businessName: location.businessName,
-      address: location.address,
-      city: location.city,
-      state: location.state?.toUpperCase() || 'UNKNOWN',
-      zipCode: location.zipCode ?? null,
-      phone: location.phone ?? null,
-      website: location.website ?? null,
-      photoUrl: null, // Skip image generation to avoid server errors
-      latitude: null,
-      longitude: null,
-      distanceMiles: null,
-    }))
-  } catch (error) {
-    console.error('[FindUs] Failed to read markdown fallback for retail locations:', error)
-    return []
-  }
-}
-
+// Load locations directly from markdown - simplified to avoid Prisma connection issues
 const loadAllLocations = unstable_cache(
   async () => {
-    console.log('[FindUs] Loading locations...')
     try {
-      console.log('[FindUs] Attempting to load from database...')
-      const locations = await prisma.retailLocation.findMany({
-        where: { isActive: true },
-        select: {
-          id: true,
-          businessName: true,
-          address: true,
-          city: true,
-          state: true,
-          zipCode: true,
-          phone: true,
-          website: true,
-          photoUrl: true,
-          latitude: true,
-          longitude: true,
-        },
-        orderBy: [{ state: 'asc' }, { city: 'asc' }, { sortOrder: 'asc' }, { businessName: 'asc' }],
-      })
-
-      if (locations.length > 0) {
-        console.log(`[FindUs] Successfully loaded ${locations.length} locations from database`)
-        return locations.map((location) => ({
-          ...location,
-          latitude: location.latitude !== null ? Number(location.latitude) : null,
-          longitude: location.longitude !== null ? Number(location.longitude) : null,
-        })) as RetailLocationRecord[]
-      }
-
-      console.warn('[FindUs] No active retail locations returned from database, falling back to markdown data.')
+      console.log('[FindUs] Loading locations from markdown...')
+      const mdPath = await readFindUsMarkdownAbsolute()
+      const parsed = await parseFindUsMarkdown(mdPath)
+      
+      const locations = parsed
+        .filter(location => location.state && location.city && location.businessName)
+        .map((location) => ({
+          id: location.id,
+          businessName: location.businessName,
+          address: location.address || '',
+          city: location.city,
+          state: location.state.toUpperCase(),
+          zipCode: location.zipCode ?? null,
+          phone: location.phone ?? null,
+          website: location.website ?? null,
+          photoUrl: null,
+          latitude: null,
+          longitude: null,
+          distanceMiles: null,
+        }))
+      
+      console.log(`[FindUs] Successfully loaded ${locations.length} locations from markdown`)
+      return locations as RetailLocationRecord[]
     } catch (error) {
-      console.error('[FindUs] Failed to load retail locations from database, falling back to markdown data.', error)
+      console.error('[FindUs] Failed to load locations from markdown:', error)
+      // Return empty array instead of throwing to prevent page crash
+      return []
     }
-
-    console.log('[FindUs] Loading from markdown fallback...')
-    const fallback = await loadLocationsFromMarkdown()
-    console.log(`[FindUs] Markdown fallback loaded ${fallback.length} locations`)
-    if (fallback.length === 0) {
-      throw new Error('Unable to load retail locations from database or markdown fallback.')
-    }
-    return fallback
   },
   ['locations:all'],
   { revalidate: 3600, tags: ['locations'] },
