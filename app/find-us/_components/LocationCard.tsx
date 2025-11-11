@@ -185,11 +185,11 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
           </div>
         </div>
 
-        {finalReviewSummary ? (
+        {finalReviewRating && finalReviewCount ? (
           <div className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
             <Star className="h-4 w-4 text-amber-500" />
             <p className="font-medium">
-              {finalReviewRating?.toFixed(1) ?? '4.3'} • {finalReviewCount?.toLocaleString() ?? '149'} reviews
+              {finalReviewRating.toFixed(1)} • {finalReviewCount.toLocaleString()} reviews
             </p>
           </div>
         ) : null}
