@@ -24,8 +24,13 @@ async function loadAllLocations(): Promise<RetailLocationRecord[]> {
 
   try {
     console.log('[FindUs] Loading locations from markdown...')
+    console.log('[FindUs] process.cwd():', process.cwd())
+    
     const mdPath = await readFindUsMarkdownAbsolute()
+    console.log('[FindUs] Found markdown at:', mdPath)
+    
     const parsed = await parseFindUsMarkdown(mdPath)
+    console.log('[FindUs] Parsed', parsed.length, 'raw locations')
     
     const locations = parsed
       .filter(location => location.state && location.city && location.businessName)
@@ -44,7 +49,8 @@ async function loadAllLocations(): Promise<RetailLocationRecord[]> {
         distanceMiles: null,
       }))
     
-    console.log(`[FindUs] Successfully loaded ${locations.length} locations from markdown`)
+    console.log(`[FindUs] After filtering: ${locations.length} valid locations`)
+    console.log(`[FindUs] Sample location:`, locations[0])
     
     // Update cache
     cachedLocations = locations as RetailLocationRecord[]
@@ -52,7 +58,10 @@ async function loadAllLocations(): Promise<RetailLocationRecord[]> {
     
     return cachedLocations
   } catch (error) {
-    console.error('[FindUs] Failed to load locations from markdown:', error)
+    console.error('[FindUs] ERROR loading locations from markdown:')
+    console.error('[FindUs] Error type:', error instanceof Error ? error.constructor.name : typeof error)
+    console.error('[FindUs] Error message:', error instanceof Error ? error.message : String(error))
+    console.error('[FindUs] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     // Return empty array instead of throwing to prevent page crash
     return []
   }
