@@ -327,15 +327,7 @@ export function FindLocationsExperience({
               {locations.map((location) => (
                 <LocationCard
                   key={location.id}
-                  businessName={location.businessName}
-                  address={location.address}
-                  city={location.city}
-                  state={location.state}
-                  zipCode={location.zipCode}
-                  phone={location.phone}
-                  website={location.website}
-                  photoUrl={location.photoUrl}
-                  distanceMiles={location.distanceMiles}
+                  location={location}
                   onSelect={() => setSelectedLocationId(location.id)}
                   isSelected={selectedLocationId === location.id}
                 />
