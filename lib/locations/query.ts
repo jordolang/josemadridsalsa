@@ -18,8 +18,6 @@ let cacheTimestamp = 0
 const CACHE_TTL = 3600 * 1000 // 1 hour in milliseconds
 
 const LOCATION_PHOTO_MAP = locationPhotos as Record<string, string>
-const DEFAULT_HOURS_SUMMARY = 'Call store for the latest hours'
-
 type LegacyLocationRecord = {
   id?: string
   businessName: string
@@ -35,11 +33,6 @@ type LegacyLocationRecord = {
   longitude?: number | null
   googleMapsUrl?: string | null
   directionsUrl?: string | null
-  reviewRating?: number | null
-  reviewCount?: number | null
-  reviewSummary?: string | null
-  hours?: string[] | null
-  hoursSummary?: string | null
 }
 
 const slugify = (value: string) =>
@@ -127,11 +120,6 @@ const attachComputedFields = (
   | 'googlePlaceId'
   | 'googleMapsUrl'
   | 'directionsUrl'
-  | 'reviewRating'
-  | 'reviewCount'
-  | 'reviewSummary'
-  | 'hours'
-  | 'hoursSummary'
 > => {
   const address = location.address || ''
   const stateCode = (location.state || '').toUpperCase()
@@ -146,11 +134,6 @@ const attachComputedFields = (
       : null
   const initialPhoto = metadataPhoto ?? providedPhoto ?? normalizePhoto(location.id)
   const googlePlaceId = metadata?.googlePlaceId ?? location.googlePlaceId ?? initialPhoto.placeId ?? null
-  const reviewRating = metadata?.reviewRating ?? location.reviewRating ?? null
-  const reviewCount = metadata?.reviewCount ?? location.reviewCount ?? null
-  const reviewSummary = metadata?.reviewSummary ?? location.reviewSummary ?? null
-  const bundledHours = metadata?.hours ?? location.hours ?? null
-  const bundledHoursSummary = metadata?.hoursSummary ?? location.hoursSummary ?? DEFAULT_HOURS_SUMMARY
 
   return {
     photoUrl: initialPhoto.url,
@@ -166,11 +149,6 @@ const attachComputedFields = (
       metadata?.googleMapsUrl ??
       buildGoogleMapsUrl(address, location.city, stateCode, zip, googlePlaceId),
     directionsUrl: location.directionsUrl ?? metadata?.directionsUrl ?? buildDirectionsUrl(address, location.city, stateCode, zip),
-    reviewRating,
-    reviewCount,
-    reviewSummary,
-    hours: bundledHours,
-    hoursSummary: bundledHoursSummary,
   }
 }
 

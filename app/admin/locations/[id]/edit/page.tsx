@@ -31,7 +31,15 @@ export default function EditLocationPage() {
   const onSubmit = async (e: any) => {
     e.preventDefault()
     setSaving(true)
-    const res = await fetch(`/api/admin/locations/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+    const payload = {
+      ...form,
+      sortOrder: Number(form.sortOrder) || 0,
+    }
+    const res = await fetch(`/api/admin/locations/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
     setSaving(false)
     if (res.ok) router.push('/admin/locations')
   }
@@ -114,5 +122,4 @@ export default function EditLocationPage() {
     </div>
   )
 }
-
 

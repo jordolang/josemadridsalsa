@@ -19,8 +19,6 @@ export type NormalizedLocationFilters = Required<Pick<LocationFilters, 'sort'>> 
   hasPhone?: boolean
 }
 
-export type LocationHours = string[]
-
 export type RetailLocationRecord = {
   id: string
   businessName: string
@@ -37,11 +35,6 @@ export type RetailLocationRecord = {
   googlePlaceId: string | null
   googleMapsUrl: string | null
   directionsUrl: string | null
-  hours?: LocationHours | null
-  hoursSummary?: string | null
-  reviewRating?: number | null
-  reviewCount?: number | null
-  reviewSummary?: string | null
   distanceMiles?: number | null
 }
 

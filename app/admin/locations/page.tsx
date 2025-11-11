@@ -1,16 +1,32 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import prisma from '@/lib/prisma'
 import { FetchPhotosButton } from './_components/FetchPhotosButton'
 
 async function getLocations() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/admin/locations`, { cache: 'no-store' })
-  if (!res.ok) return { locations: [] }
-  return res.json() as Promise<{ locations: any[] }>
+  const locations = await prisma.retailLocation.findMany({
+    orderBy: [
+      { state: 'asc' },
+      { city: 'asc' },
+      { sortOrder: 'asc' },
+      { businessName: 'asc' },
+    ],
+    select: {
+      id: true,
+      businessName: true,
+      city: true,
+      state: true,
+      phone: true,
+      isActive: true,
+    },
+  })
+
+  return locations
 }
 
 export default async function AdminLocationsPage() {
-  const { locations } = await getLocations()
+  const locations = await getLocations()
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -62,5 +78,4 @@ export default async function AdminLocationsPage() {
     </div>
   )
 }
-
 

@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 
+function parseSortOrder(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+
+  return 0
+}
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const location = await prisma.retailLocation.findUnique({ where: { id } })
@@ -24,8 +39,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       website: body.website ?? null,
       photoUrl: body.photoUrl ?? null,
       county: body.county ?? null,
-      isActive: body.isActive ?? true,
-      sortOrder: body.sortOrder ?? 0,
+      isActive: typeof body.isActive === 'boolean' ? body.isActive : true,
+      sortOrder: parseSortOrder(body.sortOrder),
     },
   })
   revalidateTag('locations')
@@ -38,4 +53,3 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   revalidateTag('locations')
   return NextResponse.json({ ok: true })
 }
-

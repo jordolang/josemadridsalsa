@@ -3,7 +3,7 @@ import path from 'path'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 import mammoth from 'mammoth'
-import pdfParse from 'pdf-parse'
+import { PDFParse } from 'pdf-parse'
 import JSZip from 'jszip'
 import { load as loadHtml } from 'cheerio'
 import {
@@ -19,6 +19,20 @@ export type ExtractionResult = {
   title?: string | null
   warnings: string[]
   status: ExtractionStatus
+}
+
+async function extractPdfText(buffer: Buffer): Promise<string> {
+  const parser = new PDFParse({ data: buffer })
+  try {
+    const result = await parser.getText()
+    return result.text ?? ''
+  } finally {
+    try {
+      await parser.destroy()
+    } catch {
+      // Best-effort cleanup; parser.destroy can throw if the document never loaded.
+    }
+  }
 }
 
 export function normalizeTrainingText(raw: string): {
@@ -91,9 +105,9 @@ export async function extractTextFromUpload({
         )
       }
     } else if (extension === '.pdf' || isMime('pdf')) {
-      const pdfResult = await pdfParse(buffer)
-      text = pdfResult.text
-      if (!text.trim()) {
+      const pdfText = await extractPdfText(buffer)
+      text = pdfText
+      if (!pdfText.trim()) {
         status = 'needs_review'
         warnings.push('PDF did not contain extractable text (possibly scanned).')
       }
@@ -162,12 +176,12 @@ export async function extractTextFromUrl(url: string): Promise<ExtractionResult>
 
     if (contentType.includes('application/pdf')) {
       const arrayBuffer = await response.arrayBuffer()
-      const pdfResult = await pdfParse(Buffer.from(arrayBuffer))
+      const pdfText = await extractPdfText(Buffer.from(arrayBuffer))
       return {
-        text: pdfResult.text,
+        text: pdfText,
         title: null,
         warnings,
-        status: pdfResult.text.trim() ? 'ready' : 'needs_review',
+        status: pdfText.trim() ? 'ready' : 'needs_review',
       }
     }
 

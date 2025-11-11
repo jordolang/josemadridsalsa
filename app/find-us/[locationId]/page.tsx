@@ -2,9 +2,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, ExternalLink, Navigation2, Clock, Star, ChevronLeft } from 'lucide-react'
+import { MapPin, Phone, ExternalLink, Navigation2, ChevronLeft } from 'lucide-react'
 import { getLocationById } from '@/lib/locations/query'
-import { getLocationDetails } from '@/lib/locations/details'
 
 type LocationPageProps = {
   params: {
@@ -48,22 +47,16 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
     notFound()
   }
 
-  const details = location.googlePlaceId ? await getLocationDetails(location.googlePlaceId) : null
   const gallerySource =
-    details?.photos?.length
-      ? details.photos
-      : location.photoGallery && location.photoGallery.length > 0
-        ? location.photoGallery
-        : location.photoUrl
-          ? [location.photoUrl]
-          : []
+    location.photoGallery && location.photoGallery.length > 0
+      ? location.photoGallery
+      : location.photoUrl
+        ? [location.photoUrl]
+        : []
   const gallery = gallerySource as string[]
   const heroImage = proxiedImage(gallery[0] ?? location.photoUrl)
-  const rating = details?.rating ?? location.reviewRating
-  const reviewCount = details?.reviewCount ?? location.reviewCount
-  const hours = details?.hours?.length ? details.hours : location.hours ?? []
-  const phone = details?.phone ?? location.phone
-  const website = details?.website ?? location.website
+  const phone = location.phone
+  const website = location.website
   const directionsUrl = location.directionsUrl
   const mapsUrl = location.googleMapsUrl
   const fullAddress = `${location.address}, ${location.city}, ${location.state}${location.zipCode ? ` ${location.zipCode}` : ''}`
@@ -106,34 +99,6 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
                     View on Google Maps
                   </a>
                 ) : null}
-              </div>
-            </div>
-
-            {rating && reviewCount ? (
-              <div className="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                <Star className="h-5 w-5 text-amber-500" />
-                <div>
-                  <p className="text-base font-semibold">
-                    {rating.toFixed(1)} out of 5
-                  </p>
-                  <p className="text-xs text-amber-800">{reviewCount.toLocaleString()} Google reviews</p>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="flex items-start gap-3 text-sm text-slate-700">
-              <Clock className="mt-0.5 h-5 w-5 text-indigo-600" />
-              <div>
-                <p className="font-semibold text-slate-900">Store hours</p>
-                {hours.length > 0 ? (
-                  <ul className="mt-2 space-y-1 text-xs text-slate-500">
-                    {hours.map((entry) => (
-                      <li key={entry}>{entry}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-xs text-slate-500">{location.hoursSummary ?? 'Call the store for the latest hours.'}</p>
-                )}
               </div>
             </div>
           </div>
