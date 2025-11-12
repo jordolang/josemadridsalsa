@@ -10,6 +10,7 @@ import {
   buildContentHash,
 } from '@/lib/training-data/extractor'
 import { TRAINING_MAX_CHARACTERS } from '@/lib/training-data/constants'
+import { invalidateIndexedContentCache } from '@/lib/ai-rag/content-cache'
 
 export const runtime = 'nodejs'
 
@@ -28,6 +29,9 @@ function mapStatus(extractionStatus: string, hasText: boolean): TrainingDocument
   if (!hasText) {
     if (extractionStatus === 'unsupported') {
       return TrainingDocumentStatus.UNSUPPORTED
+    }
+    if (extractionStatus === 'needs_review') {
+      return TrainingDocumentStatus.NEEDS_REVIEW
     }
     return TrainingDocumentStatus.FAILED
   }
@@ -131,6 +135,10 @@ async function handleFileUpload(request: Request) {
     },
   })
 
+  if (document.status === TrainingDocumentStatus.READY && document.content) {
+    invalidateIndexedContentCache()
+  }
+
   return NextResponse.json({ document })
 }
 
@@ -195,7 +203,20 @@ async function handleUrlScrape(request: Request) {
     },
   })
 
+  if (document.status === TrainingDocumentStatus.READY && document.content) {
+    invalidateIndexedContentCache()
+  }
+
   return NextResponse.json({ document })
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Allow': 'POST, OPTIONS',
+    },
+  })
 }
 
 export async function POST(request: Request) {
