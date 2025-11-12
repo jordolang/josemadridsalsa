@@ -210,6 +210,15 @@ async function handleUrlScrape(request: Request) {
   return NextResponse.json({ document })
 }
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Allow': 'POST, OPTIONS',
+    },
+  })
+}
+
 export async function POST(request: Request) {
   try {
     await requirePermission('content:write')
