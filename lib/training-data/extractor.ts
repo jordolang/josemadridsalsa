@@ -3,7 +3,8 @@ import path from 'path'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 import mammoth from 'mammoth'
-import pdfParse from 'pdf-parse'
+// @ts-ignore - pdf-parse v2.4.5 has export issues with TypeScript
+import { PDFParse } from 'pdf-parse'
 import JSZip from 'jszip'
 import { load as loadHtml } from 'cheerio'
 import {
@@ -22,7 +23,9 @@ export type ExtractionResult = {
 }
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
-  const result = await pdfParse(buffer)
+  const parser = new PDFParse({ data: buffer })
+  const result = await parser.getText()
+  await parser.destroy()
   return result.text ?? ''
 }
 
