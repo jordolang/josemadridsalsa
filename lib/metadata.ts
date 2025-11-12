@@ -1,29 +1,29 @@
 import type { Metadata } from 'next'
 
 const OG_IMAGE_BASE_PATH = '/images/OpenGraph'
-const DEFAULT_OG_IMAGE = `${OG_IMAGE_BASE_PATH}/Home.png`
+const DEFAULT_OG_IMAGE = `${OG_IMAGE_BASE_PATH}/Home-Opengraph-Dark.png`
 
 const ogImageMap: Record<string, string> = {
-  '/': `${OG_IMAGE_BASE_PATH}/Home.png`,
-  '/accessibility': `${OG_IMAGE_BASE_PATH}/Home.png`,
-  '/account': `${OG_IMAGE_BASE_PATH}/Home.png`,
-  '/account/orders': `${OG_IMAGE_BASE_PATH}/Home.png`,
-  '/account/settings': `${OG_IMAGE_BASE_PATH}/Home.png`,
+  '/': `${OG_IMAGE_BASE_PATH}/Home-Opengraph-Dark.png`,
+  '/accessibility': `${OG_IMAGE_BASE_PATH}/Home-Opengraph-Dark.png`,
+  '/account': `${OG_IMAGE_BASE_PATH}/Home-Opengraph-Dark.png`,
+  '/account/orders': `${OG_IMAGE_BASE_PATH}/Home-Opengraph-Dark.png`,
+  '/account/settings': `${OG_IMAGE_BASE_PATH}/Home-Opengraph-Dark.png`,
   '/about': `${OG_IMAGE_BASE_PATH}/about.png`,
-  '/auth': `${OG_IMAGE_BASE_PATH}/Home.png`,
-  '/checkout': `${OG_IMAGE_BASE_PATH}/Home.png`,
-  '/cookies': `${OG_IMAGE_BASE_PATH}/Home.png`,
+  '/auth': `${OG_IMAGE_BASE_PATH}/Home-Opengraph-Dark.png`,
+  '/checkout': `${OG_IMAGE_BASE_PATH}/Home-Opengraph-Dark.png`,
+  '/cookies': `${OG_IMAGE_BASE_PATH}/Home-Opengraph-Dark.png`,
   '/find-us': `${OG_IMAGE_BASE_PATH}/find-us.png`,
-  '/forms': `${OG_IMAGE_BASE_PATH}/Home.png`,
+  '/forms': `${OG_IMAGE_BASE_PATH}/Home-Opengraph-Dark.png`,
   '/fundraising': `${OG_IMAGE_BASE_PATH}/fundraising.png`,
   '/gift-certificates': `${OG_IMAGE_BASE_PATH}/gift-certificates.png`,
   '/merchandise': `${OG_IMAGE_BASE_PATH}/merch.png`,
   '/our-story': `${OG_IMAGE_BASE_PATH}/story.png`,
-  '/privacy': `${OG_IMAGE_BASE_PATH}/Home.png`,
-  '/products': `${OG_IMAGE_BASE_PATH}/Home.png`,
+  '/privacy': `${OG_IMAGE_BASE_PATH}/Home-Opengraph-Dark.png`,
+  '/products': `${OG_IMAGE_BASE_PATH}/Home-Opengraph-Dark.png`,
   '/recipes': `${OG_IMAGE_BASE_PATH}/recipes.png`,
   '/salsas': `${OG_IMAGE_BASE_PATH}/Salsas.png`,
-  '/terms': `${OG_IMAGE_BASE_PATH}/Home.png`,
+  '/terms': `${OG_IMAGE_BASE_PATH}/Home-Opengraph-Dark.png`,
   '/where-is-jose': `${OG_IMAGE_BASE_PATH}/where-is-jose.png`,
   '/wholesale': `${OG_IMAGE_BASE_PATH}/wholesale.png`,
   '/admin': `${OG_IMAGE_BASE_PATH}/dark-mode/home-dark.png`,
