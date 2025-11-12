@@ -13,6 +13,9 @@ import {
   TRAINING_MAX_CHARACTERS,
 } from './constants'
 
+const FETCH_TIMEOUT_MS = 15_000
+const ALLOWED_URL_PROTOCOLS = new Set(['http:', 'https:'])
+
 export type ExtractionStatus = 'ready' | 'needs_review' | 'unsupported' | 'failed'
 
 export type ExtractionResult = {
@@ -128,34 +131,69 @@ export async function extractTextFromUpload({
     text = null
   }
 
+  const trimmed = text?.trim() ?? ''
+  const normalizedText = trimmed.length ? trimmed : null
+  const finalStatus: ExtractionStatus = normalizedText
+    ? status
+    : status === 'unsupported'
+      ? 'unsupported'
+      : status === 'needs_review'
+        ? 'needs_review'
+        : 'failed'
+
   return {
-    text: text?.trim().length ? text : null,
+    text: normalizedText,
     title: fileName ? stripExtension(fileName) : null,
     warnings,
-    status: text ? status : 'failed',
+    status: finalStatus,
   }
 }
 
-export async function extractTextFromUrl(url: string): Promise<ExtractionResult> {
+export async function extractTextFromUrl(rawUrl: string): Promise<ExtractionResult> {
   const warnings: string[] = []
+  let parsed: URL
 
   try {
-    const response = await fetch(url, {
+    parsed = new URL(rawUrl)
+  } catch {
+    return {
+      text: null,
+      warnings: ['Invalid URL provided.'],
+      status: 'failed',
+    }
+  }
+
+  if (!ALLOWED_URL_PROTOCOLS.has(parsed.protocol)) {
+    return {
+      text: null,
+      warnings: ['Only HTTP and HTTPS URLs are supported.'],
+      status: 'failed',
+    }
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(parsed.toString(), {
       headers: {
+        Accept: 'text/html,application/pdf,text/plain;q=0.9,*/*;q=0.8',
         'User-Agent': 'JoseMadridSalsaBot/1.0 (+https://josemadridsalsa.com)',
       },
       cache: 'no-store',
+      signal: controller.signal,
     })
 
     if (!response.ok) {
       return {
         text: null,
-        warnings: [`Unable to load URL (${response.status})`],
+        warnings: [`Unable to load URL (${response.status}).`],
         status: 'failed',
       }
     }
 
-    const contentType = response.headers.get('content-type') ?? ''
+    const contentType = (response.headers.get('content-type') ?? '').toLowerCase()
+
     if (contentType.includes('text/html')) {
       const html = await response.text()
       const text = htmlToText(html)
@@ -179,24 +217,32 @@ export async function extractTextFromUrl(url: string): Promise<ExtractionResult>
       }
     }
 
-    // Fallback to plain text
     const text = await response.text()
+    if (contentType) {
+      warnings.push(`Treated content-type "${contentType}" as plain text.`)
+    } else {
+      warnings.push('Unable to detect content-type; stored as plain text.')
+    }
+
     return {
       text,
-      warnings: [
-        ...warnings,
-        contentType
-          ? `Treated content-type "${contentType}" as plain text.`
-          : 'Unable to detect content-type; stored as plain text.',
-      ],
+      warnings,
       status: text.trim() ? 'ready' : 'needs_review',
     }
   } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      warnings.push(`Request timed out after ${FETCH_TIMEOUT_MS / 1000} seconds.`)
+    } else {
+      warnings.push(`Failed to scrape URL: ${error?.message ?? 'Unknown error.'}`)
+    }
+
     return {
       text: null,
-      warnings: [`Failed to scrape URL: ${error.message}`],
+      warnings,
       status: 'failed',
     }
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 
@@ -289,10 +335,20 @@ async function extractEpub(buffer: Buffer): Promise<string> {
 }
 
 function htmlToText(html: string): string {
-  const $ = loadHtml(html)
+  const normalizedHtml = html
+    .replace(/<\s*br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|section|article|li|h[1-6])>/gi, '\n')
+
+  const $ = loadHtml(normalizedHtml)
   $('script, style, noscript').remove()
   const text = $('body').text()
-  return text.replace(/\s+/g, ' ').trim()
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim()
 }
 
 function extractHtmlTitle(html: string): string | null {

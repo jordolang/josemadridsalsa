@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { indexAllContent } from '@/lib/ai-rag/indexer'
+import { getIndexedContent } from '@/lib/ai-rag/content-cache'
 import { searchContent, formatContextForLLM } from '@/lib/ai-rag/retriever'
 
 export const runtime = 'nodejs' // Required for Prisma and file system access
@@ -16,21 +16,6 @@ type ChatRequest = {
 const PROVIDER = process.env.AI_CHAT_PROVIDER?.toLowerCase() ?? 'openai'
 const BASE_SYSTEM_PROMPT =
   'You are the Jose Madrid Salsa assistant. Help customers with product questions, fundraising, wholesale partnerships, and order support. Keep answers concise and friendly, and direct users to /fundraising, /wholesale, or /contact when helpful. Use the provided context information to answer questions accurately. If you don\'t know something, say so rather than making it up.'
-
-// Cache for indexed content (refresh every 5 minutes)
-let contentCache: { content: Awaited<ReturnType<typeof indexAllContent>>; timestamp: number } | null = null
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-
-async function getIndexedContent() {
-  const now = Date.now()
-  if (contentCache && now - contentCache.timestamp < CACHE_TTL) {
-    return contentCache.content
-  }
-
-  const content = await indexAllContent()
-  contentCache = { content, timestamp: now }
-  return content
-}
 
 function withSystemPrompt(messages: ChatMessage[], context?: string): ChatMessage[] {
   const hasSystemMessage = messages.some((message) => message.role === 'system')
