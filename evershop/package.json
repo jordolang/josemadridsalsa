@@ -1,0 +1,25 @@
+{
+  "name": "evershop",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "setup": "evershop install",
+    "start": "evershop start",
+    "build": "evershop build",
+    "dev": "evershop dev"
+  },
+  "dependencies": {
+    "@evershop/evershop": "2.1.0"
+  },
+  "devDependencies": {
+    "@parcel/watcher": "2.5.1",
+    "@types/config": "3.3.5",
+    "@types/express": "5.0.5",
+    "@types/node": "24.10.1",
+    "@types/pg": "8.15.6",
+    "@types/react": "19.2.4",
+    "execa": "9.6.0",
+    "typescript": "5.9.3"
+  }
+}

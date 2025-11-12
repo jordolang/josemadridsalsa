@@ -56,6 +56,11 @@ export default async function OrderDetailPage({
   const canWrite = await hasPermission(user, 'orders:write')
   const status = statusInfo[order.status as keyof typeof statusInfo]
   const StatusIcon = status.icon
+  const everShopAdminBase =
+    process.env.NEXT_PUBLIC_EVERSHOP_ADMIN_URL ??
+    process.env.EVERSHOP_ADMIN_URL ??
+    'http://localhost:3001/admin'
+  const everShopOrderUrl = `${everShopAdminBase.replace(/\/$/, '')}/orders?search=${encodeURIComponent(order.orderNumber)}`
 
   return (
     <div className="space-y-6">
@@ -75,10 +80,17 @@ export default async function OrderDetailPage({
             </p>
           </div>
         </div>
-        <Badge className={status.color}>
-          <StatusIcon className="mr-1 h-3 w-3" />
-          {status.label}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge className={status.color}>
+            <StatusIcon className="mr-1 h-3 w-3" />
+            {status.label}
+          </Badge>
+          <Button variant="outline" size="sm" asChild>
+            <a href={everShopOrderUrl} target="_blank" rel="noreferrer">
+              View in EverShop
+            </a>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

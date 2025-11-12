@@ -1,0 +1,16 @@
+{
+  "shop": {
+    "language": "en",
+    "currency": "USD"
+  },
+  "system": {
+    "extensions": [
+      {
+        "name": "sample",
+        "resolve": "extensions/sample",
+        "enabled": true
+      }
+    ],
+    "theme": "sample"
+  }
+}

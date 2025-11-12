@@ -27,6 +27,12 @@ yarn-error.log*
 .env*.local
 .env.local
 
+# EverShop
+evershop/.env
+evershop/.env.local
+evershop/node_modules
+evershop/.evershop
+
 # Vercel
 .vercel
 
