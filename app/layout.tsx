@@ -7,6 +7,7 @@ import { Footer } from '@/components/store/footer'
 import { AiChatWidget } from '@/components/chat/ai-chat-widget'
 import { GoogleAnalytics } from '@/components/analytics/google-analytics'
 import { getPublicGoogleAnalyticsMeasurementId } from '@/lib/google-analytics-config'
+import { Analytics } from '@vercel/analytics/react'
 import { Providers } from './providers'
 import './globals.css'
 
@@ -29,7 +30,7 @@ const robotoMono = Roboto_Mono({
   variable: '--font-roboto-mono',
 })
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.josemadridsalsa.com'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.josemadrid.net'
 
 export const metadata: Metadata = {
   title: {
@@ -100,6 +101,7 @@ export default async function RootLayout({
           <Toaster />
           <AiChatWidget />
         </Providers>
+        <Analytics />
       </body>
     </html>
   )
