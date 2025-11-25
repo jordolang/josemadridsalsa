@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
@@ -217,11 +218,12 @@ export default async function RecipesPage({
             {recipes.map((recipe) => (
               <Card key={recipe.id} className="overflow-hidden">
                 {/* Image */}
-                <div className="aspect-video bg-slate-100">
-                  <img
+                <div className="relative aspect-video bg-slate-100">
+                  <Image
                     src={recipe.featuredImage}
                     alt={recipe.title}
-                    className="h-full w-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 </div>
 

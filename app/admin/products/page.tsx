@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { Plus, Download, Upload, Search, Eye, Edit } from 'lucide-react'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
@@ -236,11 +237,14 @@ export default async function ProductsPage({
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {product.featuredImage && (
-                          <img
-                            src={product.featuredImage}
-                            alt={product.name}
-                            className="h-10 w-10 rounded object-cover"
-                          />
+                          <div className="relative h-10 w-10 flex-shrink-0">
+                            <Image
+                              src={product.featuredImage}
+                              alt={product.name}
+                              fill
+                              className="rounded object-cover"
+                            />
+                          </div>
                         )}
                         <div>
                           <Link

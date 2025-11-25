@@ -1,6 +1,7 @@
 'use client'
 
 import type { Media } from '@prisma/client'
+import Image from 'next/image'
 import {
   Dialog,
   DialogContent,
@@ -41,11 +42,14 @@ export default function MediaDetailDialog({
           {/* Image Preview */}
           <div className="rounded-lg bg-slate-100 p-4">
             {media.mimeType.startsWith('image/') ? (
-              <img
-                src={media.url}
-                alt={media.alt || media.filename}
-                className="w-full rounded"
-              />
+              <div className="relative w-full" style={{ aspectRatio: media.width && media.height ? `${media.width}/${media.height}` : '1' }}>
+                <Image
+                  src={media.url}
+                  alt={media.alt || media.filename}
+                  fill
+                  className="rounded object-contain"
+                />
+              </div>
             ) : (
               <div className="flex h-64 items-center justify-center">
                 <span className="text-6xl">📄</span>

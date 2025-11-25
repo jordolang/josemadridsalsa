@@ -1,5 +1,6 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowLeft, Package, Truck, CheckCircle } from 'lucide-react'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
@@ -104,11 +105,14 @@ export default async function OrderDetailPage({
                 {order.items.map((item) => (
                   <div key={item.id} className="flex gap-4">
                     {item.productImage && (
-                      <img
-                        src={item.productImage}
-                        alt={item.productName}
-                        className="h-16 w-16 rounded object-cover"
-                      />
+                      <div className="relative h-16 w-16 flex-shrink-0">
+                        <Image
+                          src={item.productImage}
+                          alt={item.productName}
+                          fill
+                          className="rounded object-cover"
+                        />
+                      </div>
                     )}
                     <div className="flex-1">
                       <p className="font-medium">{item.productName}</p>
