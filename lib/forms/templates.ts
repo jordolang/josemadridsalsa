@@ -182,6 +182,191 @@ const inventoryCountSection: BusinessFormSection = {
   ],
 }
 
+const orderTrackingSection: BusinessFormSection = {
+  id: 'order-tracking',
+  label: 'Order Tracking',
+  defaultIncluded: true,
+  fields: [
+    {
+      id: 'tracking-table',
+      label: 'Order Status Tracking',
+      type: 'table',
+      columns: ['Order #', 'Customer', 'Order Date', 'Status', 'Est. Delivery', 'Notes'],
+      defaultRows: 15,
+    },
+  ],
+}
+
+const orderFulfillmentSection: BusinessFormSection = {
+  id: 'order-fulfillment',
+  label: 'Order Fulfillment Checklist',
+  defaultIncluded: true,
+  fields: [
+    { id: 'order-number', label: 'Order Number', type: 'short-text', placeholder: '#12345' },
+    { id: 'customer-name', label: 'Customer Name', type: 'short-text' },
+    {
+      id: 'fulfillment-table',
+      label: 'Items to Pack',
+      type: 'table',
+      columns: ['SKU', 'Product', 'Qty Ordered', 'Qty Packed', 'Bin Location', 'Checked'],
+      defaultRows: 8,
+    },
+    { id: 'packer-name', label: 'Packed By', type: 'short-text' },
+    { id: 'quality-check', label: 'Quality Check Completed', type: 'checkbox' },
+  ],
+}
+
+const webOrderSection: BusinessFormSection = {
+  id: 'web-order-details',
+  label: 'Web Order Details',
+  defaultIncluded: true,
+  fields: [
+    { id: 'order-id', label: 'Online Order ID', type: 'short-text', placeholder: 'WEB-12345' },
+    { id: 'platform', label: 'Platform', type: 'short-text', placeholder: 'Website, Amazon, Etsy, etc.' },
+    { id: 'payment-status', label: 'Payment Status', type: 'short-text', placeholder: 'Paid, Pending, etc.' },
+    { id: 'shipping-method', label: 'Shipping Method', type: 'short-text', placeholder: 'USPS, UPS, FedEx' },
+    { id: 'tracking-number', label: 'Tracking Number', type: 'short-text' },
+  ],
+}
+
+const purchaseOrderSection: BusinessFormSection = {
+  id: 'purchase-order',
+  label: 'Purchase Order Items',
+  defaultIncluded: true,
+  fields: [
+    { id: 'po-number', label: 'PO Number', type: 'short-text', placeholder: 'PO-2025-001' },
+    { id: 'vendor-name', label: 'Vendor Name', type: 'short-text' },
+    {
+      id: 'po-table',
+      label: 'Items to Purchase',
+      type: 'table',
+      columns: ['Item', 'Description', 'Qty', 'Unit Price', 'Total', 'Notes'],
+      defaultRows: 10,
+    },
+  ],
+}
+
+const qualityControlSection: BusinessFormSection = {
+  id: 'quality-control',
+  label: 'Quality Control Inspection',
+  defaultIncluded: true,
+  fields: [
+    { id: 'batch-number', label: 'Batch/Lot Number', type: 'short-text' },
+    { id: 'production-date', label: 'Production Date', type: 'date' },
+    {
+      id: 'qc-table',
+      label: 'Quality Checks',
+      type: 'table',
+      columns: ['Check Item', 'Standard', 'Result', 'Pass/Fail', 'Notes'],
+      defaultRows: 8,
+    },
+    { id: 'inspector-name', label: 'Inspector Name', type: 'short-text' },
+    { id: 'approved', label: 'Batch Approved for Distribution', type: 'checkbox' },
+  ],
+}
+
+const customerComplaintSection: BusinessFormSection = {
+  id: 'customer-complaint',
+  label: 'Complaint Details',
+  defaultIncluded: true,
+  fields: [
+    { id: 'complaint-date', label: 'Date Received', type: 'date' },
+    { id: 'complaint-source', label: 'Source', type: 'short-text', placeholder: 'Phone, Email, Social Media' },
+    { id: 'issue-summary', label: 'Issue Summary', type: 'long-text', placeholder: 'Brief description of the complaint' },
+    { id: 'resolution', label: 'Resolution Provided', type: 'long-text' },
+    { id: 'follow-up', label: 'Follow-up Required', type: 'checkbox' },
+  ],
+}
+
+const returnAuthorizationSection: BusinessFormSection = {
+  id: 'return-authorization',
+  label: 'Return Authorization',
+  defaultIncluded: true,
+  fields: [
+    { id: 'rma-number', label: 'RMA Number', type: 'short-text', placeholder: 'RMA-12345' },
+    { id: 'return-reason', label: 'Reason for Return', type: 'long-text' },
+    {
+      id: 'return-items-table',
+      label: 'Items Being Returned',
+      type: 'table',
+      columns: ['SKU', 'Product', 'Qty', 'Condition', 'Refund/Replace'],
+      defaultRows: 6,
+    },
+    { id: 'refund-method', label: 'Refund Method', type: 'short-text', placeholder: 'Original payment, store credit, etc.' },
+  ],
+}
+
+const shippingManifestSection: BusinessFormSection = {
+  id: 'shipping-manifest',
+  label: 'Shipping Manifest',
+  defaultIncluded: true,
+  fields: [
+    { id: 'shipment-date', label: 'Shipment Date', type: 'date' },
+    { id: 'carrier', label: 'Carrier', type: 'short-text', placeholder: 'USPS, UPS, FedEx' },
+    { id: 'total-packages', label: 'Total Packages', type: 'short-text' },
+    {
+      id: 'manifest-table',
+      label: 'Shipment Details',
+      type: 'table',
+      columns: ['Order #', 'Customer', 'Tracking #', 'Weight', 'Shipping Cost', 'Notes'],
+      defaultRows: 12,
+    },
+  ],
+}
+
+const productionScheduleSection: BusinessFormSection = {
+  id: 'production-schedule',
+  label: 'Production Schedule',
+  defaultIncluded: true,
+  fields: [
+    { id: 'week-of', label: 'Week Of', type: 'date' },
+    {
+      id: 'production-table',
+      label: 'Weekly Production Plan',
+      type: 'table',
+      columns: ['Day', 'Product', 'Batch Size', 'Start Time', 'Est. Completion', 'Assigned To'],
+      defaultRows: 10,
+    },
+  ],
+}
+
+const vendorPaymentSection: BusinessFormSection = {
+  id: 'vendor-payment',
+  label: 'Vendor Payment Details',
+  defaultIncluded: true,
+  fields: [
+    { id: 'vendor-name', label: 'Vendor Name', type: 'short-text' },
+    { id: 'invoice-number', label: 'Invoice Number', type: 'short-text' },
+    { id: 'invoice-date', label: 'Invoice Date', type: 'date' },
+    { id: 'payment-due', label: 'Payment Due Date', type: 'date' },
+    {
+      id: 'payment-items-table',
+      label: 'Invoice Line Items',
+      type: 'table',
+      columns: ['Description', 'Qty', 'Unit Cost', 'Amount', 'Account Code'],
+      defaultRows: 8,
+    },
+    { id: 'total-amount', label: 'Total Amount Due', type: 'short-text' },
+  ],
+}
+
+const maintenanceLogSection: BusinessFormSection = {
+  id: 'maintenance-log',
+  label: 'Equipment Maintenance Log',
+  defaultIncluded: true,
+  fields: [
+    { id: 'equipment-name', label: 'Equipment Name', type: 'short-text' },
+    { id: 'equipment-id', label: 'Equipment ID', type: 'short-text' },
+    {
+      id: 'maintenance-table',
+      label: 'Maintenance History',
+      type: 'table',
+      columns: ['Date', 'Type', 'Description', 'Technician', 'Next Service', 'Cost'],
+      defaultRows: 10,
+    },
+  ],
+}
+
 function buildTemplate(
   template: Omit<BusinessFormTemplate, 'sections'> & { sections: BusinessFormSection[] },
 ): BusinessFormTemplate {
@@ -295,6 +480,171 @@ export const businessFormTemplates: BusinessFormTemplate[] = [
     ],
     sections: [customerInformationSection, inventoryCountSection, authorizationSection],
     publicSlug: 'inventory-count-sheet',
+  }),
+  buildTemplate({
+    id: 'order-tracking-log',
+    name: 'Order Tracking Log',
+    categoryId: 'sales',
+    description: 'Track order status from placement through delivery for wholesale and retail orders.',
+    tags: ['orders', 'tracking', 'logistics'],
+    estimatedCompletion: '5 minutes',
+    recommendedUses: [
+      'Monitor order progress for customer service inquiries.',
+      'Track multiple orders in transit for weekly reviews.',
+      'Keep delivery schedules visible for warehouse teams.',
+    ],
+    sections: [orderTrackingSection, authorizationSection],
+    publicSlug: 'order-tracking-log',
+  }),
+  buildTemplate({
+    id: 'order-fulfillment-checklist',
+    name: 'Order Fulfillment Checklist',
+    categoryId: 'operations',
+    description: 'Step-by-step checklist to ensure accurate picking, packing, and shipping of orders.',
+    tags: ['fulfillment', 'warehouse', 'shipping'],
+    estimatedCompletion: '6 minutes',
+    recommendedUses: [
+      'Attach to packing slips for order accuracy verification.',
+      'Use in warehouse to guide pickers through fulfillment.',
+      'Archive as proof of shipment accuracy for customer service.',
+    ],
+    sections: [orderFulfillmentSection, shippingAndDeliverySection, authorizationSection],
+    publicSlug: 'order-fulfillment-checklist',
+  }),
+  buildTemplate({
+    id: 'web-order-management',
+    name: 'Web Order Management Form',
+    categoryId: 'sales',
+    description: 'Capture online order details from e-commerce platforms for processing and fulfillment.',
+    tags: ['ecommerce', 'web orders', 'online sales'],
+    estimatedCompletion: '5 minutes',
+    recommendedUses: [
+      'Process orders from website, Amazon, Etsy, or marketplace platforms.',
+      'Track payment and shipping details for online sales.',
+      'Print for warehouse teams unfamiliar with online dashboards.',
+    ],
+    sections: [customerInformationSection, webOrderSection, wholesaleOrderItems, authorizationSection],
+    publicSlug: 'web-order-management',
+  }),
+  buildTemplate({
+    id: 'purchase-order-form',
+    name: 'Purchase Order Form',
+    categoryId: 'finance',
+    description: 'Formal purchase order for vendor orders, supplies, and ingredient procurement.',
+    tags: ['purchasing', 'vendors', 'procurement'],
+    estimatedCompletion: '7 minutes',
+    recommendedUses: [
+      'Issue purchase orders to ingredient suppliers and packaging vendors.',
+      'Maintain paper trail for accounting and inventory receiving.',
+      'Attach to vendor invoices for payment approval workflows.',
+    ],
+    sections: [customerInformationSection, purchaseOrderSection, paymentTermsSection, authorizationSection],
+    publicSlug: 'purchase-order-form',
+  }),
+  buildTemplate({
+    id: 'quality-control-report',
+    name: 'Quality Control Report',
+    categoryId: 'operations',
+    description: 'Batch inspection checklist for production quality assurance and food safety compliance.',
+    tags: ['quality', 'production', 'compliance'],
+    estimatedCompletion: '8 minutes',
+    recommendedUses: [
+      'Inspect each production batch before packaging.',
+      'Document quality standards for food safety audits.',
+      'Track recurring issues for process improvement.',
+    ],
+    sections: [qualityControlSection, authorizationSection],
+    publicSlug: 'quality-control-report',
+  }),
+  buildTemplate({
+    id: 'customer-complaint-form',
+    name: 'Customer Complaint Form',
+    categoryId: 'sales',
+    description: 'Log customer complaints and resolutions for quality tracking and customer service.',
+    tags: ['customer service', 'complaints', 'support'],
+    estimatedCompletion: '5 minutes',
+    recommendedUses: [
+      'Track product quality issues reported by customers.',
+      'Document resolutions for customer service training.',
+      'Analyze trends to improve product and service quality.',
+    ],
+    sections: [customerInformationSection, customerComplaintSection, authorizationSection],
+    publicSlug: 'customer-complaint-form',
+  }),
+  buildTemplate({
+    id: 'return-authorization-form',
+    name: 'Return Authorization Form (RMA)',
+    categoryId: 'sales',
+    description: 'Process customer returns and exchanges with standardized authorization workflow.',
+    tags: ['returns', 'rma', 'customer service'],
+    estimatedCompletion: '6 minutes',
+    recommendedUses: [
+      'Issue RMA numbers for return authorization.',
+      'Track returned inventory and refund processing.',
+      'Document return reasons for quality analysis.',
+    ],
+    sections: [customerInformationSection, returnAuthorizationSection, authorizationSection],
+    publicSlug: 'return-authorization-form',
+  }),
+  buildTemplate({
+    id: 'shipping-manifest',
+    name: 'Daily Shipping Manifest',
+    categoryId: 'operations',
+    description: 'Consolidated shipment log for daily carrier pickups and delivery tracking.',
+    tags: ['shipping', 'logistics', 'carriers'],
+    estimatedCompletion: '7 minutes',
+    recommendedUses: [
+      'Prepare daily shipment summaries for carrier pickups.',
+      'Track all outgoing packages in one consolidated view.',
+      'Reconcile shipping costs against invoices from carriers.',
+    ],
+    sections: [shippingManifestSection, authorizationSection],
+    publicSlug: 'daily-shipping-manifest',
+  }),
+  buildTemplate({
+    id: 'production-schedule',
+    name: 'Weekly Production Schedule',
+    categoryId: 'operations',
+    description: 'Plan and track weekly production batches, staffing, and equipment needs.',
+    tags: ['production', 'manufacturing', 'scheduling'],
+    estimatedCompletion: '6 minutes',
+    recommendedUses: [
+      'Plan weekly batch production schedules.',
+      'Coordinate production team assignments.',
+      'Track actual vs. planned production for capacity planning.',
+    ],
+    sections: [productionScheduleSection, authorizationSection],
+    publicSlug: 'weekly-production-schedule',
+  }),
+  buildTemplate({
+    id: 'vendor-payment-form',
+    name: 'Vendor Payment Authorization',
+    categoryId: 'finance',
+    description: 'Vendor invoice review and payment approval form for accounts payable.',
+    tags: ['accounts payable', 'vendors', 'payments'],
+    estimatedCompletion: '6 minutes',
+    recommendedUses: [
+      'Review vendor invoices before payment processing.',
+      'Track payment terms and due dates.',
+      'Maintain payment approval documentation for accounting.',
+    ],
+    sections: [vendorPaymentSection, authorizationSection],
+    publicSlug: 'vendor-payment-authorization',
+  }),
+  buildTemplate({
+    id: 'equipment-maintenance-log',
+    name: 'Equipment Maintenance Log',
+    categoryId: 'operations',
+    description: 'Track equipment maintenance history and schedule preventive service.',
+    tags: ['maintenance', 'equipment', 'facilities'],
+    estimatedCompletion: '5 minutes',
+    recommendedUses: [
+      'Log routine maintenance for production equipment.',
+      'Track repair history and service costs.',
+      'Schedule preventive maintenance to avoid downtime.',
+    ],
+    sections: [maintenanceLogSection, authorizationSection],
+    publicSlug: 'equipment-maintenance-log',
   }),
 ]
 

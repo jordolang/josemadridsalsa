@@ -63,6 +63,12 @@ const baseStyles = `
     text-transform: uppercase;
   }
 
+  .brand-logo {
+    max-width: 200px;
+    height: auto;
+    margin-bottom: 16px;
+  }
+
   section {
     border: 1px solid #e2e8f0;
     border-radius: 18px;
@@ -300,6 +306,11 @@ export function renderFormHtml(template: BusinessFormTemplate, options: RenderOp
       </head>
       <body>
         <div class="form-wrapper">
+          ${
+            includeBranding
+              ? `<img src="/images/jose-madrid-salsa-logo.png" alt="Jose Madrid Salsa Logo" class="brand-logo" />`
+              : ''
+          }
           <header>
             <div class="branding">
               <div>
