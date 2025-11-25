@@ -17,6 +17,7 @@ Modern, full-featured e-commerce platform for Jose Madrid Salsa with comprehensi
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
 - [Getting Started](#-getting-started)
+- [AI Chatbot Training](#-ai-chatbot-training)
 - [Admin Panel](#-admin-panel)
 - [Customer Features](#-customer-features)
 - [Business Systems](#-business-systems)
@@ -355,6 +356,71 @@ Generate `MASTER_KEY`:
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
+
+---
+
+## 🤖 AI Chatbot Training
+
+The platform includes an AI-powered customer support chatbot with RAG (Retrieval Augmented Generation) that learns from your business content.
+
+### How It Works
+
+The chatbot automatically indexes content from:
+- ✅ All products, recipes, and locations from the database
+- ✅ Markdown files in the `/public` folder
+- ✅ Custom training documents uploaded via admin panel
+- ✅ URLs scraped and indexed
+
+When customers ask questions, the AI retrieves relevant information and provides accurate, context-aware responses.
+
+### Quick Setup
+
+1. **Set OpenAI API Key**
+   ```bash
+   # Add to .env.local
+   OPENAI_API_KEY=sk-...
+   OPENAI_MODEL=gpt-4o-mini
+   ```
+
+2. **Access Training Admin**
+   ```
+   http://localhost:3000/admin/training-data
+   ```
+
+3. **Upload Training Documents**
+   - Drag and drop files (markdown, PDF, Word, CSV, etc.)
+   - Or paste URLs to scrape content
+   - Status will update to "Ready" when indexed
+
+4. **Test the Chatbot**
+   - Visit your site and use the chat widget
+   - Ask product, shipping, or business questions
+   - AI will reference your indexed content
+
+### Documentation
+
+- **[Quick Start Guide](docs/AI_CHATBOT_QUICK_START.md)** - Get up and running in 5 minutes
+- **[Complete Training Guide](docs/AI_CHATBOT_TRAINING_GUIDE.md)** - Detailed instructions and best practices
+- **[Technical Architecture](docs/AI_CHATBOT_ARCHITECTURE.md)** - System design and implementation details
+
+### Example Training Content
+
+Create markdown files with FAQs, policies, and product information:
+
+```markdown
+# Frequently Asked Questions
+
+## How long does shipping take?
+Orders ship within 1-2 business days. Standard shipping takes 3-5 days.
+
+## Are your salsas gluten-free?
+Yes, all Jose Madrid salsas are gluten-free and vegan.
+
+## What's your return policy?
+We offer a 30-day money-back guarantee on all products.
+```
+
+Upload via `/admin/training-data` and the chatbot will instantly reference this information.
 
 ---
 
