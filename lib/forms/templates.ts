@@ -367,6 +367,126 @@ const maintenanceLogSection: BusinessFormSection = {
   ],
 }
 
+const developerRequestTypeSection: BusinessFormSection = {
+  id: 'request-type',
+  label: 'Request Type',
+  description: 'Check the primary category for this request.',
+  defaultIncluded: true,
+  fields: [
+    { id: 'request-feature', label: 'Feature Request', type: 'checkbox' },
+    { id: 'request-website-issue', label: 'Website Issues', type: 'checkbox' },
+    { id: 'request-server-issue', label: 'Server Issues', type: 'checkbox' },
+    { id: 'request-customer-reported', label: 'Customer-Reported Issues', type: 'checkbox' },
+    { id: 'request-connectivity', label: 'Connectivity Issues', type: 'checkbox' },
+    { id: 'request-bug', label: 'Bug / Defect', type: 'checkbox' },
+    { id: 'request-performance', label: 'Performance / Speed Issue', type: 'checkbox' },
+    { id: 'request-security', label: 'Security Concern', type: 'checkbox' },
+    { id: 'request-na', label: 'N/A', type: 'checkbox' },
+    { id: 'request-other', label: 'Other', type: 'checkbox' },
+  ],
+}
+
+const developerIssueAreaSection: BusinessFormSection = {
+  id: 'issue-area',
+  label: 'Issue Area',
+  description: 'Check all areas affected by this request.',
+  defaultIncluded: true,
+  fields: [
+    { id: 'area-products', label: 'Products / Catalog', type: 'checkbox' },
+    { id: 'area-orders', label: 'Orders / Checkout', type: 'checkbox' },
+    { id: 'area-admin-panel', label: 'Admin Panel', type: 'checkbox' },
+    { id: 'area-forms', label: 'Forms System', type: 'checkbox' },
+    { id: 'area-content', label: 'Content / Pages', type: 'checkbox' },
+    { id: 'area-authentication', label: 'User Authentication / Login', type: 'checkbox' },
+    { id: 'area-email', label: 'Email Notifications', type: 'checkbox' },
+    { id: 'area-payment', label: 'Payment Processing', type: 'checkbox' },
+    { id: 'area-shipping', label: 'Shipping / Fulfillment', type: 'checkbox' },
+    { id: 'area-inventory', label: 'Inventory Management', type: 'checkbox' },
+    { id: 'area-customer-accounts', label: 'Customer Accounts', type: 'checkbox' },
+    { id: 'area-search', label: 'Search Functionality', type: 'checkbox' },
+    { id: 'area-mobile', label: 'Mobile Experience', type: 'checkbox' },
+    { id: 'area-api', label: 'API / Integrations', type: 'checkbox' },
+    { id: 'area-database', label: 'Database', type: 'checkbox' },
+  ],
+}
+
+const developerPrioritySection: BusinessFormSection = {
+  id: 'priority-level',
+  label: 'Priority Level',
+  description: 'Select the urgency of this request.',
+  defaultIncluded: true,
+  fields: [
+    { id: 'priority-critical', label: '🔴 Critical - Site Down / Major Loss of Function', type: 'checkbox' },
+    { id: 'priority-high', label: '🟠 High - Impacting Multiple Users', type: 'checkbox' },
+    { id: 'priority-medium', label: '🟡 Medium - Noticeable but Workable', type: 'checkbox' },
+    { id: 'priority-low', label: '🟢 Low - Minor Issue or Enhancement', type: 'checkbox' },
+  ],
+}
+
+const developerDeviceSection: BusinessFormSection = {
+  id: 'device-browser',
+  label: 'Device & Browser',
+  description: 'Where did this issue occur?',
+  defaultIncluded: true,
+  fields: [
+    { id: 'device-desktop', label: 'Desktop Computer', type: 'checkbox' },
+    { id: 'device-mobile', label: 'Mobile Phone', type: 'checkbox' },
+    { id: 'device-tablet', label: 'Tablet', type: 'checkbox' },
+    { id: 'browser-chrome', label: 'Chrome', type: 'checkbox' },
+    { id: 'browser-safari', label: 'Safari', type: 'checkbox' },
+    { id: 'browser-firefox', label: 'Firefox', type: 'checkbox' },
+    { id: 'browser-edge', label: 'Edge', type: 'checkbox' },
+    { id: 'browser-other', label: 'Other Browser', type: 'checkbox' },
+  ],
+}
+
+const developerCommonIssuesSection: BusinessFormSection = {
+  id: 'common-issues',
+  label: 'Common Issue Types',
+  description: 'Select any that apply to help identify the problem.',
+  fields: [
+    { id: 'issue-page-not-loading', label: 'Page Not Loading', type: 'checkbox' },
+    { id: 'issue-error-message', label: 'Error Message Displayed', type: 'checkbox' },
+    { id: 'issue-slow-performance', label: 'Slow Performance', type: 'checkbox' },
+    { id: 'issue-button-not-working', label: 'Button / Link Not Working', type: 'checkbox' },
+    { id: 'issue-display-incorrect', label: 'Display / Layout Incorrect', type: 'checkbox' },
+    { id: 'issue-data-incorrect', label: 'Data / Content Incorrect', type: 'checkbox' },
+    { id: 'issue-cant-login', label: 'Cannot Login / Access Denied', type: 'checkbox' },
+    { id: 'issue-form-not-submitting', label: 'Form Not Submitting', type: 'checkbox' },
+    { id: 'issue-image-missing', label: 'Image / Media Missing', type: 'checkbox' },
+    { id: 'issue-print-problem', label: 'Print / Export Problem', type: 'checkbox' },
+  ],
+}
+
+const developerDescriptionSection: BusinessFormSection = {
+  id: 'issue-description',
+  label: 'Issue Description',
+  description: 'Provide a brief description of what is happening or what you need.',
+  defaultIncluded: true,
+  fields: [
+    {
+      id: 'description-box',
+      label: 'Description',
+      type: 'long-text',
+      placeholder: 'Describe what happened, what you expected, and any error messages. Include steps to reproduce if applicable.',
+      helperText: 'Be as specific as possible. Include page URLs, user accounts, or order numbers if relevant.',
+    },
+  ],
+}
+
+const developerContactSection: BusinessFormSection = {
+  id: 'contact-info',
+  label: 'Contact Information',
+  description: 'Who should we contact about this request?',
+  defaultIncluded: true,
+  fields: [
+    { id: 'reporter-name', label: 'Your Name', type: 'short-text' },
+    { id: 'reporter-email', label: 'Email', type: 'short-text', placeholder: 'name@example.com' },
+    { id: 'reporter-phone', label: 'Phone', type: 'short-text', placeholder: '(555) 555-5555' },
+    { id: 'preferred-contact', label: 'Preferred Contact Method', type: 'short-text', placeholder: 'Email, Phone, Text' },
+  ],
+}
+
 function buildTemplate(
   template: Omit<BusinessFormTemplate, 'sections'> & { sections: BusinessFormSection[] },
 ): BusinessFormTemplate {
@@ -645,6 +765,32 @@ export const businessFormTemplates: BusinessFormTemplate[] = [
     ],
     sections: [maintenanceLogSection, authorizationSection],
     publicSlug: 'equipment-maintenance-log',
+  }),
+  buildTemplate({
+    id: 'developer-request-ticket',
+    name: 'Developer Request Ticket',
+    categoryId: 'operations',
+    description: 'Submit website issues, feature requests, or technical support needs to the development team.',
+    tags: ['developer', 'support', 'tech', 'admin'],
+    estimatedCompletion: '3 minutes',
+    recommendedUses: [
+      'Report website malfunctions or bugs to the developer.',
+      'Request new features or enhancements for the admin panel.',
+      'Document customer-reported technical issues.',
+      'Submit connectivity or server-related problems.',
+      'Track technical issues with photo documentation.',
+    ],
+    sections: [
+      developerRequestTypeSection,
+      developerIssueAreaSection,
+      developerPrioritySection,
+      developerDeviceSection,
+      developerCommonIssuesSection,
+      developerDescriptionSection,
+      developerContactSection,
+      authorizationSection,
+    ],
+    publicSlug: 'developer-request-ticket',
   }),
 ]
 

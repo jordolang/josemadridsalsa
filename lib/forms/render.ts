@@ -64,9 +64,8 @@ const baseStyles = `
   }
 
   .brand-logo {
-    max-width: 200px;
+    max-width: 50px;
     height: auto;
-    margin-bottom: 16px;
   }
 
   section {
@@ -306,22 +305,24 @@ export function renderFormHtml(template: BusinessFormTemplate, options: RenderOp
       </head>
       <body>
         <div class="form-wrapper">
-          ${
-            includeBranding
-              ? `<img src="/images/jose-madrid-salsa-logo.png" alt="Jose Madrid Salsa Logo" class="brand-logo" />`
-              : ''
-          }
           <header>
             <div class="branding">
-              <div>
-                <h1>${title ?? template.name}</h1>
-                <p>${template.description}</p>
+              <div style="display: flex; align-items: center; gap: 16px;">
+                ${
+                  includeBranding
+                    ? `<img src="/images/jose-madrid-salsa-logo.png" alt="Jose Madrid Salsa Logo" class="brand-logo" />`
+                    : ''
+                }
+                <div>
+                  ${
+                    includeBranding
+                      ? `<div class="brand-name" style="font-size: 14px; margin-bottom: 4px;">Jose Madrid Salsa</div>`
+                      : ''
+                  }
+                  <h1>${title ?? template.name}</h1>
+                  <p>${template.description}</p>
+                </div>
               </div>
-              ${
-                includeBranding
-                  ? `<div class="brand-name">Jose Madrid Salsa</div>`
-                  : ''
-              }
             </div>
           </header>
           ${selectedSections.map(renderSection).join('')}
