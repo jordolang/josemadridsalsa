@@ -36,9 +36,9 @@ async function getFormData(productId: string) {
 export default async function ProductEditorPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const { id } = params
+  const { id } = await params
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'products:write'))) {

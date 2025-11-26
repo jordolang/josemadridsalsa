@@ -9,7 +9,8 @@ import { slugify, ensureUniqueSlug } from '@/lib/forms/utils'
 import { resolveTemplateOwner } from '@/lib/forms/ownership'
 import { structureFromSections, templateHistoryInclude } from '../_lib/helpers'
 
-export async function GET(request: NextRequest, { params }: { params: { slug: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
   const auth = await requirePartner(request, 'forms:read')
   if ('error' in auth) {
     return auth.error
@@ -17,12 +18,12 @@ export async function GET(request: NextRequest, { params }: { params: { slug: st
   const { partner } = auth
 
   const template = await prisma.formTemplate.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: templateHistoryInclude,
   })
 
   if (!template) {
-    await logPartnerApiCall(partner, request, 404, { slug: params.slug })
+    await logPartnerApiCall(partner, request, 404, { slug })
     return NextResponse.json({ error: 'Template not found' }, { status: 404 })
   }
 
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: { slug: st
 
   const etag = createHash('sha1').update(JSON.stringify(body)).digest('hex')
   if (request.headers.get('if-none-match') === etag) {
-    await logPartnerApiCall(partner, request, 304, { slug: params.slug })
+    await logPartnerApiCall(partner, request, 304, { slug })
     return new NextResponse(null, {
       status: 304,
       headers: { ETag: etag },
@@ -48,11 +49,12 @@ export async function GET(request: NextRequest, { params }: { params: { slug: st
       'Cache-Control': 'private, max-age=0',
     },
   })
-  await logPartnerApiCall(partner, request, 200, { slug: params.slug })
+  await logPartnerApiCall(partner, request, 200, { slug })
   return response
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { slug: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
   const auth = await requirePartner(request, 'forms:write')
   if ('error' in auth) {
     return auth.error
@@ -75,9 +77,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { slug: 
     return NextResponse.json({ error: 'Provide at least one field to update' }, { status: 400 })
   }
 
-  const existing = await prisma.formTemplate.findUnique({ where: { slug: params.slug } })
+  const existing = await prisma.formTemplate.findUnique({ where: { slug } })
   if (!existing) {
-    await logPartnerApiCall(partner, request, 404, { slug: params.slug })
+    await logPartnerApiCall(partner, request, 404, { slug })
     return NextResponse.json({ error: 'Template not found' }, { status: 404 })
   }
 

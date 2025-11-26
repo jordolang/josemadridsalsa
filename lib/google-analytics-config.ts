@@ -146,16 +146,17 @@ function hydrateCharts(value: unknown): GoogleAnalyticsChartDefinition[] {
         return null
       }
 
-      return {
+      const chart: GoogleAnalyticsChartDefinition = {
         id: typeof raw.id === 'string' ? raw.id : randomUUID(),
         title,
-        description: typeof raw.description === 'string' ? raw.description : null,
+        description: (typeof raw.description === 'string' ? raw.description : null) ?? null,
         metric,
         dimension,
         chartType: chartType as GoogleAnalyticsChartDefinition['chartType'],
         limit: typeof raw.limit === 'number' ? raw.limit : null,
         color: (raw.color as GoogleAnalyticsChartColor) ?? DEFAULT_COLOR,
-      } satisfies GoogleAnalyticsChartDefinition
+      }
+      return chart
     })
     .filter((entry): entry is GoogleAnalyticsChartDefinition => entry !== null)
 

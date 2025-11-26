@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import path from 'path'
 import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import mammoth from 'mammoth'
 // @ts-ignore - pdf-parse v2.4.5 has export issues with TypeScript
 import { PDFParse } from 'pdf-parse'
@@ -87,7 +87,7 @@ export async function extractTextFromUpload({
       isMime('spreadsheetml') ||
       isMime('ms-excel')
     ) {
-      text = stringifyWorkbook(buffer)
+      text = await stringifyWorkbook(buffer)
     } else if (
       extension === '.docx' ||
       extension === '.doc' ||
@@ -286,15 +286,24 @@ function stringifyCsv(raw: string, tabSeparated = false): string {
     .join('\n')
 }
 
-function stringifyWorkbook(buffer: Buffer): string {
-  const workbook = XLSX.read(buffer, { type: 'buffer' })
-  const sheets = workbook.SheetNames
-  if (sheets.length === 0) return ''
+async function stringifyWorkbook(buffer: Buffer): Promise<string> {
+  const workbook = new ExcelJS.Workbook()
+  await workbook.xlsx.load(buffer as any)
+  
+  if (workbook.worksheets.length === 0) return ''
 
-  const parts = sheets.map((sheetName) => {
-    const sheet = workbook.Sheets[sheetName]
-    const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false })
-    return `Sheet: ${sheetName}\n${csv.trim()}`
+  const parts = workbook.worksheets.map((sheet) => {
+    const rows: string[] = []
+    sheet.eachRow((row) => {
+      const cells: string[] = []
+      row.eachCell((cell) => {
+        cells.push(cell.value?.toString() || '')
+      })
+      if (cells.some(c => c)) { // Skip blank rows
+        rows.push(cells.join(','))
+      }
+    })
+    return `Sheet: ${sheet.name}\n${rows.join('\n')}`
   })
 
   return parts.join('\n\n')

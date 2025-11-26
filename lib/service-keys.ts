@@ -32,27 +32,23 @@ export async function getDecryptedServiceKeyValue(serviceName: string, keyName: 
 }
 
 export async function hasActiveServiceKey(serviceName: string, keyName?: string) {
-  const where = keyName
-    ? {
+  if (keyName) {
+    const record = await prisma.serviceKey.findUnique({
+      where: {
         serviceName_keyName: {
           serviceName: normalizeKey(serviceName),
           keyName: normalizeKey(keyName),
         },
-      }
-    : {
-        serviceName: normalizeKey(serviceName),
-        isActive: true,
-      }
-
-  if ('serviceName_keyName' in where) {
-    const record = await prisma.serviceKey.findUnique({
-      where,
+      },
     })
     return Boolean(record?.isActive)
   }
 
   const record = await prisma.serviceKey.findFirst({
-    where,
+    where: {
+      serviceName: normalizeKey(serviceName),
+      isActive: true,
+    },
   })
 
   return Boolean(record)

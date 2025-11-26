@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { z } from 'zod';
 
 // Product import schema for validation
@@ -126,21 +126,39 @@ export async function parseCSV(buffer: Buffer): Promise<ImportResult> {
  */
 export async function parseExcel(buffer: Buffer): Promise<ImportResult> {
   try {
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as any);
     
     // Use the first sheet
-    const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) {
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
       return {
         success: false,
         errors: ['Excel file is empty or has no sheets'],
       };
     }
 
-    const worksheet = workbook.Sheets[firstSheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet, {
-      raw: false, // Convert to strings
-      defval: null, // Default value for empty cells
+    const data: any[] = [];
+    const headers: string[] = [];
+    
+    // Get headers from first row
+    worksheet.getRow(1).eachCell((cell) => {
+      headers.push(cell.value?.toString() || '');
+    });
+    
+    // Process data rows
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return; // Skip header row
+      
+      const rowData: any = {};
+      row.eachCell((cell, colNumber) => {
+        const header = headers[colNumber - 1];
+        if (header) {
+          rowData[header] = cell.value !== null && cell.value !== undefined ? cell.value.toString() : null;
+        }
+      });
+      
+      data.push(rowData);
     });
 
     return {

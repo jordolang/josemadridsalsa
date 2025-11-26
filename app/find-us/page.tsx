@@ -32,7 +32,14 @@ const parseNumberParam = (value?: string) => {
 }
 
 export default async function FindUsPage({ searchParams }: FindUsPageProps) {
-  let allLocations, facets, initialResult, totalLocations, ohioLocations, uniqueStates, initialFilters, initialView;
+  let allLocations: any[]
+  let facets: { states: Array<{ code: string; count: number }>, citiesByState: Record<string, string[]> }
+  let initialResult: { locations: any[], total: number, appliedFilters: any }
+  let totalLocations: number
+  let ohioLocations: number
+  let uniqueStates: number
+  let initialFilters: any
+  let initialView: 'list' | 'map'
   
   try {
     console.log('[FindUsPage] Starting page render...');
