@@ -52,18 +52,6 @@ export function LocationMap() {
   // Directions URL
   const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`
 
-  // Street View static image for the building photo card
-  const buildingPhotoUrl = useMemo(() => {
-    if (!apiKey) return null
-    // Use Street View Static API for a photo of the building
-    const size = '800x400'
-    const heading = panoId ? streetHeading : 210
-    if (panoId) {
-      return `https://maps.googleapis.com/maps/api/streetview?size=${size}&pano=${encodeURIComponent(panoId)}&heading=${heading}&pitch=0&fov=90&key=${apiKey}`
-    }
-    return `https://maps.googleapis.com/maps/api/streetview?size=${size}&location=${LATITUDE},${LONGITUDE}&heading=${heading}&pitch=0&fov=90&source=outdoor&key=${apiKey}`
-  }, [apiKey, panoId, streetHeading])
-
   // Try to find a better Street View pano near the storefront
   useEffect(() => {
     if (!apiKey || panoId) return
@@ -232,18 +220,12 @@ export function LocationMap() {
             {/* Building Photo */}
             <Card className="overflow-hidden surface-shadow">
               <div className="relative w-full h-48">
-                {buildingPhotoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- Using Google Street View Static API with dynamic params
-                  <img
-                    src={buildingPhotoUrl}
-                    alt="Jose Madrid Salsa Store Front - 601 Putnam Ave, Zanesville, OH"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-salsa-100 to-chile-100 dark:from-salsa-900/30 dark:to-chile-900/30 flex items-center justify-center">
-                    <MapPin className="w-16 h-16 text-salsa-600/50" />
-                  </div>
-                )}
+                {/* eslint-disable-next-line @next/next/no-img-element -- Using local static image */}
+                <img
+                  src="/images/jose-madrid-building.jpeg"
+                  alt="Jose Madrid Salsa Store Front - 601 Putnam Ave, Zanesville, OH"
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-bold text-foreground mb-2">
