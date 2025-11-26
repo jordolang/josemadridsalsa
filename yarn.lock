@@ -842,11 +842,6 @@
   dependencies:
     fast-glob "3.3.1"
 
-"@next/font@^14.2.15":
-  version "14.2.15"
-  resolved "https://registry.npmjs.org/@next/font/-/font-14.2.15.tgz"
-  integrity sha512-QopYhBmCDDrNDynbi+ZD1hDZXmQXVFo7TmAFp4DQgO/kogz1OLbQ92hPigJbj572eZ3GaaVxNIyYVn3/eAsehg==
-
 "@next/swc-darwin-x64@15.5.4":
   version "15.5.4"
   resolved "https://registry.npmjs.org/@next/swc-darwin-x64/-/swc-darwin-x64-15.5.4.tgz"
@@ -5961,7 +5956,7 @@ next-auth@^4.24.11:
     preact-render-to-string "^5.1.19"
     uuid "^8.3.2"
 
-next@*, "next@^12.2.5 || ^13 || ^14 || ^15 || ^16", next@^15.5.4, "next@>= 13", next@>13:
+"next@^12.2.5 || ^13 || ^14 || ^15 || ^16", next@^15.5.4, "next@>= 13", next@>13:
   version "15.5.5"
   resolved "https://registry.npmjs.org/next/-/next-15.5.5.tgz"
   integrity sha512-OQVdBPtpBfq7HxFN0kOVb7rXXOSIkt5lTzDJDGRBcOyVvNRIWFauMqi1gIHd1pszq1542vMOGY0HP4CaiALfkA==
