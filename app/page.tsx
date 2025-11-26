@@ -3,6 +3,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { ReviewsSection } from '@/components/store/reviews-section'
 import { GiftBoxSelector } from '@/components/store/gift-box-selector'
+import { LocationMap } from '@/components/store/location-map'
 import { createMetadata } from '@/lib/metadata'
 
 export const metadata: Metadata = createMetadata({
@@ -173,6 +174,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Location Map Section */}
+      <LocationMap />
 
       {/* Gift Box Selector Section */}
       <GiftBoxSelector />
