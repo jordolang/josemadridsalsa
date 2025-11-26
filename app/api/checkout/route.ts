@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { queueEverShopSync } from '@/lib/evershop/sync'
+import { queueShopifySync } from '@/lib/shopify/sync'
 
 const CheckoutSchema = z.object({
   items: z
@@ -134,7 +134,7 @@ export async function POST(request: Request) {
       },
     })
 
-    queueEverShopSync(order.id)
+    queueShopifySync(order.id)
 
     const stripe = getStripe()
 

@@ -30,10 +30,6 @@
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
     "create-admin": "tsx scripts/create-admin.ts",
-    "evershop:setup": "./scripts/setup-evershop.sh",
-    "evershop:dev": "cd evershop && npm run dev",
-    "evershop:build": "cd evershop && npm run build",
-    "evershop:start": "cd evershop && npm start",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
     "fresh": "npm run clean && npm install && npm run dev"
   },

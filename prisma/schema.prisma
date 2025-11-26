@@ -269,7 +269,13 @@ model Order {
   // Notes
   customerNotes   String?
   adminNotes      String?
-  
+  shopifyOrderId  String?  @unique
+  shopifyOrderName String?
+  shopifyFinancialStatus String?
+  shopifyFulfillmentStatus String?
+  shopifySyncedAt DateTime?
+  shopifySyncError String?
+
   // Timestamps
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
