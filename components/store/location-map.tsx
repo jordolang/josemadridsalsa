@@ -7,7 +7,9 @@ import { Card } from '@/components/ui/card'
 
 const BUSINESS_ADDRESS = '601 Putnam Ave, Zanesville, OH 43701'
 const BUSINESS_NAME = 'Jose Madrid Salsa'
-const COORDINATES = '39.9403,-82.0132' // Zanesville, OH coordinates
+// Precise coordinates for 601 Putnam Ave, Zanesville, OH 43701
+const LATITUDE = 39.940853
+const LONGITUDE = -82.012834
 
 export function LocationMap() {
   const [viewMode, setViewMode] = useState<'map' | 'street'>('map')
@@ -23,9 +25,9 @@ export function LocationMap() {
     ? `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${encodedAddress}&zoom=17`
     : null
 
-  // Google Street View Embed URL
+  // Google Street View Embed URL - using coordinates for better accuracy
   const streetViewUrl = apiKey
-    ? `https://www.google.com/maps/embed/v1/streetview?key=${apiKey}&location=${encodedAddress}&heading=210&pitch=0&fov=90`
+    ? `https://www.google.com/maps/embed/v1/streetview?key=${apiKey}&location=${LATITUDE},${LONGITUDE}&heading=210&pitch=0&fov=90`
     : null
 
   // Directions URL
