@@ -151,13 +151,14 @@ export default async function RecipePage({ params }: RecipePageProps) {
               </div>
             </div>
             <div className="flex-1 w-full">
-              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-2xl border border-white/10">
+              <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl border border-white/10 flex items-center justify-center min-h-[300px] bg-white/5">
                 <Image
                   src={recipe.featuredImage || imageFallback}
                   alt={recipe.title}
-                  fill
+                  width={800}
+                  height={600}
                   priority
-                  className="object-cover"
+                  className="w-full h-auto object-contain"
                 />
               </div>
             </div>

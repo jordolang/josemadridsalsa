@@ -57,12 +57,13 @@ export function ProductCard({ product }: ProductCardProps) {
     <Card className="group overflow-hidden transition-transform duration-300 hover:-translate-y-1">
       <div className="relative">
         <Link href={`/salsas/${product.slug}`}>
-          <div className="relative aspect-square overflow-hidden bg-muted">
+          <div className="relative overflow-hidden bg-muted flex items-center justify-center min-h-[300px]">
             <Image
               src={imageError || !product.featuredImage ? '/images/placeholder-salsa.jpg' : product.featuredImage}
               alt={product.name}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              width={400}
+              height={400}
+              className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               onError={() => setImageError(true)}
             />

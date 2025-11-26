@@ -41,7 +41,7 @@ export default function Home() {
             <div className="relative animate-slide-up animation-delay-200">
               <div className="relative w-full h-96 lg:h-[500px]">
                 <Image
-                  src="/images/products/Hero-image.webp"
+                  src="/images/Hero-Image-Mike.png"
                   alt="Fresh salsa with chips"
                   fill
                   className="object-cover object-center rounded-2xl shadow-2xl"

@@ -127,13 +127,13 @@ export default function ProductPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Product Images */}
           <div className="space-y-4">
-            <div className="aspect-square bg-card rounded-lg overflow-hidden surface-shadow">
+            <div className="bg-card rounded-lg overflow-hidden surface-shadow flex items-center justify-center min-h-[400px]">
               <Image
                 src={product.images[selectedImage] || product.featuredImage}
                 alt={product.name}
                 width={600}
                 height={600}
-                className="w-full h-full object-cover"
+                className="w-full h-auto object-contain"
                 priority
               />
             </div>
@@ -144,7 +144,7 @@ export default function ProductPage() {
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 flex items-center justify-center bg-card ${
                       selectedImage === index ? 'border-salsa-500' : 'border-border'
                     }`}
                   >
@@ -153,7 +153,7 @@ export default function ProductPage() {
                       alt={`${product.name} ${index + 1}`}
                       width={80}
                       height={80}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                   </button>
                 ))}
