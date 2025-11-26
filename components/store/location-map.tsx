@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MapPin, Navigation, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -13,6 +13,12 @@ const LONGITUDE = -82.012834
 
 export function LocationMap() {
   const [viewMode, setViewMode] = useState<'map' | 'street'>('map')
+  const [panoId, setPanoId] = useState<string | null>(
+    process.env.NEXT_PUBLIC_GOOGLE_STREETVIEW_PANO || null
+  )
+  const [streetHeading, setStreetHeading] = useState<number>(210)
+  const [streetPitch] = useState<number>(0)
+  const [streetFov] = useState<number>(90)
   
   // Get API key from environment
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
@@ -20,15 +26,28 @@ export function LocationMap() {
   // Encode address for URLs
   const encodedAddress = encodeURIComponent(BUSINESS_ADDRESS)
   
-  // Google Maps Embed URL
-  const mapEmbedUrl = apiKey
-    ? `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${encodedAddress}&zoom=17`
-    : null
+  // Prefer place_id if provided
+  const placeId = process.env.NEXT_PUBLIC_GOOGLE_PLACE_ID || process.env.GOOGLE_PLACE_ID
 
-  // Google Street View Embed URL - using coordinates for better accuracy
-  const streetViewUrl = apiKey
-    ? `https://www.google.com/maps/embed/v1/streetview?key=${apiKey}&location=${LATITUDE},${LONGITUDE}&heading=210&pitch=0&fov=90`
-    : null
+  // Google Maps Embed URL
+  const mapEmbedUrl = useMemo(() => {
+    if (!apiKey) return null
+    if (placeId) {
+      return `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=place_id:${placeId}&zoom=17`
+    }
+    return `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${encodedAddress}&zoom=17`
+  }, [apiKey, placeId, encodedAddress])
+
+  // Google Street View Embed URL - prefer panoId; include source=outdoor
+  const streetViewUrl = useMemo(() => {
+    if (!apiKey) return null
+    const base = `https://www.google.com/maps/embed/v1/streetview?key=${apiKey}`
+    const common = `&heading=${streetHeading}&pitch=${streetPitch}&fov=${streetFov}&source=outdoor`
+    if (panoId) {
+      return `${base}&pano=${encodeURIComponent(panoId)}${common}`
+    }
+    return `${base}&location=${LATITUDE},${LONGITUDE}${common}`
+  }, [apiKey, panoId, streetHeading, streetPitch, streetFov])
 
   // Directions URL
   const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`
@@ -37,6 +56,40 @@ export function LocationMap() {
   const staticMapUrl = apiKey
     ? `https://maps.googleapis.com/maps/api/staticmap?center=${encodedAddress}&zoom=17&size=800x400&markers=color:red%7C${encodedAddress}&key=${apiKey}&scale=2`
     : null
+
+  // Try to find a better Street View pano near the storefront
+  useEffect(() => {
+    if (!apiKey || panoId) return
+
+    const radii = [30, 60, 120] // meters
+    let isCancelled = false
+
+    ;(async () => {
+      for (const radius of radii) {
+        try {
+          const url = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${LATITUDE},${LONGITUDE}&radius=${radius}&source=outdoor&key=${apiKey}`
+          const res = await fetch(url)
+          if (!res.ok) continue
+          const data = await res.json()
+          if (isCancelled) return
+          if (data && data.status === 'OK' && data.pano_id) {
+            setPanoId(data.pano_id)
+            // If Google returns 'pano_yaw_deg', use it as heading
+            if (typeof data.pano_yaw_deg === 'number') {
+              setStreetHeading(Math.round(data.pano_yaw_deg))
+            }
+            break
+          }
+        } catch (_e) {
+          // ignore and try next radius
+        }
+      }
+    })()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [apiKey, panoId])
 
   if (!apiKey) {
     return (
@@ -111,6 +164,11 @@ export function LocationMap() {
                     variant={viewMode === 'street' ? 'default' : 'outline'}
                     onClick={() => setViewMode('street')}
                     className={viewMode === 'street' ? 'bg-salsa-600 hover:bg-salsa-700' : ''}
+                    title={
+                      panoId
+                        ? 'Street View uses the closest outdoor panorama'
+                        : 'Finding best Street View…'
+                    }
                   >
                     Street View
                   </Button>
