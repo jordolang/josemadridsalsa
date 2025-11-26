@@ -29,7 +29,6 @@ interface ShopifyOrderPayload {
     shipping_lines?: { title: string; code: string; price: string }[]
     shipping_address?: ShopifyAddressPayload
     billing_address?: ShopifyAddressPayload
-    discounts?: never
     total_tax?: string
     total_discounts?: string
   }
