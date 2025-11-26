@@ -4,7 +4,7 @@ import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { generateGiftCertificateCode } from '@/lib/utils'
-import { queueEverShopSync } from '@/lib/evershop/sync'
+import { queueShopifySync } from '@/lib/shopify/sync'
 
 const GiftCertificatePurchaseSchema = z.object({
   purchaserName: z.string().min(1, 'Your name is required'),
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       },
     })
 
-    queueEverShopSync(order.id)
+    queueShopifySync(order.id)
 
     // Generate unique gift certificate code
     let code = generateGiftCertificateCode()

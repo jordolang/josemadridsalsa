@@ -782,6 +782,10 @@ WHOLESALE  → 0 admin permissions
 - **PCI Compliance** - Stripe Elements for card data
 - **Webhook Events** - Order status updates, payment confirmations
 
+### Commerce & Fulfillment
+- **Shopify Admin** - Centralized order management, shipping, and inventory sync (see `docs/shopify-integration.md`)
+- **Custom Sync Layer** - `lib/shopify` handles Admin API access, webhook verification, and Prisma mirroring
+
 ### Google Services
 - **Google OAuth** - Social sign-in
 - **Google Calendar** - Event sync (planned)

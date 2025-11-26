@@ -57,11 +57,18 @@ export default async function OrderDetailPage({
   const canWrite = await hasPermission(user, 'orders:write')
   const status = statusInfo[order.status as keyof typeof statusInfo]
   const StatusIcon = status.icon
-  const everShopAdminBase =
-    process.env.NEXT_PUBLIC_EVERSHOP_ADMIN_URL ??
-    process.env.EVERSHOP_ADMIN_URL ??
-    'http://localhost:3001/admin'
-  const everShopOrderUrl = `${everShopAdminBase.replace(/\/$/, '')}/orders?search=${encodeURIComponent(order.orderNumber)}`
+  const shopifyAdminBase =
+    process.env.NEXT_PUBLIC_SHOPIFY_ADMIN_URL ??
+    (process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN || process.env.SHOPIFY_STORE_DOMAIN
+      ? `https://${(process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN || process.env.SHOPIFY_STORE_DOMAIN || '')
+          .replace(/^https?:\/\//, '')
+          .replace(/\/$/, '')}/admin`
+      : null)
+  const normalizedShopifyAdminBase = shopifyAdminBase?.replace(/\/$/, '')
+  const shopifyOrderUrl =
+    normalizedShopifyAdminBase && order.shopifyOrderId
+      ? `${normalizedShopifyAdminBase}/orders/${order.shopifyOrderId}`
+      : null
 
   return (
     <div className="space-y-6">
@@ -86,11 +93,13 @@ export default async function OrderDetailPage({
             <StatusIcon className="mr-1 h-3 w-3" />
             {status.label}
           </Badge>
-          <Button variant="outline" size="sm" asChild>
-            <a href={everShopOrderUrl} target="_blank" rel="noreferrer">
-              View in EverShop
-            </a>
-          </Button>
+          {shopifyOrderUrl ? (
+            <Button variant="outline" size="sm" asChild>
+              <a href={shopifyOrderUrl} target="_blank" rel="noreferrer">
+                View in Shopify
+              </a>
+            </Button>
+          ) : null}
         </div>
       </div>
 

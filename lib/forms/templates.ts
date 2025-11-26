@@ -857,4 +857,81 @@ export const formBlockLibrary: FormBlockLibraryItem[] = [
       ],
     },
   },
+  {
+    id: 'event-logistics-brief',
+    label: 'Event Logistics Brief',
+    description: 'Event quick-reference block for pop-ups, demos, and festivals.',
+    section: {
+      id: 'event-logistics',
+      label: 'Event Logistics',
+      fields: [
+        { id: 'event-name', label: 'Event Name', type: 'short-text', placeholder: 'Farmers market, tasting, festival, etc.' },
+        { id: 'event-date', label: 'Event Date', type: 'date' },
+        { id: 'event-location', label: 'Location / Booth #', type: 'short-text', placeholder: 'Venue, address, booth number' },
+        { id: 'setup-requirements', label: 'Setup Requirements', type: 'long-text', placeholder: 'Tables, power, permits, samples needed' },
+        { id: 'on-site-contact', label: 'On-Site Contact & Phone', type: 'short-text' },
+      ],
+    },
+  },
+  {
+    id: 'volunteer-briefing',
+    label: 'Volunteer Briefing Checklist',
+    description: 'Shift prep checklist and safety reminders for volunteers.',
+    section: {
+      id: 'volunteer-briefing',
+      label: 'Volunteer Briefing',
+      fields: [
+        { id: 'shift-call-time', label: 'Call Time', type: 'short-text', placeholder: 'e.g., Arrive by 4:30 PM' },
+        { id: 'meeting-location', label: 'Meeting Location', type: 'short-text', placeholder: 'Warehouse bay, school gym, etc.' },
+        {
+          id: 'briefing-checklist',
+          label: 'Briefing Checklist',
+          type: 'table',
+          columns: ['Task', 'Owner', 'Status', 'Notes'],
+          defaultRows: 6,
+        },
+        {
+          id: 'safety-reminders',
+          label: 'Safety or Compliance Reminders',
+          type: 'long-text',
+          placeholder: 'Gloves, hairnets, allergy statements, emergency exits, etc.',
+        },
+      ],
+    },
+  },
+  {
+    id: 'fundraising-incentives',
+    label: 'Fundraising Incentive Tracker',
+    description: 'Track prize tiers and who has qualified for each incentive.',
+    section: {
+      id: 'incentive-tracker',
+      label: 'Incentive Tracker',
+      fields: [
+        { id: 'fundraising-goal', label: 'Overall Fundraising Goal', type: 'short-text', placeholder: '$5,000, 500 jars, etc.' },
+        {
+          id: 'incentive-table',
+          label: 'Incentive Progress',
+          type: 'table',
+          columns: ['Prize Tier', 'Requirement', 'Earned By', 'Date Awarded', 'Notes'],
+          defaultRows: 8,
+        },
+      ],
+    },
+  },
+  {
+    id: 'delivery-confirmation',
+    label: 'Delivery Confirmation Block',
+    description: 'Proof-of-delivery capture with condition check and receiver signature.',
+    section: {
+      id: 'delivery-confirmation',
+      label: 'Delivery Confirmation',
+      fields: [
+        { id: 'received-by', label: 'Received By', type: 'short-text', placeholder: 'Name + title' },
+        { id: 'receipt-date', label: 'Receipt Date', type: 'date' },
+        { id: 'all-items-accounted', label: 'All items accounted for?', type: 'checkbox' },
+        { id: 'condition-notes', label: 'Condition Notes', type: 'long-text', placeholder: 'Report damages, shortages, or follow-ups' },
+        { id: 'receiver-signature', label: 'Receiver Signature', type: 'signature' },
+      ],
+    },
+  },
 ]
