@@ -1,9 +1,22 @@
 import { prisma } from '@/lib/prisma'
-import { UserRole } from '@prisma/client'
+import { fallbackPermissionsFor } from '@/lib/permissions-data'
+import { Prisma, UserRole } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
 export type { UserRole }
+
+/**
+ * Determine if we should fall back to the default permission map.
+ * Prisma throws P2021 when a backing table has not been created yet.
+ */
+function shouldFallbackToDefaultPermissions(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021'
+}
+
+function fallbackHasPermission(role: UserRole, permissionName: string): boolean {
+  return fallbackPermissionsFor(role).includes(permissionName)
+}
 
 /**
  * Get the current user's session with role information
@@ -59,17 +72,40 @@ export async function hasPermission(
 ): Promise<boolean> {
   if (!user) return false
 
-  // Check if permission exists for this role
-  const rolePermission = await prisma.rolePermission.findFirst({
-    where: {
-      role: user.role,
-      permission: {
-        name: permissionName,
+  try {
+    const rolePermission = await prisma.rolePermission.findFirst({
+      where: {
+        role: user.role,
+        permission: {
+          name: permissionName,
+        },
       },
-    },
-  })
+    })
 
-  return !!rolePermission
+    if (rolePermission) {
+      return true
+    }
+
+    // If no DB record exists for a staff role, fall back to defaults so admins don't lose access
+    if (fallbackHasPermission(user.role, permissionName)) {
+      console.warn(
+        `[RBAC] No persisted permission "${permissionName}" for role ${user.role}. Falling back to default map.`
+      )
+      return true
+    }
+
+    return false
+  } catch (error) {
+    if (shouldFallbackToDefaultPermissions(error)) {
+      console.warn(
+        `[RBAC] Permission tables are missing in the database. Using fallback permissions for role ${user.role}.`
+      )
+      return fallbackHasPermission(user.role, permissionName)
+    }
+
+    console.error('[RBAC] Error checking permission:', error)
+    return false
+  }
 }
 
 /**
@@ -118,12 +154,26 @@ export async function getUserPermissions(
       include: { permission: true },
     })
 
+    if (rolePermissions.length === 0) {
+      const fallback = fallbackPermissionsFor(user.role)
+      if (fallback.length > 0) {
+        console.warn(
+          `[RBAC] No stored permissions found for role ${user.role}. Using fallback defaults.`
+        )
+      }
+      return fallback
+    }
+
     return rolePermissions.map((rp) => rp.permission.name)
   } catch (error) {
     console.error('[RBAC] Error fetching user permissions:', error)
-    // Return empty array if permissions table doesn't exist or has issues
-    // This allows admins to still access the panel even without permissions configured
-    return []
+    const fallback = fallbackPermissionsFor(user.role)
+    if (fallback.length > 0) {
+      console.warn(
+        `[RBAC] Returning fallback permissions for role ${user.role} due to database error.`
+      )
+    }
+    return fallback
   }
 }
 
