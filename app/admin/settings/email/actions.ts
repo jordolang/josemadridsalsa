@@ -1,0 +1,142 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { prisma } from '@/lib/prisma'
+import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
+import nodemailer from 'nodemailer'
+
+export async function saveEmailConfig(formData: FormData) {
+  const user = await getCurrentUser()
+  
+  if (!user || !(await hasAnyPermission(user, ['settings:write']))) {
+    return { error: 'Unauthorized' }
+  }
+  
+  try {
+    const name = formData.get('name') as string
+    const fromEmail = formData.get('fromEmail') as string
+    const fromName = (formData.get('fromName') as string) || null
+    const replyToEmail = (formData.get('replyToEmail') as string) || null
+    
+    const smtpHost = (formData.get('smtpHost') as string) || null
+    const smtpPort = formData.get('smtpPort') ? parseInt(formData.get('smtpPort') as string) : null
+    const smtpUsername = (formData.get('smtpUsername') as string) || null
+    const smtpPassword = (formData.get('smtpPassword') as string) || null
+    const smtpSecure = formData.get('smtpSecure') === 'on'
+    
+    const useResend = formData.get('useResend') === 'on'
+    const isDefault = formData.get('isDefault') === 'on'
+    const isActive = formData.get('isActive') === 'on'
+    
+    const maxPerHour = parseInt(formData.get('maxPerHour') as string) || 1000
+    const maxPerDay = parseInt(formData.get('maxPerDay') as string) || 10000
+    
+    if (!name || !fromEmail) {
+      return { error: 'Name and from email are required' }
+    }
+    
+    // If setting as default, unset other defaults
+    if (isDefault) {
+      await prisma.emailConfiguration.updateMany({
+        where: { isDefault: true },
+        data: { isDefault: false },
+      })
+    }
+    
+    // Create configuration
+    // Note: In production, you should encrypt smtpPassword before storing
+    await prisma.emailConfiguration.create({
+      data: {
+        name,
+        smtpHost,
+        smtpPort,
+        smtpUsername,
+        smtpPassword, // TODO: Encrypt this
+        smtpSecure,
+        fromEmail,
+        fromName,
+        replyToEmail,
+        isDefault,
+        isActive,
+        useResend,
+        maxPerHour,
+        maxPerDay,
+      },
+    })
+    
+    revalidatePath('/admin/settings/email')
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error saving email config:', error)
+    return { error: 'Failed to save configuration' }
+  }
+}
+
+export async function testEmailConfig(configId: string) {
+  const user = await getCurrentUser()
+  
+  if (!user || !(await hasAnyPermission(user, ['settings:write']))) {
+    return { success: false, message: 'Unauthorized' }
+  }
+  
+  try {
+    const config = await prisma.emailConfiguration.findUnique({
+      where: { id: configId },
+    })
+    
+    if (!config) {
+      return { success: false, message: 'Configuration not found' }
+    }
+    
+    if (!config.smtpHost) {
+      return { success: false, message: 'No SMTP configuration to test' }
+    }
+    
+    // Create transporter
+    const transporter = nodemailer.createTransport({
+      host: config.smtpHost,
+      port: config.smtpPort || 587,
+      secure: config.smtpSecure,
+      auth: config.smtpUsername && config.smtpPassword ? {
+        user: config.smtpUsername,
+        pass: config.smtpPassword, // TODO: Decrypt if encrypted
+      } : undefined,
+    })
+    
+    // Verify connection
+    await transporter.verify()
+    
+    return { 
+      success: true, 
+      message: 'Connection successful! SMTP server is configured correctly.' 
+    }
+  } catch (error) {
+    console.error('SMTP test error:', error)
+    return { 
+      success: false, 
+      message: `Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }
+  }
+}
+
+export async function deleteEmailConfig(configId: string) {
+  const user = await getCurrentUser()
+  
+  if (!user || !(await hasAnyPermission(user, ['settings:write']))) {
+    return { error: 'Unauthorized' }
+  }
+  
+  try {
+    await prisma.emailConfiguration.delete({
+      where: { id: configId },
+    })
+    
+    revalidatePath('/admin/settings/email')
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting email config:', error)
+    return { error: 'Failed to delete configuration' }
+  }
+}

@@ -128,6 +128,11 @@ export const adminNavigation: NavItem[] = [
         permission: 'content:read',
       },
       {
+        label: 'Email Campaigns',
+        href: '/admin/email-campaigns',
+        permission: 'content:write',
+      },
+      {
         label: 'Reviews',
         href: '/admin/reviews',
         permission: 'content:read',
@@ -200,6 +205,11 @@ export const adminNavigation: NavItem[] = [
         label: 'Integrations',
         href: '/admin/settings/integrations',
         permission: 'api_keys:manage',
+      },
+      {
+        label: 'Email Settings',
+        href: '/admin/settings/email',
+        permission: 'settings:write',
       },
       {
         label: 'Audit Logs',
