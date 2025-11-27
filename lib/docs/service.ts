@@ -163,11 +163,16 @@ export async function resolveDocAccess(slugParts: string[] | undefined, canViewP
   }
 
   // Try to get database entry, but don't fail if DB is unavailable
+  // Skip DB query entirely during build time
   let entry: DocumentationEntry | null = null
-  try {
-    entry = await getDocRecord(slug)
-  } catch (error) {
-    console.error('[resolveDocAccess] Database error, proceeding without DB entry:', error)
+  const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build'
+  
+  if (!isBuildTime) {
+    try {
+      entry = await getDocRecord(slug)
+    } catch (error) {
+      console.error('[resolveDocAccess] Database error, proceeding without DB entry:', error)
+    }
   }
 
   const visibility = entry ? toFrontendVisibility(entry.visibility) : toFrontendVisibility((page.data as any).visibility)
