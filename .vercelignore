@@ -9,8 +9,10 @@ tests/
 __tests__/
 coverage/
 
-# Documentation  
-# Keep all .md files for fumadocs
+# Documentation
+docs/
+*.md
+!README.md
 
 # Backstage
 backstage/
