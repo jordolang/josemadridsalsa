@@ -9,12 +9,9 @@ tests/
 __tests__/
 coverage/
 
-# Documentation
-# Note: Keep *.md exclusion but allow docs/ folder for fumadocs
-!docs/
-*.md
-!README.md
-!docs/*.md
+# Documentation (keep docs/ folder for fumadocs)
+# Only exclude README.md at root, but include all docs/**/*.md
+/README.md
 
 # Backstage
 backstage/
