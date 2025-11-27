@@ -7,7 +7,17 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { substituteVariables } from '@/lib/email/sender'
+
+// Client-side variable substitution (can't import from sender.ts due to nodemailer)
+function substituteVariables(template: string, variables: Record<string, any>): string {
+  let result = template
+  Object.keys(variables).forEach((key) => {
+    const value = variables[key] ?? ''
+    const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g')
+    result = result.replace(regex, String(value))
+  })
+  return result
+}
 
 interface Template {
   id: string
