@@ -48,9 +48,15 @@ export default async function DocumentationPage({ params }: PageProps) {
   const user = await getCurrentUser()
   const canViewPrivate = isStaff(user)
   const { slug } = await params
+  
+  console.log('[DocumentationPage] Slug parts:', slug, 'canViewPrivate:', canViewPrivate)
+  
   const result = await resolveDocAccess(slug, canViewPrivate)
+  
+  console.log('[DocumentationPage] Result:', result ? 'found' : 'null')
 
   if (!result) {
+    console.log('[DocumentationPage] Not found, calling notFound()')
     notFound()
   }
 

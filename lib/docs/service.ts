@@ -152,9 +152,13 @@ export async function updateDocEntry(
 
 export async function resolveDocAccess(slugParts: string[] | undefined, canViewPrivate: boolean) {
   const slug = docSlugFromParams(slugParts)
+  console.log('[resolveDocAccess] slugParts:', slugParts, 'slug:', slug)
+  
   const page = docSource.getPage(slugParts)
+  console.log('[resolveDocAccess] page found:', !!page)
 
   if (!page) {
+    console.log('[resolveDocAccess] No page found for slug parts:', slugParts)
     return null
   }
 
