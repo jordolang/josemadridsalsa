@@ -10,9 +10,10 @@ __tests__/
 coverage/
 
 # Documentation
-# docs/ folder must be included for fumadocs to work
+# docs/ folder must be included for fumadocs to work  
 *.md
 !README.md
+!docs/**/*.md
 
 # Backstage
 backstage/
