@@ -51,7 +51,6 @@ const footerLinks = {
     { label: "Check Gift Certificate Balance", href: "/gift-certificates/balance" },
     { label: "Manage Subscription", href: "/account/settings" },
     { label: "Contact Support", href: "mailto:support@josemadridsalsa.com" },
-    { label: "Documentation", href: "/docs" },
   ],
   legal: [
     { label: "Privacy Policy", href: "/privacy" },
