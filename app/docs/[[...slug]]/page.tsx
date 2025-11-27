@@ -6,8 +6,6 @@ import { docSource } from '@/lib/docs/source'
 import { resolveDocAccess } from '@/lib/docs/service'
 import { getCurrentUser, isStaff } from '@/lib/rbac'
 
-export const dynamic = 'force-dynamic'
-
 interface PageProps {
   params: Promise<{
     slug?: string[]
