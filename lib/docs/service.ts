@@ -155,25 +155,29 @@ export async function resolveDocAccess(slugParts: string[] | undefined, canViewP
   const page = docSource.getPage(slugParts)
 
   if (!page) {
-    console.log('[resolveDocAccess] Page not found for slug:', slug, 'slugParts:', slugParts)
     return null
   }
 
-  const entry = await getDocRecord(slug)
+  // Try to get database entry, but don't fail if DB is unavailable
+  let entry: DocumentationEntry | null = null
+  try {
+    entry = await getDocRecord(slug)
+  } catch (error) {
+    console.error('[resolveDocAccess] Database error, proceeding without DB entry:', error)
+  }
+
   const visibility = entry ? toFrontendVisibility(entry.visibility) : toFrontendVisibility((page.data as any).visibility)
   const isPublished = entry?.isPublished ?? true
 
-  console.log('[resolveDocAccess]', { slug, hasEntry: !!entry, visibility, isPublished, canViewPrivate })
-
-  if ((!isPublished || visibility === 'developer') && !canViewPrivate) {
-    console.log('[resolveDocAccess] Access denied - isPublished:', isPublished, 'visibility:', visibility)
+  // Only restrict access if there's explicit DB configuration saying so
+  if (entry && (!isPublished || visibility === 'developer') && !canViewPrivate) {
     return null
   }
 
   return {
     slug,
     page,
-    entry,
+    entry: entry ?? undefined,
     visibility,
     isPublished,
   }
