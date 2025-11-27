@@ -28,6 +28,7 @@
     "products:transform": "tsx scripts/transform-products-csv.ts",
     "products:ensure-category": "tsx scripts/ensure-salsa-category.ts",
     "products:test-import": "tsx scripts/test-csv-import.ts",
+    "shopify:test-webhook": "tsx scripts/test-shopify-webhook.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
     "db:production:sync": "node scripts/sync-production-schema.js",
