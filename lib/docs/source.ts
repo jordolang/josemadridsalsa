@@ -1,6 +1,6 @@
 import { loader, map } from 'fumadocs-core/source'
 import type { PageData } from 'fumadocs-core/source'
-import { docs as docsCollection } from '../../.source/server'
+import { docs as docsCollection } from '../../.source'
 
 export type DocVisibility = 'public' | 'developer'
 
