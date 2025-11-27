@@ -364,7 +364,7 @@ requirePermission() → validate() → execute() → logAudit() → respond()
 ## Deployment Checklist
 
 ### Environment Variables Required
-```env
+```bash
 DATABASE_URL=
 NEXTAUTH_SECRET=
 NEXTAUTH_URL=

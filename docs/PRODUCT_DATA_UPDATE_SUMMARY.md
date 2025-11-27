@@ -98,7 +98,7 @@ All images properly located in `/public/images/products/`:
 
 1. **`scripts/scrape-products.py`**
    - Scrapes all products from josemadridsalsa.com
-   - Output: `scraped-products.json`
+   - Output: Product data for seeding
 
 2. **`scripts/generate-seed-data.py`**
    - Organizes scraped data by heat level

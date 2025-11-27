@@ -47,10 +47,6 @@ const navigationItems = [
     href: "/our-story",
   },
   {
-    title: "Docs",
-    href: "/docs",
-  },
-  {
     title: "Find Us",
     href: "/find-us",
   },

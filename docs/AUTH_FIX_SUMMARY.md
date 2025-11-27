@@ -83,7 +83,7 @@ export { handler as GET, handler as POST }
 - Generated a strong secret using crypto
 
 **Current values:**
-```env
+```bash
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="71d6c19fd251388a9cb6012840460b546f6c411f4ea8b2efad6b1e7881a4eb2c"
 ```

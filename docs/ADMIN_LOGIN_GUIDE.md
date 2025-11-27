@@ -153,7 +153,7 @@ Once logged in, you'll have access to:
 ### Session Expires Quickly
 
 **Update `.env`:**
-```env
+```bash
 NEXTAUTH_SECRET=your-secret-key-here
 NEXTAUTH_URL=http://localhost:3000
 ```
@@ -191,7 +191,7 @@ The admin panel uses role-based access control (RBAC):
 
 Required for admin panel to work:
 
-```env
+```bash
 # Database
 DATABASE_URL="postgresql://..."
 

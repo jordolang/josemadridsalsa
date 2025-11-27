@@ -70,7 +70,7 @@ Branded HTML email with:
 
 ## Environment Variables Required
 
-```env
+```bash
 # Already configured in your .env file
 NEXTAUTH_URL=http://localhost:3000  # Update for production
 RESEND_API_KEY=re_...
