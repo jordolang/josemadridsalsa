@@ -33,7 +33,7 @@ function humanizeTitle(value: string) {
 const enrichedSource = map(rawSource).page((entry) => {
   const segments = normalizeSegments(entry)
   const slug = segments.length > 0 ? segments.join('/') : 'index'
-  const fallbackTitle = entry.data.title ?? humanizeTitle(segments.at(-1) ?? 'Documentation')
+  const fallbackTitle = entry.data.title ?? humanizeTitle(segments[segments.length - 1] ?? 'Documentation')
   const visibility = (entry.data.visibility as DocVisibility | undefined) ?? 'public'
 
   return {
@@ -68,5 +68,5 @@ export function docSlugFromParams(slug?: string[]) {
 }
 
 export function docTree() {
-  return docSource.pageTree()
+  return docSource.pageTree
 }

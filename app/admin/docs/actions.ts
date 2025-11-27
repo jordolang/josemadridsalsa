@@ -18,10 +18,9 @@ const updateVisibilitySchema = z.object({
 
 export async function syncDocsAction() {
   await requirePermission('content:publish')
-  const summary = await syncDocumentationEntries()
+  await syncDocumentationEntries()
   revalidatePath('/admin/docs')
   revalidatePath('/docs')
-  return summary
 }
 
 export async function updateDocPublishingAction(slug: string, isPublished: boolean) {

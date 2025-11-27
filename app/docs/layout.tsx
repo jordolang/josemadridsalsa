@@ -9,7 +9,7 @@ interface DocsLayoutProps {
 export default function DocumentationLayout({ children }: DocsLayoutProps) {
   return (
     <DocsLayout
-      tree={docSource.pageTree()}
+      tree={docSource.pageTree}
       githubUrl="https://github.com/josemadridsalsa/josemadridsalsa"
       nav={{
         title: 'Jose Madrid Salsa Docs',

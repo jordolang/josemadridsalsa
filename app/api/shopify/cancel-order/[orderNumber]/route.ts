@@ -8,10 +8,10 @@ interface CancelOrderBody {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { orderNumber: string } }
+  { params }: { params: Promise<{ orderNumber: string }> }
 ) {
   try {
-    const orderNumber = params.orderNumber
+    const { orderNumber } = await params
 
     if (!orderNumber) {
       return NextResponse.json({ error: 'Order number is required' }, { status: 400 })

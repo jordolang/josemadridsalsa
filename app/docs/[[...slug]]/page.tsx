@@ -9,9 +9,9 @@ import { getCurrentUser, isStaff } from '@/lib/rbac'
 export const dynamic = 'force-dynamic'
 
 interface PageProps {
-  params: {
+  params: Promise<{
     slug?: string[]
-  }
+  }>
 }
 
 export async function generateStaticParams() {
@@ -19,7 +19,8 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const result = await resolveDocAccess(params.slug, false)
+  const { slug } = await params
+  const result = await resolveDocAccess(slug, false)
 
   if (!result) {
     return {
@@ -46,7 +47,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function DocumentationPage({ params }: PageProps) {
   const user = await getCurrentUser()
   const canViewPrivate = isStaff(user)
-  const result = await resolveDocAccess(params.slug, canViewPrivate)
+  const { slug } = await params
+  const result = await resolveDocAccess(slug, canViewPrivate)
 
   if (!result) {
     notFound()
