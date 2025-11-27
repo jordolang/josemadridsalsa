@@ -13,6 +13,7 @@
     "lint": "next lint",
     "pretype-check": "npm run docs:sync",
     "type-check": "tsc --noEmit",
+    "test": "vitest run",
     "postinstall": "prisma generate && npm run docs:sync",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
