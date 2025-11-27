@@ -20,8 +20,9 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/auth/signin',
+    error: '/auth/error',
   },
-  debug: true, // Enable debug mode to see detailed logs
+  debug: process.env.NODE_ENV === 'development', // Only enable debug in development
   logger: {
     error(code, metadata) {
       console.error('[NextAuth Error]', code, metadata)
