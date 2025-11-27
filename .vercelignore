@@ -9,11 +9,8 @@ tests/
 __tests__/
 coverage/
 
-# Documentation
-# docs/ folder must be included for fumadocs to work  
-*.md
-!README.md
-!docs/**/*.md
+# Documentation  
+# Keep all .md files for fumadocs
 
 # Backstage
 backstage/
