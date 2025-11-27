@@ -97,6 +97,11 @@ export const adminNavigation: NavItem[] = [
         href: '/admin/training-data',
         permission: 'content:write',
       },
+      {
+        label: 'Documentation',
+        href: '/admin/docs',
+        permission: 'content:read',
+      },
     ],
   },
   {
