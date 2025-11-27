@@ -155,6 +155,7 @@ export async function resolveDocAccess(slugParts: string[] | undefined, canViewP
   const page = docSource.getPage(slugParts)
 
   if (!page) {
+    console.log('[resolveDocAccess] Page not found for slug:', slug, 'slugParts:', slugParts)
     return null
   }
 
@@ -162,7 +163,10 @@ export async function resolveDocAccess(slugParts: string[] | undefined, canViewP
   const visibility = entry ? toFrontendVisibility(entry.visibility) : toFrontendVisibility((page.data as any).visibility)
   const isPublished = entry?.isPublished ?? true
 
+  console.log('[resolveDocAccess]', { slug, hasEntry: !!entry, visibility, isPublished, canViewPrivate })
+
   if ((!isPublished || visibility === 'developer') && !canViewPrivate) {
+    console.log('[resolveDocAccess] Access denied - isPublished:', isPublished, 'visibility:', visibility)
     return null
   }
 
