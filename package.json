@@ -7,12 +7,13 @@
     "dev": "next dev --turbo",
     "dev:fast": "next dev --turbo --port 3000",
     "dev:debug": "next dev --turbo --inspect",
-    "prebuild": "node scripts/sync-findus.js",
+    "prebuild": "npm run docs:sync && node scripts/sync-findus.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "pretype-check": "npm run docs:sync",
     "type-check": "tsc --noEmit",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && npm run docs:sync",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
@@ -31,7 +32,8 @@
     "db:reset": "prisma migrate reset --force",
     "create-admin": "tsx scripts/create-admin.ts",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
-    "fresh": "npm run clean && npm install && npm run dev"
+    "fresh": "npm run clean && npm install && npm run dev",
+    "docs:sync": "fumadocs-mdx fumadocs.config.ts .source"
   },
   "keywords": [
     "salsa",
@@ -44,6 +46,7 @@
   "license": "MIT",
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.0",
+    "@fumadocs/mdx-remote": "^1.4.3",
     "@hookform/resolvers": "^5.2.2",
     "@openai/codex-sdk": "^0.57.0",
     "@prisma/client": "^6.19.0",
@@ -70,6 +73,9 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
+    "fumadocs-core": "^15.8.5",
+    "fumadocs-mdx": "^14.0.3",
+    "fumadocs-ui": "^15.8.5",
     "googleapis": "^143.0.0",
     "jszip": "^3.10.1",
     "lucide-react": "^0.545.0",
