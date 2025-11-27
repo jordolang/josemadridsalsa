@@ -61,25 +61,6 @@ jobs:
           ref: ${{ steps.pr.outputs.head_sha }}
           fetch-depth: 0
 
-      - name: Use Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run lint
-        id: lint
-        run: npm run lint
-        continue-on-error: true
-
-      - name: Run type-check
-        id: typecheck
-        run: npm run type-check
-        continue-on-error: true
-
       - name: Codex review summary
         uses: actions/github-script@v7
         env:
@@ -87,8 +68,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           EVENT_ACTION: ${{ github.event.action }}
           COMMENT_AUTHOR: ${{ github.event.comment.user.login || '' }}
-          LINT_OUTCOME: ${{ steps.lint.outcome }}
-          TYPE_OUTCOME: ${{ steps.typecheck.outcome }}
+          HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
         with:
           script: |
             const marker = '<!-- codex-review -->'
@@ -160,15 +140,29 @@ jobs:
                 .join(', ')}. Consider updating the description for reviewers.`
             }
 
-            const formatOutcome = (name, value) => {
-              if (value === 'success') return `| ${name} | ✅ Passed |`
-              if (value === 'failure') return `| ${name} | ❌ Failed — see workflow logs |`
-              if (value === 'cancelled') return `| ${name} | ⚠️ Cancelled |`
-              return `| ${name} | ⚠️ Not run |`
+            // Fetch CI workflow status for this commit
+            const workflows = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head_sha: process.env.HEAD_SHA,
+              per_page: 10,
+            })
+            
+            const ciRun = workflows.data.workflow_runs.find(run => run.name === 'CI')
+            const ciStatus = ciRun ? ciRun.conclusion || ciRun.status : 'pending'
+            const ciUrl = ciRun ? ciRun.html_url : ''
+            
+            const formatCiStatus = (status) => {
+              if (status === 'success') return `✅ Passed`
+              if (status === 'failure') return `❌ Failed`
+              if (status === 'in_progress' || status === 'queued' || status === 'pending') return `⏳ Running`
+              if (status === 'cancelled') return `⚠️ Cancelled`
+              return `⚠️ Not found`
             }
-
-            const lintRow = formatOutcome('npm run lint', process.env.LINT_OUTCOME)
-            const typeRow = formatOutcome('npm run type-check', process.env.TYPE_OUTCOME)
+            
+            const ciRow = ciUrl 
+              ? `| [CI Checks](${ciUrl}) | ${formatCiStatus(ciStatus)} |`
+              : `| CI Checks | ${formatCiStatus(ciStatus)} |`
 
             const trigger =
               process.env.EVENT_NAME === 'issue_comment'
@@ -196,8 +190,7 @@ jobs:
             ### Automated Checks
             | Check | Result |
             | --- | --- |
-            ${lintRow}
-            ${typeRow}
+            ${ciRow}
 
             _Reply with \`@codex\` after pushing new commits to queue another review._`
               .replace(/^[ \t]+/gm, '')
@@ -230,8 +223,4 @@ jobs:
                 issue_number: prNumber,
                 body,
               })
-            }
-
-            if (process.env.LINT_OUTCOME === 'failure' || process.env.TYPE_OUTCOME === 'failure') {
-              core.setFailed('One or more automated checks failed. See Codex review comment for details.')
             }
