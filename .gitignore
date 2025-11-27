@@ -62,3 +62,6 @@ docs/backstage/
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
+
+# Vercel production env
+.env.vercel.production
