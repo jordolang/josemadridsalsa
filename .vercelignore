@@ -9,11 +9,12 @@ tests/
 __tests__/
 coverage/
 
-# Documentation  
-# Note: docs/ must NOT be ignored as it contains fumadocs MDX source files
+# Documentation
+# Note: Keep *.md exclusion but allow docs/ folder for fumadocs
+!docs/
 *.md
 !README.md
-!docs/**/*.md
+!docs/*.md
 
 # Backstage
 backstage/
