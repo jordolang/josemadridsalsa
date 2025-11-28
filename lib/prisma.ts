@@ -7,6 +7,12 @@ const globalForPrisma = globalThis as unknown as {
 
 let prismaClient: PrismaClient | null = null
 
+// Ensure DATABASE_URL is set; some deployments only provide POSTGRES_URL
+if (!process.env.DATABASE_URL && process.env.POSTGRES_URL) {
+  process.env.DATABASE_URL = process.env.POSTGRES_URL
+  console.log('[Prisma] DATABASE_URL not set, fell back to POSTGRES_URL')
+}
+
 try {
   // Support both Prisma Accelerate and direct Postgres URLs
   const usesAccelerate = Boolean(
@@ -24,11 +30,32 @@ try {
     
   console.log('[Prisma] Client initialized successfully')
 } catch (error) {
-  console.error('[Prisma] Failed to initialize client:', error)
-  // Create a minimal client that will fail gracefully
-  prismaClient = new PrismaClient({
-    log: ['error'],
-  })
+  console.error('[Prisma] Failed to initialize client with DATABASE_URL:', error)
+
+  // If a POSTGRES_URL exists, try again with that value as a fallback
+  const fallbackUrl = process.env.POSTGRES_URL
+  const attemptedUrl = process.env.DATABASE_URL
+  if (fallbackUrl && fallbackUrl !== attemptedUrl) {
+    try {
+      process.env.DATABASE_URL = fallbackUrl
+      console.log('[Prisma] Retrying client init with POSTGRES_URL fallback')
+
+      const baseClient = new PrismaClient({
+        log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+      })
+
+      prismaClient = baseClient
+      console.log('[Prisma] Client initialized successfully with POSTGRES_URL fallback')
+    } catch (fallbackError) {
+      console.error('[Prisma] Fallback initialization also failed:', fallbackError)
+      prismaClient = new PrismaClient({ log: ['error'] })
+    }
+  } else {
+    // Create a minimal client that will fail gracefully
+    prismaClient = new PrismaClient({
+      log: ['error'],
+    })
+  }
 }
 
 export const prisma =
