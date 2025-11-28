@@ -13,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useInteractiveCard } from '@/hooks/useInteractiveCard'
 import { useCartStore } from '@/lib/store/cart'
 import { formatPrice, getHeatLevelColor, getHeatLevelText } from '@/lib/utils'
 import { useState } from 'react'
@@ -41,12 +40,6 @@ export function ProductCard({ product }: ProductCardProps) {
   const openCart = useCartStore((state) => state.openCart)
   const [imageError, setImageError] = useState(false)
   const [isQuickViewOpen, setQuickViewOpen] = useState(false)
-  const {
-    cardRef,
-    handlePointerMove,
-    handlePointerLeave,
-    handlePointerUp,
-  } = useInteractiveCard<HTMLDivElement>()
 
   const handleAddToCart = () => {
     addItem({
@@ -76,13 +69,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Dialog open={isQuickViewOpen} onOpenChange={setQuickViewOpen}>
-      <Card
-        ref={cardRef}
-        className="group interactive-card overflow-hidden"
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-        onPointerUp={handlePointerUp}
-      >
+      <Card className="group interactive-card overflow-hidden">
         <div className="relative">
           <Link href={`/salsas/${product.slug}`}>
             <div className="relative overflow-hidden bg-muted flex items-center justify-center min-h-[300px]">

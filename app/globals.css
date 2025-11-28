@@ -82,20 +82,36 @@
     position: relative;
     isolation: isolate;
     transition: transform 0.35s ease, box-shadow 0.35s ease;
-    transform-style: preserve-3d;
+    transform: translate3d(0, 0, 0);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
   }
 
-  .interactive-card::after {
+  .interactive-card:hover,
+  .interactive-card:focus-within {
+    transform: translate3d(0, -8px, 0);
+    box-shadow:
+      0 20px 45px rgba(15, 23, 42, 0.18),
+      0 18px 35px rgba(234, 88, 12, 0.18);
+  }
+
+  .interactive-card::before {
     content: '';
     position: absolute;
-    inset: 0;
+    inset: 10px;
     border-radius: inherit;
     pointer-events: none;
-    background: radial-gradient(circle at var(--interactive-card-glow-x, 50%) var(--interactive-card-glow-y, 50%), rgba(234, 88, 12, 0.35), transparent 55%);
-    opacity: var(--interactive-card-glow-opacity, 0);
-    transition: opacity 0.35s ease;
+    background: radial-gradient(ellipse 90% 60% at 50% 110%, rgba(234, 88, 12, 0.45), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.35s ease, transform 0.35s ease;
     filter: blur(25px);
     z-index: -1;
+    transform: translateY(10px);
+  }
+
+  .interactive-card:hover::before,
+  .interactive-card:focus-within::before {
+    opacity: 1;
+    transform: translateY(22px) scale(1.05);
   }
   
   .input-field {

@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input'
 import { Clock, Users, ChefHat } from 'lucide-react'
 import type { Recipe } from '@/types/recipe'
 import { recipeData } from '@/lib/data/recipes'
-import { useInteractiveCard } from '@/hooks/useInteractiveCard'
 
 type RecipesClientProps = {
   initialRecipes: Recipe[]
@@ -213,16 +212,8 @@ export function RecipesClient({ initialRecipes }: RecipesClientProps) {
 }
 
 function RecipeGridCard({ recipe }: { recipe: Recipe }) {
-  const { cardRef, handlePointerLeave, handlePointerMove, handlePointerUp } = useInteractiveCard<HTMLDivElement>()
-
   return (
-    <div
-      ref={cardRef}
-      className="group card interactive-card overflow-hidden"
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
-      onPointerUp={handlePointerUp}
-    >
+    <div className="group card interactive-card overflow-hidden">
       <Link href={`/recipes/${recipe.slug}`}>
         <div className="relative h-48 bg-gray-100 dark:bg-gray-800">
           <Image
