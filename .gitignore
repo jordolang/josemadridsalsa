@@ -50,6 +50,9 @@ gcloud/
 backstage/
 josemadridsalsa/
 
+# Data files
+data/
+
 # Examples and docs
 examples/
 docs/backstage/
