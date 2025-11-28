@@ -1,5 +1,7 @@
 # 🌶️ Jose Madrid Salsa - E-Commerce Platform
 
+![Jose Madrid Salsa Website](public/images/Opengraph/main-page.png)
+
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-15.5-black.svg)](https://nextjs.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-6.19-2D3748.svg)](https://www.prisma.io/)
