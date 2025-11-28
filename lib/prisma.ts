@@ -8,12 +8,17 @@ const globalForPrisma = globalThis as unknown as {
 let prismaClient: PrismaClient | null = null
 
 try {
+  // Support both Prisma Accelerate and direct Postgres URLs
+  const usesAccelerate = Boolean(
+    process.env.DATABASE_URL?.startsWith('prisma://') ||
+    process.env.DATABASE_URL?.startsWith('prisma+postgres://')
+  )
+
   const baseClient = new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   })
 
-  // Use Accelerate extension only if DATABASE_URL uses the accelerate protocol
-  prismaClient = process.env.DATABASE_URL?.includes('prisma+postgres://')
+  prismaClient = usesAccelerate
     ? (baseClient.$extends(withAccelerate()) as unknown as PrismaClient)
     : baseClient
     
