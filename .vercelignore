@@ -11,8 +11,8 @@ coverage/
 
 # Documentation
 docs/
-*.md
 !README.md
+gcloud/
 
 # Backstage
 backstage/

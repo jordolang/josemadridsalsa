@@ -1,3 +1,8 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const projectRoot = path.dirname(fileURLToPath(import.meta.url))
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -51,10 +56,11 @@ const nextConfig = {
       allowedOrigins: ['localhost:3000'],
     },
   },
-  // Temporarily disable linting and type checking for deployment
-  eslint: {
-    ignoreDuringBuilds: true,
+  turbopack: {
+    // Force Turbopack to resolve packages from the actual repo root.
+    root: projectRoot,
   },
+  // Temporarily disable type checking for deployment
   typescript: {
     ignoreBuildErrors: true,
   },
