@@ -1,5 +1,5 @@
 import { parseFindUsMarkdown, readFindUsMarkdownAbsolute } from '@/lib/find-us-parser'
-import locationPhotos from '@/public/location-photos.json' assert { type: 'json' }
+import locationPhotos from '@/data/location-photos.json' assert { type: 'json' }
 import legacyLocations from '@/lib/locations/locations-data.json' assert { type: 'json' }
 import { readFile } from 'fs/promises'
 import { join } from 'path'
