@@ -7,6 +7,12 @@ const globalForPrisma = globalThis as unknown as {
 
 let prismaClient: PrismaClient | null = null
 
+const sanitizeUrl = (value?: string | null) => value?.trim()
+
+// Normalize env values (copy/paste into Vercel can leave trailing whitespace/newlines)
+process.env.DATABASE_URL = sanitizeUrl(process.env.DATABASE_URL) || undefined
+process.env.POSTGRES_URL = sanitizeUrl(process.env.POSTGRES_URL) || undefined
+
 // Ensure DATABASE_URL is set; some deployments only provide POSTGRES_URL
 if (!process.env.DATABASE_URL && process.env.POSTGRES_URL) {
   process.env.DATABASE_URL = process.env.POSTGRES_URL
@@ -14,11 +20,13 @@ if (!process.env.DATABASE_URL && process.env.POSTGRES_URL) {
 }
 
 try {
+  const databaseUrl = process.env.DATABASE_URL
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is not set')
+  }
+
   // Support both Prisma Accelerate and direct Postgres URLs
-  const usesAccelerate = Boolean(
-    process.env.DATABASE_URL?.startsWith('prisma://') ||
-    process.env.DATABASE_URL?.startsWith('prisma+postgres://')
-  )
+  const usesAccelerate = databaseUrl.startsWith('prisma://') || databaseUrl.startsWith('prisma+postgres://')
 
   const baseClient = new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
