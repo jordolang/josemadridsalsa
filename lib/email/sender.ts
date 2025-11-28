@@ -99,14 +99,15 @@ export async function sendEmail(
       const { transporter, config } = smtpConfig
       
       try {
-        const info = await transporter.sendMail({
+        const replyTo = options.replyTo ?? config.replyToEmail ?? undefined
+        const info = (await transporter.sendMail({
           from: options.from || `${config.fromName || 'Jose Madrid Salsa'} <${config.fromEmail}>`,
           to: options.to,
-          replyTo: options.replyTo || config.replyToEmail,
+          replyTo,
           subject: options.subject,
           html: options.html,
           text: options.text,
-        })
+        })) as nodemailer.SentMessageInfo
         
         return {
           success: true,

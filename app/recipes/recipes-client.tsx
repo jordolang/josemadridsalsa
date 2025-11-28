@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Clock, Users, ChefHat } from 'lucide-react'
 import type { Recipe } from '@/types/recipe'
 import { recipeData } from '@/lib/data/recipes'
+import { useInteractiveCard } from '@/hooks/useInteractiveCard'
 
 type RecipesClientProps = {
   initialRecipes: Recipe[]
@@ -32,6 +33,30 @@ const difficulties = [
   { value: 'Hard', label: 'Hard' },
 ]
 
+const calculateTotalMinutes = (prepTime: string, cookTime: string) => {
+  const prepMinutes = parseInt(prepTime, 10)
+  const cookMinutes = parseInt(cookTime, 10)
+
+  if (Number.isNaN(prepMinutes) || Number.isNaN(cookMinutes)) {
+    return null
+  }
+
+  return prepMinutes + cookMinutes
+}
+
+const getDifficultyColor = (difficulty: string) => {
+  switch (difficulty) {
+    case 'Easy':
+      return 'bg-green-100 text-green-800'
+    case 'Medium':
+      return 'bg-yellow-100 text-yellow-800'
+    case 'Hard':
+      return 'bg-red-100 text-red-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
+  }
+}
+
 export function RecipesClient({ initialRecipes }: RecipesClientProps) {
   const recipes = initialRecipes.length > 0 ? initialRecipes : fallbackRecipes
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -50,31 +75,7 @@ export function RecipesClient({ initialRecipes }: RecipesClientProps) {
     })
   }, [recipes, searchTerm, selectedCategory, selectedDifficulty])
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'Easy':
-        return 'bg-green-100 text-green-800'
-      case 'Medium':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'Hard':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
   const baseRecipesCount = recipes.length
-
-  const calculateTotalMinutes = (prepTime: string, cookTime: string) => {
-    const prepMinutes = parseInt(prepTime, 10)
-    const cookMinutes = parseInt(cookTime, 10)
-
-    if (Number.isNaN(prepMinutes) || Number.isNaN(cookMinutes)) {
-      return null
-    }
-
-    return prepMinutes + cookMinutes
-  }
 
   return (
     <main className="min-h-screen bg-background">
@@ -201,70 +202,81 @@ export function RecipesClient({ initialRecipes }: RecipesClientProps) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredRecipes.map((recipe) => (
-                <div
-                  key={recipe.id}
-                  className="group card surface-shadow transition-all duration-300 hover:-translate-y-1 overflow-hidden"
-                >
-                  <Link href={`/recipes/${recipe.slug}`}>
-                    <div className="relative h-48 bg-gray-100 dark:bg-gray-800">
-                      <Image
-                        src={recipe.featuredImage}
-                        alt={recipe.title}
-                        fill
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      />
-
-                      <div className="absolute top-3 left-3">
-                        <Badge className="bg-salsa-500 text-white">{recipe.category}</Badge>
-                      </div>
-
-                      <div className="absolute top-3 right-3">
-                        <Badge className={getDifficultyColor(recipe.difficulty)}>
-                          {recipe.difficulty}
-                        </Badge>
-                      </div>
-                    </div>
-                  </Link>
-
-                  <div className="p-6">
-                    <Link href={`/recipes/${recipe.slug}`}>
-                      <h3 className="font-semibold text-xl text-foreground hover:text-salsa-600 transition-colors line-clamp-2 mb-3">
-                        {recipe.title}
-                      </h3>
-                    </Link>
-
-                    <p className="text-muted-foreground line-clamp-3 mb-4">{recipe.description}</p>
-
-                    <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {(() => {
-                          const totalMinutes = calculateTotalMinutes(
-                            recipe.prepTime,
-                            recipe.cookTime
-                          )
-                          return totalMinutes !== null
-                            ? `${totalMinutes} min total`
-                            : `${recipe.prepTime} + ${recipe.cookTime}`
-                        })()}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        Serves {recipe.servings}
-                      </span>
-                    </div>
-
-                    <Button asChild className="w-full bg-salsa-500 hover:bg-salsa-600">
-                      <Link href={`/recipes/${recipe.slug}`}>View Recipe</Link>
-                    </Button>
-                  </div>
-                </div>
+                <RecipeGridCard key={recipe.id} recipe={recipe} />
               ))}
             </div>
           )}
         </div>
       </section>
     </main>
+  )
+}
+
+function RecipeGridCard({ recipe }: { recipe: Recipe }) {
+  const { cardRef, handlePointerLeave, handlePointerMove, handlePointerUp } = useInteractiveCard<HTMLDivElement>()
+
+  return (
+    <div
+      ref={cardRef}
+      className="group card interactive-card overflow-hidden"
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      onPointerUp={handlePointerUp}
+    >
+      <Link href={`/recipes/${recipe.slug}`}>
+        <div className="relative h-48 bg-gray-100 dark:bg-gray-800">
+          <Image
+            src={recipe.featuredImage}
+            alt={recipe.title}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+
+          <div className="absolute top-3 left-3">
+            <Badge className="bg-salsa-500 text-white">{recipe.category}</Badge>
+          </div>
+
+          <div className="absolute top-3 right-3">
+            <Badge className={getDifficultyColor(recipe.difficulty)}>
+              {recipe.difficulty}
+            </Badge>
+          </div>
+        </div>
+      </Link>
+
+      <div className="p-6">
+        <Link href={`/recipes/${recipe.slug}`}>
+          <h3 className="font-semibold text-xl text-foreground hover:text-salsa-600 transition-colors line-clamp-2 mb-3">
+            {recipe.title}
+          </h3>
+        </Link>
+
+        <p className="text-muted-foreground line-clamp-3 mb-4">{recipe.description}</p>
+
+        <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+          <span className="flex items-center gap-1">
+            <Clock className="w-4 h-4" />
+            {(() => {
+              const totalMinutes = calculateTotalMinutes(
+                recipe.prepTime,
+                recipe.cookTime
+              )
+              return totalMinutes !== null
+                ? `${totalMinutes} min total`
+                : `${recipe.prepTime} + ${recipe.cookTime}`
+            })()}
+          </span>
+          <span className="flex items-center gap-1">
+            <Users className="w-4 h-4" />
+            Serves {recipe.servings}
+          </span>
+        </div>
+
+        <Button asChild className="w-full bg-salsa-500 hover:bg-salsa-600">
+          <Link href={`/recipes/${recipe.slug}`}>View Recipe</Link>
+        </Button>
+      </div>
+    </div>
   )
 }

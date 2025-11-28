@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
+import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -106,6 +107,12 @@ export async function POST(request: Request) {
         })
 
         console.log('Order payment confirmed via webhook:', orderId)
+
+        if (!order.confirmationEmailSentAt) {
+          sendOrderConfirmationEmail(order.id).catch((error) => {
+            console.error('Failed to send confirmation email', { orderId, error })
+          })
+        }
         break
       }
 
@@ -155,4 +162,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

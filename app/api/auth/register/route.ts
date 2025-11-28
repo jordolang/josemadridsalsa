@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
+import { sendWelcomeEmail } from '@/lib/email/automation'
+import { logEngagementRequest } from '@/lib/engagements'
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         email: normalizedEmail,
         name,
@@ -49,6 +51,17 @@ export async function POST(request: Request) {
         role: 'CUSTOMER',
       },
     })
+
+    await Promise.allSettled([
+      sendWelcomeEmail({ email: normalizedEmail, name }),
+      logEngagementRequest({
+        type: 'SIGNUP',
+        email: normalizedEmail,
+        name,
+        source: 'auth:register',
+        metadata: { channel: 'web' },
+      }),
+    ])
 
     return NextResponse.json({ success: true }, { status: 201 })
   } catch (error) {

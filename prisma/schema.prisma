@@ -281,6 +281,7 @@ model Order {
   updatedAt       DateTime    @updatedAt
   shippedAt       DateTime?
   deliveredAt     DateTime?
+  confirmationEmailSentAt DateTime?
   
   // Relations
   items           OrderItem[]
@@ -1161,6 +1162,40 @@ enum EmailRecipientStatus {
   BOUNCED        // Email bounced
   OPENED         // Recipient opened email
   CLICKED        // Recipient clicked link
+}
+
+enum EngagementType {
+  NEWSLETTER
+  FUNDRAISER
+  CONTACT
+  ORDER
+  SIGNUP
+  OTHER
+}
+
+enum EngagementStatus {
+  PENDING
+  CONTACTED
+  CLOSED
+  IGNORED
+}
+
+model EngagementRequest {
+  id          String           @id @default(cuid())
+  type        EngagementType
+  status      EngagementStatus @default(PENDING)
+
+  name        String?
+  email       String?
+  source      String?
+  metadata    Json?
+
+  processedAt DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@index([type, status])
+  @@index([createdAt])
+  @@map("engagement_requests")
 }
 
 model PasswordResetToken {

@@ -4,6 +4,7 @@ import { Heart, Users, DollarSign, Truck, Download, ExternalLink, Quote, Star, C
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { createMetadata } from '@/lib/metadata';
+import { FundraiserSignupForm } from '@/components/fundraising/fundraiser-signup-form';
 
 export const metadata: Metadata = createMetadata({
   title: 'Fundraising - Jose Madrid Salsa',
@@ -303,6 +304,23 @@ export default function FundraisingPage() {
                 - Satisfied Fundraiser Organizer, October 2020
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Fundraiser Signup */}
+      <section className="py-16 bg-muted">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-serif font-bold text-foreground mb-4">
+                Tell Us About Your Fundraiser
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Share a few details and we&apos;ll customize a kickoff plan with order forms, marketing assets, and timelines tailored to your organization.
+              </p>
+            </div>
+            <FundraiserSignupForm />
           </div>
         </div>
       </section>

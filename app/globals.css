@@ -77,6 +77,26 @@
   .card {
     @apply rounded-xl border border-border bg-card text-card-foreground surface-shadow;
   }
+
+  .interactive-card {
+    position: relative;
+    isolation: isolate;
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+    transform-style: preserve-3d;
+  }
+
+  .interactive-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(circle at var(--interactive-card-glow-x, 50%) var(--interactive-card-glow-y, 50%), rgba(234, 88, 12, 0.35), transparent 55%);
+    opacity: var(--interactive-card-glow-opacity, 0);
+    transition: opacity 0.35s ease;
+    filter: blur(25px);
+    z-index: -1;
+  }
   
   .input-field {
     @apply block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-salsa-500 focus:border-salsa-500 transition-colors duration-200;

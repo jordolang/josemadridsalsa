@@ -115,15 +115,23 @@ export function Footer() {
     setIsSubscribing(true);
     
     try {
-      // In a real app, this would call your newsletter API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setIsSubscribed(true);
-      setEmail("");
+      const response = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'footer' }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error || 'Subscription failed')
+      }
+
+      setIsSubscribed(true)
+      setEmail('')
       toast({
-        title: "Welcome to our newsletter!",
+        title: 'Welcome to our newsletter!',
         description: "You'll receive exclusive updates about new flavors and special offers.",
-      });
+      })
     } catch (error) {
       toast({
         title: "Subscription failed",

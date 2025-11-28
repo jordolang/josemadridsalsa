@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { MapPin, Phone, ExternalLink, Navigation2 } from 'lucide-react'
 import type { RetailLocationRecord } from '@/lib/locations/shared'
 import { cn } from '@/lib/utils'
+import { useInteractiveCard } from '@/hooks/useInteractiveCard'
 
 type LocationCardProps = {
   location: RetailLocationRecord
@@ -22,6 +23,12 @@ const formatWebsiteLabel = (url?: string | null) => {
 
 export function LocationCard({ location, isSelected = false, onSelect }: LocationCardProps) {
   const { businessName, address, city, state, zipCode, phone, website, distanceMiles, photoUrl, directionsUrl } = location
+  const {
+    cardRef,
+    handlePointerMove,
+    handlePointerLeave,
+    handlePointerUp,
+  } = useInteractiveCard<HTMLAnchorElement>()
 
   const primaryImage = useMemo(() => {
     const gallery = location.photoGallery ?? []
@@ -36,13 +43,17 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
 
   return (
     <Link
+      ref={cardRef}
       href={`/find-us/${location.id}`}
       className={cn(
-        'card group block overflow-hidden focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-salsa-200 transition',
+        'card group interactive-card block overflow-hidden focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-salsa-200 transition',
         isSelected ? 'ring-2 ring-salsa-500 shadow-lg' : 'ring-1 ring-transparent',
       )}
       onMouseEnter={onSelect}
       onFocus={onSelect}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      onPointerUp={handlePointerUp}
     >
       <div className="relative aspect-[4/3] w-full bg-gray-100 dark:bg-gray-800">
         <Image
