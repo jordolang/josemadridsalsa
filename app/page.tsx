@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { ReviewsSection } from '@/components/store/reviews-section'
+import { AnimatedTestimonials } from '@/components/store/animated-testimonials'
 import { GiftBoxSelector } from '@/components/store/gift-box-selector'
 import { LocationMap } from '@/components/store/location-map'
 import { createMetadata } from '@/lib/metadata'
@@ -182,7 +182,7 @@ export default function Home() {
       <GiftBoxSelector />
 
       {/* Reviews Section */}
-      <ReviewsSection />
+      <AnimatedTestimonials />
 
       {/* CTA Section */}
       <section className="py-20 bg-salsa-600">
