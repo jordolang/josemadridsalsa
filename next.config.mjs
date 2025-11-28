@@ -56,6 +56,25 @@ const nextConfig = {
       allowedOrigins: ['localhost:3000'],
     },
   },
+  /**
+   * Exclude large, unused directories from serverless traces to keep
+   * functions under Vercel’s 250 MB unzipped limit.
+   */
+  outputFileTracingExcludes: {
+    '*': [
+      'data/**',
+      'docs/**',
+      'scripts/**',
+      'tests/**',
+      'public/images/**',
+      'public/Fundraiser Forms/**',
+      'public/samples/**',
+      'prisma/dev.db',
+      'prisma/seed*.ts',
+      'prisma/seeds/**',
+      'AGENTS.md',
+    ],
+  },
   turbopack: {
     // Force Turbopack to resolve packages from the actual repo root.
     root: projectRoot,

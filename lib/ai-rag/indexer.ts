@@ -20,57 +20,11 @@ type MarkdownSource = {
   title: string
   type: IndexedContent['type']
   relativePath: string[]
+  absolutePath: string
   chunk?: boolean
 }
 
-const PUBLIC_MARKDOWN_SOURCES: MarkdownSource[] = [
-  {
-    idPrefix: 'public-about',
-    title: 'About Jose Madrid Salsa',
-    type: 'page',
-    relativePath: ['public', 'About Jose.md'],
-  },
-  {
-    idPrefix: 'public-fundraising-overview',
-    title: 'Fundraise With Jose Madrid Salsa',
-    type: 'general',
-    relativePath: ['public', 'Fundraise With Jose!.md'],
-    chunk: true,
-  },
-  {
-    idPrefix: 'public-fundraising-testimonials',
-    title: 'Fundraiser Testimonials',
-    type: 'general',
-    relativePath: ['public', 'Fundraiser Testimonials.md'],
-    chunk: true,
-  },
-  {
-    idPrefix: 'public-recipes',
-    title: 'Jose Madrid Recipes',
-    type: 'recipe',
-    relativePath: ['public', 'Recipes.md'],
-    chunk: true,
-  },
-  {
-    idPrefix: 'public-salsas',
-    title: 'Salsa Catalog',
-    type: 'product',
-    relativePath: ['public', 'Salsas.md'],
-    chunk: true,
-  },
-  {
-    idPrefix: 'public-wholesale',
-    title: 'Wholesale Program',
-    type: 'general',
-    relativePath: ['public', 'Wholesale.md'],
-  },
-  {
-    idPrefix: 'public-contact',
-    title: 'Contact Jose Madrid Salsa',
-    type: 'general',
-    relativePath: ['public', 'Contact.md'],
-  },
-]
+const PUBLIC_MARKDOWN_SOURCES: MarkdownSource[] = []
 
 function slugify(value: string): string {
   return value
@@ -152,7 +106,7 @@ async function indexPublicMarkdownContent(): Promise<IndexedContent[]> {
   const entries: IndexedContent[] = []
 
   for (const source of PUBLIC_MARKDOWN_SOURCES) {
-    const absolutePath = path.join(process.cwd(), ...source.relativePath)
+    const absolutePath = source.absolutePath
     let raw: string
     try {
       raw = await fs.readFile(absolutePath, 'utf-8')
