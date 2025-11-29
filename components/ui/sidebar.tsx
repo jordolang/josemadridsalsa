@@ -9,7 +9,7 @@ import { Menu, X } from "lucide-react";
 interface Links {
   label: string;
   href: string;
-  icon: React.JSX.Element | React.ReactNode;
+  icon: React.ReactNode;
 }
 
 interface SidebarContextProps {
@@ -154,15 +154,12 @@ export const MobileSidebar = ({
   );
 };
 
-export const SidebarLink = ({
-  link,
-  className,
-  ...props
-}: {
+type SidebarLinkProps = {
   link: Links;
   className?: string;
-  props?: LinkProps;
-}) => {
+} & Omit<LinkProps, "href" | "children">;
+
+export const SidebarLink = ({ link, className, ...props }: SidebarLinkProps) => {
   const { open, animate } = useSidebar();
   return (
     <Link
