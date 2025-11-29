@@ -12,11 +12,17 @@ const sanitizeUrl = (value?: string | null) => value?.trim()
 // Normalize env values (copy/paste into Vercel can leave trailing whitespace/newlines)
 process.env.DATABASE_URL = sanitizeUrl(process.env.DATABASE_URL) || undefined
 process.env.POSTGRES_URL = sanitizeUrl(process.env.POSTGRES_URL) || undefined
+process.env.PRISMA_DATABASE_URL = sanitizeUrl(process.env.PRISMA_DATABASE_URL) || undefined
 
-// Ensure DATABASE_URL is set; some deployments only provide POSTGRES_URL
-if (!process.env.DATABASE_URL && process.env.POSTGRES_URL) {
-  process.env.DATABASE_URL = process.env.POSTGRES_URL
-  console.log('[Prisma] DATABASE_URL not set, fell back to POSTGRES_URL')
+// Ensure DATABASE_URL is set; some deployments only provide POSTGRES_URL or PRISMA_DATABASE_URL
+if (!process.env.DATABASE_URL) {
+  if (process.env.PRISMA_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.PRISMA_DATABASE_URL
+    console.log('[Prisma] DATABASE_URL not set, fell back to PRISMA_DATABASE_URL')
+  } else if (process.env.POSTGRES_URL) {
+    process.env.DATABASE_URL = process.env.POSTGRES_URL
+    console.log('[Prisma] DATABASE_URL not set, fell back to POSTGRES_URL')
+  }
 }
 
 try {
