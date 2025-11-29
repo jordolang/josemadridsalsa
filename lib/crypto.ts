@@ -4,6 +4,23 @@ const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 16 // 128 bits
 const AUTH_TAG_LENGTH = 16 // 128 bits
 const KEY_LENGTH = 32 // 256 bits
+const HEX_REGEX = /^[0-9a-f]+$/i
+
+function assertValidHex(value: string, options: { length?: number; message?: string } = {}) {
+  const { length, message } = options
+
+  if (!value || value.length % 2 !== 0) {
+    throw new Error(message ?? 'Decryption failed')
+  }
+
+  if (length && value.length !== length * 2) {
+    throw new Error(message ?? 'Decryption failed')
+  }
+
+  if (!HEX_REGEX.test(value)) {
+    throw new Error(message ?? 'Decryption failed')
+  }
+}
 
 /**
  * Get the master encryption key from environment
@@ -23,11 +40,9 @@ function getMasterKey(): Buffer {
     )
   }
 
-  try {
-    return Buffer.from(masterKey, 'hex')
-  } catch (error) {
-    throw new Error('MASTER_KEY must be a valid hex string')
-  }
+  assertValidHex(masterKey, { message: 'MASTER_KEY must be a valid hex string' })
+
+  return Buffer.from(masterKey, 'hex')
 }
 
 /**
@@ -67,27 +82,38 @@ export function encryptSecret(plaintext: string): {
  */
 export function decryptSecret(encryptedValue: string, iv: string): string {
   const key = getMasterKey()
-  
+
+  if (
+    !encryptedValue ||
+    encryptedValue.length < AUTH_TAG_LENGTH * 2 ||
+    encryptedValue.length % 2 !== 0
+  ) {
+    throw new Error('Decryption failed')
+  }
+
+  assertValidHex(iv, { length: IV_LENGTH })
+  assertValidHex(encryptedValue)
+
   // Split encrypted data and auth tag
   const authTag = Buffer.from(
     encryptedValue.slice(-AUTH_TAG_LENGTH * 2),
     'hex'
   )
   const encrypted = encryptedValue.slice(0, -AUTH_TAG_LENGTH * 2)
-  
+
   const decipher = crypto.createDecipheriv(
     ALGORITHM,
     key,
     Buffer.from(iv, 'hex')
   )
   decipher.setAuthTag(authTag)
-  
+
   try {
     let decrypted = decipher.update(encrypted, 'hex', 'utf8')
     decrypted += decipher.final('utf8')
     return decrypted
   } catch (error) {
-    throw new Error('Decryption failed - invalid key or tampered data')
+    throw new Error('Decryption failed')
   }
 }
 
