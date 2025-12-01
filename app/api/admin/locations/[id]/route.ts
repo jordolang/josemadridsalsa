@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 
+const CACHE_PROFILE = 'default'
+
 function parseSortOrder(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value
@@ -43,13 +45,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       sortOrder: parseSortOrder(body.sortOrder),
     },
   })
-  revalidateTag('locations')
+  revalidateTag('locations', CACHE_PROFILE)
   return NextResponse.json(updated)
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   await prisma.retailLocation.delete({ where: { id } })
-  revalidateTag('locations')
+  revalidateTag('locations', CACHE_PROFILE)
   return NextResponse.json({ ok: true })
 }
