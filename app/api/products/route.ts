@@ -59,8 +59,13 @@ export async function GET(request: NextRequest) {
   const heatLevel = searchParams.get('heatLevel')
   const search = searchParams.get('search')
   const featured = searchParams.get('featured')
-  const take = Number(searchParams.get('take') ?? '0') || undefined
-  const skip = Number(searchParams.get('skip') ?? '0') || 0
+
+  const rawTake = Number(searchParams.get('take'))
+  const take = Number.isFinite(rawTake) && rawTake > 0 ? rawTake : undefined
+
+  const rawSkip = Number(searchParams.get('skip'))
+  const skip = Number.isFinite(rawSkip) && rawSkip >= 0 ? rawSkip : 0
+
   const sortOrder = searchParams.get('sortOrder') === 'desc' ? 'desc' : 'asc'
   const inStock = searchParams.get('inStock')
   const categories = (searchParams.get('categories') || '')
