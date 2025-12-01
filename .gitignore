@@ -28,6 +28,8 @@ yarn-error.log*
 .env*.local
 .env.local
 .env.production
+.env.vercel.production
+
 
 # EverShop
 evershop/.env
