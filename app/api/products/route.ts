@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
-    // Import Prisma
-    const { default: prisma } = await import('@/lib/prisma')
-
-    // Check if Prisma is properly initialized
-    if (!prisma) {
-      throw new Error('Prisma client not initialized')
-    }
     
     // Get search params
     const { searchParams } = new URL(request.url)
