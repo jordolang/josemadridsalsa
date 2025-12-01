@@ -9,22 +9,22 @@ export async function GET(request: NextRequest) {
     if (!prisma) {
       throw new Error('Prisma client not initialized')
     }
-    
+
     // Get search params
     const { searchParams } = new URL(request.url)
     const heatLevel = searchParams.get('heatLevel')
     const search = searchParams.get('search')
     const featured = searchParams.get('featured')
-    
+
     // Build where clause
     const where: any = {
       isActive: true,
     }
-    
+
     if (heatLevel && heatLevel !== 'all') {
       where.heatLevel = heatLevel
     }
-    
+
     if (search) {
       where.OR = [
         {
@@ -41,12 +41,12 @@ export async function GET(request: NextRequest) {
         }
       ]
     }
-    
+
     if (featured === 'true') {
       where.isFeatured = true
     }
-    
-    const products = await prisma.product.findMany({
+
+    const salsas = await prisma.product.findMany({
       where,
       orderBy: [
         { isFeatured: 'desc' },
@@ -54,30 +54,30 @@ export async function GET(request: NextRequest) {
         { name: 'asc' }
       ],
     })
-    
+
     // Convert Decimal prices to numbers and format response
-    const parsedProducts = products.map(product => ({
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      description: product.description,
-      price: parseFloat(String(product.price)),
-      compareAtPrice: product.compareAtPrice ? parseFloat(String(product.compareAtPrice)) : undefined,
-      featuredImage: product.featuredImage,
-      images: product.images || [],
-      heatLevel: product.heatLevel,
-      sku: product.sku,
-      inventory: product.inventory,
-      isFeatured: product.isFeatured,
-      ingredients: product.ingredients || [],
-      searchKeywords: product.searchKeywords || [],
+    const parsedSalsas = salsas.map(salsa => ({
+      id: salsa.id,
+      name: salsa.name,
+      slug: salsa.slug,
+      description: salsa.description,
+      price: parseFloat(String(salsa.price)),
+      compareAtPrice: salsa.compareAtPrice ? parseFloat(String(salsa.compareAtPrice)) : undefined,
+      featuredImage: salsa.featuredImage,
+      images: salsa.images || [],
+      heatLevel: salsa.heatLevel,
+      sku: salsa.sku,
+      inventory: salsa.inventory,
+      isFeatured: salsa.isFeatured,
+      ingredients: salsa.ingredients || [],
+      searchKeywords: salsa.searchKeywords || [],
     }))
 
-    return NextResponse.json(parsedProducts)
+    return NextResponse.json(parsedSalsas)
   } catch (error) {
-    console.error('Error fetching products:', error)
+    console.error('Error fetching salsas:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch products' },
+      { error: 'Failed to fetch salsas' },
       { status: 500 }
     )
   }
