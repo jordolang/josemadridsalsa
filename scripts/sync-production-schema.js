@@ -50,17 +50,21 @@ function main() {
     process.exit(1);
   }
 
-  // Read production POSTGRES_URL (direct connection)
+// Read production database URL
   const envContent = fs.readFileSync(envPath, 'utf8');
-  const postgresUrlMatch = envContent.match(/POSTGRES_URL=(.*)/);
+
+  // Prefer standard DATABASE_URL (Neon, most providers),
+  // but fall back to legacy POSTGRES_URL if present.
+  const dbUrlMatch =
+    envContent.match(/DATABASE_URL=(.*)/) || envContent.match(/POSTGRES_URL=(.*)/);
   
-  if (!postgresUrlMatch) {
-    log('❌ Error: POSTGRES_URL not found in .env.vercel.production', 'red');
-    log('   Make sure your Vercel project has a PostgreSQL database connected', 'yellow');
+  if (!dbUrlMatch) {
+    log('❌ Error: DATABASE_URL or POSTGRES_URL not found in .env.vercel.production', 'red');
+    log('   Make sure your Vercel project has a PostgreSQL/Neon database connected', 'yellow');
     process.exit(1);
   }
-
-  let dbUrl = postgresUrlMatch[1].trim().replace(/^["']|["']$/g, '');
+  
+  let dbUrl = dbUrlMatch[1].trim().replace(/^["']|["']$/g, '');
   
   // Verify it's a valid postgres:// URL
   if (!dbUrl.startsWith('postgres://') && !dbUrl.startsWith('postgresql://')) {
