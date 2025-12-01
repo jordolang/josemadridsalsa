@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 
+const CACHE_PROFILE = 'default'
+
 function parseSortOrder(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value
@@ -46,6 +48,6 @@ export async function POST(req: NextRequest) {
       sortOrder: parseSortOrder(body.sortOrder),
     },
   })
-  revalidateTag('locations')
+  revalidateTag('locations', CACHE_PROFILE)
   return NextResponse.json(created)
 }
