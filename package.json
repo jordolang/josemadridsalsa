@@ -110,6 +110,7 @@
     "autoprefixer": "^10.4.21",
     "eslint": "^9.37.0",
     "eslint-config-next": "^15.5.4",
+    "global-agent": "^3.0.0",
     "postcss": "^8.5.6",
     "prisma": "6.19.0",
     "tsx": "^4.20.6",
