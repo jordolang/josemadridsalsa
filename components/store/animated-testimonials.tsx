@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Star, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,7 @@ export function AnimatedTestimonials({ autoplay = true }: AnimatedTestimonialsPr
   const [error, setError] = useState<string | null>(null)
   const [totalRating, setTotalRating] = useState(0)
   const [totalReviews, setTotalReviews] = useState(0)
+  const [failedImages, setFailedImages] = useState<Record<number, boolean>>({})
 
   useEffect(() => {
     async function fetchReviews() {
@@ -74,6 +76,10 @@ export function AnimatedTestimonials({ autoplay = true }: AnimatedTestimonialsPr
     const interval = setInterval(handleNext, 5000)
     return () => clearInterval(interval)
   }, [autoplay, handleNext, reviews.length])
+
+  const handleImageError = useCallback((index: number) => {
+    setFailedImages((prev) => ({ ...prev, [index]: true }))
+  }, [])
 
   const isActive = (index: number) => index === active
 
@@ -204,44 +210,45 @@ export function AnimatedTestimonials({ autoplay = true }: AnimatedTestimonialsPr
           <div className="flex items-center justify-center order-2 lg:order-1">
             <div className="relative h-80 w-full max-w-xs">
               <AnimatePresence>
-                {reviews.map((review, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, scale: 0.9, y: 50, rotate: randomRotate() }}
-                    animate={{
-                      opacity: isActive(index) ? 1 : 0.5,
-                      scale: isActive(index) ? 1 : 0.9,
-                      y: isActive(index) ? 0 : 20,
-                      zIndex: isActive(index) ? reviews.length : reviews.length - Math.abs(index - active),
-                      rotate: isActive(index) ? '0deg' : randomRotate(),
-                    }}
-                    exit={{ opacity: 0, scale: 0.9, y: -50 }}
-                    transition={{ duration: 0.5, ease: "easeInOut" }}
-                    className="absolute inset-0 origin-bottom"
-                    style={{ perspective: '1000px' }}
-                  >
-                    {review.profilePhotoUrl ? (
-                      <img
-                        src={review.profilePhotoUrl}
-                        alt={review.authorName}
-                        className="h-full w-full rounded-3xl object-cover shadow-2xl"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none'
-                          if (e.currentTarget.nextSibling) {
-                            (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex'
-                          }
-                        }}
-                      />
-                    ) : null}
-                    <div 
-                      className={`h-full w-full rounded-3xl shadow-2xl bg-gradient-to-br from-salsa-500 to-chile-600 flex items-center justify-center ${review.profilePhotoUrl ? 'hidden' : 'flex'}`}
+                {reviews.map((review, index) => {
+                  const showPhoto = Boolean(review.profilePhotoUrl) && !failedImages[index]
+
+                  return (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, scale: 0.9, y: 50, rotate: randomRotate() }}
+                      animate={{
+                        opacity: isActive(index) ? 1 : 0.5,
+                        scale: isActive(index) ? 1 : 0.9,
+                        y: isActive(index) ? 0 : 20,
+                        zIndex: isActive(index) ? reviews.length : reviews.length - Math.abs(index - active),
+                        rotate: isActive(index) ? '0deg' : randomRotate(),
+                      }}
+                      exit={{ opacity: 0, scale: 0.9, y: -50 }}
+                      transition={{ duration: 0.5, ease: "easeInOut" }}
+                      className="absolute inset-0 origin-bottom"
+                      style={{ perspective: '1000px' }}
                     >
-                      <span className="text-white text-6xl font-bold">
-                        {getInitials(review.authorName)}
-                      </span>
-                    </div>
-                  </motion.div>
-                ))}
+                      {showPhoto ? (
+                        <Image
+                          src={review.profilePhotoUrl ?? ''}
+                          alt={review.authorName}
+                          fill
+                          className="rounded-3xl object-cover shadow-2xl"
+                          sizes="(min-width: 1024px) 320px, 100vw"
+                          onError={() => handleImageError(index)}
+                        />
+                      ) : null}
+                      <div
+                        className={`h-full w-full rounded-3xl shadow-2xl bg-gradient-to-br from-salsa-500 to-chile-600 flex items-center justify-center ${showPhoto ? 'hidden' : 'flex'}`}
+                      >
+                        <span className="text-white text-6xl font-bold">
+                          {getInitials(review.authorName)}
+                        </span>
+                      </div>
+                    </motion.div>
+                  )
+                })}
               </AnimatePresence>
             </div>
           </div>
