@@ -4,17 +4,25 @@ import type { NextAuthOptions } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
-// Warn if NEXTAUTH_SECRET is not set (but don't throw in production to avoid blocking)
+// Validate NEXTAUTH_SECRET
 if (!process.env.NEXTAUTH_SECRET) {
   console.error('[Auth] CRITICAL: NEXTAUTH_SECRET is not set in environment variables')
   if (process.env.NODE_ENV === 'development') {
     throw new Error('NEXTAUTH_SECRET is required in development')
   }
+  // In production, this will cause auth to fail - but we'll handle it gracefully
+}
+
+// Log the NEXTAUTH_URL configuration (without exposing secrets)
+if (process.env.NEXTAUTH_URL) {
+  console.log('[Auth] NEXTAUTH_URL configured:', process.env.NEXTAUTH_URL)
+} else {
+  console.log('[Auth] NEXTAUTH_URL not set - will be auto-detected')
 }
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
-  session: { 
+  session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
@@ -22,6 +30,8 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/signin',
     error: '/auth/error',
   },
+  // Trust the proxy/host in production (required for Vercel and other hosting platforms)
+  useSecureCookies: process.env.NODE_ENV === 'production',
   debug: process.env.NODE_ENV === 'development', // Only enable debug in development
   logger: {
     error(code, metadata) {
