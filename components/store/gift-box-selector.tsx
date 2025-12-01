@@ -68,12 +68,12 @@ export function GiftBoxSelector() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch('/api/products')
-        if (!response.ok) throw new Error('Failed to fetch products')
+        const response = await fetch('/api/salsas')
+        if (!response.ok) throw new Error('Failed to fetch salsas')
         const data = await response.json()
         setProducts(data)
       } catch (error) {
-        console.error('Error fetching products:', error)
+        console.error('Error fetching salsas:', error)
       } finally {
         setLoading(false)
       }
