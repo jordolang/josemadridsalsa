@@ -11,7 +11,6 @@ export async function ensureUniqueSlug(baseSlug: string, existingId?: string | n
   let slug = baseSlug || 'form-template'
   let attempt = 1
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const match = await prisma.formTemplate.findFirst({
       where: existingId

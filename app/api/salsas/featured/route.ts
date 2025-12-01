@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
 
 // Mock data for when database is not available
-const mockFeaturedProducts = [
+const mockFeaturedSalsas = [
   {
     id: '1',
     name: 'Jose Madrid Mild Salsa',
@@ -46,7 +45,15 @@ const mockFeaturedProducts = [
 
 export async function GET() {
   try {
-    const products = await prisma.product.findMany({
+    // Try to import and use Prisma
+    const { default: prisma } = await import('@/lib/prisma')
+
+    // Check if Prisma is properly initialized
+    if (!prisma) {
+      throw new Error('Prisma client not initialized')
+    }
+
+    const salsas = await prisma.product.findMany({
       where: {
         isActive: true,
         isFeatured: true,
@@ -70,17 +77,10 @@ export async function GET() {
       },
     })
 
-    // Convert Decimal prices to numbers for JSON serialization
-    const parsedProducts = products.map(product => ({
-      ...product,
-      price: parseFloat(String(product.price)),
-      compareAtPrice: product.compareAtPrice ? parseFloat(String(product.compareAtPrice)) : undefined,
-    }))
-
-    return NextResponse.json(parsedProducts)
+    return NextResponse.json(salsas)
   } catch (error) {
     console.warn('Database not available, using mock data:', error)
     // Return mock data when database is not available
-    return NextResponse.json(mockFeaturedProducts)
+    return NextResponse.json(mockFeaturedSalsas)
   }
 }
