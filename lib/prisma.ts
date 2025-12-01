@@ -34,15 +34,20 @@ try {
   // Support both Prisma Accelerate and direct Postgres URLs
   const usesAccelerate = databaseUrl.startsWith('prisma://') || databaseUrl.startsWith('prisma+postgres://')
 
-  const baseClient = new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  })
-
-  prismaClient = usesAccelerate
-    ? (baseClient.$extends(withAccelerate()) as unknown as PrismaClient)
-    : baseClient
-    
-  console.log('[Prisma] Client initialized successfully')
+  if (usesAccelerate) {
+    // Use Prisma Accelerate extension for accelerated connections
+    const baseClient = new PrismaClient({
+      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    })
+    prismaClient = baseClient.$extends(withAccelerate()) as any
+    console.log('[Prisma] Client initialized successfully with Accelerate')
+  } else {
+    // Use direct Postgres connection without Accelerate extension
+    prismaClient = new PrismaClient({
+      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    })
+    console.log('[Prisma] Client initialized successfully')
+  }
 } catch (error) {
   console.error('[Prisma] Failed to initialize client with DATABASE_URL:', error)
 
@@ -54,14 +59,13 @@ try {
       process.env.DATABASE_URL = fallbackUrl
       console.log('[Prisma] Retrying client init with POSTGRES_URL fallback')
 
-      const baseClient = new PrismaClient({
+      prismaClient = new PrismaClient({
         log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
       })
-
-      prismaClient = baseClient
       console.log('[Prisma] Client initialized successfully with POSTGRES_URL fallback')
     } catch (fallbackError) {
       console.error('[Prisma] Fallback initialization also failed:', fallbackError)
+      // Create a minimal client that will fail gracefully
       prismaClient = new PrismaClient({ log: ['error'] })
     }
   } else {
@@ -72,12 +76,15 @@ try {
   }
 }
 
-export const prisma =
-  globalForPrisma.prisma ??
-  prismaClient
-
+// Use global instance in development to prevent multiple instances during hot reload
+// In production, always use a fresh client instance (serverless functions)
 if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = prismaClient
+  }
+  prismaClient = globalForPrisma.prisma
 }
+
+export const prisma = prismaClient
 
 export default prisma

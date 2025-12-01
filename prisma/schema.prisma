@@ -1307,3 +1307,26 @@ model GiftCertificateUsage {
   @@index([orderId])
   @@map("gift_certificate_usages")
 }
+
+model DocumentationEntry {
+  id             String                  @id @default(cuid())
+  slug           String                  @unique
+  title          String
+  description    String?
+  category       String?
+  tags           String[]
+  visibility     DocumentationVisibility @default(PUBLIC)
+  isPublished    Boolean                 @default(true)
+  sourcePath     String
+  filePath       String
+  lastSyncedAt   DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@map("DocumentationEntry")
+}
+
+enum DocumentationVisibility {
+  PUBLIC
+  DEVELOPER
+}
