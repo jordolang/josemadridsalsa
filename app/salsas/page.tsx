@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Loader2 } from 'lucide-react'
 import { ProductCard } from '@/components/store/product-card'
 
-type Product = {
+type Salsa = {
   id: string
   name: string
   slug: string
@@ -30,36 +30,36 @@ const heatLevels = [
 ]
 
 export default function SalsasPage() {
-  const [products, setProducts] = useState<Product[]>([])
+  const [salsas, setSalsas] = useState<Salsa[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedHeatLevel, setSelectedHeatLevel] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchSalsas = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/products')
-        if (!response.ok) throw new Error('Failed to fetch products')
+        const response = await fetch('/api/salsas')
+        if (!response.ok) throw new Error('Failed to fetch salsas')
         const data = await response.json()
-        setProducts(data)
+        setSalsas(data)
       } catch (error) {
-        console.error('Error fetching products:', error)
-        setProducts([])
+        console.error('Error fetching salsas:', error)
+        setSalsas([])
       } finally {
         setLoading(false)
       }
     }
-    fetchProducts()
+    fetchSalsas()
   }, [])
 
-  // Filter products based on search and heat level
-  const filteredProducts = products.filter((product) => {
+  // Filter salsas based on search and heat level
+  const filteredSalsas = salsas.filter((salsa) => {
     const normalizedSearch = searchTerm.toLowerCase()
     const matchesSearch =
-      product.name.toLowerCase().includes(normalizedSearch) ||
-      (product.description?.toLowerCase() ?? '').includes(normalizedSearch)
-    const matchesHeatLevel = selectedHeatLevel === 'all' || product.heatLevel === selectedHeatLevel
+      salsa.name.toLowerCase().includes(normalizedSearch) ||
+      (salsa.description?.toLowerCase() ?? '').includes(normalizedSearch)
+    const matchesHeatLevel = selectedHeatLevel === 'all' || salsa.heatLevel === selectedHeatLevel
     return matchesSearch && matchesHeatLevel
   })
 
@@ -111,7 +111,7 @@ export default function SalsasPage() {
           </div>
           
           <div className="mt-4 text-sm text-muted-foreground">
-            Showing {filteredProducts.length} of {products.length} salsas
+            Showing {filteredSalsas.length} of {salsas.length} salsas
           </div>
         </div>
       </section>
@@ -122,9 +122,9 @@ export default function SalsasPage() {
           {loading ? (
             <div className="flex justify-center items-center py-20">
               <Loader2 className="w-8 h-8 animate-spin text-salsa-500" />
-              <span className="ml-2 text-lg">Loading products...</span>
+              <span className="ml-2 text-lg">Loading salsas...</span>
             </div>
-          ) : filteredProducts.length === 0 ? (
+          ) : filteredSalsas.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">No salsas found matching your criteria.</p>
               <Button
@@ -139,8 +139,8 @@ export default function SalsasPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {filteredSalsas.map((salsa) => (
+                <ProductCard key={salsa.id} product={salsa} />
               ))}
             </div>
           )}
