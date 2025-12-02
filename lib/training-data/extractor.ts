@@ -3,7 +3,7 @@ import path from 'path'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 import mammoth from 'mammoth'
-import { PDFParse } from 'pdf-parse'
+import PDFParse from 'pdf-parse'
 import JSZip from 'jszip'
 import { load as loadHtml } from 'cheerio'
 import {
