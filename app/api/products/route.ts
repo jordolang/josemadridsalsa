@@ -71,15 +71,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(parsedProducts)
   } catch (error: any) {
     console.error('Error fetching products:', error)
-
-    // If database table doesn't exist, return empty array instead of error
-    if (error?.code === 'P2021' || error?.message?.includes('does not exist')) {
-      console.warn('Products table does not exist yet, returning empty array')
-      return NextResponse.json([])
-    }
-
     return NextResponse.json(
-      { error: 'Failed to fetch products' },
+      { error: 'Failed to fetch products', details: error.message },
       { status: 500 }
     )
   }

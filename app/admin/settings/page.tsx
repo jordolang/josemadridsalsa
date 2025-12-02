@@ -14,39 +14,29 @@ const roleLabels: Record<string, string> = {
 }
 
 async function getSettingsOverview() {
-  try {
-    const [roleCounts, permissionCount, serviceKeyCount, recentAudit] = await Promise.all([
-      prisma.user.groupBy({
-        by: ['role'],
-        _count: { _all: true },
-      }),
-      prisma.permission.count(),
-      prisma.serviceKey.count(),
-      prisma.auditLog.findMany({
-        orderBy: { createdAt: 'desc' },
-        take: 6,
-      }),
-    ])
+  const [roleCounts, permissionCount, serviceKeyCount, recentAudit] = await Promise.all([
+    prisma.user.groupBy({
+      by: ['role'],
+      _count: { _all: true },
+    }),
+    prisma.permission.count(),
+    prisma.serviceKey.count(),
+    prisma.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 6,
+    }),
+  ])
 
-    const roleSummary = roleCounts.reduce<Record<string, number>>((acc, item) => {
-      acc[item.role] = item._count._all
-      return acc
-    }, {})
+  const roleSummary = roleCounts.reduce<Record<string, number>>((acc, item) => {
+    acc[item.role] = item._count._all
+    return acc
+  }, {})
 
-    return {
-      roleSummary,
-      permissionCount,
-      serviceKeyCount,
-      auditLogs: recentAudit,
-    }
-  } catch (error) {
-    console.warn('Failed to fetch settings overview from database:', error)
-    return {
-      roleSummary: {},
-      permissionCount: 0,
-      serviceKeyCount: 0,
-      auditLogs: [],
-    }
+  return {
+    roleSummary,
+    permissionCount,
+    serviceKeyCount,
+    auditLogs: recentAudit,
   }
 }
 
