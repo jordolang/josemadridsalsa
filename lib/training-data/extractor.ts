@@ -22,16 +22,12 @@ export type ExtractionResult = {
 }
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
-  const parser = new PDFParse({ data: buffer })
   try {
-    const result = await parser.getText()
+    const result = await PDFParse(buffer)
     return result.text ?? ''
-  } finally {
-    try {
-      await parser.destroy()
-    } catch {
-      // Best-effort cleanup; parser.destroy can throw if the document never loaded.
-    }
+  } catch (error) {
+    // PDF parsing failed, return empty string
+    return ''
   }
 }
 
