@@ -5,24 +5,29 @@ import prisma from '@/lib/prisma'
 import { FetchPhotosButton } from './_components/FetchPhotosButton'
 
 async function getLocations() {
-  const locations = await prisma.retailLocation.findMany({
-    orderBy: [
-      { state: 'asc' },
-      { city: 'asc' },
-      { sortOrder: 'asc' },
-      { businessName: 'asc' },
-    ],
-    select: {
-      id: true,
-      businessName: true,
-      city: true,
-      state: true,
-      phone: true,
-      isActive: true,
-    },
-  })
+  try {
+    const locations = await prisma.retailLocation.findMany({
+      orderBy: [
+        { state: 'asc' },
+        { city: 'asc' },
+        { sortOrder: 'asc' },
+        { businessName: 'asc' },
+      ],
+      select: {
+        id: true,
+        businessName: true,
+        city: true,
+        state: true,
+        phone: true,
+        isActive: true,
+      },
+    })
 
-  return locations
+    return locations
+  } catch (error) {
+    console.warn('Failed to fetch locations from database:', error)
+    return []
+  }
 }
 
 export default async function AdminLocationsPage() {
