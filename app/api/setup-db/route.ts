@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 
@@ -10,12 +10,23 @@ const execAsync = promisify(exec)
  * ⚠️ WARNING: DELETE THIS FILE AFTER RUNNING ONCE!
  *
  * This endpoint runs database migrations on production.
- * It should ONLY be used once to set up the database initially.
+ * Protected by MASTER_KEY to avoid auth middleware.
  *
- * Usage: POST to /api/admin/migrate
+ * Usage: POST to /api/setup-db?key=YOUR_MASTER_KEY
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    // Check secret key
+    const key = request.nextUrl.searchParams.get('key')
+    const masterKey = process.env.MASTER_KEY
+
+    if (!key || !masterKey || key !== masterKey) {
+      return NextResponse.json(
+        { error: 'Unauthorized - invalid key' },
+        { status: 401 }
+      )
+    }
+
     console.log('🚀 Starting database migration...')
 
     // Run Prisma db push to create tables
@@ -54,7 +65,7 @@ export async function POST() {
       message: '✅ Database migrated and seeded successfully!',
       migration: pushOutput,
       seed: seedOutput,
-      warning: '⚠️ DELETE /app/api/admin/migrate/route.ts NOW!'
+      warning: '⚠️ DELETE /app/api/setup-db/route.ts NOW!'
     })
 
   } catch (error: any) {
@@ -70,7 +81,16 @@ export async function POST() {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const key = request.nextUrl.searchParams.get('key')
+  const masterKey = process.env.MASTER_KEY
+
+  if (!key || !masterKey || key !== masterKey) {
+    return NextResponse.json({
+      error: 'Invalid key'
+    }, { status: 401 })
+  }
+
   return NextResponse.json({
     message: 'Use POST to run migrations',
     warning: '⚠️ This endpoint should be deleted after first use!'
