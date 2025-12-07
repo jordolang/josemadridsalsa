@@ -6,9 +6,9 @@ import { MapPin, Phone, ExternalLink, Navigation2, ChevronLeft } from 'lucide-re
 import { getLocationById } from '@/lib/locations/query'
 
 type LocationPageProps = {
-  params: {
+  params: Promise<{
     locationId: string
-  }
+  }>
 }
 
 const proxiedImage = (url?: string | null) => {
@@ -24,7 +24,8 @@ const sanitizePhone = (value?: string | null) => value?.replace(/[^0-9+]/g, '') 
 export const revalidate = 3600
 
 export async function generateMetadata({ params }: LocationPageProps): Promise<Metadata> {
-  const location = await getLocationById(params.locationId)
+  const { locationId } = await params
+  const location = await getLocationById(locationId)
   if (!location) {
     return {
       title: 'Store not found · Jose Madrid Salsa',
@@ -41,7 +42,8 @@ export async function generateMetadata({ params }: LocationPageProps): Promise<M
 }
 
 export default async function LocationDetailPage({ params }: LocationPageProps) {
-  const location = await getLocationById(params.locationId)
+  const { locationId } = await params
+  const location = await getLocationById(locationId)
 
   if (!location) {
     notFound()
