@@ -199,19 +199,16 @@ export default async function TrainingDataPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {documents.map((doc) => {
-                    const warnings = Array.isArray(doc.warnings) ? doc.warnings : []
-
-                    return (
+                  {documents.map((doc) => (
                       <tr key={doc.id} className="align-top">
                         <td className="py-4">
                           <p className="font-medium">{doc.title}</p>
                           <p className="mt-1 text-xs text-slate-500">
                             {summarizeContent(doc.content)}
                           </p>
-                          {warnings.length > 0 && (
+                          {Array.isArray(doc.warnings) && doc.warnings.length > 0 && (
                             <p className="mt-1 text-xs text-amber-600">
-                              Warnings: {warnings.join('; ')}
+                              Warnings: {doc.warnings.join('; ')}
                             </p>
                           )}
                           {doc.notes && (
@@ -249,8 +246,7 @@ export default async function TrainingDataPage() {
                           )}
                         </td>
                       </tr>
-                    )
-                  })}
+                  ))}
                 </tbody>
               </table>
             </div>
