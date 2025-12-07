@@ -67,4 +67,3 @@ export async function GET(request: NextRequest) {
     warning: '⚠️ This endpoint should be deleted after first use!'
   })
 }
-# Force rebuild
