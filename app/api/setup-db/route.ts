@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { exec } from 'child_process'
-import { promisify } from 'util'
-
-const execAsync = promisify(exec)
+import { prisma } from '@/lib/db'
 
 /**
- * EMERGENCY DATABASE MIGRATION ENDPOINT
+ * EMERGENCY DATABASE SEEDING ENDPOINT
  *
  * ⚠️ WARNING: DELETE THIS FILE AFTER RUNNING ONCE!
  *
- * This endpoint runs database migrations on production.
+ * This endpoint seeds the production database.
+ * NOTE: Migrations must already be run (tables must exist).
  * Protected by MASTER_KEY to avoid auth middleware.
  *
  * Usage: POST to /api/setup-db?key=YOUR_MASTER_KEY
@@ -27,49 +25,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('🚀 Starting database migration...')
+    console.log('🚀 Starting database seeding...')
 
-    // Run Prisma db push to create tables
-    console.log('📋 Creating database tables...')
-    const { stdout: pushOutput, stderr: pushError } = await execAsync('npx prisma db push --accept-data-loss --skip-generate')
+    // Import seed function
+    const { seedDatabase } = await import('@/lib/seed')
 
-    if (pushError && !pushError.includes('warning')) {
-      console.error('❌ Migration error:', pushError)
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Migration failed',
-          details: pushError,
-          output: pushOutput
-        },
-        { status: 500 }
-      )
-    }
-
-    console.log('✅ Tables created!')
-    console.log(pushOutput)
-
-    // Run seed
-    console.log('🌱 Seeding database...')
-    const { stdout: seedOutput, stderr: seedError } = await execAsync('npm run db:seed')
-
-    if (seedError && !seedError.includes('warning')) {
-      console.error('⚠️ Seed warning:', seedError)
-    }
-
-    console.log('✅ Database seeded!')
-    console.log(seedOutput)
+    const result = await seedDatabase()
 
     return NextResponse.json({
       success: true,
-      message: '✅ Database migrated and seeded successfully!',
-      migration: pushOutput,
-      seed: seedOutput,
+      message: '✅ Database seeded successfully!',
+      details: result,
       warning: '⚠️ DELETE /app/api/setup-db/route.ts NOW!'
     })
 
   } catch (error: any) {
-    console.error('💥 Migration failed:', error)
+    console.error('💥 Seeding failed:', error)
     return NextResponse.json(
       {
         success: false,
