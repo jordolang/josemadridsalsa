@@ -7,7 +7,7 @@
     "dev": "next dev --turbo",
     "dev:fast": "next dev --turbo --port 3000",
     "dev:debug": "next dev --turbo --inspect",
-    "prebuild": "node scripts/sync-findus.js && prisma migrate deploy",
+    "prebuild": "node scripts/sync-findus.js && prisma db push --accept-data-loss --skip-generate",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
