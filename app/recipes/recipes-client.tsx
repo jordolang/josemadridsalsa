@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Clock, Users, ChefHat } from 'lucide-react'
 import type { Recipe } from '@/types/recipe'
-import { recipeData } from '@/lib/data/recipes'
+import { recipeData } from '../../lib/data/recipes'
 
 type RecipesClientProps = {
   initialRecipes: Recipe[]
