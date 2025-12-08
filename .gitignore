@@ -9,6 +9,7 @@ node_modules/
 # Next.js
 /.next/
 /out/
+.source/
 
 # Production
 /build
@@ -26,6 +27,15 @@ yarn-error.log*
 .env
 .env*.local
 .env.local
+.env.production
+.env.vercel.production
+
+
+# EverShop
+evershop/.env
+evershop/.env.local
+evershop/node_modules
+evershop/.evershop
 
 # Vercel
 .vercel
@@ -43,6 +53,9 @@ gcloud/
 backstage/
 josemadridsalsa/
 
+# Data files
+data/
+
 # Examples and docs
 examples/
 docs/backstage/
@@ -55,3 +68,6 @@ docs/backstage/
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
+
+# Vercel production env
+.env.vercel.production
