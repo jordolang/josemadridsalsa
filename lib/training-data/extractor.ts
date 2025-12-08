@@ -3,7 +3,6 @@ import path from 'path'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 import mammoth from 'mammoth'
-import PDFParse from 'pdf-parse'
 import JSZip from 'jszip'
 import { load as loadHtml } from 'cheerio'
 import {
@@ -23,7 +22,9 @@ export type ExtractionResult = {
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
   try {
-    const result = await PDFParse(buffer)
+    // Dynamic import for pdf-parse to avoid ESM issues
+    const pdfParse = (await import('pdf-parse')).default
+    const result = await pdfParse(buffer)
     return result.text ?? ''
   } catch (error) {
     // PDF parsing failed, return empty string

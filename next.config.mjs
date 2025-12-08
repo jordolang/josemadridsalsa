@@ -51,13 +51,6 @@ const nextConfig = {
       allowedOrigins: ['localhost:3000'],
     },
   },
-  // Temporarily disable linting and type checking for deployment
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
 };
 
 export default nextConfig;
