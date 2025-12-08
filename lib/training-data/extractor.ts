@@ -247,7 +247,7 @@ function stringifyWorkbook(buffer: Buffer): string {
   const sheets = workbook.SheetNames
   if (sheets.length === 0) return ''
 
-  const parts = sheets.map((sheetName) => {
+  const parts = sheets.map((sheetName: string) => {
     const sheet = workbook.Sheets[sheetName]
     const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false })
     return `Sheet: ${sheetName}\n${csv.trim()}`
