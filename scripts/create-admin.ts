@@ -1,7 +1,11 @@
 import { PrismaClient } from '@prisma/client'
+import { withAccelerate } from '@prisma/extension-accelerate'
 import bcrypt from 'bcryptjs'
 
-const prisma = new PrismaClient()
+const baseClient = new PrismaClient()
+const prisma = process.env.DATABASE_URL?.includes('prisma+postgres://')
+  ? (baseClient.$extends(withAccelerate()) as unknown as PrismaClient)
+  : baseClient
 
 async function main() {
   const email = process.env.ADMIN_EMAIL || 'admin@josemadridsalsa.com'
