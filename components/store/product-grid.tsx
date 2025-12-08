@@ -130,7 +130,7 @@ export function ProductGrid({
     });
 
     return filtered;
-  }, [products, searchQuery, selectedCategory, selectedHeatLevel, sortBy, showOnlyInStock]);
+  }, [products, searchQuery, selectedHeatLevel, sortBy, showOnlyInStock]);
 
   const activeFiltersCount = [
     selectedCategory !== "all",

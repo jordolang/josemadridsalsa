@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { Plus, Edit, Trash2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -95,11 +96,15 @@ export default function CategoriesPage() {
         {categories.map((category) => (
           <Card key={category.id} className="p-6">
             {category.image && (
-              <img
-                src={category.image}
-                alt={category.name}
-                className="mb-4 h-32 w-full rounded object-cover"
-              />
+              <div className="relative mb-4 h-32 w-full">
+                <Image
+                  src={category.image}
+                  alt={category.name}
+                  fill
+                  className="rounded object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                />
+              </div>
             )}
             <div className="space-y-2">
               <div className="flex items-start justify-between">

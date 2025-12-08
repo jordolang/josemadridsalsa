@@ -264,7 +264,15 @@ model Order {
   paymentStatus   PaymentStatus @default(PENDING)
   paymentMethod   String?
   stripePaymentId String?
-  
+
+  // Shopify Integration (optional)
+  shopifyOrderId            String?
+  shopifyOrderName          String?
+  shopifyFinancialStatus    String?
+  shopifyFulfillmentStatus  String?
+  shopifySyncError          String?
+  shopifySyncedAt           DateTime?
+
   // Notes
   customerNotes   String?
   adminNotes      String?

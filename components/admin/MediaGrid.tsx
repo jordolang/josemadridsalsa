@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import type { Media } from '@prisma/client'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -45,10 +46,12 @@ export default function MediaGrid({ media }: MediaGridProps) {
               onClick={() => setSelectedMedia(item)}
             >
               {item.mimeType.startsWith('image/') ? (
-                <img
+                <Image
                   src={item.url}
                   alt={item.alt || item.filename}
-                  className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                  fill
+                  className="object-cover transition-transform group-hover:scale-105"
+                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                 />
               ) : (
                 <div className="flex h-full items-center justify-center">
