@@ -61,6 +61,28 @@ jobs:
           ref: ${{ steps.pr.outputs.head_sha }}
           fetch-depth: 0
 
+<<<<<<< HEAD
+=======
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        id: lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Run type-check
+        id: typecheck
+        run: npm run type-check
+        continue-on-error: true
+
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
       - name: Codex review summary
         uses: actions/github-script@v7
         env:

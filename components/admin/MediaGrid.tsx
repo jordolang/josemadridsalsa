@@ -51,6 +51,10 @@ export default function MediaGrid({ media }: MediaGridProps) {
                   alt={item.alt || item.filename}
                   fill
                   className="object-cover transition-transform group-hover:scale-105"
+<<<<<<< HEAD
+=======
+                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
                 />
               ) : (
                 <div className="flex h-full items-center justify-center">

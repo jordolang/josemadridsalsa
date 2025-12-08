@@ -32,6 +32,7 @@ const parseNumberParam = (value?: string) => {
 }
 
 export default async function FindUsPage({ searchParams }: FindUsPageProps) {
+<<<<<<< HEAD
   let allLocations: any[]
   let facets: { states: Array<{ code: string; count: number }>, citiesByState: Record<string, string[]> }
   let initialResult: { locations: any[], total: number, appliedFilters: any }
@@ -40,6 +41,16 @@ export default async function FindUsPage({ searchParams }: FindUsPageProps) {
   let uniqueStates: number
   let initialFilters: any
   let initialView: 'list' | 'map'
+=======
+  let allLocations: any[] = [];
+  let facets: any;
+  let initialResult: any;
+  let totalLocations: number;
+  let ohioLocations: number;
+  let uniqueStates: number;
+  let initialFilters: LocationFilters;
+  let initialView: "map" | "list" = "list";
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
   
   try {
     console.log('[FindUsPage] Starting page render...');
@@ -76,7 +87,7 @@ export default async function FindUsPage({ searchParams }: FindUsPageProps) {
     totalLocations = allLocations.length
     ohioLocations = allLocations.filter((location) => location.state === 'OH').length
     uniqueStates = facets.states.length
-    initialView = extractParam(params, 'view') === 'map' ? 'map' : 'list'
+    initialView = (extractParam(params, 'view') === 'map' ? 'map' : 'list') as "map" | "list"
     
     console.log('[FindUsPage] Page render complete');
   } catch (error) {

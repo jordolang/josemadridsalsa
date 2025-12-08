@@ -166,10 +166,19 @@ export async function GET(request: NextRequest) {
     }))
 
     return NextResponse.json(parsedProducts)
+<<<<<<< HEAD
   } catch (error) {
     console.warn('Database unavailable, returning mock products:', error)
 
     // Provide a graceful fallback so the homepage widgets still load
     return NextResponse.json(mockProducts)
+=======
+  } catch (error: any) {
+    console.error('Error fetching products:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch products', details: error.message },
+      { status: 500 }
+    )
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
   }
 }

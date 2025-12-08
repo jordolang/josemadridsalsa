@@ -7,6 +7,8 @@ export const metadata: Metadata = createMetadata({
   pathname: '/privacy',
 });
 
+export const dynamic = 'force-dynamic';
+
 export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-background">

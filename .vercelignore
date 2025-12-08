@@ -9,9 +9,17 @@ tests/
 __tests__/
 coverage/
 
-# Documentation
+# Documentation (keep minimal)
 docs/
+<<<<<<< HEAD
+=======
 !README.md
+!docs/AI_CHATBOT_QUICK_START.md
+!docs/PRODUCTION_DATABASE.md
+*.md
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
+!README.md
+!DEPLOYMENT_COMPLETE.md
 
 # Backstage
 backstage/
@@ -48,3 +56,9 @@ yarn.lock
 # Database backup
 *.bak
 db_dump.bak
+data/
+
+# Large/unused assets
+public/Fundraiser Forms/
+public/images/Hero-Image-*.png
+public/images/Jose-*.png

@@ -14,6 +14,8 @@ export const metadata: Metadata = createMetadata({
   pathname: '/forms',
 })
 
+export const dynamic = 'force-dynamic'
+
 type CatalogTemplate = BusinessFormTemplate & {
   source: 'library' | 'saved'
   updatedAt?: string

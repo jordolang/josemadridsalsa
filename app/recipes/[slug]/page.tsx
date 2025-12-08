@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import type { Recipe } from '@/types/recipe'
-import { recipeData } from '@/lib/data/recipes'
+import { recipeData } from '../../../lib/data/recipes'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Users, ChefHat } from 'lucide-react'
 
@@ -52,7 +52,7 @@ const getTotalMinutes = (prepTime: string, cookTime: string) => {
   return prep + cook
 }
 
-export const revalidate = 0
+export const revalidate = 3600 // Revalidate every hour
 
 export async function generateStaticParams() {
   try {

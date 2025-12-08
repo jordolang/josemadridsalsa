@@ -39,8 +39,15 @@ export default function SalsasPage() {
     const fetchSalsas = async () => {
       try {
         setLoading(true)
+<<<<<<< HEAD
         const response = await fetch('/api/salsas')
         if (!response.ok) throw new Error('Failed to fetch salsas')
+=======
+        const response = await fetch('/api/products')
+        if (!response.ok) {
+          throw new Error('Failed to fetch products')
+        }
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
         const data = await response.json()
         setSalsas(data)
       } catch (error) {

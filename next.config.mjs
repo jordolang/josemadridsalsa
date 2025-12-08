@@ -55,6 +55,7 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ['localhost:3000'],
     },
+<<<<<<< HEAD
   },
   /**
    * Exclude large, unused directories from serverless traces to keep
@@ -82,6 +83,10 @@ const nextConfig = {
   // Temporarily disable type checking for deployment
   typescript: {
     ignoreBuildErrors: true,
+=======
+    // Use system TLS certificates for Turbopack font downloads
+    turbopackUseSystemTlsCerts: true,
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
   },
 }
 

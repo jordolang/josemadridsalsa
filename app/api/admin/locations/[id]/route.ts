@@ -45,13 +45,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       sortOrder: parseSortOrder(body.sortOrder),
     },
   })
+<<<<<<< HEAD
   revalidateTag('locations', CACHE_PROFILE)
+=======
+  revalidateTag('locations', '/')
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
   return NextResponse.json(updated)
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   await prisma.retailLocation.delete({ where: { id } })
+<<<<<<< HEAD
   revalidateTag('locations', CACHE_PROFILE)
+=======
+  revalidateTag('locations', '/')
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
   return NextResponse.json({ ok: true })
 }

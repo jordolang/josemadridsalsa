@@ -237,12 +237,20 @@ export default async function ProductsPage({
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {product.featuredImage && (
+<<<<<<< HEAD
                           <div className="relative h-10 w-10 flex-shrink-0">
+=======
+                          <div className="relative h-10 w-10">
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
                             <Image
                               src={product.featuredImage}
                               alt={product.name}
                               fill
                               className="rounded object-cover"
+<<<<<<< HEAD
+=======
+                              sizes="40px"
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
                             />
                           </div>
                         )}

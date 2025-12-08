@@ -10,13 +10,17 @@ import { resolveTemplateOwner } from '@/lib/forms/ownership'
 import { structureFromSections, templateHistoryInclude } from '../_lib/helpers'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+<<<<<<< HEAD
   const { slug } = await params
+=======
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
   const auth = await requirePartner(request, 'forms:read')
   if ('error' in auth) {
     return auth.error
   }
   const { partner } = auth
 
+  const { slug } = await params
   const template = await prisma.formTemplate.findUnique({
     where: { slug },
     include: templateHistoryInclude,
@@ -54,7 +58,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+<<<<<<< HEAD
   const { slug } = await params
+=======
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
   const auth = await requirePartner(request, 'forms:write')
   if ('error' in auth) {
     return auth.error
@@ -77,6 +84,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: 'Provide at least one field to update' }, { status: 400 })
   }
 
+<<<<<<< HEAD
+=======
+  const { slug } = await params
+>>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
   const existing = await prisma.formTemplate.findUnique({ where: { slug } })
   if (!existing) {
     await logPartnerApiCall(partner, request, 404, { slug })
