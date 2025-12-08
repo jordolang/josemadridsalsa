@@ -1,6 +1,7 @@
 import { PrismaClient, HeatLevel } from '@prisma/client'
 import bcrypt from 'bcryptjs'
-import { recipeData } from './data/recipes'
+// Recipes are loaded statically on pages, database seeding removed
+// import { recipeData } from './data/recipes'
 
 const prisma = new PrismaClient()
 
@@ -165,19 +166,13 @@ export async function seedDatabase() {
 
   console.log('✅ Created admin user')
 
-  // Seed recipes
-  for (const recipe of recipeData) {
-    await prisma.recipe.create({
-      data: recipe,
-    })
-  }
-
-  console.log('✅ Seeded recipes')
+  // Recipes are loaded statically on pages - no database seeding needed
+  console.log('✅ Skipped recipe seeding (loaded statically)')
 
   return {
     categories: 4,
     products: products.length,
-    recipes: recipeData.length,
+    recipes: 0, // Recipes loaded statically from files
     users: 1,
   }
 }
