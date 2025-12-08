@@ -1,6 +1,6 @@
 import { PrismaClient, HeatLevel } from '@prisma/client'
 import bcrypt from 'bcryptjs'
-import { recipeData } from '../lib/data/recipes'
+import { recipeData } from './data/recipes'
 
 const prisma = new PrismaClient()
 
