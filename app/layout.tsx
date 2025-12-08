@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { Montserrat, Volkhov, Roboto_Mono } from 'next/font/google'
 import { CartSidebar } from '@/components/store/cart-sidebar'
 import { Toaster } from '@/components/ui/toaster'
 import { Navigation } from '@/components/store/navigation'
@@ -8,25 +7,6 @@ import { AiChatWidget } from '@/components/chat/ai-chat-widget'
 import { GoogleAnalytics } from '@/components/analytics/google-analytics'
 import { Providers } from './providers'
 import './globals.css'
-
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-montserrat',
-})
-
-const volkhov = Volkhov({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  display: 'swap',
-  variable: '--font-volkhov',
-})
-
-const robotoMono = Roboto_Mono({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-roboto-mono',
-})
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.josemadridsalsa.com'
 
@@ -82,7 +62,15 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&family=Volkhov:wght@400;700&family=Roboto+Mono:wght@100..700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="font-sans antialiased bg-background text-foreground">
         <GoogleAnalytics />
         <Providers>
