@@ -34,6 +34,7 @@ model User {
   cartItems       CartItem[]
   wishlistItems   WishlistItem[]
   partnerApiKeys  PartnerApiKey[]
+  analyticsSettings AnalyticsSetting[]
 
   // Wholesale account
   wholesaleAccount WholesaleAccount?
@@ -264,24 +265,23 @@ model Order {
   paymentStatus   PaymentStatus @default(PENDING)
   paymentMethod   String?
   stripePaymentId String?
-
-  // Shopify Integration (optional)
-  shopifyOrderId            String?
-  shopifyOrderName          String?
-  shopifyFinancialStatus    String?
-  shopifyFulfillmentStatus  String?
-  shopifySyncError          String?
-  shopifySyncedAt           DateTime?
-
+  
   // Notes
   customerNotes   String?
   adminNotes      String?
-  
+  shopifyOrderId  String?  @unique
+  shopifyOrderName String?
+  shopifyFinancialStatus String?
+  shopifyFulfillmentStatus String?
+  shopifySyncedAt DateTime?
+  shopifySyncError String?
+
   // Timestamps
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   shippedAt       DateTime?
   deliveredAt     DateTime?
+  confirmationEmailSentAt DateTime?
   
   // Relations
   items           OrderItem[]
@@ -468,7 +468,7 @@ model Recipe {
 model Analytics {
   id        String      @id @default(cuid())
   type      AnalyticsType
-  
+
   // Event details
   page      String?
   action    String?
@@ -492,6 +492,21 @@ model Analytics {
   @@index([type, createdAt])
   @@index([page])
   @@map("analytics")
+}
+
+model AnalyticsSetting {
+  id               String   @id @default(cuid())
+  measurementId    String?
+  propertyId       String?
+  dataStreamId     String?
+  chartDefinitions Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  updatedById      String?
+
+  updatedBy        User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("analytics_settings")
 }
 
 model Permission {
@@ -788,18 +803,134 @@ model FormTemplateVersion {
 }
 
 model EmailTemplate {
-  id        String   @id @default(cuid())
-  key       String   @unique  // e.g., "order_confirmation", "shipping_notification"
+  id        String              @id @default(cuid())
+  key       String              @unique  // e.g., "order_confirmation", "shipping_notification"
   name      String
   subject   String
-  html      String   @db.Text
-  text      String?  @db.Text
-  variables Json?    // {"name": "string", "orderNumber": "string"}
+  html      String              @db.Text
+  text      String?             @db.Text
+  variables Json?               // {"name": "string", "orderNumber": "string"}
+  
+  // Template metadata
+  category  EmailTemplateCategory @default(TRANSACTIONAL)
+  isActive  Boolean             @default(true)
+  sentCount Int                 @default(0)
+  lastSentAt DateTime?
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
+  // Relations
+  campaigns EmailCampaign[]
+  
   @@map("email_templates")
+}
+
+model EmailConfiguration {
+  id              String   @id @default(cuid())
+  name            String   // e.g., "Primary SMTP", "Backup Server"
+  
+  // SMTP settings
+  smtpHost        String?
+  smtpPort        Int?     @default(587)
+  smtpUsername    String?
+  smtpPassword    String?  @db.Text  // Encrypted
+  smtpSecure      Boolean  @default(true)  // Use TLS
+  
+  // Sender info
+  fromEmail       String
+  fromName        String?
+  replyToEmail    String?
+  
+  // Settings
+  isDefault       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  useResend       Boolean  @default(true)  // Fallback to Resend
+  
+  // Rate limiting
+  maxPerHour      Int      @default(1000)
+  maxPerDay       Int      @default(10000)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("email_configurations")
+}
+
+model EmailCampaign {
+  id              String              @id @default(cuid())
+  name            String
+  
+  // Template
+  templateId      String
+  template        EmailTemplate       @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  
+  // Campaign details
+  subject         String              // Can override template subject
+  status          EmailCampaignStatus @default(DRAFT)
+  
+  // Scheduling
+  scheduledAt     DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  
+  // Tracking
+  totalRecipients Int                 @default(0)
+  sentCount       Int                 @default(0)
+  failedCount     Int                 @default(0)
+  bouncedCount    Int                 @default(0)
+  
+  // Settings
+  trackOpens      Boolean             @default(false)
+  trackClicks     Boolean             @default(false)
+  
+  // Metadata
+  notes           String?             @db.Text
+  createdById     String?
+  
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  
+  // Relations
+  recipients      EmailRecipient[]
+  
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([createdById])
+  @@map("email_campaigns")
+}
+
+model EmailRecipient {
+  id              String                @id @default(cuid())
+  campaignId      String
+  campaign        EmailCampaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  // Recipient info
+  email           String
+  name            String?
+  
+  // Variable data for personalization
+  variables       Json?                 // {"orderNumber": "12345", "discount": "20%"}
+  
+  // Status
+  status          EmailRecipientStatus  @default(PENDING)
+  sentAt          DateTime?
+  failedAt        DateTime?
+  bouncedAt       DateTime?
+  openedAt        DateTime?
+  clickedAt       DateTime?
+  
+  // Error tracking
+  errorMessage    String?
+  retryCount      Int                   @default(0)
+  
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  
+  @@index([campaignId])
+  @@index([email])
+  @@index([status])
+  @@map("email_recipients")
 }
 
 model AuditLog {
@@ -1007,6 +1138,66 @@ enum GiftCertificateStatus {
   CANCELLED
 }
 
+enum EmailTemplateCategory {
+  TRANSACTIONAL  // Order confirmations, shipping notifications, etc.
+  MARKETING      // Promotions, product launches, newsletters
+  ADMINISTRATIVE // Account updates, password resets
+}
+
+enum EmailCampaignStatus {
+  DRAFT          // Being created
+  SCHEDULED      // Scheduled for future send
+  SENDING        // Currently sending
+  SENT           // Completed successfully
+  PAUSED         // Temporarily stopped
+  CANCELLED      // User cancelled
+  FAILED         // Send failed
+}
+
+enum EmailRecipientStatus {
+  PENDING        // Not yet sent
+  SENDING        // Currently sending
+  SENT           // Successfully sent
+  FAILED         // Send failed
+  BOUNCED        // Email bounced
+  OPENED         // Recipient opened email
+  CLICKED        // Recipient clicked link
+}
+
+enum EngagementType {
+  NEWSLETTER
+  FUNDRAISER
+  CONTACT
+  ORDER
+  SIGNUP
+  OTHER
+}
+
+enum EngagementStatus {
+  PENDING
+  CONTACTED
+  CLOSED
+  IGNORED
+}
+
+model EngagementRequest {
+  id          String           @id @default(cuid())
+  type        EngagementType
+  status      EngagementStatus @default(PENDING)
+
+  name        String?
+  email       String?
+  source      String?
+  metadata    Json?
+
+  processedAt DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@index([type, status])
+  @@index([createdAt])
+  @@map("engagement_requests")
+}
+
 model PasswordResetToken {
   id        String   @id @default(cuid())
   token     String   @unique
@@ -1117,4 +1308,25 @@ model GiftCertificateUsage {
   @@map("gift_certificate_usages")
 }
 
-// Update Order model to include gift certificate relation
+model DocumentationEntry {
+  id             String                  @id @default(cuid())
+  slug           String                  @unique
+  title          String
+  description    String?
+  category       String?
+  tags           String[]
+  visibility     DocumentationVisibility @default(PUBLIC)
+  isPublished    Boolean                 @default(true)
+  sourcePath     String
+  filePath       String
+  lastSyncedAt   DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@map("DocumentationEntry")
+}
+
+enum DocumentationVisibility {
+  PUBLIC
+  DEVELOPER
+}
