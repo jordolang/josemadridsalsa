@@ -1,9 +1,5 @@
 import { create } from 'zustand'
-<<<<<<< HEAD
 import { persist, createJSONStorage } from 'zustand/middleware'
-=======
-import { persist, StateStorage } from 'zustand/middleware'
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
 
 export interface CartItem {
   id: string
@@ -48,71 +44,6 @@ const cartStoreConfig = (set: any, get: any): CartStore => ({
       const newQuantity = existingItem.quantity + (newItem.quantity || 1)
       const maxQuantity = newItem.maxQuantity || 99
 
-<<<<<<< HEAD
-      removeItem: (id) => {
-        set({
-          items: get().items.filter((item) => item.id !== id),
-        })
-      },
-
-      updateQuantity: (id, quantity) => {
-        if (quantity <= 0) {
-          get().removeItem(id)
-          return
-        }
-
-        set({
-          items: get().items.map((item) =>
-            item.id === id
-              ? { ...item, quantity: Math.min(quantity, item.maxQuantity || 99) }
-              : item
-          ),
-        })
-      },
-
-      clearCart: () => {
-        set({ items: [] })
-      },
-
-      openCart: () => {
-        set({ isOpen: true })
-      },
-
-      closeCart: () => {
-        set({ isOpen: false })
-      },
-
-      toggleCart: () => {
-        set({ isOpen: !get().isOpen })
-      },
-
-      totalItems: () => {
-        return get().items.reduce((total, item) => total + item.quantity, 0)
-      },
-
-      totalPrice: () => {
-        return get().items.reduce((total, item) => total + item.price * item.quantity, 0)
-      },
-    }),
-    {
-      name: 'cart-storage',
-      partialize: (state) => ({ items: state.items }),
-      storage:
-        typeof window !== 'undefined'
-          ? createJSONStorage(() => window.localStorage)
-          : createJSONStorage(() => {
-              const memoryStorage: Record<string, string> = {}
-              return {
-                getItem: (name: string) => memoryStorage[name] ?? null,
-                setItem: (name: string, value: string) => {
-                  memoryStorage[name] = value
-                },
-                removeItem: (name: string) => {
-                  delete memoryStorage[name]
-                },
-              }
-            }),
-=======
       set({
         items: items.map((item: CartItem) =>
           item.id === newItem.id
@@ -125,7 +56,6 @@ const cartStoreConfig = (set: any, get: any): CartStore => ({
       set({
         items: [...items, { ...newItem, quantity: newItem.quantity || 1 }],
       })
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
     }
   },
 

@@ -3,11 +3,6 @@ import path from 'path'
 import Papa from 'papaparse'
 import ExcelJS from 'exceljs'
 import mammoth from 'mammoth'
-<<<<<<< HEAD
-// @ts-ignore - pdf-parse v2.4.5 has export issues with TypeScript
-import { PDFParse } from 'pdf-parse'
-=======
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
 import JSZip from 'jszip'
 import { load as loadHtml } from 'cheerio'
 import {
@@ -29,12 +24,6 @@ export type ExtractionResult = {
 }
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
-<<<<<<< HEAD
-  const parser = new PDFParse({ data: buffer })
-  const result = await parser.getText()
-  await parser.destroy()
-  return result.text ?? ''
-=======
   try {
     // Dynamic import for pdf-parse to avoid ESM issues
     const pdfParse = (await import('pdf-parse')).default
@@ -44,7 +33,6 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
     // PDF parsing failed, return empty string
     return ''
   }
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
 }
 
 export function normalizeTrainingText(raw: string): {
@@ -307,7 +295,6 @@ async function stringifyWorkbook(buffer: Buffer): Promise<string> {
   
   if (workbook.worksheets.length === 0) return ''
 
-<<<<<<< HEAD
   const parts = workbook.worksheets.map((sheet) => {
     const rows: string[] = []
     sheet.eachRow((row) => {
@@ -320,12 +307,6 @@ async function stringifyWorkbook(buffer: Buffer): Promise<string> {
       }
     })
     return `Sheet: ${sheet.name}\n${rows.join('\n')}`
-=======
-  const parts = sheets.map((sheetName: string) => {
-    const sheet = workbook.Sheets[sheetName]
-    const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false })
-    return `Sheet: ${sheetName}\n${csv.trim()}`
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
   })
 
   return parts.join('\n\n')

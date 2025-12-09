@@ -8,10 +8,7 @@ import { resolveTemplateOwner } from '@/lib/forms/ownership'
 import { structureFromSections, templateHistoryInclude } from '../../_lib/helpers'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
-<<<<<<< HEAD
   const { slug } = await params
-=======
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
   const auth = await requirePartner(request, 'forms:write')
   if ('error' in auth) {
     return auth.error
@@ -29,11 +26,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch (error) {
     return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 })
   }
-
-<<<<<<< HEAD
-=======
-  const { slug } = await params
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
   const existing = await prisma.formTemplate.findUnique({ where: { slug } })
   if (!existing) {
     await logPartnerApiCall(partner, request, 404, { slug })
