@@ -48,6 +48,6 @@ export async function POST(req: NextRequest) {
       sortOrder: parseSortOrder(body.sortOrder),
     },
   })
-  revalidateTag('locations')
+  revalidateTag('locations', 'max')
   return NextResponse.json(created)
 }
