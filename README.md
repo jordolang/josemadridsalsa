@@ -7,6 +7,7 @@
 [![Prisma](https://img.shields.io/badge/Prisma-6.19-2D3748.svg)](https://www.prisma.io/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC.svg)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/jordolang/josemadridsalsa?utm_source=oss&utm_medium=github&utm_campaign=jordolang%2Fjosemadridsalsa&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 Modern, full-featured e-commerce platform for Jose Madrid Salsa with comprehensive admin panel, fundraising system, wholesale management, and multi-channel capabilities.
 
