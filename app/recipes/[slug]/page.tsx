@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import type { Recipe } from '@/types/recipe'
-import { recipeData } from '../../../lib/data/recipes'
+import { recipeData } from '@/lib/data/recipes'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Users, ChefHat } from 'lucide-react'
 
