@@ -52,7 +52,7 @@ yarn.lock
 # Database backup
 *.bak
 db_dump.bak
-data/
+data/backups/
 
 # Large/unused assets
 public/Fundraiser Forms/
