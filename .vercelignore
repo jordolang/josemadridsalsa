@@ -11,15 +11,11 @@ coverage/
 
 # Documentation (keep minimal)
 docs/
-<<<<<<< HEAD
-=======
 !README.md
 !docs/AI_CHATBOT_QUICK_START.md
 !docs/PRODUCTION_DATABASE.md
-*.md
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
-!README.md
 !DEPLOYMENT_COMPLETE.md
+*.md
 
 # Backstage
 backstage/

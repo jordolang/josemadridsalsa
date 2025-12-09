@@ -15,8 +15,6 @@ export const metadata: Metadata = createMetadata({
   pathname: '/admin',
 })
 
-export const dynamic = 'force-dynamic'
-
 export default async function AdminLayout({
   children,
 }: {
