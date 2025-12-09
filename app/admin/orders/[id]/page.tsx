@@ -114,20 +114,13 @@ export default async function OrderDetailPage({
                 {order.items.map((item) => (
                   <div key={item.id} className="flex gap-4">
                     {item.productImage && (
-<<<<<<< HEAD
                       <div className="relative h-16 w-16 flex-shrink-0">
-=======
-                      <div className="relative h-16 w-16">
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
                         <Image
                           src={item.productImage}
                           alt={item.productName}
                           fill
                           className="rounded object-cover"
-<<<<<<< HEAD
-=======
                           sizes="64px"
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
                         />
                       </div>
                     )}

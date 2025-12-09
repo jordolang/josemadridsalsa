@@ -224,10 +224,7 @@ export default async function RecipesPage({
                     alt={recipe.title}
                     fill
                     className="object-cover"
-<<<<<<< HEAD
-=======
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
                   />
                 </div>
 

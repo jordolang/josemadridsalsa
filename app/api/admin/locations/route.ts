@@ -48,10 +48,6 @@ export async function POST(req: NextRequest) {
       sortOrder: parseSortOrder(body.sortOrder),
     },
   })
-<<<<<<< HEAD
-  revalidateTag('locations', CACHE_PROFILE)
-=======
-  revalidateTag('locations', '/')
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
+  revalidateTag('locations')
   return NextResponse.json(created)
 }

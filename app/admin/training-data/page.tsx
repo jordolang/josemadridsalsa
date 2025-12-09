@@ -246,7 +246,7 @@ export default async function TrainingDataPage() {
                           )}
                         </td>
                       </tr>
-                  )})}
+                  ))}
                 </tbody>
               </table>
             </div>

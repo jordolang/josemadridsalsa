@@ -42,20 +42,13 @@ export default function MediaDetailDialog({
           {/* Image Preview */}
           <div className="rounded-lg bg-slate-100 p-4">
             {media.mimeType.startsWith('image/') ? (
-<<<<<<< HEAD
               <div className="relative w-full" style={{ aspectRatio: media.width && media.height ? `${media.width}/${media.height}` : '1' }}>
-=======
-              <div className="relative w-full aspect-video">
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
                 <Image
                   src={media.url}
                   alt={media.alt || media.filename}
                   fill
                   className="rounded object-contain"
-<<<<<<< HEAD
-=======
                   sizes="(max-width: 768px) 100vw, 600px"
->>>>>>> a914b70e48c74fb30ffafd6a685d5d84da8bcb1d
                 />
               </div>
             ) : (
