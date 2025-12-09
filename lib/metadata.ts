@@ -29,7 +29,6 @@ const ogImageMap: Record<string, string> = {
   '/wholesale': `${SITE_URL}${OG_IMAGE_BASE_PATH}/wholesale.png`,
   '/admin': `${SITE_URL}${OG_IMAGE_BASE_PATH}/dark-mode/home-dark.png`,
   '/admin/products': `${SITE_URL}${OG_IMAGE_BASE_PATH}/dark-mode/products-dark.png`,
-  '/admin/recipes': `${SITE_URL}${OG_IMAGE_BASE_PATH}/dark-mode/recipes-dark.png`,
   '/admin/fundraisers': `${SITE_URL}${OG_IMAGE_BASE_PATH}/dark-mode/fundraising-dark.png`,
   '/admin/wholesale': `${SITE_URL}${OG_IMAGE_BASE_PATH}/dark-mode/wholesale-dark.png`,
   '/admin/gift-certificates': `${SITE_URL}${OG_IMAGE_BASE_PATH}/dark-mode/gift-certificates-dark.png`,

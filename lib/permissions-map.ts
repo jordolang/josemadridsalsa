@@ -78,11 +78,6 @@ export const adminNavigation: NavItem[] = [
         permission: 'content:read',
       },
       {
-        label: 'Recipes',
-        href: '/admin/recipes',
-        permission: 'content:read',
-      },
-      {
         label: 'Events',
         href: '/admin/events',
         permission: 'content:read',
