@@ -148,8 +148,9 @@
     );
     opacity: 0;
     pointer-events: none;
-    z-index: 999;
+    z-index: 1;
     border-radius: inherit;
+    mix-blend-mode: overlay;
   }
 
   .interactive-card:hover::after {
