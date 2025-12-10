@@ -81,6 +81,16 @@ const nextConfig = {
       'AGENTS.md',
     ],
   },
+  /**
+   * Explicitly include Prisma client in serverless function traces
+   * This ensures the generated Prisma client is bundled with Vercel functions
+   */
+  outputFileTracingIncludes: {
+    '/api/**/*': [
+      './node_modules/.prisma/client/**/*',
+      './node_modules/@prisma/client/**/*',
+    ],
+  },
   turbopack: {
     // Force Turbopack to resolve packages from the actual repo root.
     root: projectRoot,
