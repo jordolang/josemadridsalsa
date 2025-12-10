@@ -26,9 +26,7 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
   const primaryImage = useMemo(() => {
     const gallery = location.photoGallery ?? []
     const hero = gallery[0] ?? photoUrl ?? '/images/store-placeholder.png'
-    if (hero.startsWith('https://places.googleapis.com/')) {
-      return `/api/image-proxy?url=${encodeURIComponent(hero)}`
-    }
+    // Return image URL directly - Next.js Image will handle optimization
     return hero
   }, [location.photoGallery, photoUrl])
 
