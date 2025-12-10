@@ -82,13 +82,16 @@ const nextConfig = {
     ],
   },
   /**
-   * Explicitly include Prisma client in serverless function traces
-   * This ensures the generated Prisma client is bundled with Vercel functions
+   * Explicitly include required files in serverless function traces
+   * This ensures they are bundled with Vercel functions
    */
   outputFileTracingIncludes: {
     '/api/**/*': [
       './node_modules/.prisma/client/**/*',
       './node_modules/@prisma/client/**/*',
+    ],
+    '/find-us': [
+      './public/find-us-locally/**/*',
     ],
   },
   turbopack: {
