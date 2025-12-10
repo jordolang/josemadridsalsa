@@ -293,6 +293,8 @@ export function renderFormHtml(template: BusinessFormTemplate, options: RenderOp
   })
 
   const today = new Date().toLocaleDateString()
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.josemadridsalsa.com'
+  const logoUrl = `${siteUrl}/images/Hero-image.png`
 
   return `
     <!DOCTYPE html>
@@ -310,7 +312,7 @@ export function renderFormHtml(template: BusinessFormTemplate, options: RenderOp
               <div style="display: flex; align-items: center; gap: 16px;">
                 ${
                   includeBranding
-                    ? `<img src="/images/jose-madrid-salsa-logo.png" alt="Jose Madrid Salsa Logo" class="brand-logo" />`
+                    ? `<img src="${logoUrl}" alt="Jose Madrid Salsa Logo" class="brand-logo" />`
                     : ''
                 }
                 <div>

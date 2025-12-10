@@ -18,7 +18,7 @@ const company = {
   name: 'Jose Madrid Salsa',
   description:
     'Handcrafted, small-batch salsas made in Ohio since 1989. We partner with families, fundraisers, and retail shops across the Midwest.',
-  logo: '/images/jose-madrid-salsa-logo.png',
+  logo: '/images/Hero-image.png',
 }
 
 const socialLinks = [
@@ -71,13 +71,14 @@ export function Footer() {
       <div className="mx-auto max-w-screen-xl px-4 pt-16 pb-6 sm:px-6 lg:px-8 lg:pt-24">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div>
-            <div className="text-primary flex justify-center gap-2 sm:justify-start">
+            <div className="text-primary flex justify-center items-center gap-3 sm:justify-start">
               <Image
                 src={company.logo}
                 alt={`${company.name} logo`}
-                width={32}
-                height={32}
-                className="rounded-full"
+                width={48}
+                height={48}
+                className="rounded-lg object-contain"
+                priority
               />
               <span className="text-2xl font-semibold">{company.name}</span>
             </div>
