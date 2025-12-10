@@ -109,39 +109,43 @@ export function ProductCard({ product }: ProductCardProps) {
                 </Badge>
               </div>
 
-              {/* Quick Actions */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              {/* Quick View Eye Icon - Center */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 z-10">
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="h-16 w-16 rounded-full p-0 bg-white/95 hover:bg-white hover:scale-110 transition-all duration-300 shadow-2xl border-2 border-salsa-500/50 hover:border-salsa-500"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setQuickViewOpen(true)
+                  }}
+                >
+                  <Eye className="h-7 w-7 text-salsa-600" />
+                  <span className="sr-only">Quick view</span>
+                </Button>
+              </div>
+
+              {/* Quick Actions - Corner */}
+              <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div className="flex gap-2">
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="h-10 w-10 rounded-full p-0"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setQuickViewOpen(true)
-                    }}
-                  >
-                    <Eye className="h-4 w-4" />
-                    <span className="sr-only">Quick view</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="h-10 w-10 rounded-full p-0"
+                    className="h-9 w-9 rounded-full p-0 bg-white/90 hover:bg-white shadow-lg"
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
                       // Add to wishlist logic
                     }}
                   >
-                    <Heart className="h-4 w-4" />
+                    <Heart className="h-4 w-4 text-salsa-600" />
                     <span className="sr-only">Add to wishlist</span>
                   </Button>
                   {!isOutOfStock && (
                     <Button
                       size="sm"
-                      className="h-10 w-10 rounded-full p-0 bg-salsa-500 hover:bg-salsa-600"
+                      className="h-9 w-9 rounded-full p-0 bg-salsa-500 hover:bg-salsa-600 shadow-lg"
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
@@ -196,17 +200,6 @@ export function ProductCard({ product }: ProductCardProps) {
                 Out of Stock
               </Button>
             )}
-          </div>
-
-          <div className="mt-2">
-            <Button
-              variant="link"
-              size="sm"
-              className="h-auto px-0 text-salsa-600 hover:text-salsa-700"
-              onClick={() => setQuickViewOpen(true)}
-            >
-              Quick view details
-            </Button>
           </div>
 
           {/* Low stock warning */}

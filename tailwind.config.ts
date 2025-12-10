@@ -108,7 +108,13 @@ const config: Config = {
   		animation: {
   			'fade-in': 'fadeIn 0.5s ease-in-out',
   			'slide-up': 'slideUp 0.5s ease-out',
-  			'bounce-gentle': 'bounceGentle 2s infinite'
+  			'bounce-gentle': 'bounceGentle 2s infinite',
+  			'slide-in-right': 'slideInRight 0.5s ease-out',
+  			'slide-in-left': 'slideInLeft 0.5s ease-out',
+  			'wiggle': 'wiggle 1s ease-in-out',
+  			'pulse-slow': 'pulseSlow 3s ease-in-out infinite',
+  			'spin-slow': 'spinSlow 3s linear infinite',
+  			'swing': 'swing 1s ease-in-out'
   		},
   		keyframes: {
   			fadeIn: {
@@ -138,6 +144,67 @@ const config: Config = {
   				},
   				'60%': {
   					transform: 'translateY(-5px)'
+  				}
+  			},
+  			slideInRight: {
+  				'0%': {
+  					transform: 'translateX(100px)',
+  					opacity: '0'
+  				},
+  				'100%': {
+  					transform: 'translateX(0)',
+  					opacity: '1'
+  				}
+  			},
+  			slideInLeft: {
+  				'0%': {
+  					transform: 'translateX(-100px)',
+  					opacity: '0'
+  				},
+  				'100%': {
+  					transform: 'translateX(0)',
+  					opacity: '1'
+  				}
+  			},
+  			wiggle: {
+  				'0%, 100%': {
+  					transform: 'rotate(-3deg)'
+  				},
+  				'50%': {
+  					transform: 'rotate(3deg)'
+  				}
+  			},
+  			pulseSlow: {
+  				'0%, 100%': {
+  					opacity: '1'
+  				},
+  				'50%': {
+  					opacity: '0.7'
+  				}
+  			},
+  			spinSlow: {
+  				'0%': {
+  					transform: 'rotate(0deg)'
+  				},
+  				'100%': {
+  					transform: 'rotate(360deg)'
+  				}
+  			},
+  			swing: {
+  				'0%, 100%': {
+  					transform: 'rotate(0deg)'
+  				},
+  				'20%': {
+  					transform: 'rotate(15deg)'
+  				},
+  				'40%': {
+  					transform: 'rotate(-10deg)'
+  				},
+  				'60%': {
+  					transform: 'rotate(5deg)'
+  				},
+  				'80%': {
+  					transform: 'rotate(-5deg)'
   				}
   			}
   		},
