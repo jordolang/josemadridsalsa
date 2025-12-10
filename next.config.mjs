@@ -90,8 +90,16 @@ const nextConfig = {
       './node_modules/.prisma/client/**/*',
       './node_modules/@prisma/client/**/*',
     ],
-    '/find-us': [
+    '/find-us/**/*': [
       './public/find-us-locally/**/*',
+    ],
+    '/recipes/**/*': [
+      './node_modules/.prisma/client/**/*',
+      './node_modules/@prisma/client/**/*',
+    ],
+    '/products/**/*': [
+      './node_modules/.prisma/client/**/*',
+      './node_modules/@prisma/client/**/*',
     ],
   },
   turbopack: {
