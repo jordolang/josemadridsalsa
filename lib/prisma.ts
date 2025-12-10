@@ -33,7 +33,12 @@ const createPrismaClient = (): PrismaClient => {
 
   try {
     if (!databaseUrl) {
-      throw new Error('DATABASE_URL is not set')
+      console.error('[Prisma] DATABASE_URL is not set. Available env vars:', {
+        hasPostgresUrl: !!process.env.POSTGRES_URL,
+        hasPrismaUrl: !!process.env.PRISMA_DATABASE_URL,
+        hasDatabaseUrl: !!process.env.DATABASE_URL,
+      })
+      throw new Error('DATABASE_URL is not set - check environment variables')
     }
 
     const usesAccelerate = databaseUrl.startsWith('prisma://') || databaseUrl.startsWith('prisma+postgres://')
@@ -47,17 +52,17 @@ const createPrismaClient = (): PrismaClient => {
       return acceleratedClient
     }
 
-    console.log('[Prisma] Client initialized successfully')
+    console.log('[Prisma] Client initialized successfully (direct connection)')
     return new PrismaClient({ log: logLevels })
   } catch (error) {
-    console.error('[Prisma] Failed to initialize client with DATABASE_URL:', error)
+    console.error('[Prisma] Failed to initialize client:', error)
 
     const fallbackUrl = process.env.POSTGRES_URL
     const attemptedUrl = process.env.DATABASE_URL
 
     if (fallbackUrl && fallbackUrl !== attemptedUrl) {
       try {
-        console.log('[Prisma] Retrying client init with POSTGRES_URL fallback')
+        console.log('[Prisma] Attempting fallback with POSTGRES_URL')
         return new PrismaClient({
           log: logLevels,
           datasources: { db: { url: fallbackUrl } },
@@ -67,8 +72,9 @@ const createPrismaClient = (): PrismaClient => {
       }
     }
 
-    // Create a minimal client that will fail gracefully
-    return new PrismaClient({ log: ['error'] })
+    // Re-throw the error instead of returning a broken client
+    // This will help identify configuration issues early
+    throw new Error(`Failed to initialize Prisma Client: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
 

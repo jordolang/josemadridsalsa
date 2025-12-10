@@ -61,6 +61,7 @@ const nextConfig = {
   /**
    * Exclude large, unused directories from serverless traces to keep
    * functions under Vercel's 250 MB unzipped limit.
+   * Note: Do NOT exclude public/images/** as it prevents Next.js Image Optimization from working
    */
   outputFileTracingExcludes: {
     '*': [
@@ -68,7 +69,6 @@ const nextConfig = {
       'docs/**',
       'scripts/**',
       'tests/**',
-      'public/images/**',
       'public/Fundraiser Forms/**',
       'public/samples/**',
       'prisma/dev.db',

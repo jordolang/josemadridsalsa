@@ -1,8 +1,23 @@
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import type { NextAuthOptions } from 'next-auth'
-import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+
+// Lazy load Prisma to handle initialization errors gracefully
+let prismaClient: any = null
+async function getPrisma() {
+  if (!prismaClient) {
+    try {
+      const { prisma } = await import('@/lib/prisma')
+      prismaClient = prisma
+      console.log('[Auth] Prisma client loaded successfully')
+    } catch (error) {
+      console.error('[Auth] Failed to load Prisma client:', error)
+      throw new Error('Database connection failed')
+    }
+  }
+  return prismaClient
+}
 
 // Validate NEXTAUTH_SECRET
 if (!process.env.NEXTAUTH_SECRET) {
@@ -20,8 +35,19 @@ if (process.env.NEXTAUTH_URL) {
   console.log('[Auth] NEXTAUTH_URL not set - will be auto-detected')
 }
 
+// Initialize adapter with error handling
+let adapter: any
+try {
+  const { prisma } = require('@/lib/prisma')
+  adapter = PrismaAdapter(prisma) as any
+  console.log('[Auth] PrismaAdapter initialized')
+} catch (error) {
+  console.error('[Auth] Failed to initialize PrismaAdapter:', error)
+  // Adapter will be undefined, which NextAuth can handle
+}
+
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  adapter,
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -32,7 +58,7 @@ export const authOptions: NextAuthOptions = {
   },
   // Trust the proxy/host in production (required for Vercel and other hosting platforms)
   useSecureCookies: process.env.NODE_ENV === 'production',
-  debug: process.env.NODE_ENV === 'development', // Only enable debug in development
+  debug: false, // Disable debug to prevent /api/auth/_log 405 errors
   logger: {
     error(code, metadata) {
       console.error('[NextAuth Error]', code, metadata)
@@ -41,7 +67,9 @@ export const authOptions: NextAuthOptions = {
       console.warn('[NextAuth Warn]', code)
     },
     debug(code, metadata) {
-      console.log('[NextAuth Debug]', code, metadata)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[NextAuth Debug]', code, metadata)
+      }
     },
   },
   providers: [
@@ -59,13 +87,14 @@ export const authOptions: NextAuthOptions = {
           }
 
           console.log('[Auth] Attempting login for:', credentials.email)
-          
+
+          const prisma = await getPrisma()
           const user = await prisma.user.findUnique({ where: { email: credentials.email } })
           if (!user) {
             console.error('[Auth] User not found:', credentials.email)
             return null
           }
-          
+
           if (!user.password) {
             console.error('[Auth] User has no password set:', credentials.email)
             return null
@@ -111,6 +140,7 @@ export const authOptions: NextAuthOptions = {
         if (!token.role && token.email) {
           console.log('[JWT Callback] No role in token, fetching from DB for:', token.email)
           try {
+            const prisma = await getPrisma()
             const dbUser = await prisma.user.findUnique({
               where: { email: token.email as string },
               select: { id: true, role: true },

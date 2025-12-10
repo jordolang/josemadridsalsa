@@ -7,7 +7,22 @@ export async function GET(request: NextRequest) {
 
     // Check if Prisma is properly initialized
     if (!prisma) {
-      throw new Error('Prisma client not initialized')
+      console.error('[API Salsas] Prisma client not initialized')
+      return NextResponse.json(
+        { error: 'Database connection not available' },
+        { status: 503 }
+      )
+    }
+
+    // Test database connection
+    try {
+      await prisma.$connect()
+    } catch (dbError) {
+      console.error('[API Salsas] Database connection failed:', dbError)
+      return NextResponse.json(
+        { error: 'Database connection failed' },
+        { status: 503 }
+      )
     }
 
     // Get search params
