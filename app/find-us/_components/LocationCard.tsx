@@ -33,11 +33,8 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
       return '/images/Hero-Image-5.png'
     }
 
-    // Proxy Google Places images through our API to add authentication
-    if (hero.startsWith('https://places.googleapis.com/')) {
-      return `/api/image-proxy?url=${encodeURIComponent(hero)}`
-    }
-
+    // Use Google Places images directly - Next.js will optimize them
+    // The URLs already contain the necessary API key parameter
     return hero
   }, [location.photoGallery, photoUrl, imageError])
 
@@ -61,7 +58,6 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
           className="object-cover transition duration-500 group-hover:scale-[1.02]"
           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
           onError={() => setImageError(true)}
-          unoptimized={primaryImage.startsWith('/api/image-proxy')}
         />
       </div>
 

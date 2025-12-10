@@ -11,11 +11,12 @@ type LocationPageProps = {
   }>
 }
 
-const proxiedImage = (url?: string | null) => {
-  if (!url) return '/images/store-placeholder.png'
-  if (url.startsWith('https://places.googleapis.com/')) {
-    return `/api/image-proxy?url=${encodeURIComponent(url)}`
-  }
+const getImageUrl = (url?: string | null) => {
+  // Return placeholder if no URL provided
+  if (!url) return '/images/Hero-Image-5.png'
+
+  // Use Google Places images directly - Next.js will optimize them
+  // The URLs already contain the necessary API key parameter
   return url
 }
 
@@ -56,7 +57,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
         ? [location.photoUrl]
         : []
   const gallery = gallerySource as string[]
-  const heroImage = proxiedImage(gallery[0] ?? location.photoUrl)
+  const heroImage = getImageUrl(gallery[0] ?? location.photoUrl)
   const phone = location.phone
   const website = location.website
   const directionsUrl = location.directionsUrl
@@ -165,7 +166,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
             {gallery.map((imageUrl, index) => (
               <div key={`${imageUrl}-${index}`} className="snap-start flex-shrink-0">
                 <div className="relative h-56 w-80 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 shadow">
-                  <Image src={proxiedImage(imageUrl)} alt={`${location.businessName} photo ${index + 1}`} fill className="object-cover" />
+                  <Image src={getImageUrl(imageUrl)} alt={`${location.businessName} photo ${index + 1}`} fill className="object-cover" />
                 </div>
               </div>
             ))}
