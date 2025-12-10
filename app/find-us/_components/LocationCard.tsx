@@ -38,13 +38,13 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
     <Link
       href={`/find-us/${location.id}`}
       className={cn(
-        'card group interactive-card block overflow-hidden focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-salsa-200 transition',
+        'card group interactive-card block focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-salsa-200 transition',
         isSelected ? 'ring-2 ring-salsa-500 shadow-lg' : 'ring-1 ring-transparent',
       )}
       onMouseEnter={onSelect}
       onFocus={onSelect}
     >
-      <div className="relative aspect-[4/3] w-full bg-gray-100 dark:bg-gray-800">
+      <div className="relative aspect-[4/3] w-full bg-gray-100 dark:bg-gray-800 overflow-hidden rounded-t-xl">
         <Image
           src={primaryImage}
           alt={`${businessName} storefront`}
