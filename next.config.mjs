@@ -5,6 +5,10 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url))
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Force cache invalidation for Vercel builds
+  generateBuildId: async () => {
+    return `build-${Date.now()}`
+  },
   images: {
     remotePatterns: [
       {
