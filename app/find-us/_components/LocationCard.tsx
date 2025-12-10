@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { MapPin, Phone, ExternalLink, Navigation2 } from 'lucide-react'
@@ -22,13 +22,24 @@ const formatWebsiteLabel = (url?: string | null) => {
 
 export function LocationCard({ location, isSelected = false, onSelect }: LocationCardProps) {
   const { businessName, address, city, state, zipCode, phone, website, distanceMiles, photoUrl, directionsUrl } = location
+  const [imageError, setImageError] = useState(false)
 
   const primaryImage = useMemo(() => {
     const gallery = location.photoGallery ?? []
-    const hero = gallery[0] ?? photoUrl ?? '/images/store-placeholder.png'
-    // Return image URL directly - Next.js Image will handle optimization
+    const hero = gallery[0] ?? photoUrl
+
+    // If no image or error occurred, use placeholder
+    if (!hero || imageError) {
+      return '/images/Hero-Image-5.png'
+    }
+
+    // Proxy Google Places images through our API to add authentication
+    if (hero.startsWith('https://places.googleapis.com/')) {
+      return `/api/image-proxy?url=${encodeURIComponent(hero)}`
+    }
+
     return hero
-  }, [location.photoGallery, photoUrl])
+  }, [location.photoGallery, photoUrl, imageError])
 
   const fullAddress = `${address}, ${city}, ${state}${zipCode ? ` ${zipCode}` : ''}`
 
@@ -49,6 +60,8 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
           fill
           className="object-cover transition duration-500 group-hover:scale-[1.02]"
           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          onError={() => setImageError(true)}
+          unoptimized={primaryImage.startsWith('/api/image-proxy')}
         />
       </div>
 
