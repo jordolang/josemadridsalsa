@@ -4,20 +4,12 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { MapPin, Phone, ExternalLink, Navigation2, ChevronLeft } from 'lucide-react'
 import { getLocationById } from '@/lib/locations/query'
+import { getLocationImageUrl } from '@/lib/utils/image'
 
 type LocationPageProps = {
   params: Promise<{
     locationId: string
   }>
-}
-
-const getImageUrl = (url?: string | null) => {
-  // Return placeholder if no URL provided
-  if (!url) return '/images/Hero-Image-5.png'
-
-  // Use Google Places images directly - Next.js will optimize them
-  // The URLs already contain the necessary API key parameter
-  return url
 }
 
 const sanitizePhone = (value?: string | null) => value?.replace(/[^0-9+]/g, '') ?? ''
@@ -57,7 +49,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
         ? [location.photoUrl]
         : []
   const gallery = gallerySource as string[]
-  const heroImage = getImageUrl(gallery[0] ?? location.photoUrl)
+  const heroImage = getLocationImageUrl(gallery[0] ?? location.photoUrl)
   const phone = location.phone
   const website = location.website
   const directionsUrl = location.directionsUrl
@@ -166,7 +158,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
             {gallery.map((imageUrl, index) => (
               <div key={`${imageUrl}-${index}`} className="snap-start flex-shrink-0">
                 <div className="relative h-56 w-80 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 shadow">
-                  <Image src={getImageUrl(imageUrl)} alt={`${location.businessName} photo ${index + 1}`} fill className="object-cover" />
+                  <Image src={getLocationImageUrl(imageUrl)} alt={`${location.businessName} photo ${index + 1}`} fill className="object-cover" />
                 </div>
               </div>
             ))}
