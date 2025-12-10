@@ -5,6 +5,10 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url))
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Force cache invalidation for Vercel builds
+  generateBuildId: async () => {
+    return `build-${Date.now()}`
+  },
   images: {
     remotePatterns: [
       {
@@ -75,6 +79,19 @@ const nextConfig = {
       'prisma/seed*.ts',
       'prisma/seeds/**',
       'AGENTS.md',
+    ],
+  },
+  /**
+   * Explicitly include required files in serverless function traces
+   * This ensures they are bundled with Vercel functions
+   */
+  outputFileTracingIncludes: {
+    '/api/**/*': [
+      './node_modules/.prisma/client/**/*',
+      './node_modules/@prisma/client/**/*',
+    ],
+    '/find-us': [
+      './public/find-us-locally/**/*',
     ],
   },
   turbopack: {
