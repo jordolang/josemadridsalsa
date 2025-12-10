@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { AnimatedTestimonials } from '@/components/store/animated-testimonials'
 import { GiftBoxSelector } from '@/components/store/gift-box-selector'
 import { LocationMap } from '@/components/store/location-map'
+import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { createMetadata } from '@/lib/metadata'
 
 export const metadata: Metadata = createMetadata({
@@ -58,57 +59,65 @@ export default function Home() {
       {/* Product Categories */}
       <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold font-serif text-foreground mb-4">
-              Find Your Perfect <span className="text-gradient">Heat Level</span>
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              From those who like it mild to the heat seekers, we have the perfect salsa for everyone.
-            </p>
-          </div>
-          
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold font-serif text-foreground mb-4">
+                Find Your Perfect <span className="text-gradient">Heat Level</span>
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                From those who like it mild to the heat seekers, we have the perfect salsa for everyone.
+              </p>
+            </div>
+          </ScrollReveal>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Mild Salsa */}
-            <div className="card p-8 text-center group hover:scale-105 transition-transform duration-300">
-              <div className="w-20 h-20 bg-verde-100 dark:bg-verde-900/40 rounded-full mx-auto mb-6 flex items-center justify-center">
-                <span className="text-3xl">🌿</span>
+            <ScrollReveal delay={100}>
+              <div className="card p-8 text-center group hover:scale-105 transition-transform duration-300">
+                <div className="w-20 h-20 bg-verde-100 dark:bg-verde-900/40 rounded-full mx-auto mb-6 flex items-center justify-center">
+                  <span className="text-3xl">🌿</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-4 text-foreground">Mild</h3>
+                <p className="text-muted-foreground mb-6">
+                  Perfect for those who enjoy flavor without the heat. Great for kids and mild palates.
+                </p>
+                <Link href="/salsas?heat=mild" className="btn-secondary w-full">
+                  Shop Mild
+                </Link>
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-foreground">Mild</h3>
-              <p className="text-muted-foreground mb-6">
-                Perfect for those who enjoy flavor without the heat. Great for kids and mild palates.
-              </p>
-              <Link href="/salsas?heat=mild" className="btn-secondary w-full">
-                Shop Mild
-              </Link>
-            </div>
+            </ScrollReveal>
 
             {/* Medium Salsa */}
-            <div className="card p-8 text-center group hover:scale-105 transition-transform duration-300">
-              <div className="w-20 h-20 bg-chile-100 dark:bg-chile-900/40 rounded-full mx-auto mb-6 flex items-center justify-center">
-                <span className="text-3xl">🌶️</span>
+            <ScrollReveal delay={200}>
+              <div className="card p-8 text-center group hover:scale-105 transition-transform duration-300">
+                <div className="w-20 h-20 bg-chile-100 dark:bg-chile-900/40 rounded-full mx-auto mb-6 flex items-center justify-center">
+                  <span className="text-3xl">🌶️</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-4 text-foreground">Medium</h3>
+                <p className="text-muted-foreground mb-6">
+                  The perfect balance of flavor and heat. Our most popular choice for everyday enjoyment.
+                </p>
+                <Link href="/salsas?heat=medium" className="btn-secondary w-full">
+                  Shop Medium
+                </Link>
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-foreground">Medium</h3>
-              <p className="text-muted-foreground mb-6">
-                The perfect balance of flavor and heat. Our most popular choice for everyday enjoyment.
-              </p>
-              <Link href="/salsas?heat=medium" className="btn-secondary w-full">
-                Shop Medium
-              </Link>
-            </div>
+            </ScrollReveal>
 
             {/* Hot Salsa */}
-            <div className="card p-8 text-center group hover:scale-105 transition-transform duration-300">
-              <div className="w-20 h-20 bg-salsa-100 dark:bg-salsa-900/30 rounded-full mx-auto mb-6 flex items-center justify-center">
-                <span className="text-3xl">🔥</span>
+            <ScrollReveal delay={300}>
+              <div className="card p-8 text-center group hover:scale-105 transition-transform duration-300">
+                <div className="w-20 h-20 bg-salsa-100 dark:bg-salsa-900/30 rounded-full mx-auto mb-6 flex items-center justify-center">
+                  <span className="text-3xl">🔥</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-4 text-foreground">Hot</h3>
+                <p className="text-muted-foreground mb-6">
+                  For those who love the heat! Bold flavors with a serious kick that builds with each bite.
+                </p>
+                <Link href="/salsas?heat=hot" className="btn-secondary w-full">
+                  Shop Hot
+                </Link>
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-foreground">Hot</h3>
-              <p className="text-muted-foreground mb-6">
-                For those who love the heat! Bold flavors with a serious kick that builds with each bite.
-              </p>
-              <Link href="/salsas?heat=hot" className="btn-secondary w-full">
-                Shop Hot
-              </Link>
-            </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
@@ -117,60 +126,64 @@ export default function Home() {
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <h2 className="text-4xl font-bold font-serif text-foreground mb-6">
-                More Than Just Great Taste
-              </h2>
-              <div className="space-y-8">
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-salsa-100 dark:bg-salsa-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-salsa-600 text-xl">🏪</span>
+            <ScrollReveal className="scroll-reveal-left">
+              <div>
+                <h2 className="text-4xl font-bold font-serif text-foreground mb-6">
+                  More Than Just Great Taste
+                </h2>
+                <div className="space-y-8">
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-salsa-100 dark:bg-salsa-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <span className="text-salsa-600 text-xl">🏪</span>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-foreground mb-2">Fundraising Made Easy</h3>
+                      <p className="text-muted-foreground">
+                        Perfect for schools, churches, and organizations. High-profit margins and products people actually want.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground mb-2">Fundraising Made Easy</h3>
-                    <p className="text-muted-foreground">
-                      Perfect for schools, churches, and organizations. High-profit margins and products people actually want.
-                    </p>
+
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-verde-100 dark:bg-verde-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <span className="text-verde-600 text-xl">🏭</span>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-foreground mb-2">Wholesale Options</h3>
+                      <p className="text-muted-foreground">
+                        Stock our premium salsas in your store. Competitive pricing with excellent support.
+                      </p>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-verde-100 dark:bg-verde-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-verde-600 text-xl">🏭</span>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground mb-2">Wholesale Options</h3>
-                    <p className="text-muted-foreground">
-                      Stock our premium salsas in your store. Competitive pricing with excellent support.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-chile-100 dark:bg-chile-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-chile-600 text-xl">📍</span>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground mb-2">Local Presence</h3>
-                    <p className="text-muted-foreground">
-                      Find us at local stores throughout Ohio, or order online for delivery anywhere.
-                    </p>
+
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-chile-100 dark:bg-chile-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <span className="text-chile-600 text-xl">📍</span>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-foreground mb-2">Local Presence</h3>
+                      <p className="text-muted-foreground">
+                        Find us at local stores throughout Ohio, or order online for delivery anywhere.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <div className="relative">
-              <div className="relative w-full h-96 lg:h-[500px]">
-                <Image
-                  src="/images/salsa-bowl.png"
-                  alt="Fresh ingredients for salsa"
-                  fill
-                  className="object-contain rounded-2xl"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 45vw, 40vw"
-                />
+            </ScrollReveal>
+
+            <ScrollReveal className="scroll-reveal-right">
+              <div className="relative">
+                <div className="relative w-full h-96 lg:h-[500px]">
+                  <Image
+                    src="/images/salsa-bowl.png"
+                    alt="Fresh ingredients for salsa"
+                    fill
+                    className="object-contain rounded-2xl"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 45vw, 40vw"
+                  />
+                </div>
               </div>
-            </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
