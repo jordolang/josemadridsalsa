@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { MapPin, Phone, ExternalLink, Navigation2 } from 'lucide-react'
 import type { RetailLocationRecord } from '@/lib/locations/shared'
 import { cn } from '@/lib/utils'
+import { getLocationImageUrl, getFallbackImage } from '@/lib/utils/image'
 
 type LocationCardProps = {
   location: RetailLocationRecord
@@ -25,17 +26,16 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
   const [imageError, setImageError] = useState(false)
 
   const primaryImage = useMemo(() => {
+    // If error occurred, use placeholder
+    if (imageError) {
+      return getFallbackImage()
+    }
+
     const gallery = location.photoGallery ?? []
     const hero = gallery[0] ?? photoUrl
 
-    // If no image or error occurred, use placeholder
-    if (!hero || imageError) {
-      return '/images/Hero-Image-5.png'
-    }
-
-    // Use Google Places images directly - Next.js will optimize them
-    // The URLs already contain the necessary API key parameter
-    return hero
+    // Get the appropriate URL (proxied for Google Places images to hide API key)
+    return getLocationImageUrl(hero)
   }, [location.photoGallery, photoUrl, imageError])
 
   const fullAddress = `${address}, ${city}, ${state}${zipCode ? ` ${zipCode}` : ''}`
@@ -58,6 +58,7 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
           className="object-cover transition duration-500 group-hover:scale-[1.02]"
           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
           onError={() => setImageError(true)}
+          unoptimized={primaryImage.startsWith('/api/image-proxy')}
         />
       </div>
 
