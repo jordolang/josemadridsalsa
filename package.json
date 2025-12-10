@@ -8,7 +8,7 @@
     "dev:fast": "next dev --turbo --port 3000",
     "dev:debug": "next dev --turbo --inspect",
     "prebuild": "node scripts/sync-findus.js",
-    "build": "next build",
+    "build": "NODE_ENV=production next build",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "type-check": "tsc --noEmit",
