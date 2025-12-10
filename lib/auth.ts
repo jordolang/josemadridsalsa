@@ -42,8 +42,9 @@ try {
   adapter = PrismaAdapter(prisma) as any
   console.log('[Auth] PrismaAdapter initialized')
 } catch (error) {
-  console.error('[Auth] Failed to initialize PrismaAdapter:', error)
+  console.warn('[Auth] Failed to initialize PrismaAdapter:', error)
   // Adapter will be undefined, which NextAuth can handle
+  // This is expected during build time when DATABASE_URL might not be available
 }
 
 export const authOptions: NextAuthOptions = {

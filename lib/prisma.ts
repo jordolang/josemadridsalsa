@@ -33,12 +33,15 @@ const createPrismaClient = (): PrismaClient => {
 
   try {
     if (!databaseUrl) {
-      console.error('[Prisma] DATABASE_URL is not set. Available env vars:', {
+      console.warn('[Prisma] DATABASE_URL is not set. Available env vars:', {
         hasPostgresUrl: !!process.env.POSTGRES_URL,
         hasPrismaUrl: !!process.env.PRISMA_DATABASE_URL,
         hasDatabaseUrl: !!process.env.DATABASE_URL,
       })
-      throw new Error('DATABASE_URL is not set - check environment variables')
+      // During build time, return a client without datasource override
+      // It will fail at runtime if actually used, but allows build to succeed
+      console.warn('[Prisma] Creating client without DATABASE_URL (will fail at runtime if used)')
+      return new PrismaClient({ log: ['error'] })
     }
 
     const usesAccelerate = databaseUrl.startsWith('prisma://') || databaseUrl.startsWith('prisma+postgres://')
@@ -72,9 +75,9 @@ const createPrismaClient = (): PrismaClient => {
       }
     }
 
-    // Re-throw the error instead of returning a broken client
-    // This will help identify configuration issues early
-    throw new Error(`Failed to initialize Prisma Client: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    // Return a basic client for build time - it will fail at runtime if used without proper config
+    console.warn('[Prisma] Returning basic client (will fail at runtime if DATABASE_URL not set)')
+    return new PrismaClient({ log: ['error'] })
   }
 }
 
