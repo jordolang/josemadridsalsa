@@ -8,6 +8,9 @@ export default async function RecipesPage() {
 
   try {
     const prisma = (await import('@/lib/prisma')).default
+
+    // Try to connect and query
+    await prisma.$connect()
     recipes = await prisma.recipe.findMany({
       select: {
         id: true,
@@ -30,7 +33,9 @@ export default async function RecipesPage() {
       ],
     })
   } catch (error) {
-    console.error('Error loading recipes:', error)
+    console.error('[Recipes Page] Error loading recipes:', error)
+    // Return empty array on error - page will show "no recipes" message
+    recipes = []
   }
 
   return <RecipesClient initialRecipes={recipes} />
