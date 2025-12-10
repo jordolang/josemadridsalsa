@@ -35,20 +35,10 @@ if (process.env.NEXTAUTH_URL) {
   console.log('[Auth] NEXTAUTH_URL not set - will be auto-detected')
 }
 
-// Initialize adapter with error handling
-let adapter: any
-try {
-  const { prisma } = require('@/lib/prisma')
-  adapter = PrismaAdapter(prisma) as any
-  console.log('[Auth] PrismaAdapter initialized')
-} catch (error) {
-  console.warn('[Auth] Failed to initialize PrismaAdapter:', error)
-  // Adapter will be undefined, which NextAuth can handle
-  // This is expected during build time when DATABASE_URL might not be available
-}
-
+// Don't initialize adapter at module load time - it will cause crashes
+// NextAuth will work fine with JWT strategy without an adapter
 export const authOptions: NextAuthOptions = {
-  adapter,
+  adapter: undefined,
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
