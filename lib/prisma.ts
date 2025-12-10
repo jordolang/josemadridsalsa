@@ -81,11 +81,23 @@ const createPrismaClient = (): PrismaClient => {
   }
 }
 
-const prismaClient =
-  process.env.NODE_ENV !== 'production'
-    ? globalForPrisma.prisma ?? (globalForPrisma.prisma = createPrismaClient())
-    : createPrismaClient()
+// Lazy initialization: create client on first use, not at module load time
+// This ensures DATABASE_URL is available from Vercel runtime environment
+function getPrismaClient(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    console.log('[Prisma] Creating client on first use')
+    globalForPrisma.prisma = createPrismaClient()
+  }
+  return globalForPrisma.prisma
+}
 
-export const prisma: PrismaClient = prismaClient
+// Export a Proxy that lazily creates the client on first property access
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(target, prop) {
+    const client = getPrismaClient()
+    const value = (client as any)[prop]
+    return typeof value === 'function' ? value.bind(client) : value
+  }
+})
 
 export default prisma
