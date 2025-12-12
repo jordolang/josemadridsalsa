@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { isGooglePlacesUrl } from '@/lib/utils/image'
+import { isGooglePlacesUrl, GOOGLE_PLACES_HOST } from '@/lib/utils/image'
 
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-const GOOGLE_PHOTO_HOST = 'places.googleapis.com'
 const FALLBACK_REFERER = 'https://www.josemadrid.net'
 
 /**
@@ -10,7 +9,7 @@ const FALLBACK_REFERER = 'https://www.josemadrid.net'
  * This ensures we always use the latest key and don't rely on stale keys in the database.
  */
 const rewriteGooglePhotoUrl = (originalUrl: string): string => {
-  if (!originalUrl.startsWith(`https://${GOOGLE_PHOTO_HOST}/`)) {
+  if (!originalUrl.startsWith(`https://${GOOGLE_PLACES_HOST}/`)) {
     return originalUrl
   }
 

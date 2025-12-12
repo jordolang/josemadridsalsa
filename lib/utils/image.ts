@@ -2,7 +2,7 @@
  * Utility functions for handling image URLs, particularly Google Places images
  */
 
-const GOOGLE_PLACES_HOST = 'places.googleapis.com'
+export const GOOGLE_PLACES_HOST = 'places.googleapis.com'
 const FALLBACK_IMAGE = '/images/Hero-Image-5.png'
 
 /**
@@ -11,7 +11,7 @@ const FALLBACK_IMAGE = '/images/Hero-Image-5.png'
 export function isGooglePlacesUrl(url: string): boolean {
   try {
     const urlObj = new URL(url)
-    return urlObj.hostname === GOOGLE_PLACES_HOST
+    return urlObj.hostname === GOOGLE_PLACES_HOST && urlObj.protocol === 'https:'
   } catch {
     return false
   }
