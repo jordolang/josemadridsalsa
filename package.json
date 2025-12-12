@@ -83,7 +83,7 @@
     "jszip": "^3.10.1",
     "lucide-react": "^0.555.0",
     "mammoth": "^1.11.0",
-    "next": "^16.0.5",
+    "next": "^16.0.10",
     "next-auth": "^4.24.11",
     "nodemailer": "^7.0.11",
     "p-limit": "^7.2.0",
@@ -97,7 +97,7 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^3.4.18",
     "tailwindcss-animate": "^1.0.7",
-    "workflow": "^4.0.1-beta.6",
+    "workflow": "^4.0.1-beta.29",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },
