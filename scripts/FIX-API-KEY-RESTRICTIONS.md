@@ -11,7 +11,7 @@ This means the API key has HTTP referrer restrictions that prevent server-side u
 ### Option 1: Remove Restrictions (Fastest - for development)
 
 1. Go to [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials)
-2. Find your API key: `AIzaSyAnBwcUie1AXcNtXMS3-L8_YpYbjWxwWwg`
+2. Find your API key: `AIzaSyClxlUHfl43oC9tR2ABFWEoU053XgYsRs4`
 3. Click to edit it
 4. Under **Application restrictions**, select:
    - ✅ **None** (for development/testing)
