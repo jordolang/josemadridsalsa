@@ -1,25 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { isGooglePlacesUrl, GOOGLE_PLACES_HOST } from '@/lib/utils/image'
 
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 const FALLBACK_REFERER = 'https://www.josemadrid.net'
 
+// Updated to support both legacy and new API formats
+const LEGACY_PLACES_HOST = 'maps.googleapis.com'
+const NEW_PLACES_HOST = 'places.googleapis.com'
+
+/**
+ * Validates if URL is from Google Places (legacy or new API)
+ */
+const isGooglePlacesUrl = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url)
+    return urlObj.hostname === LEGACY_PLACES_HOST || urlObj.hostname === NEW_PLACES_HOST
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Determines if this is a New Places API URL
+ */
+const isNewPlacesApiUrl = (url: string): boolean => {
+  return url.includes('places.googleapis.com/v1/')
+}
+
 /**
  * Rewrites a Google Places photo URL to use the current API key from environment variables.
- * This ensures we always use the latest key and don't rely on stale keys in the database.
+ * Handles both legacy and new API formats.
  */
 const rewriteGooglePhotoUrl = (originalUrl: string): string => {
-  if (!originalUrl.startsWith(`https://${GOOGLE_PLACES_HOST}/`)) {
+  if (!isGooglePlacesUrl(originalUrl)) {
     return originalUrl
   }
 
   try {
     const url = new URL(originalUrl)
-    // Always prefer the currently configured API key so we don't rely on stale keys baked into JSON.
-    if (GOOGLE_PLACES_API_KEY) {
-      url.searchParams.delete('key')
-      url.searchParams.set('key', GOOGLE_PLACES_API_KEY)
+    
+    if (isNewPlacesApiUrl(originalUrl)) {
+      // New API: Ensure we have required size parameters
+      if (!url.searchParams.has('maxHeightPx') && !url.searchParams.has('maxWidthPx')) {
+        // Add default size if missing
+        url.searchParams.set('maxWidthPx', '1600')
+      }
+      
+      // API key can be in query param or header for new API
+      if (GOOGLE_PLACES_API_KEY && !url.searchParams.has('key')) {
+        url.searchParams.set('key', GOOGLE_PLACES_API_KEY)
+      }
+    } else {
+      // Legacy API: photo_reference format
+      if (GOOGLE_PLACES_API_KEY) {
+        url.searchParams.delete('key')
+        url.searchParams.set('key', GOOGLE_PLACES_API_KEY)
+      }
+      
+      // Ensure we have size parameters for legacy API
+      if (!url.searchParams.has('maxwidth') && !url.searchParams.has('maxheight')) {
+        url.searchParams.set('maxwidth', '1600')
+      }
     }
+    
     return url.toString()
   } catch (error) {
     console.warn('[image-proxy] Failed to rewrite Google photo URL:', error)
@@ -56,18 +98,30 @@ export async function GET(request: NextRequest) {
 
   try {
     const rewrittenUrl = rewriteGooglePhotoUrl(imageUrl)
+    
+    console.log('[image-proxy] Fetching:', rewrittenUrl.replace(/key=[^&]+/, 'key=***'))
+
+    const headers: HeadersInit = {
+      Referer: FALLBACK_REFERER,
+    }
+
+    // For new API, can also use X-Goog-Api-Key header
+    if (isNewPlacesApiUrl(rewrittenUrl) && GOOGLE_PLACES_API_KEY) {
+      headers['X-Goog-Api-Key'] = GOOGLE_PLACES_API_KEY
+    }
 
     // Fetch the image from Google Places API
     const response = await fetch(rewrittenUrl, {
-      headers: {
-        Referer: FALLBACK_REFERER,
-      },
+      headers,
       // Add timeout to prevent hanging requests
       signal: AbortSignal.timeout(10000), // 10 second timeout
     })
 
     if (!response.ok) {
       console.error(`[image-proxy] Failed to fetch image: ${response.status} ${response.statusText}`)
+      const errorText = await response.text()
+      console.error(`[image-proxy] Error response:`, errorText.substring(0, 200))
+      
       // Return a placeholder or error image
       return new NextResponse(null, { status: response.status })
     }
@@ -85,18 +139,5 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        // Cache for 1 year since location images rarely change
-        'Cache-Control': 'public, max-age=31536000, immutable',
-        // Security headers
-        'X-Content-Type-Options': 'nosniff',
-      },
-    })
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      console.error('[image-proxy] Request timeout')
-      return NextResponse.json({ error: 'Request timeout' }, { status: 504 })
-    }
-    console.error('[image-proxy] Error proxying image:', error)
-    return NextResponse.json({ error: 'Failed to fetch image' }, { status: 500 })
-  }
-}
+        // Cache for 1 hour (photos can change and names can expire)
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
