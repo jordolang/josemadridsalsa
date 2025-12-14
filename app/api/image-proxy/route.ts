@@ -45,13 +45,11 @@ const rewriteGooglePhotoUrl = (originalUrl: string): string => {
         url.searchParams.set('maxWidthPx', '1600')
       }
 
-      // CRITICAL: Always replace the API key (old keys in database may be expired/invalid)
-      if (GOOGLE_PLACES_API_KEY) {
-        url.searchParams.delete('key')
-        url.searchParams.set('key', GOOGLE_PLACES_API_KEY)
-      }
+      // CRITICAL: New Places API (v1) uses header-based auth (X-Goog-Api-Key)
+      // Remove the key parameter from URL - it will be sent via header instead
+      url.searchParams.delete('key')
     } else {
-      // Legacy API: photo_reference format
+      // Legacy API: photo_reference format uses query parameter auth
       // CRITICAL: Always replace the API key (old keys in database may be expired/invalid)
       if (GOOGLE_PLACES_API_KEY) {
         url.searchParams.delete('key')
@@ -100,16 +98,25 @@ export async function GET(request: NextRequest) {
 
   try {
     const rewrittenUrl = rewriteGooglePhotoUrl(imageUrl)
-    
-    console.log('[image-proxy] Fetching:', rewrittenUrl.replace(/key=[^&]+/, 'key=***'))
+
+    console.log('[image-proxy] Original URL:', imageUrl.substring(0, 100) + '...')
+    console.log('[image-proxy] Rewritten URL:', rewrittenUrl.replace(/key=[^&]+/, 'key=***'))
+    console.log('[image-proxy] API Key present:', !!GOOGLE_PLACES_API_KEY)
+    console.log('[image-proxy] Is New Places API:', isNewPlacesApiUrl(rewrittenUrl))
 
     const headers: HeadersInit = {
       Referer: FALLBACK_REFERER,
     }
 
-    // For new API, can also use X-Goog-Api-Key header
-    if (isNewPlacesApiUrl(rewrittenUrl) && GOOGLE_PLACES_API_KEY) {
+    // CRITICAL: New Places API (v1) REQUIRES X-Goog-Api-Key header (not query param)
+    // Legacy API uses query parameter authentication instead
+    if (isNewPlacesApiUrl(rewrittenUrl)) {
+      if (!GOOGLE_PLACES_API_KEY) {
+        console.error('[image-proxy] Missing API key for New Places API')
+        return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
+      }
       headers['X-Goog-Api-Key'] = GOOGLE_PLACES_API_KEY
+      console.log('[image-proxy] Added X-Goog-Api-Key header for New Places API')
     }
 
     // Fetch the image from Google Places API
@@ -119,11 +126,14 @@ export async function GET(request: NextRequest) {
       signal: AbortSignal.timeout(10000), // 10 second timeout
     })
 
+    console.log('[image-proxy] Response status:', response.status)
+    console.log('[image-proxy] Response headers:', Object.fromEntries(response.headers.entries()))
+
     if (!response.ok) {
       console.error(`[image-proxy] Failed to fetch image: ${response.status} ${response.statusText}`)
       const errorText = await response.text()
-      console.error(`[image-proxy] Error response:`, errorText.substring(0, 200))
-      
+      console.error(`[image-proxy] Error response:`, errorText.substring(0, 500))
+
       // Return a placeholder or error image
       return new NextResponse(null, { status: response.status })
     }
