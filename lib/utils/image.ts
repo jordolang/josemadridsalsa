@@ -3,7 +3,7 @@
  */
 
 export const GOOGLE_PLACES_HOST = 'places.googleapis.com'
-const FALLBACK_IMAGE = '/images/Hero-Image-5.png'
+const FALLBACK_IMAGE = '/images/Hero-Image-Mike.png'
 
 /**
  * Validates if a URL is a Google Places image URL

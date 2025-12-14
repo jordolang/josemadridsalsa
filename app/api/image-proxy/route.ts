@@ -37,31 +37,33 @@ const rewriteGooglePhotoUrl = (originalUrl: string): string => {
 
   try {
     const url = new URL(originalUrl)
-    
+
     if (isNewPlacesApiUrl(originalUrl)) {
       // New API: Ensure we have required size parameters
       if (!url.searchParams.has('maxHeightPx') && !url.searchParams.has('maxWidthPx')) {
         // Add default size if missing
         url.searchParams.set('maxWidthPx', '1600')
       }
-      
-      // API key can be in query param or header for new API
-      if (GOOGLE_PLACES_API_KEY && !url.searchParams.has('key')) {
-        url.searchParams.set('key', GOOGLE_PLACES_API_KEY)
-      }
-    } else {
-      // Legacy API: photo_reference format
+
+      // CRITICAL: Always replace the API key (old keys in database may be expired/invalid)
       if (GOOGLE_PLACES_API_KEY) {
         url.searchParams.delete('key')
         url.searchParams.set('key', GOOGLE_PLACES_API_KEY)
       }
-      
+    } else {
+      // Legacy API: photo_reference format
+      // CRITICAL: Always replace the API key (old keys in database may be expired/invalid)
+      if (GOOGLE_PLACES_API_KEY) {
+        url.searchParams.delete('key')
+        url.searchParams.set('key', GOOGLE_PLACES_API_KEY)
+      }
+
       // Ensure we have size parameters for legacy API
       if (!url.searchParams.has('maxwidth') && !url.searchParams.has('maxheight')) {
         url.searchParams.set('maxwidth', '1600')
       }
     }
-    
+
     return url.toString()
   } catch (error) {
     console.warn('[image-proxy] Failed to rewrite Google photo URL:', error)
