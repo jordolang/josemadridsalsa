@@ -141,3 +141,13 @@ export async function GET(request: NextRequest) {
         'Content-Type': contentType,
         // Cache for 1 hour (photos can change and names can expire)
         'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+      },
+    })
+  } catch (error) {
+    console.error('[image-proxy] Error fetching image:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch image' },
+      { status: 500 }
+    )
+  }
+}
