@@ -45,9 +45,12 @@ const rewriteGooglePhotoUrl = (originalUrl: string): string => {
         url.searchParams.set('maxWidthPx', '1600')
       }
 
-      // CRITICAL: New Places API (v1) uses header-based auth (X-Goog-Api-Key)
-      // Remove the key parameter from URL - it will be sent via header instead
-      url.searchParams.delete('key')
+      // CRITICAL: Always replace the API key (old keys in database may be expired/invalid)
+      // New Places API supports both query param and header auth, but query param is standard
+      if (GOOGLE_PLACES_API_KEY) {
+        url.searchParams.delete('key')
+        url.searchParams.set('key', GOOGLE_PLACES_API_KEY)
+      }
     } else {
       // Legacy API: photo_reference format uses query parameter auth
       // CRITICAL: Always replace the API key (old keys in database may be expired/invalid)
@@ -108,15 +111,10 @@ export async function GET(request: NextRequest) {
       Referer: FALLBACK_REFERER,
     }
 
-    // CRITICAL: New Places API (v1) REQUIRES X-Goog-Api-Key header (not query param)
-    // Legacy API uses query parameter authentication instead
-    if (isNewPlacesApiUrl(rewrittenUrl)) {
-      if (!GOOGLE_PLACES_API_KEY) {
-        console.error('[image-proxy] Missing API key for New Places API')
-        return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
-      }
-      headers['X-Goog-Api-Key'] = GOOGLE_PLACES_API_KEY
-      console.log('[image-proxy] Added X-Goog-Api-Key header for New Places API')
+    // Verify API key is available
+    if (!GOOGLE_PLACES_API_KEY) {
+      console.error('[image-proxy] Missing API key')
+      return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
     }
 
     // Fetch the image from Google Places API
@@ -133,6 +131,12 @@ export async function GET(request: NextRequest) {
       console.error(`[image-proxy] Failed to fetch image: ${response.status} ${response.statusText}`)
       const errorText = await response.text()
       console.error(`[image-proxy] Error response:`, errorText.substring(0, 500))
+
+      // 400/404 errors often indicate expired photo names
+      // Photo names from Google Places API expire and cannot be cached
+      if (response.status === 400 || response.status === 404) {
+        console.error('[image-proxy] Photo name may be expired. Photo names from Places API cannot be cached.')
+      }
 
       // Return a placeholder or error image
       return new NextResponse(null, { status: response.status })
