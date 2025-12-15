@@ -188,10 +188,14 @@ async function main() {
     process.exit(1);
   }
 
+  // Resolve paths relative to the repo root, not the current working directory.
+  // This allows running the script from anywhere (e.g. from `scripts/`).
+  const repoRoot = path.resolve(__dirname, '..');
+
   // Try kebab-case path first, then fallback to spaced path
-  const kebabPath = path.join(process.cwd(), 'public', 'find-us-locally', 'find-us-locally.md');
-  const spacedPath = path.join(process.cwd(), 'public', 'Find Us Locally', 'Find Us Locally.md');
-  
+  const kebabPath = path.join(repoRoot, 'public', 'find-us-locally', 'find-us-locally.md');
+  const spacedPath = path.join(repoRoot, 'public', 'Find Us Locally', 'Find Us Locally.md');
+
   let mdPath;
   try {
     await fsp.access(kebabPath);
@@ -207,8 +211,8 @@ async function main() {
       process.exit(1);
     }
   }
-  
-  const outPath = path.join(process.cwd(), 'public', 'location-photos.json');
+
+  const outPath = path.join(repoRoot, 'public', 'location-photos.json');
 
   console.log('Parsing markdown for locations...');
   const locations = await parseFindUsMarkdown(mdPath);
