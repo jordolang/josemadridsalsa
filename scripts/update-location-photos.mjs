@@ -3,14 +3,15 @@
 /**
  * Fetch photos for retail locations using Google Places API
  * and update locations-data.json
- * 
+ *
  * Usage:
  *   node scripts/update-location-photos.mjs [--force]
- * 
+ *
  * Requirements:
  *   - GOOGLE_PLACES_API_KEY or NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in environment
  */
 
+import 'dotenv/config';
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 

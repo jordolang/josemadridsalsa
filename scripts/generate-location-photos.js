@@ -8,6 +8,7 @@
     node scripts/generate-location-photos.js
 */
 
+require('dotenv/config');
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
