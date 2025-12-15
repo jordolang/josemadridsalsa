@@ -14,6 +14,7 @@
 import 'dotenv/config';
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { buildPlacesPhotoUrl } from '../lib/google-places-photo.js';
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 const PLACES_API_BASE = 'https://places.googleapis.com/v1';
@@ -46,12 +47,6 @@ async function fetchWithRetry(url, options, retries = 3) {
     }
   }
   throw new Error('Max retries exceeded');
-}
-
-function buildPlacesPhotoUrl(photoName, maxWidth = 1200) {
-  // photoName already contains the full resource path like "places/{placeId}/photos/{photoId}"
-  // So we just need to append it directly to the base URL
-  return `${PLACES_API_BASE}/${photoName}/media?key=${API_KEY}&maxWidthPx=${maxWidth}`;
 }
 
 function getBestPhoto(place) {
@@ -88,8 +83,8 @@ function getBestPhoto(place) {
   const bestPhoto = photos[0];
   // Default to 800px if no width specified
   const maxWidth = bestPhoto.widthPx ? Math.min(bestPhoto.widthPx, 1200) : 800;
-  
-  return buildPlacesPhotoUrl(bestPhoto.name, maxWidth);
+
+  return buildPlacesPhotoUrl(bestPhoto.name, API_KEY, maxWidth);
 }
 
 async function searchPlaceWithQuery(query, location) {
