@@ -130,6 +130,8 @@ async function parseFindUsMarkdown(mdAbsolutePath) {
 }
 
 function buildPlacesPhotoUrl(photoName, maxWidth = 800) {
+  // photoName already contains the full resource path like "places/{placeId}/photos/{photoId}"
+  // So we just need to append it directly to the base URL
   return `${PLACES_API_BASE}/${photoName}/media?key=${API_KEY}&maxWidthPx=${maxWidth}`;
 }
 
