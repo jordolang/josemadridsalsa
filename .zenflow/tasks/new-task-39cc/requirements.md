@@ -26,10 +26,10 @@ This PRD outlines comprehensive enhancements to the Jose Madrid Admin Panel acro
 - Generate unique order numbers
 - Support both authenticated user orders and guest orders
 
-**Questions**:
-- Should imported orders automatically sync to Shopify?
-- What's the expected file format/template?
-- Should we support order item SKU lookup or require product IDs?
+**Decisions**:
+- ✅ Imported orders WILL automatically sync to Shopify
+- File format: CSV/Excel with standard e-commerce columns
+- Support both SKU lookup and product ID mapping
 
 #### 1.2.2 Modify Orders
 **User Story**: As an admin, I want to edit existing orders to correct mistakes or accommodate customer requests.
@@ -43,10 +43,10 @@ This PRD outlines comprehensive enhancements to the Jose Madrid Admin Panel acro
 - Track order modification history in audit logs
 - Option to notify customer of changes
 
-**Questions**:
-- Should order modifications sync back to Shopify?
-- Are there any order statuses that should prevent editing (e.g., DELIVERED)?
-- Should price changes be allowed after payment?
+**Decisions**:
+- ✅ Order modifications WILL sync back to Shopify
+- Prevent editing for DELIVERED and REFUNDED statuses
+- Price changes allowed only before payment completion
 
 #### 1.2.3 Print Shipping Labels
 **User Story**: As an admin, I want to print shipping labels directly from the admin panel.
@@ -59,10 +59,10 @@ This PRD outlines comprehensive enhancements to the Jose Madrid Admin Panel acro
 - Update order status to SHIPPED
 - PDF download of labels
 
-**Questions**:
-- Which shipping carriers should be supported initially?
-- Should we use Shopify's shipping API or direct carrier integrations?
-- Are there existing shipping accounts/credentials?
+**Decisions**:
+- ✅ Initial carriers: FedEx, USPS, UPS (configurable for future expansion)
+- Use direct carrier integrations with Shopify as fallback
+- Carrier credentials will be configured in ServiceKey storage
 
 #### 1.2.4 Third-Party Service Connections
 **User Story**: As an admin, I want to connect and manage third-party services for order fulfillment.
@@ -78,9 +78,10 @@ This PRD outlines comprehensive enhancements to the Jose Madrid Admin Panel acro
 - Test connection functionality
 - Webhook setup for status updates
 
-**Questions**:
-- Which specific third-party services are required?
-- Are there existing accounts with these services?
+**Decisions**:
+- ✅ Build extensible integration framework for future services
+- Initial focus: ShipStation, Shippo (add others as needed)
+- Framework allows plugin-style service additions
 
 #### 1.2.5 Enhanced Shopify Integration
 **User Story**: As an admin, I want better visibility and control over Shopify synchronization.
@@ -302,21 +303,24 @@ This PRD outlines comprehensive enhancements to the Jose Madrid Admin Panel acro
 **User Story**: As an admin, I want to authenticate with Google to access calendar data.
 
 **Acceptance Criteria**:
-- OAuth 2.0 flow for Google Calendar
-- Scope: read/write calendar events
+- OAuth 2.0 flow for Google Calendar (replace service account approach)
+- Scope: read/write calendar events, Search Console access
 - Store access/refresh tokens securely (ServiceKey model)
 - Token refresh handling
 - Disconnect/reconnect functionality
-- Support for multiple Google accounts (if needed)
+- Support for multiple admin users with own Google accounts
+- System-wide default calendar configuration
 
 **Technical Notes**:
 - NextAuth already configured (`app/api/auth/[...nextauth]/`)
 - Add Google provider to NextAuth config
 - Store tokens in ServiceKey model
+- Migrate from service account to OAuth
 
-**Questions**:
-- Should this use service account (current) or OAuth?
-- Multiple admin users accessing same calendar or individual calendars?
+**Decisions**:
+- ✅ Use OAuth 2.0 per admin user (NOT service account)
+- ✅ Each admin can connect their own Google Calendar
+- ✅ System admin designates primary calendar for public events
 
 #### 4.2.2 Automatic Google Calendar Sync
 **User Story**: As an admin, I want events to automatically sync from Google Calendar.
@@ -350,10 +354,18 @@ This PRD outlines comprehensive enhancements to the Jose Madrid Admin Panel acro
   - Custom description override
   - Tags
 - Edit existing events (both manual and synced)
-- Delete events
+  - For synced events: mark as "manually modified"
+  - Option to revert to Google Calendar source
+  - Track modification history
+- Delete events (manual only; synced events can be hidden)
 - Duplicate event
 - Preview event display
 - Validation (dates, required fields)
+
+**Decisions**:
+- ✅ Synced events CAN be manually edited (hybrid approach)
+- ✅ Maintain link to Google event for future sync
+- ✅ Manual edits take precedence over Google sync updates
 
 #### 4.2.4 "Where is Jose?" Event Tracking
 **User Story**: As an admin, I want to mark special events as "Where is Jose?" for prominent display.
@@ -521,9 +533,10 @@ This PRD outlines comprehensive enhancements to the Jose Madrid Admin Panel acro
 - Manual actions/security issues
 - Sitemap submission status
 
-**Questions**:
-- Should this use the same Google OAuth as calendar or separate?
-- Which Google Search Console properties to track?
+**Decisions**:
+- ✅ Use same Google OAuth for both Calendar and Search Console
+- Track primary domain property: josemadridsalsa.com
+- Support for multiple properties if needed in future
 
 ## 6. AI Training & Chatbot Enhancements
 
@@ -573,17 +586,25 @@ This PRD outlines comprehensive enhancements to the Jose Madrid Admin Panel acro
 
 **Acceptance Criteria**:
 - Issue resolution workflows:
-  - Order status lookup (by order number or email)
-  - Tracking number retrieval
-  - Return/refund request initiation
-  - Gift certificate balance check
-  - Account password reset assistance
+  - ~~Order status lookup (by order number or email)~~ [EXCLUDED - No PII access]
+  - ~~Tracking number retrieval~~ [EXCLUDED - No PII access]
+  - Return/refund request initiation (general info only)
+  - Gift certificate balance check (public lookup by code)
+  - Account password reset assistance (link to reset flow)
   - Product recommendations
   - Recipe suggestions
-- Escalation to human support when needed
+  - General FAQ and policies
+- **MANDATORY**: Escalation to human support when customer needs order-specific help
 - Conversation handoff to admin messaging system
-- Collect customer info for support tickets
+- Collect customer contact info for support tickets
 - Integration with existing Conversation/Message models
+- Clear disclaimers about privacy protection
+
+**Privacy & Security**:
+- ❌ NO access to customer order details (PII protected)
+- ❌ NO access to customer account information
+- ✅ Only provide general information and policy guidance
+- ✅ Always offer human support escalation for personal matters
 
 #### 6.2.4 Training Content Management
 **User Story**: As an admin, I want to easily manage and update training content.
@@ -622,24 +643,39 @@ This PRD outlines comprehensive enhancements to the Jose Madrid Admin Panel acro
 - Implement feedback mechanism (thumbs up/down)
 - Track successful resolutions
 
+**Data Retention & Storage**:
+- ✅ Store ALL chat conversations permanently on server
+- ✅ Implement automated backup system
+- ✅ Enable data extraction for:
+  - Customer support analysis
+  - Training data improvement
+  - Business intelligence
+  - Compliance and audit
+- Database schema: Create ChatConversation and ChatMessage models
+- Include metadata: timestamp, user context, escalations, satisfaction ratings
+- Searchable and exportable (CSV, JSON)
+- Data privacy: Exclude PII from analysis exports
+
 #### 6.2.6 Advanced Integrations
 **User Story**: As an admin, I want the chatbot to access live data for accurate responses.
 
 **Acceptance Criteria**:
 - Real-time data access:
-  - Order status from database
+  - ~~Order status from database~~ [EXCLUDED - No PII]
   - Product availability
   - Current promotions
   - Store hours/locations
   - Event schedules
 - API function calling:
-  - Look up order by number
-  - Check gift certificate balance
+  - ~~Look up order by number~~ [EXCLUDED - No PII]
+  - Check gift certificate balance (public lookup only)
   - Find nearest retail location
   - Get product information
-- Secure data access (user authentication for personal data)
+  - Get recipe information
 - Rate limiting on database queries
 - Fallback to static knowledge when APIs unavailable
+
+**Privacy Constraint**: No access to customer-specific or order-specific data
 
 ## 7. Cross-Cutting Requirements
 
@@ -707,44 +743,64 @@ This PRD outlines comprehensive enhancements to the Jose Madrid Admin Panel acro
 11. SEO: Google Search Console Integration
 12. AI: Analytics Dashboard, Advanced Integrations
 
-## 9. Open Questions & Clarifications Needed
+## 9. Decisions & Remaining Questions
 
-### Orders
-1. Should order imports automatically sync to Shopify?
-2. Are there specific shipping carriers required beyond what Shopify offers?
-3. What third-party fulfillment services are currently in use?
-4. Should SMS notifications be supported in addition to email?
+### ✅ Resolved Decisions
 
-### Gift Certificates
-5. Should gift certificates sync to Shopify as products?
-6. Are there limits on gift certificate amounts?
-7. Should there be a separate gift certificate expiration policy?
+**Orders**:
+1. ✅ Order imports WILL automatically sync to Shopify
+2. ✅ Default shipping carriers: FedEx, USPS, UPS (configurable)
+3. ✅ Build extensible framework for third-party fulfillment services
 
-### Locations
-8. Are all 149 locations currently in the database, or do they need to be imported?
-9. Should location changes trigger notifications to any external systems?
+**Events**:
+4. ✅ Use OAuth 2.0 for Google Calendar (per admin user)
+5. ✅ Synced events CAN be manually edited (hybrid approach)
 
-### Events
-10. Should Google Calendar integration use service account (current) or OAuth per admin user?
-11. Can one event be both synced from Google AND manually edited?
-12. How many events should display on homepage (max)?
+**SEO**:
+6. ✅ Track primary domain: josemadridsalsa.com in Google Search Console
+7. ✅ Use same Google OAuth for Calendar and Search Console
 
-### SEO
-13. Should SEO recommendations be automated or manual review?
-14. Which Google Search Console property should be tracked?
-15. Should sitemap updates trigger automatic GSC submission?
+**AI/Chatbot**:
+8. ✅ NO access to customer order details (PII protected)
+9. ✅ MANDATORY escalation path to human support
+10. ✅ Store ALL chat logs on server, backed up for future data extraction and analysis
 
-### AI/Chatbot
-16. What's the budget/plan for OpenAI API usage?
-17. Should the chatbot have access to customer order details (PII concerns)?
-18. Should there be an escalation path to human support? How?
-19. What data retention policies apply to chat logs?
+### ❓ Remaining Questions
 
-### General
-20. What's the deployment schedule? (staging -> production timeline)
-21. Are there specific third-party services already contracted?
-22. What's the expected concurrent admin user count?
-23. Any regulatory compliance requirements (PCI DSS, GDPR, etc.)?
+**Gift Certificates**:
+1. Should gift certificates sync to Shopify as products?
+2. Are there limits on gift certificate amounts?
+3. Should there be a separate gift certificate expiration policy?
+
+**Locations**:
+4. Are all 149 locations currently in database, or do they need import verification?
+5. Should location changes trigger notifications to any external systems?
+
+**Events**:
+6. How many events should display on homepage (max)?
+
+**SEO**:
+7. Should SEO recommendations be automated or manual review?
+8. Should sitemap updates trigger automatic GSC submission?
+
+**AI/Chatbot**:
+9. What's the budget/plan for OpenAI API usage?
+
+**General**:
+10. What's the deployment schedule? (staging -> production timeline)
+11. What's the expected concurrent admin user count?
+12. Any regulatory compliance requirements (PCI DSS, GDPR, etc.)?
+13. Should SMS notifications be supported in addition to email?
+
+**Assumptions for Specification**:
+- Gift certificates: Max $500, 1-year expiration default (configurable)
+- Homepage events: Display max 5 events
+- SEO: Automated recommendations with manual review option
+- Sitemap: Auto-submit to GSC on changes
+- OpenAI: Use GPT-4 Turbo with token budgeting
+- Deployment: Standard staging -> production flow
+- Concurrent users: Plan for 50 concurrent admins
+- Compliance: Follow PCI DSS Level 2, basic GDPR principles
 
 ## 10. Success Metrics
 
