@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const permitted = await hasPermission(session.user.id, 'events:write')
+    const permitted = await hasPermission(session.user as any, 'events:write')
     if (!permitted) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }

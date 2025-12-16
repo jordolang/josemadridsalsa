@@ -1,6 +1,6 @@
 import { google } from 'googleapis'
 import { prisma } from '@/lib/prisma'
-import { getServiceKey } from '@/lib/service-keys'
+import { getDecryptedServiceKeyValue } from '@/lib/service-keys'
 
 export async function syncGoogleCalendar(): Promise<{
   created: number
@@ -16,8 +16,8 @@ export async function syncGoogleCalendar(): Promise<{
   }
 
   try {
-    const accessToken = await getServiceKey('google_calendar', 'access_token')
-    const refreshToken = await getServiceKey('google_calendar', 'refresh_token')
+    const accessToken = await getDecryptedServiceKeyValue('google_calendar', 'access_token')
+    const refreshToken = await getDecryptedServiceKeyValue('google_calendar', 'refresh_token')
 
     if (!accessToken) {
       throw new Error('Google Calendar not connected')

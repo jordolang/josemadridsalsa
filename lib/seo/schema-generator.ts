@@ -41,7 +41,7 @@ export async function generateOrganizationSchema(): Promise<OrganizationSchema> 
     '@type': 'Organization',
     name: seoConfig?.siteName || 'Jose Madrid Salsa',
     url: seoConfig?.siteUrl || 'https://www.josemadrid.net',
-    logo: seoConfig?.defaultOgImage,
+    logo: seoConfig?.defaultOgImage || undefined,
     contactPoint: {
       '@type': 'ContactPoint',
       telephone: '+1-XXX-XXX-XXXX',

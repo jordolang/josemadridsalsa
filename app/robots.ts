@@ -10,26 +10,34 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       rules: [],
     }
 
-    let currentRule: any = {}
+    let currentRule: { userAgent?: string | string[]; allow?: string | string[]; disallow?: string | string[]; crawlDelay?: number } = {}
     for (const line of lines) {
       if (line.startsWith('User-agent:')) {
         if (currentRule.userAgent) {
-          parsed.rules.push(currentRule)
+          (parsed.rules as any[]).push(currentRule)
         }
         currentRule = { userAgent: line.split(':')[1].trim() }
       } else if (line.startsWith('Allow:')) {
-        currentRule.allow = currentRule.allow || []
-        currentRule.allow.push(line.split(':')[1].trim())
+        if (!currentRule.allow) {
+          currentRule.allow = []
+        }
+        if (Array.isArray(currentRule.allow)) {
+          currentRule.allow.push(line.split(':')[1].trim())
+        }
       } else if (line.startsWith('Disallow:')) {
-        currentRule.disallow = currentRule.disallow || []
-        currentRule.disallow.push(line.split(':')[1].trim())
+        if (!currentRule.disallow) {
+          currentRule.disallow = []
+        }
+        if (Array.isArray(currentRule.disallow)) {
+          currentRule.disallow.push(line.split(':')[1].trim())
+        }
       } else if (line.startsWith('Sitemap:')) {
         parsed.sitemap = line.split(':')[1].trim()
       }
     }
 
     if (currentRule.userAgent) {
-      parsed.rules.push(currentRule)
+      (parsed.rules as any[]).push(currentRule)
     }
 
     return parsed

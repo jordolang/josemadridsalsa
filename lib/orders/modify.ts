@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { Decimal } from '@prisma/client/runtime/library'
-import { createAuditLog } from '@/lib/audit'
+import { logAudit } from '@/lib/audit'
 
 export interface OrderModification {
   orderId: string
@@ -104,7 +104,7 @@ export async function modifyOrder(modification: OrderModification) {
     },
   })
 
-  await createAuditLog({
+  await logAudit({
     userId,
     action: 'order.modify',
     entityType: 'Order',

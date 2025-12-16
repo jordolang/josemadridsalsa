@@ -69,7 +69,8 @@ export async function parseOrderFile(
   const ext = filename.toLowerCase().split('.').pop()
 
   if (ext === 'csv') {
-    return parseCSV(file instanceof Buffer ? file.toString('utf-8') : await file.text())
+    const content = file instanceof Buffer ? file.toString('utf-8') : await (file as File).text()
+    return parseCSV(content)
   } else if (ext === 'xlsx' || ext === 'xls') {
     return parseExcel(file)
   } else {
@@ -98,12 +99,12 @@ async function parseCSV(content: string): Promise<{ rows: any[]; errors: any[] }
 
 async function parseExcel(file: File | Buffer): Promise<{ rows: any[]; errors: any[] }> {
   const workbook = new ExcelJS.Workbook()
-  
+
   if (file instanceof Buffer) {
-    await workbook.xlsx.load(file)
+    await workbook.xlsx.load(file as any)
   } else {
-    const buffer = await file.arrayBuffer()
-    await workbook.xlsx.load(Buffer.from(buffer))
+    const buffer = await (file as File).arrayBuffer()
+    await workbook.xlsx.load(Buffer.from(buffer) as any)
   }
 
   const worksheet = workbook.worksheets[0]
@@ -182,14 +183,14 @@ export async function importOrders(
     try {
       const validated = OrderImportRowSchema.parse(rows[i])
       const groupKey = validated.orderNumber || `${validated.customerEmail}-${i}`
-      
+
       if (!orderGroups.has(groupKey)) {
         orderGroups.set(groupKey, [])
       }
       orderGroups.get(groupKey)!.push({ ...validated, rowIndex: i })
     } catch (error) {
       if (error instanceof z.ZodError) {
-        error.errors.forEach((err) => {
+        error.issues.forEach((err: any) => {
           result.errors.push({
             row: i + 2,
             field: err.path.join('.'),
@@ -254,9 +255,22 @@ async function createOrderFromItems(
     }
   }
 
-  const shippingAddress = await prisma.address.create({
+  const shippingAddress = user ? await prisma.address.create({
     data: {
-      userId: user?.id,
+      userId: user.id,
+      type: 'SHIPPING',
+      firstName: firstItem.shippingFirstName,
+      lastName: firstItem.shippingLastName,
+      street: firstItem.shippingStreet,
+      city: firstItem.shippingCity,
+      state: firstItem.shippingState,
+      zipCode: firstItem.shippingZip,
+      country: firstItem.shippingCountry,
+      phone: firstItem.shippingPhone,
+    },
+  }) : await prisma.address.create({
+    data: {
+      userId: 'guest',
       type: 'SHIPPING',
       firstName: firstItem.shippingFirstName,
       lastName: firstItem.shippingLastName,
@@ -271,9 +285,21 @@ async function createOrderFromItems(
 
   let billingAddress = shippingAddress
   if (firstItem.billingStreet) {
-    billingAddress = await prisma.address.create({
+    billingAddress = user ? await prisma.address.create({
       data: {
-        userId: user?.id,
+        userId: user.id,
+        type: 'BILLING',
+        firstName: firstItem.billingFirstName || firstItem.shippingFirstName,
+        lastName: firstItem.billingLastName || firstItem.shippingLastName,
+        street: firstItem.billingStreet,
+        city: firstItem.billingCity || firstItem.shippingCity,
+        state: firstItem.billingState || firstItem.shippingState,
+        zipCode: firstItem.billingZip || firstItem.shippingZip,
+        country: firstItem.billingCountry,
+      },
+    }) : await prisma.address.create({
+      data: {
+        userId: 'guest',
         type: 'BILLING',
         firstName: firstItem.billingFirstName || firstItem.shippingFirstName,
         lastName: firstItem.billingLastName || firstItem.shippingLastName,
