@@ -1314,11 +1314,6 @@
   resolved "https://registry.yarnpkg.com/@next/env/-/env-16.0.10.tgz#8a307ee3e4e48ed1149bc3e38bff5a1a2347eb1d"
   integrity sha512-8tuaQkyDVgeONQ1MeT9Mkk8pQmZapMKFh5B+OrFUlG3rVmYTXcXlBetBgTurKXGaIZvkoqRT9JL5K3phXcgang==
 
-"@next/env@16.0.7":
-  version "16.0.7"
-  resolved "https://registry.npmjs.org/@next/env/-/env-16.0.7.tgz"
-  integrity sha512-gpaNgUh5nftFKRkRQGnVi5dpcYSKGcZZkQffZ172OrG/XkrnS7UBTQ648YY+8ME92cC4IojpI2LqTC8sTDhAaw==
-
 "@next/eslint-plugin-next@15.5.5":
   version "15.5.5"
   resolved "https://registry.npmjs.org/@next/eslint-plugin-next/-/eslint-plugin-next-15.5.5.tgz"
@@ -1331,80 +1326,40 @@
   resolved "https://registry.yarnpkg.com/@next/swc-darwin-arm64/-/swc-darwin-arm64-16.0.10.tgz#333e326a7439d0461a432f9cd679d3798d12a04c"
   integrity sha512-4XgdKtdVsaflErz+B5XeG0T5PeXKDdruDf3CRpnhN+8UebNa5N2H58+3GDgpn/9GBurrQ1uWW768FfscwYkJRg==
 
-"@next/swc-darwin-arm64@16.0.7":
-  version "16.0.7"
-  resolved "https://registry.yarnpkg.com/@next/swc-darwin-arm64/-/swc-darwin-arm64-16.0.7.tgz#ffe8afc902807e409f16a5f585dc4cb683804931"
-  integrity sha512-LlDtCYOEj/rfSnEn/Idi+j1QKHxY9BJFmxx7108A6D8K0SB+bNgfYQATPk/4LqOl4C0Wo3LACg2ie6s7xqMpJg==
-
 "@next/swc-darwin-x64@16.0.10":
   version "16.0.10"
   resolved "https://registry.yarnpkg.com/@next/swc-darwin-x64/-/swc-darwin-x64-16.0.10.tgz#e6f233466dd62b054d07bc6107461abd4ec0d461"
   integrity sha512-spbEObMvRKkQ3CkYVOME+ocPDFo5UqHb8EMTS78/0mQ+O1nqE8toHJVioZo4TvebATxgA8XMTHHrScPrn68OGw==
-
-"@next/swc-darwin-x64@16.0.7":
-  version "16.0.7"
-  resolved "https://registry.yarnpkg.com/@next/swc-darwin-x64/-/swc-darwin-x64-16.0.7.tgz#ec5fd15ae391e1af9f152881f559bffaa24524e7"
-  integrity sha512-rtZ7BhnVvO1ICf3QzfW9H3aPz7GhBrnSIMZyr4Qy6boXF0b5E3QLs+cvJmg3PsTCG2M1PBoC+DANUi4wCOKXpA==
 
 "@next/swc-linux-arm64-gnu@16.0.10":
   version "16.0.10"
   resolved "https://registry.yarnpkg.com/@next/swc-linux-arm64-gnu/-/swc-linux-arm64-gnu-16.0.10.tgz#591cd7387080105540cc9c0486d513e6c212b9a6"
   integrity sha512-uQtWE3X0iGB8apTIskOMi2w/MKONrPOUCi5yLO+v3O8Mb5c7K4Q5KD1jvTpTF5gJKa3VH/ijKjKUq9O9UhwOYw==
 
-"@next/swc-linux-arm64-gnu@16.0.7":
-  version "16.0.7"
-  resolved "https://registry.yarnpkg.com/@next/swc-linux-arm64-gnu/-/swc-linux-arm64-gnu-16.0.7.tgz#22be26ee7544f68aa916159b823899b67b09f0a6"
-  integrity sha512-mloD5WcPIeIeeZqAIP5c2kdaTa6StwP4/2EGy1mUw8HiexSHGK/jcM7lFuS3u3i2zn+xH9+wXJs6njO7VrAqww==
-
 "@next/swc-linux-arm64-musl@16.0.10":
   version "16.0.10"
   resolved "https://registry.yarnpkg.com/@next/swc-linux-arm64-musl/-/swc-linux-arm64-musl-16.0.10.tgz#1078ff56c044f67fd1372ead5869fdba65d5b302"
   integrity sha512-llA+hiDTrYvyWI21Z0L1GiXwjQaanPVQQwru5peOgtooeJ8qx3tlqRV2P7uH2pKQaUfHxI/WVarvI5oYgGxaTw==
-
-"@next/swc-linux-arm64-musl@16.0.7":
-  version "16.0.7"
-  resolved "https://registry.yarnpkg.com/@next/swc-linux-arm64-musl/-/swc-linux-arm64-musl-16.0.7.tgz#1b34103951456e5d6766710e4f16dadbd7745bed"
-  integrity sha512-+ksWNrZrthisXuo9gd1XnjHRowCbMtl/YgMpbRvFeDEqEBd523YHPWpBuDjomod88U8Xliw5DHhekBC3EOOd9g==
 
 "@next/swc-linux-x64-gnu@16.0.10":
   version "16.0.10"
   resolved "https://registry.yarnpkg.com/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-16.0.10.tgz#f1b125d91ac732aded3e54720c7abc3c5197f5bf"
   integrity sha512-AK2q5H0+a9nsXbeZ3FZdMtbtu9jxW4R/NgzZ6+lrTm3d6Zb7jYrWcgjcpM1k8uuqlSy4xIyPR2YiuUr+wXsavA==
 
-"@next/swc-linux-x64-gnu@16.0.7":
-  version "16.0.7"
-  resolved "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-16.0.7.tgz"
-  integrity sha512-4WtJU5cRDxpEE44Ana2Xro1284hnyVpBb62lIpU5k85D8xXxatT+rXxBgPkc7C1XwkZMWpK5rXLXTh9PFipWsA==
-
 "@next/swc-linux-x64-musl@16.0.10":
   version "16.0.10"
   resolved "https://registry.yarnpkg.com/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-16.0.10.tgz#c7ae2997cae8b2f1c06a3f8b0a6e655d686f6863"
   integrity sha512-1TDG9PDKivNw5550S111gsO4RGennLVl9cipPhtkXIFVwo31YZ73nEbLjNC8qG3SgTz/QZyYyaFYMeY4BKZR/g==
-
-"@next/swc-linux-x64-musl@16.0.7":
-  version "16.0.7"
-  resolved "https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-16.0.7.tgz"
-  integrity sha512-HYlhqIP6kBPXalW2dbMTSuB4+8fe+j9juyxwfMwCe9kQPPeiyFn7NMjNfoFOfJ2eXkeQsoUGXg+O2SE3m4Qg2w==
 
 "@next/swc-win32-arm64-msvc@16.0.10":
   version "16.0.10"
   resolved "https://registry.yarnpkg.com/@next/swc-win32-arm64-msvc/-/swc-win32-arm64-msvc-16.0.10.tgz#3639be8d6d4dc1c3ee27fd8de7d3b923622800b5"
   integrity sha512-aEZIS4Hh32xdJQbHz121pyuVZniSNoqDVx1yIr2hy+ZwJGipeqnMZBJHyMxv2tiuAXGx6/xpTcQJ6btIiBjgmg==
 
-"@next/swc-win32-arm64-msvc@16.0.7":
-  version "16.0.7"
-  resolved "https://registry.yarnpkg.com/@next/swc-win32-arm64-msvc/-/swc-win32-arm64-msvc-16.0.7.tgz#2cf27e275ddd8d04f89391a9cdf6790cccb3bf09"
-  integrity sha512-EviG+43iOoBRZg9deGauXExjRphhuYmIOJ12b9sAPy0eQ6iwcPxfED2asb/s2/yiLYOdm37kPaiZu8uXSYPs0Q==
-
 "@next/swc-win32-x64-msvc@16.0.10":
   version "16.0.10"
   resolved "https://registry.yarnpkg.com/@next/swc-win32-x64-msvc/-/swc-win32-x64-msvc-16.0.10.tgz#80a4a2fc3ef54ee9d4ab43560215abbc78cfecdc"
   integrity sha512-E+njfCoFLb01RAFEnGZn6ERoOqhK1Gl3Lfz1Kjnj0Ulfu7oJbuMyvBKNj/bw8XZnenHDASlygTjZICQW+rYW1Q==
-
-"@next/swc-win32-x64-msvc@16.0.7":
-  version "16.0.7"
-  resolved "https://registry.yarnpkg.com/@next/swc-win32-x64-msvc/-/swc-win32-x64-msvc-16.0.7.tgz#e9e38fcca752902542c25c527e532af71e9ca812"
-  integrity sha512-gniPjy55zp5Eg0896qSrf3yB1dw4F/3s8VK1ephdsZZ129j2n6e1WqCbE2YgcKhW9hPB9TVZENugquWJD5x0ug==
 
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
@@ -3673,27 +3628,27 @@
     "@vitest/pretty-format" "4.0.6"
     tinyrainbow "^3.0.3"
 
-"@workflow/astro@4.0.0-beta.7":
-  version "4.0.0-beta.7"
-  resolved "https://registry.yarnpkg.com/@workflow/astro/-/astro-4.0.0-beta.7.tgz#5391b05b1d55fff2027dee481aa55336f2ef6189"
-  integrity sha512-TMArVeTDLUiq2JR5uhumS8XsV5RxGB0bRZ6aEKxuf3WGP/jy2r+yW8bit8a4uIFzTdk26DQRo3N6lGnpbOnRIQ==
+"@workflow/astro@4.0.0-beta.8":
+  version "4.0.0-beta.8"
+  resolved "https://registry.yarnpkg.com/@workflow/astro/-/astro-4.0.0-beta.8.tgz#68e4c7936c1c89e32fa3f5e0b005c2f652e68fc2"
+  integrity sha512-jzXppExz2xo7tnIfDs4z7cIZMkfoRTvBJX43ao5URSGTkESQzPDxGP3C4QFBvkvxYioW1fg+eT4FM4310Pr2/Q==
   dependencies:
     "@swc/core" "1.15.3"
-    "@workflow/builders" "4.0.1-beta.24"
+    "@workflow/builders" "4.0.1-beta.25"
     "@workflow/rollup" "4.0.0-beta.6"
     "@workflow/swc-plugin" "4.0.1-beta.12"
     "@workflow/vite" "4.0.0-beta.2"
     exsolve "^1.0.7"
     pathe "^2.0.3"
 
-"@workflow/builders@4.0.1-beta.24":
-  version "4.0.1-beta.24"
-  resolved "https://registry.yarnpkg.com/@workflow/builders/-/builders-4.0.1-beta.24.tgz#cd137061d5dd07c28b301f64a12b71fb86f08a06"
-  integrity sha512-lmTyyvqiF4weQJO3FVXOgTRp45ECYnRUTStL5iFU4wj6574QnUqXbArfNLPcJ0sSIsNyTgi57XtFqOw+qcN7mQ==
+"@workflow/builders@4.0.1-beta.25":
+  version "4.0.1-beta.25"
+  resolved "https://registry.yarnpkg.com/@workflow/builders/-/builders-4.0.1-beta.25.tgz#9402f937854f24918e218791d44b7cf0ad0e7476"
+  integrity sha512-HdvzM1HD0MG7eLKDvTC6Xj+3rUkBMKIoHqkQYnT1vMaCfiT3+pLVKLUmHAclVcPmpljg4IgHcMQhrb+CRyPF2Q==
   dependencies:
     "@swc/core" "1.15.3"
-    "@workflow/core" "4.0.1-beta.25"
-    "@workflow/errors" "4.0.1-beta.7"
+    "@workflow/core" "4.0.1-beta.26"
+    "@workflow/errors" "4.0.1-beta.8"
     "@workflow/swc-plugin" "4.0.1-beta.12"
     builtin-modules "5.0.0"
     chalk "5.6.2"
@@ -3703,22 +3658,22 @@
     find-up "7.0.0"
     tinyglobby "0.2.14"
 
-"@workflow/cli@4.0.1-beta.29":
-  version "4.0.1-beta.29"
-  resolved "https://registry.yarnpkg.com/@workflow/cli/-/cli-4.0.1-beta.29.tgz#b5f590125b0efbc032c9d2e24cb5b005ba2feef6"
-  integrity sha512-TcfrkZmGdogo2AlkPft6BdPrZuPAsX6Pxo6FbjCMuhDORMciDGNw/SWh8MLW8jZA/9pngb3MMGwxlwo97/fIhg==
+"@workflow/cli@4.0.1-beta.31":
+  version "4.0.1-beta.31"
+  resolved "https://registry.yarnpkg.com/@workflow/cli/-/cli-4.0.1-beta.31.tgz#283e9bec8f38cf7935596e01cf3fd0cf5d16995e"
+  integrity sha512-UOKwgn6+HT1PXn3Cp4lnp20lg1VxurJ3kBPrgM6JPYopxRWNl7H3UALY/7LjoETKIwMVLXR9foj9CzMa3M3gAg==
   dependencies:
     "@oclif/core" "4.0.0"
     "@oclif/plugin-help" "6.2.31"
     "@swc/core" "1.15.3"
-    "@workflow/builders" "4.0.1-beta.24"
-    "@workflow/core" "4.0.1-beta.25"
-    "@workflow/errors" "4.0.1-beta.7"
+    "@workflow/builders" "4.0.1-beta.25"
+    "@workflow/core" "4.0.1-beta.26"
+    "@workflow/errors" "4.0.1-beta.8"
     "@workflow/swc-plugin" "4.0.1-beta.12"
-    "@workflow/web" "4.0.1-beta.15"
+    "@workflow/web" "4.0.1-beta.16"
     "@workflow/world" "4.0.1-beta.10"
-    "@workflow/world-local" "4.0.1-beta.16"
-    "@workflow/world-vercel" "4.0.1-beta.18"
+    "@workflow/world-local" "4.0.1-beta.17"
+    "@workflow/world-vercel" "4.0.1-beta.19"
     boxen "8.0.1"
     builtin-modules "5.0.0"
     chalk "5.6.2"
@@ -3737,21 +3692,21 @@
     xdg-app-paths "5.1.0"
     zod "4.1.11"
 
-"@workflow/core@4.0.1-beta.25":
-  version "4.0.1-beta.25"
-  resolved "https://registry.yarnpkg.com/@workflow/core/-/core-4.0.1-beta.25.tgz#12bff3251defdc114ed508b50c0597db69d4143a"
-  integrity sha512-/acFsHo9/u1keLAXddq4wAiKehLla7LE2zCOnl4t87Pf5OfzYUEGq+kjAGKvY/scLm+VsQdqhWlD8IjxLVt07w==
+"@workflow/core@4.0.1-beta.26":
+  version "4.0.1-beta.26"
+  resolved "https://registry.yarnpkg.com/@workflow/core/-/core-4.0.1-beta.26.tgz#8de003db2e9af9850acbd760c540bad825f322df"
+  integrity sha512-bla1XXCgjk+3DoOUufxY18uADeNJ1Re0X6cYMY8gXr6acZl5Nfrv14qNqjaZRxut2azJXnif6uv66+nXYlqPtw==
   dependencies:
     "@aws-sdk/credential-provider-web-identity" "3.609.0"
     "@jridgewell/trace-mapping" "0.3.31"
     "@standard-schema/spec" "1.0.0"
     "@types/ms" "2.1.0"
     "@vercel/functions" "^3.1.4"
-    "@workflow/errors" "4.0.1-beta.7"
-    "@workflow/utils" "4.0.1-beta.5"
+    "@workflow/errors" "4.0.1-beta.8"
+    "@workflow/utils" "4.0.1-beta.6"
     "@workflow/world" "4.0.1-beta.10"
-    "@workflow/world-local" "4.0.1-beta.16"
-    "@workflow/world-vercel" "4.0.1-beta.18"
+    "@workflow/world-local" "4.0.1-beta.17"
+    "@workflow/world-vercel" "4.0.1-beta.19"
     debug "4.4.3"
     devalue "5.6.0"
     ms "2.1.3"
@@ -3760,47 +3715,47 @@
     ulid "3.0.1"
     zod "4.1.11"
 
-"@workflow/errors@4.0.1-beta.7":
-  version "4.0.1-beta.7"
-  resolved "https://registry.yarnpkg.com/@workflow/errors/-/errors-4.0.1-beta.7.tgz#5a2274fef767629874d2c0763ccc2ef919052a31"
-  integrity sha512-0lgHbNN4po6BqC/W4ccEXcbGZlAZNAqhAnM3VQlGU0U0pKEj9jN2DUh8lcysp5eLzttkGw3e7Bk1DL7qwDvP6Q==
+"@workflow/errors@4.0.1-beta.8":
+  version "4.0.1-beta.8"
+  resolved "https://registry.yarnpkg.com/@workflow/errors/-/errors-4.0.1-beta.8.tgz#50fe4dc2750fe92ca5385d8839fc8036096ebe03"
+  integrity sha512-XSnnVBeuQcYR8jyHtgH/6DqYc95HfXBB/AX6qWRZz6Lh58AYoMshNBPk5xbYSCpe8QR0xLwDY/sxCLzmwMmJ3w==
   dependencies:
-    "@workflow/utils" "4.0.1-beta.5"
+    "@workflow/utils" "4.0.1-beta.6"
     ms "2.1.3"
 
-"@workflow/next@4.0.1-beta.28":
-  version "4.0.1-beta.28"
-  resolved "https://registry.yarnpkg.com/@workflow/next/-/next-4.0.1-beta.28.tgz#ed2655c4989f0d0676bb8ba6b516f87e1330d9c3"
-  integrity sha512-XAYEk7mdxmI+W07VosjtOupFxAY245gr6sycUt8tUAAzwDkfgPdB6M3mdBl9kC+3aMFFtndV3CMH5khz4PbYmw==
+"@workflow/next@4.0.1-beta.30":
+  version "4.0.1-beta.30"
+  resolved "https://registry.yarnpkg.com/@workflow/next/-/next-4.0.1-beta.30.tgz#960b135e8883eed1a71b3d8177fe7e815a48a550"
+  integrity sha512-5dki8+2OhYl5eSwjvDjlicXd8PPN7ubNjtlD6CIDUL0QwnkjKTTtvASpsvFYAfORwvnIw3mcsqwzCwxQw/CTfA==
   dependencies:
     "@swc/core" "1.15.3"
-    "@workflow/builders" "4.0.1-beta.24"
-    "@workflow/core" "4.0.1-beta.25"
+    "@workflow/builders" "4.0.1-beta.25"
+    "@workflow/core" "4.0.1-beta.26"
     "@workflow/swc-plugin" "4.0.1-beta.12"
     semver "7.7.3"
     watchpack "2.4.4"
 
-"@workflow/nitro@4.0.1-beta.28":
-  version "4.0.1-beta.28"
-  resolved "https://registry.yarnpkg.com/@workflow/nitro/-/nitro-4.0.1-beta.28.tgz#6624042b36fb6e11ac6837d50410f40d47e94dfd"
-  integrity sha512-nQtgNKrA5S/hvzztZCo+9I/I5qdAExnkW1LijbOIq6pxzpP0XHOEQYgyfO5I7n/NIvM4TT7FyrHk30FiJqZI2w==
+"@workflow/nitro@4.0.1-beta.29":
+  version "4.0.1-beta.29"
+  resolved "https://registry.yarnpkg.com/@workflow/nitro/-/nitro-4.0.1-beta.29.tgz#144abb7c75423bb59dabee7e25467e3d27c4b2ed"
+  integrity sha512-qBw6aTaLAyqYhJkgR8GmFWEoi4wrCBfK57XmFObbKY8RnvvvPmyxkbTL3Cl9x44V+m5lSG9h3pxfTgV/ui0hwg==
   dependencies:
     "@swc/core" "1.15.3"
-    "@workflow/builders" "4.0.1-beta.24"
-    "@workflow/core" "4.0.1-beta.25"
+    "@workflow/builders" "4.0.1-beta.25"
+    "@workflow/core" "4.0.1-beta.26"
     "@workflow/rollup" "4.0.0-beta.6"
     "@workflow/swc-plugin" "4.0.1-beta.12"
     "@workflow/vite" "4.0.0-beta.2"
     exsolve "1.0.7"
     pathe "2.0.3"
 
-"@workflow/nuxt@4.0.1-beta.17":
-  version "4.0.1-beta.17"
-  resolved "https://registry.yarnpkg.com/@workflow/nuxt/-/nuxt-4.0.1-beta.17.tgz#35a74e5e77f3ec75a94094e1d9a49452f2d16f74"
-  integrity sha512-ljqiXaLJo3Bl1b0R9mQhOrfbxY7V0l/TO4Jfz3sQ5oVv/D7QAg7Ldvi2/mu3CPIzKJaA3uGpHOR9ZmMxw7OSvQ==
+"@workflow/nuxt@4.0.1-beta.18":
+  version "4.0.1-beta.18"
+  resolved "https://registry.yarnpkg.com/@workflow/nuxt/-/nuxt-4.0.1-beta.18.tgz#cce4c8ef0292fa8e893fdc2b35b398c8aaa4cfc4"
+  integrity sha512-FxjBHk9jCSs5WJ0JXrp+kgTOd9vU/Dypg8QVtqWOLbIQ3r3UrzhEdowFXUO+4aGERUlSY0fNcjibPNPVFRPjaQ==
   dependencies:
     "@nuxt/kit" "4.2.0"
-    "@workflow/nitro" "4.0.1-beta.28"
+    "@workflow/nitro" "4.0.1-beta.29"
 
 "@workflow/rollup@4.0.0-beta.6":
   version "4.0.0-beta.6"
@@ -3811,13 +3766,13 @@
     "@workflow/swc-plugin" "4.0.1-beta.12"
     exsolve "1.0.7"
 
-"@workflow/sveltekit@4.0.0-beta.22":
-  version "4.0.0-beta.22"
-  resolved "https://registry.yarnpkg.com/@workflow/sveltekit/-/sveltekit-4.0.0-beta.22.tgz#5a9b02a416ef69f141044bec55458564468d3cdc"
-  integrity sha512-3JB2keUApvHm4ixCrTylAPhE/d2HhL7AVTXtVHrdLpOG1IKLH0PcY+c/j7z5X0JIEYur0GRQMhjyHjfom9c0qg==
+"@workflow/sveltekit@4.0.0-beta.23":
+  version "4.0.0-beta.23"
+  resolved "https://registry.yarnpkg.com/@workflow/sveltekit/-/sveltekit-4.0.0-beta.23.tgz#80848b261ef301e464d11a8f4d9a81eb87c6a7c2"
+  integrity sha512-kTfDbp8G1Ug+iZoCM7Af55rlx6SL7OgoqL200mu6fXt5fduVLlhh+1lbJw6+SZgVhIx2c/uXJLSdAMBG81UJfw==
   dependencies:
     "@swc/core" "1.15.3"
-    "@workflow/builders" "4.0.1-beta.24"
+    "@workflow/builders" "4.0.1-beta.25"
     "@workflow/rollup" "4.0.0-beta.6"
     "@workflow/swc-plugin" "4.0.1-beta.12"
     "@workflow/vite" "4.0.0-beta.2"
@@ -3835,10 +3790,10 @@
   resolved "https://registry.yarnpkg.com/@workflow/typescript-plugin/-/typescript-plugin-4.0.1-beta.4.tgz#2d0c1700c7220ee593f13a574684e71dd691c754"
   integrity sha512-AkZ3wHbPJq0ZhswR9ctdysJ1ZSW3lmYII+spnbgS72zxkwgl1MNwPtlFt1+lANLDLx6638IbRFwFvsqLtQLqrQ==
 
-"@workflow/utils@4.0.1-beta.5":
-  version "4.0.1-beta.5"
-  resolved "https://registry.yarnpkg.com/@workflow/utils/-/utils-4.0.1-beta.5.tgz#bb0b7cf9b71a94655ac0003fc90b7051691ac7dd"
-  integrity sha512-624gRJAKTVsH+7//qSclldJo13HYyg61C0ge921aaG1Ib+5INlWPv0OAILbbKV8dAvMU6HU758W+CVr6FjiBEQ==
+"@workflow/utils@4.0.1-beta.6":
+  version "4.0.1-beta.6"
+  resolved "https://registry.yarnpkg.com/@workflow/utils/-/utils-4.0.1-beta.6.tgz#a640db62a3bfecc9d1e42cc4f44635d78d126c9f"
+  integrity sha512-75N1l3zPSHHZzt51PnCFwab9RdNwMx5GUe1BjuPUcsgDcq/tE8ibeaikClj8ScUwQzH1uAzlllgcWfx1AFqYhw==
   dependencies:
     ms "2.1.3"
 
@@ -3847,37 +3802,37 @@
   resolved "https://registry.yarnpkg.com/@workflow/vite/-/vite-4.0.0-beta.2.tgz#648cf72a1632e5604f5dea016f3495c5a92d208b"
   integrity sha512-EKtfw+ld0jF1sXkHQWIdfmn6f7ZzcPzeByXTYydBmSRoYWT7GPTwvBPhwYXatnu/tq/BJrxNYhg1cUVZ9VkNiw==
 
-"@workflow/web@4.0.1-beta.15":
-  version "4.0.1-beta.15"
-  resolved "https://registry.yarnpkg.com/@workflow/web/-/web-4.0.1-beta.15.tgz#4b88453bf6c1af3f2531eb51f3a61814819200f8"
-  integrity sha512-hYl7i5Omw2TuZzh7k6zNv9ERpIa0uJtAWbZfM02mSDxci4lNdn9fCujD9Rgkj8yqSFb3D1Nmy+6kHo49UPaqJQ==
+"@workflow/web@4.0.1-beta.16":
+  version "4.0.1-beta.16"
+  resolved "https://registry.yarnpkg.com/@workflow/web/-/web-4.0.1-beta.16.tgz#19b9ec791a5a621f4d9e69ea1dfba7acb3b96507"
+  integrity sha512-LWaHRFVpyCFIKil0ijEJoiA99uzEilDSPOlGR8PSDK8OHqyVKRMTkXlId2Y3UpjnoCgtZ0Uf8g+83ounhciA5g==
   dependencies:
     "@xyflow/react" "12.9.3"
-    next "16.0.7"
+    next "16.0.10"
     nuqs "^2.2.5"
 
-"@workflow/world-local@4.0.1-beta.16":
-  version "4.0.1-beta.16"
-  resolved "https://registry.yarnpkg.com/@workflow/world-local/-/world-local-4.0.1-beta.16.tgz#5d313edd37ebaac3efb598b4ad1244247aad4f3c"
-  integrity sha512-3dQyY5YZGqn/zMkwutcUYP3gwQdhG3Doha4zIM3SssisbtDP0eojlaYUpVlif7347PNBdbnsWLgP9+5UYf2Avw==
+"@workflow/world-local@4.0.1-beta.17":
+  version "4.0.1-beta.17"
+  resolved "https://registry.yarnpkg.com/@workflow/world-local/-/world-local-4.0.1-beta.17.tgz#5c1dffe1697bba207c1a7369a936b5a91ef1737c"
+  integrity sha512-xCieWuRT0qcdAsM+i59xIrwvS+on10bMEcGiME1yUxfc2D67W63od2Oqjqstki0FwsOhHMzCrbiVokTdflyC5A==
   dependencies:
     "@vercel/queue" "0.0.0-alpha.33"
-    "@workflow/errors" "4.0.1-beta.7"
-    "@workflow/utils" "4.0.1-beta.5"
+    "@workflow/errors" "4.0.1-beta.8"
+    "@workflow/utils" "4.0.1-beta.6"
     "@workflow/world" "4.0.1-beta.10"
     async-sema "3.1.1"
     ulid "3.0.1"
     undici "6.22.0"
     zod "4.1.11"
 
-"@workflow/world-vercel@4.0.1-beta.18":
-  version "4.0.1-beta.18"
-  resolved "https://registry.yarnpkg.com/@workflow/world-vercel/-/world-vercel-4.0.1-beta.18.tgz#e195ada4c0da9032b2ac8168f46de28a8074686b"
-  integrity sha512-VPItM5YAfsNUXDDGZlJ2X6PYk31BJtjpeGITKiNKYMeLH6CrjQ9USxN9+POMTElXmfyKzCh120sx4jvB4Kb2AA==
+"@workflow/world-vercel@4.0.1-beta.19":
+  version "4.0.1-beta.19"
+  resolved "https://registry.yarnpkg.com/@workflow/world-vercel/-/world-vercel-4.0.1-beta.19.tgz#f31eab7fe26ee02b1b890097f88625316459da6c"
+  integrity sha512-U7emZnP+aM5ySU2t58you9BziOA79/mLJUG0i+xRitcI5B4F0ntb8GN6PUhT1WFbiJoniMXXZYAI9jjsxZOiSA==
   dependencies:
     "@vercel/oidc" "3.0.5"
     "@vercel/queue" "0.0.0-alpha.33"
-    "@workflow/errors" "4.0.1-beta.7"
+    "@workflow/errors" "4.0.1-beta.8"
     "@workflow/world" "4.0.1-beta.10"
     zod "4.1.11"
 
@@ -7691,28 +7646,7 @@ next-auth@^4.24.11:
     preact-render-to-string "^5.1.19"
     uuid "^8.3.2"
 
-next@16.0.7:
-  version "16.0.7"
-  resolved "https://registry.yarnpkg.com/next/-/next-16.0.7.tgz#859045df71599a8883fc7049a65d6d468c56db08"
-  integrity sha512-3mBRJyPxT4LOxAJI6IsXeFtKfiJUbjCLgvXO02fV8Wy/lIhPvP94Fe7dGhUgHXcQy4sSuYwQNcOLhIfOm0rL0A==
-  dependencies:
-    "@next/env" "16.0.7"
-    "@swc/helpers" "0.5.15"
-    caniuse-lite "^1.0.30001579"
-    postcss "8.4.31"
-    styled-jsx "5.1.6"
-  optionalDependencies:
-    "@next/swc-darwin-arm64" "16.0.7"
-    "@next/swc-darwin-x64" "16.0.7"
-    "@next/swc-linux-arm64-gnu" "16.0.7"
-    "@next/swc-linux-arm64-musl" "16.0.7"
-    "@next/swc-linux-x64-gnu" "16.0.7"
-    "@next/swc-linux-x64-musl" "16.0.7"
-    "@next/swc-win32-arm64-msvc" "16.0.7"
-    "@next/swc-win32-x64-msvc" "16.0.7"
-    sharp "^0.34.4"
-
-next@^16.0.10:
+next@16.0.10, next@^16.0.10:
   version "16.0.10"
   resolved "https://registry.yarnpkg.com/next/-/next-16.0.10.tgz#74289793cd4e0a577732353aada1d54cfec97556"
   integrity sha512-RtWh5PUgI+vxlV3HdR+IfWA1UUHu0+Ram/JBO4vWB54cVPentCD0e+lxyAYEsDTqGGMg7qpjhKh6dc6aW7W/sA==
@@ -10119,20 +10053,20 @@ wordwrap@^1.0.0:
   resolved "https://registry.npmjs.org/wordwrap/-/wordwrap-1.0.0.tgz"
   integrity sha512-gvVzJFlPycKc5dZN4yPkP8w7Dc37BtP1yczEneOb4uq34pXZcvrtRTmWV8W+Ume+XCxKgbjM+nevkyFPMybd4Q==
 
-workflow@^4.0.1-beta.29:
-  version "4.0.1-beta.29"
-  resolved "https://registry.yarnpkg.com/workflow/-/workflow-4.0.1-beta.29.tgz#31fbb9cb8c0e13898e47abfc06836cf94850a38f"
-  integrity sha512-UQQ3wV4qOuhQ+E3Qz0QMeOagxQX1//H2JHMuRubnhc89TEGrYbw5QzEtBQ5KoAUPfKolXf+3AGVsZAZjWKsLDw==
+workflow@^4.0.1-beta.31:
+  version "4.0.1-beta.31"
+  resolved "https://registry.yarnpkg.com/workflow/-/workflow-4.0.1-beta.31.tgz#127653edcae5ad534ede364dd6c7fd1d1b81de2b"
+  integrity sha512-UfZdxGaJwamBdWi69zJialVgdjVLnyqVt6zfsAy+xcC/W4s3f8GD6CwbebPCPFmQRNdKQtGWFwjWJ3ljm05tsw==
   dependencies:
-    "@workflow/astro" "4.0.0-beta.7"
-    "@workflow/cli" "4.0.1-beta.29"
-    "@workflow/core" "4.0.1-beta.25"
-    "@workflow/errors" "4.0.1-beta.7"
-    "@workflow/next" "4.0.1-beta.28"
-    "@workflow/nitro" "4.0.1-beta.28"
-    "@workflow/nuxt" "4.0.1-beta.17"
+    "@workflow/astro" "4.0.0-beta.8"
+    "@workflow/cli" "4.0.1-beta.31"
+    "@workflow/core" "4.0.1-beta.26"
+    "@workflow/errors" "4.0.1-beta.8"
+    "@workflow/next" "4.0.1-beta.30"
+    "@workflow/nitro" "4.0.1-beta.29"
+    "@workflow/nuxt" "4.0.1-beta.18"
     "@workflow/rollup" "4.0.0-beta.6"
-    "@workflow/sveltekit" "4.0.0-beta.22"
+    "@workflow/sveltekit" "4.0.0-beta.23"
     "@workflow/typescript-plugin" "4.0.1-beta.4"
     ms "2.1.3"
 
