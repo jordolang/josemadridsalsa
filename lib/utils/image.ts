@@ -22,9 +22,15 @@ export function isGooglePlacesUrl(url: string): boolean {
  * to hide API keys from the client.
  *
  * @param url - The original image URL (may be null/undefined)
+ * @param placeId - Optional Google Place ID to fetch fresh photos
  * @returns The final URL to use in Image components
  */
-export function getLocationImageUrl(url?: string | null): string {
+export function getLocationImageUrl(url?: string | null, placeId?: string | null): string {
+  // If we have a Place ID, use it to fetch fresh photos (solves expired photo URL issue)
+  if (placeId) {
+    return `/api/image-proxy?placeId=${encodeURIComponent(placeId)}`
+  }
+
   // Return placeholder if no URL provided
   if (!url) return FALLBACK_IMAGE
 

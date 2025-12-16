@@ -31,12 +31,17 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
       return getFallbackImage()
     }
 
+    // Prefer using Place ID for fresh photos (solves expired photo URL issue)
+    if (location.googlePlaceId) {
+      return getLocationImageUrl(null, location.googlePlaceId)
+    }
+
     const gallery = location.photoGallery ?? []
     const hero = gallery[0] ?? photoUrl
 
     // Get the appropriate URL (proxied for Google Places images to hide API key)
     return getLocationImageUrl(hero)
-  }, [location.photoGallery, photoUrl, imageError])
+  }, [location.photoGallery, photoUrl, location.googlePlaceId, imageError])
 
   const fullAddress = `${address}, ${city}, ${state}${zipCode ? ` ${zipCode}` : ''}`
 

@@ -49,7 +49,8 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
         ? [location.photoUrl]
         : []
   const gallery = gallerySource as string[]
-  const heroImage = getLocationImageUrl(gallery[0] ?? location.photoUrl)
+  // Use Place ID for fresh photos if available (solves expired photo URL issue)
+  const heroImage = getLocationImageUrl(gallery[0] ?? location.photoUrl, location.googlePlaceId)
   const phone = location.phone
   const website = location.website
   const directionsUrl = location.directionsUrl
