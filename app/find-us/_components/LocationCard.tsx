@@ -101,13 +101,13 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
 
         <div className="mt-2 space-y-1.5 sm:space-y-2 text-xs text-slate-600 hidden sm:block">
           {phone ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
               <Phone className="h-3.5 w-3.5 text-verde-600 flex-shrink-0" />
               <span className="truncate">{phone}</span>
             </div>
           ) : null}
           {website ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
               <ExternalLink className="h-3.5 w-3.5 text-salsa-600 flex-shrink-0" />
               <span className="truncate">{formatWebsiteLabel(website)}</span>
             </div>
