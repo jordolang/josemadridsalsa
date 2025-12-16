@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { hasPermission } from '@/lib/rbac'
 import { parseOrderFile, importOrders } from '@/lib/orders/import'
-import { createAuditLog } from '@/lib/audit'
+import { logAudit } from '@/lib/audit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const permitted = await hasPermission(session.user.id, 'orders:import')
+    const permitted = await hasPermission(session.user as any, 'orders:import')
     if (!permitted) {
       return NextResponse.json(
         { error: 'Forbidden: Insufficient permissions' },
@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
       skipDuplicates,
     })
 
-    await createAuditLog({
-      userId: session.user.id,
+    await logAudit({
+      userId: (session.user as any).id,
       action: 'orders.import',
       entityType: 'Order',
       changes: {

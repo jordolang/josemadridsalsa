@@ -63,6 +63,11 @@ Take the data from the previous 3 Steps, and perform all the changes and create 
 
 Implementation has been completed with the following deliverables:
 
+
+### [ ] Step: Linting and Error Correction
+<!-- chat-id: b2d7c6b7-409d-4519-95e1-f502b645cb5d -->
+
+Please Lint the codebase, run a dev server to determine if there are any console errors, and fix any errors that present themselves. Maintain integrity of the codebase so that in the next step when we commit and PR it will build properly the first time.
 ## Database & Infrastructure
 - ✅ Extended Prisma schema with all new models (SeoConfiguration, StructuredData, Notification, ChatConversation, TrainingDocumentCategory, ShippingProvider, etc.)
 - ✅ Updated existing models (Order, TrainingDocument) with new fields
