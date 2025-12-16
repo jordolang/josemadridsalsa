@@ -14,7 +14,6 @@ const fsp = require('fs/promises');
 const path = require('path');
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-const PLACES_API_BASE = 'https://places.googleapis.com/v1';
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -130,7 +129,7 @@ async function parseFindUsMarkdown(mdAbsolutePath) {
 }
 
 function buildPlacesPhotoUrl(photoName, maxWidth = 800) {
-  return `${PLACES_API_BASE}/${photoName}/media?key=${API_KEY}&maxWidthPx=${maxWidth}`;
+  return `https://places.googleapis.com/v1/${photoName}/media?key=${API_KEY}&maxWidthPx=${maxWidth}`;
 }
 
 function pickBestPhoto(place) {
@@ -153,7 +152,7 @@ function pickBestPhoto(place) {
 
 async function searchPlace({ businessName, address, city, state }) {
   const textQuery = `${businessName} ${address} ${city} ${state}`.trim();
-  const url = `${PLACES_API_BASE}/places:searchText`;
+  const url = 'https://places.googleapis.com/v1/places:searchText';
   try {
     const res = await fetchWithRetry(url, {
       method: 'POST',

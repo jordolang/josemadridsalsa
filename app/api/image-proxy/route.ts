@@ -80,16 +80,29 @@ const rewriteGooglePhotoUrl = (originalUrl: string): string => {
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
-  const imageUrl = searchParams.get('url')
+  const rawUrl = searchParams.get('url')
 
-  if (!imageUrl) {
+  if (!rawUrl) {
     console.warn('[image-proxy] Missing url parameter')
     return NextResponse.json({ error: 'Missing url parameter' }, { status: 400 })
   }
 
+  // Decode the URL if it's double-encoded (browser may have encoded it again)
+  let imageUrl = rawUrl
+  try {
+    // If the URL contains %3A (encoded :), it's likely double-encoded
+    if (rawUrl.includes('%3A') || rawUrl.includes('%3a')) {
+      imageUrl = decodeURIComponent(rawUrl)
+      console.log('[image-proxy] URL was double-encoded, decoded to:', imageUrl.substring(0, 100))
+    }
+  } catch (error) {
+    console.warn('[image-proxy] Failed to decode URL:', error)
+  }
+
   // Security: Only allow Google Places images to prevent SSRF and unauthorized API usage
   if (!isGooglePlacesUrl(imageUrl)) {
-    console.warn('[image-proxy] Rejected non-Google Places URL:', imageUrl.substring(0, 50))
+    const truncatedUrl = imageUrl.length > 100 ? imageUrl.substring(0, 100) + '...' : imageUrl
+    console.warn('[image-proxy] Rejected non-Google Places URL:', truncatedUrl)
     return NextResponse.json({ error: 'Only Google Places images are allowed' }, { status: 400 })
   }
 
@@ -102,7 +115,8 @@ export async function GET(request: NextRequest) {
   try {
     const rewrittenUrl = rewriteGooglePhotoUrl(imageUrl)
 
-    console.log('[image-proxy] Original URL:', imageUrl.substring(0, 100) + '...')
+    const truncatedOriginal = imageUrl.length > 100 ? imageUrl.substring(0, 100) + '...' : imageUrl
+    console.log('[image-proxy] Original URL:', truncatedOriginal)
     console.log('[image-proxy] Rewritten URL:', rewrittenUrl.replace(/key=[^&]+/, 'key=***'))
     console.log('[image-proxy] API Key present:', !!GOOGLE_PLACES_API_KEY)
     console.log('[image-proxy] Is New Places API:', isNewPlacesApiUrl(rewrittenUrl))
