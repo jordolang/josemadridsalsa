@@ -8,12 +8,12 @@
     node scripts/generate-location-photos.js
 */
 
+require('dotenv/config');
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-const PLACES_API_BASE = 'https://places.googleapis.com/v1';
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -129,7 +129,7 @@ async function parseFindUsMarkdown(mdAbsolutePath) {
 }
 
 function buildPlacesPhotoUrl(photoName, maxWidth = 800) {
-  return `${PLACES_API_BASE}/${photoName}/media?key=${API_KEY}&maxWidthPx=${maxWidth}`;
+  return `https://places.googleapis.com/v1/${photoName}/media?key=${API_KEY}&maxWidthPx=${maxWidth}`;
 }
 
 function pickBestPhoto(place) {
@@ -152,7 +152,7 @@ function pickBestPhoto(place) {
 
 async function searchPlace({ businessName, address, city, state }) {
   const textQuery = `${businessName} ${address} ${city} ${state}`.trim();
-  const url = `${PLACES_API_BASE}/places:searchText`;
+  const url = 'https://places.googleapis.com/v1/places:searchText';
   try {
     const res = await fetchWithRetry(url, {
       method: 'POST',
@@ -187,10 +187,14 @@ async function main() {
     process.exit(1);
   }
 
+  // Resolve paths relative to the repo root, not the current working directory.
+  // This allows running the script from anywhere (e.g. from `scripts/`).
+  const repoRoot = path.resolve(__dirname, '..');
+
   // Try kebab-case path first, then fallback to spaced path
-  const kebabPath = path.join(process.cwd(), 'public', 'find-us-locally', 'find-us-locally.md');
-  const spacedPath = path.join(process.cwd(), 'public', 'Find Us Locally', 'Find Us Locally.md');
-  
+  const kebabPath = path.join(repoRoot, 'public', 'find-us-locally', 'find-us-locally.md');
+  const spacedPath = path.join(repoRoot, 'public', 'Find Us Locally', 'Find Us Locally.md');
+
   let mdPath;
   try {
     await fsp.access(kebabPath);
@@ -206,8 +210,8 @@ async function main() {
       process.exit(1);
     }
   }
-  
-  const outPath = path.join(process.cwd(), 'public', 'location-photos.json');
+
+  const outPath = path.join(repoRoot, 'public', 'location-photos.json');
 
   console.log('Parsing markdown for locations...');
   const locations = await parseFindUsMarkdown(mdPath);

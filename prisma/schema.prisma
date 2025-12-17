@@ -47,9 +47,9 @@ model User {
 
 model Address {
   id          String      @id @default(cuid())
-  userId      String
+  userId      String?
   type        AddressType @default(SHIPPING)
-  
+
   firstName   String
   lastName    String
   company     String?
@@ -59,19 +59,19 @@ model Address {
   zipCode     String
   country     String      @default("US")
   phone       String?
-  
+
   isDefault   Boolean     @default(false)
-  
+
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  
+
   // Relations
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user        User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Orders using this address
   shippingOrders Order[] @relation("ShippingAddress")
   billingOrders  Order[] @relation("BillingAddress")
-  
+
   @@map("addresses")
 }
 
@@ -261,6 +261,15 @@ model Order {
   trackingNumber  String?
   estimatedDelivery DateTime?
   actualDelivery  DateTime?
+  shippingLabelUrl String?
+  packingSlipUrl  String?
+  
+  // Invoicing
+  invoiceUrl      String?
+  invoiceSentAt   DateTime?
+  
+  // Modification history
+  modificationHistory Json?
   
   // Payment
   paymentStatus   PaymentStatus @default(PENDING)
@@ -659,10 +668,22 @@ model TrainingDocument {
   error         String?
   scrapedAt     DateTime?
   ingestedAt    DateTime?
+  
+  // New fields for categorization
+  categoryId    String?
+  category      TrainingDocumentCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  priority      Int                        @default(0)
+  domain        ChatDomain?
+  isEnabled     Boolean                    @default(true)
+  version       Int                        @default(1)
+  
   createdAt     DateTime                   @default(now())
   updatedAt     DateTime                   @updatedAt
 
   @@index([status])
+  @@index([categoryId])
+  @@index([domain])
+  @@index([isEnabled])
   @@map("training_documents")
 }
 
@@ -1015,6 +1036,11 @@ enum PermissionCategory {
   API_KEYS
   MESSAGING
   SOCIAL_MEDIA
+  SEO
+  GIFT_CERTIFICATES
+  LOCATIONS
+  EVENTS
+  AI_TRAINING
 }
 
 enum TagType {
@@ -1330,4 +1356,224 @@ model DocumentationEntry {
 enum DocumentationVisibility {
   PUBLIC
   DEVELOPER
+}
+
+model SeoConfiguration {
+  id                  String   @id @default(cuid())
+  
+  // Global SEO settings
+  siteName            String
+  siteDescription     String   @db.Text
+  siteUrl             String
+  defaultOgImage      String?
+  twitterHandle       String?
+  facebookAppId       String?
+  defaultKeywords     String[]
+  
+  // Template strings for different entity types
+  productTitleTemplate     String?
+  productDescTemplate      String?
+  categoryTitleTemplate    String?
+  categoryDescTemplate     String?
+  recipeTitleTemplate      String?
+  recipeDescTemplate       String?
+  locationTitleTemplate    String?
+  locationDescTemplate     String?
+  
+  // Robots & Sitemap
+  robotsTxt           String?  @db.Text
+  sitemapPriorities   Json?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@map("seo_configurations")
+}
+
+model StructuredData {
+  id          String               @id @default(cuid())
+  entityType  StructuredDataType
+  entityId    String
+  schemaType  String               // e.g., "Organization", "Product", "Recipe"
+  jsonLd      Json
+  isActive    Boolean              @default(true)
+  
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  
+  @@unique([entityType, entityId])
+  @@index([entityType])
+  @@map("structured_data")
+}
+
+model OrderNotificationSetting {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  
+  // Notification preferences
+  newOrderEmail         Boolean  @default(true)
+  newOrderInApp         Boolean  @default(true)
+  orderStatusEmail      Boolean  @default(true)
+  orderStatusInApp      Boolean  @default(true)
+  highValueEmail        Boolean  @default(true)
+  highValueInApp        Boolean  @default(true)
+  highValueThreshold    Decimal  @default(100) @db.Decimal(10, 2)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@map("order_notification_settings")
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  type        NotificationType
+  
+  title       String
+  message     String           @db.Text
+  entityType  String?
+  entityId    String?
+  
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+  
+  createdAt   DateTime         @default(now())
+  
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model TrainingDocumentCategory {
+  id          String              @id @default(cuid())
+  name        String              @unique
+  description String?
+  slug        String              @unique
+  sortOrder   Int                 @default(0)
+  isActive    Boolean             @default(true)
+  
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  
+  // Relations
+  documents   TrainingDocument[]
+  
+  @@map("training_document_categories")
+}
+
+model ChatConversation {
+  id            String              @id @default(cuid())
+  userId        String?
+  sessionId     String
+  
+  // Classification
+  domain        ChatDomain?
+  isResolved    Boolean             @default(false)
+  requiresHuman Boolean             @default(false)
+  
+  // Metadata
+  email         String?
+  metadata      Json?
+  
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  resolvedAt    DateTime?
+  
+  // Relations
+  messages      ChatMessage[]
+  
+  @@index([userId])
+  @@index([sessionId])
+  @@index([domain])
+  @@index([isResolved])
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  role           ChatRole
+  content        String           @db.Text
+  
+  // Function calling
+  functionName   String?
+  functionArgs   Json?
+  functionResult Json?
+  
+  createdAt      DateTime         @default(now())
+  
+  // Relations
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@index([conversationId])
+  @@map("chat_messages")
+}
+
+model ShippingProvider {
+  id            String                @id @default(cuid())
+  name          String
+  type          ShippingProviderType
+  
+  // Configuration
+  apiKey        String?               @db.Text
+  apiSecret     String?               @db.Text
+  accountId     String?
+  
+  // Settings
+  isActive      Boolean               @default(true)
+  isDefault     Boolean               @default(false)
+  
+  // Metadata
+  config        Json?
+  
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  
+  @@map("shipping_providers")
+}
+
+enum StructuredDataType {
+  PRODUCT
+  RECIPE
+  LOCATION
+  ORGANIZATION
+  EVENT
+}
+
+enum NotificationType {
+  ORDER_NEW
+  ORDER_STATUS_CHANGE
+  ORDER_HIGH_VALUE
+  ORDER_MODIFIED
+  SYSTEM
+}
+
+enum ChatDomain {
+  GENERAL
+  ORDERS
+  SHIPPING
+  PAYMENT
+  STRIPE
+  ACCOUNTS
+  PRODUCTS
+  GIFT_CERTIFICATES
+  FUNDRAISING
+  LOCATIONS
+  DOCUMENTATION
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  FUNCTION
+}
+
+enum ShippingProviderType {
+  SHOPIFY
+  SHIPSTATION
+  SHIPPO
+  USPS
+  CUSTOM
 }

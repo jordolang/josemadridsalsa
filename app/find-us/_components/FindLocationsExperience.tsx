@@ -189,9 +189,9 @@ export function FindLocationsExperience({
   const totalCount = meta?.total ?? initialMeta.total
 
   return (
-    <section className="space-y-8">
-      <div className="card surface-shadow p-6">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end">
+    <section className="space-y-6 sm:space-y-8">
+      <div className="card surface-shadow p-4 sm:p-6">
+        <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-end">
           <div className="flex-1 space-y-4">
             <label className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Search</span>
@@ -317,13 +317,13 @@ export function FindLocationsExperience({
       ) : (
         <div>
           {isLoading ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="h-64 animate-pulse rounded-2xl bg-muted" />
               ))}
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {locations.map((location) => (
                 <LocationCard
                   key={location.id}

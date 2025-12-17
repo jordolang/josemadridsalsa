@@ -1,22 +1,15 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { MapPin, Phone, ExternalLink, Navigation2, ChevronLeft } from 'lucide-react'
 import { getLocationById } from '@/lib/locations/query'
+import { getLocationImageUrl } from '@/lib/utils/image'
+import { LocationImage } from './_components/LocationImage'
 
 type LocationPageProps = {
   params: Promise<{
     locationId: string
   }>
-}
-
-const proxiedImage = (url?: string | null) => {
-  if (!url) return '/images/store-placeholder.png'
-  if (url.startsWith('https://places.googleapis.com/')) {
-    return `/api/image-proxy?url=${encodeURIComponent(url)}`
-  }
-  return url
 }
 
 const sanitizePhone = (value?: string | null) => value?.replace(/[^0-9+]/g, '') ?? ''
@@ -56,7 +49,8 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
         ? [location.photoUrl]
         : []
   const gallery = gallerySource as string[]
-  const heroImage = proxiedImage(gallery[0] ?? location.photoUrl)
+  // Use Place ID for fresh photos if available (solves expired photo URL issue)
+  const heroImage = getLocationImageUrl(gallery[0] ?? location.photoUrl, location.googlePlaceId)
   const phone = location.phone
   const website = location.website
   const directionsUrl = location.directionsUrl
@@ -73,7 +67,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
       <div className="grid gap-8 lg:grid-cols-[3fr,2fr]">
         <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-lg">
           <div className="relative h-80 w-full sm:h-[26rem]">
-            <Image src={heroImage} alt={`${location.businessName} storefront`} fill className="object-cover" priority />
+            <LocationImage src={heroImage} alt={`${location.businessName} storefront`} fill className="object-cover" priority />
           </div>
           {gallery.length > 1 ? (
             <div className="border-t border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-500">
@@ -165,7 +159,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
             {gallery.map((imageUrl, index) => (
               <div key={`${imageUrl}-${index}`} className="snap-start flex-shrink-0">
                 <div className="relative h-56 w-80 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 shadow">
-                  <Image src={proxiedImage(imageUrl)} alt={`${location.businessName} photo ${index + 1}`} fill className="object-cover" />
+                  <LocationImage src={getLocationImageUrl(imageUrl)} alt={`${location.businessName} photo ${index + 1}`} fill className="object-cover" />
                 </div>
               </div>
             ))}

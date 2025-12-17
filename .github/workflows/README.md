@@ -29,34 +29,6 @@ This directory contains GitHub Actions workflows for automated CI/CD.
 - Uploads build artifacts
 - Only runs if lint and tests pass
 
-### Codex Review (`codex-review.yml`)
-
-**Purpose:** Adds an automated reviewer that summarizes every pull request, compares the stated intent with the actual changes, and reports results of the lightweight safety checks (`npm run lint`, `npm run type-check`).
-
-**Triggers:**
-- Any pull request event (`opened`, `synchronize`, `reopened`, `ready_for_review`)
-- Manual requests by commenting `@codex` on an open PR
-
-**Behavior:**
-- Checks out the PR head commit and installs dependencies
-- Runs linting + type checks (fails the workflow but still posts its findings if either command fails)
-- Posts/updates a `Codex Review` comment with:
-  - Intent summary (or a warning when the PR body is empty)
-  - Impacted directories + change statistics
-  - Intent vs. change coverage signal (flags when the PR description never references the touched folders)
-  - Automated check results and a reminder that `@codex` can re-run the review after new commits land
-
-See `docs/CODEX_REVIEW.md` for reviewer etiquette, sample output, and troubleshooting tips.
-
-## Viewing in Backstage
-
-The CI/CD status is visible in Backstage:
-
-1. Go to http://localhost:3000/catalog
-2. Click "josemadridsalsa-web" component
-3. Navigate to "CI/CD" tab
-4. See workflow runs, status, and logs
-
 ## Running Locally
 
 Before pushing, run these commands locally:
