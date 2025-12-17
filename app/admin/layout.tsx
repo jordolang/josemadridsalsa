@@ -3,6 +3,7 @@ import { getCurrentUser, getUserPermissions } from '@/lib/rbac'
 import { adminNavigation, filterNavByPermissions } from '@/lib/permissions-map'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { AdminTopbar } from '@/components/admin/AdminTopbar'
+import { Toaster } from '@/components/ui/toaster'
 import type { Metadata } from 'next'
 import { createMetadata } from '@/lib/metadata'
 
@@ -39,21 +40,24 @@ export default async function AdminLayout({
     const filteredNav = filterNavByPermissions(adminNavigation, userPermissions)
 
     return (
-      <div className="flex h-screen overflow-hidden bg-background text-foreground">
-        {/* Sidebar */}
-        <AdminSidebar navigation={filteredNav} className="hidden lg:block" />
+      <>
+        <div className="flex h-screen overflow-hidden bg-background text-foreground">
+          {/* Sidebar */}
+          <AdminSidebar navigation={filteredNav} className="hidden lg:block" />
 
-        {/* Main content */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {/* Top bar */}
-          <AdminTopbar user={user} />
+          {/* Main content */}
+          <div className="flex flex-1 flex-col overflow-hidden">
+            {/* Top bar */}
+            <AdminTopbar user={user} />
 
-          {/* Page content */}
-          <main className="flex-1 overflow-y-auto p-6">
-            {children}
-          </main>
+            {/* Page content */}
+            <main className="flex-1 overflow-y-auto p-6">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
+        <Toaster />
+      </>
     )
   } catch (error) {
     console.error('[Admin Layout] Error:', error)
