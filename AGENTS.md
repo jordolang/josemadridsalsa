@@ -21,3 +21,6 @@ Commits mirror current history: lead with an imperative verb or scoped prefix (`
 
 ## Configuration & Environment Notes
 Secrets live in `.env.local`; define `DATABASE_URL`, Stripe keys, and NextAuth secrets before running migrations. After schema updates run `npm run db:generate`, and document any new env vars in `docs/` to keep deploy pipelines aligned.
+
+## USER NON-NEGOTIABLES
+User absolutely refuses to allow any API Keys or Secrets that may be contained at some point within the .env files to be contained or to be commmitted to the repository or to be listed in any markdown documentation. Never include actual API keys into documentation. Also, only create documentation when asked to create documentation for the project. All docs belong in the docs folder, not in any other folder! Do not forget these ABSOLUTE RULES!
