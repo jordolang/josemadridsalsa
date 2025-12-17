@@ -25,7 +25,7 @@ const ModifyOrderSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -42,8 +42,11 @@ export async function PATCH(
     const body = await request.json()
     const validated = ModifyOrderSchema.parse(body)
 
+    // Await params in Next.js 15+
+    const { id } = await params
+
     const result = await modifyOrder({
-      orderId: params.id,
+      orderId: id,
       userId: (session.user as any).id,
       updates: validated,
     })
