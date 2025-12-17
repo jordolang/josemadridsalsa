@@ -1,20 +1,105 @@
 'use client'
 
-import { Search, FileText, Globe } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Search, FileText, Globe, Save, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 
+interface SeoConfig {
+  siteName: string
+  siteDescription: string
+  siteUrl: string
+  defaultOgImage?: string
+  twitterHandle?: string
+  facebookAppId?: string
+  productTitleTemplate?: string
+  productDescTemplate?: string
+  recipeTitleTemplate?: string
+  recipeDescTemplate?: string
+  robotsTxt?: string
+}
+
 export default function SEOPage() {
+  const [config, setConfig] = useState<SeoConfig>({
+    siteName: '',
+    siteDescription: '',
+    siteUrl: '',
+  })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    fetchConfig()
+  }, [])
+
+  async function fetchConfig() {
+    try {
+      const response = await fetch('/api/admin/seo/configuration')
+      if (response.ok) {
+        const data = await response.json()
+        if (data && Object.keys(data).length > 0) {
+          setConfig(data)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch SEO config:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    setSaved(false)
+    try {
+      const response = await fetch('/api/admin/seo/configuration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      })
+      if (response.ok) {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+      }
+    } catch (error) {
+      console.error('Failed to save SEO config:', error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function updateConfig(field: keyof SeoConfig, value: string) {
+    setConfig(prev => ({ ...prev, [field]: value }))
+  }
+
+  if (loading) {
+    return <div className="p-8 text-center">Loading SEO configuration...</div>
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">SEO Manager</h1>
-          <p className="text-slate-600">Manage global SEO settings and defaults</p>
+          <p className="text-slate-600">Manage global SEO settings and meta templates</p>
         </div>
+        <Button onClick={handleSave} disabled={saving}>
+          {saved ? (
+            <>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Saved!
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              {saving ? 'Saving...' : 'Save All Changes'}
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Global SEO Settings */}
@@ -26,21 +111,61 @@ export default function SEOPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="siteName">Site Name</Label>
-            <Input id="siteName" placeholder="Jose Madrid Salsa" disabled />
+            <Input
+              id="siteName"
+              value={config.siteName}
+              onChange={(e) => updateConfig('siteName', e.target.value)}
+              placeholder="Jose Madrid Salsa"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="siteDescription">Site Description</Label>
-            <Textarea id="siteDescription" placeholder="Premium handcrafted salsa from Jose Madrid" rows={3} disabled />
+            <Textarea
+              id="siteDescription"
+              value={config.siteDescription}
+              onChange={(e) => updateConfig('siteDescription', e.target.value)}
+              placeholder="Premium handcrafted salsa from Jose Madrid"
+              rows={3}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="siteUrl">Site URL</Label>
-            <Input id="siteUrl" placeholder="https://josemadridsalsa.com" disabled />
+            <Input
+              id="siteUrl"
+              value={config.siteUrl}
+              onChange={(e) => updateConfig('siteUrl', e.target.value)}
+              placeholder="https://josemadridsalsa.com"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="defaultOgImage">Default OG Image URL</Label>
-            <Input id="defaultOgImage" placeholder="https://example.com/og-image.jpg" disabled />
+            <Input
+              id="defaultOgImage"
+              value={config.defaultOgImage || ''}
+              onChange={(e) => updateConfig('defaultOgImage', e.target.value)}
+              placeholder="https://example.com/og-image.jpg"
+            />
           </div>
-          <Button disabled>Save Global Settings</Button>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="twitterHandle">Twitter Handle</Label>
+              <Input
+                id="twitterHandle"
+                value={config.twitterHandle || ''}
+                onChange={(e) => updateConfig('twitterHandle', e.target.value)}
+                placeholder="@josemadridsalsa"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="facebookAppId">Facebook App ID</Label>
+              <Input
+                id="facebookAppId"
+                value={config.facebookAppId || ''}
+                onChange={(e) => updateConfig('facebookAppId', e.target.value)}
+                placeholder="123456789"
+              />
+            </div>
+          </div>
         </div>
       </Card>
 

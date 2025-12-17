@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveAddress, deleteAddress } from "@/app/account/settings/actions";
+import { saveAddress, deleteAddress } from "@/app/(public)/account/settings/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

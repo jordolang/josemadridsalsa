@@ -2,7 +2,13 @@ import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
-  const seoConfig = await prisma.seoConfiguration.findFirst()
+  let seoConfig = null
+
+  try {
+    seoConfig = await prisma.seoConfiguration.findFirst()
+  } catch (error) {
+    console.error('Failed to fetch SEO config for robots.txt, using defaults:', error)
+  }
 
   if (seoConfig?.robotsTxt) {
     const lines = seoConfig.robotsTxt.split('\n')

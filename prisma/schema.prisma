@@ -303,7 +303,19 @@ model Order {
   // Gift certificates
   giftCertificates GiftCertificate[]
   giftCertificateUsages GiftCertificateUsage[]
-  
+
+  // Shipping labels
+  shippingLabels  ShippingLabel[]
+
+  // Import tracking
+  importSource    String?
+  importBatchId   String?
+  importedAt      DateTime?
+
+  // Printing tracking
+  printedInvoiceAt    DateTime?
+  printedPackingSlipAt DateTime?
+
   @@map("orders")
 }
 
@@ -701,13 +713,20 @@ model FeaturedEvent {
   featuredTo        DateTime?
   isWhereIsJose     Boolean   @default(false)
   customDescription String?
-  
+
+  // Manual override tracking
+  manuallyModified  Boolean   @default(false)
+  modifiedFields    Json?
+  lastGoogleSync    DateTime?
+  displayPriority   Int       @default(0)
+  connectedByUserId String?
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  
+
   // Relations
   eventTags         EventTag[]
-  
+
   @@index([isWhereIsJose])
   @@index([featuredFrom, featuredTo])
   @@map("featured_events")
@@ -1514,23 +1533,115 @@ model ShippingProvider {
   id            String                @id @default(cuid())
   name          String
   type          ShippingProviderType
-  
+
   // Configuration
   apiKey        String?               @db.Text
   apiSecret     String?               @db.Text
   accountId     String?
-  
+
   // Settings
   isActive      Boolean               @default(true)
   isDefault     Boolean               @default(false)
-  
+
   // Metadata
   config        Json?
-  
+
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
-  
+
   @@map("shipping_providers")
+}
+
+model ShippingCarrier {
+  id              String   @id @default(cuid())
+  name            String   // "FedEx", "USPS", "UPS"
+  code            String   @unique // "fedex", "usps", "ups"
+  apiEndpoint     String?
+  isActive        Boolean  @default(true)
+
+  // Credentials stored in ServiceKey
+  requiresAuth    Boolean  @default(true)
+
+  config          Json?    // Carrier-specific config
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  labels          ShippingLabel[]
+
+  @@map("shipping_carriers")
+}
+
+model ShippingLabel {
+  id              String   @id @default(cuid())
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id])
+
+  carrierId       String
+  carrier         ShippingCarrier @relation(fields: [carrierId], references: [id])
+
+  trackingNumber  String
+  labelUrl        String?  // PDF URL or base64
+  cost            Decimal? @db.Decimal(10, 2)
+
+  shipDate        DateTime?
+  estimatedDelivery DateTime?
+
+  // Raw API response
+  carrierResponse Json?
+
+  createdAt       DateTime @default(now())
+  createdById     String?
+
+  @@index([orderId])
+  @@index([trackingNumber])
+  @@map("shipping_labels")
+}
+
+model ThirdPartyIntegration {
+  id              String   @id @default(cuid())
+  name            String   // "ShipStation", "Shippo", etc.
+  type            IntegrationType
+  isActive        Boolean  @default(false)
+  isConfigured    Boolean  @default(false)
+
+  // Credentials in ServiceKey, referenced by service name
+
+  config          Json?    // Integration-specific settings
+  webhookUrl      String?
+
+  lastSyncAt      DateTime?
+  lastError       String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("third_party_integrations")
+}
+
+model OrderNotificationRule {
+  id              String   @id @default(cuid())
+  name            String
+
+  // Trigger conditions
+  triggerEvent    OrderNotificationEvent
+  statusFilter    OrderStatus?
+  minAmount       Decimal? @db.Decimal(10, 2)
+
+  // Notification channels
+  emailEnabled    Boolean  @default(true)
+  emailTo         String[] // Recipient addresses
+
+  // Optional Slack/SMS
+  slackEnabled    Boolean  @default(false)
+  slackWebhook    String?
+
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("order_notification_rules")
 }
 
 enum StructuredDataType {
@@ -1576,4 +1687,23 @@ enum ShippingProviderType {
   SHIPPO
   USPS
   CUSTOM
+}
+
+enum IntegrationType {
+  SHIPPING
+  FULFILLMENT
+  INVENTORY
+  MARKETING
+  ANALYTICS
+}
+
+enum OrderNotificationEvent {
+  ORDER_CREATED
+  ORDER_PAID
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  ORDER_CANCELLED
+  ORDER_REFUNDED
+  PAYMENT_FAILED
+  HIGH_VALUE_ORDER
 }

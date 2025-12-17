@@ -21,6 +21,7 @@
     "db:seed:recipes": "tsx scripts/seed-recipes.ts",
     "db:seed:email-templates": "tsx scripts/seed-email-templates.ts",
     "locations:import": "tsx scripts/import-locations-from-markdown.ts",
+    "locations:verify": "tsx scripts/verify-locations.ts",
     "locations:photos": "node scripts/generate-location-photos.js",
     "locations:update-photos": "node scripts/update-location-photos.mjs",
     "locations:geocode": "tsx scripts/backfill-location-coordinates.ts",
