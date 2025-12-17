@@ -80,42 +80,48 @@ function summarizeContent(content?: string | null) {
 }
 
 async function getDocuments() {
-  const documents = await prisma.trainingDocument.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 100,
-  })
+  try {
+    const documents = await prisma.trainingDocument.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    })
 
-  const initial: TrainingStats = {
-    total: 0,
-    readyCharacters: 0,
-    [TrainingDocumentStatus.PROCESSING]: 0,
-    [TrainingDocumentStatus.READY]: 0,
-    [TrainingDocumentStatus.NEEDS_REVIEW]: 0,
-    [TrainingDocumentStatus.FAILED]: 0,
-    [TrainingDocumentStatus.UNSUPPORTED]: 0,
-  }
-
-  const stats = documents.reduce<TrainingStats>((acc, doc) => {
-    acc.total += 1
-    acc[doc.status] += 1
-    if (doc.content?.length) {
-      acc.readyCharacters += doc.content.length
+    const initial: TrainingStats = {
+      total: 0,
+      readyCharacters: 0,
+      [TrainingDocumentStatus.PROCESSING]: 0,
+      [TrainingDocumentStatus.READY]: 0,
+      [TrainingDocumentStatus.NEEDS_REVIEW]: 0,
+      [TrainingDocumentStatus.FAILED]: 0,
+      [TrainingDocumentStatus.UNSUPPORTED]: 0,
     }
-    return acc
-  }, initial)
 
-  return { documents, stats }
+    const stats = documents.reduce<TrainingStats>((acc, doc) => {
+      acc.total += 1
+      acc[doc.status] += 1
+      if (doc.content?.length) {
+        acc.readyCharacters += doc.content.length
+      }
+      return acc
+    }, initial)
+
+    return { documents, stats }
+  } catch (error) {
+    console.error('[Training Data] Error fetching documents:', error)
+    throw new Error('Failed to load training documents. Please check your database connection.')
+  }
 }
 
 export default async function TrainingDataPage() {
-  const user = await getCurrentUser()
-  if (!user || !(await hasPermission(user, 'content:write'))) {
-    redirect('/admin')
-  }
+  try {
+    const user = await getCurrentUser()
+    if (!user || !(await hasPermission(user, 'content:write'))) {
+      redirect('/admin')
+    }
 
-  const { documents, stats } = await getDocuments()
+    const { documents, stats } = await getDocuments()
 
-  return (
+    return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold">AI Training Data</h1>
@@ -254,5 +260,9 @@ export default async function TrainingDataPage() {
         </div>
       </Card>
     </div>
-  )
+    )
+  } catch (error) {
+    console.error('[Training Data] Error rendering:', error)
+    throw new Error(error instanceof Error ? error.message : 'Failed to load training data page')
+  }
 }
