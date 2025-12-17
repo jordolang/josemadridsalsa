@@ -1,55 +1,37 @@
 import { prisma } from '../lib/prisma'
 
 async function verifyLocations() {
-  console.log('🔍 Verifying locations in database...\n')
+  console.log('Verifying retail locations...\n')
 
-  const locations = await prisma.retailLocation.findMany({
-    orderBy: [{ state: 'asc' }, { city: 'asc' }],
-  })
-
-  console.log(`Total locations: ${locations.length}`)
-
-  if (locations.length !== 149) {
-    console.warn(`⚠️  Expected 149 locations, found ${locations.length}`)
-  }
-
-  const missingPhotos = locations.filter((loc) => !loc.photoUrl)
-  const missingCoordinates = locations.filter((loc) => !loc.latitude || !loc.longitude)
-  const inactive = locations.filter((loc) => !loc.isActive)
-
-  console.log(`\n📊 Statistics:`)
-  console.log(`  - Missing photos: ${missingPhotos.length}`)
-  console.log(`  - Missing coordinates: ${missingCoordinates.length}`)
-  console.log(`  - Inactive locations: ${inactive.length}`)
-
-  const byState = locations.reduce((acc, loc) => {
-    acc[loc.state] = (acc[loc.state] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
-
-  console.log(`\n📍 Locations by state:`)
-  Object.entries(byState)
-    .sort(([, a], [, b]) => b - a)
-    .forEach(([state, count]) => {
-      console.log(`  ${state}: ${count}`)
+  try {
+    const totalLocations = await prisma.retailLocation.count()
+    const activeLocations = await prisma.retailLocation.count({
+      where: { isActive: true },
     })
 
-  if (missingPhotos.length > 0) {
-    console.log(`\n📸 Locations missing photos:`)
-    missingPhotos.slice(0, 10).forEach((loc) => {
-      console.log(`  - ${loc.businessName}, ${loc.city}, ${loc.state}`)
-    })
-    if (missingPhotos.length > 10) {
-      console.log(`  ... and ${missingPhotos.length - 10} more`)
+    console.log(`Total locations in database: ${totalLocations}`)
+    console.log(`Active locations: ${activeLocations}`)
+    console.log(`Inactive locations: ${totalLocations - activeLocations}\n`)
+
+    const expectedCount = 149
+    
+    if (totalLocations === expectedCount) {
+      console.log(`✅ SUCCESS: Database has exactly ${expectedCount} locations as expected!`)
+    } else if (totalLocations < expectedCount) {
+      console.log(`⚠️  WARNING: Expected ${expectedCount} locations but found only ${totalLocations}`)
+      console.log(`Missing ${expectedCount - totalLocations} locations`)
+      console.log('\nTo import locations, run: npm run locations:import')
+    } else {
+      console.log(`ℹ️  INFO: Database has ${totalLocations} locations (${totalLocations - expectedCount} more than expected)`)
     }
-  }
 
-  console.log('\n✅ Verification complete!')
+    await prisma.$disconnect()
+    process.exit(totalLocations === expectedCount ? 0 : 1)
+  } catch (error) {
+    console.error('Error verifying locations:', error)
+    await prisma.$disconnect()
+    process.exit(1)
+  }
 }
 
 verifyLocations()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error('Error:', error)
-    process.exit(1)
-  })
