@@ -128,7 +128,7 @@ export function Navigation() {
             href="/" 
             className="flex items-center space-x-2 font-serif font-bold text-base lg:text-xl flex-shrink-0"
           >
-            <div className="relative w-10 h-10 lg:w-12 lg:h-12 flex-shrink-0">
+            <div className="relative w-10 h-10 lg:w-12 lg:h-12 flex-shrink-0" suppressHydrationWarning>
               <Image
                 src="/images/Hero-image.png"
                 alt="Jose Madrid Salsa Logo"
