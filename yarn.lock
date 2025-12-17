@@ -7356,7 +7356,7 @@ next-auth@^4.24.11:
     preact-render-to-string "^5.1.19"
     uuid "^8.3.2"
 
-"next@^12.2.5 || ^13 || ^14 || ^15 || ^16", next@^16.0.10, "next@>= 13", next@>13:
+"next@^12.2.5 || ^13 || ^14 || ^15 || ^16", "next@>= 13", next@>13, next@16.0.10:
   version "16.0.10"
   resolved "https://registry.npmjs.org/next/-/next-16.0.10.tgz"
   integrity sha512-RtWh5PUgI+vxlV3HdR+IfWA1UUHu0+Ram/JBO4vWB54cVPentCD0e+lxyAYEsDTqGGMg7qpjhKh6dc6aW7W/sA==
