@@ -47,9 +47,9 @@ model User {
 
 model Address {
   id          String      @id @default(cuid())
-  userId      String
+  userId      String?
   type        AddressType @default(SHIPPING)
-  
+
   firstName   String
   lastName    String
   company     String?
@@ -59,19 +59,19 @@ model Address {
   zipCode     String
   country     String      @default("US")
   phone       String?
-  
+
   isDefault   Boolean     @default(false)
-  
+
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  
+
   // Relations
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user        User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Orders using this address
   shippingOrders Order[] @relation("ShippingAddress")
   billingOrders  Order[] @relation("BillingAddress")
-  
+
   @@map("addresses")
 }
 
