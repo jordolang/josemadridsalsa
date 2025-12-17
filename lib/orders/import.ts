@@ -255,22 +255,9 @@ async function createOrderFromItems(
     }
   }
 
-  const shippingAddress = user ? await prisma.address.create({
+  const shippingAddress = await prisma.address.create({
     data: {
-      userId: user.id,
-      type: 'SHIPPING',
-      firstName: firstItem.shippingFirstName,
-      lastName: firstItem.shippingLastName,
-      street: firstItem.shippingStreet,
-      city: firstItem.shippingCity,
-      state: firstItem.shippingState,
-      zipCode: firstItem.shippingZip,
-      country: firstItem.shippingCountry,
-      phone: firstItem.shippingPhone,
-    },
-  }) : await prisma.address.create({
-    data: {
-      userId: 'guest',
+      userId: user?.id,
       type: 'SHIPPING',
       firstName: firstItem.shippingFirstName,
       lastName: firstItem.shippingLastName,
@@ -285,21 +272,9 @@ async function createOrderFromItems(
 
   let billingAddress = shippingAddress
   if (firstItem.billingStreet) {
-    billingAddress = user ? await prisma.address.create({
+    billingAddress = await prisma.address.create({
       data: {
-        userId: user.id,
-        type: 'BILLING',
-        firstName: firstItem.billingFirstName || firstItem.shippingFirstName,
-        lastName: firstItem.billingLastName || firstItem.shippingLastName,
-        street: firstItem.billingStreet,
-        city: firstItem.billingCity || firstItem.shippingCity,
-        state: firstItem.billingState || firstItem.shippingState,
-        zipCode: firstItem.billingZip || firstItem.shippingZip,
-        country: firstItem.billingCountry,
-      },
-    }) : await prisma.address.create({
-      data: {
-        userId: 'guest',
+        userId: user?.id,
         type: 'BILLING',
         firstName: firstItem.billingFirstName || firstItem.shippingFirstName,
         lastName: firstItem.billingLastName || firstItem.shippingLastName,
