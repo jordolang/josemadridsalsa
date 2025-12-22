@@ -128,7 +128,7 @@ export function Navigation() {
             href="/" 
             className="flex items-center space-x-2 font-serif font-bold text-base lg:text-xl flex-shrink-0"
           >
-            <div className="relative w-10 h-10 lg:w-12 lg:h-12 flex-shrink-0">
+            <div className="relative w-10 h-10 lg:w-12 lg:h-12 flex-shrink-0" suppressHydrationWarning>
               <Image
                 src="/images/Hero-image.png"
                 alt="Jose Madrid Salsa Logo"
@@ -361,16 +361,16 @@ export function Navigation() {
                   <Menu className="w-4 h-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80">
-                <SheetHeader>
+              <SheetContent side="right" className="w-80 flex flex-col">
+                <SheetHeader className="flex-shrink-0">
                   <SheetTitle className="text-left font-serif text-gradient">
                     Jose Madrid Salsa
                   </SheetTitle>
                 </SheetHeader>
-                
-                <div className="mt-6 space-y-6">
+
+                <div className="mt-4 space-y-4 overflow-y-auto flex-1 pr-2">
                   {/* Mobile Search */}
-                  <form onSubmit={handleSearch} className="space-y-2">
+                  <form onSubmit={handleSearch} className="space-y-2 flex-shrink-0">
                     <Input
                       type="search"
                       placeholder="Search products..."
@@ -384,18 +384,18 @@ export function Navigation() {
                   </form>
 
                   {/* Mobile Navigation */}
-                  <nav className="space-y-4">
+                  <nav className="space-y-2">
                     {navigationItems.map((item) => (
                       <div key={item.title}>
                         <Link
                           href={item.href}
                           onClick={() => setIsMobileMenuOpen(false)}
-                          className="block py-2 px-1 text-lg font-medium hover:text-salsa-600 transition-colors"
+                          className="block py-1.5 px-1 text-base font-medium hover:text-salsa-600 transition-colors"
                         >
                           {item.title}
                         </Link>
                         {item.megaMenu && (
-                          <div className="ml-4 mt-2 space-y-2">
+                          <div className="ml-4 mt-1 space-y-1">
                             {item.megaMenu.map((category) => (
                               <Link
                                 key={category.name}
@@ -412,27 +412,27 @@ export function Navigation() {
                     ))}
                   </nav>
 
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+                  <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-1.5">
                     <div>
                       <p className="text-sm font-medium text-foreground">Appearance</p>
-                      <p className="text-xs text-muted-foreground">Toggle light or dark theme</p>
+                      <p className="text-xs text-muted-foreground">Toggle theme</p>
                     </div>
-                    <ThemeToggle size="default" className="h-10 w-10 p-0" />
+                    <ThemeToggle size="default" className="h-9 w-9 p-0" />
                   </div>
 
                   {/* Mobile Social Links */}
-                  <div className="pt-4 border-t border-border">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                  <div className="pt-3 border-t border-border">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                       Connect with us
                     </p>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       {socialLinks.map((social) => (
                         <Button
                           key={social.name}
                           variant="outline"
                           size="sm"
                           asChild
-                          className="h-9 w-9 rounded-full px-0 text-muted-foreground"
+                          className="h-8 w-8 rounded-full px-0 text-muted-foreground"
                         >
                           <a
                             href={social.href}
@@ -440,7 +440,7 @@ export function Navigation() {
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            <social.icon className="h-4 w-4" />
+                            <social.icon className="h-3.5 w-3.5" />
                           </a>
                         </Button>
                       ))}
@@ -448,58 +448,59 @@ export function Navigation() {
                   </div>
 
                   {/* Mobile Account Actions */}
-                  <div className="pt-4 border-t border-border space-y-2">
+                  <div className="pt-3 border-t border-border space-y-1.5">
                     {session ? (
-                      <div className="space-y-2">
-                        <div className="rounded-lg bg-muted p-3">
+                      <div className="space-y-1.5">
+                        <div className="rounded-lg bg-muted p-2">
                           <p className="text-sm font-medium text-foreground">{session.user?.name}</p>
                           <p className="text-xs text-muted-foreground">{session.user?.email}</p>
                         </div>
-                        <Button variant="outline" className="w-full justify-start" asChild>
+                        <Button variant="outline" size="sm" className="w-full justify-start h-9" asChild>
                           <Link href="/account" onClick={() => setIsMobileMenuOpen(false)}>
-                            <User className="w-4 h-4 mr-2" />
+                            <User className="w-3.5 h-3.5 mr-2" />
                             My Account
                           </Link>
                         </Button>
-                        <Button variant="outline" className="w-full justify-start" asChild>
+                        <Button variant="outline" size="sm" className="w-full justify-start h-9" asChild>
                           <Link href="/account/orders" onClick={() => setIsMobileMenuOpen(false)}>
-                            <ShoppingCart className="w-4 h-4 mr-2" />
+                            <ShoppingCart className="w-3.5 h-3.5 mr-2" />
                             Order History
                           </Link>
                         </Button>
-                        <Button variant="outline" className="w-full justify-start" asChild>
+                        <Button variant="outline" size="sm" className="w-full justify-start h-9" asChild>
                           <Link href="/gift-certificates/purchase" onClick={() => setIsMobileMenuOpen(false)}>
-                            <Gift className="w-4 h-4 mr-2" />
+                            <Gift className="w-3.5 h-3.5 mr-2" />
                             Gift Certificates
                           </Link>
                         </Button>
                         <Button
                           variant="outline"
-                          className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50"
+                          size="sm"
+                          className="w-full justify-start h-9 text-red-600 border-red-200 hover:bg-red-50"
                           onClick={() => {
                             setIsMobileMenuOpen(false);
                             signOut({ callbackUrl: '/' });
                           }}
                         >
-                          <LogOut className="w-4 h-4 mr-2" />
+                          <LogOut className="w-3.5 h-3.5 mr-2" />
                           Sign Out
                         </Button>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        <Button className="w-full" asChild>
+                      <div className="space-y-1.5">
+                        <Button size="sm" className="w-full h-9" asChild>
                           <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)}>
                             Sign Up
                           </Link>
                         </Button>
-                        <Button variant="outline" className="w-full" asChild>
+                        <Button variant="outline" size="sm" className="w-full h-9" asChild>
                           <Link href="/auth/signin" onClick={() => setIsMobileMenuOpen(false)}>
                             Sign In
                           </Link>
                         </Button>
-                        <Button variant="outline" className="w-full justify-start" asChild>
+                        <Button variant="outline" size="sm" className="w-full justify-start h-9" asChild>
                           <Link href="/gift-certificates/purchase" onClick={() => setIsMobileMenuOpen(false)}>
-                            <Gift className="w-4 h-4 mr-2" />
+                            <Gift className="w-3.5 h-3.5 mr-2" />
                             Gift Certificates
                           </Link>
                         </Button>

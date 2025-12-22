@@ -1,16 +1,17 @@
 #!/usr/bin/env tsx
 /**
  * Test Shopify Webhook Signature Verification
- * 
+ *
  * This script helps you test your Shopify webhook setup by:
  * 1. Generating a test webhook payload
  * 2. Creating a valid HMAC signature
  * 3. Sending a test request to your local webhook endpoint
- * 
+ *
  * Usage:
  *   tsx scripts/test-shopify-webhook.ts
  */
 
+import 'dotenv/config';
 import crypto from 'crypto'
 
 const WEBHOOK_URL = 'http://localhost:3000/api/webhooks/shopify'

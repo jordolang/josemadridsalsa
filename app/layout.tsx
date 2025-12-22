@@ -1,13 +1,4 @@
 import type { Metadata } from 'next'
-import Script from 'next/script'
-import { CartSidebar } from '@/components/store/cart-sidebar'
-import { Toaster } from '@/components/ui/toaster'
-import { Navigation } from '@/components/store/navigation'
-import Footer from '@/components/ui/footer-column'
-import { AiChatWidget } from '@/components/chat/ai-chat-widget'
-import { GoogleAnalytics } from '@/components/analytics/google-analytics'
-import { getPublicGoogleAnalyticsMeasurementId } from '@/lib/google-analytics-config'
-import { Analytics } from '@vercel/analytics/react'
 import { Providers } from './providers'
 import './globals.css'
 
@@ -33,7 +24,7 @@ export const metadata: Metadata = {
     description: 'Premium gourmet salsas made with the finest ingredients. Order online for delivery.',
     images: [
       {
-        url: 'https://www.josemadrid.net/images/Opengraph/Home-Opengraph-Dark.png',
+        url: 'https://www.josemadrid.net/images/Opengraph/josemadrid-hero.png',
         width: 1200,
         height: 630,
         alt: 'Jose Madrid Salsa',
@@ -44,7 +35,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Jose Madrid Salsa - Premium Gourmet Salsa',
     description: 'Premium gourmet salsas made with the finest ingredients.',
-    images: ['https://www.josemadrid.net/images/Opengraph/Home-Opengraph-Dark.png'],
+    images: ['https://www.josemadrid.net/images/Opengraph/josemadrid-hero.png'],
   },
   robots: {
     index: true,
@@ -59,13 +50,11 @@ export const metadata: Metadata = {
   },
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const measurementId = await getPublicGoogleAnalyticsMeasurementId()
-
   return (
     <html lang="en">
       <head>
@@ -77,43 +66,9 @@ export default async function RootLayout({
         />
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
-        {/* Google Tag Manager */}
-        <Script
-          id="gtm-script"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-            new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-            j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-            'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-            })(window,document,'script','dataLayer','GTM-5KSQW4JJ');`
-          }}
-        />
-        {/* End Google Tag Manager */}
-        {/* Google Tag Manager (noscript) */}
-        <noscript>
-          <iframe
-            src="https://www.googletagmanager.com/ns.html?id=GTM-5KSQW4JJ"
-            height="0"
-            width="0"
-            style={{ display: 'none', visibility: 'hidden' }}
-          />
-        </noscript>
-        {/* End Google Tag Manager (noscript) */}
-        {measurementId && <GoogleAnalytics measurementId={measurementId} />}
         <Providers>
-          <div className="flex min-h-screen flex-col">
-            <Navigation />
-            <div className="flex-1">
-              {children}
-            </div>
-            <Footer />
-          </div>
-          <CartSidebar />
-          <Toaster />
-          <AiChatWidget />
+          {children}
         </Providers>
-        <Analytics />
       </body>
     </html>
   )

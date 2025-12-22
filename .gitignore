@@ -71,3 +71,7 @@ docs/backstage/
 
 # Vercel production env
 .env.vercel.production
+
+# TypeScript Build Info File
+tsconfig.tsbuildinfo
+*. tsbuildinfo
