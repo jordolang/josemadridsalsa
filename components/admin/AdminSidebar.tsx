@@ -41,9 +41,10 @@ const iconMap = {
 interface AdminSidebarProps {
   navigation: NavItem[]
   className?: string
+  onClose?: () => void
 }
 
-export function AdminSidebar({ navigation, className = '' }: AdminSidebarProps) {
+export function AdminSidebar({ navigation, className = '', onClose }: AdminSidebarProps) {
   const pathname = usePathname()
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
@@ -58,12 +59,29 @@ export function AdminSidebar({ navigation, className = '' }: AdminSidebarProps) 
     return pathname.startsWith(href)
   }
 
+  const handleLinkClick = () => {
+    if (onClose) {
+      onClose()
+    }
+  }
+
   return (
     <aside className={`w-64 bg-slate-900 text-white dark:bg-slate-950 ${className}`}>
-      <div className="flex h-16 items-center px-6">
-        <Link href="/admin" className="text-xl font-bold">
+      <div className="flex h-16 items-center justify-between px-6">
+        <Link href="/admin" className="text-xl font-bold" onClick={handleLinkClick}>
           Jose Madrid Admin
         </Link>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white lg:hidden"
+            aria-label="Close menu"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       <nav className="space-y-1 px-3 py-4">
@@ -100,6 +118,7 @@ export function AdminSidebar({ navigation, className = '' }: AdminSidebarProps) 
                         <Link
                           key={child.href}
                           href={child.href}
+                          onClick={handleLinkClick}
                           className={`block rounded-lg px-3 py-2 text-sm transition-colors ${
                             isActive(child.href)
                               ? 'bg-slate-800 text-white'
@@ -115,6 +134,7 @@ export function AdminSidebar({ navigation, className = '' }: AdminSidebarProps) 
               ) : (
                 <Link
                   href={item.href}
+                  onClick={handleLinkClick}
                   className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     active
                       ? 'bg-slate-800 text-white'
