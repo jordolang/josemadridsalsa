@@ -1,15 +1,6 @@
 # Repository Security Setup
 
-<<<<<<< HEAD
 Complete security configuration for Jlang.dev repositories with CodeQL scanning and secret prevention.
-=======
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-15.5-black.svg)](https://nextjs.org/)
-[![Prisma](https://img.shields.io/badge/Prisma-6.19-2D3748.svg)](https://www.prisma.io/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC.svg)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-
->>>>>>> 4ef8e7cbfb79335c7e5bf7775ae538bf88b0d6fa
 
 ## Features
 

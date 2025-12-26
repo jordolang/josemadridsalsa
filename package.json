@@ -1,7 +1,6 @@
 {
-  "name": "jose-madrid-salsa",
-  "version": "1.0.0",
-  "description": "Modern e-commerce website for Jose Madrid Salsa with admin panel and comprehensive business management features",
+  "name": "josemadrid-salsa",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
@@ -38,7 +37,12 @@
     "db:production:pull-env": "vercel env pull .env.vercel.production --environment=production --yes",
     "create-admin": "tsx scripts/create-admin.ts",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
-    "fresh": "npm run clean && npm install && npm run dev"
+    "fresh": "npm run clean && npm install && npm run dev",
+    "prepare": "husky install",
+    "security:scan": "gitleaks detect --source . --verbose --redact",
+    "security:protect": "gitleaks protect --verbose --redact --staged",
+    "security:baseline": "gitleaks detect --source . --verbose --report-format json --report-path gitleaks-report.json",
+    "pre-commit": "lint-staged && npm run security:protect"
   },
   "keywords": [
     "salsa",
@@ -115,6 +119,8 @@
     "eslint": "^9.37.0",
     "eslint-config-next": "^15.5.4",
     "global-agent": "^3.0.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
     "postcss": "^8.5.6",
     "prisma": "6.19.0",
     "ts-node": "^10.9.2",
@@ -122,5 +128,14 @@
     "typescript": "^5.9.3",
     "vercel": "^48.11.0",
     "vitest": "^4.0.6"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }

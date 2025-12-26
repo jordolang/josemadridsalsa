@@ -1,0 +1,25 @@
+{
+  "name": "security-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prepare": "husky install",
+    "security:scan": "gitleaks detect --source . --verbose --redact",
+    "security:protect": "gitleaks protect --verbose --redact --staged",
+    "security:baseline": "gitleaks detect --source . --verbose --report-format json --report-path gitleaks-report.json",
+    "pre-commit": "lint-staged && npm run security:protect"
+  },
+  "devDependencies": {
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}
