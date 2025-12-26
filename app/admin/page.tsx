@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import {  DollarSign, ShoppingCart, Users, Package } from 'lucide-react'
 import { StatsCard } from '@/components/admin/StatsCard'
+import { SalesOverview } from '@/components/admin/SalesOverview'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
@@ -107,6 +108,11 @@ export default async function AdminDashboard() {
           icon={Package}
         />
       </div>
+
+      {/* Sales Overview Chart */}
+      {canViewFinancials && (
+        <SalesOverview />
+      )}
 
       {/* Recent Orders */}
       {canViewOrders && stats.recentOrders.length > 0 && (
