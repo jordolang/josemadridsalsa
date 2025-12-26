@@ -21,61 +21,66 @@ interface SearchParams {
 }
 
 async function getOrders(searchParams: SearchParams) {
-  const page = Number(searchParams.page) || 1
-  const limit = 50
-  const skip = (page - 1) * limit
+  try {
+    const page = Number(searchParams.page) || 1
+    const limit = 50
+    const skip = (page - 1) * limit
 
-  const where: any = {}
+    const where: any = {}
 
-  // Search filter
-  if (searchParams.search) {
-    where.OR = [
-      { orderNumber: { contains: searchParams.search, mode: 'insensitive' } },
-      { guestEmail: { contains: searchParams.search, mode: 'insensitive' } },
-      {
-        user: {
-          OR: [
-            { email: { contains: searchParams.search, mode: 'insensitive' } },
-            { name: { contains: searchParams.search, mode: 'insensitive' } },
-          ],
-        },
-      },
-    ]
-  }
-
-  // Status filter
-  if (searchParams.status && searchParams.status !== 'all') {
-    where.status = searchParams.status
-  }
-
-  const [orders, total] = await Promise.all([
-    prisma.order.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
+    // Search filter
+    if (searchParams.search) {
+      where.OR = [
+        { orderNumber: { contains: searchParams.search, mode: 'insensitive' } },
+        { guestEmail: { contains: searchParams.search, mode: 'insensitive' } },
+        {
+          user: {
+            OR: [
+              { email: { contains: searchParams.search, mode: 'insensitive' } },
+              { name: { contains: searchParams.search, mode: 'insensitive' } },
+            ],
           },
         },
-        items: {
-          select: {
-            id: true,
+      ]
+    }
+
+    // Status filter
+    if (searchParams.status && searchParams.status !== 'all') {
+      where.status = searchParams.status
+    }
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+          items: {
+            select: {
+              id: true,
+            },
           },
         },
-      },
-    }),
-    prisma.order.count({ where }),
-  ])
+      }),
+      prisma.order.count({ where }),
+    ])
 
-  return {
-    orders,
-    total,
-    page,
-    totalPages: Math.ceil(total / limit),
+    return {
+      orders,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    }
+  } catch (error) {
+    console.error('[Orders] Error fetching orders:', error)
+    throw new Error('Failed to load orders. Please check your database connection.')
   }
 }
 
@@ -94,17 +99,18 @@ export default async function OrdersPage({
 }: {
   searchParams: Promise<SearchParams>
 }) {
-  const params = await searchParams;
-  const user = await getCurrentUser()
+  try {
+    const params = await searchParams;
+    const user = await getCurrentUser()
 
-  if (!user || !(await hasPermission(user, 'orders:read'))) {
-    redirect('/admin')
-  }
+    if (!user || !(await hasPermission(user, 'orders:read'))) {
+      redirect('/admin')
+    }
 
-  const canExport = await hasPermission(user, 'orders:export')
-  const { orders, total, page, totalPages } = await getOrders(params)
+    const canExport = await hasPermission(user, 'orders:export')
+    const { orders, total, page, totalPages } = await getOrders(params)
 
-  return (
+    return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -264,5 +270,9 @@ export default async function OrdersPage({
         )}
       </Card>
     </div>
-  )
+    )
+  } catch (error) {
+    console.error('[Orders] Error rendering:', error)
+    throw new Error(error instanceof Error ? error.message : 'Failed to load orders page')
+  }
 }

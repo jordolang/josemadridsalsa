@@ -8,60 +8,66 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 async function getDashboardStats() {
-  const [
-    totalOrders,
-    totalUsers,
-    totalProducts,
-    recentOrders,
-  ] = await Promise.all([
-    prisma.order.count(),
-    prisma.user.count(),
-    prisma.product.count(),
-    prisma.order.findMany({
-      take: 10,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
+  try {
+    const [
+      totalOrders,
+      totalUsers,
+      totalProducts,
+      recentOrders,
+    ] = await Promise.all([
+      prisma.order.count(),
+      prisma.user.count(),
+      prisma.product.count(),
+      prisma.order.findMany({
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
           },
         },
-      },
-    }),
-  ])
+      }),
+    ])
 
-  // Calculate total revenue (simple sum for now)
-  const revenue = await prisma.order.aggregate({
-    _sum: {
-      total: true,
-    },
-    where: {
-      status: {
-        not: 'CANCELLED',
+    // Calculate total revenue (simple sum for now)
+    const revenue = await prisma.order.aggregate({
+      _sum: {
+        total: true,
       },
-    },
-  })
+      where: {
+        status: {
+          not: 'CANCELLED',
+        },
+      },
+    })
 
-  return {
-    totalOrders,
-    totalUsers,
-    totalProducts,
-    revenue: revenue._sum.total || 0,
-    recentOrders,
+    return {
+      totalOrders,
+      totalUsers,
+      totalProducts,
+      revenue: revenue._sum.total || 0,
+      recentOrders,
+    }
+  } catch (error) {
+    console.error('[Admin Dashboard] Error fetching stats:', error)
+    throw new Error('Failed to load dashboard statistics. Please check your database connection.')
   }
 }
 
 export default async function AdminDashboard() {
-  const user = await getCurrentUser()
-  if (!user) return null
+  try {
+    const user = await getCurrentUser()
+    if (!user) return null
 
-  const canViewFinancials = await hasPermission(user, 'financials:read')
-  const canViewOrders = await hasPermission(user, 'orders:read')
+    const canViewFinancials = await hasPermission(user, 'financials:read')
+    const canViewOrders = await hasPermission(user, 'orders:read')
 
-  const stats = await getDashboardStats()
+    const stats = await getDashboardStats()
 
-  return (
+    return (
     <div className="space-y-6">
       {/* Header */}
       <div>
@@ -187,5 +193,9 @@ export default async function AdminDashboard() {
         </div>
       </Card>
     </div>
-  )
+    )
+  } catch (error) {
+    console.error('[Admin Dashboard] Error rendering:', error)
+    throw new Error(error instanceof Error ? error.message : 'Failed to load admin dashboard')
+  }
 }

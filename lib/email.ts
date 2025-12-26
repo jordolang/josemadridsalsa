@@ -116,6 +116,32 @@ export async function sendPasswordResetEmail(email: string, token: string) {
   }
 }
 
+export async function sendEmail(options: {
+  to: string
+  subject: string
+  html?: string
+  text?: string
+}) {
+  if (!resendApiKey) {
+    console.warn('RESEND_API_KEY not set; skipping email send')
+    return { skipped: true }
+  }
+
+  try {
+    const resend = new Resend(resendApiKey)
+    const res = await resend.emails.send({
+      from: fromEmail,
+      to: options.to,
+      subject: options.subject,
+      ...(options.html ? { html: options.html } : { text: options.text || '' }),
+    })
+    return res
+  } catch (e) {
+    console.error('Failed to send email', e)
+    return { error: true }
+  }
+}
+
 function escapeHtml(str: string) {
   return str
     .replace(/&/g, '&amp;')

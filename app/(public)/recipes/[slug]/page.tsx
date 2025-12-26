@@ -25,10 +25,24 @@ const difficultyColors: Record<string, string> = {
 }
 
 const loadRecipe = async (slug: string): Promise<Recipe | null> => {
+  // Skip database during build to avoid connection issues
+  if (process.env.VERCEL || process.env.CI || !process.env.DATABASE_URL) {
+    const fallbackRecipe = recipeData.find((item) => item.slug === slug)
+    return fallbackRecipe ?? null
+  }
+
   try {
-    const recipe = await prisma.recipe.findUnique({
-      where: { slug },
+    // Add timeout to prevent hanging (3 second max)
+    const timeoutPromise = new Promise<null>((resolve) => {
+      setTimeout(() => resolve(null), 3000)
     })
+
+    const recipe = await Promise.race([
+      prisma.recipe.findUnique({
+        where: { slug },
+      }),
+      timeoutPromise,
+    ])
 
     if (recipe) {
       return recipe
@@ -55,16 +69,30 @@ const getTotalMinutes = (prepTime: string, cookTime: string) => {
 export const revalidate = 3600 // Revalidate every hour
 
 export async function generateStaticParams() {
+  // During build, prefer static data to avoid database connection issues
+  if (process.env.VERCEL || process.env.CI || !process.env.DATABASE_URL) {
+    console.log('Build environment detected, using static recipe data')
+    return recipeData.map((recipe) => ({ slug: recipe.slug }))
+  }
+
   try {
-    const recipes = await prisma.recipe.findMany({
-      select: { slug: true },
+    // Add timeout to prevent hanging during build (5 second max)
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Database query timeout')), 5000)
     })
+
+    const recipes = await Promise.race([
+      prisma.recipe.findMany({
+        select: { slug: true },
+      }),
+      timeoutPromise,
+    ])
 
     if (recipes.length > 0) {
       return recipes.map(({ slug }) => ({ slug }))
     }
   } catch (error) {
-    console.warn('Falling back to static recipe params due to Prisma error:', error)
+    console.warn('Falling back to static recipe params:', error instanceof Error ? error.message : 'Unknown error')
   }
 
   return recipeData.map((recipe) => ({ slug: recipe.slug }))

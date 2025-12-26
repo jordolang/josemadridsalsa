@@ -17,6 +17,7 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
+  Gift,
 } from 'lucide-react'
 import { useState } from 'react'
 import type { NavItem } from '@/lib/permissions-map'
@@ -34,6 +35,7 @@ const iconMap = {
   DollarSign,
   Building2,
   Settings,
+  Gift,
 }
 
 interface AdminSidebarProps {

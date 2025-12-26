@@ -71,7 +71,7 @@ export function Footer() {
       <div className="mx-auto max-w-screen-xl px-4 pt-16 pb-6 sm:px-6 lg:px-8 lg:pt-24">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div>
-            <div className="text-primary flex justify-center items-center gap-3 sm:justify-start">
+            <div className="text-primary flex justify-center gap-2 sm:justify-start" suppressHydrationWarning>
               <Image
                 src={company.logo}
                 alt={`${company.name} logo`}
