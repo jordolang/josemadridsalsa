@@ -109,6 +109,7 @@ export const useCartStore = typeof window !== 'undefined'
   ? create<CartStore>()(
       persist(cartStoreConfig, {
         name: 'cart-storage',
+        storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({ items: state.items }),
       })
     )
