@@ -318,8 +318,16 @@ export function ProjectStatusDashboard({ analysis }: Props) {
 
 // Helper Components
 
-function StatsCard({ title, value, subtitle, icon, color }: any) {
-  const colors = {
+interface StatsCardProps {
+  title: string
+  value: string
+  subtitle?: string
+  icon: React.ReactNode
+  color: 'blue' | 'purple' | 'green' | 'orange'
+}
+
+function StatsCard({ title, value, subtitle, icon, color }: StatsCardProps) {
+  const colors: Record<StatsCardProps['color'], string> = {
     blue: 'bg-blue-50 border-blue-200 text-blue-700',
     purple: 'bg-purple-50 border-purple-200 text-purple-700',
     green: 'bg-green-50 border-green-200 text-green-700',
@@ -327,7 +335,7 @@ function StatsCard({ title, value, subtitle, icon, color }: any) {
   }
 
   return (
-    <Card className={`p-4 ${colors[color] || colors.blue}`}>
+    <Card className={`p-4 ${colors[color]}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="text-sm font-medium">{title}</div>
         {icon}
@@ -338,7 +346,13 @@ function StatsCard({ title, value, subtitle, icon, color }: any) {
   )
 }
 
-function DebtStat({ label, count, critical }: any) {
+interface DebtStatProps {
+  label: string
+  count: number
+  critical?: boolean
+}
+
+function DebtStat({ label, count, critical }: DebtStatProps) {
   return (
     <div className="text-center">
       <div className={`text-2xl font-bold ${critical ? 'text-red-600' : 'text-gray-700'}`}>
@@ -349,8 +363,14 @@ function DebtStat({ label, count, critical }: any) {
   )
 }
 
-function FeatureSection({ title, features, color }: any) {
-  const colors = {
+interface FeatureSectionProps {
+  title: string
+  features: any[]
+  color: 'red' | 'yellow' | 'green'
+}
+
+function FeatureSection({ title, features, color }: FeatureSectionProps) {
+  const colors: Record<FeatureSectionProps['color'], string> = {
     red: 'bg-red-50 border-red-200',
     yellow: 'bg-yellow-50 border-yellow-200',
     green: 'bg-green-50 border-green-200',
@@ -380,7 +400,14 @@ function FeatureSection({ title, features, color }: any) {
   )
 }
 
-function ProgressBar({ label, current, total, percentage }: any) {
+interface ProgressBarProps {
+  label: string
+  current: number
+  total: number
+  percentage: number
+}
+
+function ProgressBar({ label, current, total, percentage }: ProgressBarProps) {
   return (
     <div>
       <div className="flex items-center justify-between text-sm mb-1">
