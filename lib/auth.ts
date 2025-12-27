@@ -77,27 +77,29 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
-          console.log('[Auth] Attempting login for:', credentials.email)
+          // Normalize email to lowercase for case-insensitive matching (matches registration flow)
+          const normalizedEmail = credentials.email.toLowerCase()
+          console.log('[Auth] Attempting login for:', normalizedEmail)
 
           const prisma = await getPrisma()
-          const user = await prisma.user.findUnique({ where: { email: credentials.email } })
+          const user = await prisma.user.findUnique({ where: { email: normalizedEmail } })
           if (!user) {
-            console.error('[Auth] User not found:', credentials.email)
+            console.error('[Auth] User not found:', normalizedEmail)
             return null
           }
 
           if (!user.password) {
-            console.error('[Auth] User has no password set:', credentials.email)
+            console.error('[Auth] User has no password set:', normalizedEmail)
             return null
           }
 
           const isValid = await bcrypt.compare(credentials.password, user.password)
           if (!isValid) {
-            console.error('[Auth] Invalid password for:', credentials.email)
+            console.error('[Auth] Invalid password for:', normalizedEmail)
             return null
           }
 
-          console.log('[Auth] Login successful for:', credentials.email)
+          console.log('[Auth] Login successful for:', normalizedEmail)
           return {
             id: user.id,
             email: user.email,
