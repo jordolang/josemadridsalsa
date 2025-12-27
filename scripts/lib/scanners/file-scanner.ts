@@ -72,7 +72,7 @@ export class FileScanner {
       ],
     })
 
-    return files.map((file) => path.join(this.projectRoot, file))
+    return files.map((file: string) => path.join(this.projectRoot, file))
   }
 
   /**
@@ -92,7 +92,7 @@ export class FileScanner {
       ],
     })
 
-    return files.map((file) => path.join(this.projectRoot, file))
+    return files.map((file: string) => path.join(this.projectRoot, file))
   }
 
   /**
@@ -116,7 +116,7 @@ export class FileScanner {
       ],
     })
 
-    return files.map((file) => path.join(this.projectRoot, file))
+    return files.map((file: string) => path.join(this.projectRoot, file))
   }
 
   /**
@@ -139,7 +139,7 @@ export class FileScanner {
       ],
     })
 
-    return files.map((file) => path.join(this.projectRoot, file))
+    return files.map((file: string) => path.join(this.projectRoot, file))
   }
 
   /**
@@ -165,7 +165,7 @@ export class FileScanner {
       ],
     })
 
-    return files.map((file) => path.join(this.projectRoot, file))
+    return files.map((file: string) => path.join(this.projectRoot, file))
   }
 
   /**
