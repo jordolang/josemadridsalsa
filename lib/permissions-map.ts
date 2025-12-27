@@ -107,6 +107,12 @@ export const adminNavigation: NavItem[] = [
     permission: 'analytics:read',
   },
   {
+    label: 'Project Status',
+    href: '/admin/project-status',
+    icon: 'Activity',
+    permission: 'analytics:read',
+  },
+  {
     label: 'Communications',
     href: '/admin/communications',
     icon: 'MessageSquare',

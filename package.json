@@ -42,7 +42,10 @@
     "security:scan": "gitleaks detect --source . --verbose --redact",
     "security:protect": "gitleaks protect --verbose --redact --staged",
     "security:baseline": "gitleaks detect --source . --verbose --report-format json --report-path gitleaks-report.json",
-    "pre-commit": "lint-staged && npm run security:protect"
+    "pre-commit": "lint-staged && npm run security:protect",
+    "analyze": "tsx scripts/analyze-project.ts",
+    "analyze:watch": "tsx scripts/analyze-project.ts --watch",
+    "analyze:report": "tsx scripts/analyze-project.ts --export markdown"
   },
   "keywords": [
     "salsa",
@@ -78,7 +81,6 @@
     "@types/nodemailer": "^7.0.4",
     "@vercel/analytics": "^1.5.0",
     "bcryptjs": "^3.0.2",
-    "cheerio": "^1.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -109,6 +111,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@axe-core/cli": "^4.11.0",
     "@types/node": "^24.10.4",
     "@types/papaparse": "^5.5.0",
     "@types/react": "^19.2.2",
@@ -116,10 +119,14 @@
     "@vitest/ui": "^4.0.6",
     "autoprefixer": "^10.4.21",
     "baseline-browser-mapping": "^2.8.32",
+    "cheerio": "^1.1.2",
     "eslint": "^9.37.0",
     "eslint-config-next": "^15.5.4",
+    "fast-glob": "^3.3.2",
+    "glob": "^13.0.0",
     "global-agent": "^3.0.0",
     "husky": "^8.0.3",
+    "lighthouse": "^13.0.1",
     "lint-staged": "^15.2.0",
     "postcss": "^8.5.6",
     "prisma": "6.19.0",
