@@ -4,6 +4,7 @@ import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { queueShopifySync } from '@/lib/shopify/sync'
+import { calculateTax } from '@/lib/tax-calculator'
 
 const CheckoutSchema = z.object({
   items: z
@@ -102,9 +103,40 @@ export async function POST(request: Request) {
       })
     }
 
-    const tax = 0
-    const shippingCost = 0
-    const total = subtotal + tax + shippingCost
+    // Calculate tax using Stripe Tax API
+    let taxAmount = 0
+    try {
+      const taxResult = await calculateTax({
+        lineItems: orderItems.map((item) => ({
+          amount: Math.round(Number(item.totalPrice) * 100), // Convert to cents
+          reference: item.productId,
+          taxCode: 'txcd_30011000', // Food & beverage - Packaged food
+        })),
+        shippingAddress: {
+          line1: shipping.address1,
+          line2: shipping.address2,
+          city: shipping.city,
+          state: shipping.state,
+          postalCode: shipping.postalCode,
+          country: 'US',
+        },
+        customerEmail: customer.email,
+      })
+
+      taxAmount = taxResult.taxAmountDecimal
+      console.log('[Checkout] Tax calculated:', {
+        subtotal,
+        taxAmount,
+        taxRate: taxResult.taxRate,
+        breakdown: taxResult.taxBreakdown,
+      })
+    } catch (error) {
+      console.error('[Checkout] Tax calculation failed, using $0:', error)
+      // Continue with 0 tax rather than blocking checkout
+    }
+
+    const shippingCost = 0 // TODO: Implement shipping calculation
+    const total = subtotal + taxAmount + shippingCost
 
     const shippingSummary = [
       `${shipping.address1}${shipping.address2 ? `, ${shipping.address2}` : ''}`,
@@ -120,7 +152,7 @@ export async function POST(request: Request) {
         customerNotes: notes ?? undefined,
         subtotal: toDecimal(subtotal),
         shippingCost: toDecimal(shippingCost),
-        tax: toDecimal(tax),
+        tax: toDecimal(taxAmount),
         discountAmount: toDecimal(0),
         total: toDecimal(total),
         paymentStatus: 'PENDING',

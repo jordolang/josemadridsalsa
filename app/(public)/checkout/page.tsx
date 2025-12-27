@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import {
   CardElement,
@@ -80,6 +80,9 @@ function CheckoutForm() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [taxAmount, setTaxAmount] = useState(0)
+  const [isCalculatingTax, setIsCalculatingTax] = useState(false)
+  const taxCalcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const subtotal = useMemo(
     () => items.reduce((total, item) => total + item.price * item.quantity, 0),
@@ -87,6 +90,50 @@ function CheckoutForm() {
   )
 
   const hasCartItems = items.length > 0
+
+  // Calculate tax when address is complete
+  const calculateTaxEstimate = async () => {
+    // Only calculate if we have required address fields
+    if (!formState.city || !formState.state || !formState.postalCode || items.length === 0) {
+      return
+    }
+
+    setIsCalculatingTax(true)
+    try {
+      const response = await fetch('/api/checkout/calculate-tax', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            productId: item.id,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+          shippingAddress: {
+            address1: formState.address1 || '123 Main St', // Placeholder if not entered yet
+            address2: formState.address2 || undefined,
+            city: formState.city,
+            state: formState.state,
+            postalCode: formState.postalCode,
+            country: 'US',
+          },
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setTaxAmount(data.tax || 0)
+      } else {
+        console.error('Failed to calculate tax')
+        setTaxAmount(0)
+      }
+    } catch (error) {
+      console.error('Error calculating tax:', error)
+      setTaxAmount(0)
+    } finally {
+      setIsCalculatingTax(false)
+    }
+  }
 
   const handleInputChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -96,7 +143,28 @@ function CheckoutForm() {
       ...prev,
       [name]: value,
     }))
+
+    // Trigger tax calculation when address fields change
+    if (['city', 'state', 'postalCode'].includes(name)) {
+      // Clear previous timeout
+      if (taxCalcTimeoutRef.current) {
+        clearTimeout(taxCalcTimeoutRef.current)
+      }
+      // Debounce tax calculation to avoid excessive API calls
+      taxCalcTimeoutRef.current = setTimeout(() => {
+        calculateTaxEstimate()
+      }, 800)
+    }
   }
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (taxCalcTimeoutRef.current) {
+        clearTimeout(taxCalcTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -415,14 +483,19 @@ function CheckoutForm() {
                   <span>{formatPrice(0)}</span>
                 </div>
                 <div className="flex items-center justify-between text-gray-600">
-                  <span>Tax</span>
-                  <span>{formatPrice(0)}</span>
+                  <span>Tax {isCalculatingTax && <span className="text-xs">(calculating...)</span>}</span>
+                  <span>{formatPrice(taxAmount)}</span>
                 </div>
+                {taxAmount === 0 && formState.postalCode.length >= 5 && (
+                  <p className="text-xs text-gray-500 italic">
+                    Enter your full address to calculate tax
+                  </p>
+                )}
               </div>
             </CardContent>
             <CardFooter className="flex items-center justify-between border-t text-lg font-semibold">
               <span>Total due now</span>
-              <span>{formatPrice(subtotal)}</span>
+              <span>{formatPrice(subtotal + taxAmount)}</span>
             </CardFooter>
           </Card>
         </aside>

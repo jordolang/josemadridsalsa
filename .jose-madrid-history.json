@@ -1,0 +1,48 @@
+{
+  "runs": [
+    {
+      "runNumber": 1,
+      "timestamp": "2025-12-26T17:49:55.261Z",
+      "launchReadiness": 0,
+      "criticalBlockers": 0,
+      "completedPages": 0,
+      "overallCompletion": 0
+    },
+    {
+      "runNumber": 2,
+      "timestamp": "2025-12-27T03:16:37.889Z",
+      "launchReadiness": 0,
+      "criticalBlockers": [],
+      "criticalBlockersCount": 0,
+      "completedPages": 0,
+      "overallCompletion": 0
+    },
+    {
+      "runNumber": 3,
+      "timestamp": "2025-12-27T03:21:37.532Z",
+      "launchReadiness": 0,
+      "criticalBlockers": [],
+      "criticalBlockersCount": 0,
+      "completedPages": 0,
+      "overallCompletion": 0
+    },
+    {
+      "runNumber": 4,
+      "timestamp": "2025-12-27T03:36:06.787Z",
+      "launchReadiness": 0,
+      "criticalBlockers": [],
+      "criticalBlockersCount": 0,
+      "completedPages": 0,
+      "overallCompletion": 0
+    },
+    {
+      "runNumber": 5,
+      "timestamp": "2025-12-27T05:00:00.704Z",
+      "launchReadiness": 0,
+      "criticalBlockers": [],
+      "criticalBlockersCount": 0,
+      "completedPages": 0,
+      "overallCompletion": 0
+    }
+  ]
+}
