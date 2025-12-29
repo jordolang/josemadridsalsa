@@ -5,6 +5,7 @@ import { AnimatedTestimonials } from '@/components/store/animated-testimonials'
 import { GiftBoxSelector } from '@/components/store/gift-box-selector'
 import { LocationMap } from '@/components/store/location-map'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
+import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { createMetadata } from '@/lib/metadata'
 
 export const metadata: Metadata = createMetadata({
@@ -16,7 +17,8 @@ export const metadata: Metadata = createMetadata({
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
+    <ErrorBoundary>
+      <main className="min-h-screen">
       {/* Hero Section */}
       <section className="hero-gradient relative overflow-hidden">
         <div className="absolute inset-0 bg-black opacity-20"></div>
@@ -212,5 +214,6 @@ export default function Home() {
         </div>
       </section>
     </main>
+    </ErrorBoundary>
   )
 }
