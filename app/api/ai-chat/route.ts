@@ -277,8 +277,7 @@ export async function POST(request: Request) {
       rateLimitRemaining: rateLimitResult.remaining,
     })
 
-    // Clone response and add rate limit headers
-    const responseData = await response.clone().json()
+    // Return response with rate limit headers
     return NextResponse.json(responseData, {
       headers: rateLimitHeaders,
     })
