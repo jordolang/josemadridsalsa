@@ -11,6 +11,7 @@ import { useCartStore } from '@/lib/store/cart'
 import { formatPrice, getHeatLevelColor, getHeatLevelText } from '@/lib/utils'
 import { HeatGauge } from '@/components/store/heat-gauge'
 import { getSalsaHeatRating } from '@/lib/salsa-heat'
+import { GiftBoxQuickAdd } from '@/components/store/gift-box-quick-add'
 
 type Product = {
   id: string
@@ -137,6 +138,9 @@ export default function ProductsPage() {
           </div>
         </div>
       </section>
+
+      {/* Gift Box Quick Add */}
+      <GiftBoxQuickAdd />
 
       {/* Products Grid */}
       <section className="py-12">

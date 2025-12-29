@@ -188,11 +188,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Location Map Section */}
-      <LocationMap />
-
       {/* Gift Box Selector Section */}
       <GiftBoxSelector />
+
+      {/* Location Map Section */}
+      <LocationMap />
 
       {/* Reviews Section */}
       <AnimatedTestimonials />

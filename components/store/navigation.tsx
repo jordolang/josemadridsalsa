@@ -21,7 +21,7 @@ const salsaCategories = [
   { name: "Medium Heat", href: "/products?heat=medium", description: "Just the right kick" },
   { name: "Hot & Spicy", href: "/products?heat=hot", description: "For the brave souls" },
   { name: "Gourmet Fruit", href: "/products?heat=fruit", description: "Unique fruit-infused flavors" },
-  { name: "Bundle Deals", href: "/products", description: "Mix & match your favorites" },
+  { name: "Bundle Deals", href: "/bundles", description: "Mix & match your favorites" },
   { name: "Merchandise", href: "/merchandise", description: "T-shirts, hats, and accessories" },
 ];
 
