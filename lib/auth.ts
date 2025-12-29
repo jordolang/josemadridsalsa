@@ -49,7 +49,7 @@ export const authOptions: NextAuthOptions = {
   },
   // Trust the proxy/host in production (required for Vercel and other hosting platforms)
   useSecureCookies: process.env.NODE_ENV === 'production',
-  debug: true, // Enable debug temporarily to troubleshoot login issues
+  debug: false, // Disable debug to prevent /api/auth/_log 405 errors
   logger: {
     error(code, metadata) {
       console.error('[NextAuth Error]', code, metadata)
@@ -72,14 +72,8 @@ export const authOptions: NextAuthOptions = {
       },
       authorize: async (credentials) => {
         try {
-          console.log('[Auth] Authorize callback started')
-          console.log('[Auth] Credentials received:', {
-            email: credentials?.email,
-            hasPassword: !!credentials?.password
-          })
-
           if (!credentials?.email || !credentials?.password) {
-            console.error('[Auth] Missing credentials - email:', !!credentials?.email, 'password:', !!credentials?.password)
+            console.error('[Auth] Missing credentials')
             return null
           }
 
@@ -88,8 +82,6 @@ export const authOptions: NextAuthOptions = {
           console.log('[Auth] Attempting login for:', normalizedEmail)
 
           const prisma = await getPrisma()
-          console.log('[Auth] Prisma client obtained')
-
           const user = await prisma.user.findUnique({
             where: { email: normalizedEmail },
             select: {
@@ -99,13 +91,6 @@ export const authOptions: NextAuthOptions = {
               role: true,
               password: true,
             }
-          })
-
-          console.log('[Auth] User query result:', {
-            found: !!user,
-            email: user?.email,
-            hasPassword: !!user?.password,
-            role: user?.role
           })
 
           if (!user) {
@@ -118,24 +103,19 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
-          console.log('[Auth] Comparing password...')
           const isValid = await bcrypt.compare(credentials.password, user.password)
-          console.log('[Auth] Password comparison result:', isValid)
-
           if (!isValid) {
             console.error('[Auth] Invalid password for:', normalizedEmail)
             return null
           }
 
-          console.log('[Auth] Login successful for:', normalizedEmail, 'returning user object')
-          const returnUser = {
+          console.log('[Auth] Login successful for:', normalizedEmail)
+          return {
             id: user.id,
             email: user.email,
             name: user.name ?? undefined,
             role: user.role,
-          }
-          console.log('[Auth] Returning user:', returnUser)
-          return returnUser as any
+          } as any
         } catch (error) {
           console.error('[Auth] Authentication error:', error)
           if (error instanceof Error) {
