@@ -32,28 +32,28 @@ const giftBoxOptions: GiftBoxOption[] = [
     name: 'Choose 3 Pack',
     size: 3,
     price: 23.00,
-    image: '/images/products/choose-3-with-gift-box.jpg',
+    image: '/images/new-products/3-product-box.jpeg',
   },
   {
     id: 'choose-5',
     name: 'Choose 5 Pack',
     size: 5,
     price: 28.00,
-    image: '/images/products/choose-5.png',
+    image: '/images/new-products/6-products.jpeg',
   },
   {
     id: 'choose-6',
     name: 'Choose 6 Pack',
     size: 6,
     price: 32.00,
-    image: '/images/products/choose-6.png',
+    image: '/images/new-products/6-products.jpeg',
   },
   {
     id: 'choose-12',
     name: 'Choose 12 Pack',
     size: 12,
     price: 60.00,
-    image: '/images/products/choose-12.png',
+    image: '/images/new-products/12-products.jpeg',
   },
 ]
 

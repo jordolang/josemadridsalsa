@@ -82,7 +82,10 @@ function CheckoutForm() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [taxAmount, setTaxAmount] = useState(0)
   const [isCalculatingTax, setIsCalculatingTax] = useState(false)
+  const [shippingCost, setShippingCost] = useState(0)
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false)
   const taxCalcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const shippingCalcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const subtotal = useMemo(
     () => items.reduce((total, item) => total + item.price * item.quantity, 0),
@@ -135,6 +138,48 @@ function CheckoutForm() {
     }
   }
 
+  // Calculate shipping when address is complete
+  const calculateShippingEstimate = async () => {
+    if (!formState.city || !formState.state || !formState.postalCode || items.length === 0) {
+      return
+    }
+
+    setIsCalculatingShipping(true)
+    try {
+      const response = await fetch('/api/checkout/calculate-shipping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            productId: item.id,
+            quantity: item.quantity,
+          })),
+          shippingAddress: {
+            address1: formState.address1 || '123 Main St',
+            address2: formState.address2 || undefined,
+            city: formState.city,
+            state: formState.state,
+            postalCode: formState.postalCode,
+            country: 'US',
+          },
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setShippingCost(data.shippingCost || 0)
+      } else {
+        console.error('Failed to calculate shipping')
+        setShippingCost(0)
+      }
+    } catch (error) {
+      console.error('Error calculating shipping:', error)
+      setShippingCost(0)
+    } finally {
+      setIsCalculatingShipping(false)
+    }
+  }
+
   const handleInputChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -144,24 +189,33 @@ function CheckoutForm() {
       [name]: value,
     }))
 
-    // Trigger tax calculation when address fields change
+    // Trigger tax and shipping calculation when address fields change
     if (['city', 'state', 'postalCode'].includes(name)) {
-      // Clear previous timeout
+      // Clear previous timeouts
       if (taxCalcTimeoutRef.current) {
         clearTimeout(taxCalcTimeoutRef.current)
       }
-      // Debounce tax calculation to avoid excessive API calls
+      if (shippingCalcTimeoutRef.current) {
+        clearTimeout(shippingCalcTimeoutRef.current)
+      }
+      // Debounce calculations to avoid excessive API calls
       taxCalcTimeoutRef.current = setTimeout(() => {
         calculateTaxEstimate()
+      }, 800)
+      shippingCalcTimeoutRef.current = setTimeout(() => {
+        calculateShippingEstimate()
       }, 800)
     }
   }
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (taxCalcTimeoutRef.current) {
         clearTimeout(taxCalcTimeoutRef.current)
+      }
+      if (shippingCalcTimeoutRef.current) {
+        clearTimeout(shippingCalcTimeoutRef.current)
       }
     }
   }, [])
@@ -479,23 +533,23 @@ function CheckoutForm() {
                   <span>{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex items-center justify-between text-gray-600">
-                  <span>Shipping</span>
-                  <span>{formatPrice(0)}</span>
+                  <span>Shipping {isCalculatingShipping && <span className="text-xs">(calculating...)</span>}</span>
+                  <span>{shippingCost === 0 && subtotal >= 50 ? 'FREE' : formatPrice(shippingCost)}</span>
                 </div>
                 <div className="flex items-center justify-between text-gray-600">
                   <span>Tax {isCalculatingTax && <span className="text-xs">(calculating...)</span>}</span>
                   <span>{formatPrice(taxAmount)}</span>
                 </div>
-                {taxAmount === 0 && formState.postalCode.length >= 5 && (
+                {(taxAmount === 0 || shippingCost === 0) && formState.postalCode.length >= 5 && (
                   <p className="text-xs text-gray-500 italic">
-                    Enter your full address to calculate tax
+                    {subtotal >= 50 && shippingCost === 0 ? '🎉 Free shipping on orders over $50!' : 'Enter your full address to calculate shipping & tax'}
                   </p>
                 )}
               </div>
             </CardContent>
             <CardFooter className="flex items-center justify-between border-t text-lg font-semibold">
               <span>Total due now</span>
-              <span>{formatPrice(subtotal + taxAmount)}</span>
+              <span>{formatPrice(subtotal + shippingCost + taxAmount)}</span>
             </CardFooter>
           </Card>
         </aside>

@@ -114,7 +114,8 @@ model Product {
   price       Decimal     @db.Decimal(10, 2)
   compareAtPrice Decimal? @db.Decimal(10, 2)
   costPrice   Decimal?    @db.Decimal(10, 2)
-  
+  taxCode     String?     // Stripe Tax Code for tax calculation
+
   // Inventory
   sku         String      @unique
   barcode     String?

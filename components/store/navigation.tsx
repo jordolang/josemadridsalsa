@@ -22,6 +22,7 @@ const salsaCategories = [
   { name: "Hot & Spicy", href: "/products?heat=hot", description: "For the brave souls" },
   { name: "Gourmet Fruit", href: "/products?heat=fruit", description: "Unique fruit-infused flavors" },
   { name: "Bundle Deals", href: "/products", description: "Mix & match your favorites" },
+  { name: "Merchandise", href: "/merchandise", description: "T-shirts, hats, and accessories" },
 ];
 
 const navigationItems = [
@@ -29,10 +30,6 @@ const navigationItems = [
     title: "Products",
     href: "/products",
     megaMenu: salsaCategories,
-  },
-  {
-    title: "Merchandise",
-    href: "/merchandise",
   },
   {
     title: "Recipes",

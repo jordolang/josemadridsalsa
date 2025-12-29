@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { queueShopifySync } from '@/lib/shopify/sync'
 import { calculateTax } from '@/lib/tax-calculator'
+import { calculateShipping } from '@/lib/shipping-calculator'
 
 const CheckoutSchema = z.object({
   items: z
@@ -135,7 +136,42 @@ export async function POST(request: Request) {
       // Continue with 0 tax rather than blocking checkout
     }
 
-    const shippingCost = 0 // TODO: Implement shipping calculation
+    // Calculate shipping cost
+    let shippingCost = 0
+    let shippingMethod = 'Standard Shipping'
+    try {
+      const itemsWithWeights = orderItems.map((item) => {
+        const product = productMap.get(item.productId)
+        return {
+          weight: product?.weight ? Number(product.weight) : 1.0,
+          quantity: item.quantity,
+        }
+      })
+
+      const shippingResult = calculateShipping({
+        items: itemsWithWeights,
+        shippingAddress: {
+          state: shipping.state,
+          postalCode: shipping.postalCode,
+          country: 'US',
+        },
+        subtotal,
+      })
+
+      shippingCost = shippingResult.shippingCost
+      shippingMethod = shippingResult.shippingMethod
+
+      console.log('[Checkout] Shipping calculated:', {
+        subtotal,
+        shippingCost,
+        shippingMethod,
+        estimatedDelivery: shippingResult.estimatedDelivery,
+      })
+    } catch (error) {
+      console.error('[Checkout] Shipping calculation failed, using $0:', error)
+      // Continue with 0 shipping rather than blocking checkout
+    }
+
     const total = subtotal + taxAmount + shippingCost
 
     const shippingSummary = [

@@ -4,6 +4,12 @@ import { getIndexedContent } from '@/lib/ai-rag/content-cache'
 import { searchContent, formatContextForLLM } from '@/lib/ai-rag/retriever'
 import { getCurrentUser } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  createRateLimitHeaders,
+  RATE_LIMITS,
+} from '@/lib/rate-limiter'
 
 export const runtime = 'nodejs' // Required for Prisma and file system access
 
@@ -158,6 +164,35 @@ export async function POST(request: Request) {
     const userId = user?.id
     const userEmail = user?.email
 
+    // Rate limiting - Different limits for authenticated vs guest users
+    const rateLimitConfig = user ? RATE_LIMITS.AI_CHAT_USER : RATE_LIMITS.AI_CHAT
+    const identifier = userId || getClientIdentifier(request)
+
+    const rateLimitResult = checkRateLimit({
+      ...rateLimitConfig,
+      identifier: `ai-chat:${identifier}`,
+    })
+
+    // Add rate limit headers to all responses
+    const rateLimitHeaders = createRateLimitHeaders(rateLimitResult)
+
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Rate limit exceeded',
+          message: `Too many requests. Please try again in ${rateLimitResult.resetIn} seconds.`,
+          retryAfter: rateLimitResult.resetIn,
+        },
+        {
+          status: 429,
+          headers: {
+            ...rateLimitHeaders,
+            'Retry-After': rateLimitResult.resetIn.toString(),
+          },
+        }
+      )
+    }
+
     // Parse and validate request body
     const body = await request.json()
     const parsed = ChatRequestSchema.safeParse(body)
@@ -239,9 +274,14 @@ export async function POST(request: Request) {
       success,
       responseTimeMs: responseTime,
       messageCount: messages.length,
+      rateLimitRemaining: rateLimitResult.remaining,
     })
 
-    return response
+    // Clone response and add rate limit headers
+    const responseData = await response.clone().json()
+    return NextResponse.json(responseData, {
+      headers: rateLimitHeaders,
+    })
   } catch (error) {
     console.error('[AI_CHAT_ERROR]', error)
 
