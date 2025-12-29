@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     if (!params.success) {
       return NextResponse.json(
-        { error: 'Invalid search parameters', details: params.error.errors },
+        { error: 'Invalid search parameters', details: params.error.issues },
         { status: 400 }
       )
     }
