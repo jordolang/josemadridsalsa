@@ -9,9 +9,7 @@ import { z } from 'zod'
 // Validation schema for query parameters
 const queryParamsSchema = z.object({
   skipCache: z.enum(['true', 'false']).optional().default('false'),
-  maxResults: z.coerce.number().min(1).max(100).optional().default(50),
-  timeMin: z.string().datetime().optional(),
-  timeMax: z.string().datetime().optional(),
+  limit: z.coerce.number().min(1).max(100).optional().default(25),
 })
 
 export async function GET(request: NextRequest) {
@@ -23,9 +21,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const params = queryParamsSchema.safeParse({
       skipCache: searchParams.get('skipCache') || 'false',
-      maxResults: searchParams.get('maxResults') || '50',
-      timeMin: searchParams.get('timeMin') || undefined,
-      timeMax: searchParams.get('timeMax') || undefined,
+      limit: searchParams.get('limit') || '25',
     })
 
     if (!params.success) {
@@ -38,14 +34,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { skipCache, maxResults, timeMin, timeMax } = params.data
+    const { skipCache, limit } = params.data
 
     // Fetch calendar events
     const events = await getUpcomingScheduleEvents({
       skipCache: skipCache === 'true',
-      maxResults,
-      timeMin,
-      timeMax,
+      limit,
     })
 
     return NextResponse.json({ events }, { status: 200 })
