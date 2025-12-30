@@ -5,13 +5,10 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { ShoppingCart, Loader2, Search } from 'lucide-react'
-import { useCartStore } from '@/lib/store/cart'
-import { formatPrice, getHeatLevelColor, getHeatLevelText } from '@/lib/utils'
-import { HeatGauge } from '@/components/store/heat-gauge'
-import { getSalsaHeatRating } from '@/lib/salsa-heat'
+import { Loader2, Search } from 'lucide-react'
+import { ProductCard } from '@/components/store/product-card'
+import { formatPrice, getHeatLevelText } from '@/lib/utils'
 
 // Simple debounce implementation
 function debounce<T extends (...args: any[]) => any>(
@@ -63,9 +60,6 @@ export default function ProductSearchPage() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [loading, setLoading] = useState(false)
   const [totalResults, setTotalResults] = useState(0)
-
-  const addItem = useCartStore((state) => state.addItem)
-  const openCart = useCartStore((state) => state.openCart)
 
   // Fetch autocomplete suggestions
   const fetchSuggestions = useCallback(
@@ -150,20 +144,6 @@ export default function ProductSearchPage() {
     setQuery(suggestion.name)
     setShowSuggestions(false)
     router.push(`/salsas/${suggestion.slug}`)
-  }
-
-  const handleAddToCart = (product: Product) => {
-    addItem({
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      price: product.price,
-      image: product.featuredImage,
-      sku: product.sku,
-      heatLevel: product.heatLevel,
-      maxQuantity: product.inventory,
-    })
-    openCart()
   }
 
   return (
@@ -268,97 +248,9 @@ export default function ProductSearchPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {products.map((product) => {
-                const heatRating = getSalsaHeatRating(product.name, product.heatLevel)
-
-                return (
-                  <div
-                    key={product.id}
-                    className="group card surface-shadow transition-all duration-300 hover:-translate-y-1 overflow-hidden"
-                  >
-                    <Link href={`/salsas/${product.slug}`}>
-                      <div className="relative aspect-square bg-gray-100 dark:bg-gray-800">
-                        <Image
-                          src={product.featuredImage}
-                          alt={product.name}
-                          fill
-                          className="object-cover transition-transform duration-300 group-hover:scale-105"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                        />
-
-                        {/* Badges */}
-                        <div className="absolute top-3 left-3 flex flex-col gap-2">
-                          {product.isFeatured && (
-                            <Badge className="bg-salsa-500 text-white">Featured</Badge>
-                          )}
-                          {product.compareAtPrice && (
-                            <Badge className="bg-green-500 text-white">Sale</Badge>
-                          )}
-                        </div>
-
-                        {/* Heat Level Badge */}
-                        <div className="absolute top-3 right-3">
-                          <Badge className={getHeatLevelColor(product.heatLevel)}>
-                            {getHeatLevelText(product.heatLevel)}
-                          </Badge>
-                        </div>
-                      </div>
-                    </Link>
-
-                    <div className="p-6">
-                      <Link href={`/salsas/${product.slug}`}>
-                        <h3 className="font-semibold text-lg text-foreground hover:text-salsa-600 transition-colors line-clamp-2 mb-2">
-                          {product.name}
-                        </h3>
-                      </Link>
-
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                        {product.description}
-                      </p>
-
-                      <HeatGauge
-                        value={heatRating.value}
-                        max={heatRating.max}
-                        label={heatRating.label}
-                        heatLevel={product.heatLevel}
-                        className="mb-4"
-                      />
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-foreground">
-                            {formatPrice(product.price)}
-                          </span>
-                          {product.compareAtPrice && (
-                            <span className="text-sm text-muted-foreground line-through">
-                              {formatPrice(product.compareAtPrice)}
-                            </span>
-                          )}
-                        </div>
-
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            handleAddToCart(product)
-                          }}
-                          className="bg-salsa-500 hover:bg-salsa-600 flex items-center gap-2"
-                        >
-                          <ShoppingCart className="w-4 h-4" />
-                          Add
-                        </Button>
-                      </div>
-
-                      {/* Stock indicator */}
-                      {product.inventory <= 5 && product.inventory > 0 && (
-                        <div className="mt-2 text-sm text-orange-600">
-                          Only {product.inventory} left!
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
             </div>
           )}
         </div>
