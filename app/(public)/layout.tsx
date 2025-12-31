@@ -5,6 +5,7 @@ import { Navigation } from '@/components/store/navigation'
 import Footer from '@/components/ui/footer-column'
 import { AiChatWidget } from '@/components/chat/ai-chat-widget'
 import { GoogleAnalytics } from '@/components/analytics/google-analytics'
+import { AmplitudeAnalytics } from '@/components/analytics/amplitude-analytics'
 import { getPublicGoogleAnalyticsMeasurementId } from '@/lib/google-analytics-config'
 import { Analytics } from '@vercel/analytics/react'
 
@@ -41,6 +42,7 @@ export default async function PublicLayout({
       </noscript>
       {/* End Google Tag Manager (noscript) */}
       {measurementId && <GoogleAnalytics measurementId={measurementId} />}
+      <AmplitudeAnalytics />
       <div className="flex min-h-screen flex-col">
         <Navigation />
         <div className="flex-1">
