@@ -1,41 +1,55 @@
-import type { Metadata } from 'next'
-import { Providers } from './providers'
-import './globals.css'
+import type { Metadata } from "next";
+import { Providers } from "./providers";
+import "./globals.css";
+import Script from "next/script";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.josemadridsalsa.com'
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.josemadridsalsa.com";
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | Jose Madrid Salsa',
-    default: 'Jose Madrid Salsa - Premium Gourmet Salsa',
+    template: "%s | Jose Madrid Salsa",
+    default: "Jose Madrid Salsa - Premium Gourmet Salsa",
   },
   metadataBase: new URL(siteUrl),
-  description: 'Premium gourmet salsas made with the finest ingredients. Order online for delivery or find us at local stores. Perfect for fundraising and wholesale.',
-  keywords: ['salsa', 'gourmet', 'premium', 'mild', 'medium', 'hot', 'fundraising', 'wholesale', 'ohio'],
-  authors: [{ name: 'Jose Madrid Salsa' }],
-  creator: 'Jose Madrid Salsa',
-  publisher: 'Jose Madrid Salsa',
+  description:
+    "Premium gourmet salsas made with the finest ingredients. Order online for delivery or find us at local stores. Perfect for fundraising and wholesale.",
+  keywords: [
+    "salsa",
+    "gourmet",
+    "premium",
+    "mild",
+    "medium",
+    "hot",
+    "fundraising",
+    "wholesale",
+    "ohio",
+  ],
+  authors: [{ name: "Jose Madrid Salsa" }],
+  creator: "Jose Madrid Salsa",
+  publisher: "Jose Madrid Salsa",
   openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: 'https://josemadridsalsa.com',
-    siteName: 'Jose Madrid Salsa',
-    title: 'Jose Madrid Salsa - Premium Gourmet Salsa',
-    description: 'Premium gourmet salsas made with the finest ingredients. Order online for delivery.',
+    type: "website",
+    locale: "en_US",
+    url: "https://josemadridsalsa.com",
+    siteName: "Jose Madrid Salsa",
+    title: "Jose Madrid Salsa - Premium Gourmet Salsa",
+    description:
+      "Premium gourmet salsas made with the finest ingredients. Order online for delivery.",
     images: [
       {
-        url: 'https://www.josemadrid.net/images/Opengraph/josemadrid-hero.png',
+        url: "https://www.josemadrid.net/images/Opengraph/josemadrid-hero.png",
         width: 1200,
         height: 630,
-        alt: 'Jose Madrid Salsa',
+        alt: "Jose Madrid Salsa",
       },
     ],
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'Jose Madrid Salsa - Premium Gourmet Salsa',
-    description: 'Premium gourmet salsas made with the finest ingredients.',
-    images: ['https://www.josemadrid.net/images/Opengraph/josemadrid-hero.png'],
+    card: "summary_large_image",
+    title: "Jose Madrid Salsa - Premium Gourmet Salsa",
+    description: "Premium gourmet salsas made with the finest ingredients.",
+    images: ["https://www.josemadrid.net/images/Opengraph/josemadrid-hero.png"],
   },
   robots: {
     index: true,
@@ -43,34 +57,47 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
     },
   },
-}
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
       <head>
-        <meta name="google-site-verification" content="E6ciztQzSgCnoZxkfE5GvfLE349LWqzal-VezMq3nRQ" />
+        <meta
+          name="google-site-verification"
+          content="E6ciztQzSgCnoZxkfE5GvfLE349LWqzal-VezMq3nRQ"
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
         <link
           href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&family=Volkhov:wght@400;700&family=Roboto+Mono:wght@100..700&display=swap"
           rel="stylesheet"
         />
+        <Script src="https://cdn.amplitude.com/libs/analytics-browser-2.11.1-min.js.gz" />
+        <Script src="https://cdn.amplitude.com/libs/plugin-session-replay-browser-1.25.0-min.js.gz" />
+        <Script
+          id="amplitude-init"
+          dangerouslySetInnerHTML={{
+            __html: `window.amplitude.add(window.sessionReplay.plugin({sampleRate: 1}));window.amplitude.init('d6ea60d3e0dfd3207e8802bcf2550846', {"autocapture":{"elementInteractions":true}});`,
+          }}
+        />
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
-        <Providers>
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
-  )
+  );
 }
