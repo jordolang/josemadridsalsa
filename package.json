@@ -58,8 +58,8 @@
   "author": "Jose Madrid Salsa",
   "license": "MIT",
   "dependencies": {
-    "@amplitude/analytics-browser": "^2.17.0",
-    "@amplitude/plugin-session-replay-browser": "^1.14.0",
+    "@amplitude/analytics-browser": "^2.33.1",
+    "@amplitude/plugin-session-replay-browser": "^1.25.5",
     "@anthropic-ai/sdk": "^0.71.2",
     "@auth/prisma-adapter": "^2.11.0",
     "@hookform/resolvers": "^5.2.2",

@@ -154,6 +154,8 @@ model Product {
   wishlistItems WishlistItem[]
   fundraiserProducts FundraiserProduct[]
   productTags ProductTag[]
+  inventoryTransactions InventoryTransaction[]
+  inventoryAlerts InventoryAlert[]
 
   @@map("products")
 }
@@ -1707,4 +1709,88 @@ enum OrderNotificationEvent {
   ORDER_REFUNDED
   PAYMENT_FAILED
   HIGH_VALUE_ORDER
+}
+
+// ========================================
+// INVENTORY MANAGEMENT MODELS
+// ========================================
+
+model InventoryTransaction {
+  id              String                    @id @default(cuid())
+  productId       String
+  product         Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Transaction details
+  type            InventoryTransactionType
+  quantity        Int                       // Positive for additions, negative for removals
+  previousStock   Int
+  newStock        Int
+
+  // Metadata
+  reason          String?
+  notes           String?                   @db.Text
+
+  // Reference to related entity (order, etc.)
+  orderId         String?
+  userId          String?                   // Who made the change
+
+  createdAt       DateTime                  @default(now())
+
+  @@index([productId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("inventory_transactions")
+}
+
+model InventoryAlert {
+  id              String                @id @default(cuid())
+  productId       String
+  product         Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Alert details
+  type            InventoryAlertType    @default(LOW_STOCK)
+  status          InventoryAlertStatus  @default(ACTIVE)
+  stockLevel      Int                   // Stock level when alert was triggered
+  threshold       Int                   // Threshold that triggered the alert
+
+  // Notification tracking
+  notifiedAt      DateTime?
+  notifiedTo      String[]              // Email addresses that were notified
+
+  // Resolution
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  resolutionNotes String?
+
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@index([productId, status])
+  @@index([type])
+  @@index([createdAt])
+  @@map("inventory_alerts")
+}
+
+enum InventoryTransactionType {
+  SALE              // Product sold
+  RESTOCK           // Manual restock
+  ADJUSTMENT        // Manual adjustment
+  RETURN            // Customer return
+  DAMAGED           // Damaged/spoiled product
+  SAMPLE            // Given as sample
+  TRANSFER          // Transfer between locations
+  INITIAL           // Initial stock entry
+}
+
+enum InventoryAlertType {
+  LOW_STOCK         // Stock below threshold
+  OUT_OF_STOCK      // Stock at zero
+  OVERSTOCKED       // Stock above maximum
+}
+
+enum InventoryAlertStatus {
+  ACTIVE            // Alert is active
+  ACKNOWLEDGED      // Alert has been seen
+  RESOLVED          // Stock level corrected
+  DISMISSED         // Alert dismissed without action
 }
