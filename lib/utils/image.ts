@@ -22,26 +22,29 @@ export function isGooglePlacesUrl(url: string): boolean {
  * to hide API keys from the client.
  *
  * @param url - The original image URL (may be null/undefined)
- * @param placeId - Optional Google Place ID to fetch fresh photos
+ * @param placeId - Optional Google Place ID to fetch fresh photos (used as fallback)
  * @returns The final URL to use in Image components
  */
 export function getLocationImageUrl(url?: string | null, placeId?: string | null): string {
-  // If we have a Place ID, use it to fetch fresh photos (solves expired photo URL issue)
+  // Prefer stored URL if available (more reliable than fetching fresh)
+  if (url) {
+    // Proxy Google Places images through our API to hide the API key
+    // This prevents API key exposure in client-side HTML/network requests
+    if (isGooglePlacesUrl(url)) {
+      return `/api/image-proxy?url=${encodeURIComponent(url)}`
+    }
+
+    // For non-Google URLs, return as-is
+    return url
+  }
+
+  // Fallback to Place ID to fetch fresh photos if no URL stored
   if (placeId) {
     return `/api/image-proxy?placeId=${encodeURIComponent(placeId)}`
   }
 
-  // Return placeholder if no URL provided
-  if (!url) return FALLBACK_IMAGE
-
-  // Proxy Google Places images through our API to hide the API key
-  // This prevents API key exposure in client-side HTML/network requests
-  if (isGooglePlacesUrl(url)) {
-    return `/api/image-proxy?url=${encodeURIComponent(url)}`
-  }
-
-  // For non-Google URLs, return as-is
-  return url
+  // Last resort: return placeholder
+  return FALLBACK_IMAGE
 }
 
 /**
