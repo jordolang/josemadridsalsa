@@ -2,8 +2,11 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Image, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 export function FetchPhotosButton() {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<string | null>(null)
   const [force, setForce] = useState(false)
@@ -12,25 +15,60 @@ export function FetchPhotosButton() {
     setLoading(true)
     setResult(null)
     try {
-      const res = await fetch('/api/admin/locations/fetch-photos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force }) })
+      const res = await fetch('/api/admin/locations/fetch-photos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force })
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'Failed')
-      setResult(`Updated ${data.updated} of ${data.processed}. Missing: ${data.missingCount}.`)
+
+      setResult(
+        `✓ Updated ${data.updated} locations with ${data.totalPhotosAdded} total photos (max ${data.maxPhotosPerLocation} per location). ${data.missingCount} locations still need photos.`
+      )
+
+      // Refresh the page to show updated data
+      setTimeout(() => {
+        router.refresh()
+      }, 1000)
     } catch (e: any) {
-      setResult(e?.message || 'Error running fetch photos')
+      setResult(`✗ Error: ${e?.message || 'Failed to fetch photos'}`)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="flex items-center gap-3">
-      <label className="flex items-center gap-2 text-sm text-muted-foreground">
-        <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
-        Force re-fetch
-      </label>
-      <Button onClick={run} disabled={loading}>{loading ? 'Fetching Photos...' : 'Fetch Photos'}</Button>
-      {result && <span className="text-sm text-muted-foreground">{result}</span>}
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3">
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={force}
+            onChange={(e) => setForce(e.target.checked)}
+            className="rounded"
+          />
+          Force re-fetch all
+        </label>
+        <Button onClick={run} disabled={loading} variant="outline" size="sm">
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Fetching Photos...
+            </>
+          ) : (
+            <>
+              <Image className="mr-2 h-4 w-4" />
+              Fetch Photos from Google
+            </>
+          )}
+        </Button>
+      </div>
+      {result && (
+        <p className={`text-sm ${result.startsWith('✓') ? 'text-green-600' : 'text-red-600'}`}>
+          {result}
+        </p>
+      )}
     </div>
   )
 }
