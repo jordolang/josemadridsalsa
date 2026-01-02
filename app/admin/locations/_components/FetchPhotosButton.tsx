@@ -24,7 +24,7 @@ export function FetchPhotosButton() {
       if (!res.ok) throw new Error(data?.error || 'Failed')
 
       setResult(
-        `✓ Updated ${data.updated} locations with ${data.totalPhotosAdded} total photos (max ${data.maxPhotosPerLocation} per location). ${data.missingCount} locations still need photos.`
+        `✓ Updated ${data.updated} locations with photos. ${data.missingCount} locations still need photos.`
       )
 
       // Refresh the page to show updated data
