@@ -2,7 +2,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { MapPin, Phone, ExternalLink, Navigation2, ChevronLeft } from 'lucide-react'
-import { getLocationById } from '@/lib/locations/query'
+import { getLocationByIdFromDB } from '@/lib/locations/db-query'
 import { getLocationImageUrl } from '@/lib/utils/image'
 import { LocationImage } from './_components/LocationImage'
 
@@ -18,7 +18,7 @@ export const revalidate = 3600
 
 export async function generateMetadata({ params }: LocationPageProps): Promise<Metadata> {
   const { locationId } = await params
-  const location = await getLocationById(locationId)
+  const location = await getLocationByIdFromDB(locationId)
   if (!location) {
     return {
       title: 'Store not found · Jose Madrid Salsa',
@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: LocationPageProps): Promise<M
 
 export default async function LocationDetailPage({ params }: LocationPageProps) {
   const { locationId } = await params
-  const location = await getLocationById(locationId)
+  const location = await getLocationByIdFromDB(locationId)
 
   if (!location) {
     notFound()

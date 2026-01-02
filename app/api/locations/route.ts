@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { queryLocations } from '@/lib/locations/query'
+import { filterLocationsFromDB } from '@/lib/locations/db-query'
 
 const CACHE_CONTROL_HEADER = 's-maxage=3600, stale-while-revalidate=300'
 
@@ -35,7 +35,7 @@ function parseFilters(searchParams: URLSearchParams) {
 export async function GET(request: NextRequest) {
   try {
     const filters = parseFilters(request.nextUrl.searchParams)
-    const result = await queryLocations(filters)
+    const result = await filterLocationsFromDB(filters)
 
     const response = NextResponse.json({
       data: result.locations,

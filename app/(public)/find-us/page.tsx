@@ -2,7 +2,12 @@ import { Metadata } from 'next'
 import { MapPin } from 'lucide-react'
 import { createMetadata } from '@/lib/metadata'
 import { FindLocationsExperience } from './_components/FindLocationsExperience'
-import { filterLocations, getAllLocations, getLocationFacets, normalizeFilters } from '@/lib/locations/query'
+import {
+  getAllLocationsFromDB,
+  getLocationFacetsFromDB,
+  filterLocationsFromDB,
+} from '@/lib/locations/db-query'
+import { normalizeFilters } from '@/lib/locations/shared'
 import type { LocationFilters } from '@/lib/locations/shared'
 
 export const metadata: Metadata = createMetadata({
@@ -57,21 +62,33 @@ export default async function FindUsPage({ searchParams }: FindUsPageProps) {
 
     console.log('[FindUsPage] Normalizing filters...');
     initialFilters = normalizeFilters(rawFilters)
-    
-    console.log('[FindUsPage] Calling getAllLocations...');
-    allLocations = await getAllLocations()
-    console.log('[FindUsPage] Got', allLocations.length, 'locations');
-    
+
+    console.log('[FindUsPage] Calling getAllLocationsFromDB...');
+    allLocations = await getAllLocationsFromDB()
+    console.log('[FindUsPage] Got', allLocations.length, 'locations from database');
+
     if (!allLocations || allLocations.length === 0) {
       console.warn('[FindUsPage] No locations returned, using empty array');
       allLocations = [];
     }
-    
-    console.log('[FindUsPage] Getting facets...');
-    facets = await getLocationFacets(allLocations)
-    
-    console.log('[FindUsPage] Filtering locations...');
-    initialResult = filterLocations(allLocations, initialFilters)
+
+    console.log('[FindUsPage] Getting facets from database...');
+    const dbFacets = await getLocationFacetsFromDB()
+
+    // Transform facets to match expected format
+    facets = {
+      states: dbFacets.states,
+      citiesByState: dbFacets.cities.reduce((acc, city) => {
+        if (!acc[city.state]) {
+          acc[city.state] = []
+        }
+        acc[city.state].push(city.name)
+        return acc
+      }, {} as Record<string, string[]>),
+    }
+
+    console.log('[FindUsPage] Filtering locations from database...');
+    initialResult = await filterLocationsFromDB(initialFilters)
 
     totalLocations = allLocations.length
     ohioLocations = allLocations.filter((location) => location.state === 'OH').length

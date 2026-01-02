@@ -1263,7 +1263,7 @@ model PasswordResetToken {
 }
 
 model RetailLocation {
-  id             String   @id @default(cuid())
+  id             String          @id @default(cuid())
   businessName   String
   address        String
   city           String
@@ -1273,13 +1273,14 @@ model RetailLocation {
   website        String?
   photoUrl       String?
   googlePlacesId String?
-  latitude       Decimal? @db.Decimal(10, 7)
-  longitude      Decimal? @db.Decimal(10, 7)
+  latitude       Decimal?        @db.Decimal(10, 7)
+  longitude      Decimal?        @db.Decimal(10, 7)
   county         String?
-  isActive       Boolean  @default(true)
-  sortOrder      Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isActive       Boolean         @default(true)
+  sortOrder      Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  photos         LocationPhoto[]
 
   @@index([city])
   @@index([state])
@@ -1287,6 +1288,19 @@ model RetailLocation {
   @@index([isActive])
   @@unique([businessName, address])
   @@map("retail_locations")
+}
+
+model LocationPhoto {
+  id         String         @id @default(cuid())
+  url        String
+  caption    String?
+  sortOrder  Int            @default(0)
+  locationId String
+  location   RetailLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  createdAt  DateTime       @default(now())
+
+  @@index([locationId])
+  @@map("location_photos")
 }
 
 model GiftCertificate {
