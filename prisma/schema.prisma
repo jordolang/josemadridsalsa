@@ -35,6 +35,8 @@ model User {
   cartItems       CartItem[]
   wishlistItems   WishlistItem[]
   abandonedCarts  AbandonedCart[]
+  discountCodes   DiscountCode[]
+  discountUsages  DiscountUsage[]
   partnerApiKeys  PartnerApiKey[]
   analyticsSettings AnalyticsSetting[]
 
@@ -261,6 +263,70 @@ model AbandonedCart {
   @@index([guestEmail])
   @@index([emailSent, createdAt])
   @@map("abandoned_carts")
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_SHIPPING
+}
+
+model DiscountCode {
+  id              String        @id @default(cuid())
+  code            String        @unique
+  description     String?
+
+  // Discount configuration
+  type            DiscountType
+  value           Decimal       @db.Decimal(10, 2) // Percentage (e.g., 10.00 = 10%) or dollar amount
+
+  // Usage limits
+  maxUses         Int?          // null = unlimited
+  usedCount       Int           @default(0)
+  maxUsesPerUser  Int?          // null = unlimited per user
+  minPurchase     Decimal?      @db.Decimal(10, 2) // Minimum cart value required
+
+  // Validity period
+  startsAt        DateTime?
+  expiresAt       DateTime?
+
+  // Status
+  isActive        Boolean       @default(true)
+
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  createdById     String?
+
+  // Relations
+  createdBy       User?         @relation(fields: [createdById], references: [id])
+  usages          DiscountUsage[]
+
+  @@index([code])
+  @@index([isActive, expiresAt])
+  @@map("discount_codes")
+}
+
+model DiscountUsage {
+  id              String       @id @default(cuid())
+  discountCodeId  String
+  orderId         String
+  userId          String?
+
+  // Usage details
+  discountAmount  Decimal      @db.Decimal(10, 2)
+  orderTotal      Decimal      @db.Decimal(10, 2)
+
+  createdAt       DateTime     @default(now())
+
+  // Relations
+  discountCode    DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
+  user            User?        @relation(fields: [userId], references: [id])
+
+  @@index([discountCodeId])
+  @@index([userId])
+  @@index([orderId])
+  @@map("discount_usages")
 }
 
 model Order {
