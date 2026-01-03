@@ -9,6 +9,9 @@ import { Input } from '@/components/ui/input'
 import { Clock, Users, ChefHat } from 'lucide-react'
 import type { Recipe } from '@/types/recipe'
 import { recipeData } from '@/lib/data/recipes'
+import { SocialShare } from '@/components/ui/social-share'
+import { ShareContent } from '@/types/sharing'
+import { generateHashtags } from '@/lib/sharing/metadata-extractor'
 
 type RecipesClientProps = {
   initialRecipes: Recipe[]
@@ -267,6 +270,26 @@ function RecipeGridCard({ recipe }: { recipe: Recipe }) {
         <Button asChild className="w-full bg-salsa-500 hover:bg-salsa-600">
           <Link href={`/recipes/${recipe.slug}`}>View Recipe</Link>
         </Button>
+
+        {/* Social Sharing */}
+        <div className="border-t border-border pt-4 mt-4">
+          <SocialShare
+            content={{
+              title: recipe.title,
+              description: recipe.description,
+              url: typeof window !== 'undefined' ? `${window.location.origin}/recipes/${recipe.slug}` : '',
+              image: recipe.featuredImage,
+              contentType: 'recipe',
+              contentId: recipe.id,
+              hashtags: generateHashtags('recipe'),
+              via: 'josemadridsalsa',
+            }}
+            size="sm"
+            title="Share this recipe"
+            showLabels={false}
+            platforms={['pinterest', 'facebook', 'twitter', 'email', 'copy']}
+          />
+        </div>
       </div>
     </div>
   )
