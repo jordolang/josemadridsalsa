@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { templatePayloadSchema } from '@/lib/forms/schema'
 import { serializeTemplate } from '@/lib/forms/serialization'
 import { requirePartner, logPartnerApiCall } from '@/lib/api/partner-keys'
+import { logAudit } from '@/lib/audit'
 import { slugify, ensureUniqueSlug } from '@/lib/forms/utils'
 import { resolveTemplateOwner } from '@/lib/forms/ownership'
 import { structureFromSections } from './_lib/helpers'
@@ -129,6 +130,23 @@ export async function POST(request: NextRequest) {
     })
 
     return template
+  })
+
+  // Audit log the form template creation
+  await logAudit({
+    userId: owner.id,
+    action: 'CREATE',
+    entityType: 'FormTemplate',
+    entityId: created.id,
+    changes: {
+      slug,
+      name: payload.name,
+      description: payload.description,
+      category: payload.categoryId,
+      status: payload.status,
+      partnerId: partner.id,
+      partnerName: partner.name,
+    },
   })
 
   revalidatePath('/forms')
