@@ -1,15 +1,20 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, notFound } from 'next/navigation'
+import { useParams, notFound, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ShoppingCart, Minus, Plus, Loader2 } from 'lucide-react'
+import { ShoppingCart, Minus, Plus, Loader2, Heart } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
-import { formatPrice, getHeatLevelColor, getHeatLevelText } from '@/lib/utils'
+import { useWishlistStore } from '@/lib/store/wishlist'
+import { formatPrice, getHeatLevelColor, getHeatLevelText, cn } from '@/lib/utils'
 import { HeatGauge } from '@/components/store/heat-gauge'
 import { getSalsaHeatRating } from '@/lib/salsa-heat'
+import { useSession } from 'next-auth/react'
+import { SocialShare } from '@/components/ui/social-share'
+import { ShareContent } from '@/types/sharing'
+import { generateHashtags } from '@/lib/sharing/metadata-extractor'
 
 type Product = {
   id: string
@@ -33,15 +38,18 @@ type Product = {
 export default function ProductPage() {
   const params = useParams()
   const slug = params.slug as string
-  
+  const router = useRouter()
+
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
-  
+
   const addItem = useCartStore((state) => state.addItem)
   const openCart = useCartStore((state) => state.openCart)
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore()
+  const { data: session } = useSession()
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -72,7 +80,7 @@ export default function ProductPage() {
 
   const handleAddToCart = () => {
     if (!product) return
-    
+
     addItem(
       {
         id: product.id,
@@ -86,9 +94,26 @@ export default function ProductPage() {
         quantity,
       }
     )
-    
+
     openCart()
   }
+
+  const handleWishlistToggle = () => {
+    if (!product) return
+
+    if (!session) {
+      router.push(`/auth/signin?callbackUrl=/salsas/${product.slug}`)
+      return
+    }
+
+    if (isInWishlist(product.id)) {
+      removeFromWishlist(product.id)
+    } else {
+      addToWishlist(product.id)
+    }
+  }
+
+  const inWishlist = product ? isInWishlist(product.id) : false
 
   if (loading) {
     return (
@@ -256,21 +281,59 @@ export default function ProductPage() {
                 </div>
               </div>
               
-              <Button
-                onClick={handleAddToCart}
-                size="lg"
-                className="w-full bg-salsa-500 hover:bg-salsa-600 text-lg py-3"
-                disabled={product.inventory === 0}
-              >
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                {product.inventory === 0 ? 'Out of Stock' : 'Add to Cart'}
-              </Button>
-              
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleAddToCart}
+                  size="lg"
+                  className="flex-1 bg-salsa-500 hover:bg-salsa-600 text-lg py-3"
+                  disabled={product.inventory === 0}
+                >
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  {product.inventory === 0 ? 'Out of Stock' : 'Add to Cart'}
+                </Button>
+
+                <Button
+                  onClick={handleWishlistToggle}
+                  size="lg"
+                  variant={inWishlist ? "default" : "outline"}
+                  className={cn(
+                    "px-4 py-3",
+                    inWishlist && "bg-salsa-500 hover:bg-salsa-600 text-white"
+                  )}
+                  aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
+                  aria-pressed={inWishlist}
+                >
+                  <Heart className={cn("w-5 h-5", inWishlist && "fill-current")} />
+                  <span className="sr-only">
+                    {inWishlist ? "Remove from wishlist" : "Add to wishlist"}
+                  </span>
+                </Button>
+              </div>
+
               {product.inventory <= 5 && product.inventory > 0 && (
                 <p className="text-orange-600 text-sm">
                   Only {product.inventory} left in stock!
                 </p>
               )}
+            </div>
+
+            {/* Social Sharing */}
+            <div className="border-t border-border pt-6">
+              <SocialShare
+                content={{
+                  title: product.name,
+                  description: product.description,
+                  url: typeof window !== 'undefined' ? window.location.href : '',
+                  image: product.featuredImage,
+                  contentType: 'product',
+                  contentId: product.id,
+                  hashtags: generateHashtags('product'),
+                  via: 'josemadridsalsa',
+                }}
+                size="md"
+                title="Share this product"
+                showLabels={false}
+              />
             </div>
           </div>
         </div>

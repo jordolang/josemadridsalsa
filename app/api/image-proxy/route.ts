@@ -24,6 +24,13 @@ const isGooglePlacesUrl = (url: string): boolean => {
 }
 
 /**
+ * Checks if URL is from legacy Places API
+ */
+const isLegacyPlacesUrl = (url: string): boolean => {
+  return url.includes('maps.googleapis.com/maps/api/place/photo')
+}
+
+/**
  * Determines if this is a New Places API URL
  */
 const isNewPlacesApiUrl = (url: string): boolean => {
@@ -125,22 +132,26 @@ const rewriteGooglePhotoUrl = (originalUrl: string): string => {
       }
 
       // CRITICAL: Always replace the API key (old keys in database may be expired/invalid)
-      // New Places API supports both query param and header auth, but query param is standard
       if (GOOGLE_PLACES_API_KEY) {
         url.searchParams.delete('key')
         url.searchParams.set('key', GOOGLE_PLACES_API_KEY)
       }
-    } else {
+    } else if (isLegacyPlacesUrl(originalUrl)) {
       // Legacy API: photo_reference format uses query parameter auth
-      // CRITICAL: Always replace the API key (old keys in database may be expired/invalid)
       if (GOOGLE_PLACES_API_KEY) {
         url.searchParams.delete('key')
         url.searchParams.set('key', GOOGLE_PLACES_API_KEY)
       }
 
       // Ensure we have size parameters for legacy API
-      if (!url.searchParams.has('maxwidth') && !url.searchParams.has('maxheight')) {
+      if (!url.searchParams.has('maxwidth')) {
         url.searchParams.set('maxwidth', '1600')
+      }
+    } else {
+      // Legacy Maps API (not Places API) - still replace key
+      if (GOOGLE_PLACES_API_KEY) {
+        url.searchParams.delete('key')
+        url.searchParams.set('key', GOOGLE_PLACES_API_KEY)
       }
     }
 
@@ -222,6 +233,7 @@ export async function GET(request: NextRequest) {
     console.log('[image-proxy] Rewritten URL:', rewrittenUrl.replace(/key=[^&]+/, 'key=***'))
     console.log('[image-proxy] API Key present:', !!GOOGLE_PLACES_API_KEY)
     console.log('[image-proxy] Is New Places API:', isNewPlacesApiUrl(rewrittenUrl))
+    console.log('[image-proxy] Is Legacy Places API:', isLegacyPlacesUrl(rewrittenUrl))
     console.log('[image-proxy] Using Place ID method:', !!placeId)
 
     const headers: HeadersInit = {

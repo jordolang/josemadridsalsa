@@ -8,6 +8,7 @@ import { GoogleAnalytics } from '@/components/analytics/google-analytics'
 import { AmplitudeAnalytics } from '@/components/analytics/amplitude-analytics'
 import { getPublicGoogleAnalyticsMeasurementId } from '@/lib/google-analytics-config'
 import { Analytics } from '@vercel/analytics/react'
+import { WishlistSyncProvider } from '@/components/providers/wishlist-sync-provider'
 
 export default async function PublicLayout({
   children,
@@ -43,6 +44,7 @@ export default async function PublicLayout({
       {/* End Google Tag Manager (noscript) */}
       {measurementId && <GoogleAnalytics measurementId={measurementId} />}
       <AmplitudeAnalytics />
+      <WishlistSyncProvider />
       <div className="flex min-h-screen flex-col">
         <Navigation />
         <div className="flex-1">

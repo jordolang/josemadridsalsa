@@ -5,6 +5,7 @@ import { MapPin, Phone, ExternalLink, Navigation2, ChevronLeft } from 'lucide-re
 import { getLocationByIdFromDB } from '@/lib/locations/db-query'
 import { getLocationImageUrl } from '@/lib/utils/image'
 import { LocationImage } from './_components/LocationImage'
+import { LocationShare } from './_components/LocationShare'
 
 type LocationPageProps = {
   params: Promise<{
@@ -146,6 +147,16 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
               </span>
             )}
           </div>
+
+          {/* Social Sharing */}
+          <LocationShare location={{
+            id: location.id,
+            businessName: location.businessName,
+            city: location.city,
+            state: location.state,
+            address: location.address,
+            photoUrl: location.photoUrl,
+          }} />
         </div>
       </div>
 

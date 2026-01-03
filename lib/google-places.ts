@@ -3,6 +3,7 @@
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 const PLACES_API_BASE = 'https://places.googleapis.com/v1';
+const LEGACY_PLACES_API_BASE = 'https://maps.googleapis.com/maps/api';
 
 // Delay helper for rate limiting
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -79,14 +80,20 @@ export async function getCompanyLogoFromWebsite(websiteUrl: string): Promise<str
   return null;
 }
 
-// Build Google Places photo URL
-export function buildPlacesPhotoUrl(photoName: string, maxWidth: number = 800): string {
+// Build Google Places photo URL (supports both legacy and new API)
+export function buildPlacesPhotoUrl(photoReference: string, maxWidth: number = 800): string {
   if (!API_KEY) {
     throw new Error('GOOGLE_PLACES_API_KEY not configured');
   }
-  
-  // Extract photo reference from photo name (format: places/{place_id}/photos/{photo_id})
-  return `${PLACES_API_BASE}/${photoName}/media?key=${API_KEY}&maxWidthPx=${maxWidth}`;
+
+  // Check if it's a new API photo name (contains 'places/')
+  if (photoReference.includes('places/')) {
+    // New API format: places/{place_id}/photos/{photo_id}
+    return `${PLACES_API_BASE}/${photoReference}/media?key=${API_KEY}&maxWidthPx=${maxWidth}`;
+  } else {
+    // Legacy API format: photo_reference
+    return `${LEGACY_PLACES_API_BASE}/place/photo?photoreference=${photoReference}&key=${API_KEY}&maxwidth=${maxWidth}`;
+  }
 }
 
 // Get best photo from place
@@ -127,7 +134,7 @@ export function getBestPhotoUrlForPlace(place: any): string | null {
   }
 }
 
-// Find place by name and address
+// Find place by name and address (tries v1 first, falls back to legacy)
 export async function findPlaceByNameAddress(input: {
   businessName: string;
   address: string;
@@ -138,9 +145,10 @@ export async function findPlaceByNameAddress(input: {
     console.warn('GOOGLE_PLACES_API_KEY not configured');
     return null;
   }
-  
+
   const query = `${input.businessName} ${input.address} ${input.city} ${input.state}`;
-  
+
+  // Try v1 API first
   try {
     const response = await fetchWithRetry(
       `${PLACES_API_BASE}/places:searchText`,
@@ -166,40 +174,87 @@ export async function findPlaceByNameAddress(input: {
         }),
       }
     );
-    
+
+    if (response.ok) {
+      const data = await response.json();
+
+      if (data.places && data.places.length > 0) {
+        // Return the first (best) match
+        const place = data.places[0];
+
+        // Extract photo URLs
+        const photos: string[] = [];
+        if (place.photos) {
+          place.photos.forEach((photo: any) => {
+            try {
+              const url = buildPlacesPhotoUrl(photo.name, 800);
+              photos.push(url);
+            } catch {
+              // Skip if error building URL
+            }
+          });
+        }
+
+        await delay(100);
+        return { place, photos };
+      }
+    }
+  } catch (error) {
+    console.warn('V1 API failed, trying legacy API:', error);
+  }
+
+  // Fallback to legacy API
+  console.log('🔄 Falling back to legacy Places API...');
+  return await findPlaceByNameAddressLegacy(input);
+}
+
+// Legacy Places API implementation (no billing required)
+async function findPlaceByNameAddressLegacy(input: {
+  businessName: string;
+  address: string;
+  city: string;
+  state: string;
+}): Promise<{ place: any; photos: string[] } | null> {
+  const query = `${input.businessName} ${input.address} ${input.city} ${input.state}`;
+
+  try {
+    const response = await fetchWithRetry(
+      `${LEGACY_PLACES_API_BASE}/place/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&fields=place_id,name,formatted_address,photos&key=${API_KEY}`,
+      {
+        method: 'GET',
+      }
+    );
+
     if (!response.ok) {
-      console.warn(`Places API error: ${response.status}`);
+      console.warn(`Legacy Places API error: ${response.status}`);
       return null;
     }
-    
+
     const data = await response.json();
-    
-    if (!data.places || data.places.length === 0) {
+
+    if (data.status !== 'OK' || !data.candidates || data.candidates.length === 0) {
+      console.warn('Legacy API: No places found');
       return null;
     }
-    
+
     // Return the first (best) match
-    const place = data.places[0];
-    
-    // Extract photo URLs
+    const place = data.candidates[0];
+
+    // Extract photo URLs (legacy format)
     const photos: string[] = [];
     if (place.photos) {
       place.photos.forEach((photo: any) => {
-        try {
-          const url = buildPlacesPhotoUrl(photo.name, 800);
+        if (photo.photo_reference) {
+          const url = `${LEGACY_PLACES_API_BASE}/place/photo?photoreference=${photo.photo_reference}&key=${API_KEY}&maxwidth=800`;
           photos.push(url);
-        } catch {
-          // Skip if error building URL
         }
       });
     }
-    
-    // Small delay to respect rate limits
+
     await delay(100);
-    
     return { place, photos };
   } catch (error) {
-    console.error('Error fetching from Places API:', error);
+    console.error('Error fetching from legacy Places API:', error);
     return null;
   }
 }

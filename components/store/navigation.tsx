@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { Search, ShoppingCart, Menu, X, User, Gift, LogOut, Settings, Facebook, Twitter, Store } from "lucide-react";
+import { Search, ShoppingCart, Menu, X, User, Gift, LogOut, Settings, Facebook, Twitter, Store, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useCartStore } from "@/lib/store/cart";
+import { useWishlistStore } from "@/lib/store/wishlist";
 import { cn } from "@/lib/utils";
 
 const salsaCategories = [
@@ -90,8 +91,10 @@ export function Navigation() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { items, toggleCart } = useCartStore();
-  
+  const { totalItems } = useWishlistStore();
+
   const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const wishlistCount = totalItems();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -296,6 +299,15 @@ export function Navigation() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link href="/wishlist">
+                      <Heart className="mr-2 h-4 w-4" />
+                      Wishlist
+                      {wishlistCount > 0 && (
+                        <Badge className="ml-auto" variant="secondary">{wishlistCount}</Badge>
+                      )}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link href="/account/settings">
                       <Settings className="mr-2 h-4 w-4" />
                       Settings
@@ -462,6 +474,15 @@ export function Navigation() {
                           <Link href="/account/orders" onClick={() => setIsMobileMenuOpen(false)}>
                             <ShoppingCart className="w-3.5 h-3.5 mr-2" />
                             Order History
+                          </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" className="w-full justify-start h-9" asChild>
+                          <Link href="/wishlist" onClick={() => setIsMobileMenuOpen(false)}>
+                            <Heart className="w-3.5 h-3.5 mr-2" />
+                            Wishlist
+                            {wishlistCount > 0 && (
+                              <Badge className="ml-2" variant="secondary">{wishlistCount}</Badge>
+                            )}
                           </Link>
                         </Button>
                         <Button variant="outline" size="sm" className="w-full justify-start h-9" asChild>

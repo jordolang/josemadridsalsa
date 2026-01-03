@@ -14,8 +14,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useCartStore } from '@/lib/store/cart'
-import { formatPrice, getHeatLevelColor, getHeatLevelText } from '@/lib/utils'
+import { useWishlistStore } from '@/lib/store/wishlist'
+import { formatPrice, getHeatLevelColor, getHeatLevelText, cn } from '@/lib/utils'
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 interface Product {
   id: string
@@ -38,8 +41,13 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem)
   const openCart = useCartStore((state) => state.openCart)
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore()
+  const { data: session } = useSession()
+  const router = useRouter()
   const [imageError, setImageError] = useState(false)
   const [isQuickViewOpen, setQuickViewOpen] = useState(false)
+
+  const inWishlist = isInWishlist(product.id)
 
   const handleAddToCart = () => {
     addItem({
@@ -53,6 +61,19 @@ export function ProductCard({ product }: ProductCardProps) {
       maxQuantity: product.inventory,
     })
     openCart()
+  }
+
+  const handleWishlistToggle = () => {
+    if (!session) {
+      router.push(`/auth/signin?callbackUrl=/products`)
+      return
+    }
+
+    if (inWishlist) {
+      removeFromWishlist(product.id)
+    } else {
+      addToWishlist(product.id)
+    }
   }
 
   const handleQuickAddToCart = () => {
@@ -132,15 +153,22 @@ export function ProductCard({ product }: ProductCardProps) {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="h-9 w-9 rounded-full p-0 bg-white/90 hover:bg-white shadow-lg"
+                    className={cn(
+                      "h-9 w-9 rounded-full p-0 shadow-lg transition-colors",
+                      inWishlist
+                        ? "bg-salsa-500 hover:bg-salsa-600 text-white"
+                        : "bg-white/90 hover:bg-white text-salsa-600"
+                    )}
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      // Add to wishlist logic
+                      handleWishlistToggle()
                     }}
+                    aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
+                    aria-pressed={inWishlist}
                   >
-                    <Heart className="h-4 w-4 text-salsa-600" />
-                    <span className="sr-only">Add to wishlist</span>
+                    <Heart className={cn("h-4 w-4", inWishlist && "fill-current")} />
+                    <span className="sr-only">{inWishlist ? "Remove from wishlist" : "Add to wishlist"}</span>
                   </Button>
                   {!isOutOfStock && (
                     <Button

@@ -24,6 +24,7 @@ const formatWebsiteLabel = (url?: string | null) => {
 export function LocationCard({ location, isSelected = false, onSelect }: LocationCardProps) {
   const { businessName, address, city, state, zipCode, phone, website, distanceMiles, photoUrl, directionsUrl } = location
   const [imageError, setImageError] = useState(false)
+  const [placeIdFailed, setPlaceIdFailed] = useState(false)
 
   const primaryImage = useMemo(() => {
     // If error occurred, use placeholder
@@ -31,17 +32,17 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
       return getFallbackImage()
     }
 
-    // Prefer using Place ID for fresh photos (solves expired photo URL issue)
-    if (location.googlePlaceId) {
+    // Try Place ID for fresh photos, but don't retry if it failed before
+    if (location.googlePlaceId && !placeIdFailed) {
       return getLocationImageUrl(null, location.googlePlaceId)
     }
 
     const gallery = location.photoGallery ?? []
     const hero = gallery[0] ?? photoUrl
 
-    // Get the appropriate URL (proxied for Google Places images to hide API key)
+    // Get the appropriate URL (will filter out low-quality favicons)
     return getLocationImageUrl(hero)
-  }, [location.photoGallery, photoUrl, location.googlePlaceId, imageError])
+  }, [location.photoGallery, photoUrl, location.googlePlaceId, imageError, placeIdFailed])
 
   const fullAddress = `${address}, ${city}, ${state}${zipCode ? ` ${zipCode}` : ''}`
 
@@ -62,7 +63,14 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
           fill
           className="object-cover transition duration-500 group-hover:scale-[1.02]"
           sizes="(max-width: 640px) 90vw, (max-width: 768px) 45vw, (max-width: 1024px) 30vw, 25vw"
-          onError={() => setImageError(true)}
+          onError={() => {
+            // If this was a Place ID request that failed, mark it as failed so we don't retry
+            if (primaryImage.includes('placeId=')) {
+              setPlaceIdFailed(true)
+            } else {
+              setImageError(true)
+            }
+          }}
           unoptimized={primaryImage.startsWith('/api/image-proxy')}
         />
       </div>

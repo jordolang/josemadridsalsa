@@ -18,6 +18,15 @@ export function isGooglePlacesUrl(url: string): boolean {
 }
 
 /**
+ * Checks if a URL is a favicon (low-quality fallback we don't want to use)
+ */
+export function isFaviconUrl(url: string): boolean {
+  return url.includes('google.com/s2/favicons') ||
+         url.includes('store-placeholder.png') ||
+         url.length < 50 // Very short URLs are likely placeholders
+}
+
+/**
  * Gets the appropriate image URL for display, proxying Google Places URLs
  * to hide API keys from the client.
  *
@@ -26,8 +35,8 @@ export function isGooglePlacesUrl(url: string): boolean {
  * @returns The final URL to use in Image components
  */
 export function getLocationImageUrl(url?: string | null, placeId?: string | null): string {
-  // Prefer stored URL if available (more reliable than fetching fresh)
-  if (url) {
+  // Prefer stored URL if available and not a low-quality fallback
+  if (url && !isFaviconUrl(url)) {
     // Proxy Google Places images through our API to hide the API key
     // This prevents API key exposure in client-side HTML/network requests
     if (isGooglePlacesUrl(url)) {
@@ -38,7 +47,7 @@ export function getLocationImageUrl(url?: string | null, placeId?: string | null
     return url
   }
 
-  // Fallback to Place ID to fetch fresh photos if no URL stored
+  // Fallback to Place ID to fetch fresh photos if no good URL stored
   if (placeId) {
     return `/api/image-proxy?placeId=${encodeURIComponent(placeId)}`
   }
