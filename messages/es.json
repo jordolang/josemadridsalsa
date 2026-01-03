@@ -1,0 +1,72 @@
+{
+  "common": {
+    "addToCart": "Agregar al Carrito",
+    "buyNow": "Comprar Ahora",
+    "quickView": "Vista Rápida",
+    "compare": "Comparar",
+    "outOfStock": "Agotado",
+    "inStock": "En Stock",
+    "viewDetails": "Ver Detalles",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito"
+  },
+  "nav": {
+    "home": "Inicio",
+    "products": "Productos",
+    "salsas": "Salsas",
+    "bundles": "Paquetes",
+    "recipes": "Recetas",
+    "about": "Acerca de",
+    "cart": "Carrito",
+    "account": "Cuenta",
+    "loyalty": "Recompensas"
+  },
+  "product": {
+    "heatLevel": "Nivel de Picante",
+    "price": "Precio",
+    "description": "Descripción",
+    "ingredients": "Ingredientes",
+    "reviews": "Reseñas",
+    "addedToCart": "¡Agregado al carrito!",
+    "frequentlyBoughtTogether": "Frecuentemente Comprados Juntos",
+    "youMayAlsoLike": "También Te Puede Gustar",
+    "recentlyViewed": "Vistos Recientemente"
+  },
+  "cart": {
+    "title": "Carrito de Compras",
+    "empty": "Tu carrito está vacío",
+    "subtotal": "Subtotal",
+    "shipping": "Envío",
+    "tax": "Impuestos",
+    "total": "Total",
+    "checkout": "Finalizar Compra",
+    "continueShopping": "Continuar Comprando",
+    "remove": "Eliminar",
+    "quantity": "Cantidad"
+  },
+  "loyalty": {
+    "title": "Programa de Lealtad",
+    "points": "Puntos",
+    "tier": "Nivel",
+    "availableRewards": "Recompensas Disponibles",
+    "redeemPoints": "Canjear Puntos",
+    "earnedFromPurchase": "Ganado de compra",
+    "pointsBalance": "Saldo de Puntos",
+    "lifetimePoints": "Puntos Totales",
+    "tiers": {
+      "bronze": "Bronce",
+      "silver": "Plata",
+      "gold": "Oro",
+      "platinum": "Platino"
+    }
+  },
+  "discount": {
+    "code": "Código de Descuento",
+    "apply": "Aplicar",
+    "remove": "Quitar",
+    "applied": "Descuento Aplicado",
+    "invalid": "Código de descuento inválido",
+    "expired": "Este código ha expirado"
+  }
+}

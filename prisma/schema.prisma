@@ -37,6 +37,7 @@ model User {
   abandonedCarts  AbandonedCart[]
   discountCodes   DiscountCode[]
   discountUsages  DiscountUsage[]
+  loyaltyAccount  LoyaltyAccount?
   partnerApiKeys  PartnerApiKey[]
   analyticsSettings AnalyticsSetting[]
 
@@ -327,6 +328,128 @@ model DiscountUsage {
   @@index([userId])
   @@index([orderId])
   @@map("discount_usages")
+}
+
+enum LoyaltyTier {
+  BRONZE   // 0-499 points
+  SILVER   // 500-999 points
+  GOLD     // 1000-2499 points
+  PLATINUM // 2500+ points
+}
+
+enum PointTransactionType {
+  EARNED_PURCHASE
+  EARNED_REFERRAL
+  EARNED_REVIEW
+  EARNED_BIRTHDAY
+  EARNED_BONUS
+  REDEEMED_DISCOUNT
+  REDEEMED_REWARD
+  EXPIRED
+  ADJUSTED
+}
+
+model LoyaltyAccount {
+  id              String        @id @default(cuid())
+  userId          String        @unique
+
+  // Points balance
+  pointsBalance   Int           @default(0)
+  lifetimePoints  Int           @default(0)
+
+  // Tier
+  tier            LoyaltyTier   @default(BRONZE)
+  tierUpdatedAt   DateTime      @default(now())
+
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions    PointTransaction[]
+  rewards         RewardRedemption[]
+
+  @@map("loyalty_accounts")
+}
+
+model PointTransaction {
+  id              String                @id @default(cuid())
+  accountId       String
+
+  // Transaction details
+  type            PointTransactionType
+  points          Int                   // Positive for earned, negative for redeemed
+  description     String
+
+  // Reference data
+  orderId         String?
+  expiresAt       DateTime?             // For point expiration
+
+  createdAt       DateTime              @default(now())
+
+  // Relations
+  account         LoyaltyAccount        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([createdAt])
+  @@index([expiresAt])
+  @@map("point_transactions")
+}
+
+model LoyaltyReward {
+  id              String        @id @default(cuid())
+  name            String
+  description     String
+
+  // Cost and type
+  pointsCost      Int
+  rewardType      String        // DISCOUNT, FREE_SHIPPING, FREE_PRODUCT, etc.
+  rewardValue     Decimal?      @db.Decimal(10, 2)
+
+  // Availability
+  isActive        Boolean       @default(true)
+  minimumTier     LoyaltyTier   @default(BRONZE)
+
+  // Limits
+  maxRedemptions  Int?          // null = unlimited
+  usedCount       Int           @default(0)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  redemptions     RewardRedemption[]
+
+  @@map("loyalty_rewards")
+}
+
+model RewardRedemption {
+  id              String        @id @default(cuid())
+  accountId       String
+  rewardId        String
+
+  // Redemption details
+  pointsSpent     Int
+  status          String        // PENDING, ACTIVE, USED, EXPIRED
+
+  // Discount code generated (if applicable)
+  discountCode    String?
+
+  // Expiration
+  expiresAt       DateTime?
+  usedAt          DateTime?
+
+  createdAt       DateTime      @default(now())
+
+  // Relations
+  account         LoyaltyAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  reward          LoyaltyReward   @relation(fields: [rewardId], references: [id])
+
+  @@index([accountId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("reward_redemptions")
 }
 
 model Order {
