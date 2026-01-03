@@ -71,6 +71,29 @@ export async function POST(request: Request) {
           },
         })
       }
+
+      // Mark any abandoned carts as recovered
+      if (order.userId) {
+        await tx.abandonedCart.updateMany({
+          where: {
+            userId: order.userId,
+            recoveredAt: null,
+          },
+          data: {
+            recoveredAt: new Date(),
+          },
+        })
+      } else if (order.guestEmail) {
+        await tx.abandonedCart.updateMany({
+          where: {
+            guestEmail: order.guestEmail.toLowerCase(),
+            recoveredAt: null,
+          },
+          data: {
+            recoveredAt: new Date(),
+          },
+        })
+      }
     })
 
     return NextResponse.json({ success: true })

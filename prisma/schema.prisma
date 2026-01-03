@@ -34,6 +34,7 @@ model User {
   reviews         Review[]
   cartItems       CartItem[]
   wishlistItems   WishlistItem[]
+  abandonedCarts  AbandonedCart[]
   partnerApiKeys  PartnerApiKey[]
   analyticsSettings AnalyticsSetting[]
 
@@ -220,15 +221,46 @@ model WishlistItem {
   id        String   @id @default(cuid())
   userId    String
   productId String
-  
+
   createdAt DateTime @default(now())
-  
+
   // Relations
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
+
   @@unique([userId, productId])
   @@map("wishlist_items")
+}
+
+model AbandonedCart {
+  id              String    @id @default(cuid())
+
+  // Customer identification (at least one must be present)
+  userId          String?
+  guestEmail      String?
+
+  // Cart contents (JSON snapshot)
+  cartData        Json      // { items: CartItem[], totalItems: number, totalPrice: number }
+
+  // Recovery tracking
+  recoveryToken   String    @unique @default(cuid())
+  recoveredAt     DateTime?
+
+  // Email tracking
+  emailSent       Boolean   @default(false)
+  emailSentAt     DateTime?
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([guestEmail])
+  @@index([emailSent, createdAt])
+  @@map("abandoned_carts")
 }
 
 model Order {

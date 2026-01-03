@@ -252,10 +252,99 @@ export async function sendFundraiserFollowupEmail(options: {
     to: options.email,
     variables,
     fallback: {
-      subject: 'Let’s get your fundraiser started!',
+      subject: 'Let\'s get your fundraiser started!',
       html: `<p>Hi {{contactName}},</p><p>Thanks for your interest in fundraising with Jose Madrid Salsa. We&apos;ll be in touch shortly to build your plan.</p>`,
       text: 'Thanks for your interest in fundraising with Jose Madrid Salsa.',
     },
     replyTo: options.supportEmail ?? 'fundraising@josemadridsalsa.com',
+  })
+}
+
+interface CartItemData {
+  id: string
+  name: string
+  slug: string
+  price: number
+  image: string
+  quantity: number
+  sku: string
+  heatLevel: string
+}
+
+export async function sendAbandonedCartEmail(options: {
+  email: string
+  name?: string | null
+  cartItems: CartItemData[]
+  totalPrice: number
+  recoveryToken: string
+}) {
+  const cartItemsHtml = options.cartItems
+    .map((item) => {
+      const lineTotal = (item.price * item.quantity).toFixed(2)
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid #e5e7eb;">
+          <div style="display:flex;align-items:center;gap:16px;">
+            <img src="${item.image}" alt="${item.name}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;" />
+            <div>
+              <div style="font-weight:600;font-size:16px;margin-bottom:4px;">${item.name}</div>
+              <div style="color:#6b7280;font-size:14px;">Quantity: ${item.quantity}</div>
+              <div style="color:#6b7280;font-size:14px;">Heat Level: ${item.heatLevel}</div>
+            </div>
+          </div>
+          <div style="font-weight:600;font-size:16px;">$${lineTotal}</div>
+        </div>`
+    })
+    .join('')
+
+  const cartItemsText = options.cartItems
+    .map((item) => `${item.quantity}× ${item.name} ($${item.price}) — $${(item.price * item.quantity).toFixed(2)}`)
+    .join('\n')
+
+  const recoveryUrl = `${defaultAppUrl}/checkout?recover=${options.recoveryToken}`
+
+  const variables = {
+    name: options.name || 'there',
+    cartItems: cartItemsHtml,
+    cartItemsText,
+    totalPrice: `$${options.totalPrice.toFixed(2)}`,
+    recoveryLink: recoveryUrl,
+    discountCode: 'COMEBACK10',
+    discountAmount: '10',
+    unsubscribe_url: `${defaultAppUrl}/account/preferences`,
+  }
+
+  return sendTemplateEmail({
+    templateKey: 'abandoned_cart',
+    to: options.email,
+    variables,
+    fallback: {
+      subject: 'You left something behind! Complete your order now',
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+        <h1 style="color:#dc2626;font-size:28px;margin-bottom:24px;">Don't forget your salsa!</h1>
+        <p style="font-size:16px;line-height:1.6;margin-bottom:24px;">Hi {{name}},</p>
+        <p style="font-size:16px;line-height:1.6;margin-bottom:24px;">
+          You left some delicious items in your cart. We've saved them for you!
+        </p>
+        <div style="background:#f9fafb;border-radius:12px;padding:16px;margin-bottom:24px;">
+          {{cartItems}}
+          <div style="display:flex;justify-content:space-between;padding:16px;font-size:18px;font-weight:700;border-top:2px solid #dc2626;">
+            <span>Total:</span>
+            <span style="color:#dc2626;">{{totalPrice}}</span>
+          </div>
+        </div>
+        <p style="font-size:16px;line-height:1.6;margin-bottom:24px;">
+          <strong>Special offer:</strong> Use code <strong style="color:#dc2626;">{{discountCode}}</strong> at checkout to save {{discountAmount}}% on your order!
+        </p>
+        <div style="text-align:center;margin:32px 0;">
+          <a href="{{recoveryLink}}" style="display:inline-block;background:#dc2626;color:white;padding:16px 32px;text-decoration:none;border-radius:8px;font-weight:600;font-size:16px;">
+            Complete Your Order
+          </a>
+        </div>
+        <p style="font-size:14px;color:#6b7280;line-height:1.6;margin-top:32px;">
+          Questions? Reply to this email or visit our store to browse more products.
+        </p>
+      </div>`,
+      text: `Hi {{name}},\n\nYou left some items in your cart at Jose Madrid Salsa:\n\n{{cartItemsText}}\n\nTotal: {{totalPrice}}\n\nComplete your order now and use code {{discountCode}} to save {{discountAmount}}%!\n\n{{recoveryLink}}\n\nThanks,\nJose Madrid Salsa`,
+    },
+    replyTo: 'support@josemadridsalsa.com',
   })
 }
