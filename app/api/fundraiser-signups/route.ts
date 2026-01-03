@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { getCurrentUser } from '@/lib/rbac'
 import { logEngagementRequest } from '@/lib/engagements'
+import { logAudit } from '@/lib/audit'
 import { sendFundraiserFollowupEmail } from '@/lib/email/automation'
 import { sendEmail } from '@/lib/email/sender'
 
@@ -13,8 +15,11 @@ const FundraiserSignupSchema = z.object({
   message: z.string().optional(),
 })
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Optional authentication - track user if logged in
+    const user = await getCurrentUser()
+
     const payload = await request.json()
     const parsed = FundraiserSignupSchema.safeParse(payload)
 
@@ -61,6 +66,23 @@ Goal: ${data.fundraisingGoal || 'Not specified'}
 Message:
 ${data.message || '—'}
 `,
+    })
+
+    // Audit log the fundraiser signup
+    await logAudit({
+      userId: user?.id || null,
+      action: 'CREATE',
+      entityType: 'FundraiserSignup',
+      entityId: normalizedEmail,
+      changes: {
+        contactName: data.contactName,
+        organizationName: data.organizationName,
+        email: normalizedEmail,
+        phone: data.phone,
+        fundraisingGoal: data.fundraisingGoal,
+        message: data.message,
+        isAuthenticated: !!user,
+      },
     })
 
     return NextResponse.json({ success: true })
