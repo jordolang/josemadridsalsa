@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
@@ -6,6 +6,8 @@ import { Prisma } from '@prisma/client'
 import { queueShopifySync } from '@/lib/shopify/sync'
 import { calculateTax } from '@/lib/tax-calculator'
 import { calculateShipping } from '@/lib/shipping-calculator'
+import { getCurrentUser } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 
 const CheckoutSchema = z.object({
   items: z
@@ -30,6 +32,8 @@ const CheckoutSchema = z.object({
     postalCode: z.string().min(1),
   }),
   notes: z.string().optional(),
+  discountCode: z.string().optional(),
+  recoveryToken: z.string().optional(),
 })
 
 const toDecimal = (value: number) =>
@@ -45,8 +49,11 @@ const generateOrderNumber = () => {
   return `JMS-${datePart}-${randomPart}`
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Check if user is authenticated (optional - guests can checkout)
+    const user = await getCurrentUser()
+
     const json = await request.json()
     const parsed = CheckoutSchema.safeParse(json)
 
@@ -57,7 +64,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { items, customer, shipping, notes } = parsed.data
+    const { items, customer, shipping, notes, discountCode, recoveryToken } = parsed.data
 
     const productIds = items.map((item) => item.productId)
     const products = await prisma.product.findMany({
@@ -179,10 +186,29 @@ export async function POST(request: Request) {
       `${shipping.city}, ${shipping.state} ${shipping.postalCode}`,
     ].join('\n')
 
+    // If recovery token provided, mark abandoned cart as recovered
+    if (recoveryToken) {
+      try {
+        await prisma.abandonedCart.updateMany({
+          where: {
+            recoveryToken,
+            recoveredAt: null,
+          },
+          data: {
+            recoveredAt: new Date(),
+          },
+        })
+      } catch (error) {
+        console.error('[Checkout] Failed to mark cart as recovered:', error)
+        // Don't block checkout if this fails
+      }
+    }
+
     const order = await prisma.order.create({
       data: {
         orderNumber: generateOrderNumber(),
-        guestEmail: customer.email,
+        userId: user?.id ?? undefined,
+        guestEmail: user ? undefined : customer.email,
         guestPhone: customer.phone,
         shippingMethod: shippingSummary,
         customerNotes: notes ?? undefined,
@@ -201,6 +227,23 @@ export async function POST(request: Request) {
         items: true,
       },
     })
+
+    // Log order creation audit event
+    await logAuditWithRequest(
+      {
+        userId: user?.id,
+        action: 'create',
+        entityType: 'Order',
+        entityId: order.id,
+        changes: {
+          orderNumber: order.orderNumber,
+          total: Number(order.total),
+          items: orderItems.length,
+          customer: user ? user.email : customer.email,
+        },
+      },
+      request
+    )
 
     queueShopifySync(order.id)
 
