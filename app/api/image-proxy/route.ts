@@ -1,7 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 const FALLBACK_REFERER = 'https://www.josemadrid.net'
+
+// Validation schema for query parameters
+const ImageProxyQuerySchema = z.object({
+  url: z.string().url().nullish(),
+  placeId: z.string().min(1).nullish(),
+  maxWidth: z.string().nullish().transform((val) => {
+    if (!val) return 1200
+    const num = parseInt(val, 10)
+    if (isNaN(num) || num < 100 || num > 4000) return 1200
+    return num
+  }),
+}).refine(
+  (data) => data.url || data.placeId,
+  {
+    message: 'Either url or placeId must be provided',
+    path: ['url', 'placeId'],
+  }
+)
 
 // Updated to support both legacy and new API formats
 const LEGACY_PLACES_HOST = 'maps.googleapis.com'
@@ -165,19 +184,43 @@ const rewriteGooglePhotoUrl = (originalUrl: string): string => {
 /**
  * Image proxy route that securely fetches Google Places images while hiding the API key from clients.
  *
- * Security: Only allows Google Places URLs to prevent SSRF attacks and API key exposure.
- * The API key is kept server-side and never exposed in client-visible URLs.
+ * Security Model:
+ * - PUBLIC endpoint (no authentication required) - needed for public location pages
+ * - Whitelist-only: ONLY Google Places API URLs allowed (prevents SSRF attacks)
+ * - Server-side API key: Never exposes API key to clients
+ * - Content validation: Ensures response is an image
+ * - Timeout protection: 10 second timeout prevents hanging requests
+ * - Rate limiting: Should be configured at reverse proxy/CDN level (Vercel)
+ *
+ * Query Parameters:
+ * - url: Google Places photo URL (either url or placeId required)
+ * - placeId: Google Place ID to fetch fresh photos (either url or placeId required)
+ * - maxWidth: Maximum width in pixels (100-4000, default: 1200)
+ *
+ * @public No authentication required - security through URL whitelisting
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
-  const rawUrl = searchParams.get('url')
-  const placeId = searchParams.get('placeId')
 
-  // Support both URL-based and Place ID-based requests
-  if (!rawUrl && !placeId) {
-    console.warn('[image-proxy] Missing url or placeId parameter')
-    return NextResponse.json({ error: 'Missing url or placeId parameter' }, { status: 400 })
+  // Validate query parameters with Zod
+  const validation = ImageProxyQuerySchema.safeParse({
+    url: searchParams.get('url'),
+    placeId: searchParams.get('placeId'),
+    maxWidth: searchParams.get('maxWidth'),
+  })
+
+  if (!validation.success) {
+    console.warn('[image-proxy] Invalid parameters:', validation.error.flatten())
+    return NextResponse.json(
+      {
+        error: 'Invalid parameters',
+        details: validation.error.flatten().fieldErrors,
+      },
+      { status: 400 }
+    )
   }
+
+  const { url: rawUrl, placeId, maxWidth } = validation.data
 
   // Verify API key is available
   if (!GOOGLE_PLACES_API_KEY) {
@@ -191,7 +234,7 @@ export async function GET(request: NextRequest) {
     // If Place ID is provided, fetch fresh photo URL
     if (placeId) {
       console.log('[image-proxy] Fetching image via Place ID:', placeId)
-      const freshPhotoUrl = await getFreshPhotoFromPlaceId(placeId)
+      const freshPhotoUrl = await getFreshPhotoFromPlaceId(placeId, maxWidth)
 
       if (!freshPhotoUrl) {
         console.warn('[image-proxy] Could not get fresh photo for place:', placeId)
@@ -280,6 +323,10 @@ export async function GET(request: NextRequest) {
         'Content-Type': contentType,
         // Cache for 1 hour (photos can change and names can expire)
         'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+        // Security headers
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Referrer-Policy': 'no-referrer',
       },
     })
   } catch (error) {
