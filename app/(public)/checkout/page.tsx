@@ -75,6 +75,8 @@ function CheckoutForm() {
   const router = useRouter()
   const items = useCartStore((state) => state.items)
   const clearCart = useCartStore((state) => state.clearCart)
+  const addItem = useCartStore((state) => state.addItem)
+  const setGuestEmail = useCartStore((state) => state.setGuestEmail)
 
   const [formState, setFormState] = useState<CheckoutFormState>(initialFormState)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -84,8 +86,10 @@ function CheckoutForm() {
   const [isCalculatingTax, setIsCalculatingTax] = useState(false)
   const [shippingCost, setShippingCost] = useState(0)
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false)
+  const [isRecoveringCart, setIsRecoveringCart] = useState(false)
   const taxCalcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const shippingCalcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const hasRecoveredRef = useRef(false)
 
   const subtotal = useMemo(
     () => items.reduce((total, item) => total + item.price * item.quantity, 0),
@@ -189,6 +193,11 @@ function CheckoutForm() {
       [name]: value,
     }))
 
+    // Track guest email for abandoned cart recovery
+    if (name === 'email' && value.includes('@')) {
+      setGuestEmail(value)
+    }
+
     // Trigger tax and shipping calculation when address fields change
     if (['city', 'state', 'postalCode'].includes(name)) {
       // Clear previous timeouts
@@ -207,6 +216,50 @@ function CheckoutForm() {
       }, 800)
     }
   }
+
+  // Handle cart recovery from abandoned cart email
+  useEffect(() => {
+    const recoverCart = async () => {
+      // Only recover once
+      if (hasRecoveredRef.current) return
+
+      const params = new URLSearchParams(window.location.search)
+      const recoveryToken = params.get('recover')
+
+      if (!recoveryToken) return
+
+      hasRecoveredRef.current = true
+      setIsRecoveringCart(true)
+
+      try {
+        const response = await fetch(`/api/cart/recover?token=${recoveryToken}`)
+        const data = await response.json()
+
+        if (response.ok && data.success && data.cart?.items) {
+          // Clear current cart and add recovered items
+          clearCart()
+          data.cart.items.forEach((item: any) => {
+            addItem(item)
+          })
+
+          setSuccessMessage('Your cart has been restored! Complete your order below.')
+
+          // Remove recovery token from URL
+          const url = new URL(window.location.href)
+          url.searchParams.delete('recover')
+          window.history.replaceState({}, '', url.toString())
+        } else {
+          console.error('Cart recovery failed:', data.error)
+        }
+      } catch (error) {
+        console.error('Error recovering cart:', error)
+      } finally {
+        setIsRecoveringCart(false)
+      }
+    }
+
+    recoverCart()
+  }, [addItem, clearCart])
 
   // Cleanup timeouts on unmount
   useEffect(() => {

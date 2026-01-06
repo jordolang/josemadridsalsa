@@ -16,6 +16,7 @@ export interface CartItem {
 interface CartStore {
   items: CartItem[]
   isOpen: boolean
+  guestEmail?: string
 
   // Actions
   addItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void
@@ -25,44 +26,79 @@ interface CartStore {
   openCart: () => void
   closeCart: () => void
   toggleCart: () => void
+  setGuestEmail: (email: string) => void
 
   // Computed values
   totalItems: () => number
   totalPrice: () => number
 }
 
+// Debounced cart tracking
+let trackingTimeout: NodeJS.Timeout | null = null
+async function trackCartChanges(items: CartItem[], guestEmail?: string) {
+  // Clear any existing timeout
+  if (trackingTimeout) {
+    clearTimeout(trackingTimeout)
+  }
+
+  // Debounce for 2 seconds to avoid excessive API calls
+  trackingTimeout = setTimeout(async () => {
+    try {
+      await fetch('/api/cart/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items,
+          guestEmail,
+        }),
+      })
+    } catch (error) {
+      console.error('Failed to track cart:', error)
+    }
+  }, 2000)
+}
+
 const cartStoreConfig = (set: any, get: any): CartStore => ({
   items: [],
   isOpen: false,
+  guestEmail: undefined,
 
   addItem: (newItem: any) => {
     const items = get().items
     const existingItem = items.find((item: CartItem) => item.id === newItem.id)
 
+    let updatedItems: CartItem[]
     if (existingItem) {
       // Update quantity if item already exists
       const newQuantity = existingItem.quantity + (newItem.quantity || 1)
       const maxQuantity = newItem.maxQuantity || 99
 
-      set({
-        items: items.map((item: CartItem) =>
-          item.id === newItem.id
-            ? { ...item, quantity: Math.min(newQuantity, maxQuantity) }
-            : item
-        ),
-      })
+      updatedItems = items.map((item: CartItem) =>
+        item.id === newItem.id
+          ? { ...item, quantity: Math.min(newQuantity, maxQuantity) }
+          : item
+      )
     } else {
       // Add new item
-      set({
-        items: [...items, { ...newItem, quantity: newItem.quantity || 1 }],
-      })
+      updatedItems = [...items, { ...newItem, quantity: newItem.quantity || 1 }]
+    }
+
+    set({ items: updatedItems })
+
+    // Track cart changes for abandoned cart recovery
+    if (typeof window !== 'undefined') {
+      trackCartChanges(updatedItems, get().guestEmail)
     }
   },
 
   removeItem: (id: string) => {
-    set({
-      items: get().items.filter((item: CartItem) => item.id !== id),
-    })
+    const updatedItems = get().items.filter((item: CartItem) => item.id !== id)
+    set({ items: updatedItems })
+
+    // Track cart changes for abandoned cart recovery
+    if (typeof window !== 'undefined') {
+      trackCartChanges(updatedItems, get().guestEmail)
+    }
   },
 
   updateQuantity: (id: string, quantity: number) => {
@@ -71,17 +107,30 @@ const cartStoreConfig = (set: any, get: any): CartStore => ({
       return
     }
 
-    set({
-      items: get().items.map((item: CartItem) =>
-        item.id === id
-          ? { ...item, quantity: Math.min(quantity, item.maxQuantity || 99) }
-          : item
-      ),
-    })
+    const updatedItems = get().items.map((item: CartItem) =>
+      item.id === id
+        ? { ...item, quantity: Math.min(quantity, item.maxQuantity || 99) }
+        : item
+    )
+    set({ items: updatedItems })
+
+    // Track cart changes for abandoned cart recovery
+    if (typeof window !== 'undefined') {
+      trackCartChanges(updatedItems, get().guestEmail)
+    }
   },
 
   clearCart: () => {
     set({ items: [] })
+  },
+
+  setGuestEmail: (email: string) => {
+    set({ guestEmail: email })
+
+    // Track cart with the new email
+    if (typeof window !== 'undefined' && get().items.length > 0) {
+      trackCartChanges(get().items, email)
+    }
   },
 
   openCart: () => {
@@ -110,7 +159,7 @@ export const useCartStore = typeof window !== 'undefined'
       persist(cartStoreConfig, {
         name: 'cart-storage',
         storage: createJSONStorage(() => localStorage),
-        partialize: (state) => ({ items: state.items }),
+        partialize: (state) => ({ items: state.items, guestEmail: state.guestEmail }),
       })
     )
   : create<CartStore>()(cartStoreConfig)
