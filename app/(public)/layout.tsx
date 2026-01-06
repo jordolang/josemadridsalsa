@@ -9,6 +9,7 @@ import { AmplitudeAnalytics } from '@/components/analytics/amplitude-analytics'
 import { getPublicGoogleAnalyticsMeasurementId } from '@/lib/google-analytics-config'
 import { Analytics } from '@vercel/analytics/react'
 import { WishlistSyncProvider } from '@/components/providers/wishlist-sync-provider'
+import { CompareFloatingButton, ProductComparison } from '@/components/store/product-comparison'
 
 export default async function PublicLayout({
   children,
@@ -53,6 +54,8 @@ export default async function PublicLayout({
         <Footer />
       </div>
       <CartSidebar />
+      <CompareFloatingButton />
+      <ProductComparison />
       <Toaster />
       <AiChatWidget />
       <Analytics />

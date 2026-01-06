@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { ShoppingCart, Minus, Plus, Loader2, Heart } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 import { useWishlistStore } from '@/lib/store/wishlist'
+import { useRecentlyViewedStore } from '@/lib/store/recently-viewed'
 import { formatPrice, getHeatLevelColor, getHeatLevelText, cn } from '@/lib/utils'
 import { HeatGauge } from '@/components/store/heat-gauge'
 import { getSalsaHeatRating } from '@/lib/salsa-heat'
@@ -15,6 +16,7 @@ import { useSession } from 'next-auth/react'
 import { SocialShare } from '@/components/ui/social-share'
 import { ShareContent } from '@/types/sharing'
 import { generateHashtags } from '@/lib/sharing/metadata-extractor'
+import { RecentlyViewedProducts } from '@/components/store/recently-viewed'
 
 type Product = {
   id: string
@@ -49,6 +51,7 @@ export default function ProductPage() {
   const addItem = useCartStore((state) => state.addItem)
   const openCart = useCartStore((state) => state.openCart)
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore()
+  const addRecentlyViewed = useRecentlyViewedStore((state) => state.addProduct)
   const { data: session } = useSession()
 
   useEffect(() => {
@@ -77,6 +80,20 @@ export default function ProductPage() {
 
     fetchProduct()
   }, [slug])
+
+  // Track recently viewed products
+  useEffect(() => {
+    if (product) {
+      addRecentlyViewed({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: product.featuredImage,
+        heatLevel: product.heatLevel,
+      })
+    }
+  }, [product, addRecentlyViewed])
 
   const handleAddToCart = () => {
     if (!product) return
@@ -336,6 +353,11 @@ export default function ProductPage() {
               />
             </div>
           </div>
+        </div>
+
+        {/* Recently Viewed Products */}
+        <div className="mt-12">
+          <RecentlyViewedProducts currentProductId={product.id} />
         </div>
       </div>
     </main>

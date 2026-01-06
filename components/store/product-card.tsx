@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ShoppingCart, Heart, Eye } from 'lucide-react'
+import { ShoppingCart, Heart, Eye, Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,10 +15,12 @@ import {
 } from '@/components/ui/dialog'
 import { useCartStore } from '@/lib/store/cart'
 import { useWishlistStore } from '@/lib/store/wishlist'
+import { useComparisonStore } from '@/lib/store/comparison'
 import { formatPrice, getHeatLevelColor, getHeatLevelText, cn } from '@/lib/utils'
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 interface Product {
   id: string
@@ -42,12 +44,14 @@ export function ProductCard({ product }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem)
   const openCart = useCartStore((state) => state.openCart)
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore()
+  const { addProduct: addToComparison, removeProduct: removeFromComparison, isInComparison, canAddMore, openPanel } = useComparisonStore()
   const { data: session } = useSession()
   const router = useRouter()
   const [imageError, setImageError] = useState(false)
   const [isQuickViewOpen, setQuickViewOpen] = useState(false)
 
   const inWishlist = isInWishlist(product.id)
+  const inComparison = isInComparison(product.id)
 
   const handleAddToCart = () => {
     addItem({
@@ -73,6 +77,32 @@ export function ProductCard({ product }: ProductCardProps) {
       removeFromWishlist(product.id)
     } else {
       addToWishlist(product.id)
+    }
+  }
+
+  const handleComparisonToggle = () => {
+    if (inComparison) {
+      removeFromComparison(product.id)
+      toast.success('Removed from comparison')
+    } else {
+      if (!canAddMore()) {
+        toast.error('Maximum 4 products can be compared')
+        return
+      }
+
+      addToComparison({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: product.featuredImage || '/images/placeholder-salsa.jpg',
+        heatLevel: product.heatLevel,
+        sku: product.sku,
+        description: product.description,
+        inventory: product.inventory,
+      })
+      toast.success('Added to comparison')
+      openPanel()
     }
   }
 
@@ -150,6 +180,26 @@ export function ProductCard({ product }: ProductCardProps) {
               {/* Quick Actions - Corner */}
               <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className={cn(
+                      "h-9 w-9 rounded-full p-0 shadow-lg transition-colors",
+                      inComparison
+                        ? "bg-blue-500 hover:bg-blue-600 text-white"
+                        : "bg-white/90 hover:bg-white text-blue-600"
+                    )}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleComparisonToggle()
+                    }}
+                    aria-label={inComparison ? "Remove from comparison" : "Add to comparison"}
+                    aria-pressed={inComparison}
+                  >
+                    <Scale className={cn("h-4 w-4", inComparison && "fill-current")} />
+                    <span className="sr-only">{inComparison ? "Remove from comparison" : "Add to comparison"}</span>
+                  </Button>
                   <Button
                     size="sm"
                     variant="secondary"
