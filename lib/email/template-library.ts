@@ -873,4 +873,1297 @@ Thank you for choosing Jose Madrid Salsa!
 
 The Jose Madrid Family`,
   },
+
+  // 11. Password Reset
+  {
+    key: 'password_reset',
+    name: 'Password Reset',
+    subject: 'Reset Your Password - Jose Madrid Salsa',
+    category: 'TRANSACTIONAL',
+    description: 'Password reset email with secure link',
+    variables: {
+      name: 'string',
+      resetUrl: 'string',
+      expiresIn: 'string',
+    },
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Reset Password</title></head>
+<body style="${baseStyles.container}">
+  <div style="${baseStyles.wrapper}">
+    <div style="${baseStyles.header}">
+      <h1 style="${baseStyles.headerTitle}">Reset Your Password</h1>
+    </div>
+    <div style="${baseStyles.content}">
+      <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+      <p style="margin-bottom:20px;">We received a request to reset your password for your Jose Madrid Salsa account.</p>
+      <p style="margin-bottom:20px;">Click the button below to create a new password:</p>
+      <div style="text-align:center;margin:30px 0;">
+        <a href="{{resetUrl}}" style="${baseStyles.button}">Reset Password</a>
+      </div>
+      <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:20px;margin:30px 0;border-radius:6px;">
+        <p style="margin:0 0 10px;color:#92400e;font-weight:600;">⏰ Link expires in {{expiresIn}}</p>
+        <p style="margin:0;color:#92400e;font-size:14px;">For your security, this link will only work once and expires after the time limit.</p>
+      </div>
+      <p style="margin-top:30px;">If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
+      <hr style="${baseStyles.divider}">
+      <p style="font-size:14px;color:#6c757d;">If the button doesn't work, copy and paste this link into your browser:</p>
+      <p style="font-size:14px;color:#dc2626;word-break:break-all;">{{resetUrl}}</p>
+    </div>
+    <div style="${baseStyles.footer}">
+      <p style="margin:0 0 10px;">Jose Madrid Salsa</p>
+      <p style="margin:0 0 10px;">Questions? Email <a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">support@josemadridsalsa.com</a></p>
+    </div>
+  </div>
+</body>
+</html>`,
+    text: `Hi {{name}},
+
+We received a request to reset your password for your Jose Madrid Salsa account.
+
+Reset your password here: {{resetUrl}}
+
+This link expires in {{expiresIn}} and will only work once.
+
+If you didn't request this, you can safely ignore this email.
+
+Jose Madrid Salsa Support`,
+  },
+
+  // 12. Email Verification
+  {
+    key: 'email_verification',
+    name: 'Email Verification',
+    subject: 'Verify Your Email Address',
+    category: 'TRANSACTIONAL',
+    description: 'Email confirmation for new accounts',
+    variables: {
+      name: 'string',
+      verificationUrl: 'string',
+      code: 'string',
+      expiresIn: 'string',
+    },
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Verify Email</title></head>
+<body style="${baseStyles.container}">
+  <div style="${baseStyles.wrapper}">
+    <div style="${baseStyles.header}">
+      <h1 style="${baseStyles.headerTitle}">Verify Your Email</h1>
+    </div>
+    <div style="${baseStyles.content}">
+      <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+      <p style="margin-bottom:20px;">Thanks for signing up! We just need to verify your email address to complete your registration.</p>
+      <p style="margin-bottom:20px;">Click the button below to verify your email:</p>
+      <div style="text-align:center;margin:30px 0;">
+        <a href="{{verificationUrl}}" style="${baseStyles.button}">Verify Email Address</a>
+      </div>
+      <div style="background:#e0f2fe;border-left:4px solid:#0284c7;padding:20px;margin:30px 0;border-radius:6px;">
+        <p style="margin:0 0 10px;color:#075985;font-weight:600;">Or use this verification code:</p>
+        <p style="margin:0;color:#075985;font-size:24px;font-weight:700;letter-spacing:4px;font-family:monospace;">{{code}}</p>
+      </div>
+      <p style="margin-top:20px;font-size:14px;color:#6c757d;">This code expires in {{expiresIn}}.</p>
+      <hr style="${baseStyles.divider}">
+      <p style="font-size:14px;color:#6c757d;">If you didn't create an account, please ignore this email.</p>
+      <p style="font-size:14px;color:#6c757d;word-break:break-all;margin-top:20px;">Verification link: {{verificationUrl}}</p>
+    </div>
+    <div style="${baseStyles.footer}">
+      <p style="margin:0 0 10px;">Jose Madrid Salsa</p>
+      <p style="margin:0;">Need help? Email <a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">support@josemadridsalsa.com</a></p>
+    </div>
+  </div>
+</body>
+</html>`,
+    text: `Hi {{name}},
+
+Thanks for signing up! Please verify your email address to complete registration.
+
+Verify here: {{verificationUrl}}
+
+Or use this code: {{code}}
+
+This code expires in {{expiresIn}}.
+
+If you didn't create an account, please ignore this email.
+
+Jose Madrid Salsa Team`,
+  },
+
+  // 13. Order Delivered
+  {
+    key: 'order_delivered',
+    name: 'Order Delivered',
+    subject: 'Your Order Has Been Delivered! 📦',
+    category: 'TRANSACTIONAL',
+    description: 'Delivery confirmation with review request',
+    variables: {
+      name: 'string',
+      orderNumber: 'string',
+      deliveryDate: 'string',
+      reviewUrl: 'string',
+      orderItems: 'string',
+    },
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Order Delivered</title></head>
+<body style="${baseStyles.container}">
+  <div style="${baseStyles.wrapper}">
+    <div style="${baseStyles.header}">
+      <h1 style="${baseStyles.headerTitle}">📦 Your Order Arrived!</h1>
+    </div>
+    <div style="${baseStyles.content}">
+      <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+      <p style="margin-bottom:20px;">Great news! Your order #{{orderNumber}} was delivered on {{deliveryDate}}.</p>
+      <div style="background:#dcfce7;border-left:4px solid:#16a34a;padding:20px;margin:30px 0;border-radius:6px;">
+        <p style="margin:0 0 10px;color:#166534;font-weight:600;">✓ Delivery Confirmed</p>
+        <p style="margin:0;color:#166534;">Your package should now be at your doorstep. We hope you enjoy every bite!</p>
+      </div>
+      <h3 style="color:#dc2626;font-size:18px;margin-bottom:15px;">Items Delivered:</h3>
+      <div style="background:#f9fafb;padding:20px;border-radius:8px;margin-bottom:30px;">
+        {{orderItems}}
+      </div>
+      <hr style="${baseStyles.divider}">
+      <h3 style="color:#dc2626;font-size:18px;margin-bottom:15px;">How Did We Do?</h3>
+      <p style="margin-bottom:20px;">We'd love to hear your feedback! Your review helps other salsa lovers make great choices.</p>
+      <div style="text-align:center;margin:30px 0;">
+        <a href="{{reviewUrl}}" style="${baseStyles.button}">Leave a Review</a>
+      </div>
+      <p style="margin-top:30px;font-size:14px;color:#6c757d;">As a thank you for leaving a review, we'll send you a special discount code for your next order!</p>
+      <hr style="${baseStyles.divider}">
+      <h3 style="color:#dc2626;font-size:18px;margin-bottom:15px;">🌮 Try These Recipes:</h3>
+      <ul style="padding-left:20px;">
+        <li style="margin-bottom:10px;"><a href="https://www.josemadridsalsa.com/recipes/salsa-verde-chicken" style="color:#dc2626;text-decoration:none;">Salsa Verde Chicken Enchiladas</a></li>
+        <li style="margin-bottom:10px;"><a href="https://www.josemadridsalsa.com/recipes/breakfast-burrito" style="color:#dc2626;text-decoration:none;">Ultimate Breakfast Burrito</a></li>
+        <li style="margin-bottom:10px;"><a href="https://www.josemadridsalsa.com/recipes/fish-tacos" style="color:#dc2626;text-decoration:none;">Baja Fish Tacos</a></li>
+      </ul>
+      <p style="margin-top:30px;">Enjoy your salsa!</p>
+      <p style="margin-top:10px;"><strong>The Jose Madrid Salsa Team</strong></p>
+    </div>
+    <div style="${baseStyles.footer}">
+      <p style="margin:0 0 10px;">Questions? Contact us anytime</p>
+      <p style="margin:0;"><a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">support@josemadridsalsa.com</a> | <a href="tel:7403493144" style="color:#dc2626;text-decoration:none;">740-349-3144</a></p>
+    </div>
+  </div>
+</body>
+</html>`,
+    text: `Hi {{name}},
+
+Great news! Your order #{{orderNumber}} was delivered on {{deliveryDate}}.
+
+We hope you enjoy every bite!
+
+HOW DID WE DO?
+Leave a review and get a special discount code: {{reviewUrl}}
+
+TRY THESE RECIPES:
+- Salsa Verde Chicken Enchiladas
+- Ultimate Breakfast Burrito
+- Baja Fish Tacos
+
+Visit: https://www.josemadridsalsa.com/recipes
+
+Enjoy your salsa!
+
+The Jose Madrid Salsa Team`,
+  },
+
+  // 14. Refund Processed
+  {
+    key: 'refund_processed',
+    name: 'Refund Processed',
+    subject: 'Refund Processed for Order #{{orderNumber}}',
+    category: 'TRANSACTIONAL',
+    description: 'Refund confirmation with timeline',
+    variables: {
+      name: 'string',
+      orderNumber: 'string',
+      refundAmount: 'string',
+      refundMethod: 'string',
+      processingDays: 'string',
+      originalOrderDate: 'string',
+    },
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Refund Processed</title></head>
+<body style="${baseStyles.container}">
+  <div style="${baseStyles.wrapper}">
+    <div style="${baseStyles.header}">
+      <h1 style="${baseStyles.headerTitle}">Refund Processed</h1>
+    </div>
+    <div style="${baseStyles.content}">
+      <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+      <p style="margin-bottom:20px;">Your refund for order #{{orderNumber}} has been processed.</p>
+      <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:8px;padding:24px;margin:30px 0;">
+        <table style="width:100%;border-collapse:collapse;">
+          <tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:12px 0;color:#6c757d;">Refund Amount:</td>
+            <td style="padding:12px 0;text-align:right;font-weight:600;font-size:20px;color:#16a34a;">{{refundAmount}}</td>
+          </tr>
+          <tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:12px 0;color:#6c757d;">Refund Method:</td>
+            <td style="padding:12px 0;text-align:right;font-weight:600;">{{refundMethod}}</td>
+          </tr>
+          <tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:12px 0;color:#6c757d;">Order Date:</td>
+            <td style="padding:12px 0;text-align:right;">{{originalOrderDate}}</td>
+          </tr>
+          <tr>
+            <td style="padding:12px 0;color:#6c757d;">Expected in Account:</td>
+            <td style="padding:12px 0;text-align:right;font-weight:600;">{{processingDays}}</td>
+          </tr>
+        </table>
+      </div>
+      <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:20px;margin:30px 0;border-radius:6px;">
+        <p style="margin:0 0 10px;color:#92400e;font-weight:600;">⏰ Processing Time</p>
+        <p style="margin:0;color:#92400e;">Please allow {{processingDays}} for the refund to appear in your account, depending on your financial institution.</p>
+      </div>
+      <p style="margin-top:30px;">We're sorry things didn't work out this time. We're always working to improve our products and service.</p>
+      <hr style="${baseStyles.divider}">
+      <h3 style="color:#dc2626;font-size:18px;margin-bottom:15px;">We'd Love Your Feedback</h3>
+      <p style="margin-bottom:20px;">If you have a moment, please let us know what went wrong so we can make it right:</p>
+      <ul style="padding-left:20px;">
+        <li style="margin-bottom:10px;">Did the product not meet your expectations?</li>
+        <li style="margin-bottom:10px;">Was there an issue with delivery?</li>
+        <li style="margin-bottom:10px;">Something else we should know?</li>
+      </ul>
+      <p style="margin-top:20px;">Reply to this email or call us at <a href="tel:7403493144" style="color:#dc2626;">740-349-3144</a>. We're here to help!</p>
+      <p style="margin-top:30px;">Thank you for giving us a try.</p>
+      <p style="margin-top:10px;"><strong>The Jose Madrid Salsa Team</strong></p>
+    </div>
+    <div style="${baseStyles.footer}">
+      <p style="margin:0 0 10px;">Questions about your refund?</p>
+      <p style="margin:0;"><a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">support@josemadridsalsa.com</a> | <a href="tel:7403493144" style="color:#dc2626;text-decoration:none;">740-349-3144</a></p>
+    </div>
+  </div>
+</body>
+</html>`,
+    text: `Hi {{name}},
+
+Your refund for order #{{orderNumber}} has been processed.
+
+REFUND DETAILS:
+Amount: {{refundAmount}}
+Method: {{refundMethod}}
+Expected in Account: {{processingDays}}
+
+Please allow {{processingDays}} for the refund to appear in your account.
+
+We'd love your feedback on what went wrong. Reply to this email or call 740-349-3144.
+
+Thank you for giving us a try.
+
+The Jose Madrid Salsa Team`,
+  },
+
+  // 15. Account Created
+  {
+    key: 'account_created',
+    name: 'Account Created',
+    subject: 'Your Account is Ready!',
+    category: 'TRANSACTIONAL',
+    description: 'Admin-created account welcome email',
+    variables: {
+      name: 'string',
+      email: 'string',
+      loginUrl: 'string',
+      accountType: 'string',
+    },
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Account Created</title></head>
+<body style="${baseStyles.container}">
+  <div style="${baseStyles.wrapper}">
+    <div style="${baseStyles.header}">
+      <h1 style="${baseStyles.headerTitle}">Welcome to Jose Madrid Salsa!</h1>
+    </div>
+    <div style="${baseStyles.content}">
+      <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+      <p style="margin-bottom:20px;">Great news! Your {{accountType}} account has been created and is ready to use.</p>
+      <div style="background:#dcfce7;border-left:4px solid:#16a34a;padding:20px;margin:30px 0;border-radius:6px;">
+        <p style="margin:0 0 10px;color:#166534;font-weight:600;">✓ Account Active</p>
+        <p style="margin:0;color:#166534;">You can now access your account and start exploring.</p>
+      </div>
+      <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:8px;padding:24px;margin:30px 0;">
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:12px 0;color:#6c757d;width:40%;">Account Type:</td>
+            <td style="padding:12px 0;font-weight:600;">{{accountType}}</td>
+          </tr>
+          <tr>
+            <td style="padding:12px 0;color:#6c757d;">Email:</td>
+            <td style="padding:12px 0;font-weight:600;">{{email}}</td>
+          </tr>
+        </table>
+      </div>
+      <div style="text-align:center;margin:30px 0;">
+        <a href="{{loginUrl}}" style="${baseStyles.button}">Log In to Your Account</a>
+      </div>
+      <hr style="${baseStyles.divider}">
+      <h3 style="color:#dc2626;font-size:18px;margin-bottom:15px;">Getting Started:</h3>
+      <ul style="padding-left:20px;">
+        <li style="margin-bottom:10px;"><strong>Set your password</strong> - Check your email for a password setup link</li>
+        <li style="margin-bottom:10px;"><strong>Complete your profile</strong> - Add your shipping and billing information</li>
+        <li style="margin-bottom:10px;"><strong>Browse products</strong> - Check out our full line of authentic salsas</li>
+      </ul>
+      <p style="margin-top:30px;">If you have any questions about your account or need assistance getting started, we're here to help!</p>
+      <p style="margin-top:20px;">Call us at <a href="tel:7403493144" style="color:#dc2626;">740-349-3144</a> or reply to this email.</p>
+      <p style="margin-top:30px;">Welcome to the family!</p>
+      <p style="margin-top:10px;"><strong>The Jose Madrid Salsa Team</strong></p>
+    </div>
+    <div style="${baseStyles.footer}">
+      <p style="margin:0 0 10px;">Jose Madrid Salsa</p>
+      <p style="margin:0;">Questions? <a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">support@josemadridsalsa.com</a> | <a href="tel:7403493144" style="color:#dc2626;text-decoration:none;">740-349-3144</a></p>
+    </div>
+  </div>
+</body>
+</html>`,
+    text: `Hi {{name}},
+
+Your {{accountType}} account has been created and is ready to use!
+
+ACCOUNT DETAILS:
+Type: {{accountType}}
+Email: {{email}}
+
+Log in here: {{loginUrl}}
+
+GETTING STARTED:
+1. Set your password (check your email)
+2. Complete your profile
+3. Browse our products
+
+Questions? Call 740-349-3144 or email support@josemadridsalsa.com
+
+Welcome to the family!
+
+The Jose Madrid Salsa Team`,
+  },
+  // 16. Subscription Renewal
+  {
+    key: 'subscription_renewal',
+    name: 'Subscription Renewal',
+    subject: 'Your Upcoming Subscription Renewal',
+    category: 'TRANSACTIONAL',
+    description: 'Recurring order confirmation and reminder',
+    variables: {
+      name: 'string',
+      subscriptionName: 'string',
+      renewalDate: 'string',
+      renewalPrice: 'string',
+      manageSubscriptionUrl: 'string',
+      orderItems: 'string',
+    },
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Subscription Renewal</title></head>
+<body style="${baseStyles.container}">
+  <div style="${baseStyles.wrapper}">
+    <div style="${baseStyles.header}">
+      <h1 style="${baseStyles.headerTitle}">Subscription Renewal</h1>
+    </div>
+    <div style="${baseStyles.content}">
+      <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+      <p style="margin-bottom:20px;">This is a reminder that your {{subscriptionName}} subscription is scheduled to renew on <strong>{{renewalDate}}</strong>.</p>
+      <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:8px;padding:24px;margin:30px 0;">
+        <h3 style="color:#333;margin:0 0 20px;font-size:18px;">Renewal Details</h3>
+        <div style="margin-bottom:15px;">{{orderItems}}</div>
+        <hr style="${baseStyles.divider}">
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:8px 0;color:#6c757d;">Renewal Price:</td>
+            <td style="padding:8px 0;text-align:right;font-weight:600;font-size:18px;">{{renewalPrice}}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;color:#6c757d;">Renewal Date:</td>
+            <td style="padding:8px 0;text-align:right;font-weight:600;">{{renewalDate}}</td>
+          </tr>
+        </table>
+      </div>
+      <div style="background:#e7f5ff;border-left:4px solid #1971c2;padding:20px;margin:30px 0;border-radius:6px;">
+        <p style="margin:0;color:#1864ab;">No action is needed. Your order will be processed automatically. To make changes to your subscription, please visit your account dashboard.</p>
+      </div>
+      <div style="text-align:center;margin:30px 0;">
+        <a href="{{manageSubscriptionUrl}}" style="${baseStyles.button}">Manage Subscription</a>
+      </div>
+      <p style="margin-top:30px;">Thank you for being a loyal subscriber!</p>
+      <p style="margin-top:10px;"><strong>The Jose Madrid Salsa Team</strong></p>
+    </div>
+    <div style="${baseStyles.footer}">
+      <p style="margin:0 0 10px;">Questions? Email <a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">support@josemadridsalsa.com</a></p>
+    </div>
+  </div>
+</body>
+</html>`,
+    text: `Hi {{name}},
+
+This is a reminder that your {{subscriptionName}} subscription is scheduled to renew on {{renewalDate}}.
+
+RENEWAL DETAILS:
+{{orderItems}}
+Price: {{renewalPrice}}
+Date: {{renewalDate}}
+
+No action is needed. Your order will be processed automatically.
+
+To make changes, visit: {{manageSubscriptionUrl}}
+
+Thank you for being a loyal subscriber!
+The Jose Madrid Salsa Team`,
+    },
+    // 17. Payment Failed
+    {
+      key: 'payment_failed',
+      name: 'Payment Failed',
+      subject: 'Action Required: Your Payment Failed',
+      category: 'TRANSACTIONAL',
+      description: 'Failed payment notification with retry link',
+      variables: {
+        name: 'string',
+        orderNumber: 'string',
+        amountDue: 'string',
+        updatePaymentUrl: 'string',
+      },
+      html: `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Payment Failed</title></head>
+  <body style="${baseStyles.container}">
+    <div style="${baseStyles.wrapper}">
+      <div style="${baseStyles.header}">
+        <h1 style="${baseStyles.headerTitle}">Payment Failed</h1>
+      </div>
+      <div style="${baseStyles.content}">
+        <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+        <p style="margin-bottom:20px;">Unfortunately, we were unable to process the payment for your recent order #{{orderNumber}}.</p>
+        <div style="background:#ffe3e3;border-left:4px solid #dc2626;padding:20px;margin:30px 0;border-radius:6px;">
+          <p style="margin:0 0 10px;color:#991b1b;font-weight:600;">Action Required</p>
+          <p style="margin:0;color:#991b1b;">Please update your payment information to keep your order active. Amount due: <strong>{{amountDue}}</strong></p>
+        </div>
+        <div style="text-align:center;margin:30px 0;">
+          <a href="{{updatePaymentUrl}}" style="${baseStyles.button}">Update Payment Info</a>
+        </div>
+        <p style="margin-top:30px;">If your payment information is not updated within 3 days, your order will be automatically canceled.</p>
+        <p style="margin-top:20px;">If you have any questions, please contact us at <a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;">support@josemadridsalsa.com</a>.</p>
+      </div>
+      <div style="${baseStyles.footer}">
+        <p style="margin:0;">We appreciate your business!</p>
+      </div>
+    </div>
+  </body>
+  </html>`,
+      text: `Hi {{name}},
+  
+  Your payment for order #{{orderNumber}} failed.
+  
+  Amount due: {{amountDue}}
+  
+  Please update your payment information: {{updatePaymentUrl}}
+  
+  If not updated within 3 days, your order will be canceled.
+  
+  Questions? Email support@josemadridsalsa.com`,
+    },
+    // 18. Wholesale Order Confirmation
+    {
+      key: 'wholesale_order_confirmation',
+      name: 'Wholesale Order Confirmation',
+      subject: 'Wholesale Order #{{orderNumber}} Confirmed',
+      category: 'TRANSACTIONAL',
+      description: 'B2B order confirmation',
+      variables: {
+        businessName: 'string',
+        orderNumber: 'string',
+        orderDate: 'string',
+        orderTotal: 'string',
+        orderItems: 'string',
+        shippingAddress: 'string',
+      },
+      html: `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Wholesale Order Confirmation</title></head>
+  <body style="${baseStyles.container}">
+    <div style="${baseStyles.wrapper}">
+      <div style="${baseStyles.header}">
+        <h1 style="${baseStyles.headerTitle}">Wholesale Order Confirmed</h1>
+        <p style="color:#ffffff;margin:10px 0 0;font-size:18px;">Order #{{orderNumber}}</p>
+      </div>
+      <div style="${baseStyles.content}">
+        <p style="font-size:16px;margin-bottom:20px;">Hello {{businessName}},</p>
+        <p style="margin-bottom:20px;">Thank you for your wholesale order. We are preparing your items for shipment.</p>
+        <div style="background:#f8f9fa;padding:25px;border-radius:8px;margin:30px 0;">
+          <h3 style="color:#333;margin:0 0 15px;font-size:18px;">Order Summary</h3>
+          <p><strong>Order Date:</strong> {{orderDate}}</p>
+          <hr style="${baseStyles.divider}">
+          {{orderItems}}
+          <hr style="${baseStyles.divider}">
+          <p style="text-align:right;font-size:20px;font-weight:700;color:#dc2626;">Total: {{orderTotal}}</p>
+        </div>
+        <div style="background:#e7f5ff;padding:20px;border-radius:8px;border-left:4px solid:#1971c2;margin:30px 0;">
+          <p style="margin:0 0 10px;color:#1864ab;font-weight:600;">📦 Shipping Address</p>
+          <p style="margin:0;color:#1864ab;white-space:pre-line;">{{shippingAddress}}</p>
+        </div>
+        <p style="margin-top:30px;">For any questions regarding your order, please contact your account manager.</p>
+      </div>
+      <div style="${baseStyles.footer}">
+        <p style="margin:0;">Thank you for your partnership!</p>
+      </div>
+    </div>
+  </body>
+  </html>`,
+      text: `Hello {{businessName}},
+  
+  Thank you for your wholesale order #{{orderNumber}}.
+  
+  Order Date: {{orderDate}}
+  Total: {{orderTotal}}
+  
+  Shipping Address:
+  {{shippingAddress}}
+  
+  For questions, contact your account manager.
+  
+  Thank you for your partnership!`,
+    },
+    // 19. Fundraiser Update
+    {
+      key: 'fundraiser_update',
+      name: 'Fundraiser Update',
+      subject: 'Your Fundraiser Progress for {{organizationName}}',
+      category: 'TRANSACTIONAL',
+      description: 'Automated progress updates for fundraisers',
+      variables: {
+        organizationName: 'string',
+        contactName: 'string',
+        currentTotal: 'string',
+        fundraiserGoal: 'string',
+        progressPercent: 'string',
+        daysRemaining: 'string',
+        dashboardUrl: 'string',
+      },
+      html: `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Fundraiser Update</title></head>
+  <body style="${baseStyles.container}">
+    <div style="${baseStyles.wrapper}">
+      <div style="${baseStyles.header}">
+        <h1 style="${baseStyles.headerTitle}">Fundraiser Update</h1>
+      </div>
+      <div style="${baseStyles.content}">
+        <p style="font-size:16px;margin-bottom:20px;">Hi {{contactName}},</p>
+        <p style="margin-bottom:20px;">Here's a quick update on your fundraiser for {{organizationName}}.</p>
+        <div style="background:#f8f9fa;padding:25px;border-radius:8px;margin:30px 0;text-align:center;">
+          <p style="font-size:18px;color:#333;">You've raised</p>
+          <p style="font-size:48px;font-weight:700;color:#dc2626;margin:10px 0;">{{currentTotal}}</p>
+          <p style="font-size:18px;color:#333;">out of your <strong>{{fundraiserGoal}}</strong> goal!</p>
+          <div style="background:#e9ecef;border-radius:10px;height:20px;margin:20px 0;">
+            <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);width:{{progressPercent}}%;height:20px;border-radius:10px;"></div>
+          </div>
+          <p style="font-size:16px;"><strong>{{daysRemaining}}</strong> days remaining!</p>
+        </div>
+        <div style="text-align:center;margin:30px 0;">
+          <a href="{{dashboardUrl}}" style="${baseStyles.button}">View Your Dashboard</a>
+        </div>
+        <p style="margin-top:30px;">Keep up the great work! Share your fundraising page to reach your goal.</p>
+      </div>
+      <div style="${baseStyles.footer}">
+        <p style="margin:0;">Keep up the great work!</p>
+      </div>
+    </div>
+  </body>
+  </html>`,
+      text: `Hi {{contactName}},
+  
+  Here's an update on your fundraiser for {{organizationName}}.
+  
+  You've raised {{currentTotal}} out of your {{fundraiserGoal}} goal!
+  
+  {{progressPercent}}% of the way there with {{daysRemaining}} days remaining.
+  
+  Keep up the great work!
+  
+  View your dashboard: {{dashboardUrl}}`,
+    },
+    // 20. Order Cancellation
+    {
+      key: 'order_cancellation',
+      name: 'Order Cancellation',
+      subject: 'Your Order #{{orderNumber}} Has Been Canceled',
+      category: 'TRANSACTIONAL',
+      description: 'Cancellation confirmation',
+      variables: {
+        name: 'string',
+        orderNumber: 'string',
+        cancellationDate: 'string',
+      },
+      html: `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Order Canceled</title></head>
+  <body style="${baseStyles.container}">
+    <div style="${baseStyles.wrapper}">
+      <div style="${baseStyles.header}">
+        <h1 style="${baseStyles.headerTitle}">Order Canceled</h1>
+      </div>
+      <div style="${baseStyles.content}">
+        <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+        <p style="margin-bottom:20px;">Your order #{{orderNumber}} has been canceled as of {{cancellationDate}}.</p>
+        <div style="background:#ffe3e3;border-left:4px solid #dc2626;padding:20px;margin:30px 0;border-radius:6px;">
+          <p style="margin:0;color:#991b1b;">If you did not request this cancellation, please contact us immediately at <a href="mailto:support@josemadridsalsa.com" style="color:#991b1b;">support@josemadridsalsa.com</a>.</p>
+        </div>
+        <p style="margin-top:30px;">If you have any questions, feel free to reach out. We're here to help.</p>
+      </div>
+      <div style="${baseStyles.footer}">
+        <p style="margin:0;">We're sorry to see you go.</p>
+      </div>
+    </div>
+  </body>
+  </html>`,
+            text: `Hi {{name}},
+        
+        Your order #{{orderNumber}} has been canceled as of {{cancellationDate}}.
+        
+        If you did not request this, please contact us immediately at support@josemadridsalsa.com.
+        
+        If you have any questions, feel free to reach out.`,
+          },
+          // 21. Flash Sale
+          {
+            key: 'flash_sale',
+            name: 'Flash Sale',
+            subject: '⚡ Flash Sale! 25% Off EVERYTHING! ⚡',
+            category: 'MARKETING',
+            description: 'Time-sensitive promotions with countdown',
+            variables: {
+              name: 'string',
+              saleEndDate: 'string',
+              shopUrl: 'string',
+            },
+            html: `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Flash Sale</title></head>
+        <body style="${baseStyles.container}">
+          <div style="${baseStyles.wrapper}">
+            <div style="${baseStyles.header}">
+              <h1 style="${baseStyles.headerTitle}">⚡ Flash Sale! ⚡</h1>
+            </div>
+            <div style="${baseStyles.content}">
+              <p style="font-size:24px;font-weight:bold;text-align:center;color:#dc2626;">25% Off Everything!</p>
+              <p style="font-size:16px;text-align:center;margin-bottom:30px;">For a limited time, get 25% off your entire order. No code needed!</p>
+              <div style="text-align:center;margin:30px 0;">
+                <a href="{{shopUrl}}" style="${baseStyles.button}">Shop Now</a>
+              </div>
+              <p style="font-size:14px;text-align:center;">Hurry, this sale ends on {{saleEndDate}}.</p>
+            </div>
+            <div style="${baseStyles.footer}">
+              <p style="margin:0;">Don't miss out on these savings!</p>
+            </div>
+          </div>
+        </body>
+        </html>`,
+                  text: `Flash Sale! Get 25% off everything. No code needed.
+              
+                    Shop now: {{shopUrl}}
+                    
+                    Hurry, sale ends {{saleEndDate}}.`,
+                },
+                // 22. Seasonal Summer
+                {
+                  key: 'seasonal_summer',
+                  name: 'Seasonal Summer',
+                  subject: '☀️ Summer is Here! Time to Grill!',
+                  category: 'MARKETING',
+                  description: 'Summer/BBQ season campaigns',
+                  variables: {
+                    name: 'string',
+                    productName: 'string',
+                    productUrl: 'string',
+                    recipeName: 'string',
+                    recipeUrl: 'string',
+                  },
+                  html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Summer Sale</title></head>
+              <body style="${baseStyles.container}">
+                <div style="${baseStyles.wrapper}">
+                  <div style="${baseStyles.header}">
+                    <h1 style="${baseStyles.headerTitle}">☀️ Summer is Here!</h1>
+                  </div>
+                  <div style="${baseStyles.content}">
+                    <p style="font-size:18px;text-align:center;">Fire up the grill and get ready for a season of flavor!</p>
+                    <p style="text-align:center;margin-bottom:30px;">Our {{productName}} is the perfect companion for all your summer BBQs.</p>
+                    <div style="text-align:center;margin:30px 0;">
+                      <a href="{{productUrl}}" style="${baseStyles.button}">Shop Summer Flavors</a>
+                    </div>
+                    <p style="font-size:16px;text-align:center;">Need some inspiration? Check out our new recipe for <strong>{{recipeName}}</strong>!</p>
+                    <div style="text-align:center;margin:30px 0;">
+                      <a href="{{recipeUrl}}" style="color:#dc2626;text-decoration:underline;">Get the Recipe</a>
+                    </div>
+                  </div>
+                  <div style="${baseStyles.footer}">
+                    <p style="margin:0;">Happy Grilling!</p>
+                  </div>
+                </div>
+              </body>
+              </html>`,
+                  text: `Summer is here! Time to grill!
+            
+            Our {{productName}} is the perfect companion for all your summer BBQs.
+            Shop now: {{productUrl}}
+            
+            Need inspiration? Check out our new recipe for {{recipeName}}: {{recipeUrl}}
+            
+            Happy Grilling!`,
+                },
+                // 23. Seasonal Fall
+                {
+                    key: 'seasonal_fall',
+                    name: 'Seasonal Fall',
+                    subject: '🏈 Game Day Never Tasted So Good!',
+                    category: 'MARKETING',
+                    description: 'Fall/game day campaigns',
+                    variables: {
+                        name: 'string',
+                        productName: 'string',
+                        productUrl: 'string',
+                        discountCode: 'string',
+                    },
+                    html: `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Fall Sale</title></head>
+                <body style="${baseStyles.container}">
+                    <div style="${baseStyles.wrapper}">
+                    <div style="${baseStyles.header}">
+                        <h1 style="${baseStyles.headerTitle}">🏈 Game Day Ready!</h1>
+                    </div>
+                    <div style="${baseStyles.content}">
+                        <p style="font-size:18px;text-align:center;">The weather is cooling down, but the salsa is heating up!</p>
+                        <p style="text-align:center;margin-bottom:30px;">Score a touchdown at your next tailgate with our {{productName}}.</p>
+                        <div style="text-align:center;margin:30px 0;">
+                        <a href="{{productUrl}}" style="${baseStyles.button}">Shop Game Day Salsas</a>
+                        </div>
+                        <p style="font-size:16px;text-align:center;">Use code <strong>{{discountCode}}</strong> for 15% off your next order.</p>
+                    </div>
+                    <div style="${baseStyles.footer}">
+                        <p style="margin:0;">Get Ready for Kickoff!</p>
+                    </div>
+                    </div>
+                </body>
+                </html>`,
+                    text: `Game Day Never Tasted So Good!
+                
+                Score a touchdown at your next tailgate with our {{productName}}.
+                Shop now: {{productUrl}}
+                
+                Use code {{discountCode}} for 15% off your next order.`,
+                },
+                // 24. Seasonal Holiday
+                {
+                  key: 'seasonal_holiday',
+                  name: 'Seasonal Holiday',
+                  subject: '🎄 Holiday Gifting Made Easy!',
+                  category: 'MARKETING',
+                  description: 'Holiday gift sets and party packs',
+                  variables: {
+                    name: 'string',
+                    giftGuideUrl: 'string',
+                    shippingDeadline: 'string',
+                  },
+                  html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Holiday Sale</title></head>
+              <body style="${baseStyles.container}">
+                <div style="${baseStyles.wrapper}">
+                  <div style="${baseStyles.header}">
+                    <h1 style="${baseStyles.headerTitle}">🎄 Happy Holidays!</h1>
+                  </div>
+                  <div style="${baseStyles.content}">
+                    <p style="font-size:18px;text-align:center;">Find the perfect gift for the salsa lover in your life!</p>
+                    <p style="text-align:center;margin-bottom:30px;">Our holiday gift sets are here and ready to ship.</p>
+                    <div style="text-align:center;margin:30px 0;">
+                      <a href="{{giftGuideUrl}}" style="${baseStyles.button}">Shop the Holiday Gift Guide</a>
+                    </div>
+                    <p style="font-size:14px;text-align:center;">Order by <strong>{{shippingDeadline}}</strong> to ensure delivery by Christmas!</p>
+                  </div>
+                  <div style="${baseStyles.footer}">
+                    <p style="margin:0;">Spread the Holiday Cheer!</p>
+                  </div>
+                </div>
+              </body>
+              </html>`,
+                  text: `Holiday Gifting Made Easy!
+
+Find the perfect gift for the salsa lover in your life.
+Shop our Holiday Gift Guide: {{giftGuideUrl}}
+
+Order by {{shippingDeadline}} for Christmas delivery.`,
+                },
+                // 25. Back in Stock
+                {
+                  key: 'back_in_stock',
+                  name: 'Back in Stock',
+                  subject: 'Good News! {{productName}} is Back in Stock!',
+                  category: 'MARKETING',
+                  description: 'Inventory restocking notifications',
+                  variables: {
+                    name: 'string',
+                    productName: 'string',
+                    productUrl: 'string',
+                  },
+                  html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Back in Stock</title></head>
+              <body style="${baseStyles.container}">
+                <div style="${baseStyles.wrapper}">
+                  <div style="${baseStyles.header}">
+                    <h1 style="${baseStyles.headerTitle}">It's Back!</h1>
+                  </div>
+                  <div style="${baseStyles.content}">
+                    <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+                    <p style="margin-bottom:20px;">Great news! The {{productName}} you've been waiting for is back in stock.</p>
+                    <div style="text-align:center;margin:30px 0;">
+                      <a href="{{productUrl}}" style="${baseStyles.button}">Shop Now</a>
+                    </div>
+                    <p style="text-align:center;">Hurry, it might sell out again!</p>
+                  </div>
+                  <div style="${baseStyles.footer}">
+                    <p style="margin:0;">Happy Shopping!</p>
+                  </div>
+                </div>
+              </body>
+              </html>`,
+                  text: `Good News! {{productName}} is back in stock.
+
+              Shop now: {{productUrl}}
+              
+              Hurry, it might sell out again!`,
+                },
+                // 26. Win Back
+                {
+                  key: 'win_back',
+                  name: 'Win Back',
+                  subject: '👋 We Miss You!',
+                  category: 'MARKETING',
+                  description: 'Re-engage inactive customers (90+ days)',
+                  variables: {
+                    name: 'string',
+                    discountCode: 'string',
+                    shopUrl: 'string',
+                  },
+                  html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>We Miss You</title></head>
+              <body style="${baseStyles.container}">
+                <div style="${baseStyles.wrapper}">
+                  <div style="${baseStyles.header}">
+                    <h1 style="${baseStyles.headerTitle}">👋 We Miss You!</h1>
+                  </div>
+                  <div style="${baseStyles.content}">
+                    <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+                    <p style="margin-bottom:20px;">It's been a while since your last order. We'd love to see you again!</p>
+                    <p style="text-align:center;">Here's a special offer to welcome you back:</p>
+                    <div style="text-align:center;margin:30px 0;">
+                      <p style="font-size:24px;font-weight:bold;color:#dc2626;">20% OFF YOUR NEXT ORDER</p>
+                      <p>Use code: <strong>{{discountCode}}</strong></p>
+                    </div>
+                    <div style="text-align:center;margin:30px 0;">
+                      <a href="{{shopUrl}}" style="${baseStyles.button}">Shop Now</a>
+                    </div>
+                  </div>
+                  <div style="${baseStyles.footer}">
+                    <p style="margin:0;">We hope to see you soon!</p>
+                  </div>
+                </div>
+              </body>
+              </html>`,
+                  text: `We Miss You!
+
+              It's been a while since your last order. We'd love to see you again!
+              
+              Here's 20% off your next order. Use code: {{discountCode}}
+              
+              Shop now: {{shopUrl}}`,
+                },
+                // 27. Birthday Special
+                {
+                  key: 'birthday_special',
+                  name: 'Birthday Special',
+                  subject: '🎉 Happy Birthday, {{name}}!',
+                  category: 'MARKETING',
+                  description: 'Birthday emails with special offers',
+                  variables: {
+                    name: 'string',
+                    discountCode: 'string',
+                    shopUrl: 'string',
+                  },
+                  html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Happy Birthday</title></head>
+              <body style="${baseStyles.container}">
+                <div style="${baseStyles.wrapper}">
+                  <div style="${baseStyles.header}">
+                    <h1 style="${baseStyles.headerTitle}">🎉 Happy Birthday!</h1>
+                  </div>
+                  <div style="${baseStyles.content}">
+                    <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+                    <p style="margin-bottom:20px;">Happy birthday from all of us at Jose Madrid Salsa! We hope you have a great day.</p>
+                    <p style="text-align:center;">To celebrate, here's a special gift for you:</p>
+                    <div style="text-align:center;margin:30px 0;">
+                      <p style="font-size:24px;font-weight:bold;color:#dc2626;">A FREE JAR OF SALSA</p>
+                      <p>with your next order. Use code: <strong>{{discountCode}}</strong></p>
+                    </div>
+                    <div style="text-align:center;margin:30px 0;">
+                      <a href="{{shopUrl}}" style="${baseStyles.button}">Claim Your Gift</a>
+                    </div>
+                  </div>
+                  <div style="${baseStyles.footer}">
+                    <p style="margin:0;">Enjoy your special day!</p>
+                  </div>
+                </div>
+              </body>
+              </html>`,
+                  text: `Happy Birthday, {{name}}!
+
+              Enjoy a free jar of salsa on us. Use code: {{discountCode}}
+              
+              Claim your gift: {{shopUrl}}`,
+                },
+                // 28. Referral Program
+                {
+                  key: 'referral_program',
+                  name: 'Referral Program',
+                  subject: 'Share the Love, Get Rewarded!',
+                  category: 'MARKETING',
+                  description: 'Customer referral invitations',
+                  variables: {
+                    name: 'string',
+                    referralUrl: 'string',
+                    friendDiscount: 'string',
+                    yourReward: 'string',
+                  },
+                  html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Refer a Friend</title></head>
+              <body style="${baseStyles.container}">
+                <div style="${baseStyles.wrapper}">
+                  <div style="${baseStyles.header}">
+                    <h1 style="${baseStyles.headerTitle}">Share the Love!</h1>
+                  </div>
+                  <div style="${baseStyles.content}">
+                    <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+                    <p style="margin-bottom:20px;">Love our salsa? Share it with your friends and get rewarded!</p>
+                    <div style="background:#f8f9fa;padding:25px;border-radius:8px;margin:30px 0;text-align:center;">
+                      <p>Your friends get <strong>{{friendDiscount}}</strong> off their first order.</p>
+                      <p>You get <strong>{{yourReward}}</strong> for each successful referral!</p>
+                    </div>
+                    <div style="text-align:center;margin:30px 0;">
+                      <a href="{{referralUrl}}" style="${baseStyles.button}">Start Sharing</a>
+                    </div>
+                  </div>
+                  <div style="${baseStyles.footer}">
+                    <p style="margin:0;">The more you share, the more you earn!</p>
+                  </div>
+                </div>
+              </body>
+              </html>`,
+                  text: `Share the Love, Get Rewarded!
+
+              Your friends get {{friendDiscount}} off their first order. You get {{yourReward}} for each successful referral!
+              
+              Start sharing: {{referralUrl}}`,
+                },
+                // 29. Review Request
+                {
+                  key: 'review_request',
+                  name: 'Review Request',
+                  subject: 'Got a Minute? Share Your Feedback',
+                  category: 'MARKETING',
+                  description: 'Post-purchase review requests',
+                  variables: {
+                    name: 'string',
+                    productName: 'string',
+                    reviewUrl: 'string',
+                  },
+                  html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Review Request</title></head>
+              <body style="${baseStyles.container}">
+                <div style="${baseStyles.wrapper}">
+                  <div style="${baseStyles.header}">
+                    <h1 style="${baseStyles.headerTitle}">How Did We Do?</h1>
+                  </div>
+                  <div style="${baseStyles.content}">
+                    <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+                    <p style="margin-bottom:20px;">Thanks for your recent purchase of {{productName}}. We'd love to hear what you think!</p>
+                    <div style="text-align:center;margin:30px 0;">
+                      <a href="{{reviewUrl}}" style="${baseStyles.button}">Leave a Review</a>
+                    </div>
+                  </div>
+                  <div style="${baseStyles.footer}">
+                    <p style="margin:0;">Your feedback helps us improve!</p>
+                  </div>
+                </div>
+              </body>
+              </html>`,
+                  text: `Hi {{name}},
+
+Thanks for your recent purchase of {{productName}}. We'd love to hear what you think!
+
+Leave a review: {{reviewUrl}}`,
+                },
+                // 30. Customer Survey
+                {
+                  key: 'customer_survey',
+                  name: 'Customer Survey',
+                  subject: 'Help Us Improve! Take Our Survey',
+                  category: 'MARKETING',
+                  description: 'Customer satisfaction surveys',
+                  variables: {
+                    name: 'string',
+                    surveyUrl: 'string',
+                  },
+                  html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Customer Survey</title></head>
+              <body style="${baseStyles.container}">
+                <div style="${baseStyles.wrapper}">
+                  <div style="${baseStyles.header}">
+                    <h1 style="${baseStyles.headerTitle}">We Value Your Opinion</h1>
+                  </div>
+                  <div style="${baseStyles.content}">
+                    <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+                    <p style="margin-bottom:20px;">Your feedback is important to us. Please take a few minutes to complete our survey.</p>
+                    <div style="text-align:center;margin:30px 0;">
+                      <a href="{{surveyUrl}}" style="${baseStyles.button}">Take the Survey</a>
+                    </div>
+                  </div>
+                  <div style="${baseStyles.footer}">
+                    <p style="margin:0;">Thank you for your time!</p>
+                  </div>
+                </div>
+              </body>
+              </html>`,
+                  text: `Hi {{name}},
+
+Help us improve by taking our survey: {{surveyUrl}}
+
+Thank you for your time!`,
+                },
+                // 31. Recipe Feature
+                {
+                  key: 'recipe_feature',
+                  name: 'Recipe Feature',
+                  subject: '🌶️ New Recipe: {{recipeName}}',
+                  category: 'MARKETING',
+                  description: 'Monthly recipe spotlights',
+                  variables: {
+                    name: 'string',
+                    recipeName: 'string',
+                    recipeUrl: 'string',
+                    productName: 'string',
+                    productUrl: 'string',
+                  },
+                  html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>New Recipe</title></head>
+              <body style="${baseStyles.container}">
+                <div style="${baseStyles.wrapper}">
+                  <div style="${baseStyles.header}">
+                    <h1 style="${baseStyles.headerTitle}">New Recipe!</h1>
+                  </div>
+                  <div style="${baseStyles.content}">
+                    <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+                    <p style="margin-bottom:20px;">Looking for some culinary inspiration? Try our new recipe for <strong>{{recipeName}}</strong>, featuring our delicious {{productName}} salsa!</p>
+                    <div style="text-align:center;margin:30px 0;">
+                      <a href="{{recipeUrl}}" style="${baseStyles.button}">Get the Recipe</a>
+                    </div>
+                    <div style="text-align:center;margin:30px 0;">
+                      <a href="{{productUrl}}" style="color:#dc2626;text-decoration:underline;">Get the Salsa</a>
+                    </div>
+                  </div>
+                  <div style="${baseStyles.footer}">
+                    <p style="margin:0;">Happy Cooking!</p>
+                  </div>
+                </div>
+              </body>
+              </html>`,
+                  text: `New Recipe: {{recipeName}}
+
+              Try our new recipe for {{recipeName}}, featuring our delicious {{productName}} salsa!
+              
+              Get the recipe: {{recipeUrl}}
+              Get the salsa: {{productUrl}}`,
+                },
+                // 32. Loyalty Milestone
+                {
+                  key: 'loyalty_milestone',
+                  name: 'Loyalty Milestone',
+                  subject: 'You\'ve Reached a New Loyalty Level!',
+                  category: 'MARKETING',
+                  description: 'Loyalty program achievements',
+                  variables: {
+                    name: 'string',
+                    level: 'string',
+                    reward: 'string',
+                  },
+                  html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Loyalty Milestone</title></head>
+              <body style="${baseStyles.container}">
+                <div style="${baseStyles.wrapper}">
+                  <div style="${baseStyles.header}">
+                    <h1 style="${baseStyles.headerTitle}">Congratulations!</h1>
+                  </div>
+                  <div style="${baseStyles.content}">
+                    <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+                    <p style="margin-bottom:20px;">You've reached the <strong>{{level}}</strong> level in our loyalty program! Thank you for being such a loyal customer.</p>
+                    <p style="text-align:center;">Your reward is: <strong>{{reward}}</strong></p>
+                  </div>
+                  <div style="${baseStyles.footer}">
+                    <p style="margin:0;">Thank you for your loyalty!</p>
+                  </div>
+                </div>
+              </body>
+              </html>`,
+                  text: `Congratulations, {{name}}!
+
+              You've reached the {{level}} level in our loyalty program.
+              
+              Your reward is: {{reward}}`,
+                },
+                // 33. Order Status Update
+                {
+                  key: 'order_status_update',
+                  name: 'Order Status Update',
+                  subject: 'Update on Your Order #{{orderNumber}}',
+                  category: 'ADMINISTRATIVE',
+                  description: 'Manual status updates for exceptions',
+                  variables: {
+                    name: 'string',
+                    orderNumber: 'string',
+                    status: 'string',
+                    message: 'string',
+                  },
+                  html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Order Status Update</title></head>
+              <body style="${baseStyles.container}">
+                <div style="${baseStyles.wrapper}">
+                  <div style="${baseStyles.header}">
+                    <h1 style="${baseStyles.headerTitle}">Order Update</h1>
+                  </div>
+                  <div style="${baseStyles.content}">
+                    <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+                    <p style="margin-bottom:20px;">Here's an update on your order #{{orderNumber}}:</p>
+                    <p><strong>Status:</strong> {{status}}</p>
+                    <p><strong>Message:</strong></p>
+                    <p>{{message}}</p>
+                  </div>
+                  <div style="${baseStyles.footer}">
+                    <p style="margin:0;">Thank you for your patience.</p>
+                  </div>
+                </div>
+              </body>
+              </html>`,
+                  text: `Hi {{name}},
+
+              Here's an update on your order #{{orderNumber}}:
+              Status: {{status}}
+              
+              Message:
+              {{message}}`,
+                },
+                // 34. Account Security Alert
+                {
+                  key: 'account_security_alert',
+                  name: 'Account Security Alert',
+                  subject: 'Security Alert for Your Account',
+                  category: 'ADMINISTRATIVE',
+                  description: 'Security notifications',
+                  variables: {
+                    name: 'string',
+                    alert: 'string',
+                  },
+                  html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Security Alert</title></head>
+              <body style="${baseStyles.container}">
+                <div style="${baseStyles.wrapper}">
+                  <div style="${baseStyles.header}">
+                    <h1 style="${baseStyles.headerTitle}">Security Alert</h1>
+                  </div>
+                  <div style="${baseStyles.content}">
+                    <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+                    <p style="margin-bottom:20px;">We're writing to you about a security alert on your account.</p>
+                    <p><strong>Alert:</strong> {{alert}}</p>
+                    <p>If this was you, you can safely disregard this email. If this was not you, please contact us immediately.</p>
+                  </div>
+                  <div style="${baseStyles.footer}">
+                    <p style="margin:0;">Thank you for your attention to this matter.</p>
+                  </div>
+                </div>
+              </body>
+              </html>`,
+                  text: `Hi {{name}},
+
+              We're writing to you about a security alert on your account.
+              
+              Alert: {{alert}}
+              
+              If this was you, you can safely disregard this email. If this was not you, please contact us immediately.`,
+                },
+                // 35. Service Announcement
+                {
+                  key: 'service_announcement',
+                  name: 'Service Announcement',
+                  subject: 'An Important Announcement from Jose Madrid Salsa',
+                  category: 'ADMINISTRATIVE',
+                  description: 'Maintenance, policy changes',
+                  variables: {
+                    title: 'string',
+                    message: 'string',
+                  },
+                  html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>{{title}}</title></head>
+              <body style="${baseStyles.container}">
+                <div style="${baseStyles.wrapper}">
+                  <div style="${baseStyles.header}">
+                    <h1 style="${baseStyles.headerTitle}">{{title}}</h1>
+                  </div>
+                  <div style="${baseStyles.content}">
+                    <p>{{message}}</p>
+                  </div>
+                  <div style="${baseStyles.footer}">
+                    <p style="margin:0;">Thank you for your understanding.</p>
+                  </div>
+                </div>
+              </body>
+              </html>`,
+                  text: `{{title}}
+
+              {{message}}`,
+                },
 ]

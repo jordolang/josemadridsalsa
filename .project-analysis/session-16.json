@@ -1,0 +1,89 @@
+{
+  "sessionNumber": 16,
+  "estimatedHours": 5,
+  "focus": "Frontend Page Completion",
+  "priority": "high",
+  "tasks": [
+    {
+      "taskNumber": 1,
+      "title": "Complete Admin Email-templates Page",
+      "description": "Finish implementing Admin Email-templates page. Current completion: 45%",
+      "priority": "high",
+      "estimatedHours": 2,
+      "files": [
+        "app/admin/email-templates/page.tsx"
+      ],
+      "dependencies": [],
+      "instructions": "## Complete Admin Email-templates Page\n\n### Current Status\n- **Completion:** 45%\n- **Issues:** Page has minimal content (<100 LOC), Missing error handling/error boundary, Missing loading state, No tests found\n- **File:** app/admin/email-templates/page.tsx\n\n### Tasks\n- Add meaningful content (currently <100 lines)\n\n- Add error handling/error boundary\n- Add loading state (Suspense or loading.tsx)\n- Write tests for critical functionality\n\n### Implementation\n1. Review existing similar pages for patterns\n2. Fix each issue listed above\n3. Ensure responsive design\n4. Test thoroughly on all devices\n",
+      "testing": {
+        "functional": [
+          "Page loads without errors",
+          "All features work"
+        ],
+        "visual": [
+          "Responsive on mobile/tablet/desktop",
+          "Matches design system"
+        ],
+        "performance": [
+          "Page loads in <3 seconds"
+        ],
+        "accessibility": [
+          "Keyboard navigation works",
+          "Screen reader compatible"
+        ]
+      }
+    },
+    {
+      "taskNumber": 2,
+      "title": "Complete API Route: app/api/forms/route.ts",
+      "description": "Add missing features to app/api/forms/route.ts. Issues: Missing authentication check, No tests found",
+      "priority": "medium",
+      "estimatedHours": 1.5,
+      "files": [
+        "app/api/forms/route.ts"
+      ],
+      "dependencies": [],
+      "instructions": "## Complete API Route: app/api/forms/route.ts\n\n### Current Status\n- **Completion:** 75%\n- **Methods:** GET, POST\n- **Issues:** Missing authentication check, No tests found\n\n### Tasks\n- Add authentication check (getCurrentUser or requirePermission)\n\n\n\n- Write API tests\n\n### Implementation\n1. Review similar API routes for patterns\n2. Add missing functionality from issues list\n3. Test all HTTP methods\n4. Verify error handling\n5. Check performance (<500ms response time)\n",
+      "testing": {
+        "functional": [
+          "All HTTP methods work",
+          "Error handling tested"
+        ],
+        "visual": [],
+        "performance": [
+          "Response time <500ms"
+        ],
+        "accessibility": []
+      }
+    },
+    {
+      "taskNumber": 3,
+      "title": "Complete API Route: app/api/locations/route.ts",
+      "description": "Add missing features to app/api/locations/route.ts. Issues: Missing authentication check, Missing request validation (Zod schema), No tests found",
+      "priority": "medium",
+      "estimatedHours": 1.5,
+      "files": [
+        "app/api/locations/route.ts"
+      ],
+      "dependencies": [],
+      "instructions": "## Complete API Route: app/api/locations/route.ts\n\n### Current Status\n- **Completion:** 50%\n- **Methods:** GET\n- **Issues:** Missing authentication check, Missing request validation (Zod schema), No tests found\n\n### Tasks\n- Add authentication check (getCurrentUser or requirePermission)\n- Add Zod validation schema\n\n- Add audit logging for mutations\n- Write API tests\n\n### Implementation\n1. Review similar API routes for patterns\n2. Add missing functionality from issues list\n3. Test all HTTP methods\n4. Verify error handling\n5. Check performance (<500ms response time)\n",
+      "testing": {
+        "functional": [
+          "All HTTP methods work",
+          "Error handling tested"
+        ],
+        "visual": [],
+        "performance": [
+          "Response time <500ms"
+        ],
+        "accessibility": []
+      }
+    }
+  ],
+  "estimatedCompletion": {
+    "totalHours": 5,
+    "expectedProgress": 4,
+    "tasksToComplete": 3,
+    "projectedCompletion": 73
+  }
+}

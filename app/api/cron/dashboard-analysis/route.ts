@@ -11,7 +11,7 @@ const CRON_SECRET = process.env.CRON_SECRET
 /**
  * Vercel Cron Job - Dashboard Analysis
  * Runs every 5 hours to analyze project status and generate metrics
- * Schedule: 0 */5 * * * (00:00, 05:00, 10:00, 15:00, 20:00)
+ * Schedule: 0 asterisk/5 asterisk asterisk asterisk (every 5 hours)
  */
 export async function GET(request: NextRequest) {
   try {
