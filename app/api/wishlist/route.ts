@@ -8,13 +8,15 @@ export const runtime = 'nodejs'
 /**
  * GET /api/wishlist
  * Fetch authenticated user's wishlist items with full product data
+ * Returns empty array if not authenticated (to avoid console errors)
  */
 export async function GET(request: NextRequest) {
   return tryCatch(async () => {
     const user = await getCurrentUser()
 
     if (!user) {
-      return unauthorized('Please sign in to view your wishlist')
+      // Return empty wishlist instead of 401 to prevent console errors
+      return ok({ items: [] })
     }
 
     const wishlistItems = await prisma.wishlistItem.findMany({

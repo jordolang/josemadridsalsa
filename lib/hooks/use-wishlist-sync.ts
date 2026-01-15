@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useWishlistStore } from '@/lib/store/wishlist'
 
@@ -10,15 +10,18 @@ import { useWishlistStore } from '@/lib/store/wishlist'
 export function useWishlistSync() {
   const { data: session, status } = useSession()
   const { fetchWishlist, clearWishlist } = useWishlistStore()
+  const hasFetched = useRef(false)
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && session?.user && !hasFetched.current) {
       // User is signed in - fetch their wishlist from the database
+      hasFetched.current = true
       fetchWishlist()
     } else if (status === 'unauthenticated') {
-      // User is signed out - clear the local wishlist
+      // User is signed out - clear the local wishlist and reset fetch flag
+      hasFetched.current = false
       clearWishlist()
     }
     // Don't do anything while status is 'loading'
-  }, [status, fetchWishlist, clearWishlist])
+  }, [status, session, fetchWishlist, clearWishlist])
 }

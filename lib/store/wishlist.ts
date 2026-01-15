@@ -138,18 +138,22 @@ const wishlistStoreConfig = (set: any, get: any): WishlistStore => ({
     set({ isLoading: true })
 
     try {
-      const response = await fetch('/api/wishlist')
-      const data = await response.json()
+      const response = await fetch('/api/wishlist', {
+        credentials: 'include',
+      })
 
       if (!response.ok) {
-        // If unauthorized, just clear the wishlist silently
-        if (response.status === 401) {
+        // If unauthorized, just clear the wishlist silently (don't log error)
+        if (response.status === 401 || response.status === 403) {
           set({ items: [], isLoading: false })
           return
         }
+
+        const data = await response.json()
         throw new Error(data.error || 'Failed to fetch wishlist')
       }
 
+      const data = await response.json()
       const items: WishlistItem[] = data.items.map((item: any) => ({
         id: item.id,
         productId: item.product.id,
@@ -167,7 +171,10 @@ const wishlistStoreConfig = (set: any, get: any): WishlistStore => ({
 
       set({ items, isLoading: false })
     } catch (error: any) {
-      console.error('Failed to fetch wishlist:', error)
+      // Only log non-authentication errors
+      if (error.message && !error.message.includes('401') && !error.message.includes('403')) {
+        console.error('Failed to fetch wishlist:', error)
+      }
       set({ items: [], isLoading: false })
     }
   },
