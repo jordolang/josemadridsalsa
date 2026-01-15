@@ -49,7 +49,7 @@ export const authOptions: NextAuthOptions = {
   },
   // Trust the proxy/host in production (required for Vercel and other hosting platforms)
   useSecureCookies: process.env.NODE_ENV === 'production',
-  debug: false, // Disable debug to prevent /api/auth/_log 405 errors
+  debug: process.env.NODE_ENV === 'development', // Enable debug in development only
   logger: {
     error(code, metadata) {
       console.error('[NextAuth Error]', code, metadata)
