@@ -108,13 +108,19 @@ When DATABASE_URL is not set:
 
 ### Middleware Impact
 
-From `middleware.ts:24-31`:
+From `middleware.ts:97-99` (API routes):
 ```typescript
-const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
 if (!token) {
-  return new NextResponse('Unauthorized', { status: 401 })
+  return NextResponse.json(
+    { error: 'Unauthorized - authentication required' },
+    { status: 401 }
+  )
 }
 ```
+
+Similar token validation occurs at:
+- Lines 64-69: `/admin` routes
+- Lines 84-85: `/account` routes
 
 Without a valid database connection:
 - Sessions cannot be created during login
