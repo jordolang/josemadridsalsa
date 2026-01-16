@@ -898,3 +898,103 @@ Turn 1
     request_id: 'req_011CX8aG8z7hHNnrx1QBeMwM'
   }
 }
+
+> josemadrid-salsa@0.1.0 auto-execute
+> tsx scripts/auto-execute-session.ts
+
+🤖 José Madrid Salsa - Autonomous Session Executor (Claude API)
+
+📊 Loading latest analysis...
+✅ Loaded analysis run #13
+   Overall completion: 79%
+   Work session: Backend API Enhancement
+   Tasks: 3
+   Estimated: 4.5h
+
+📝 Generating execution prompt...
+✅ Prompt saved: /Users/jordanlang/Repos/josemadridsalsa/.project-analysis/prompts/session-13-1768557602864.md
+
+🔑 Initializing Claude API...
+✅ API initialized
+
+🚀 Starting autonomous execution...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📄 Execution log: /Users/jordanlang/Repos/josemadridsalsa/logs/auto-executor/session-13-1768557602865.log
+
+🎯 Starting autonomous session #13
+⏰ Started at: 2026-01-16T10:00:02.866Z
+
+
+================================================================================
+Turn 1
+================================================================================
+
+❌ API Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."},"request_id":"req_011CXArwsyDLnnWN4s3GkNKQ"}
+❌ Error during execution: BadRequestError: 400 {"type":"error","error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."},"request_id":"req_011CXArwsyDLnnWN4s3GkNKQ"}
+    at APIError.generate (/Users/jordanlang/Repos/josemadridsalsa/node_modules/@anthropic-ai/sdk/src/core/error.ts:63:14)
+    at Anthropic.makeStatusError (/Users/jordanlang/Repos/josemadridsalsa/node_modules/@anthropic-ai/sdk/src/client.ts:443:28)
+    at Anthropic.makeRequest (/Users/jordanlang/Repos/josemadridsalsa/node_modules/@anthropic-ai/sdk/src/client.ts:678:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async executeWithClaudeAPI (/Users/jordanlang/Repos/josemadridsalsa/scripts/auto-execute-session.ts:168:24)
+    at async main (/Users/jordanlang/Repos/josemadridsalsa/scripts/auto-execute-session.ts:119:5) {
+  status: 400,
+  headers: Headers {
+    date: 'Fri, 16 Jan 2026 10:00:03 GMT',
+    'content-type': 'application/json',
+    'content-length': '234',
+    connection: 'keep-alive',
+    'x-should-retry': 'false',
+    'request-id': 'req_011CXArwsyDLnnWN4s3GkNKQ',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    'anthropic-organization-id': '1c88c294-58a4-441d-a678-9524080a8b15',
+    server: 'cloudflare',
+    'x-envoy-upstream-service-time': '21',
+    'cf-cache-status': 'DYNAMIC',
+    'x-robots-tag': 'none',
+    'cf-ray': '9becc37feaff52a6-ORD'
+  },
+  requestID: 'req_011CXArwsyDLnnWN4s3GkNKQ',
+  error: {
+    type: 'error',
+    error: {
+      type: 'invalid_request_error',
+      message: 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'
+    },
+    request_id: 'req_011CXArwsyDLnnWN4s3GkNKQ'
+  }
+}
+
+❌ Fatal error: BadRequestError: 400 {"type":"error","error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."},"request_id":"req_011CXArwsyDLnnWN4s3GkNKQ"}
+    at APIError.generate (/Users/jordanlang/Repos/josemadridsalsa/node_modules/@anthropic-ai/sdk/src/core/error.ts:63:14)
+    at Anthropic.makeStatusError (/Users/jordanlang/Repos/josemadridsalsa/node_modules/@anthropic-ai/sdk/src/client.ts:443:28)
+    at Anthropic.makeRequest (/Users/jordanlang/Repos/josemadridsalsa/node_modules/@anthropic-ai/sdk/src/client.ts:678:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async executeWithClaudeAPI (/Users/jordanlang/Repos/josemadridsalsa/scripts/auto-execute-session.ts:168:24)
+    at async main (/Users/jordanlang/Repos/josemadridsalsa/scripts/auto-execute-session.ts:119:5) {
+  status: 400,
+  headers: Headers {
+    date: 'Fri, 16 Jan 2026 10:00:03 GMT',
+    'content-type': 'application/json',
+    'content-length': '234',
+    connection: 'keep-alive',
+    'x-should-retry': 'false',
+    'request-id': 'req_011CXArwsyDLnnWN4s3GkNKQ',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    'anthropic-organization-id': '1c88c294-58a4-441d-a678-9524080a8b15',
+    server: 'cloudflare',
+    'x-envoy-upstream-service-time': '21',
+    'cf-cache-status': 'DYNAMIC',
+    'x-robots-tag': 'none',
+    'cf-ray': '9becc37feaff52a6-ORD'
+  },
+  requestID: 'req_011CXArwsyDLnnWN4s3GkNKQ',
+  error: {
+    type: 'error',
+    error: {
+      type: 'invalid_request_error',
+      message: 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'
+    },
+    request_id: 'req_011CXArwsyDLnnWN4s3GkNKQ'
+  }
+}
