@@ -30,6 +30,7 @@ Jose Madrid Salsa is a modern, full-featured e-commerce platform built with Next
 
 - [Environment Setup](env-setup.md) - Get started with local development
 - [Admin Panel Guide](admin-panel-complete.md) - Learn to use the admin dashboard
+- [Stripe Payment Integration](stripe/README.md) - Payment processing documentation
 - [API Documentation](#) - API endpoints and usage
 - [Project Status](PROJECT_STATUS.md) - Current project state
 
@@ -138,6 +139,32 @@ The platform exposes RESTful APIs for:
 - **Calendar** - `/api/calendar`
 
 See the [API Documentation](#) for detailed endpoint information.
+
+## Payment Processing
+
+The platform uses **Stripe** for secure payment processing with:
+
+- ✅ Server-side PaymentIntent creation
+- ✅ Webhook-based order fulfillment
+- ✅ Real-time tax and shipping calculation
+- ✅ Gift certificate support
+- ✅ PCI DSS compliance via Stripe Elements
+- ✅ 3D Secure authentication
+- ✅ Test and production environments
+
+**Documentation**:
+- [Stripe Integration Overview](stripe/README.md) - Start here
+- [Current Implementation Guide](stripe/current-implementation.md) - Technical details
+- [Comprehensive Stripe Guide](stripe/stripe-checkout-comprehensive-guide.md) - All patterns
+- [Webhook Setup Guide](STRIPE_WEBHOOK_SETUP.md) - Webhook configuration
+
+**Quick Reference**:
+```bash
+# Test cards
+4242 4242 4242 4242  # Success
+4000 0025 0000 3155  # 3D Secure required
+4000 0000 0000 9995  # Declined
+```
 
 ## Development Workflow
 
