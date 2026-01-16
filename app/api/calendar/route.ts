@@ -3,7 +3,6 @@ import {
   getUpcomingScheduleEvents,
   GoogleCalendarNotConfiguredError,
 } from '@/lib/google-calendar'
-import { requirePermission } from '@/lib/rbac'
 import { z } from 'zod'
 
 // Validation schema for query parameters
@@ -14,8 +13,7 @@ const queryParamsSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    // Require authentication and calendar:read permission
-    await requirePermission('calendar:read')
+    // Public endpoint - no authentication required for public calendar display
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url)
@@ -53,27 +51,6 @@ export async function GET(request: NextRequest) {
             'Google Calendar integration is not configured. Add the required environment variables and try again.',
         },
         { status: 503 }
-      )
-    }
-
-    // Handle authentication/authorization errors
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json(
-        {
-          error: 'Unauthorized',
-          message: 'Authentication required to access calendar events',
-        },
-        { status: 401 }
-      )
-    }
-
-    if (error instanceof Error && error.message.includes('Forbidden')) {
-      return NextResponse.json(
-        {
-          error: 'Forbidden',
-          message: 'Insufficient permissions to access calendar events',
-        },
-        { status: 403 }
       )
     }
 
