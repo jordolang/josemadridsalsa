@@ -34,17 +34,14 @@ export async function POST(request: NextRequest) {
 
     const { items, guestEmail } = parsed.data
 
-    // Need either authenticated user or guest email
-    if (!user && !guestEmail) {
-      return NextResponse.json(
-        { error: 'Email required for cart tracking' },
-        { status: 400 }
-      )
-    }
-
     // Don't track empty carts
     if (items.length === 0) {
       return NextResponse.json({ success: true, message: 'Empty cart, not tracked' })
+    }
+
+    // If no user or guest email, silently skip tracking (user hasn't provided email yet)
+    if (!user && !guestEmail) {
+      return NextResponse.json({ success: true, message: 'Cart not tracked yet, waiting for email' })
     }
 
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
