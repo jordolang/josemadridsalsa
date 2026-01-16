@@ -164,6 +164,9 @@ The platform uses **Stripe** for secure payment processing with:
 4242 4242 4242 4242  # Success
 4000 0025 0000 3155  # 3D Secure required
 4000 0000 0000 9995  # Declined
+4000 0027 6000 3184  # 3D Secure 2 required
+4000 0000 0000 0069  # Expired card
+4000 0000 0000 0341  # Processing error
 ```
 
 ## Development Workflow

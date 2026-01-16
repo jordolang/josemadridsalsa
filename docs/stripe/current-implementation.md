@@ -52,10 +52,14 @@ Jose Madrid Salsa uses a **custom Payment Element integration** with server-side
 ```typescript
 import Stripe from 'stripe';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-10-29.clover',
-  typescript: true,
-});
+export const getStripe = () => {
+  if (!stripeClient) {
+    stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2025-10-29.clover',
+    });
+  }
+  return stripeClient;
+};
 ```
 
 **Environment Variables:**
@@ -64,6 +68,8 @@ STRIPE_PUBLISHABLE_KEY=pk_test_...  # Public key for frontend
 STRIPE_SECRET_KEY=sk_test_...       # Secret key for backend
 STRIPE_WEBHOOK_SECRET=whsec_...     # Webhook signature verification
 ```
+
+> ⚠️ **SECURITY WARNING**: The examples above show test keys. **NEVER commit actual API keys to version control**. Always use environment variables and add `.env.local` to your `.gitignore`.
 
 ### 3. Webhook Integration
 

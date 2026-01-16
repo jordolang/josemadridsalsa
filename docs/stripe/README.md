@@ -72,6 +72,8 @@ STRIPE_SECRET_KEY=sk_test_...          # Backend (secret)
 STRIPE_WEBHOOK_SECRET=whsec_...        # Webhook verification
 ```
 
+> ⚠️ **SECURITY WARNING**: The examples above show test keys. **NEVER commit actual API keys to version control**. Always use environment variables and add `.env.local` to your `.gitignore`.
+
 ### Test Cards
 
 | Card Number | Scenario |
