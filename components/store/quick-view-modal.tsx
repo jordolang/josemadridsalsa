@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ShoppingCart, Heart, X } from 'lucide-react'
@@ -112,6 +112,9 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
               <DialogTitle className="text-3xl font-bold mb-2">
                 {product.name}
               </DialogTitle>
+              <DialogDescription className="sr-only">
+                Quick view for {product.name}. View details, pricing, and add to cart.
+              </DialogDescription>
               <div className="flex items-center gap-2 mb-4">
                 <Badge className={getHeatLevelColor(product.heatLevel)}>
                   {product.heatLevel}
