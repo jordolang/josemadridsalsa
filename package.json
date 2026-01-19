@@ -35,6 +35,8 @@
     "db:production:sync": "node scripts/sync-production-schema.js",
     "db:production:seed": "node scripts/seed-production.js",
     "db:production:pull-env": "vercel env pull .env.vercel.production --environment=production --yes",
+    "db:diagnose": "node scripts/diagnose-db-connection.js",
+    "vercel:setup-env": "bash scripts/setup-vercel-env.sh",
     "create-admin": "tsx scripts/create-admin.ts",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
     "fresh": "npm run clean && npm install && npm run dev",
