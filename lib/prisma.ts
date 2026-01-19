@@ -33,15 +33,29 @@ const createPrismaClient = (): PrismaClient => {
 
   try {
     if (!databaseUrl) {
-      console.warn('[Prisma] DATABASE_URL is not set. Available env vars:', {
+      console.error('[Prisma] ❌ DATABASE_URL is not set!')
+      console.error('[Prisma] Available env vars:', {
         hasPostgresUrl: !!process.env.POSTGRES_URL,
         hasPrismaUrl: !!process.env.PRISMA_DATABASE_URL,
         hasDatabaseUrl: !!process.env.DATABASE_URL,
+        environment: process.env.NODE_ENV,
+        isVercel: !!process.env.VERCEL,
+        vercelEnv: process.env.VERCEL_ENV,
       })
       // During build time, return a client without datasource override
       // It will fail at runtime if actually used, but allows build to succeed
       console.warn('[Prisma] Creating client without DATABASE_URL (will fail at runtime if used)')
+      console.warn('[Prisma] ⚠️  Set DATABASE_URL in Vercel: Settings → Environment Variables → Production')
       return new PrismaClient({ log: ['error'] })
+    }
+
+    // Check for problematic db.prisma.io URL
+    if (databaseUrl.includes('db.prisma.io')) {
+      console.error('[Prisma] ❌ CRITICAL: db.prisma.io is NOT publicly accessible!')
+      console.error('[Prisma] This URL will cause all database queries to fail.')
+      console.error('[Prisma] ✅ SOLUTION: Use Prisma Accelerate URL instead:')
+      console.error('[Prisma]    DATABASE_URL="prisma://accelerate.prisma-data.net/?api_key=..."')
+      throw new Error('Invalid DATABASE_URL: db.prisma.io is not accessible')
     }
 
     const usesAccelerate = databaseUrl.startsWith('prisma://') || databaseUrl.startsWith('prisma+postgres://')
@@ -51,14 +65,14 @@ const createPrismaClient = (): PrismaClient => {
         log: logLevels,
       })
       const acceleratedClient = baseClient.$extends(withAccelerate()) as unknown as PrismaClient
-      console.log('[Prisma] Client initialized successfully with Accelerate')
+      console.log('[Prisma] ✅ Client initialized successfully with Accelerate')
       return acceleratedClient
     }
 
-    console.log('[Prisma] Client initialized successfully (direct connection)')
+    console.log('[Prisma] ✅ Client initialized successfully (direct connection)')
     return new PrismaClient({ log: logLevels })
   } catch (error) {
-    console.error('[Prisma] Failed to initialize client:', error)
+    console.error('[Prisma] ❌ Failed to initialize client:', error)
 
     const fallbackUrl = process.env.POSTGRES_URL
     const attemptedUrl = process.env.DATABASE_URL
@@ -76,7 +90,8 @@ const createPrismaClient = (): PrismaClient => {
     }
 
     // Return a basic client for build time - it will fail at runtime if used without proper config
-    console.warn('[Prisma] Returning basic client (will fail at runtime if DATABASE_URL not set)')
+    console.error('[Prisma] ⚠️  Returning basic client (will fail at runtime if DATABASE_URL not set)')
+    console.error('[Prisma] 📋 Run diagnostic: node scripts/diagnose-db-connection.js')
     return new PrismaClient({ log: ['error'] })
   }
 }
