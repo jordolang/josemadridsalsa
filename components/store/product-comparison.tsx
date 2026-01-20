@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useComparisonStore } from '@/lib/store/comparison'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { X, ShoppingCart } from 'lucide-react'
+import { X, ShoppingCart, Share2 } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -36,6 +36,21 @@ export function ProductComparison() {
       maxQuantity: product.inventory,
     })
     toast.success(`Added ${product.name} to cart`)
+  }
+
+  const handleShare = async () => {
+    try {
+      // Generate shareable URL with product IDs
+      const productIds = products.map(p => p.id).join(',')
+      const baseUrl = window.location.origin
+      const shareUrl = `${baseUrl}/salsas?compare=${productIds}`
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(shareUrl)
+      toast.success('Comparison link copied to clipboard!')
+    } catch (error) {
+      toast.error('Failed to copy link')
+    }
   }
 
   const getHeatLevelColor = (level: string) => {
@@ -84,6 +99,10 @@ export function ProductComparison() {
           Compare Products ({products.length}/{4})
         </h3>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleShare}>
+            <Share2 className="w-4 h-4 mr-2" />
+            Share
+          </Button>
           <Button variant="outline" size="sm" onClick={clearComparison}>
             Clear All
           </Button>
