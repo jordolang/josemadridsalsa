@@ -34,6 +34,9 @@ interface Product {
   sku: string
   inventory: number
   isFeatured: boolean
+  ingredients?: string[]
+  weight?: string | null
+  dimensions?: string | null
 }
 
 interface ProductCardProps {
@@ -100,6 +103,9 @@ export function ProductCard({ product }: ProductCardProps) {
         sku: product.sku,
         description: product.description,
         inventory: product.inventory,
+        ingredients: product.ingredients || null,
+        weight: product.weight || null,
+        dimensions: product.dimensions || null,
       })
       toast.success('Added to comparison')
       openPanel()
