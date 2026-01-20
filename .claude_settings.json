@@ -1,0 +1,34 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read(./**)",
+      "Write(./**)",
+      "Edit(./**)",
+      "Glob(./**)",
+      "Grep(./**)",
+      "Read(/Users/jordanlang/Repos/josemadridsalsa/**)",
+      "Write(/Users/jordanlang/Repos/josemadridsalsa/**)",
+      "Edit(/Users/jordanlang/Repos/josemadridsalsa/**)",
+      "Glob(/Users/jordanlang/Repos/josemadridsalsa/**)",
+      "Grep(/Users/jordanlang/Repos/josemadridsalsa/**)",
+      "Read(/Users/jordanlang/Repos/josemadridsalsa/.auto-claude/ideation/**)",
+      "Write(/Users/jordanlang/Repos/josemadridsalsa/.auto-claude/ideation/**)",
+      "Edit(/Users/jordanlang/Repos/josemadridsalsa/.auto-claude/ideation/**)",
+      "Bash(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "mcp__context7__resolve-library-id(*)",
+      "mcp__context7__get-library-docs(*)",
+      "mcp__graphiti-memory__search_nodes(*)",
+      "mcp__graphiti-memory__search_facts(*)",
+      "mcp__graphiti-memory__add_episode(*)",
+      "mcp__graphiti-memory__get_episodes(*)",
+      "mcp__graphiti-memory__get_entity_edge(*)"
+    ]
+  }
+}

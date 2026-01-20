@@ -1,0 +1,40 @@
+{
+  "existing_features": [],
+  "tech_stack": [
+    "Next.js",
+    "TypeScript"
+  ],
+  "target_audience": "Gourmet salsa enthusiasts and food lovers seeking premium, artisan salsa products made with quality ingredients",
+  "planned_features": [
+    "Salsa Heat Preference Quiz",
+    "SMTP Password Encryption",
+    "Enhanced Heat Level Discovery",
+    "Mobile App",
+    "Loyalty Rewards Program",
+    "Corporate & Events Portal",
+    "Tax Exemption System",
+    "Enhanced Fundraising Portal",
+    "Wholesale Portal Improvements",
+    "Product Comparison Tool",
+    "Subscription Program",
+    "Shipping Cost Calculator",
+    "Ingredient Sourcing Stories",
+    "Referral Program",
+    "Custom Gift Bundle Builder"
+  ],
+  "graph_hints": {},
+  "config": {
+    "enabled_types": [
+      "code_improvements",
+      "ui_ux_improvements",
+      "security_hardening",
+      "documentation_gaps",
+      "performance_optimizations",
+      "code_quality"
+    ],
+    "include_roadmap_context": true,
+    "include_kanban_context": true,
+    "max_ideas_per_type": 5
+  },
+  "created_at": "2026-01-20T04:33:47.192065"
+}

@@ -39,6 +39,8 @@ function SignInFormInner() {
         callbackUrl,
       })
 
+      console.log('Sign in result:', result)
+
       if (result?.error) {
         // Provide more specific error messages
         if (result.error === 'CredentialsSignin') {

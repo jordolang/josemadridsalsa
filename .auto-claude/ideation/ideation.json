@@ -1,0 +1,50 @@
+{
+  "id": "ideation-20260120-043437",
+  "project_id": "/Users/jordanlang/Repos/josemadridsalsa",
+  "config": {
+    "enabled_types": [
+      "code_improvements",
+      "ui_ux_improvements",
+      "security_hardening",
+      "documentation_gaps",
+      "performance_optimizations",
+      "code_quality"
+    ],
+    "include_roadmap_context": true,
+    "include_kanban_context": true,
+    "max_ideas_per_type": 5
+  },
+  "ideas": [],
+  "project_context": {
+    "existing_features": [],
+    "tech_stack": [
+      "Next.js",
+      "TypeScript"
+    ],
+    "target_audience": "Gourmet salsa enthusiasts and food lovers seeking premium, artisan salsa products made with quality ingredients",
+    "planned_features": [
+      "Salsa Heat Preference Quiz",
+      "SMTP Password Encryption",
+      "Enhanced Heat Level Discovery",
+      "Mobile App",
+      "Loyalty Rewards Program",
+      "Corporate & Events Portal",
+      "Tax Exemption System",
+      "Enhanced Fundraising Portal",
+      "Wholesale Portal Improvements",
+      "Product Comparison Tool",
+      "Subscription Program",
+      "Shipping Cost Calculator",
+      "Ingredient Sourcing Stories",
+      "Referral Program",
+      "Custom Gift Bundle Builder"
+    ]
+  },
+  "summary": {
+    "total_ideas": 0,
+    "by_type": {},
+    "by_status": {}
+  },
+  "generated_at": "2026-01-20T04:34:37.752765",
+  "updated_at": "2026-01-20T04:34:37.752803"
+}
