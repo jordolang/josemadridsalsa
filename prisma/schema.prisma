@@ -1087,9 +1087,26 @@ model EmailTemplate {
   
   // Relations
   campaigns EmailCampaign[]
-
+  compositions EmailTemplateComposition[]
   
   @@map("email_templates")
+}
+
+model EmailTemplateComposition {
+  id          String         @id @default(cuid())
+  templateId  String
+  template    EmailTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  
+  // Composition data
+  blocks       Json           // Array of email blocks
+  globalStyles Json?          // Global styling configuration
+  version      Int            @default(1)
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  @@unique([templateId])
+  @@map("email_template_compositions")
 }
 
 model EmailConfiguration {

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Decimal } from '@prisma/client/runtime/library'
 import { validateDiscountCode, recordDiscountUsage } from '@/lib/discounts'
 
 // Mock Prisma
@@ -41,7 +42,7 @@ describe('Discount Code Validation', () => {
         code: 'TEST10',
         description: 'Test discount',
         type: 'PERCENTAGE',
-        value: 10,
+        value: new Decimal(10),
         maxUses: null,
         usedCount: 0,
         maxUsesPerUser: null,
@@ -52,7 +53,6 @@ describe('Discount Code Validation', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         createdById: null,
-        usages: [],
       })
 
       const result = await validateDiscountCode('TEST10', 100)
@@ -70,7 +70,7 @@ describe('Discount Code Validation', () => {
         code: 'TEST10',
         description: 'Test discount',
         type: 'PERCENTAGE',
-        value: 10,
+        value: new Decimal(10),
         maxUses: null,
         usedCount: 0,
         maxUsesPerUser: null,
@@ -81,7 +81,6 @@ describe('Discount Code Validation', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         createdById: null,
-        usages: [],
       })
 
       const result = await validateDiscountCode('TEST10', 100)
@@ -97,18 +96,17 @@ describe('Discount Code Validation', () => {
         code: 'TEST10',
         description: 'Test discount',
         type: 'PERCENTAGE',
-        value: 10,
+        value: new Decimal(10),
         maxUses: null,
         usedCount: 0,
         maxUsesPerUser: null,
-        minPurchase: 50,
+         minPurchase: new Decimal(50),
         startsAt: null,
         expiresAt: null,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
         createdById: null,
-        usages: [],
       })
 
       const result = await validateDiscountCode('TEST10', 25)
@@ -124,7 +122,7 @@ describe('Discount Code Validation', () => {
         code: 'TEST10',
         description: 'Test discount',
         type: 'PERCENTAGE',
-        value: 10,
+        value: new Decimal(10),
         maxUses: null,
         usedCount: 0,
         maxUsesPerUser: null,
@@ -135,7 +133,6 @@ describe('Discount Code Validation', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         createdById: null,
-        usages: [],
       })
 
       const result = await validateDiscountCode('TEST10', 100)
@@ -151,7 +148,7 @@ describe('Discount Code Validation', () => {
         code: 'SAVE20',
         description: 'Test discount',
         type: 'FIXED_AMOUNT',
-        value: 20,
+        value: new Decimal(20),
         maxUses: null,
         usedCount: 0,
         maxUsesPerUser: null,
@@ -162,7 +159,6 @@ describe('Discount Code Validation', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         createdById: null,
-        usages: [],
       })
 
       const result = await validateDiscountCode('SAVE20', 100)
@@ -178,7 +174,7 @@ describe('Discount Code Validation', () => {
         code: 'SAVE20',
         description: 'Test discount',
         type: 'FIXED_AMOUNT',
-        value: 20,
+        value: new Decimal(20),
         maxUses: null,
         usedCount: 0,
         maxUsesPerUser: null,
@@ -189,7 +185,6 @@ describe('Discount Code Validation', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         createdById: null,
-        usages: [],
       })
 
       const result = await validateDiscountCode('SAVE20', 15)
@@ -205,7 +200,7 @@ describe('Discount Code Validation', () => {
         code: 'LIMITED',
         description: 'Test discount',
         type: 'PERCENTAGE',
-        value: 10,
+        value: new Decimal(10),
         maxUses: 100,
         usedCount: 100,
         maxUsesPerUser: null,
@@ -216,7 +211,6 @@ describe('Discount Code Validation', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         createdById: null,
-        usages: [],
       })
 
       const result = await validateDiscountCode('LIMITED', 100)
