@@ -267,6 +267,8 @@
       "db:production:sync",
       "db:production:seed",
       "db:production:pull-env",
+      "db:diagnose",
+      "vercel:setup-env",
       "create-admin",
       "clean",
       "fresh",
@@ -286,6 +288,7 @@
     "shell_scripts": []
   },
   "project_dir": "/Users/jordanlang/Repos/josemadridsalsa",
-  "created_at": "2026-01-20T04:25:05.494984",
-  "project_hash": "ac2948fef031f0b197c36970c5e469c3"
+  "created_at": "2026-01-20T08:37:22.468885",
+  "project_hash": "3abd3869dac448c2b65b9a25f6581969",
+  "inherited_from": "/Users/jordanlang/Repos/josemadridsalsa"
 }

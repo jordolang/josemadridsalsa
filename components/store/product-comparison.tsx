@@ -155,9 +155,59 @@ export function ProductComparison() {
               ))}
             </tr>
 
-            {/* Availability */}
+            {/* Ingredients */}
             <tr className="border-b bg-gray-50">
-              <td className="p-4 font-semibold sticky left-0 bg-gray-50">Availability</td>
+              <td className="p-4 font-semibold sticky left-0 bg-gray-50">Ingredients</td>
+              {products.map(product => (
+                <td key={product.id} className="p-4">
+                  {product.ingredients && product.ingredients.length > 0 ? (
+                    <p className="text-sm text-gray-600">
+                      {product.ingredients.join(', ')}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">Not available</p>
+                  )}
+                </td>
+              ))}
+            </tr>
+
+            {/* Weight/Size */}
+            <tr className="border-b">
+              <td className="p-4 font-semibold sticky left-0 bg-white">Weight/Size</td>
+              {products.map(product => (
+                <td key={product.id} className="p-4">
+                  <div className="text-sm text-gray-600">
+                    {product.weight && (
+                      <div className="mb-1">
+                        <span className="font-medium">Weight:</span> {product.weight}
+                      </div>
+                    )}
+                    {product.dimensions && (
+                      <div>
+                        <span className="font-medium">Dimensions:</span> {product.dimensions}
+                      </div>
+                    )}
+                    {!product.weight && !product.dimensions && (
+                      <p className="text-gray-400 italic">Not available</p>
+                    )}
+                  </div>
+                </td>
+              ))}
+            </tr>
+
+            {/* Ratings */}
+            <tr className="border-b bg-gray-50">
+              <td className="p-4 font-semibold sticky left-0 bg-gray-50">Ratings</td>
+              {products.map(product => (
+                <td key={product.id} className="p-4">
+                  <p className="text-sm text-gray-400 italic">Coming soon</p>
+                </td>
+              ))}
+            </tr>
+
+            {/* Availability */}
+            <tr className="border-b">
+              <td className="p-4 font-semibold sticky left-0 bg-white">Availability</td>
               {products.map(product => (
                 <td key={product.id} className="p-4">
                   {product.inventory > 0 ? (

@@ -75,3 +75,6 @@ docs/backstage/
 # TypeScript Build Info File
 tsconfig.tsbuildinfo
 *. tsbuildinfo
+
+# Auto Claude data directory
+.auto-claude/
