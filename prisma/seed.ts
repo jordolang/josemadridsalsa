@@ -563,6 +563,78 @@ async function main() {
 
   console.log('✅ Created users and addresses')
 
+  // Create sample retail locations
+  const sampleLocations = [
+    {
+      businessName: 'Giant Eagle',
+      address: '123 Main St',
+      city: 'Columbus',
+      state: 'OH',
+      zipCode: '43215',
+      phone: '614-555-0123',
+      website: 'https://www.gianteagle.com',
+      latitude: 39.9612,
+      longitude: -82.9988,
+      isActive: true,
+    },
+    {
+      businessName: 'Kroger',
+      address: '456 Oak Ave',
+      city: 'Cleveland',
+      state: 'OH',
+      zipCode: '44114',
+      phone: '216-555-0456',
+      website: 'https://www.kroger.com',
+      latitude: 41.4993,
+      longitude: -81.6944,
+      isActive: true,
+    },
+    {
+      businessName: 'Walmart Supercenter',
+      address: '789 Elm St',
+      city: 'Cincinnati',
+      state: 'OH',
+      zipCode: '45202',
+      phone: '513-555-0789',
+      website: 'https://www.walmart.com',
+      latitude: 39.1031,
+      longitude: -84.5120,
+      isActive: true,
+    },
+    {
+      businessName: 'Meijer',
+      address: '321 Pine Rd',
+      city: 'Toledo',
+      state: 'OH',
+      zipCode: '43604',
+      phone: '419-555-0321',
+      website: 'https://www.meijer.com',
+      latitude: 41.6528,
+      longitude: -83.5379,
+      isActive: true,
+    },
+    {
+      businessName: 'Aldi',
+      address: '654 Maple Ln',
+      city: 'Akron',
+      state: 'OH',
+      zipCode: '44308',
+      phone: '330-555-0654',
+      website: 'https://www.aldi.us',
+      latitude: 41.0814,
+      longitude: -81.5190,
+      isActive: true,
+    },
+  ]
+
+  for (const locationData of sampleLocations) {
+    await prisma.retailLocation.create({
+      data: locationData,
+    })
+  }
+
+  console.log('✅ Created sample retail locations')
+
   // Create sample fundraiser
   await prisma.fundraiser.create({
     data: {
