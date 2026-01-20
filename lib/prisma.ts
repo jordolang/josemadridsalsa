@@ -49,15 +49,6 @@ const createPrismaClient = (): PrismaClient => {
       return new PrismaClient({ log: ['error'] })
     }
 
-    // Check for problematic db.prisma.io URL
-    if (databaseUrl.includes('db.prisma.io')) {
-      console.error('[Prisma] ❌ CRITICAL: db.prisma.io is NOT publicly accessible!')
-      console.error('[Prisma] This URL will cause all database queries to fail.')
-      console.error('[Prisma] ✅ SOLUTION: Use Prisma Accelerate URL instead:')
-      console.error('[Prisma]    DATABASE_URL="prisma://accelerate.prisma-data.net/?api_key=..."')
-      throw new Error('Invalid DATABASE_URL: db.prisma.io is not accessible')
-    }
-
     const usesAccelerate = databaseUrl.startsWith('prisma://') || databaseUrl.startsWith('prisma+postgres://')
 
     if (usesAccelerate) {
