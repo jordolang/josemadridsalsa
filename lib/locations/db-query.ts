@@ -91,6 +91,7 @@ function transformLocation(
  * Get all active locations from database
  */
 export async function getAllLocationsFromDB(): Promise<RetailLocationRecord[]> {
+  console.log('[getAllLocationsFromDB] Starting query...')
   const locations = await prisma.retailLocation.findMany({
     where: {
       isActive: true,
@@ -108,6 +109,7 @@ export async function getAllLocationsFromDB(): Promise<RetailLocationRecord[]> {
       { businessName: 'asc' },
     ],
   })
+  console.log('[getAllLocationsFromDB] Found', locations.length, 'locations')
 
   return locations.map((loc) => transformLocation(loc))
 }
