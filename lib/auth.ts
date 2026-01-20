@@ -93,6 +93,11 @@ export const authOptions: NextAuthOptions = {
             }
           })
 
+          console.log('User found:', !!user)
+          if (user) {
+            console.log('Password match:', await bcrypt.compare(credentials.password, user.password))
+          }
+
           if (!user) {
             console.error('[Auth] User not found:', normalizedEmail)
             return null
