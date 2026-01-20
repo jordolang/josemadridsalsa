@@ -1087,7 +1087,7 @@ model EmailTemplate {
   
   // Relations
   campaigns EmailCampaign[]
-  composition EmailTemplateComposition?
+
   
   @@map("email_templates")
 }
@@ -2029,17 +2029,4 @@ enum InventoryAlertStatus {
   ACKNOWLEDGED      // Alert has been seen
   RESOLVED          // Stock level corrected
   DISMISSED         // Alert dismissed without action
-}
-
-model EmailTemplateComposition {
-  id           String        @id @default(cuid())
-  templateId   String        @unique
-  template     EmailTemplate @relation(fields: [templateId], references: [id])
-  blocks       Json
-  globalStyles Json?
-  version      Int           @default(1)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
-  @@map("email_template_compositions")
 }
