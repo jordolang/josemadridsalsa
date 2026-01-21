@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2, Search } from 'lucide-react'
-import { ProductCard } from '@/components/store/product-card'
+import { ProductCard, type Product } from '@/components/store/product-card'
 import { formatPrice, getHeatLevelText } from '@/lib/utils'
 
 // Simple debounce implementation
@@ -22,24 +22,7 @@ function debounce<T extends (...args: any[]) => any>(
   }
 }
 
-type Product = {
-  id: string
-  name: string
-  slug: string
-  description: string
-  price: number
-  compareAtPrice?: number
-  featuredImage: string
-  heatLevel: string
-  sku: string
-  inventory: number
-  isFeatured: boolean
-  category?: {
-    id: string
-    name: string
-    slug: string
-  } | null
-}
+
 
 type SearchSuggestion = {
   name: string

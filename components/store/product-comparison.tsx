@@ -155,6 +155,30 @@ export function ProductComparison() {
               ))}
             </tr>
 
+            {/* Ingredients */}
+            <tr className="border-b">
+              <td className="p-4 font-semibold sticky left-0 bg-white align-top">
+                Ingredients
+              </td>
+              {products.map(product => (
+                <td key={product.id} className="p-4">
+                  <div className="flex flex-wrap gap-1">
+                    {Array.isArray(product.ingredients) &&
+                    product.ingredients.length > 0 ? (
+                      (product.ingredients as string[]).map((ingredient: string, idx: number) => (
+                        <span key={idx} className="text-sm text-gray-600">
+                          {ingredient}
+                          {idx < (product.ingredients as string[]).length - 1 ? ',' : ''}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-gray-500">Not available</span>
+                    )}
+                  </div>
+                </td>
+              ))}
+            </tr>
+
             {/* Availability */}
             <tr className="border-b bg-gray-50">
               <td className="p-4 font-semibold sticky left-0 bg-gray-50">Availability</td>

@@ -11,6 +11,7 @@ export interface ComparisonProduct {
   sku: string
   description: string | null
   inventory: number
+  ingredients: string[] | null
 }
 
 interface ComparisonStore {

@@ -105,6 +105,7 @@ export function ProductRecommendations({
               sku: product.sku,
               inventory: product.inventory,
               isFeatured: false,
+              ingredients: null,
             }}
           />
         ))}

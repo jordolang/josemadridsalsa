@@ -4,22 +4,8 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2 } from 'lucide-react'
-import { ProductCard } from '@/components/store/product-card'
+import { ProductCard, type Product } from '@/components/store/product-card'
 import { GiftBoxQuickAdd } from '@/components/store/gift-box-quick-add'
-
-type Product = {
-  id: string
-  name: string
-  slug: string
-  description: string
-  price: number
-  compareAtPrice?: number
-  featuredImage: string
-  heatLevel: string
-  sku: string
-  inventory: number
-  isFeatured: boolean
-}
 
 const heatLevels = [
   { value: 'all', label: 'All Heat Levels' },
@@ -58,9 +44,12 @@ export default function ProductsPage() {
 
   // Filter products based on search and heat level
   const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesHeatLevel = selectedHeatLevel === 'all' || product.heatLevel === selectedHeatLevel
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.description &&
+        product.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesHeatLevel =
+      selectedHeatLevel === 'all' || product.heatLevel === selectedHeatLevel
     return matchesSearch && matchesHeatLevel
   })
 

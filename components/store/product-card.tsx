@@ -22,7 +22,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
-interface Product {
+export interface Product {
   id: string
   name: string
   slug: string
@@ -34,6 +34,7 @@ interface Product {
   sku: string
   inventory: number
   isFeatured: boolean
+  ingredients: string[] | null
 }
 
 interface ProductCardProps {
@@ -100,6 +101,7 @@ export function ProductCard({ product }: ProductCardProps) {
         sku: product.sku,
         description: product.description,
         inventory: product.inventory,
+        ingredients: product.ingredients,
       })
       toast.success('Added to comparison')
       openPanel()

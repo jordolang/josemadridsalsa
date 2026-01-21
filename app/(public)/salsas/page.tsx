@@ -4,21 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2 } from 'lucide-react'
-import { ProductCard } from '@/components/store/product-card'
-
-type Salsa = {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  price: number
-  compareAtPrice?: number | null
-  featuredImage: string | null
-  heatLevel: string
-  sku: string
-  inventory: number
-  isFeatured: boolean
-}
+import { ProductCard, type Product } from '@/components/store/product-card'
 
 const heatLevels = [
   { value: 'all', label: 'All Heat Levels' },
@@ -30,7 +16,7 @@ const heatLevels = [
 ]
 
 export default function SalsasPage() {
-  const [salsas, setSalsas] = useState<Salsa[]>([])
+  const [salsas, setSalsas] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedHeatLevel, setSelectedHeatLevel] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
@@ -58,7 +44,7 @@ export default function SalsasPage() {
     const normalizedSearch = searchTerm.toLowerCase()
     const matchesSearch =
       salsa.name.toLowerCase().includes(normalizedSearch) ||
-      (salsa.description?.toLowerCase() ?? '').includes(normalizedSearch)
+      (salsa.description && salsa.description.toLowerCase().includes(normalizedSearch))
     const matchesHeatLevel = selectedHeatLevel === 'all' || salsa.heatLevel === selectedHeatLevel
     return matchesSearch && matchesHeatLevel
   })
