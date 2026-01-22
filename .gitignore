@@ -55,6 +55,7 @@ josemadridsalsa/
 
 # Data files
 data/
+public/location-photos.json
 
 # Examples and docs
 examples/
@@ -75,3 +76,19 @@ docs/backstage/
 # TypeScript Build Info File
 tsconfig.tsbuildinfo
 *. tsbuildinfo
+.gemini/
+gha-creds-*.json
+
+# Auto-Claude
+.auto-claude/
+
+# Project Analysis
+.project-analysis/
+
+# Logs
+logs/
+.auto-claude/
+.project-analysis/
+logs/
+public/location-photos.json
+.DS_Store
