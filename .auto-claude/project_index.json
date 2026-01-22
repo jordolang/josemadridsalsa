@@ -126,7 +126,7 @@
           "GOOGLE_PLACES_API_KEY": {
             "value": "<REDACTED>",
             "source": ".env.local",
-            "type": "string",
+            "type": "path",
             "sensitive": true,
             "required": true
           },
@@ -396,26 +396,215 @@
             "sensitive": true,
             "required": false
           },
-          "ANTHROPIC_API_KEY": {
+          "CRON_SECRET": {
             "value": "<REDACTED>",
             "source": ".env.local",
-            "type": "string",
+            "type": "path",
+            "sensitive": true,
+            "required": false
+          },
+          "DATABASE_URL_UNPOOLED": {
+            "value": "postgresql://neondb_owner:npg_suRSly1DjCn8@ep-holy-leaf-ahscccxe.c-3.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require",
+            "source": ".env.local",
+            "type": "url",
+            "sensitive": false,
+            "required": false
+          },
+          "NEXTAUTH_URL": {
+            "value": "<REDACTED>",
+            "source": ".env.local",
+            "type": "url",
             "sensitive": true,
             "required": true
           },
-          "CRON_SECRET": {
+          "NEXT_PUBLIC_SENTRY_DSN": {
+            "value": "https://98b04ae9086c6cb3b8136686e088d957@o4509068102139904.ingest.us.sentry.io/4510733629587456",
+            "source": ".env.local",
+            "type": "url",
+            "sensitive": false,
+            "required": false
+          },
+          "NX_DAEMON": {
+            "value": "false",
+            "source": ".env.local",
+            "type": "boolean",
+            "sensitive": false,
+            "required": false
+          },
+          "SENTRY_AUTH_TOKEN": {
             "value": "<REDACTED>",
             "source": ".env.local",
             "type": "string",
             "sensitive": true,
             "required": false
           },
-          "NEXTAUTH_URL": {
-            "value": null,
-            "source": ".env.example",
+          "SENTRY_ORG": {
+            "value": "josemadridsalsa",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "SENTRY_OTLP_TRACES_URL": {
+            "value": "https://o4509068102139904.ingest.us.sentry.io/api/4510733629587456/integration/otlp/v1/traces",
+            "source": ".env.local",
+            "type": "url",
+            "sensitive": false,
+            "required": false
+          },
+          "SENTRY_PROJECT": {
+            "value": "javascript-nextjs",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "SENTRY_PUBLIC_KEY": {
+            "value": "<REDACTED>",
+            "source": ".env.local",
             "type": "string",
             "sensitive": true,
-            "required": true
+            "required": false
+          },
+          "SENTRY_VERCEL_LOG_DRAIN_URL": {
+            "value": "https://o4509068102139904.ingest.us.sentry.io/api/4510733629587456/integration/vercel/logs/",
+            "source": ".env.local",
+            "type": "url",
+            "sensitive": false,
+            "required": false
+          },
+          "TURBO_CACHE": {
+            "value": "remote:rw",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "TURBO_DOWNLOAD_LOCAL_ENABLED": {
+            "value": "true",
+            "source": ".env.local",
+            "type": "boolean",
+            "sensitive": false,
+            "required": false
+          },
+          "TURBO_REMOTE_ONLY": {
+            "value": "true",
+            "source": ".env.local",
+            "type": "boolean",
+            "sensitive": false,
+            "required": false
+          },
+          "TURBO_RUN_SUMMARY": {
+            "value": "true",
+            "source": ".env.local",
+            "type": "boolean",
+            "sensitive": false,
+            "required": false
+          },
+          "VERCEL": {
+            "value": "1",
+            "source": ".env.local",
+            "type": "boolean",
+            "sensitive": false,
+            "required": false
+          },
+          "VERCEL_ENV": {
+            "value": "production",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "VERCEL_GIT_COMMIT_AUTHOR_LOGIN": {
+            "value": "<REDACTED>",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": true,
+            "required": false
+          },
+          "VERCEL_GIT_COMMIT_AUTHOR_NAME": {
+            "value": "<REDACTED>",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": true,
+            "required": false
+          },
+          "VERCEL_GIT_COMMIT_MESSAGE": {
+            "value": "",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "VERCEL_GIT_COMMIT_REF": {
+            "value": "",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "VERCEL_GIT_COMMIT_SHA": {
+            "value": "",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "VERCEL_GIT_PREVIOUS_SHA": {
+            "value": "",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "VERCEL_GIT_PROVIDER": {
+            "value": "",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "VERCEL_GIT_PULL_REQUEST_ID": {
+            "value": "",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "VERCEL_GIT_REPO_ID": {
+            "value": "",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "VERCEL_GIT_REPO_OWNER": {
+            "value": "",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "VERCEL_GIT_REPO_SLUG": {
+            "value": "",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "VERCEL_TARGET_ENV": {
+            "value": "production",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "VERCEL_URL": {
+            "value": "",
+            "source": ".env.local",
+            "type": "string",
+            "sensitive": false,
+            "required": false
           },
           "GOOGLE_PLACE_ID": {
             "value": null,
@@ -438,7 +627,35 @@
             "sensitive": false,
             "required": true
           },
+          "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": true,
+            "required": true
+          },
+          "GOOGLE_CALENDAR_ID": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": false,
+            "required": true
+          },
+          "GOOGLE_CALENDAR_IMPERSONATED_USER": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": false,
+            "required": true
+          },
           "NEXT_PUBLIC_AMPLITUDE_API_KEY": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": true,
+            "required": true
+          },
+          "ANTHROPIC_API_KEY": {
             "value": null,
             "source": ".env.example",
             "type": "string",
@@ -446,9 +663,9 @@
             "required": true
           }
         },
-        "required_count": 25,
+        "required_count": 28,
         "optional_count": 0,
-        "detected_count": 53
+        "detected_count": 84
       },
       "database": {
         "models": {
@@ -4014,6 +4231,79 @@
             "file": "prisma/schema.prisma",
             "orm": "Prisma"
           },
+          "EmailTemplateComposition": {
+            "table": "emailtemplatecomposition",
+            "fields": {
+              "id": {
+                "type": "String",
+                "primary_key": true,
+                "unique": false,
+                "nullable": false
+              },
+              "templateId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "template": {
+                "type": "EmailTemplate",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Composition": {
+                "type": "data",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "blocks": {
+                "type": "Json",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Array": {
+                "type": "of",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "globalStyles": {
+                "type": "Json",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Global": {
+                "type": "styling",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "version": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "createdAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "updatedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              }
+            },
+            "file": "prisma/schema.prisma",
+            "orm": "Prisma"
+          },
           "EmailConfiguration": {
             "table": "emailconfiguration",
             "fields": {
@@ -6362,61 +6652,6 @@
             },
             "file": "prisma/schema.prisma",
             "orm": "Prisma"
-          },
-          "EmailTemplateComposition": {
-            "table": "emailtemplatecomposition",
-            "fields": {
-              "id": {
-                "type": "String",
-                "primary_key": true,
-                "unique": false,
-                "nullable": false
-              },
-              "templateId": {
-                "type": "String",
-                "primary_key": false,
-                "unique": true,
-                "nullable": false
-              },
-              "template": {
-                "type": "EmailTemplate",
-                "primary_key": false,
-                "unique": false,
-                "nullable": false
-              },
-              "blocks": {
-                "type": "Json",
-                "primary_key": false,
-                "unique": false,
-                "nullable": false
-              },
-              "globalStyles": {
-                "type": "Json",
-                "primary_key": false,
-                "unique": false,
-                "nullable": false
-              },
-              "version": {
-                "type": "Int",
-                "primary_key": false,
-                "unique": false,
-                "nullable": false
-              },
-              "createdAt": {
-                "type": "DateTime",
-                "primary_key": false,
-                "unique": false,
-                "nullable": false
-              },
-              "updatedAt": {
-                "type": "DateTime",
-                "primary_key": false,
-                "unique": false,
-                "nullable": false
-              }
-            },
-            "file": "prisma/schema.prisma",
-            "orm": "Prisma"
           }
         },
         "total_models": 68,
@@ -6461,6 +6696,7 @@
           "FormTemplate",
           "FormTemplateVersion",
           "EmailTemplate",
+          "EmailTemplateComposition",
           "EmailConfiguration",
           "EmailCampaign",
           "EmailRecipient",
@@ -6487,8 +6723,7 @@
           "ThirdPartyIntegration",
           "OrderNotificationRule",
           "InventoryTransaction",
-          "InventoryAlert",
-          "EmailTemplateComposition"
+          "InventoryAlert"
         ]
       },
       "services": {

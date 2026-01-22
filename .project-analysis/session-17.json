@@ -6,15 +6,15 @@
   "tasks": [
     {
       "taskNumber": 1,
-      "title": "Complete API Route: app/api/forms/route.ts",
-      "description": "Add missing features to app/api/forms/route.ts. Issues: Missing authentication check, No tests found",
+      "title": "Complete API Route: app/api/calendar/route.ts",
+      "description": "Add missing features to app/api/calendar/route.ts. Issues: Missing authentication check, No tests found",
       "priority": "medium",
       "estimatedHours": 1.5,
       "files": [
-        "app/api/forms/route.ts"
+        "app/api/calendar/route.ts"
       ],
       "dependencies": [],
-      "instructions": "## Complete API Route: app/api/forms/route.ts\n\n### Current Status\n- **Completion:** 75%\n- **Methods:** GET, POST\n- **Issues:** Missing authentication check, No tests found\n\n### Tasks\n- Add authentication check (getCurrentUser or requirePermission)\n\n\n\n- Write API tests\n\n### Implementation\n1. Review similar API routes for patterns\n2. Add missing functionality from issues list\n3. Test all HTTP methods\n4. Verify error handling\n5. Check performance (<500ms response time)\n",
+      "instructions": "## Complete API Route: app/api/calendar/route.ts\n\n### Current Status\n- **Completion:** 70%\n- **Methods:** GET\n- **Issues:** Missing authentication check, No tests found\n\n### Tasks\n- Add authentication check (getCurrentUser or requirePermission)\n\n\n- Add audit logging for mutations\n- Write API tests\n\n### Implementation\n1. Review similar API routes for patterns\n2. Add missing functionality from issues list\n3. Test all HTTP methods\n4. Verify error handling\n5. Check performance (<500ms response time)\n",
       "testing": {
         "functional": [
           "All HTTP methods work",
@@ -29,15 +29,15 @@
     },
     {
       "taskNumber": 2,
-      "title": "Complete API Route: app/api/image-proxy/route.ts",
-      "description": "Add missing features to app/api/image-proxy/route.ts. Issues: Missing authentication check, No tests found",
+      "title": "Complete API Route: app/api/forms/route.ts",
+      "description": "Add missing features to app/api/forms/route.ts. Issues: Missing authentication check, No tests found",
       "priority": "medium",
       "estimatedHours": 1.5,
       "files": [
-        "app/api/image-proxy/route.ts"
+        "app/api/forms/route.ts"
       ],
       "dependencies": [],
-      "instructions": "## Complete API Route: app/api/image-proxy/route.ts\n\n### Current Status\n- **Completion:** 70%\n- **Methods:** GET\n- **Issues:** Missing authentication check, No tests found\n\n### Tasks\n- Add authentication check (getCurrentUser or requirePermission)\n\n\n- Add audit logging for mutations\n- Write API tests\n\n### Implementation\n1. Review similar API routes for patterns\n2. Add missing functionality from issues list\n3. Test all HTTP methods\n4. Verify error handling\n5. Check performance (<500ms response time)\n",
+      "instructions": "## Complete API Route: app/api/forms/route.ts\n\n### Current Status\n- **Completion:** 75%\n- **Methods:** GET, POST\n- **Issues:** Missing authentication check, No tests found\n\n### Tasks\n- Add authentication check (getCurrentUser or requirePermission)\n\n\n\n- Write API tests\n\n### Implementation\n1. Review similar API routes for patterns\n2. Add missing functionality from issues list\n3. Test all HTTP methods\n4. Verify error handling\n5. Check performance (<500ms response time)\n",
       "testing": {
         "functional": [
           "All HTTP methods work",
@@ -78,6 +78,6 @@
     "totalHours": 4.5,
     "expectedProgress": 4,
     "tasksToComplete": 3,
-    "projectedCompletion": 73
+    "projectedCompletion": 72
   }
 }

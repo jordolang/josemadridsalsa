@@ -1,33 +1,17 @@
 {
   "version": "1.0.0",
-  "timestamp": "2026-01-16T10:00:01.840Z",
-  "runNumber": 13,
+  "timestamp": "2026-01-22T20:04:42.184Z",
+  "runNumber": 21,
   "overallCompletion": 79,
   "metrics": {
     "frontend": {
       "completion": 66,
-      "pagesTotal": 90,
+      "pagesTotal": 91,
       "pagesComplete": 26,
-      "pagesInProgress": 64,
+      "pagesInProgress": 65,
       "componentCount": 0,
       "typeScriptCoverage": 100,
       "pages": [
-        {
-          "name": "(public)",
-          "path": "app/(public)/page.tsx",
-          "exists": true,
-          "completion": 80,
-          "lineCount": 220,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": true,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
         {
           "name": "Admin",
           "path": "app/admin/page.tsx",
@@ -45,79 +29,11 @@
           ]
         },
         {
-          "name": "(public) Accessibility",
-          "path": "app/(public)/accessibility/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 124,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) About",
-          "path": "app/(public)/about/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 178,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Account",
-          "path": "app/(public)/account/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 110,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Bundles",
-          "path": "app/(public)/bundles/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 346,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Checkout",
-          "path": "app/(public)/checkout/page.tsx",
+          "name": "(public)",
+          "path": "app/(public)/page.tsx",
           "exists": true,
           "completion": 80,
-          "lineCount": 633,
+          "lineCount": 220,
           "hasContent": true,
           "hasTypeScript": true,
           "hasErrorHandling": true,
@@ -129,145 +45,28 @@
           ]
         },
         {
-          "name": "(public) Find-us",
-          "path": "app/(public)/find-us/page.tsx",
+          "name": "Auth Error",
+          "path": "app/auth/error/page.tsx",
           "exists": true,
-          "completion": 80,
-          "lineCount": 177,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": true,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Cookies",
-          "path": "app/(public)/cookies/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 128,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Forms",
-          "path": "app/(public)/forms/page.tsx",
-          "exists": true,
-          "completion": 80,
-          "lineCount": 200,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": true,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Fundraising",
-          "path": "app/(public)/fundraising/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 361,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Merchandise",
-          "path": "app/(public)/merchandise/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 188,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Our-story",
-          "path": "app/(public)/our-story/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 319,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Privacy",
-          "path": "app/(public)/privacy/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 106,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Recipes",
-          "path": "app/(public)/recipes/page.tsx",
-          "exists": true,
-          "completion": 60,
-          "lineCount": 43,
+          "completion": 55,
+          "lineCount": 82,
           "hasContent": false,
           "hasTypeScript": true,
-          "hasErrorHandling": true,
-          "hasLoadingState": false,
+          "hasErrorHandling": false,
+          "hasLoadingState": true,
           "hasTests": false,
           "issues": [
             "Page has minimal content (<100 LOC)",
-            "Missing loading state",
+            "Missing error handling/error boundary",
             "No tests found"
           ]
         },
         {
-          "name": "(public) Products",
-          "path": "app/(public)/products/page.tsx",
+          "name": "Auth Forgot-password",
+          "path": "app/auth/forgot-password/page.tsx",
           "exists": true,
           "completion": 90,
-          "lineCount": 155,
+          "lineCount": 125,
           "hasContent": true,
           "hasTypeScript": true,
           "hasErrorHandling": true,
@@ -278,11 +77,11 @@
           ]
         },
         {
-          "name": "(public) Salsas",
-          "path": "app/(public)/salsas/page.tsx",
+          "name": "Auth Reset-password",
+          "path": "app/auth/reset-password/page.tsx",
           "exists": true,
           "completion": 90,
-          "lineCount": 152,
+          "lineCount": 277,
           "hasContent": true,
           "hasTypeScript": true,
           "hasErrorHandling": true,
@@ -293,62 +92,26 @@
           ]
         },
         {
-          "name": "(public) Terms",
-          "path": "app/(public)/terms/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 101,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Where-is-jose",
-          "path": "app/(public)/where-is-jose/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 325,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Wholesale",
-          "path": "app/(public)/wholesale/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 324,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Wishlist",
-          "path": "app/(public)/wishlist/page.tsx",
+          "name": "Auth Signin",
+          "path": "app/auth/signin/page.tsx",
           "exists": true,
           "completion": 90,
-          "lineCount": 121,
+          "lineCount": 149,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": true,
+          "hasLoadingState": true,
+          "hasTests": false,
+          "issues": [
+            "No tests found"
+          ]
+        },
+        {
+          "name": "Auth Signup",
+          "path": "app/auth/signup/page.tsx",
+          "exists": true,
+          "completion": 90,
+          "lineCount": 201,
           "hasContent": true,
           "hasTypeScript": true,
           "hasErrorHandling": true,
@@ -477,6 +240,21 @@
           ]
         },
         {
+          "name": "Admin Events",
+          "path": "app/admin/events/page.tsx",
+          "exists": true,
+          "completion": 90,
+          "lineCount": 222,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": true,
+          "hasLoadingState": true,
+          "hasTests": false,
+          "issues": [
+            "No tests found"
+          ]
+        },
+        {
           "name": "Admin Financials",
           "path": "app/admin/financials/page.tsx",
           "exists": true,
@@ -490,21 +268,6 @@
           "issues": [
             "Missing error handling/error boundary",
             "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "Admin Events",
-          "path": "app/admin/events/page.tsx",
-          "exists": true,
-          "completion": 90,
-          "lineCount": 222,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": true,
-          "hasLoadingState": true,
-          "hasTests": false,
-          "issues": [
             "No tests found"
           ]
         },
@@ -543,6 +306,23 @@
           ]
         },
         {
+          "name": "Admin Gift-certificates",
+          "path": "app/admin/gift-certificates/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 274,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
           "name": "Admin Inventory",
           "path": "app/admin/inventory/page.tsx",
           "exists": true,
@@ -560,11 +340,11 @@
           ]
         },
         {
-          "name": "Admin Gift-certificates",
-          "path": "app/admin/gift-certificates/page.tsx",
+          "name": "Admin Locations",
+          "path": "app/admin/locations/page.tsx",
           "exists": true,
           "completion": 65,
-          "lineCount": 274,
+          "lineCount": 340,
           "hasContent": true,
           "hasTypeScript": true,
           "hasErrorHandling": false,
@@ -588,23 +368,6 @@
           "hasLoadingState": false,
           "hasTests": false,
           "issues": [
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "Admin Locations",
-          "path": "app/admin/locations/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 340,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
             "Missing loading state",
             "No tests found"
           ]
@@ -677,23 +440,6 @@
           ]
         },
         {
-          "name": "Admin Products",
-          "path": "app/admin/products/page.tsx",
-          "exists": true,
-          "completion": 65,
-          "lineCount": 350,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
           "name": "Admin Project-status",
           "path": "app/admin/project-status/page.tsx",
           "exists": true,
@@ -706,6 +452,23 @@
           "hasTests": false,
           "issues": [
             "Page has minimal content (<100 LOC)",
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "Admin Products",
+          "path": "app/admin/products/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 350,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
             "Missing error handling/error boundary",
             "Missing loading state",
             "No tests found"
@@ -761,22 +524,6 @@
           ]
         },
         {
-          "name": "Admin Social",
-          "path": "app/admin/social/page.tsx",
-          "exists": true,
-          "completion": 80,
-          "lineCount": 507,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": true,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
           "name": "Admin Tags",
           "path": "app/admin/tags/page.tsx",
           "exists": true,
@@ -794,11 +541,11 @@
           ]
         },
         {
-          "name": "Admin Training-data",
-          "path": "app/admin/training-data/page.tsx",
+          "name": "Admin Social",
+          "path": "app/admin/social/page.tsx",
           "exists": true,
           "completion": 80,
-          "lineCount": 269,
+          "lineCount": 507,
           "hasContent": true,
           "hasTypeScript": true,
           "hasErrorHandling": true,
@@ -827,6 +574,22 @@
           ]
         },
         {
+          "name": "Admin Training-data",
+          "path": "app/admin/training-data/page.tsx",
+          "exists": true,
+          "completion": 80,
+          "lineCount": 269,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": true,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
           "name": "Admin Wholesale",
           "path": "app/admin/wholesale/page.tsx",
           "exists": true,
@@ -844,124 +607,11 @@
           ]
         },
         {
-          "name": "Auth Error",
-          "path": "app/auth/error/page.tsx",
-          "exists": true,
-          "completion": 55,
-          "lineCount": 82,
-          "hasContent": false,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": true,
-          "hasTests": false,
-          "issues": [
-            "Page has minimal content (<100 LOC)",
-            "Missing error handling/error boundary",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "Auth Forgot-password",
-          "path": "app/auth/forgot-password/page.tsx",
-          "exists": true,
-          "completion": 90,
-          "lineCount": 125,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": true,
-          "hasLoadingState": true,
-          "hasTests": false,
-          "issues": [
-            "No tests found"
-          ]
-        },
-        {
-          "name": "Auth Reset-password",
-          "path": "app/auth/reset-password/page.tsx",
-          "exists": true,
-          "completion": 90,
-          "lineCount": 277,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": true,
-          "hasLoadingState": true,
-          "hasTests": false,
-          "issues": [
-            "No tests found"
-          ]
-        },
-        {
-          "name": "Auth Signin",
-          "path": "app/auth/signin/page.tsx",
-          "exists": true,
-          "completion": 90,
-          "lineCount": 149,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": true,
-          "hasLoadingState": true,
-          "hasTests": false,
-          "issues": [
-            "No tests found"
-          ]
-        },
-        {
-          "name": "Auth Signup",
-          "path": "app/auth/signup/page.tsx",
-          "exists": true,
-          "completion": 90,
-          "lineCount": 201,
-          "hasContent": true,
-          "hasTypeScript": true,
-          "hasErrorHandling": true,
-          "hasLoadingState": true,
-          "hasTests": false,
-          "issues": [
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Account Orders",
-          "path": "app/(public)/account/orders/page.tsx",
-          "exists": true,
-          "completion": 45,
-          "lineCount": 99,
-          "hasContent": false,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Page has minimal content (<100 LOC)",
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Account Settings",
-          "path": "app/(public)/account/settings/page.tsx",
-          "exists": true,
-          "completion": 45,
-          "lineCount": 78,
-          "hasContent": false,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Page has minimal content (<100 LOC)",
-            "Missing error handling/error boundary",
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "(public) Checkout Success",
-          "path": "app/(public)/checkout/success/page.tsx",
+          "name": "(public) About",
+          "path": "app/(public)/about/page.tsx",
           "exists": true,
           "completion": 65,
-          "lineCount": 156,
+          "lineCount": 178,
           "hasContent": true,
           "hasTypeScript": true,
           "hasErrorHandling": false,
@@ -974,11 +624,11 @@
           ]
         },
         {
-          "name": "(public) Find-us LocationId Detail",
-          "path": "app/(public)/find-us/[locationId]/page.tsx",
+          "name": "(public) Accessibility",
+          "path": "app/(public)/accessibility/page.tsx",
           "exists": true,
           "completion": 65,
-          "lineCount": 209,
+          "lineCount": 124,
           "hasContent": true,
           "hasTypeScript": true,
           "hasErrorHandling": false,
@@ -991,11 +641,45 @@
           ]
         },
         {
-          "name": "(public) Forms Slug Detail",
-          "path": "app/(public)/forms/[slug]/page.tsx",
+          "name": "(public) Account",
+          "path": "app/(public)/account/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 110,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Bundles",
+          "path": "app/(public)/bundles/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 346,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Checkout",
+          "path": "app/(public)/checkout/page.tsx",
           "exists": true,
           "completion": 80,
-          "lineCount": 169,
+          "lineCount": 633,
           "hasContent": true,
           "hasTypeScript": true,
           "hasErrorHandling": true,
@@ -1007,8 +691,25 @@
           ]
         },
         {
-          "name": "(public) Gift-certificates Balance",
-          "path": "app/(public)/gift-certificates/balance/page.tsx",
+          "name": "(public) Cookies",
+          "path": "app/(public)/cookies/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 128,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Find-us",
+          "path": "app/(public)/find-us/page.tsx",
           "exists": true,
           "completion": 80,
           "lineCount": 177,
@@ -1023,11 +724,28 @@
           ]
         },
         {
-          "name": "(public) Gift-certificates Purchase",
-          "path": "app/(public)/gift-certificates/purchase/page.tsx",
+          "name": "(public) Fundraising",
+          "path": "app/(public)/fundraising/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 361,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Forms",
+          "path": "app/(public)/forms/page.tsx",
           "exists": true,
           "completion": 80,
-          "lineCount": 396,
+          "lineCount": 200,
           "hasContent": true,
           "hasTypeScript": true,
           "hasErrorHandling": true,
@@ -1039,11 +757,11 @@
           ]
         },
         {
-          "name": "(public) Gift-certificates Success",
-          "path": "app/(public)/gift-certificates/success/page.tsx",
+          "name": "(public) Cart",
+          "path": "app/(public)/cart/page.tsx",
           "exists": true,
           "completion": 55,
-          "lineCount": 40,
+          "lineCount": 30,
           "hasContent": false,
           "hasTypeScript": true,
           "hasErrorHandling": false,
@@ -1056,27 +774,62 @@
           ]
         },
         {
-          "name": "(public) Recipes Slug Detail",
-          "path": "app/(public)/recipes/[slug]/page.tsx",
+          "name": "(public) Merchandise",
+          "path": "app/(public)/merchandise/page.tsx",
           "exists": true,
-          "completion": 80,
-          "lineCount": 235,
+          "completion": 65,
+          "lineCount": 188,
           "hasContent": true,
           "hasTypeScript": true,
-          "hasErrorHandling": true,
+          "hasErrorHandling": false,
           "hasLoadingState": false,
           "hasTests": false,
           "issues": [
+            "Missing error handling/error boundary",
             "Missing loading state",
             "No tests found"
           ]
         },
         {
-          "name": "(public) Products Search",
-          "path": "app/(public)/products/search/page.tsx",
+          "name": "(public) Recipes",
+          "path": "app/(public)/recipes/page.tsx",
+          "exists": true,
+          "completion": 60,
+          "lineCount": 43,
+          "hasContent": false,
+          "hasTypeScript": true,
+          "hasErrorHandling": true,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Page has minimal content (<100 LOC)",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Our-story",
+          "path": "app/(public)/our-story/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 319,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Products",
+          "path": "app/(public)/products/page.tsx",
           "exists": true,
           "completion": 90,
-          "lineCount": 261,
+          "lineCount": 144,
           "hasContent": true,
           "hasTypeScript": true,
           "hasErrorHandling": true,
@@ -1087,11 +840,94 @@
           ]
         },
         {
-          "name": "(public) Salsas Slug Detail",
-          "path": "app/(public)/salsas/[slug]/page.tsx",
+          "name": "(public) Privacy",
+          "path": "app/(public)/privacy/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 106,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Where-is-jose",
+          "path": "app/(public)/where-is-jose/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 325,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Terms",
+          "path": "app/(public)/terms/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 101,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Wholesale",
+          "path": "app/(public)/wholesale/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 324,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Salsas",
+          "path": "app/(public)/salsas/page.tsx",
           "exists": true,
           "completion": 90,
-          "lineCount": 366,
+          "lineCount": 138,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": true,
+          "hasLoadingState": true,
+          "hasTests": false,
+          "issues": [
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Wishlist",
+          "path": "app/(public)/wishlist/page.tsx",
+          "exists": true,
+          "completion": 90,
+          "lineCount": 121,
           "hasContent": true,
           "hasTypeScript": true,
           "hasErrorHandling": true,
@@ -1188,6 +1024,23 @@
           ]
         },
         {
+          "name": "Admin Gift-certificates Id Detail",
+          "path": "app/admin/gift-certificates/[id]/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 247,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
           "name": "Admin Financials Taxes",
           "path": "app/admin/financials/taxes/page.tsx",
           "exists": true,
@@ -1206,17 +1059,18 @@
           ]
         },
         {
-          "name": "Admin Gift-certificates Id Detail",
-          "path": "app/admin/gift-certificates/[id]/page.tsx",
+          "name": "Admin Locations New",
+          "path": "app/admin/locations/new/page.tsx",
           "exists": true,
-          "completion": 65,
-          "lineCount": 247,
-          "hasContent": true,
+          "completion": 45,
+          "lineCount": 34,
+          "hasContent": false,
           "hasTypeScript": true,
           "hasErrorHandling": false,
           "hasLoadingState": false,
           "hasTests": false,
           "issues": [
+            "Page has minimal content (<100 LOC)",
             "Missing error handling/error boundary",
             "Missing loading state",
             "No tests found"
@@ -1234,24 +1088,6 @@
           "hasLoadingState": false,
           "hasTests": false,
           "issues": [
-            "Missing loading state",
-            "No tests found"
-          ]
-        },
-        {
-          "name": "Admin Locations New",
-          "path": "app/admin/locations/new/page.tsx",
-          "exists": true,
-          "completion": 45,
-          "lineCount": 34,
-          "hasContent": false,
-          "hasTypeScript": true,
-          "hasErrorHandling": false,
-          "hasLoadingState": false,
-          "hasTests": false,
-          "issues": [
-            "Page has minimal content (<100 LOC)",
-            "Missing error handling/error boundary",
             "Missing loading state",
             "No tests found"
           ]
@@ -1398,11 +1234,29 @@
           ]
         },
         {
-          "name": "(public) Account Orders Id Detail",
-          "path": "app/(public)/account/orders/[id]/page.tsx",
+          "name": "(public) Account Settings",
+          "path": "app/(public)/account/settings/page.tsx",
+          "exists": true,
+          "completion": 45,
+          "lineCount": 78,
+          "hasContent": false,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Page has minimal content (<100 LOC)",
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Checkout Success",
+          "path": "app/(public)/checkout/success/page.tsx",
           "exists": true,
           "completion": 65,
-          "lineCount": 170,
+          "lineCount": 156,
           "hasContent": true,
           "hasTypeScript": true,
           "hasErrorHandling": false,
@@ -1411,6 +1265,152 @@
           "issues": [
             "Missing error handling/error boundary",
             "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Find-us LocationId Detail",
+          "path": "app/(public)/find-us/[locationId]/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 209,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Forms Slug Detail",
+          "path": "app/(public)/forms/[slug]/page.tsx",
+          "exists": true,
+          "completion": 80,
+          "lineCount": 169,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": true,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Account Orders",
+          "path": "app/(public)/account/orders/page.tsx",
+          "exists": true,
+          "completion": 45,
+          "lineCount": 99,
+          "hasContent": false,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Page has minimal content (<100 LOC)",
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Gift-certificates Balance",
+          "path": "app/(public)/gift-certificates/balance/page.tsx",
+          "exists": true,
+          "completion": 80,
+          "lineCount": 177,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": true,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Gift-certificates Purchase",
+          "path": "app/(public)/gift-certificates/purchase/page.tsx",
+          "exists": true,
+          "completion": 80,
+          "lineCount": 396,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": true,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Gift-certificates Success",
+          "path": "app/(public)/gift-certificates/success/page.tsx",
+          "exists": true,
+          "completion": 55,
+          "lineCount": 40,
+          "hasContent": false,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": true,
+          "hasTests": false,
+          "issues": [
+            "Page has minimal content (<100 LOC)",
+            "Missing error handling/error boundary",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Recipes Slug Detail",
+          "path": "app/(public)/recipes/[slug]/page.tsx",
+          "exists": true,
+          "completion": 80,
+          "lineCount": 235,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": true,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Products Search",
+          "path": "app/(public)/products/search/page.tsx",
+          "exists": true,
+          "completion": 90,
+          "lineCount": 244,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": true,
+          "hasLoadingState": true,
+          "hasTests": false,
+          "issues": [
+            "No tests found"
+          ]
+        },
+        {
+          "name": "(public) Salsas Slug Detail",
+          "path": "app/(public)/salsas/[slug]/page.tsx",
+          "exists": true,
+          "completion": 90,
+          "lineCount": 366,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": true,
+          "hasLoadingState": true,
+          "hasTests": false,
+          "issues": [
             "No tests found"
           ]
         },
@@ -1505,6 +1505,23 @@
           ]
         },
         {
+          "name": "(public) Account Orders Id Detail",
+          "path": "app/(public)/account/orders/[id]/page.tsx",
+          "exists": true,
+          "completion": 65,
+          "lineCount": 170,
+          "hasContent": true,
+          "hasTypeScript": true,
+          "hasErrorHandling": false,
+          "hasLoadingState": false,
+          "hasTests": false,
+          "issues": [
+            "Missing error handling/error boundary",
+            "Missing loading state",
+            "No tests found"
+          ]
+        },
+        {
           "name": "(admin) Admin Emails Id Detail Compose",
           "path": "app/(admin)/admin/emails/[id]/compose/page.tsx",
           "exists": true,
@@ -1527,8 +1544,8 @@
     "backend": {
       "completion": 70,
       "apiRoutesTotal": 85,
-      "apiRoutesComplete": 21,
-      "authCoverage": 54,
+      "apiRoutesComplete": 20,
+      "authCoverage": 53,
       "validationCoverage": 40,
       "routes": [
         {
@@ -1551,13 +1568,14 @@
           "methods": [
             "GET"
           ],
-          "hasAuth": true,
+          "hasAuth": false,
           "hasValidation": true,
           "hasErrorHandling": true,
           "hasAuditLogging": false,
           "hasTests": false,
-          "completion": 90,
+          "completion": 70,
           "issues": [
+            "Missing authentication check",
             "No tests found"
           ]
         },
@@ -1642,22 +1660,6 @@
           ]
         },
         {
-          "path": "app/api/loyalty/route.ts",
-          "methods": [
-            "GET"
-          ],
-          "hasAuth": true,
-          "hasValidation": false,
-          "hasErrorHandling": true,
-          "hasAuditLogging": false,
-          "hasTests": false,
-          "completion": 70,
-          "issues": [
-            "Missing request validation (Zod schema)",
-            "No tests found"
-          ]
-        },
-        {
           "path": "app/api/newsletter/route.ts",
           "methods": [
             "POST"
@@ -1703,6 +1705,22 @@
           "completion": 50,
           "issues": [
             "Missing authentication check",
+            "Missing request validation (Zod schema)",
+            "No tests found"
+          ]
+        },
+        {
+          "path": "app/api/loyalty/route.ts",
+          "methods": [
+            "GET"
+          ],
+          "hasAuth": true,
+          "hasValidation": false,
+          "hasErrorHandling": true,
+          "hasAuditLogging": false,
+          "hasTests": false,
+          "completion": 70,
+          "issues": [
             "Missing request validation (Zod schema)",
             "No tests found"
           ]
@@ -1861,7 +1879,7 @@
           ]
         },
         {
-          "path": "app/api/admin/locations/route.ts",
+          "path": "app/api/admin/media/route.ts",
           "methods": [
             "GET",
             "POST"
@@ -1878,7 +1896,7 @@
           ]
         },
         {
-          "path": "app/api/admin/media/route.ts",
+          "path": "app/api/admin/locations/route.ts",
           "methods": [
             "GET",
             "POST"
@@ -2074,38 +2092,6 @@
           ]
         },
         {
-          "path": "app/api/cart/recover/route.ts",
-          "methods": [
-            "GET"
-          ],
-          "hasAuth": false,
-          "hasValidation": false,
-          "hasErrorHandling": true,
-          "hasAuditLogging": false,
-          "hasTests": false,
-          "completion": 50,
-          "issues": [
-            "Missing authentication check",
-            "Missing request validation (Zod schema)",
-            "No tests found"
-          ]
-        },
-        {
-          "path": "app/api/cart/track/route.ts",
-          "methods": [
-            "POST"
-          ],
-          "hasAuth": true,
-          "hasValidation": true,
-          "hasErrorHandling": true,
-          "hasAuditLogging": false,
-          "hasTests": false,
-          "completion": 90,
-          "issues": [
-            "No tests found"
-          ]
-        },
-        {
           "path": "app/api/checkout/apply-gift-certificate/route.ts",
           "methods": [
             "POST"
@@ -2186,36 +2172,17 @@
           ]
         },
         {
-          "path": "app/api/cron/abandoned-cart/route.ts",
+          "path": "app/api/cart/track/route.ts",
           "methods": [
-            "GET"
+            "POST"
           ],
-          "hasAuth": false,
-          "hasValidation": false,
+          "hasAuth": true,
+          "hasValidation": true,
           "hasErrorHandling": true,
           "hasAuditLogging": false,
           "hasTests": false,
-          "completion": 50,
+          "completion": 90,
           "issues": [
-            "Missing authentication check",
-            "Missing request validation (Zod schema)",
-            "No tests found"
-          ]
-        },
-        {
-          "path": "app/api/cron/dashboard-analysis/route.ts",
-          "methods": [
-            "GET"
-          ],
-          "hasAuth": false,
-          "hasValidation": false,
-          "hasErrorHandling": true,
-          "hasAuditLogging": false,
-          "hasTests": false,
-          "completion": 50,
-          "issues": [
-            "Missing authentication check",
-            "Missing request validation (Zod schema)",
             "No tests found"
           ]
         },
@@ -2233,6 +2200,40 @@
           "completion": 70,
           "issues": [
             "Missing authentication check",
+            "No tests found"
+          ]
+        },
+        {
+          "path": "app/api/cart/recover/route.ts",
+          "methods": [
+            "GET"
+          ],
+          "hasAuth": false,
+          "hasValidation": false,
+          "hasErrorHandling": true,
+          "hasAuditLogging": false,
+          "hasTests": false,
+          "completion": 50,
+          "issues": [
+            "Missing authentication check",
+            "Missing request validation (Zod schema)",
+            "No tests found"
+          ]
+        },
+        {
+          "path": "app/api/cron/abandoned-cart/route.ts",
+          "methods": [
+            "GET"
+          ],
+          "hasAuth": false,
+          "hasValidation": false,
+          "hasErrorHandling": true,
+          "hasAuditLogging": false,
+          "hasTests": false,
+          "completion": 50,
+          "issues": [
+            "Missing authentication check",
+            "Missing request validation (Zod schema)",
             "No tests found"
           ]
         },
@@ -2265,6 +2266,23 @@
           "completion": 70,
           "issues": [
             "Missing authentication check",
+            "No tests found"
+          ]
+        },
+        {
+          "path": "app/api/cron/dashboard-analysis/route.ts",
+          "methods": [
+            "GET"
+          ],
+          "hasAuth": false,
+          "hasValidation": false,
+          "hasErrorHandling": true,
+          "hasAuditLogging": false,
+          "hasTests": false,
+          "completion": 50,
+          "issues": [
+            "Missing authentication check",
+            "Missing request validation (Zod schema)",
             "No tests found"
           ]
         },
@@ -2302,38 +2320,6 @@
           ]
         },
         {
-          "path": "app/api/loyalty/redeem/route.ts",
-          "methods": [
-            "POST"
-          ],
-          "hasAuth": true,
-          "hasValidation": true,
-          "hasErrorHandling": true,
-          "hasAuditLogging": false,
-          "hasTests": false,
-          "completion": 90,
-          "issues": [
-            "No tests found"
-          ]
-        },
-        {
-          "path": "app/api/loyalty/rewards/route.ts",
-          "methods": [
-            "GET"
-          ],
-          "hasAuth": false,
-          "hasValidation": false,
-          "hasErrorHandling": true,
-          "hasAuditLogging": false,
-          "hasTests": false,
-          "completion": 50,
-          "issues": [
-            "Missing authentication check",
-            "Missing request validation (Zod schema)",
-            "No tests found"
-          ]
-        },
-        {
           "path": "app/api/places/photo/route.ts",
           "methods": [
             "GET"
@@ -2352,6 +2338,23 @@
         },
         {
           "path": "app/api/products/featured/route.ts",
+          "methods": [
+            "GET"
+          ],
+          "hasAuth": false,
+          "hasValidation": false,
+          "hasErrorHandling": true,
+          "hasAuditLogging": false,
+          "hasTests": false,
+          "completion": 50,
+          "issues": [
+            "Missing authentication check",
+            "Missing request validation (Zod schema)",
+            "No tests found"
+          ]
+        },
+        {
+          "path": "app/api/reviews/google/route.ts",
           "methods": [
             "GET"
           ],
@@ -2401,7 +2404,22 @@
           ]
         },
         {
-          "path": "app/api/reviews/google/route.ts",
+          "path": "app/api/loyalty/redeem/route.ts",
+          "methods": [
+            "POST"
+          ],
+          "hasAuth": true,
+          "hasValidation": true,
+          "hasErrorHandling": true,
+          "hasAuditLogging": false,
+          "hasTests": false,
+          "completion": 90,
+          "issues": [
+            "No tests found"
+          ]
+        },
+        {
+          "path": "app/api/loyalty/rewards/route.ts",
           "methods": [
             "GET"
           ],
@@ -2421,24 +2439,6 @@
           "path": "app/api/salsas/featured/route.ts",
           "methods": [
             "GET"
-          ],
-          "hasAuth": false,
-          "hasValidation": false,
-          "hasErrorHandling": true,
-          "hasAuditLogging": false,
-          "hasTests": false,
-          "completion": 50,
-          "issues": [
-            "Missing authentication check",
-            "Missing request validation (Zod schema)",
-            "No tests found"
-          ]
-        },
-        {
-          "path": "app/api/shopify/sync-order/route.ts",
-          "methods": [
-            "GET",
-            "POST"
           ],
           "hasAuth": false,
           "hasValidation": false,
@@ -2486,9 +2486,45 @@
           ]
         },
         {
-          "path": "app/api/admin/audit-logs/stats/route.ts",
+          "path": "app/api/shopify/sync-order/route.ts",
           "methods": [
-            "GET"
+            "GET",
+            "POST"
+          ],
+          "hasAuth": false,
+          "hasValidation": false,
+          "hasErrorHandling": true,
+          "hasAuditLogging": false,
+          "hasTests": false,
+          "completion": 50,
+          "issues": [
+            "Missing authentication check",
+            "Missing request validation (Zod schema)",
+            "No tests found"
+          ]
+        },
+        {
+          "path": "app/api/admin/categories/[id]/route.ts",
+          "methods": [
+            "GET",
+            "PATCH",
+            "DELETE"
+          ],
+          "hasAuth": true,
+          "hasValidation": true,
+          "hasErrorHandling": true,
+          "hasAuditLogging": true,
+          "hasTests": false,
+          "completion": 95,
+          "issues": [
+            "No tests found"
+          ]
+        },
+        {
+          "path": "app/api/admin/email-templates/[id]/route.ts",
+          "methods": [
+            "PUT",
+            "DELETE"
           ],
           "hasAuth": true,
           "hasValidation": false,
@@ -2520,10 +2556,9 @@
           ]
         },
         {
-          "path": "app/api/admin/email-templates/[id]/route.ts",
+          "path": "app/api/admin/audit-logs/stats/route.ts",
           "methods": [
-            "PUT",
-            "DELETE"
+            "GET"
           ],
           "hasAuth": true,
           "hasValidation": false,
@@ -2538,19 +2573,19 @@
           ]
         },
         {
-          "path": "app/api/admin/categories/[id]/route.ts",
+          "path": "app/api/admin/inventory/[productId]/route.ts",
           "methods": [
             "GET",
-            "PATCH",
-            "DELETE"
+            "POST"
           ],
           "hasAuth": true,
-          "hasValidation": true,
+          "hasValidation": false,
           "hasErrorHandling": true,
           "hasAuditLogging": true,
           "hasTests": false,
-          "completion": 95,
+          "completion": 75,
           "issues": [
+            "Missing request validation (Zod schema)",
             "No tests found"
           ]
         },
@@ -2571,10 +2606,10 @@
           ]
         },
         {
-          "path": "app/api/admin/inventory/[productId]/route.ts",
+          "path": "app/api/admin/media/[id]/route.ts",
           "methods": [
             "GET",
-            "POST"
+            "DELETE"
           ],
           "hasAuth": true,
           "hasValidation": false,
@@ -2641,29 +2676,9 @@
           ]
         },
         {
-          "path": "app/api/admin/locations/update-local-photos/route.ts",
+          "path": "app/api/admin/orders/import/route.ts",
           "methods": [
             "POST"
-          ],
-          "hasAuth": false,
-          "hasValidation": false,
-          "hasErrorHandling": false,
-          "hasAuditLogging": false,
-          "hasTests": false,
-          "completion": 30,
-          "issues": [
-            "Missing authentication check",
-            "Missing request validation (Zod schema)",
-            "Missing proper error handling (try-catch)",
-            "Missing audit logging for admin action",
-            "No tests found"
-          ]
-        },
-        {
-          "path": "app/api/admin/media/[id]/route.ts",
-          "methods": [
-            "GET",
-            "DELETE"
           ],
           "hasAuth": true,
           "hasValidation": false,
@@ -2695,43 +2710,11 @@
           ]
         },
         {
-          "path": "app/api/admin/orders/import/route.ts",
-          "methods": [
-            "POST"
-          ],
-          "hasAuth": true,
-          "hasValidation": false,
-          "hasErrorHandling": true,
-          "hasAuditLogging": true,
-          "hasTests": false,
-          "completion": 75,
-          "issues": [
-            "Missing request validation (Zod schema)",
-            "No tests found"
-          ]
-        },
-        {
           "path": "app/api/admin/products/[id]/route.ts",
           "methods": [
             "GET",
             "PATCH",
             "DELETE"
-          ],
-          "hasAuth": true,
-          "hasValidation": false,
-          "hasErrorHandling": true,
-          "hasAuditLogging": true,
-          "hasTests": false,
-          "completion": 75,
-          "issues": [
-            "Missing request validation (Zod schema)",
-            "No tests found"
-          ]
-        },
-        {
-          "path": "app/api/admin/products/export/route.ts",
-          "methods": [
-            "GET"
           ],
           "hasAuth": true,
           "hasValidation": false,
@@ -2761,19 +2744,36 @@
           ]
         },
         {
-          "path": "app/api/admin/seo/configuration/route.ts",
+          "path": "app/api/admin/products/export/route.ts",
           "methods": [
-            "GET",
-            "POST"
+            "GET"
           ],
           "hasAuth": true,
           "hasValidation": false,
           "hasErrorHandling": true,
-          "hasAuditLogging": false,
+          "hasAuditLogging": true,
           "hasTests": false,
-          "completion": 65,
+          "completion": 75,
           "issues": [
             "Missing request validation (Zod schema)",
+            "No tests found"
+          ]
+        },
+        {
+          "path": "app/api/admin/locations/update-local-photos/route.ts",
+          "methods": [
+            "POST"
+          ],
+          "hasAuth": false,
+          "hasValidation": false,
+          "hasErrorHandling": false,
+          "hasAuditLogging": false,
+          "hasTests": false,
+          "completion": 30,
+          "issues": [
+            "Missing authentication check",
+            "Missing request validation (Zod schema)",
+            "Missing proper error handling (try-catch)",
             "Missing audit logging for admin action",
             "No tests found"
           ]
@@ -2814,6 +2814,24 @@
           ]
         },
         {
+          "path": "app/api/admin/seo/configuration/route.ts",
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "hasAuth": true,
+          "hasValidation": false,
+          "hasErrorHandling": true,
+          "hasAuditLogging": false,
+          "hasTests": false,
+          "completion": 65,
+          "issues": [
+            "Missing request validation (Zod schema)",
+            "Missing audit logging for admin action",
+            "No tests found"
+          ]
+        },
+        {
           "path": "app/api/forms/[slug]/versions/route.ts",
           "methods": [
             "POST"
@@ -2847,23 +2865,6 @@
           ]
         },
         {
-          "path": "app/api/shopify/cancel-order/[orderNumber]/route.ts",
-          "methods": [
-            "POST"
-          ],
-          "hasAuth": false,
-          "hasValidation": false,
-          "hasErrorHandling": true,
-          "hasAuditLogging": false,
-          "hasTests": false,
-          "completion": 50,
-          "issues": [
-            "Missing authentication check",
-            "Missing request validation (Zod schema)",
-            "No tests found"
-          ]
-        },
-        {
           "path": "app/api/admin/email-templates/[id]/composition/route.ts",
           "methods": [
             "GET",
@@ -2883,17 +2884,18 @@
           ]
         },
         {
-          "path": "app/api/admin/inventory/alerts/[alertId]/route.ts",
+          "path": "app/api/shopify/cancel-order/[orderNumber]/route.ts",
           "methods": [
-            "PATCH"
+            "POST"
           ],
-          "hasAuth": true,
+          "hasAuth": false,
           "hasValidation": false,
           "hasErrorHandling": true,
-          "hasAuditLogging": true,
+          "hasAuditLogging": false,
           "hasTests": false,
-          "completion": 75,
+          "completion": 50,
           "issues": [
+            "Missing authentication check",
             "Missing request validation (Zod schema)",
             "No tests found"
           ]
@@ -2928,6 +2930,22 @@
           "completion": 85,
           "issues": [
             "Missing audit logging for admin action",
+            "No tests found"
+          ]
+        },
+        {
+          "path": "app/api/admin/inventory/alerts/[alertId]/route.ts",
+          "methods": [
+            "PATCH"
+          ],
+          "hasAuth": true,
+          "hasValidation": false,
+          "hasErrorHandling": true,
+          "hasAuditLogging": true,
+          "hasTests": false,
+          "completion": 75,
+          "issues": [
+            "Missing request validation (Zod schema)",
             "No tests found"
           ]
         },
@@ -2996,6 +3014,7 @@
         "FormTemplate",
         "FormTemplateVersion",
         "EmailTemplate",
+        "EmailTemplateComposition",
         "EmailConfiguration",
         "EmailCampaign",
         "EmailRecipient",
@@ -3022,8 +3041,7 @@
         "ThirdPartyIntegration",
         "OrderNotificationRule",
         "InventoryTransaction",
-        "InventoryAlert",
-        "EmailTemplateComposition"
+        "InventoryAlert"
       ],
       "relationships": [
         {
@@ -3213,6 +3231,12 @@
           "hasIndex": true
         },
         {
+          "from": "EmailTemplateComposition",
+          "to": "EmailTemplate",
+          "type": "one-to-one",
+          "hasIndex": true
+        },
+        {
           "from": "EmailCampaign",
           "to": "EmailTemplate",
           "type": "one-to-one",
@@ -3277,12 +3301,6 @@
           "to": "Product",
           "type": "one-to-one",
           "hasIndex": true
-        },
-        {
-          "from": "EmailTemplateComposition",
-          "to": "EmailTemplate",
-          "type": "one-to-one",
-          "hasIndex": true
         }
       ]
     },
@@ -3295,7 +3313,7 @@
     }
   },
   "technicalDebt": {
-    "totalScore": 48,
+    "totalScore": 49,
     "todos": [
       {
         "file": "app/api/checkout/calculate-tax/route.ts",
@@ -3316,6 +3334,12 @@
         "context": "taxExempt: false, // TODO: Implement tax exemption lookup if needed"
       },
       {
+        "file": "lib/data/retail-locations.ts",
+        "line": 35,
+        "text": "// Note: JSON has googlePlaceId, not googlePlacesId",
+        "context": "googlePlaceId: string | null // Note: JSON has googlePlaceId, not googlePlacesId"
+      },
+      {
         "file": "lib/email/sender.ts",
         "line": 80,
         "text": "// TODO: Decrypt if encrypted",
@@ -3332,6 +3356,71 @@
         "file": "app/admin/page.tsx",
         "line": 204,
         "context": "console.error('[Admin Dashboard] Error rendering:', error)"
+      },
+      {
+        "file": "app/auth/signin/page.tsx",
+        "line": 61,
+        "context": "console.error('Sign in error:', error)"
+      },
+      {
+        "file": "app/auth/signup/page.tsx",
+        "line": 90,
+        "context": "console.error('Registration error:', error)"
+      },
+      {
+        "file": "app/admin/categories/page.tsx",
+        "line": 41,
+        "context": "console.error('Failed to fetch categories:', error)"
+      },
+      {
+        "file": "app/admin/events/page.tsx",
+        "line": 43,
+        "context": "console.error('Failed to fetch events:', error)"
+      },
+      {
+        "file": "app/admin/events/page.tsx",
+        "line": 59,
+        "context": "console.error('Failed to sync calendar:', error)"
+      },
+      {
+        "file": "app/admin/events/page.tsx",
+        "line": 170,
+        "context": "console.error('Failed to delete event:', error)"
+      },
+      {
+        "file": "app/admin/orders/page.tsx",
+        "line": 82,
+        "context": "console.error('[Orders] Error fetching orders:', error)"
+      },
+      {
+        "file": "app/admin/orders/page.tsx",
+        "line": 275,
+        "context": "console.error('[Orders] Error rendering:', error)"
+      },
+      {
+        "file": "app/admin/seo/page.tsx",
+        "line": 49,
+        "context": "console.error('Failed to fetch SEO config:', error)"
+      },
+      {
+        "file": "app/admin/seo/page.tsx",
+        "line": 69,
+        "context": "console.error('Failed to save SEO config:', error)"
+      },
+      {
+        "file": "app/admin/social/page.tsx",
+        "line": 124,
+        "context": "console.error('[ADMIN_SOCIAL_INTEGRATIONS]', error)"
+      },
+      {
+        "file": "app/admin/training-data/page.tsx",
+        "line": 110,
+        "context": "console.error('[Training Data] Error fetching documents:', error)"
+      },
+      {
+        "file": "app/admin/training-data/page.tsx",
+        "line": 265,
+        "context": "console.error('[Training Data] Error rendering:', error)"
       },
       {
         "file": "app/(public)/checkout/page.tsx",
@@ -3425,83 +3514,18 @@
       },
       {
         "file": "app/(public)/products/page.tsx",
-        "line": 50,
+        "line": 36,
         "context": "console.error('Error fetching products:', error)"
       },
       {
         "file": "app/(public)/salsas/page.tsx",
-        "line": 47,
+        "line": 33,
         "context": "console.error('Error fetching salsas:', error)"
       },
       {
         "file": "app/(public)/wishlist/page.tsx",
         "line": 74,
         "context": "console.error('Error clearing wishlist:', error)"
-      },
-      {
-        "file": "app/admin/categories/page.tsx",
-        "line": 41,
-        "context": "console.error('Failed to fetch categories:', error)"
-      },
-      {
-        "file": "app/admin/events/page.tsx",
-        "line": 43,
-        "context": "console.error('Failed to fetch events:', error)"
-      },
-      {
-        "file": "app/admin/events/page.tsx",
-        "line": 59,
-        "context": "console.error('Failed to sync calendar:', error)"
-      },
-      {
-        "file": "app/admin/events/page.tsx",
-        "line": 170,
-        "context": "console.error('Failed to delete event:', error)"
-      },
-      {
-        "file": "app/admin/orders/page.tsx",
-        "line": 82,
-        "context": "console.error('[Orders] Error fetching orders:', error)"
-      },
-      {
-        "file": "app/admin/orders/page.tsx",
-        "line": 275,
-        "context": "console.error('[Orders] Error rendering:', error)"
-      },
-      {
-        "file": "app/admin/seo/page.tsx",
-        "line": 49,
-        "context": "console.error('Failed to fetch SEO config:', error)"
-      },
-      {
-        "file": "app/admin/seo/page.tsx",
-        "line": 69,
-        "context": "console.error('Failed to save SEO config:', error)"
-      },
-      {
-        "file": "app/admin/social/page.tsx",
-        "line": 124,
-        "context": "console.error('[ADMIN_SOCIAL_INTEGRATIONS]', error)"
-      },
-      {
-        "file": "app/admin/training-data/page.tsx",
-        "line": 110,
-        "context": "console.error('[Training Data] Error fetching documents:', error)"
-      },
-      {
-        "file": "app/admin/training-data/page.tsx",
-        "line": 265,
-        "context": "console.error('[Training Data] Error rendering:', error)"
-      },
-      {
-        "file": "app/auth/signin/page.tsx",
-        "line": 61,
-        "context": "console.error('Sign in error:', error)"
-      },
-      {
-        "file": "app/auth/signup/page.tsx",
-        "line": 90,
-        "context": "console.error('Registration error:', error)"
       },
       {
         "file": "app/(public)/forms/[slug]/page.tsx",
@@ -3530,12 +3554,12 @@
       },
       {
         "file": "app/(public)/products/search/page.tsx",
-        "line": 84,
+        "line": 67,
         "context": "console.error('Error fetching suggestions:', error)"
       },
       {
         "file": "app/(public)/products/search/page.tsx",
-        "line": 114,
+        "line": 97,
         "context": "console.error('Error searching products:', error)"
       },
       {
@@ -3565,7 +3589,7 @@
       },
       {
         "file": "app/api/calendar/route.ts",
-        "line": 81,
+        "line": 58,
         "context": "console.error('[Calendar API] Failed to fetch Google Calendar events:', error)"
       },
       {
@@ -3754,11 +3778,6 @@
         "context": "console.error('Error fetching locations:', error)"
       },
       {
-        "file": "app/api/loyalty/route.ts",
-        "line": 17,
-        "context": "console.error('Get loyalty account error:', error)"
-      },
-      {
         "file": "app/api/newsletter/route.ts",
         "line": 42,
         "context": "console.error('Newsletter subscription error:', error)"
@@ -3772,6 +3791,11 @@
         "file": "app/api/recipes/route.ts",
         "line": 43,
         "context": "console.error('Error fetching recipes:', error)"
+      },
+      {
+        "file": "app/api/loyalty/route.ts",
+        "line": 17,
+        "context": "console.error('Get loyalty account error:', error)"
       },
       {
         "file": "app/api/salsas/route.ts",
@@ -3834,6 +3858,11 @@
         "context": "console.error('Error restocking inventory:', error);"
       },
       {
+        "file": "app/api/admin/media/route.ts",
+        "line": 120,
+        "context": "console.error('Error creating media:', error);"
+      },
+      {
         "file": "app/api/admin/locations/route.ts",
         "line": 65,
         "context": "console.error('[GET /api/admin/locations] Error:', error)"
@@ -3842,11 +3871,6 @@
         "file": "app/api/admin/locations/route.ts",
         "line": 180,
         "context": "console.error('[POST /api/admin/locations] Error:', error)"
-      },
-      {
-        "file": "app/api/admin/media/route.ts",
-        "line": 120,
-        "context": "console.error('Error creating media:', error);"
       },
       {
         "file": "app/api/admin/products/route.ts",
@@ -3914,16 +3938,6 @@
         "context": "console.error('Token verification error:', error)"
       },
       {
-        "file": "app/api/cart/recover/route.ts",
-        "line": 66,
-        "context": "console.error('Cart recovery error:', error)"
-      },
-      {
-        "file": "app/api/cart/track/route.ts",
-        "line": 89,
-        "context": "console.error('Cart tracking error:', error)"
-      },
-      {
         "file": "app/api/checkout/apply-gift-certificate/route.ts",
         "line": 60,
         "context": "console.error('Gift certificate application error:', error)"
@@ -3949,6 +3963,16 @@
         "context": "console.error('Discount validation error:', error)"
       },
       {
+        "file": "app/api/cart/track/route.ts",
+        "line": 86,
+        "context": "console.error('Cart tracking error:', error)"
+      },
+      {
+        "file": "app/api/cart/recover/route.ts",
+        "line": 66,
+        "context": "console.error('Cart recovery error:', error)"
+      },
+      {
         "file": "app/api/cron/abandoned-cart/route.ts",
         "line": 112,
         "context": "console.error(`Failed to process abandoned cart ${cart.id}:`, error)"
@@ -3957,6 +3981,16 @@
         "file": "app/api/cron/abandoned-cart/route.ts",
         "line": 122,
         "context": "console.error('Abandoned cart cron job error:', error)"
+      },
+      {
+        "file": "app/api/gift-certificates/balance/route.ts",
+        "line": 85,
+        "context": "console.error('Balance check error:', error)"
+      },
+      {
+        "file": "app/api/gift-certificates/complete/route.ts",
+        "line": 68,
+        "context": "console.error('Gift certificate completion error:', error)"
       },
       {
         "file": "app/api/cron/dashboard-analysis/route.ts",
@@ -4014,16 +4048,6 @@
         "context": "console.error('Dashboard analysis cron job error:', error)"
       },
       {
-        "file": "app/api/gift-certificates/balance/route.ts",
-        "line": 85,
-        "context": "console.error('Balance check error:', error)"
-      },
-      {
-        "file": "app/api/gift-certificates/complete/route.ts",
-        "line": 68,
-        "context": "console.error('Gift certificate completion error:', error)"
-      },
-      {
         "file": "app/api/gift-certificates/purchase/route.ts",
         "line": 120,
         "context": "console.error('Gift certificate purchase error:', error)"
@@ -4034,16 +4058,6 @@
         "context": "console.error('Error processing locations:', error)"
       },
       {
-        "file": "app/api/loyalty/redeem/route.ts",
-        "line": 33,
-        "context": "console.error('Redeem reward error:', error)"
-      },
-      {
-        "file": "app/api/loyalty/rewards/route.ts",
-        "line": 13,
-        "context": "console.error('Get rewards error:', error)"
-      },
-      {
         "file": "app/api/places/photo/route.ts",
         "line": 47,
         "context": "console.error('Error fetching place photo:', error)"
@@ -4052,21 +4066,6 @@
         "file": "app/api/products/featured/route.ts",
         "line": 82,
         "context": "console.warn('Database not available, using mock data:', error)"
-      },
-      {
-        "file": "app/api/products/search/route.ts",
-        "line": 202,
-        "context": "console.error('Error searching products:', error)"
-      },
-      {
-        "file": "app/api/products/search/route.ts",
-        "line": 261,
-        "context": "console.error('Error getting autocomplete suggestions:', error)"
-      },
-      {
-        "file": "app/api/recommendations/personalized/route.ts",
-        "line": 23,
-        "context": "console.error('Personalized recommendations error:', error)"
       },
       {
         "file": "app/api/reviews/google/route.ts",
@@ -4084,19 +4083,34 @@
         "context": "console.error('Error fetching Google reviews:', error)"
       },
       {
+        "file": "app/api/products/search/route.ts",
+        "line": 202,
+        "context": "console.error('Error searching products:', error)"
+      },
+      {
+        "file": "app/api/products/search/route.ts",
+        "line": 261,
+        "context": "console.error('Error getting autocomplete suggestions:', error)"
+      },
+      {
+        "file": "app/api/recommendations/personalized/route.ts",
+        "line": 23,
+        "context": "console.error('Personalized recommendations error:', error)"
+      },
+      {
+        "file": "app/api/loyalty/redeem/route.ts",
+        "line": 33,
+        "context": "console.error('Redeem reward error:', error)"
+      },
+      {
+        "file": "app/api/loyalty/rewards/route.ts",
+        "line": 13,
+        "context": "console.error('Get rewards error:', error)"
+      },
+      {
         "file": "app/api/salsas/featured/route.ts",
         "line": 82,
         "context": "console.warn('Database not available, using mock data:', error)"
-      },
-      {
-        "file": "app/api/shopify/sync-order/route.ts",
-        "line": 61,
-        "context": "console.error('Error syncing order to Shopify:', error)"
-      },
-      {
-        "file": "app/api/shopify/sync-order/route.ts",
-        "line": 85,
-        "context": "console.error('Error fetching Shopify order status:', error)"
       },
       {
         "file": "app/api/webhooks/shopify/route.ts",
@@ -4174,14 +4188,14 @@
         "context": "console.error('Error processing webhook:', error)"
       },
       {
-        "file": "app/api/admin/audit-logs/stats/route.ts",
-        "line": 149,
-        "context": "console.error('[Audit Logs Stats API] Error:', error)"
+        "file": "app/api/shopify/sync-order/route.ts",
+        "line": 61,
+        "context": "console.error('Error syncing order to Shopify:', error)"
       },
       {
-        "file": "app/api/admin/gift-certificates/export/route.ts",
-        "line": 132,
-        "context": "console.error('Gift certificate export error:', error)"
+        "file": "app/api/shopify/sync-order/route.ts",
+        "line": 85,
+        "context": "console.error('Error fetching Shopify order status:', error)"
       },
       {
         "file": "app/api/admin/email-templates/[id]/route.ts",
@@ -4194,9 +4208,29 @@
         "context": "console.error('Error deleting template:', error)"
       },
       {
+        "file": "app/api/admin/gift-certificates/export/route.ts",
+        "line": 132,
+        "context": "console.error('Gift certificate export error:', error)"
+      },
+      {
+        "file": "app/api/admin/audit-logs/stats/route.ts",
+        "line": 149,
+        "context": "console.error('[Audit Logs Stats API] Error:', error)"
+      },
+      {
         "file": "app/api/admin/inventory/[productId]/route.ts",
         "line": 103,
         "context": "console.error('Error adjusting inventory:', error);"
+      },
+      {
+        "file": "app/api/admin/media/[id]/route.ts",
+        "line": 47,
+        "context": "console.error('Error fetching media:', error);"
+      },
+      {
+        "file": "app/api/admin/media/[id]/route.ts",
+        "line": 93,
+        "context": "console.error('Error deleting media:', error);"
       },
       {
         "file": "app/api/admin/locations/[id]/route.ts",
@@ -4224,16 +4258,6 @@
         "context": "console.error('[POST /api/admin/locations/geocode] Error:', error)"
       },
       {
-        "file": "app/api/admin/media/[id]/route.ts",
-        "line": 47,
-        "context": "console.error('Error fetching media:', error);"
-      },
-      {
-        "file": "app/api/admin/media/[id]/route.ts",
-        "line": 93,
-        "context": "console.error('Error deleting media:', error);"
-      },
-      {
         "file": "app/api/admin/orders/import/route.ts",
         "line": 71,
         "context": "console.error('Order import error:', error)"
@@ -4254,14 +4278,14 @@
         "context": "console.error('Error deleting product:', error);"
       },
       {
-        "file": "app/api/admin/products/export/route.ts",
-        "line": 118,
-        "context": "console.error('Error exporting products:', error);"
-      },
-      {
         "file": "app/api/admin/products/import/route.ts",
         "line": 138,
         "context": "console.error('Error importing products:', error);"
+      },
+      {
+        "file": "app/api/admin/products/export/route.ts",
+        "line": 118,
+        "context": "console.error('Error exporting products:', error);"
       },
       {
         "file": "app/api/admin/tags/[id]/route.ts",
@@ -4284,11 +4308,6 @@
         "context": "console.error('Recommendations error:', error)"
       },
       {
-        "file": "app/api/shopify/cancel-order/[orderNumber]/route.ts",
-        "line": 58,
-        "context": "console.error('Error cancelling Shopify order:', error)"
-      },
-      {
         "file": "app/api/admin/email-templates/[id]/composition/route.ts",
         "line": 47,
         "context": "console.error('Error fetching composition:', error)"
@@ -4309,9 +4328,9 @@
         "context": "console.error('Error deleting composition:', error)"
       },
       {
-        "file": "app/api/admin/inventory/alerts/[alertId]/route.ts",
-        "line": 57,
-        "context": "console.error('Error updating alert:', error);"
+        "file": "app/api/shopify/cancel-order/[orderNumber]/route.ts",
+        "line": 58,
+        "context": "console.error('Error cancelling Shopify order:', error)"
       },
       {
         "file": "app/api/admin/email-templates/[id]/test/route.ts",
@@ -4322,6 +4341,11 @@
         "file": "app/api/admin/orders/[id]/modify/route.ts",
         "line": 56,
         "context": "console.error('Order modification error:', error)"
+      },
+      {
+        "file": "app/api/admin/inventory/alerts/[alertId]/route.ts",
+        "line": 57,
+        "context": "console.error('Error updating alert:', error);"
       },
       {
         "file": "app/api/admin/email-templates/[id]/composition/render/route.ts",
@@ -4369,14 +4393,14 @@
         "context": "console.error('[ErrorBoundary] Caught error:', error, errorInfo)"
       },
       {
-        "file": "components/admin/audit-logs/AIChatStats.tsx",
-        "line": 57,
-        "context": "console.error('Error fetching AI chat stats:', err)"
-      },
-      {
         "file": "components/admin/project-status/ProjectStatusDashboard.tsx",
         "line": 41,
         "context": "console.error('Failed to trigger analysis:', error)"
+      },
+      {
+        "file": "components/admin/audit-logs/AIChatStats.tsx",
+        "line": 57,
+        "context": "console.error('Error fetching AI chat stats:', err)"
       },
       {
         "file": "lib/api.ts",
@@ -4676,46 +4700,61 @@
       {
         "file": "lib/prisma.ts",
         "line": 36,
-        "context": "console.warn('[Prisma] DATABASE_URL is not set. Available env vars:', {"
+        "context": "console.error('[Prisma] ❌ DATABASE_URL is not set!')"
       },
       {
         "file": "lib/prisma.ts",
-        "line": 43,
+        "line": 37,
+        "context": "console.error('[Prisma] Available env vars:', {"
+      },
+      {
+        "file": "lib/prisma.ts",
+        "line": 47,
         "context": "console.warn('[Prisma] Creating client without DATABASE_URL (will fail at runtime if used)')"
       },
       {
         "file": "lib/prisma.ts",
-        "line": 54,
-        "context": "console.log('[Prisma] Client initialized successfully with Accelerate')"
+        "line": 48,
+        "context": "console.warn('[Prisma] ⚠️  Set DATABASE_URL in Vercel: Settings → Environment Variables → Production')"
       },
       {
         "file": "lib/prisma.ts",
-        "line": 58,
-        "context": "console.log('[Prisma] Client initialized successfully (direct connection)')"
+        "line": 59,
+        "context": "console.log('[Prisma] ✅ Client initialized successfully with Accelerate')"
       },
       {
         "file": "lib/prisma.ts",
-        "line": 61,
-        "context": "console.error('[Prisma] Failed to initialize client:', error)"
+        "line": 63,
+        "context": "console.log('[Prisma] ✅ Client initialized successfully (direct connection)')"
       },
       {
         "file": "lib/prisma.ts",
-        "line": 68,
+        "line": 66,
+        "context": "console.error('[Prisma] ❌ Failed to initialize client:', error)"
+      },
+      {
+        "file": "lib/prisma.ts",
+        "line": 73,
         "context": "console.log('[Prisma] Attempting fallback with POSTGRES_URL')"
       },
       {
         "file": "lib/prisma.ts",
-        "line": 74,
+        "line": 79,
         "context": "console.error('[Prisma] Fallback initialization also failed:', fallbackError)"
       },
       {
         "file": "lib/prisma.ts",
-        "line": 79,
-        "context": "console.warn('[Prisma] Returning basic client (will fail at runtime if DATABASE_URL not set)')"
+        "line": 84,
+        "context": "console.error('[Prisma] ⚠️  Returning basic client (will fail at runtime if DATABASE_URL not set)')"
       },
       {
         "file": "lib/prisma.ts",
-        "line": 88,
+        "line": 85,
+        "context": "console.error('[Prisma] 📋 Run diagnostic: node scripts/diagnose-db-connection.js')"
+      },
+      {
+        "file": "lib/prisma.ts",
+        "line": 94,
         "context": "console.log('[Prisma] Creating client on first use')"
       },
       {
@@ -4874,6 +4913,16 @@
         "context": "console.warn(`SYSTEM_OWNER_EMAIL user ${configuredEmail} not found – falling back to first admin.`)"
       },
       {
+        "file": "lib/project-analyzer/index.ts",
+        "line": 25,
+        "context": "console.error('Error loading analysis:', error)"
+      },
+      {
+        "file": "lib/project-analyzer/index.ts",
+        "line": 52,
+        "context": "console.error('Error loading history:', error)"
+      },
+      {
         "file": "lib/locations/query.ts",
         "line": 160,
         "context": "console.log('[FindUs] Returning cached locations')"
@@ -4949,14 +4998,39 @@
         "context": "console.warn('[FindUs] Skipping location with missing state or city:', location)"
       },
       {
-        "file": "lib/project-analyzer/index.ts",
-        "line": 25,
-        "context": "console.error('Error loading analysis:', error)"
+        "file": "lib/store/cart.ts",
+        "line": 56,
+        "context": "console.error('Failed to track cart:', error)"
       },
       {
-        "file": "lib/project-analyzer/index.ts",
-        "line": 52,
-        "context": "console.error('Error loading history:', error)"
+        "file": "lib/store/wishlist.ts",
+        "line": 100,
+        "context": "console.error('Failed to add to wishlist:', error)"
+      },
+      {
+        "file": "lib/store/wishlist.ts",
+        "line": 125,
+        "context": "console.error('Failed to remove from wishlist:', error)"
+      },
+      {
+        "file": "lib/store/wishlist.ts",
+        "line": 176,
+        "context": "console.error('Failed to fetch wishlist:', error)"
+      },
+      {
+        "file": "lib/shopify/sync.ts",
+        "line": 27,
+        "context": "console.warn(`[Shopify] Order ${orderId} not found for sync`)"
+      },
+      {
+        "file": "lib/shopify/sync.ts",
+        "line": 42,
+        "context": "console.error(`[Shopify] Failed to sync order ${order.orderNumber}:`, result.error)"
+      },
+      {
+        "file": "lib/shopify/sync.ts",
+        "line": 70,
+        "context": "console.error(`[Shopify] Error syncing order ${order.orderNumber}:`, error)"
       },
       {
         "file": "lib/sharing/analytics.ts",
@@ -4992,64 +5066,9 @@
         "file": "lib/sharing/url-generator.ts",
         "line": 243,
         "context": "console.error('Native share failed:', error)"
-      },
-      {
-        "file": "lib/shopify/sync.ts",
-        "line": 27,
-        "context": "console.warn(`[Shopify] Order ${orderId} not found for sync`)"
-      },
-      {
-        "file": "lib/shopify/sync.ts",
-        "line": 42,
-        "context": "console.error(`[Shopify] Failed to sync order ${order.orderNumber}:`, result.error)"
-      },
-      {
-        "file": "lib/shopify/sync.ts",
-        "line": 70,
-        "context": "console.error(`[Shopify] Error syncing order ${order.orderNumber}:`, error)"
-      },
-      {
-        "file": "lib/store/cart.ts",
-        "line": 56,
-        "context": "console.error('Failed to track cart:', error)"
-      },
-      {
-        "file": "lib/store/wishlist.ts",
-        "line": 100,
-        "context": "console.error('Failed to add to wishlist:', error)"
-      },
-      {
-        "file": "lib/store/wishlist.ts",
-        "line": 125,
-        "context": "console.error('Failed to remove from wishlist:', error)"
-      },
-      {
-        "file": "lib/store/wishlist.ts",
-        "line": 176,
-        "context": "console.error('Failed to fetch wishlist:', error)"
       }
     ],
     "anyTypes": [
-      {
-        "file": "app/(public)/checkout/page.tsx",
-        "line": 241,
-        "context": "data.cart.items.forEach((item: any) => {"
-      },
-      {
-        "file": "app/(public)/find-us/page.tsx",
-        "line": 40,
-        "context": "let allLocations: any[] = [];"
-      },
-      {
-        "file": "app/(public)/find-us/page.tsx",
-        "line": 42,
-        "context": "let initialResult: { locations: any[], total: number, appliedFilters: any };"
-      },
-      {
-        "file": "app/(public)/forms/page.tsx",
-        "line": 25,
-        "context": "const mapSavedTemplate = (template: any): CatalogTemplate => ({"
-      },
       {
         "file": "app/admin/audit-logs/page.tsx",
         "line": 32,
@@ -5071,6 +5090,11 @@
         "context": "const where: any = {}"
       },
       {
+        "file": "app/admin/locations/page.tsx",
+        "line": 29,
+        "context": "const where: any = {}"
+      },
+      {
         "file": "app/admin/invoices/page.tsx",
         "line": 35,
         "context": "function parseLineCount(lines: any): number {"
@@ -5078,11 +5102,6 @@
       {
         "file": "app/admin/invoices/page.tsx",
         "line": 52,
-        "context": "const where: any = {}"
-      },
-      {
-        "file": "app/admin/locations/page.tsx",
-        "line": 29,
         "context": "const where: any = {}"
       },
       {
@@ -5126,14 +5145,24 @@
         "context": "const where: any = {}"
       },
       {
-        "file": "app/(public)/forms/[slug]/page.tsx",
-        "line": 24,
-        "context": "const mapSavedTemplate = (template: any): CatalogTemplate => ({"
+        "file": "app/(public)/checkout/page.tsx",
+        "line": 241,
+        "context": "data.cart.items.forEach((item: any) => {"
       },
       {
-        "file": "app/(public)/products/search/page.tsx",
-        "line": 14,
-        "context": "function debounce<T extends (...args: any[]) => any>("
+        "file": "app/(public)/find-us/page.tsx",
+        "line": 40,
+        "context": "let allLocations: any[] = [];"
+      },
+      {
+        "file": "app/(public)/find-us/page.tsx",
+        "line": 42,
+        "context": "let initialResult: { locations: any[], total: number, appliedFilters: any };"
+      },
+      {
+        "file": "app/(public)/forms/page.tsx",
+        "line": 25,
+        "context": "const mapSavedTemplate = (template: any): CatalogTemplate => ({"
       },
       {
         "file": "app/admin/invoices/[id]/page.tsx",
@@ -5149,6 +5178,16 @@
         "file": "app/admin/invoices/[id]/page.tsx",
         "line": 75,
         "context": "const data: any = {"
+      },
+      {
+        "file": "app/(public)/forms/[slug]/page.tsx",
+        "line": 24,
+        "context": "const mapSavedTemplate = (template: any): CatalogTemplate => ({"
+      },
+      {
+        "file": "app/(public)/products/search/page.tsx",
+        "line": 14,
+        "context": "function debounce<T extends (...args: any[]) => any>("
       },
       {
         "file": "app/api/forms/route.ts",
@@ -5231,21 +5270,6 @@
         "context": "} catch (error: any) {"
       },
       {
-        "file": "app/api/admin/locations/route.ts",
-        "line": 37,
-        "context": "const where: any = {}"
-      },
-      {
-        "file": "app/api/admin/locations/route.ts",
-        "line": 64,
-        "context": "} catch (error: any) {"
-      },
-      {
-        "file": "app/api/admin/locations/route.ts",
-        "line": 179,
-        "context": "} catch (error: any) {"
-      },
-      {
         "file": "app/api/admin/media/route.ts",
         "line": 22,
         "context": "const where: any = {};"
@@ -5258,6 +5282,21 @@
       {
         "file": "app/api/admin/media/route.ts",
         "line": 119,
+        "context": "} catch (error: any) {"
+      },
+      {
+        "file": "app/api/admin/locations/route.ts",
+        "line": 37,
+        "context": "const where: any = {}"
+      },
+      {
+        "file": "app/api/admin/locations/route.ts",
+        "line": 64,
+        "context": "} catch (error: any) {"
+      },
+      {
+        "file": "app/api/admin/locations/route.ts",
+        "line": 179,
         "context": "} catch (error: any) {"
       },
       {
@@ -5351,6 +5390,11 @@
         "context": "locations.map(async (loc: any) => {"
       },
       {
+        "file": "app/api/reviews/google/route.ts",
+        "line": 99,
+        "context": "const allReviews = reviews.map((review: any) => ({"
+      },
+      {
         "file": "app/api/products/search/route.ts",
         "line": 55,
         "context": "const where: any = {"
@@ -5371,16 +5415,6 @@
         "context": "} catch (error: any) {"
       },
       {
-        "file": "app/api/reviews/google/route.ts",
-        "line": 99,
-        "context": "const allReviews = reviews.map((review: any) => ({"
-      },
-      {
-        "file": "app/api/admin/gift-certificates/export/route.ts",
-        "line": 25,
-        "context": "const where: any = {}"
-      },
-      {
         "file": "app/api/admin/categories/[id]/route.ts",
         "line": 32,
         "context": "} catch (error: any) {"
@@ -5396,6 +5430,21 @@
         "context": "} catch (error: any) {"
       },
       {
+        "file": "app/api/admin/gift-certificates/export/route.ts",
+        "line": 25,
+        "context": "const where: any = {}"
+      },
+      {
+        "file": "app/api/admin/inventory/[productId]/route.ts",
+        "line": 44,
+        "context": "} catch (error: any) {"
+      },
+      {
+        "file": "app/api/admin/inventory/[productId]/route.ts",
+        "line": 102,
+        "context": "} catch (error: any) {"
+      },
+      {
         "file": "app/api/admin/inventory/alerts/route.ts",
         "line": 22,
         "context": "const where: any = {};"
@@ -5406,13 +5455,13 @@
         "context": "} catch (error: any) {"
       },
       {
-        "file": "app/api/admin/inventory/[productId]/route.ts",
-        "line": 44,
+        "file": "app/api/admin/media/[id]/route.ts",
+        "line": 46,
         "context": "} catch (error: any) {"
       },
       {
-        "file": "app/api/admin/inventory/[productId]/route.ts",
-        "line": 102,
+        "file": "app/api/admin/media/[id]/route.ts",
+        "line": 92,
         "context": "} catch (error: any) {"
       },
       {
@@ -5441,21 +5490,6 @@
         "context": "} catch (error: any) {"
       },
       {
-        "file": "app/api/admin/locations/update-local-photos/route.ts",
-        "line": 79,
-        "context": "const where: any = {"
-      },
-      {
-        "file": "app/api/admin/media/[id]/route.ts",
-        "line": 46,
-        "context": "} catch (error: any) {"
-      },
-      {
-        "file": "app/api/admin/media/[id]/route.ts",
-        "line": 92,
-        "context": "} catch (error: any) {"
-      },
-      {
         "file": "app/api/admin/orders/export/route.ts",
         "line": 10,
         "context": "const where: any = {}"
@@ -5476,6 +5510,11 @@
         "context": "} catch (error: any) {"
       },
       {
+        "file": "app/api/admin/products/import/route.ts",
+        "line": 137,
+        "context": "} catch (error: any) {"
+      },
+      {
         "file": "app/api/admin/products/export/route.ts",
         "line": 24,
         "context": "const where: any = {};"
@@ -5486,9 +5525,9 @@
         "context": "} catch (error: any) {"
       },
       {
-        "file": "app/api/admin/products/import/route.ts",
-        "line": 137,
-        "context": "} catch (error: any) {"
+        "file": "app/api/admin/locations/update-local-photos/route.ts",
+        "line": 79,
+        "context": "const where: any = {"
       },
       {
         "file": "app/api/admin/tags/[id]/route.ts",
@@ -5621,16 +5660,6 @@
         "context": "const handleAddToCart = (product: any) => {"
       },
       {
-        "file": "components/admin/inventory/InventoryAdjustmentDialog.tsx",
-        "line": 114,
-        "context": "} catch (error: any) {"
-      },
-      {
-        "file": "components/admin/inventory/InventoryAlertsTable.tsx",
-        "line": 71,
-        "context": "} catch (error: any) {"
-      },
-      {
         "file": "components/admin/project-status/ProjectStatusDashboard.tsx",
         "line": 368,
         "context": "features: any[]"
@@ -5639,6 +5668,16 @@
         "file": "components/admin/project-status/ProjectStatusDashboard.tsx",
         "line": 385,
         "context": "{features.map((feature: any, i: number) => ("
+      },
+      {
+        "file": "components/admin/inventory/InventoryAdjustmentDialog.tsx",
+        "line": 114,
+        "context": "} catch (error: any) {"
+      },
+      {
+        "file": "components/admin/inventory/InventoryAlertsTable.tsx",
+        "line": 71,
+        "context": "} catch (error: any) {"
       },
       {
         "file": "lib/api.ts",
@@ -5781,31 +5820,6 @@
         "context": "export async function importGiftCertificates(rows: any[]): Promise<{"
       },
       {
-        "file": "lib/locations/db-query.ts",
-        "line": 38,
-        "context": "loc: any,"
-      },
-      {
-        "file": "lib/locations/db-query.ts",
-        "line": 67,
-        "context": "? loc.photos.map((p: any) => p.url).sort((a: any, b: any) => a.sortOrder - b.sortOrder)"
-      },
-      {
-        "file": "lib/locations/db-query.ts",
-        "line": 148,
-        "context": "const where: any = {"
-      },
-      {
-        "file": "lib/locations/import 2.ts",
-        "line": 22,
-        "context": "export async function importLocations(rows: any[], updateExisting = true): Promise<{"
-      },
-      {
-        "file": "lib/locations/import.ts",
-        "line": 22,
-        "context": "export async function importLocations(rows: any[], updateExisting = true): Promise<{"
-      },
-      {
         "file": "lib/orders/import 2.ts",
         "line": 60,
         "context": "data?: any"
@@ -5916,6 +5930,41 @@
         "context": "jsonLd: any"
       },
       {
+        "file": "lib/locations/db-query.ts",
+        "line": 38,
+        "context": "loc: any,"
+      },
+      {
+        "file": "lib/locations/db-query.ts",
+        "line": 67,
+        "context": "? loc.photos.map((p: any) => p.url).sort((a: any, b: any) => a.sortOrder - b.sortOrder)"
+      },
+      {
+        "file": "lib/locations/db-query.ts",
+        "line": 148,
+        "context": "const where: any = {"
+      },
+      {
+        "file": "lib/locations/import 2.ts",
+        "line": 22,
+        "context": "export async function importLocations(rows: any[], updateExisting = true): Promise<{"
+      },
+      {
+        "file": "lib/locations/import.ts",
+        "line": 22,
+        "context": "export async function importLocations(rows: any[], updateExisting = true): Promise<{"
+      },
+      {
+        "file": "lib/training-data/extractor.ts",
+        "line": 131,
+        "context": "} catch (error: any) {"
+      },
+      {
+        "file": "lib/training-data/extractor.ts",
+        "line": 235,
+        "context": "} catch (error: any) {"
+      },
+      {
         "file": "lib/store/cart.ts",
         "line": 61,
         "context": "const cartStoreConfig = (set: any, get: any): CartStore => ({"
@@ -5927,7 +5976,7 @@
       },
       {
         "file": "lib/store/comparison.ts",
-        "line": 33,
+        "line": 34,
         "context": "const comparisonStoreConfig = (set: any, get: any): ComparisonStore => ({"
       },
       {
@@ -5961,16 +6010,6 @@
         "context": "} catch (error: any) {"
       },
       {
-        "file": "lib/training-data/extractor.ts",
-        "line": 131,
-        "context": "} catch (error: any) {"
-      },
-      {
-        "file": "lib/training-data/extractor.ts",
-        "line": 235,
-        "context": "} catch (error: any) {"
-      },
-      {
         "file": "lib/email/blocks/renderer.ts",
         "line": 6,
         "context": "value: any"
@@ -5980,7 +6019,7 @@
     "commentedCode": [
       {
         "file": "components/store/product-grid.tsx",
-        "line": 95,
+        "line": 79,
         "text": "Commented code block (3 lines)"
       }
     ]
@@ -6149,13 +6188,36 @@
     ]
   },
   "workSession": {
-    "sessionNumber": 13,
+    "sessionNumber": 21,
     "estimatedHours": 4.5,
     "focus": "Backend API Enhancement",
     "priority": "medium",
     "tasks": [
       {
         "taskNumber": 1,
+        "title": "Complete API Route: app/api/calendar/route.ts",
+        "description": "Add missing features to app/api/calendar/route.ts. Issues: Missing authentication check, No tests found",
+        "priority": "medium",
+        "estimatedHours": 1.5,
+        "files": [
+          "app/api/calendar/route.ts"
+        ],
+        "dependencies": [],
+        "instructions": "## Complete API Route: app/api/calendar/route.ts\n\n### Current Status\n- **Completion:** 70%\n- **Methods:** GET\n- **Issues:** Missing authentication check, No tests found\n\n### Tasks\n- Add authentication check (getCurrentUser or requirePermission)\n\n\n- Add audit logging for mutations\n- Write API tests\n\n### Implementation\n1. Review similar API routes for patterns\n2. Add missing functionality from issues list\n3. Test all HTTP methods\n4. Verify error handling\n5. Check performance (<500ms response time)\n",
+        "testing": {
+          "functional": [
+            "All HTTP methods work",
+            "Error handling tested"
+          ],
+          "visual": [],
+          "performance": [
+            "Response time <500ms"
+          ],
+          "accessibility": []
+        }
+      },
+      {
+        "taskNumber": 2,
         "title": "Complete API Route: app/api/forms/route.ts",
         "description": "Add missing features to app/api/forms/route.ts. Issues: Missing authentication check, No tests found",
         "priority": "medium",
@@ -6178,7 +6240,7 @@
         }
       },
       {
-        "taskNumber": 2,
+        "taskNumber": 3,
         "title": "Complete API Route: app/api/image-proxy/route.ts",
         "description": "Add missing features to app/api/image-proxy/route.ts. Issues: Missing authentication check, No tests found",
         "priority": "medium",
@@ -6188,29 +6250,6 @@
         ],
         "dependencies": [],
         "instructions": "## Complete API Route: app/api/image-proxy/route.ts\n\n### Current Status\n- **Completion:** 70%\n- **Methods:** GET\n- **Issues:** Missing authentication check, No tests found\n\n### Tasks\n- Add authentication check (getCurrentUser or requirePermission)\n\n\n- Add audit logging for mutations\n- Write API tests\n\n### Implementation\n1. Review similar API routes for patterns\n2. Add missing functionality from issues list\n3. Test all HTTP methods\n4. Verify error handling\n5. Check performance (<500ms response time)\n",
-        "testing": {
-          "functional": [
-            "All HTTP methods work",
-            "Error handling tested"
-          ],
-          "visual": [],
-          "performance": [
-            "Response time <500ms"
-          ],
-          "accessibility": []
-        }
-      },
-      {
-        "taskNumber": 3,
-        "title": "Complete API Route: app/api/locations/route.ts",
-        "description": "Add missing features to app/api/locations/route.ts. Issues: Missing authentication check, Missing request validation (Zod schema), No tests found",
-        "priority": "medium",
-        "estimatedHours": 1.5,
-        "files": [
-          "app/api/locations/route.ts"
-        ],
-        "dependencies": [],
-        "instructions": "## Complete API Route: app/api/locations/route.ts\n\n### Current Status\n- **Completion:** 50%\n- **Methods:** GET\n- **Issues:** Missing authentication check, Missing request validation (Zod schema), No tests found\n\n### Tasks\n- Add authentication check (getCurrentUser or requirePermission)\n- Add Zod validation schema\n\n- Add audit logging for mutations\n- Write API tests\n\n### Implementation\n1. Review similar API routes for patterns\n2. Add missing functionality from issues list\n3. Test all HTTP methods\n4. Verify error handling\n5. Check performance (<500ms response time)\n",
         "testing": {
           "functional": [
             "All HTTP methods work",

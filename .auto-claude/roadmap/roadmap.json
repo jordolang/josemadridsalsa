@@ -350,7 +350,7 @@
       "impact": "medium",
       "phase_id": "phase-2",
       "dependencies": [],
-      "status": "under_review",
+      "status": "planned",
       "acceptance_criteria": [
         "Add to compare button on product cards and detail pages",
         "Compare up to 4 products side-by-side",
@@ -363,6 +363,7 @@
         "As a new customer, I want to compare different salsas so that I can choose the best ones for my taste",
         "As a gift buyer, I want to compare products so that I can select the perfect variety pack"
       ],
+      "linked_spec_id": "001-product-comparison-tool",
       "competitor_insight_ids": []
     },
     {
@@ -596,7 +597,7 @@
   ],
   "metadata": {
     "created_at": "2025-01-20T18:50:00Z",
-    "updated_at": "2026-01-20T09:37:14.703Z",
+    "updated_at": "2026-01-21T18:43:47.766Z",
     "generated_by": "roadmap_features agent",
     "prioritization_framework": "MoSCoW",
     "competitor_analysis_used": true,
