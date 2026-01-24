@@ -40,6 +40,12 @@ type CheckoutFormState = {
   notes: string
 }
 
+type ShippingOption = {
+  method: string
+  cost: number
+  estimatedDays: string
+}
+
 const initialFormState: CheckoutFormState = {
   firstName: '',
   lastName: '',
@@ -86,6 +92,8 @@ function CheckoutForm() {
   const [isCalculatingTax, setIsCalculatingTax] = useState(false)
   const [shippingCost, setShippingCost] = useState(0)
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false)
+  const [availableShippingOptions, setAvailableShippingOptions] = useState<ShippingOption[]>([])
+  const [selectedShippingOption, setSelectedShippingOption] = useState<ShippingOption | null>(null)
   const [isRecoveringCart, setIsRecoveringCart] = useState(false)
   const taxCalcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const shippingCalcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -171,14 +179,29 @@ function CheckoutForm() {
 
       if (response.ok) {
         const data = await response.json()
-        setShippingCost(data.shippingCost || 0)
+        const options = data.availableOptions || []
+        setAvailableShippingOptions(options)
+
+        // Select the first option by default (usually the cheapest/standard option)
+        if (options.length > 0) {
+          const firstOption = options[0]
+          setSelectedShippingOption(firstOption)
+          setShippingCost(firstOption.cost)
+        } else {
+          setShippingCost(data.shippingCost || 0)
+          setSelectedShippingOption(null)
+        }
       } else {
         console.error('Failed to calculate shipping')
         setShippingCost(0)
+        setAvailableShippingOptions([])
+        setSelectedShippingOption(null)
       }
     } catch (error) {
       console.error('Error calculating shipping:', error)
       setShippingCost(0)
+      setAvailableShippingOptions([])
+      setSelectedShippingOption(null)
     } finally {
       setIsCalculatingShipping(false)
     }
@@ -215,6 +238,11 @@ function CheckoutForm() {
         calculateShippingEstimate()
       }, 800)
     }
+  }
+
+  const handleShippingOptionChange = (option: ShippingOption) => {
+    setSelectedShippingOption(option)
+    setShippingCost(option.cost)
   }
 
   // Handle cart recovery from abandoned cart email
@@ -519,6 +547,52 @@ function CheckoutForm() {
                     </div>
                   </div>
                 </section>
+
+                {availableShippingOptions.length > 0 && (
+                  <section className="space-y-4">
+                    <h2 className="text-xl font-semibold text-gray-900">Shipping method</h2>
+                    <div className="space-y-3">
+                      {availableShippingOptions.map((option, index) => (
+                        <label
+                          key={index}
+                          className={`
+                            flex items-start gap-4 rounded-lg border-2 p-4 cursor-pointer transition-colors
+                            ${
+                              selectedShippingOption?.method === option.method
+                                ? 'border-salsa-500 bg-salsa-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }
+                          `}
+                        >
+                          <input
+                            type="radio"
+                            name="shippingOption"
+                            value={option.method}
+                            checked={selectedShippingOption?.method === option.method}
+                            onChange={() => handleShippingOptionChange(option)}
+                            className="mt-1 h-4 w-4 text-salsa-500 focus:ring-salsa-500"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-gray-900">{option.method}</span>
+                              <span className="font-semibold text-gray-900">
+                                {option.cost === 0 ? 'FREE' : formatPrice(option.cost)}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-sm text-gray-600">
+                              Estimated delivery: {option.estimatedDays}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                    {isCalculatingShipping && (
+                      <p className="text-sm text-gray-500 italic">
+                        Calculating shipping options...
+                      </p>
+                    )}
+                  </section>
+                )}
 
                 <section className="space-y-4">
                   <h2 className="text-xl font-semibold text-gray-900">Payment details</h2>
