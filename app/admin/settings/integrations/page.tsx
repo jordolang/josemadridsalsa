@@ -136,7 +136,7 @@ export default async function IntegrationsPage() {
         <div>
           <h1 className="text-3xl font-bold">Integrations</h1>
           <p className="text-slate-600">
-            Manage encrypted API credentials for payments, calendar sync, email, and social platforms.
+            Manage encrypted API credentials for payments, shipping, calendar sync, email, and social platforms.
           </p>
         </div>
         <div className="rounded-lg bg-slate-100 px-4 py-2 text-sm text-slate-600">
@@ -148,7 +148,7 @@ export default async function IntegrationsPage() {
         <h2 className="text-xl font-semibold">Current credentials</h2>
         {serviceKeys.length === 0 ? (
           <div className="py-12 text-center text-sm text-slate-500">
-            No integrations configured yet. Add Stripe, Google Calendar, or social media secrets below.
+            No integrations configured yet. Add Stripe, shipping provider, Google Calendar, or social media secrets below.
           </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
@@ -231,7 +231,7 @@ export default async function IntegrationsPage() {
                 className="font-mono text-sm"
               />
               <p className="text-xs text-slate-500">
-                Lowercase identifier, e.g. <code>stripe</code>, <code>google_calendar</code>.
+                Lowercase identifier, e.g. <code>stripe</code>, <code>shipping</code>, <code>google_calendar</code>.
               </p>
             </div>
             <div className="space-y-2">
