@@ -9,6 +9,7 @@ import {
   type ShippingAddress,
   type Parcel,
 } from './shipping-api'
+import { prisma } from './prisma'
 
 export interface ShippingCalculationInput {
   /** Items in the order */
@@ -104,6 +105,35 @@ const DEFAULT_ORIGIN_ADDRESS: ShippingAddress = {
 }
 
 /**
+ * Get free shipping threshold from database settings
+ *
+ * Fetches the configurable free shipping threshold from ShippingSettings
+ * Falls back to default value if settings don't exist
+ *
+ * Following error handling pattern from lib/tax-calculator.ts
+ */
+async function getFreeShippingThreshold(): Promise<number> {
+  try {
+    const settings = await prisma.shippingSettings.findFirst({
+      orderBy: { createdAt: 'desc' },
+      select: { freeShippingThreshold: true },
+    })
+
+    if (settings?.freeShippingThreshold) {
+      return parseFloat(settings.freeShippingThreshold.toString())
+    }
+
+    // Return default if no settings found
+    return SHIPPING_RATES.FREE_SHIPPING_THRESHOLD
+  } catch (error) {
+    console.error('[Shipping Calculator] Error fetching free shipping threshold:', error)
+
+    // Return default threshold to not block checkout
+    return SHIPPING_RATES.FREE_SHIPPING_THRESHOLD
+  }
+}
+
+/**
  * Calculate parcel dimensions from order items
  *
  * Simple aggregation strategy for MVP - sums dimensions
@@ -145,12 +175,13 @@ function calculateParcelDimensions(
  * Used when API is unavailable to ensure checkout is never blocked
  */
 function calculateEstimateRates(
-  input: ShippingCalculationInput
+  input: ShippingCalculationInput,
+  freeShippingThreshold: number
 ): ShippingCalculationResult {
   const { items, shippingAddress, subtotal } = input
 
   // Free shipping for orders over threshold
-  if (subtotal >= SHIPPING_RATES.FREE_SHIPPING_THRESHOLD) {
+  if (subtotal >= freeShippingThreshold) {
     return {
       shippingCost: 0,
       shippingMethod: 'Free Shipping',
@@ -229,8 +260,11 @@ export async function calculateShipping(
 ): Promise<ShippingCalculationResult> {
   const { items, shippingAddress, subtotal } = input
 
+  // Get configurable free shipping threshold from database
+  const freeShippingThreshold = await getFreeShippingThreshold()
+
   // Free shipping for orders over threshold (check first to avoid API call)
-  if (subtotal >= SHIPPING_RATES.FREE_SHIPPING_THRESHOLD) {
+  if (subtotal >= freeShippingThreshold) {
     return {
       shippingCost: 0,
       shippingMethod: 'Free Shipping',
@@ -241,7 +275,7 @@ export async function calculateShipping(
   // For international shipping, fall back to estimate rates for now
   // TODO: Add international shipping API support
   if (shippingAddress.country !== 'US') {
-    return calculateEstimateRates(input)
+    return calculateEstimateRates(input, freeShippingThreshold)
   }
 
   try {
@@ -293,7 +327,7 @@ export async function calculateShipping(
     } else {
       // No rates returned - fall back to estimates
       console.warn('[Shipping Calculator] No rates returned from API, using estimates')
-      return calculateEstimateRates(input)
+      return calculateEstimateRates(input, freeShippingThreshold)
     }
   } catch (error) {
     console.error('[Shipping Calculator] Error calculating shipping:', error)
@@ -314,20 +348,23 @@ export async function calculateShipping(
     console.warn('[Shipping Calculator] Falling back to estimate-based rates')
 
     // Return estimate rates rather than failing checkout
-    return calculateEstimateRates(input)
+    return calculateEstimateRates(input, freeShippingThreshold)
   }
 }
 
 /**
  * Get shipping estimate for frontend preview
  */
-export function getShippingEstimate(params: {
+export async function getShippingEstimate(params: {
   subtotal: number
   state: string
   country?: string
-}): number {
+}): Promise<number> {
+  // Get configurable free shipping threshold from database
+  const freeShippingThreshold = await getFreeShippingThreshold()
+
   // Quick estimate without detailed item info
-  if (params.subtotal >= SHIPPING_RATES.FREE_SHIPPING_THRESHOLD) {
+  if (params.subtotal >= freeShippingThreshold) {
     return 0
   }
 
