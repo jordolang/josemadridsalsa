@@ -3,14 +3,30 @@
  * José Madrid Salsa E-commerce Platform
  */
 
+import {
+  getShippingRates,
+  type ShipmentRequest,
+  type ShippingAddress,
+  type Parcel,
+} from './shipping-api'
+
 export interface ShippingCalculationInput {
   /** Items in the order */
   items: Array<{
     weight?: number // Weight in pounds
+    dimensions?: {
+      // Dimensions in inches
+      length?: number
+      width?: number
+      height?: number
+    }
     quantity: number
   }>
   /** Shipping address */
   shippingAddress: {
+    line1?: string
+    line2?: string
+    city?: string
     state: string
     postalCode: string
     country: string
@@ -76,15 +92,59 @@ const SHIPPING_RATES = {
 }
 
 /**
- * Calculate shipping cost for an order
- *
- * Strategy:
- * 1. Free shipping over threshold
- * 2. International shipping for non-US
- * 3. Flat rate for domestic orders
- * 4. Apply state multipliers for remote locations
+ * Default origin address for shipping calculations
+ * TODO: Make this configurable in admin settings
  */
-export function calculateShipping(
+const DEFAULT_ORIGIN_ADDRESS: ShippingAddress = {
+  street1: process.env.SHIPPING_ORIGIN_ADDRESS || '123 Main St',
+  city: process.env.SHIPPING_ORIGIN_CITY || 'San Francisco',
+  state: process.env.SHIPPING_ORIGIN_STATE || 'CA',
+  zip: process.env.SHIPPING_ORIGIN_ZIP || '94111',
+  country: 'US',
+}
+
+/**
+ * Calculate parcel dimensions from order items
+ *
+ * Simple aggregation strategy for MVP - sums dimensions
+ * Future: Implement bin packing algorithm for optimal box selection
+ */
+function calculateParcelDimensions(
+  items: ShippingCalculationInput['items']
+): Parcel {
+  let totalWeight = 0
+  let maxLength = 0
+  let maxWidth = 0
+  let totalHeight = 0
+
+  for (const item of items) {
+    // Weight in pounds -> convert to ounces
+    const itemWeight = (item.weight || 1.0) * 16 // Default 1 lb = 16 oz
+    totalWeight += itemWeight * item.quantity
+
+    // Dimensions - use defaults if not provided
+    const dims = item.dimensions || { length: 10, width: 8, height: 2 }
+
+    // Simple box aggregation: max length/width, sum heights
+    maxLength = Math.max(maxLength, dims.length || 10)
+    maxWidth = Math.max(maxWidth, dims.width || 8)
+    totalHeight += (dims.height || 2) * item.quantity
+  }
+
+  return {
+    length: maxLength,
+    width: maxWidth,
+    height: Math.min(totalHeight, 24), // Cap at 24 inches
+    weight: totalWeight,
+  }
+}
+
+/**
+ * Fallback shipping calculation using estimate-based rates
+ *
+ * Used when API is unavailable to ensure checkout is never blocked
+ */
+function calculateEstimateRates(
   input: ShippingCalculationInput
 ): ShippingCalculationResult {
   const { items, shippingAddress, subtotal } = input
@@ -150,6 +210,102 @@ export function calculateShipping(
         estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
       },
     ],
+  }
+}
+
+/**
+ * Calculate shipping cost for an order using real carrier API
+ *
+ * Strategy:
+ * 1. Check free shipping threshold first
+ * 2. Call real carrier API for accurate rates
+ * 3. Return multiple shipping options (standard, expedited, express)
+ * 4. Fall back to estimate-based rates if API fails (never block checkout)
+ *
+ * Follows error handling pattern from lib/tax-calculator.ts
+ */
+export async function calculateShipping(
+  input: ShippingCalculationInput
+): Promise<ShippingCalculationResult> {
+  const { items, shippingAddress, subtotal } = input
+
+  // Free shipping for orders over threshold (check first to avoid API call)
+  if (subtotal >= SHIPPING_RATES.FREE_SHIPPING_THRESHOLD) {
+    return {
+      shippingCost: 0,
+      shippingMethod: 'Free Shipping',
+      estimatedDelivery: SHIPPING_RATES.FLAT_RATE.estimatedDays,
+    }
+  }
+
+  // For international shipping, fall back to estimate rates for now
+  // TODO: Add international shipping API support
+  if (shippingAddress.country !== 'US') {
+    return calculateEstimateRates(input)
+  }
+
+  try {
+    // Calculate parcel dimensions from items
+    const parcel = calculateParcelDimensions(items)
+
+    // Build shipping API request
+    const shipmentRequest: ShipmentRequest = {
+      fromAddress: DEFAULT_ORIGIN_ADDRESS,
+      toAddress: {
+        street1: shippingAddress.line1 || '123 Main St', // Placeholder if not provided
+        street2: shippingAddress.line2,
+        city: shippingAddress.city || 'City',
+        state: shippingAddress.state,
+        zip: shippingAddress.postalCode,
+        country: shippingAddress.country,
+      },
+      parcel,
+    }
+
+    // Get real carrier rates from API
+    const ratesResponse = await getShippingRates(shipmentRequest)
+
+    // If API returned rates, use them
+    if (ratesResponse.rates.length > 0) {
+      // Sort rates by cost (cheapest first)
+      const sortedRates = [...ratesResponse.rates].sort((a, b) => a.rate - b.rate)
+
+      // Map API rates to our format
+      const availableOptions = sortedRates.map((rate) => ({
+        method: `${rate.carrier} ${rate.service}`,
+        cost: rate.rate,
+        estimatedDays: rate.deliveryDays
+          ? `${rate.deliveryDays} business days`
+          : '3-5 business days',
+      }))
+
+      // Use cheapest rate as default
+      const cheapestRate = sortedRates[0]
+
+      return {
+        shippingCost: cheapestRate.rate,
+        shippingMethod: `${cheapestRate.carrier} ${cheapestRate.service}`,
+        estimatedDelivery: cheapestRate.deliveryDays
+          ? `${cheapestRate.deliveryDays} business days`
+          : '3-5 business days',
+        availableOptions,
+      }
+    } else {
+      // No rates returned - fall back to estimates
+      console.warn('[Shipping Calculator] No rates returned from API, using estimates')
+      return calculateEstimateRates(input)
+    }
+  } catch (error) {
+    console.error('[Shipping Calculator] Error calculating shipping:', error)
+
+    if (error instanceof Error) {
+      console.error('[Shipping Calculator] Error details:', error.message)
+    }
+
+    // For production: log error but return estimate rates to not block checkout
+    console.warn('[Shipping Calculator] Falling back to estimate-based rates')
+
+    return calculateEstimateRates(input)
   }
 }
 

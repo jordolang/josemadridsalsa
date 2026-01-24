@@ -155,9 +155,12 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      const shippingResult = calculateShipping({
+      const shippingResult = await calculateShipping({
         items: itemsWithWeights,
         shippingAddress: {
+          line1: shipping.address1,
+          line2: shipping.address2,
+          city: shipping.city,
           state: shipping.state,
           postalCode: shipping.postalCode,
           country: 'US',
