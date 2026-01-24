@@ -90,7 +90,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      ...shippingResult,
+      shippingCost: shippingResult.shippingCost,
+      shippingMethod: shippingResult.shippingMethod,
+      estimatedDelivery: shippingResult.estimatedDelivery,
+      availableOptions: shippingResult.availableOptions || [],
       subtotal,
     })
   } catch (error) {
