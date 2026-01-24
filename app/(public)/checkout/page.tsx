@@ -92,6 +92,7 @@ function CheckoutForm() {
   const [isCalculatingTax, setIsCalculatingTax] = useState(false)
   const [shippingCost, setShippingCost] = useState(0)
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false)
+  const [shippingError, setShippingError] = useState<string | null>(null)
   const [availableShippingOptions, setAvailableShippingOptions] = useState<ShippingOption[]>([])
   const [selectedShippingOption, setSelectedShippingOption] = useState<ShippingOption | null>(null)
   const [isRecoveringCart, setIsRecoveringCart] = useState(false)
@@ -157,6 +158,7 @@ function CheckoutForm() {
     }
 
     setIsCalculatingShipping(true)
+    setShippingError(null)
     try {
       const response = await fetch('/api/checkout/calculate-shipping', {
         method: 'POST',
@@ -192,13 +194,15 @@ function CheckoutForm() {
           setSelectedShippingOption(null)
         }
       } else {
-        console.error('Failed to calculate shipping')
+        const errorData = await response.json().catch(() => ({}))
+        const errorMsg = errorData.error || 'Unable to calculate shipping costs'
+        setShippingError(errorMsg)
         setShippingCost(0)
         setAvailableShippingOptions([])
         setSelectedShippingOption(null)
       }
     } catch (error) {
-      console.error('Error calculating shipping:', error)
+      setShippingError('Unable to calculate shipping costs. Please try again.')
       setShippingCost(0)
       setAvailableShippingOptions([])
       setSelectedShippingOption(null)
@@ -223,13 +227,14 @@ function CheckoutForm() {
 
     // Trigger tax and shipping calculation when address fields change
     if (['city', 'state', 'postalCode'].includes(name)) {
-      // Clear previous timeouts
+      // Clear previous timeouts and errors
       if (taxCalcTimeoutRef.current) {
         clearTimeout(taxCalcTimeoutRef.current)
       }
       if (shippingCalcTimeoutRef.current) {
         clearTimeout(shippingCalcTimeoutRef.current)
       }
+      setShippingError(null)
       // Debounce calculations to avoid excessive API calls
       taxCalcTimeoutRef.current = setTimeout(() => {
         calculateTaxEstimate()
@@ -550,48 +555,55 @@ function CheckoutForm() {
                   </div>
                 </section>
 
-                {availableShippingOptions.length > 0 && (
+                {(availableShippingOptions.length > 0 || isCalculatingShipping || shippingError) && (
                   <section className="space-y-4">
                     <h2 className="text-xl font-semibold text-gray-900">Shipping method</h2>
-                    <div className="space-y-3">
-                      {availableShippingOptions.map((option, index) => (
-                        <label
-                          key={index}
-                          className={`
-                            flex items-start gap-4 rounded-lg border-2 p-4 cursor-pointer transition-colors
-                            ${
-                              selectedShippingOption?.method === option.method
-                                ? 'border-salsa-500 bg-salsa-50'
-                                : 'border-gray-200 hover:border-gray-300'
-                            }
-                          `}
-                        >
-                          <input
-                            type="radio"
-                            name="shippingOption"
-                            value={option.method}
-                            checked={selectedShippingOption?.method === option.method}
-                            onChange={() => handleShippingOptionChange(option)}
-                            className="mt-1 h-4 w-4 text-salsa-500 focus:ring-salsa-500"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-gray-900">{option.method}</span>
-                              <span className="font-semibold text-gray-900">
-                                {option.cost === 0 ? 'FREE' : formatPrice(option.cost)}
-                              </span>
+
+                    {isCalculatingShipping ? (
+                      <div className="flex items-center gap-3 rounded-lg border-2 border-gray-200 bg-gray-50 p-4">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-salsa-500"></div>
+                        <span className="text-sm text-gray-600">Calculating shipping options...</span>
+                      </div>
+                    ) : shippingError ? (
+                      <div className="rounded-lg border-2 border-red-200 bg-red-50 p-4">
+                        <p className="text-sm text-red-700">{shippingError}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {availableShippingOptions.map((option, index) => (
+                          <label
+                            key={index}
+                            className={`
+                              flex items-start gap-4 rounded-lg border-2 p-4 cursor-pointer transition-colors
+                              ${
+                                selectedShippingOption?.method === option.method
+                                  ? 'border-salsa-500 bg-salsa-50'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }
+                            `}
+                          >
+                            <input
+                              type="radio"
+                              name="shippingOption"
+                              value={option.method}
+                              checked={selectedShippingOption?.method === option.method}
+                              onChange={() => handleShippingOptionChange(option)}
+                              className="mt-1 h-4 w-4 text-salsa-500 focus:ring-salsa-500"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-gray-900">{option.method}</span>
+                                <span className="font-semibold text-gray-900">
+                                  {option.cost === 0 ? 'FREE' : formatPrice(option.cost)}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-sm text-gray-600">
+                                Estimated delivery: {option.estimatedDays}
+                              </p>
                             </div>
-                            <p className="mt-1 text-sm text-gray-600">
-                              Estimated delivery: {option.estimatedDays}
-                            </p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                    {isCalculatingShipping && (
-                      <p className="text-sm text-gray-500 italic">
-                        Calculating shipping options...
-                      </p>
+                          </label>
+                        ))}
+                      </div>
                     )}
                   </section>
                 )}
