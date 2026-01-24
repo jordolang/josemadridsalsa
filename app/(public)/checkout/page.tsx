@@ -348,6 +348,8 @@ function CheckoutForm() {
             postalCode: formState.postalCode,
           },
           notes: formState.notes || undefined,
+          shippingMethod: selectedShippingOption?.method,
+          shippingCost: selectedShippingOption?.cost,
         }),
       })
 

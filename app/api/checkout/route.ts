@@ -34,6 +34,8 @@ const CheckoutSchema = z.object({
   notes: z.string().optional(),
   discountCode: z.string().optional(),
   recoveryToken: z.string().optional(),
+  shippingMethod: z.string().optional(),
+  shippingCost: z.number().optional(),
 })
 
 const toDecimal = (value: number) =>
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, customer, shipping, notes, discountCode, recoveryToken } = parsed.data
+    const { items, customer, shipping, notes, discountCode, recoveryToken, shippingMethod, shippingCost } = parsed.data
 
     const productIds = items.map((item) => item.productId)
     const products = await prisma.product.findMany({
@@ -143,46 +145,59 @@ export async function POST(request: NextRequest) {
       // Continue with 0 tax rather than blocking checkout
     }
 
-    // Calculate shipping cost
-    let shippingCost = 0
-    let shippingMethod = 'Standard Shipping'
-    try {
-      const itemsWithWeights = orderItems.map((item) => {
-        const product = productMap.get(item.productId)
-        return {
-          weight: product?.weight ? Number(product.weight) : 1.0,
-          quantity: item.quantity,
-        }
-      })
+    // Use shipping cost and method from frontend if provided, otherwise calculate
+    let finalShippingCost = 0
+    let finalShippingMethod = 'Standard Shipping'
 
-      const shippingResult = await calculateShipping({
-        items: itemsWithWeights,
-        shippingAddress: {
-          line1: shipping.address1,
-          line2: shipping.address2,
-          city: shipping.city,
-          state: shipping.state,
-          postalCode: shipping.postalCode,
-          country: 'US',
-        },
-        subtotal,
-      })
+    if (shippingMethod && shippingCost !== undefined) {
+      // Use the shipping option selected by the customer
+      finalShippingCost = shippingCost
+      finalShippingMethod = shippingMethod
 
-      shippingCost = shippingResult.shippingCost
-      shippingMethod = shippingResult.shippingMethod
-
-      console.log('[Checkout] Shipping calculated:', {
-        subtotal,
-        shippingCost,
-        shippingMethod,
-        estimatedDelivery: shippingResult.estimatedDelivery,
+      console.log('[Checkout] Using selected shipping:', {
+        shippingCost: finalShippingCost,
+        shippingMethod: finalShippingMethod,
       })
-    } catch (error) {
-      console.error('[Checkout] Shipping calculation failed, using $0:', error)
-      // Continue with 0 shipping rather than blocking checkout
+    } else {
+      // Fallback: calculate shipping if not provided
+      try {
+        const itemsWithWeights = orderItems.map((item) => {
+          const product = productMap.get(item.productId)
+          return {
+            weight: product?.weight ? Number(product.weight) : 1.0,
+            quantity: item.quantity,
+          }
+        })
+
+        const shippingResult = await calculateShipping({
+          items: itemsWithWeights,
+          shippingAddress: {
+            line1: shipping.address1,
+            line2: shipping.address2,
+            city: shipping.city,
+            state: shipping.state,
+            postalCode: shipping.postalCode,
+            country: 'US',
+          },
+          subtotal,
+        })
+
+        finalShippingCost = shippingResult.shippingCost
+        finalShippingMethod = shippingResult.shippingMethod
+
+        console.log('[Checkout] Shipping calculated:', {
+          subtotal,
+          shippingCost: finalShippingCost,
+          shippingMethod: finalShippingMethod,
+          estimatedDelivery: shippingResult.estimatedDelivery,
+        })
+      } catch (error) {
+        console.error('[Checkout] Shipping calculation failed, using $0:', error)
+        // Continue with 0 shipping rather than blocking checkout
+      }
     }
 
-    const total = subtotal + taxAmount + shippingCost
+    const total = subtotal + taxAmount + finalShippingCost
 
     const shippingSummary = [
       `${shipping.address1}${shipping.address2 ? `, ${shipping.address2}` : ''}`,
@@ -213,10 +228,10 @@ export async function POST(request: NextRequest) {
         userId: user?.id ?? undefined,
         guestEmail: user ? undefined : customer.email,
         guestPhone: customer.phone,
-        shippingMethod: shippingSummary,
+        shippingMethod: finalShippingMethod,
         customerNotes: notes ?? undefined,
         subtotal: toDecimal(subtotal),
-        shippingCost: toDecimal(shippingCost),
+        shippingCost: toDecimal(finalShippingCost),
         tax: toDecimal(taxAmount),
         discountAmount: toDecimal(0),
         total: toDecimal(total),
