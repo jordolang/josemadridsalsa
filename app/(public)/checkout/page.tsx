@@ -667,9 +667,14 @@ function CheckoutForm() {
                   <span>Tax {isCalculatingTax && <span className="text-xs">(calculating...)</span>}</span>
                   <span>{formatPrice(taxAmount)}</span>
                 </div>
-                {(taxAmount === 0 || shippingCost === 0) && formState.postalCode.length >= 5 && (
+                {shippingCost === 0 && subtotal >= 50 && availableShippingOptions.length > 0 && (
+                  <p className="text-xs text-green-600 font-medium">
+                    🎉 Free shipping on orders over $50!
+                  </p>
+                )}
+                {!isCalculatingShipping && availableShippingOptions.length === 0 && formState.postalCode.length >= 5 && (
                   <p className="text-xs text-gray-500 italic">
-                    {subtotal >= 50 && shippingCost === 0 ? '🎉 Free shipping on orders over $50!' : 'Enter your full address to calculate shipping & tax'}
+                    Enter your full address to calculate shipping
                   </p>
                 )}
               </div>
