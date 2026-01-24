@@ -298,13 +298,22 @@ export async function calculateShipping(
   } catch (error) {
     console.error('[Shipping Calculator] Error calculating shipping:', error)
 
+    // For production: log error but return estimate rates to not block checkout
+    // You may want to enable monitoring alerts or notify admins
     if (error instanceof Error) {
       console.error('[Shipping Calculator] Error details:', error.message)
+
+      // Log specific error types for debugging
+      if (error.message.includes('API key') || error.message.includes('authentication')) {
+        console.error('[Shipping Calculator] Authentication error - check SHIPPING_API_KEY configuration')
+      } else if (error.message.includes('network') || error.message.includes('timeout')) {
+        console.error('[Shipping Calculator] Network error - carrier API may be unavailable')
+      }
     }
 
-    // For production: log error but return estimate rates to not block checkout
     console.warn('[Shipping Calculator] Falling back to estimate-based rates')
 
+    // Return estimate rates rather than failing checkout
     return calculateEstimateRates(input)
   }
 }
