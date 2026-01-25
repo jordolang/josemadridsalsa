@@ -49,6 +49,8 @@ export interface ShippingCalculationResult {
     cost: number
     estimatedDays: string
   }>
+  /** Flag indicating if fallback estimate rates were used */
+  fallback?: boolean
 }
 
 /**
@@ -245,7 +247,8 @@ function calculateParcelDimensions(
  */
 function calculateEstimateRates(
   input: ShippingCalculationInput,
-  freeShippingThreshold: number
+  freeShippingThreshold: number,
+  markAsFallback = false
 ): ShippingCalculationResult {
   const { items, shippingAddress, subtotal } = input
 
@@ -255,6 +258,7 @@ function calculateEstimateRates(
       shippingCost: 0,
       shippingMethod: 'Free Shipping',
       estimatedDelivery: SHIPPING_RATES.FLAT_RATE.estimatedDays,
+      fallback: markAsFallback,
     }
   }
 
@@ -264,6 +268,7 @@ function calculateEstimateRates(
       shippingCost: SHIPPING_RATES.INTERNATIONAL.cost,
       shippingMethod: 'International Shipping',
       estimatedDelivery: SHIPPING_RATES.INTERNATIONAL.estimatedDays,
+      fallback: markAsFallback,
     }
   }
 
@@ -343,6 +348,7 @@ function calculateEstimateRates(
     shippingMethod: availableOptions[0].method,
     estimatedDelivery: availableOptions[0].estimatedDays,
     availableOptions,
+    fallback: markAsFallback,
   }
 }
 
@@ -377,7 +383,7 @@ export async function calculateShipping(
   // For international shipping, fall back to estimate rates for now
   // TODO: Add international shipping API support
   if (shippingAddress.country !== 'US') {
-    return calculateEstimateRates(input, freeShippingThreshold)
+    return calculateEstimateRates(input, freeShippingThreshold, false)
   }
 
   try {
@@ -420,7 +426,7 @@ export async function calculateShipping(
         // If no USPS rates available, fall back to estimates
         if (filteredRates.length === 0) {
           console.warn('[Shipping Calculator] No USPS rates available for PO Box, using estimates')
-          return calculateEstimateRates(input, freeShippingThreshold)
+          return calculateEstimateRates(input, freeShippingThreshold, true)
         }
       }
 
@@ -450,7 +456,7 @@ export async function calculateShipping(
     } else {
       // No rates returned - fall back to estimates
       console.warn('[Shipping Calculator] No rates returned from API, using estimates')
-      return calculateEstimateRates(input, freeShippingThreshold)
+      return calculateEstimateRates(input, freeShippingThreshold, true)
     }
   } catch (error) {
     console.error('[Shipping Calculator] Error calculating shipping:', error)
@@ -471,7 +477,7 @@ export async function calculateShipping(
     console.warn('[Shipping Calculator] Falling back to estimate-based rates')
 
     // Return estimate rates rather than failing checkout
-    return calculateEstimateRates(input, freeShippingThreshold)
+    return calculateEstimateRates(input, freeShippingThreshold, true)
   }
 }
 

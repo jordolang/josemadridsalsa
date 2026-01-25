@@ -104,6 +104,7 @@ export async function POST(request: Request) {
       estimatedDelivery: shippingResult.estimatedDelivery,
       availableOptions: shippingResult.availableOptions || [],
       subtotal,
+      fallback: shippingResult.fallback || false,
     })
   } catch (error) {
     console.error('[Shipping Calculation API] Error:', error)
