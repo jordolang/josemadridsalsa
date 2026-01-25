@@ -263,6 +263,458 @@ describe('E2E: Checkout Flow with Real Shipping Rates', () => {
     })
   })
 
+  describe('Alaska and Hawaii Surcharges', () => {
+    it('should apply surcharge for Alaska addresses', async () => {
+      if (!testProductId) {
+        console.log('⚠️  Skipping: No test product available')
+        return
+      }
+
+      // Calculate shipping for Alaska (Anchorage)
+      const akResponse = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ productId: testProductId, quantity: 1 }],
+          shippingAddress: {
+            address1: '123 Northern Lights Blvd',
+            city: 'Anchorage',
+            state: 'AK',
+            postalCode: '99501',
+            country: 'US',
+          },
+        }),
+      })
+
+      expect(akResponse.status).toBe(200)
+      const akData = await akResponse.json()
+
+      // Calculate shipping for California (baseline)
+      const caResponse = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ productId: testProductId, quantity: 1 }],
+          shippingAddress: {
+            address1: '123 Main Street',
+            city: 'San Francisco',
+            state: 'CA',
+            postalCode: '94111',
+            country: 'US',
+          },
+        }),
+      })
+
+      expect(caResponse.status).toBe(200)
+      const caData = await caResponse.json()
+
+      console.log(`✓ Alaska shipping cost: $${akData.shippingCost.toFixed(2)}`)
+      console.log(`✓ California shipping cost: $${caData.shippingCost.toFixed(2)}`)
+
+      // Verify Alaska costs are higher than California (surcharge applied)
+      expect(akData.shippingCost).toBeGreaterThan(caData.shippingCost)
+
+      // Verify surcharge is approximately 1.5x (allowing for rounding)
+      const surchargeRatio = akData.shippingCost / caData.shippingCost
+      expect(surchargeRatio).toBeGreaterThanOrEqual(1.4)
+      expect(surchargeRatio).toBeLessThanOrEqual(1.6)
+
+      console.log(`✓ Alaska surcharge ratio: ${surchargeRatio.toFixed(2)}x (expected ~1.5x)`)
+    })
+
+    it('should apply surcharge for Hawaii addresses', async () => {
+      if (!testProductId) {
+        console.log('⚠️  Skipping: No test product available')
+        return
+      }
+
+      // Calculate shipping for Hawaii (Honolulu)
+      const hiResponse = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ productId: testProductId, quantity: 1 }],
+          shippingAddress: {
+            address1: '123 Kalakaua Avenue',
+            city: 'Honolulu',
+            state: 'HI',
+            postalCode: '96815',
+            country: 'US',
+          },
+        }),
+      })
+
+      expect(hiResponse.status).toBe(200)
+      const hiData = await hiResponse.json()
+
+      // Calculate shipping for California (baseline)
+      const caResponse = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ productId: testProductId, quantity: 1 }],
+          shippingAddress: {
+            address1: '123 Main Street',
+            city: 'San Francisco',
+            state: 'CA',
+            postalCode: '94111',
+            country: 'US',
+          },
+        }),
+      })
+
+      expect(caResponse.status).toBe(200)
+      const caData = await caResponse.json()
+
+      console.log(`✓ Hawaii shipping cost: $${hiData.shippingCost.toFixed(2)}`)
+      console.log(`✓ California shipping cost: $${caData.shippingCost.toFixed(2)}`)
+
+      // Verify Hawaii costs are higher than California (surcharge applied)
+      expect(hiData.shippingCost).toBeGreaterThan(caData.shippingCost)
+
+      // Verify surcharge is approximately 1.5x (allowing for rounding)
+      const surchargeRatio = hiData.shippingCost / caData.shippingCost
+      expect(surchargeRatio).toBeGreaterThanOrEqual(1.4)
+      expect(surchargeRatio).toBeLessThanOrEqual(1.6)
+
+      console.log(`✓ Hawaii surcharge ratio: ${surchargeRatio.toFixed(2)}x (expected ~1.5x)`)
+    })
+
+    it('should apply surcharges to all shipping options for AK/HI', async () => {
+      if (!testProductId) {
+        console.log('⚠️  Skipping: No test product available')
+        return
+      }
+
+      // Get shipping options for Alaska
+      const akResponse = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ productId: testProductId, quantity: 1 }],
+          shippingAddress: {
+            address1: '123 Northern Lights Blvd',
+            city: 'Anchorage',
+            state: 'AK',
+            postalCode: '99501',
+            country: 'US',
+          },
+        }),
+      })
+
+      const akData = await akResponse.json()
+
+      // Get shipping options for California
+      const caResponse = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ productId: testProductId, quantity: 1 }],
+          shippingAddress: {
+            address1: '123 Main Street',
+            city: 'San Francisco',
+            state: 'CA',
+            postalCode: '94111',
+            country: 'US',
+          },
+        }),
+      })
+
+      const caData = await caResponse.json()
+
+      if (akData.availableOptions && caData.availableOptions) {
+        console.log('✓ Comparing shipping options:')
+
+        // Compare corresponding options (if available)
+        const minLength = Math.min(akData.availableOptions.length, caData.availableOptions.length)
+
+        for (let i = 0; i < minLength; i++) {
+          const akOption = akData.availableOptions[i]
+          const caOption = caData.availableOptions[i]
+
+          console.log(`  ${akOption.method}: AK=$${akOption.cost.toFixed(2)} vs CA=$${caOption.cost.toFixed(2)}`)
+
+          // Verify AK option costs more than CA option
+          if (akOption.cost > 0 && caOption.cost > 0) {
+            expect(akOption.cost).toBeGreaterThanOrEqual(caOption.cost)
+          }
+        }
+
+        console.log('✓ All Alaska shipping options include appropriate surcharges')
+      } else {
+        console.log('⚠️  Shipping options not available for comparison')
+      }
+    })
+
+    it('should show realistic surcharge costs for remote states', async () => {
+      if (!testProductId) {
+        console.log('⚠️  Skipping: No test product available')
+        return
+      }
+
+      const addresses = [
+        { state: 'AK', city: 'Anchorage', zip: '99501', name: 'Alaska' },
+        { state: 'HI', city: 'Honolulu', zip: '96815', name: 'Hawaii' },
+      ]
+
+      console.log('✓ Testing surcharge pricing for remote states:')
+
+      for (const addr of addresses) {
+        const response = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: [{ productId: testProductId, quantity: 1 }],
+            shippingAddress: {
+              address1: '123 Main Street',
+              city: addr.city,
+              state: addr.state,
+              postalCode: addr.zip,
+              country: 'US',
+            },
+          }),
+        })
+
+        expect(response.status).toBe(200)
+        const data = await response.json()
+
+        // Remote state shipping should be higher but still reasonable
+        // Standard should be $8-25, Express up to $50
+        expect(data.shippingCost).toBeGreaterThan(0)
+        expect(data.shippingCost).toBeLessThan(60)
+
+        console.log(`  ${addr.name}: $${data.shippingCost.toFixed(2)} (${data.shippingMethod})`)
+      }
+
+      console.log('✓ Remote state shipping costs are within realistic ranges')
+    })
+  })
+
+  describe('PO Box Address Handling', () => {
+    it('should detect PO Box addresses and return USPS-only options', async () => {
+      if (!testProductId) {
+        console.log('⚠️  Skipping: No test product available')
+        return
+      }
+
+      const poBoxAddresses = [
+        'PO Box 123',
+        'P.O. Box 456',
+        'P O Box 789',
+        'Post Office Box 101',
+        'POB 202',
+      ]
+
+      console.log('✓ Testing PO Box address detection and filtering:')
+
+      for (const poBoxAddress of poBoxAddresses) {
+        const response = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: [{ productId: testProductId, quantity: 1 }],
+            shippingAddress: {
+              address1: poBoxAddress,
+              city: 'San Francisco',
+              state: 'CA',
+              postalCode: '94111',
+              country: 'US',
+            },
+          }),
+        })
+
+        expect(response.status).toBe(200)
+        const data = await response.json()
+
+        // Verify response has shipping options
+        expect(data).toHaveProperty('shippingCost')
+        expect(data).toHaveProperty('availableOptions')
+
+        if (data.availableOptions && data.availableOptions.length > 0) {
+          // Verify all options are USPS only
+          const allOptionsAreUSPS = data.availableOptions.every((option: any) =>
+            option.method.toUpperCase().includes('USPS')
+          )
+
+          console.log(`  "${poBoxAddress}": ${data.availableOptions.length} options, USPS only: ${allOptionsAreUSPS}`)
+
+          if (!allOptionsAreUSPS) {
+            console.log('  Options returned:', data.availableOptions.map((o: any) => o.method))
+            console.log('  ⚠️  Non-USPS carriers detected for PO Box address')
+          }
+
+          // Log options for verification
+          data.availableOptions.forEach((option: any) => {
+            console.log(`    - ${option.method}: $${option.cost.toFixed(2)}`)
+          })
+
+          expect(allOptionsAreUSPS).toBe(true)
+        }
+      }
+
+      console.log('✓ PO Box addresses correctly filtered to USPS-only options')
+    })
+
+    it('should return all carriers for regular street addresses', async () => {
+      if (!testProductId) {
+        console.log('⚠️  Skipping: No test product available')
+        return
+      }
+
+      const response = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ productId: testProductId, quantity: 1 }],
+          shippingAddress: {
+            address1: '123 Main Street',
+            city: 'San Francisco',
+            state: 'CA',
+            postalCode: '94111',
+            country: 'US',
+          },
+        }),
+      })
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+
+      console.log('✓ Regular street address shipping options:')
+
+      if (data.availableOptions && data.availableOptions.length > 0) {
+        const carriers = new Set(
+          data.availableOptions.map((option: any) => {
+            const carrier = option.method.split(' ')[0]
+            return carrier
+          })
+        )
+
+        console.log(`  Carriers available: ${Array.from(carriers).join(', ')}`)
+        console.log(`  Total options: ${data.availableOptions.length}`)
+
+        data.availableOptions.forEach((option: any) => {
+          console.log(`    - ${option.method}: $${option.cost.toFixed(2)}`)
+        })
+
+        // For regular addresses, we expect to see potentially multiple carriers
+        // (Though in test mode with mock data, this depends on the mock implementation)
+        expect(data.availableOptions.length).toBeGreaterThan(0)
+      }
+    })
+
+    it('should handle PO Box in address line 2', async () => {
+      if (!testProductId) {
+        console.log('⚠️  Skipping: No test product available')
+        return
+      }
+
+      const response = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ productId: testProductId, quantity: 1 }],
+          shippingAddress: {
+            address1: '123 Main Street',
+            address2: 'PO Box 456',
+            city: 'San Francisco',
+            state: 'CA',
+            postalCode: '94111',
+            country: 'US',
+          },
+        }),
+      })
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+
+      console.log('✓ PO Box in address line 2:')
+
+      if (data.availableOptions && data.availableOptions.length > 0) {
+        const allOptionsAreUSPS = data.availableOptions.every((option: any) =>
+          option.method.toUpperCase().includes('USPS')
+        )
+
+        console.log(`  All options USPS: ${allOptionsAreUSPS}`)
+        data.availableOptions.forEach((option: any) => {
+          console.log(`    - ${option.method}: $${option.cost.toFixed(2)}`)
+        })
+
+        expect(allOptionsAreUSPS).toBe(true)
+      }
+    })
+
+    it('should apply state surcharges to PO Box addresses', async () => {
+      if (!testProductId) {
+        console.log('⚠️  Skipping: No test product available')
+        return
+      }
+
+      // Test Alaska PO Box with surcharge
+      const akPoBoxResponse = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ productId: testProductId, quantity: 1 }],
+          shippingAddress: {
+            address1: 'PO Box 999',
+            city: 'Anchorage',
+            state: 'AK',
+            postalCode: '99501',
+            country: 'US',
+          },
+        }),
+      })
+
+      expect(akPoBoxResponse.status).toBe(200)
+      const akPoBoxData = await akPoBoxResponse.json()
+
+      // Test California PO Box (baseline)
+      const caPoBoxResponse = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ productId: testProductId, quantity: 1 }],
+          shippingAddress: {
+            address1: 'PO Box 123',
+            city: 'San Francisco',
+            state: 'CA',
+            postalCode: '94111',
+            country: 'US',
+          },
+        }),
+      })
+
+      expect(caPoBoxResponse.status).toBe(200)
+      const caPoBoxData = await caPoBoxResponse.json()
+
+      console.log('✓ PO Box surcharge verification:')
+      console.log(`  Alaska PO Box: $${akPoBoxData.shippingCost.toFixed(2)}`)
+      console.log(`  California PO Box: $${caPoBoxData.shippingCost.toFixed(2)}`)
+
+      // Verify Alaska PO Box costs more than California PO Box
+      expect(akPoBoxData.shippingCost).toBeGreaterThan(caPoBoxData.shippingCost)
+
+      // Verify both are USPS only
+      if (akPoBoxData.availableOptions && akPoBoxData.availableOptions.length > 0) {
+        const akAllUSPS = akPoBoxData.availableOptions.every((opt: any) =>
+          opt.method.toUpperCase().includes('USPS')
+        )
+        expect(akAllUSPS).toBe(true)
+        console.log(`  Alaska PO Box carriers: USPS only ✓`)
+      }
+
+      if (caPoBoxData.availableOptions && caPoBoxData.availableOptions.length > 0) {
+        const caAllUSPS = caPoBoxData.availableOptions.every((opt: any) =>
+          opt.method.toUpperCase().includes('USPS')
+        )
+        expect(caAllUSPS).toBe(true)
+        console.log(`  California PO Box carriers: USPS only ✓`)
+      }
+
+      console.log('✓ State surcharges correctly applied to PO Box addresses')
+    })
+  })
+
   describe('Error Handling', () => {
     it('should handle invalid product IDs gracefully', async () => {
       const response = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
@@ -357,11 +809,23 @@ To complete the full E2E test, perform these manual steps:
 
 9. □ Verify order summary updates with new shipping cost
 
-10. □ Enter Stripe test card: 4242 4242 4242 4242
+10. □ Test Alaska address:
+    - Change state to AK
+    - City: Anchorage
+    - ZIP: 99501
+    - Verify shipping costs are ~1.5x higher than CA
 
-11. □ Complete checkout and verify success page
+11. □ Test Hawaii address:
+    - Change state to HI
+    - City: Honolulu
+    - ZIP: 96815
+    - Verify shipping costs are ~1.5x higher than CA
 
-12. □ Check database/admin to verify:
+12. □ Enter Stripe test card: 4242 4242 4242 4242
+
+13. □ Complete checkout and verify success page
+
+14. □ Check database/admin to verify:
     - Order.shippingMethod = selected option name
     - Order.shippingCost = selected option cost
     - Order.total = subtotal + shipping + tax

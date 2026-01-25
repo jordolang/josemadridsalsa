@@ -105,6 +105,75 @@ const DEFAULT_ORIGIN_ADDRESS: ShippingAddress = {
 }
 
 /**
+ * Detect if an address is a PO Box
+ *
+ * PO Boxes have delivery restrictions - only USPS can deliver to them.
+ * UPS, FedEx, and other carriers cannot deliver to PO Boxes.
+ *
+ * @param address Address line to check
+ * @returns True if address appears to be a PO Box
+ */
+function isPOBox(address: string | undefined): boolean {
+  if (!address) return false
+
+  const normalizedAddress = address.toUpperCase().replace(/\./g, '')
+
+  // Common PO Box patterns
+  const poBoxPatterns = [
+    /\bP\s*O\s+BOX\b/,           // PO BOX, P.O. BOX, P O BOX
+    /\bPO\s+BOX\b/,              // PO BOX
+    /\bPOST\s+OFFICE\s+BOX\b/,  // POST OFFICE BOX
+    /\bP\s*O\s*B\b/,             // POB, P.O.B
+    /\bBOX\s+\d+/,               // BOX 123 (when at start of address)
+  ]
+
+  return poBoxPatterns.some(pattern => pattern.test(normalizedAddress))
+}
+
+/**
+ * Detect if an address is likely residential vs commercial
+ *
+ * This is a heuristic check - real carrier APIs do more sophisticated detection.
+ * Residential addresses may have different rates than commercial addresses.
+ *
+ * @param address Shipping address to check
+ * @returns 'residential' | 'commercial' | 'unknown'
+ */
+function detectAddressType(address: {
+  line1?: string
+  line2?: string
+  company?: string
+}): 'residential' | 'commercial' | 'unknown' {
+  // If company name provided, likely commercial
+  if (address.company) {
+    return 'commercial'
+  }
+
+  // Check for common commercial indicators
+  const fullAddress = `${address.line1 || ''} ${address.line2 || ''}`.toUpperCase()
+
+  const commercialIndicators = [
+    /\bSUITE\b/,
+    /\bSTE\b/,
+    /\b#\s*\d+/,     // Suite numbers
+    /\bFLOOR\b/,
+    /\bBLDG\b/,
+    /\bUNIT\b/,
+  ]
+
+  const hasCommercialIndicator = commercialIndicators.some(pattern =>
+    pattern.test(fullAddress)
+  )
+
+  if (hasCommercialIndicator) {
+    return 'commercial'
+  }
+
+  // Default to residential for safety (residential rates typically higher)
+  return 'residential'
+}
+
+/**
  * Get free shipping threshold from database settings
  *
  * Fetches the configurable free shipping threshold from ShippingSettings
@@ -198,6 +267,9 @@ function calculateEstimateRates(
     }
   }
 
+  // Check if destination is a PO Box
+  const isPoBox = isPOBox(shippingAddress.line1) || isPOBox(shippingAddress.line2)
+
   // Calculate total weight
   const totalWeight = items.reduce((sum, item) => {
     const itemWeight = item.weight || 1.0 // Default 1 lb per item if not specified
@@ -222,11 +294,34 @@ function calculateEstimateRates(
 
   const finalCost = baseCost * stateMultiplier
 
-  return {
-    shippingCost: parseFloat(finalCost.toFixed(2)),
-    shippingMethod: 'Standard Shipping',
-    estimatedDelivery: SHIPPING_RATES.FLAT_RATE.estimatedDays,
-    availableOptions: [
+  // Build available options based on address type
+  const availableOptions = []
+
+  if (isPoBox) {
+    // PO Box - only USPS options
+    availableOptions.push(
+      {
+        method: 'USPS Ground Advantage',
+        cost: parseFloat(finalCost.toFixed(2)),
+        estimatedDays: SHIPPING_RATES.FLAT_RATE.estimatedDays,
+      },
+      {
+        method: 'USPS Priority Mail',
+        cost: parseFloat((finalCost * 1.5).toFixed(2)),
+        estimatedDays: '1-3 business days',
+      },
+      {
+        method: 'USPS Priority Mail Express',
+        cost:
+          SHIPPING_RATES.EXPRESS.cost * stateMultiplier > subtotal
+            ? 0
+            : parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2)),
+        estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
+      }
+    )
+  } else {
+    // Regular address - all carriers available
+    availableOptions.push(
       {
         method: 'Standard Shipping',
         cost: parseFloat(finalCost.toFixed(2)),
@@ -239,8 +334,15 @@ function calculateEstimateRates(
             ? 0
             : SHIPPING_RATES.EXPRESS.cost * stateMultiplier,
         estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
-      },
-    ],
+      }
+    )
+  }
+
+  return {
+    shippingCost: availableOptions[0].cost,
+    shippingMethod: availableOptions[0].method,
+    estimatedDelivery: availableOptions[0].estimatedDays,
+    availableOptions,
   }
 }
 
@@ -301,8 +403,29 @@ export async function calculateShipping(
 
     // If API returned rates, use them
     if (ratesResponse.rates.length > 0) {
+      // Check if destination is a PO Box
+      const isPoBox = isPOBox(shippingAddress.line1) || isPOBox(shippingAddress.line2)
+
+      // Filter rates based on address type
+      let filteredRates = ratesResponse.rates
+
+      if (isPoBox) {
+        // Only USPS can deliver to PO Boxes
+        filteredRates = ratesResponse.rates.filter((rate) =>
+          rate.carrier.toUpperCase().includes('USPS')
+        )
+
+        console.log('[Shipping Calculator] PO Box detected - filtering to USPS only')
+
+        // If no USPS rates available, fall back to estimates
+        if (filteredRates.length === 0) {
+          console.warn('[Shipping Calculator] No USPS rates available for PO Box, using estimates')
+          return calculateEstimateRates(input, freeShippingThreshold)
+        }
+      }
+
       // Sort rates by cost (cheapest first)
-      const sortedRates = [...ratesResponse.rates].sort((a, b) => a.rate - b.rate)
+      const sortedRates = [...filteredRates].sort((a, b) => a.rate - b.rate)
 
       // Map API rates to our format
       const availableOptions = sortedRates.map((rate) => ({
