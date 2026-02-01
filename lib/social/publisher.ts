@@ -229,6 +229,164 @@ async function publishToTikTok(
 }
 
 /**
+ * Publish content to Instagram via Instagram Graph API (requires Facebook Page + IG Business account)
+ * Uses the Content Publishing API: create container -> publish container
+ */
+async function publishToInstagram(
+  accessToken: string,
+  igUserId: string,
+  content: string,
+  mediaUrls: string[],
+): Promise<PublishResult> {
+  try {
+    if (mediaUrls.length === 0) {
+      return { success: false, error: 'Instagram requires at least one image or video to publish.' }
+    }
+
+    const apiBase = `https://graph.facebook.com/v21.0/${igUserId}`
+
+    if (mediaUrls.length === 1) {
+      // Single image/video post
+      const isVideo = /\.(mp4|mov|avi|wmv|webm)$/i.test(mediaUrls[0])
+
+      const containerRes = await fetch(`${apiBase}/media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...(isVideo
+            ? { media_type: 'VIDEO', video_url: mediaUrls[0] }
+            : { image_url: mediaUrls[0] }),
+          caption: content,
+          access_token: accessToken,
+        }),
+      })
+      const containerData = await containerRes.json()
+      if (containerData.error) {
+        return { success: false, error: containerData.error.message }
+      }
+
+      // For videos, poll until container is ready
+      if (isVideo) {
+        let ready = false
+        for (let i = 0; i < 30; i++) {
+          await new Promise((r) => setTimeout(r, 2000))
+          const statusRes = await fetch(
+            `https://graph.facebook.com/v21.0/${containerData.id}?fields=status_code&access_token=${accessToken}`,
+          )
+          const statusData = await statusRes.json()
+          if (statusData.status_code === 'FINISHED') {
+            ready = true
+            break
+          }
+          if (statusData.status_code === 'ERROR') {
+            return { success: false, error: 'Instagram video processing failed.' }
+          }
+        }
+        if (!ready) {
+          return { success: false, error: 'Instagram video processing timed out.' }
+        }
+      }
+
+      // Publish the container
+      const publishRes = await fetch(`${apiBase}/media_publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          creation_id: containerData.id,
+          access_token: accessToken,
+        }),
+      })
+      const publishData = await publishRes.json()
+      if (publishData.error) {
+        return { success: false, error: publishData.error.message }
+      }
+
+      return {
+        success: true,
+        externalPostId: publishData.id,
+        externalUrl: `https://www.instagram.com/p/${publishData.id}/`,
+      }
+    }
+
+    // Carousel post (multiple images/videos, up to 10)
+    const childContainerIds: string[] = []
+    for (const url of mediaUrls.slice(0, 10)) {
+      const isVideo = /\.(mp4|mov|avi|wmv|webm)$/i.test(url)
+      const childRes = await fetch(`${apiBase}/media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...(isVideo
+            ? { media_type: 'VIDEO', video_url: url }
+            : { image_url: url }),
+          is_carousel_item: true,
+          access_token: accessToken,
+        }),
+      })
+      const childData = await childRes.json()
+      if (childData.error) {
+        return { success: false, error: `Carousel item failed: ${childData.error.message}` }
+      }
+
+      // Poll video items until ready
+      if (isVideo) {
+        for (let i = 0; i < 30; i++) {
+          await new Promise((r) => setTimeout(r, 2000))
+          const statusRes = await fetch(
+            `https://graph.facebook.com/v21.0/${childData.id}?fields=status_code&access_token=${accessToken}`,
+          )
+          const statusData = await statusRes.json()
+          if (statusData.status_code === 'FINISHED') break
+          if (statusData.status_code === 'ERROR') {
+            return { success: false, error: 'Instagram carousel video processing failed.' }
+          }
+        }
+      }
+
+      childContainerIds.push(childData.id)
+    }
+
+    // Create carousel container
+    const carouselRes = await fetch(`${apiBase}/media`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        media_type: 'CAROUSEL',
+        children: childContainerIds.join(','),
+        caption: content,
+        access_token: accessToken,
+      }),
+    })
+    const carouselData = await carouselRes.json()
+    if (carouselData.error) {
+      return { success: false, error: carouselData.error.message }
+    }
+
+    // Publish carousel
+    const publishRes = await fetch(`${apiBase}/media_publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        creation_id: carouselData.id,
+        access_token: accessToken,
+      }),
+    })
+    const publishData = await publishRes.json()
+    if (publishData.error) {
+      return { success: false, error: publishData.error.message }
+    }
+
+    return {
+      success: true,
+      externalPostId: publishData.id,
+      externalUrl: `https://www.instagram.com/p/${publishData.id}/`,
+    }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+/**
  * Publish a post to a single platform account
  */
 export async function publishToAccount(
@@ -309,6 +467,9 @@ export async function publishToAccount(
       break
     case 'TWITTER':
       result = await publishToTwitter(accessToken, content, mediaUrls)
+      break
+    case 'INSTAGRAM':
+      result = await publishToInstagram(accessToken, account.accountId, content, mediaUrls)
       break
     case 'TIKTOK':
       result = await publishToTikTok(accessToken, content, mediaUrls)

@@ -169,8 +169,10 @@ export async function GET(request: Request) {
       case 'INSTAGRAM': {
         const fbData = await exchangeFacebookToken(code, redirectUri)
 
-        // Connect first page (user can select later)
+        let igAccountsConnected = 0
+
         for (const page of fbData.pages) {
+          // Save the Facebook Page account
           await upsertSocialAccount({
             platform: 'FACEBOOK',
             accountId: page.id,
@@ -187,13 +189,49 @@ export async function GET(request: Request) {
             ],
             connectedById: user.id,
           })
+
+          // Discover Instagram Business account linked to this Page
+          try {
+            const igRes = await fetch(
+              `https://graph.facebook.com/v21.0/${page.id}?fields=instagram_business_account{id,name,username,profile_picture_url}&access_token=${page.access_token}`,
+            )
+            const igData = await igRes.json()
+            const igAccount = igData.instagram_business_account
+
+            if (igAccount) {
+              await upsertSocialAccount({
+                platform: 'INSTAGRAM',
+                accountId: igAccount.id,
+                accountName: igAccount.name || page.name,
+                accountHandle: igAccount.username ? `@${igAccount.username}` : undefined,
+                profileImageUrl: igAccount.profile_picture_url ?? undefined,
+                // Instagram API calls use the Page's access token
+                accessToken: page.access_token,
+                tokenExpiresAt: new Date(Date.now() + fbData.expiresIn * 1000),
+                scopes: [
+                  'instagram_basic',
+                  'instagram_content_publish',
+                  'instagram_manage_insights',
+                ],
+                connectedById: user.id,
+              })
+              igAccountsConnected++
+            }
+          } catch (igErr) {
+            // Instagram discovery is best-effort; don't fail the whole flow
+            console.warn(`[SOCIAL_OAUTH] Failed to discover IG account for page ${page.id}:`, igErr)
+          }
         }
 
         await logAudit({
           userId: user.id,
           action: 'social_account.connect',
           entityType: 'SocialAccount',
-          changes: { platform: 'FACEBOOK', pages: fbData.pages.length },
+          changes: {
+            platform: 'FACEBOOK',
+            pages: fbData.pages.length,
+            instagramAccounts: igAccountsConnected,
+          },
         })
         break
       }
