@@ -989,27 +989,116 @@ model ServiceKey {
   @@map("service_keys")
 }
 
+model SocialAccount {
+  id             String              @id @default(cuid())
+  platform       SocialMediaPlatform
+
+  // Account info
+  accountId      String              // Platform's account/page ID
+  accountName    String              // Display name (page name, @handle)
+  accountHandle  String?             // @username
+  profileImageUrl String?
+
+  // OAuth tokens (encrypted via ServiceKey pattern)
+  accessToken    String              @db.Text
+  accessTokenIv  String
+  refreshToken   String?             @db.Text
+  refreshTokenIv String?
+  tokenExpiresAt DateTime?
+
+  // Scopes / permissions granted
+  scopes         String[]
+
+  // Status
+  isActive       Boolean             @default(true)
+  lastVerifiedAt DateTime?
+  connectionError String?
+
+  // Who connected this
+  connectedById  String?
+
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  // Relations
+  publishedPosts SocialPostPublish[]
+
+  @@unique([platform, accountId])
+  @@index([platform])
+  @@index([isActive])
+  @@map("social_accounts")
+}
+
 model SocialMediaPost {
   id          String                   @id @default(cuid())
   platforms   SocialMediaPlatform[]    // Array of platforms
   content     String                   @db.Text
-  
+
+  // Platform-specific content overrides
+  facebookContent  String?            @db.Text
+  twitterContent   String?            @db.Text
+  tiktokContent    String?            @db.Text
+  instagramContent String?            @db.Text
+
   scheduledAt DateTime?
   status      SocialMediaPostStatus    @default(DRAFT)
-  
+
   // External IDs after publishing
   externalIds Json?                    // {facebook: "123", instagram: "456"}
-  
+
+  // Metadata
+  hashtags    String[]
+  linkUrl     String?
+
   createdAt   DateTime                 @default(now())
   updatedAt   DateTime                 @updatedAt
   publishedAt DateTime?
-  
+  createdById String?
+
   // Relations
   media       SocialMediaPostMedia[]
-  
+  publishes   SocialPostPublish[]
+
   @@index([status])
   @@index([scheduledAt])
+  @@index([createdById])
   @@map("social_media_posts")
+}
+
+model SocialPostPublish {
+  id              String              @id @default(cuid())
+  postId          String
+  accountId       String
+
+  // Result
+  platform        SocialMediaPlatform
+  externalPostId  String?             // ID on the platform
+  externalUrl     String?             // URL to the post on the platform
+  status          SocialPublishStatus @default(PENDING)
+  errorMessage    String?
+
+  // Engagement metrics (pulled from platform)
+  likes           Int                 @default(0)
+  comments        Int                 @default(0)
+  shares          Int                 @default(0)
+  impressions     Int                 @default(0)
+  reach           Int                 @default(0)
+  clicks          Int                 @default(0)
+
+  publishedAt     DateTime?
+  metricsUpdatedAt DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  // Relations
+  post            SocialMediaPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  account         SocialAccount       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, accountId])
+  @@index([postId])
+  @@index([accountId])
+  @@index([status])
+  @@map("social_post_publishes")
 }
 
 model SocialMediaPostMedia {
@@ -1323,6 +1412,13 @@ enum SocialMediaPlatform {
 enum SocialMediaPostStatus {
   DRAFT
   SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+enum SocialPublishStatus {
+  PENDING
+  PUBLISHING
   PUBLISHED
   FAILED
 }
