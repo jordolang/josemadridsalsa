@@ -1,4 +1,4 @@
-import type { SocialMediaPlatform, SocialMediaPostStatus, SocialPublishStatus } from '@prisma/client'
+import type { SocialMediaPlatform, SocialMediaPostStatus, SocialPublishStatus, ShopPlatform, ShopListingStatus } from '@prisma/client'
 
 export type SocialComposerState = {
   status: 'idle' | 'success' | 'error'
@@ -218,7 +218,78 @@ export const PLATFORM_CONFIGS: Record<SocialMediaPlatform, PlatformConfig> = {
   },
 }
 
-export type DashboardTab = 'overview' | 'compose' | 'calendar' | 'accounts' | 'analytics'
+export type DashboardTab = 'overview' | 'compose' | 'calendar' | 'accounts' | 'shops' | 'analytics'
+
+// Shop types
+export type ShopListingInfo = {
+  id: string
+  productId: string
+  productName: string
+  productSku: string
+  productPrice: string
+  productImage: string | null
+  productInventory: number
+  shopPlatform: ShopPlatform
+  externalId: string | null
+  externalUrl: string | null
+  catalogId: string | null
+  status: ShopListingStatus
+  syncError: string | null
+  titleOverride: string | null
+  descriptionOverride: string | null
+  priceOverride: string | null
+  condition: string | null
+  availability: string | null
+  marketplaceCategory: string | null
+  lastSyncedAt: string | null
+  publishedAt: string | null
+}
+
+export type ShopOverview = {
+  totalListings: number
+  activeListings: number
+  errorListings: number
+  pendingListings: number
+  byPlatform: Record<string, { total: number; active: number; errors: number }>
+}
+
+export const SHOP_PLATFORM_CONFIG: Record<ShopPlatform, {
+  label: string
+  shortLabel: string
+  description: string
+  color: string
+  bgColor: string
+  textColor: string
+  borderColor: string
+}> = {
+  FACEBOOK_SHOP: {
+    label: 'Facebook Shop',
+    shortLabel: 'FB Shop',
+    description: 'List products on your Facebook Page Shop tab for customers to browse and purchase.',
+    color: '#1877F2',
+    bgColor: 'bg-[#1877F2]',
+    textColor: 'text-[#1877F2]',
+    borderColor: 'border-[#1877F2]',
+  },
+  FACEBOOK_MARKETPLACE: {
+    label: 'Facebook Marketplace',
+    shortLabel: 'Marketplace',
+    description: 'List products on Facebook Marketplace for local and shipped sales.',
+    color: '#1877F2',
+    bgColor: 'bg-[#1877F2]',
+    textColor: 'text-[#1877F2]',
+    borderColor: 'border-[#1877F2]',
+  },
+  TIKTOK_SHOP: {
+    label: 'TikTok Shop',
+    shortLabel: 'TT Shop',
+    description: 'Sell products directly on TikTok through in-app shopping and live commerce.',
+    color: '#000000',
+    bgColor: 'bg-black',
+    textColor: 'text-black',
+    borderColor: 'border-black',
+  },
+}
 
 export type CalendarPost = {
   id: string

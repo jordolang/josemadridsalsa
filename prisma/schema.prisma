@@ -160,8 +160,62 @@ model Product {
   productTags ProductTag[]
   inventoryTransactions InventoryTransaction[]
   inventoryAlerts InventoryAlert[]
+  shopListings    ShopListing[]
 
   @@map("products")
+}
+
+model ShopListing {
+  id              String            @id @default(cuid())
+  productId       String
+  product         Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Which shop platform
+  shopPlatform    ShopPlatform
+
+  // Platform-specific external IDs
+  externalId      String?           // Product ID on the platform
+  externalUrl     String?           // URL to the listing on the platform
+  catalogId       String?           // Facebook catalog ID / TikTok shop ID
+
+  // Sync status
+  status          ShopListingStatus @default(PENDING)
+  syncError       String?
+
+  // Listing overrides (null = use product values)
+  titleOverride   String?
+  descriptionOverride String?       @db.Text
+  priceOverride   Decimal?          @db.Decimal(10, 2)
+
+  // Marketplace-specific
+  condition       String?           @default("new")
+  availability    String?           @default("in stock")
+  marketplaceCategory String?       // Platform's category mapping
+
+  lastSyncedAt    DateTime?
+  publishedAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([productId, shopPlatform])
+  @@index([shopPlatform, status])
+  @@index([productId])
+  @@map("shop_listings")
+}
+
+enum ShopPlatform {
+  FACEBOOK_SHOP
+  FACEBOOK_MARKETPLACE
+  TIKTOK_SHOP
+}
+
+enum ShopListingStatus {
+  PENDING
+  SYNCING
+  ACTIVE
+  PAUSED
+  REJECTED
+  ERROR
 }
 
 model Conversation {

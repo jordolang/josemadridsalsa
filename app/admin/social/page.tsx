@@ -201,7 +201,7 @@ export default async function SocialMediaPage({
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Social Media</h1>
           <p className="text-slate-600">
-            Manage, compose, schedule, and publish content across Facebook, X, TikTok, Instagram & Google Business.
+            Manage content, shops, and commerce across Facebook, X, TikTok, Instagram & Google Business.
           </p>
         </div>
         {(canSchedule || canPublish) && (

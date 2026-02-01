@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { LayoutDashboard, PenSquare, CalendarDays, Link2, BarChart3 } from 'lucide-react'
+import { LayoutDashboard, PenSquare, CalendarDays, Link2, BarChart3, ShoppingBag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DashboardTab } from '@/types/social'
 
@@ -10,6 +10,7 @@ const TABS: Array<{ id: DashboardTab; label: string; icon: React.ElementType }> 
   { id: 'compose', label: 'Compose', icon: PenSquare },
   { id: 'calendar', label: 'Calendar', icon: CalendarDays },
   { id: 'accounts', label: 'Accounts', icon: Link2 },
+  { id: 'shops', label: 'Shops', icon: ShoppingBag },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
 ]
 
