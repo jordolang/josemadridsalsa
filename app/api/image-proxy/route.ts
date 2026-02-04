@@ -269,7 +269,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const rewrittenUrl = imageUrl.includes('key=') ? imageUrl : rewriteGooglePhotoUrl(imageUrl)
+    // Always rewrite the URL to ensure the current API key is used
+    // (stored URLs in the database may contain old/expired API keys)
+    const rewrittenUrl = rewriteGooglePhotoUrl(imageUrl)
 
     const truncatedOriginal = imageUrl.length > 100 ? imageUrl.substring(0, 100) + '...' : imageUrl
     console.log('[image-proxy] Original URL:', truncatedOriginal)
