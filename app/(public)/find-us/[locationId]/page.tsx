@@ -50,7 +50,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
         ? [location.photoUrl]
         : []
   const gallery = gallerySource as string[]
-  // Use Place ID for fresh photos if available (solves expired photo URL issue)
+  // Try stored photo URL first; Place ID is used as fallback if no stored URL exists
   const heroImage = getLocationImageUrl(gallery[0] ?? location.photoUrl, location.googlePlaceId)
   const phone = location.phone
   const website = location.website
@@ -68,7 +68,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
       <div className="grid gap-8 lg:grid-cols-[3fr,2fr]">
         <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-lg">
           <div className="relative h-80 w-full sm:h-[26rem]">
-            <LocationImage src={heroImage} alt={`${location.businessName} storefront`} fill className="object-cover" priority />
+            <LocationImage src={heroImage} alt={`${location.businessName} storefront`} fill className="object-cover" priority fallbackPlaceId={location.googlePlaceId} />
           </div>
           {gallery.length > 1 ? (
             <div className="border-t border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-500">
@@ -170,7 +170,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
             {gallery.map((imageUrl, index) => (
               <div key={`${imageUrl}-${index}`} className="snap-start flex-shrink-0">
                 <div className="relative h-56 w-80 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 shadow">
-                  <LocationImage src={getLocationImageUrl(imageUrl)} alt={`${location.businessName} photo ${index + 1}`} fill className="object-cover" />
+                  <LocationImage src={getLocationImageUrl(imageUrl)} alt={`${location.businessName} photo ${index + 1}`} fill className="object-cover" fallbackPlaceId={location.googlePlaceId} />
                 </div>
               </div>
             ))}
