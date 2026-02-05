@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { AccountBreadcrumbs } from "@/components/account/AccountBreadcrumbs";
@@ -26,6 +27,20 @@ export default async function AccountLayout({ children }: Props) {
   const userRole = (session.user as any)?.role as string | undefined;
   const isStaff = userRole && ["ADMIN", "DEVELOPER", "STAFF"].includes(userRole);
 
+  const userId = (session.user as any)?.id as string | undefined;
+  let hasBlogAccess = false;
+  if (userId) {
+    try {
+      const blogRequest = await prisma.blogAccessRequest.findUnique({
+        where: { userId },
+        select: { status: true },
+      });
+      hasBlogAccess = blogRequest?.status === 'APPROVED';
+    } catch {
+      // Blog table may not exist yet - ignore
+    }
+  }
+
   return (
     <div className="container mx-auto grid grid-cols-12 gap-6 py-8">
       <aside className="col-span-12 md:col-span-3">
@@ -38,6 +53,14 @@ export default async function AccountLayout({ children }: Props) {
             <Link href="/account" className="text-sm hover:underline">Dashboard</Link>
             <Link href="/account/orders" className="text-sm hover:underline">Orders</Link>
             <Link href="/account/settings" className="text-sm hover:underline">Settings</Link>
+            {hasBlogAccess && (
+              <>
+                <Separator className="my-2" />
+                <Link href="/account/blog" className="text-sm hover:underline font-medium text-salsa-600">
+                  My Blog Posts
+                </Link>
+              </>
+            )}
             {isStaff && (
               <>
                 <Separator className="my-2" />
