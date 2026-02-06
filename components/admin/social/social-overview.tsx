@@ -1,6 +1,6 @@
 'use client'
 
-import { Facebook, Instagram, Twitter, Music2, Store, TrendingUp, Clock, Send, AlertCircle, CheckCircle2, FileText } from 'lucide-react'
+import { Facebook, Instagram, Twitter, Music2, Store, TrendingUp, Clock, Send, AlertCircle, CheckCircle2, FileText, BarChart3, PenSquare } from 'lucide-react'
 import type { SocialMediaPlatform, SocialMediaPostStatus } from '@prisma/client'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
