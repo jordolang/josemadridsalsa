@@ -37,10 +37,6 @@ const navigationItems = [
     href: "/recipes",
   },
   {
-    title: "Blog",
-    href: "/blog",
-  },
-  {
     title: "About Jose",
     href: "/about",
   },
