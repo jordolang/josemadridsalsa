@@ -45,7 +45,11 @@ model User {
   wholesaleAccount WholesaleAccount?
   conversations    Conversation[]
   passwordResetTokens PasswordResetToken[]
-  
+
+  // Blog
+  blogAccessRequest BlogAccessRequest?
+  blogPosts         BlogPost[]
+
   @@map("users")
 }
 
@@ -2196,4 +2200,73 @@ enum InventoryAlertStatus {
   ACKNOWLEDGED      // Alert has been seen
   RESOLVED          // Stock level corrected
   DISMISSED         // Alert dismissed without action
+}
+
+// ========================================
+// TASTE OF ZANESVILLE BLOG MODELS
+// ========================================
+
+model BlogAccessRequest {
+  id              String             @id @default(cuid())
+  userId          String             @unique
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Applicant details
+  businessName    String?
+  reason          String?            @db.Text
+
+  // Status
+  status          BlogAccessStatus   @default(PENDING)
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  reviewNotes     String?
+
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([status])
+  @@map("blog_access_requests")
+}
+
+model BlogPost {
+  id              String           @id @default(cuid())
+  authorId        String
+  author          User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Content
+  title           String
+  slug            String           @unique
+  excerpt         String?          @db.Text
+  content         String           @db.Text
+  featuredImage   String?
+  category        String?
+
+  // Status
+  status          BlogPostStatus   @default(DRAFT)
+  publishedAt     DateTime?
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([authorId])
+  @@index([status, publishedAt])
+  @@index([category])
+  @@map("blog_posts")
+}
+
+enum BlogAccessStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BlogPostStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  REJECTED
 }

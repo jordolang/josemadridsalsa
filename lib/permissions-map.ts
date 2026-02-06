@@ -95,6 +95,29 @@ export const adminNavigation: NavItem[] = [
     ],
   },
   {
+    label: 'Blog',
+    href: '/admin/blog',
+    icon: 'FileText',
+    permission: 'content:read',
+    children: [
+      {
+        label: 'Overview',
+        href: '/admin/blog',
+        permission: 'content:read',
+      },
+      {
+        label: 'Access Requests',
+        href: '/admin/blog/requests',
+        permission: 'content:write',
+      },
+      {
+        label: 'All Posts',
+        href: '/admin/blog/posts',
+        permission: 'content:read',
+      },
+    ],
+  },
+  {
     label: 'Fundraisers',
     href: '/admin/fundraisers',
     icon: 'Heart',

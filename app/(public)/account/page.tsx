@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { OrderCard } from "@/components/account/OrderCard";
+import { BlogAccessSection } from "@/components/account/BlogAccessSection";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createMetadata({
@@ -23,28 +24,36 @@ export default async function AccountPage() {
 
   const userId = (session.user as any).id;
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-    },
-  });
-
-  const recentOrdersRaw = await prisma.order.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    take: 5,
-    select: {
-      id: true,
-      orderNumber: true,
-      status: true,
-      createdAt: true,
-      total: true,
-    },
-  });
+  const [user, recentOrdersRaw, blogAccessRequest] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+    }),
+    prisma.order.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        createdAt: true,
+        total: true,
+      },
+    }),
+    prisma.blogAccessRequest.findUnique({
+      where: { userId },
+      select: {
+        status: true,
+        businessName: true,
+      },
+    }),
+  ]);
 
   const recentOrders = recentOrdersRaw.map(o => ({
     id: o.id,
@@ -74,6 +83,12 @@ export default async function AccountPage() {
         </div>
       </Card>
 
+      {/* Blog Access Section */}
+      <BlogAccessSection
+        initialStatus={blogAccessRequest?.status ?? null}
+        businessName={blogAccessRequest?.businessName}
+      />
+
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="p-4">
           <h2 className="text-lg font-medium mb-4">Recent Orders</h2>
@@ -101,6 +116,7 @@ export default async function AccountPage() {
             <Link href="/account/settings" className="text-sm hover:underline">Update profile</Link>
             <Link href="/account/settings" className="text-sm hover:underline">Manage addresses</Link>
             <Link href="/account/orders" className="text-sm hover:underline">Track an order</Link>
+            <Link href="/blog" className="text-sm hover:underline text-salsa-600">Visit Taste of Zanesville Blog</Link>
           </div>
         </Card>
       </div>
