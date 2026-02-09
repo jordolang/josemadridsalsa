@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useFormState, useFormStatus } from 'react-dom'
+import { useActionState, useEffect, useMemo, useState } from 'react'
+import { useFormStatus } from 'react-dom'
 import {
   Facebook,
   Instagram,
@@ -57,7 +57,7 @@ type Props = {
 const INITIAL_STATE: SocialComposerState = { status: 'idle' }
 
 export function SocialComposer({ action, accounts, canSchedule, canPublish }: Props) {
-  const [state, formAction] = useFormState(action, INITIAL_STATE)
+  const [state, formAction] = useActionState(action, INITIAL_STATE)
   const [content, setContent] = useState('')
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<SocialMediaPlatform>>(new Set())
   const [scheduleEnabled, setScheduleEnabled] = useState(false)

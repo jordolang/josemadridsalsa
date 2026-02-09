@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
 import type { SocialMediaPlatform, SocialMediaPostStatus } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
@@ -8,39 +7,48 @@ import { createSocialPost } from './actions'
 import type { SocialAccountInfo, CalendarPost, PlatformMetrics, DashboardTab } from '@/types/social'
 
 async function getSocialMediaData() {
-  const [recentPosts, scheduledPosts, statusCounts, allPosts] = await Promise.all([
-    prisma.socialMediaPost.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 30,
-    }),
-    prisma.socialMediaPost.findMany({
-      where: { status: 'SCHEDULED' },
-      orderBy: { scheduledAt: 'asc' },
-      take: 10,
-    }),
-    prisma.socialMediaPost.groupBy({
-      by: ['status'],
-      _count: { _all: true },
-    }),
-    // For calendar - get posts from the last 90 days and future scheduled
-    prisma.socialMediaPost.findMany({
-      where: {
-        OR: [
-          { createdAt: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
-          { scheduledAt: { gte: new Date() } },
-        ],
-      },
-      select: {
-        id: true,
-        content: true,
-        platforms: true,
-        status: true,
-        scheduledAt: true,
-        publishedAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    }),
-  ])
+  let recentPosts: Awaited<ReturnType<typeof prisma.socialMediaPost.findMany>> = []
+  let scheduledPosts: typeof recentPosts = []
+  let statusCounts: Array<{ status: SocialMediaPostStatus; _count: { _all: number } }> = []
+  let allPosts: Array<{ id: string; content: string; platforms: SocialMediaPlatform[]; status: SocialMediaPostStatus; scheduledAt: Date | null; publishedAt: Date | null }> = []
+
+  try {
+    ;[recentPosts, scheduledPosts, statusCounts, allPosts] = await Promise.all([
+      prisma.socialMediaPost.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+      }),
+      prisma.socialMediaPost.findMany({
+        where: { status: 'SCHEDULED' },
+        orderBy: { scheduledAt: 'asc' },
+        take: 10,
+      }),
+      prisma.socialMediaPost.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+      }),
+      // For calendar - get posts from the last 90 days and future scheduled
+      prisma.socialMediaPost.findMany({
+        where: {
+          OR: [
+            { createdAt: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
+            { scheduledAt: { gte: new Date() } },
+          ],
+        },
+        select: {
+          id: true,
+          content: true,
+          platforms: true,
+          status: true,
+          scheduledAt: true,
+          publishedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ])
+  } catch (error) {
+    console.warn('[SOCIAL] Failed to fetch social media posts:', error instanceof Error ? error.message : error)
+  }
 
   // Get connected accounts
   let accounts: SocialAccountInfo[] = []
