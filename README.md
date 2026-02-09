@@ -1,23 +1,41 @@
-# Repository Security Setup
+# Jose Madrid Salsa E-Commerce Platform
 
-<<<<<<< HEAD
-Complete security configuration for Jlang.dev repositories with CodeQL scanning and secret prevention.
-=======
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-15.5-black.svg)](https://nextjs.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-6.19-2D3748.svg)](https://www.prisma.io/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC.svg)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
->>>>>>> 4ef8e7cbfb79335c7e5bf7775ae538bf88b0d6fa
-
 ## Features
 
-✅ **CodeQL Security Scanning** - Automated code analysis for vulnerabilities  
-✅ **Secret Detection** - Multiple layers of API key and credential protection  
-✅ **Pre-commit Hooks** - Local prevention of secret commits  
-✅ **GitHub Actions Integration** - Automated CI/CD security checks  
-✅ **Dependency Monitoring** - Track vulnerable packages  
+✅ **CodeQL Security Scanning** - Automated code analysis for vulnerabilities
+✅ **Secret Detection** - Multiple layers of API key and credential protection
+✅ **Pre-commit Hooks** - Local prevention of secret commits
+✅ **GitHub Actions Integration** - Automated CI/CD security checks
+✅ **Dependency Monitoring** - Track vulnerable packages
+
+## Data Import
+
+The platform includes comprehensive data import capabilities for migrating existing data or bulk uploading new content. Import functionality supports:
+
+- **Products** - Hot sauce catalog with SKUs, pricing, inventory, and metadata
+- **Orders** - Historical orders with line items, shipping, and payment information
+- **Gift Certificates** - Digital gift certificates with custom themes and messages
+- **Retail Locations** - Physical store locations that carry Jose Madrid Salsa products
+
+### Supported Formats
+- CSV (.csv) - Universal support for all data types
+- Excel (.xlsx, .xls) - Products, Orders
+- JSON (.json) - Products with complex nested data
+
+### Key Features
+- ✨ **Validation** - Comprehensive data validation before import
+- 📊 **Batch Processing** - Efficient handling of large datasets
+- 🔄 **Flexible Options** - Auto-create missing relationships, skip duplicates
+- 📝 **Error Reporting** - Detailed error messages with row and field identification
+- 📥 **Template Downloads** - Pre-formatted templates for each import type
+
+For detailed documentation, field specifications, and troubleshooting, see the **[Data Import Guide](./docs/IMPORT_GUIDE.md)**.
 
 ## Quick Setup
 
