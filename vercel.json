@@ -1,12 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/abandoned-cart",
-      "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/cron/dashboard-analysis",
-      "schedule": "0 */5 * * *"
-    }
-  ]
-}
+{}
