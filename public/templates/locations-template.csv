@@ -1,0 +1,2 @@
+businessName,address,city,state,zipCode,phone,website,photoUrl,latitude,longitude,county,isActive
+Example Dance Studio,123 Main Street,Miami,FL,33101,(305) 555-1234,https://example.com,https://example.com/photo.jpg,25.7617,-80.1918,Miami-Dade,true
