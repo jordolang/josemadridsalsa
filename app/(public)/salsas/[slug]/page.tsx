@@ -5,10 +5,12 @@ import { useParams, notFound, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ShoppingCart, Minus, Plus, Loader2, Heart } from 'lucide-react'
+import { ShoppingCart, Minus, Plus, Loader2, Heart, Scale } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 import { useWishlistStore } from '@/lib/store/wishlist'
+import { useComparisonStore } from '@/lib/store/comparison'
 import { useRecentlyViewedStore } from '@/lib/store/recently-viewed'
+import { toast } from 'sonner'
 import { formatPrice, getHeatLevelColor, getHeatLevelText, cn } from '@/lib/utils'
 import { HeatGauge } from '@/components/store/heat-gauge'
 import { getSalsaHeatRating } from '@/lib/salsa-heat'
@@ -35,6 +37,8 @@ type Product = {
   searchKeywords: string[]
   productType: string
   packSize?: number
+  weight?: string
+  dimensions?: string
 }
 
 export default function ProductPage() {
@@ -51,6 +55,7 @@ export default function ProductPage() {
   const addItem = useCartStore((state) => state.addItem)
   const openCart = useCartStore((state) => state.openCart)
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore()
+  const { addProduct: addToComparison, removeProduct: removeFromComparison, isInComparison, canAddMore, openPanel } = useComparisonStore()
   const addRecentlyViewed = useRecentlyViewedStore((state) => state.addProduct)
   const { data: session } = useSession()
 
@@ -130,7 +135,39 @@ export default function ProductPage() {
     }
   }
 
+  const handleComparisonToggle = () => {
+    if (!product) return
+
+    if (inComparison) {
+      removeFromComparison(product.id)
+      toast.success('Removed from comparison')
+    } else {
+      if (!canAddMore()) {
+        toast.error('Maximum 4 products can be compared')
+        return
+      }
+
+      addToComparison({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: product.featuredImage,
+        heatLevel: product.heatLevel,
+        sku: product.sku,
+        description: product.description,
+        inventory: product.inventory,
+        ingredients: product.ingredients || null,
+        weight: product.weight || null,
+        dimensions: product.dimensions || null,
+      })
+      toast.success('Added to comparison')
+      openPanel()
+    }
+  }
+
   const inWishlist = product ? isInWishlist(product.id) : false
+  const inComparison = product ? isInComparison(product.id) : false
 
   if (loading) {
     return (
@@ -307,6 +344,23 @@ export default function ProductPage() {
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
                   {product.inventory === 0 ? 'Out of Stock' : 'Add to Cart'}
+                </Button>
+
+                <Button
+                  onClick={handleComparisonToggle}
+                  size="lg"
+                  variant={inComparison ? "default" : "outline"}
+                  className={cn(
+                    "px-4 py-3",
+                    inComparison ? "bg-blue-500 hover:bg-blue-600 text-white" : "text-blue-600 border-blue-600 hover:bg-blue-50"
+                  )}
+                  aria-label={inComparison ? "Remove from comparison" : "Add to comparison"}
+                  aria-pressed={inComparison}
+                >
+                  <Scale className="w-5 h-5" />
+                  <span className="sr-only">
+                    {inComparison ? "Remove from comparison" : "Add to comparison"}
+                  </span>
                 </Button>
 
                 <Button

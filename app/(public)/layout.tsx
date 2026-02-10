@@ -10,6 +10,7 @@ import { getPublicGoogleAnalyticsMeasurementId } from '@/lib/google-analytics-co
 import { Analytics } from '@vercel/analytics/react'
 import { WishlistSyncProvider } from '@/components/providers/wishlist-sync-provider'
 import { CompareFloatingButton, ProductComparison } from '@/components/store/product-comparison'
+import { ComparisonURLHandler } from '@/components/store/comparison-url-handler'
 
 export default async function PublicLayout({
   children,
@@ -46,6 +47,7 @@ export default async function PublicLayout({
       {measurementId && <GoogleAnalytics measurementId={measurementId} />}
       <AmplitudeAnalytics />
       <WishlistSyncProvider />
+      <ComparisonURLHandler />
       <div className="flex min-h-screen flex-col">
         <Navigation />
         <div className="flex-1">
