@@ -5,6 +5,21 @@ import { useSearchParams } from 'next/navigation'
 import { useComparisonStore } from '@/lib/store/comparison'
 import { toast } from 'sonner'
 
+interface ProductFromAPI {
+  id: string
+  name: string
+  slug: string
+  price: number
+  featuredImage: string | null
+  heatLevel: string
+  sku: string
+  description: string
+  inventory: number
+  ingredients?: string[] | null
+  weight?: string | null
+  dimensions?: string | null
+}
+
 export function ComparisonURLHandler() {
   const searchParams = useSearchParams()
   const { addProduct, openPanel, clearComparison } = useComparisonStore()
@@ -36,10 +51,10 @@ export function ComparisonURLHandler() {
           throw new Error('Failed to fetch products')
         }
 
-        const allProducts = await response.json()
+        const allProducts: ProductFromAPI[] = await response.json()
 
         // Filter products that match the IDs
-        const matchedProducts = allProducts.filter((product: any) =>
+        const matchedProducts = allProducts.filter((product) =>
           productIds.includes(product.id)
         )
 
@@ -51,7 +66,7 @@ export function ComparisonURLHandler() {
         // Clear existing comparison and add new products
         clearComparison()
 
-        matchedProducts.forEach((product: any) => {
+        matchedProducts.forEach((product) => {
           addProduct({
             id: product.id,
             name: product.name,
@@ -62,7 +77,7 @@ export function ComparisonURLHandler() {
             sku: product.sku,
             description: product.description,
             inventory: product.inventory,
-            ingredients: product.ingredients,
+            ingredients: product.ingredients || null,
             weight: product.weight || null,
             dimensions: product.dimensions || null,
           })

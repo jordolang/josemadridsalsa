@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useComparisonStore } from '@/lib/store/comparison'
+import { useComparisonStore, ComparisonProduct } from '@/lib/store/comparison'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { X, ShoppingCart, Share2 } from 'lucide-react'
@@ -23,7 +23,7 @@ export function ProductComparison() {
     return null
   }
 
-  const handleAddToCart = (product: any) => {
+  const handleAddToCart = (product: ComparisonProduct) => {
     addToCart({
       id: product.id,
       name: product.name,
