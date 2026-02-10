@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useComparisonStore } from '@/lib/store/comparison'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { X, ShoppingCart } from 'lucide-react'
+import { X, ShoppingCart, Share2 } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -38,6 +38,21 @@ export function ProductComparison() {
     toast.success(`Added ${product.name} to cart`)
   }
 
+  const handleShare = async () => {
+    try {
+      // Generate shareable URL with product IDs
+      const productIds = products.map(p => p.id).join(',')
+      const baseUrl = window.location.origin
+      const shareUrl = `${baseUrl}/salsas?compare=${productIds}`
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(shareUrl)
+      toast.success('Comparison link copied to clipboard!')
+    } catch (error) {
+      toast.error('Failed to copy link')
+    }
+  }
+
   const getHeatLevelColor = (level: string) => {
     const colors: Record<string, string> = {
       MILD: 'bg-green-100 text-green-800',
@@ -48,6 +63,34 @@ export function ProductComparison() {
     return colors[level] || 'bg-gray-100 text-gray-800'
   }
 
+  // Difference detection helpers
+  const prices = products.map(p => p.price)
+  const minPrice = Math.min(...prices)
+  const maxPrice = Math.max(...prices)
+  const hasPriceDifference = minPrice !== maxPrice
+
+  const heatLevels = products.map(p => p.heatLevel)
+  const uniqueHeatLevels = new Set(heatLevels)
+  const hasHeatDifference = uniqueHeatLevels.size > 1
+
+  // Get all unique ingredients across all products
+  const allIngredients = new Set<string>()
+  products.forEach(product => {
+    if (product.ingredients && product.ingredients.length > 0) {
+      product.ingredients.forEach((ing: string) => allIngredients.add(ing.toLowerCase().trim()))
+    }
+  })
+
+  // Helper to check if an ingredient is unique to this product
+  const getIngredientHighlight = (ingredient: string, productId: string) => {
+    const normalizedIngredient = ingredient.toLowerCase().trim()
+    const otherProducts = products.filter(p => p.id !== productId)
+    const isUnique = !otherProducts.some(p =>
+      p.ingredients?.some((ing: string) => ing.toLowerCase().trim() === normalizedIngredient)
+    )
+    return isUnique
+  }
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-salsa-500 shadow-2xl z-50 max-h-[70vh] overflow-hidden">
       {/* Header */}
@@ -56,6 +99,10 @@ export function ProductComparison() {
           Compare Products ({products.length}/{4})
         </h3>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleShare}>
+            <Share2 className="w-4 h-4 mr-2" />
+            Share
+          </Button>
           <Button variant="outline" size="sm" onClick={clearComparison}>
             Clear All
           </Button>
@@ -122,20 +169,39 @@ export function ProductComparison() {
             {/* Price */}
             <tr className="border-b">
               <td className="p-4 font-semibold sticky left-0 bg-white">Price</td>
-              {products.map(product => (
-                <td key={product.id} className="p-4">
-                  <span className="text-2xl font-bold text-salsa-600">
-                    ${product.price.toFixed(2)}
-                  </span>
-                </td>
-              ))}
+              {products.map(product => {
+                const isLowest = hasPriceDifference && product.price === minPrice
+                const isHighest = hasPriceDifference && product.price === maxPrice
+                return (
+                  <td key={product.id} className="p-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-2xl font-bold text-salsa-600">
+                        ${product.price.toFixed(2)}
+                      </span>
+                      {isLowest && (
+                        <Badge className="bg-green-100 text-green-800 w-fit">
+                          Lowest Price
+                        </Badge>
+                      )}
+                      {isHighest && (
+                        <Badge className="bg-red-100 text-red-800 w-fit">
+                          Highest Price
+                        </Badge>
+                      )}
+                    </div>
+                  </td>
+                )
+              })}
             </tr>
 
             {/* Heat Level */}
             <tr className="border-b bg-gray-50">
               <td className="p-4 font-semibold sticky left-0 bg-gray-50">Heat Level</td>
               {products.map(product => (
-                <td key={product.id} className="p-4">
+                <td
+                  key={product.id}
+                  className={`p-4 ${hasHeatDifference ? 'bg-yellow-50' : ''}`}
+                >
                   <Badge className={getHeatLevelColor(product.heatLevel)}>
                     {product.heatLevel}
                   </Badge>
@@ -156,32 +222,73 @@ export function ProductComparison() {
             </tr>
 
             {/* Ingredients */}
-            <tr className="border-b">
-              <td className="p-4 font-semibold sticky left-0 bg-white align-top">
-                Ingredients
-              </td>
+            <tr className="border-b bg-gray-50">
+              <td className="p-4 font-semibold sticky left-0 bg-gray-50">Ingredients</td>
               {products.map(product => (
                 <td key={product.id} className="p-4">
-                  <div className="flex flex-wrap gap-1">
-                    {Array.isArray(product.ingredients) &&
-                    product.ingredients.length > 0 ? (
-                      (product.ingredients as string[]).map((ingredient: string, idx: number) => (
-                        <span key={idx} className="text-sm text-gray-600">
-                          {ingredient}
-                          {idx < (product.ingredients as string[]).length - 1 ? ',' : ''}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-sm text-gray-500">Not available</span>
+                  {product.ingredients && product.ingredients.length > 0 ? (
+                    <div className="text-sm flex flex-wrap gap-1">
+                      {product.ingredients.map((ingredient: string, idx: number) => {
+                        const isUnique = getIngredientHighlight(ingredient, product.id)
+                        return (
+                          <span
+                            key={idx}
+                            className={`${
+                              isUnique
+                                ? 'bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium'
+                                : 'text-gray-600'
+                            }`}
+                          >
+                            {ingredient}
+                            {idx < product.ingredients.length - 1 ? ',' : ''}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">Not available</p>
+                  )}
+                </td>
+              ))}
+            </tr>
+
+            {/* Weight/Size */}
+            <tr className="border-b">
+              <td className="p-4 font-semibold sticky left-0 bg-white">Weight/Size</td>
+              {products.map(product => (
+                <td key={product.id} className="p-4">
+                  <div className="text-sm text-gray-600">
+                    {product.weight && (
+                      <div className="mb-1">
+                        <span className="font-medium">Weight:</span> {product.weight}
+                      </div>
+                    )}
+                    {product.dimensions && (
+                      <div>
+                        <span className="font-medium">Dimensions:</span> {product.dimensions}
+                      </div>
+                    )}
+                    {!product.weight && !product.dimensions && (
+                      <p className="text-gray-400 italic">Not available</p>
                     )}
                   </div>
                 </td>
               ))}
             </tr>
 
-            {/* Availability */}
+            {/* Ratings */}
             <tr className="border-b bg-gray-50">
-              <td className="p-4 font-semibold sticky left-0 bg-gray-50">Availability</td>
+              <td className="p-4 font-semibold sticky left-0 bg-gray-50">Ratings</td>
+              {products.map(product => (
+                <td key={product.id} className="p-4">
+                  <p className="text-sm text-gray-400 italic">Coming soon</p>
+                </td>
+              ))}
+            </tr>
+
+            {/* Availability */}
+            <tr className="border-b">
+              <td className="p-4 font-semibold sticky left-0 bg-white">Availability</td>
               {products.map(product => (
                 <td key={product.id} className="p-4">
                   {product.inventory > 0 ? (
