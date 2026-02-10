@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Script from 'next/script'
 import { CartSidebar } from '@/components/store/cart-sidebar'
 import { Toaster } from '@/components/ui/toaster'
@@ -47,7 +48,9 @@ export default async function PublicLayout({
       {measurementId && <GoogleAnalytics measurementId={measurementId} />}
       <AmplitudeAnalytics />
       <WishlistSyncProvider />
-      <ComparisonURLHandler />
+      <Suspense fallback={null}>
+        <ComparisonURLHandler />
+      </Suspense>
       <div className="flex min-h-screen flex-col">
         <Navigation />
         <div className="flex-1">
