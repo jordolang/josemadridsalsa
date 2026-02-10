@@ -240,7 +240,7 @@ export function ProductComparison() {
                             }`}
                           >
                             {ingredient}
-                            {idx < product.ingredients.length - 1 ? ',' : ''}
+                            {idx < (product.ingredients?.length ?? 0) - 1 ? ',' : ''}
                           </span>
                         )
                       })}
