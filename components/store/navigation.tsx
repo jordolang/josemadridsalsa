@@ -13,7 +13,7 @@ import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuL
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { useCartStore } from "@/lib/store/cart";
+import { CartIcon } from "@/components/store/cart-icon";
 import { useWishlistStore } from "@/lib/store/wishlist";
 import { cn } from "@/lib/utils";
 
@@ -90,10 +90,8 @@ export function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { items, toggleCart } = useCartStore();
   const { totalItems } = useWishlistStore();
 
-  const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const wishlistCount = totalItems();
 
   useEffect(() => {
@@ -346,22 +344,7 @@ export function Navigation() {
             </Button>
 
             {/* Cart */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleCart}
-              className="relative p-1.5"
-            >
-              <ShoppingCart className="w-4 h-4" />
-              {cartItemCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center p-0 text-[10px] bg-salsa-500"
-                >
-                  {cartItemCount}
-                </Badge>
-              )}
-            </Button>
+            <CartIcon />
 
             {/* Mobile Menu */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
