@@ -421,7 +421,7 @@ function CheckoutForm() {
 
       clearCart()
       setSuccessMessage('Payment successful!')
-      router.push(`/checkout/success?order=${orderId}`)
+      router.push(`/order-confirmation/${orderId}`)
     } catch (error) {
       console.error(error)
       setErrorMessage(
