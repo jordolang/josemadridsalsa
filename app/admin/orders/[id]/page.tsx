@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import RefundDialog from '@/components/admin/RefundDialog'
 
 async function getOrder(id: string) {
   const order = await prisma.order.findUnique({
@@ -278,6 +279,13 @@ export default async function OrderDetailPage({
               <div className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Actions</h2>
                 <div className="space-y-2">
+                  <RefundDialog
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                    totalPaid={Number(order.total)}
+                    refundableAmount={Number(order.total)}
+                    paymentStatus={order.paymentStatus}
+                  />
                   <Button variant="outline" className="w-full" disabled>
                     Update Status
                   </Button>
