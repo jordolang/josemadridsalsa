@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import RefundDialog from '@/components/admin/RefundDialog'
+import { getStripe } from '@/lib/stripe'
+import { Decimal } from '@prisma/client/runtime/library'
 
 async function getOrder(id: string) {
   const order = await prisma.order.findUnique({
@@ -25,6 +27,36 @@ async function getOrder(id: string) {
   })
 
   return order
+}
+
+async function getRefundableAmount(order: {
+  stripePaymentId: string | null
+  paymentStatus: string
+  total: number | Decimal
+}): Promise<number> {
+  // If order can't be refunded, return 0
+  if (!order.stripePaymentId) return 0
+  if (order.paymentStatus !== 'PAID' && order.paymentStatus !== 'PARTIALLY_REFUNDED') {
+    return 0
+  }
+
+  try {
+    const stripe = getStripe()
+    const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentId)
+
+    const charge = paymentIntent.charges?.data?.[0]
+    if (!charge) return 0
+
+    // Calculate refunded amount (Stripe stores in cents)
+    const totalRefunded = (charge.amount_refunded || 0) / 100
+    const totalPaid = Number(order.total)
+
+    // Return remaining refundable amount
+    return Math.max(0, totalPaid - totalRefunded)
+  } catch (error) {
+    console.error('Error fetching refundable amount:', error)
+    return 0
+  }
 }
 
 const statusInfo = {
@@ -56,6 +88,14 @@ export default async function OrderDetailPage({
   }
 
   const canWrite = await hasPermission(user, 'orders:write')
+
+  // Calculate actual refundable amount
+  const refundableAmount = await getRefundableAmount({
+    stripePaymentId: order.stripePaymentId,
+    paymentStatus: order.paymentStatus,
+    total: order.total,
+  })
+
   const status = statusInfo[order.status as keyof typeof statusInfo]
   const StatusIcon = status.icon
   const shopifyAdminBase =
@@ -283,7 +323,7 @@ export default async function OrderDetailPage({
                     orderId={order.id}
                     orderNumber={order.orderNumber}
                     totalPaid={Number(order.total)}
-                    refundableAmount={Number(order.total)}
+                    refundableAmount={refundableAmount}
                     paymentStatus={order.paymentStatus}
                   />
                   <Button variant="outline" className="w-full" disabled>
