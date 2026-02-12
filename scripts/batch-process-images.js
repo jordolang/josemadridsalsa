@@ -11,6 +11,15 @@ async function batchProcess() {
   const inputDir = './photography/edited'
   const outputDir = './photography/exports'
 
+  // Standard configuration for product images
+  // 1200x1200px ensures adequate detail for zoom while keeping file sizes reasonable
+  // White background for consistent product display on e-commerce sites
+  const TARGET_SIZE = 1200
+  const RESIZE_CONFIG = { 
+    fit: 'contain', 
+    background: '#ffffff' 
+  }
+
   try {
     // Verify input directory exists
     try {
@@ -44,19 +53,19 @@ async function batchProcess() {
       try {
         // Process to JPG
         await sharp(inputPath)
-          .resize(1200, 1200, { fit: 'contain', background: '#ffffff' })
+          .resize(TARGET_SIZE, TARGET_SIZE, RESIZE_CONFIG)
           .jpeg({ quality: 90, progressive: true })
           .toFile(path.join(outputDir, 'jpg', `${name}.jpg`))
 
         // Process to PNG
         await sharp(inputPath)
-          .resize(1200, 1200, { fit: 'contain', background: '#ffffff' })
+          .resize(TARGET_SIZE, TARGET_SIZE, RESIZE_CONFIG)
           .png({ compressionLevel: 9 })
           .toFile(path.join(outputDir, 'png', `${name}.png`))
 
         // Process to WebP
         await sharp(inputPath)
-          .resize(1200, 1200, { fit: 'contain', background: '#ffffff' })
+          .resize(TARGET_SIZE, TARGET_SIZE, RESIZE_CONFIG)
           .webp({ quality: 85, effort: 6 })
           .toFile(path.join(outputDir, 'webp', `${name}.webp`))
 

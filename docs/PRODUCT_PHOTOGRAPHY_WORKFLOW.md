@@ -238,13 +238,13 @@ photography/
 mkdir -p photography/raw/session-$(date +%Y-%m-%d)
 
 # Import photos from camera/card
-# macOS example
-cp /Volumes/SD_CARD/DCIM/* photography/raw/session-$(date +%Y-%m-%d)/
+# macOS example (using rsync for safer handling of spaces/special characters)
+rsync -av /Volumes/SD_CARD/DCIM/ photography/raw/session-$(date +%Y-%m-%d)/
 # Linux example
-# cp /media/$USER/SD_CARD/* photography/raw/session-$(date +%Y-%m-%d)/
-# Or use variables
-# CAMERA_PATH="/path/to/camera"
-# cp "$CAMERA_PATH"/* photography/raw/session-$(date +%Y-%m-%d)/
+# rsync -av /media/$USER/SD_CARD/ photography/raw/session-$(date +%Y-%m-%d)/
+# Or use cp with quoted paths
+# CAMERA_PATH="/Volumes/SD Card/DCIM"
+# cp -R "$CAMERA_PATH"/* photography/raw/session-$(date +%Y-%m-%d)/
 
 # Sort and rename
 cd photography/raw/session-$(date +%Y-%m-%d)
@@ -555,7 +555,7 @@ async function optimizeToWebP(inputDir: string, quality: number = 85) {
   console.log(`Total WebP size: ${(totalWebP / 1024).toFixed(1)}KB`)
   console.log(`Total savings: ${totalSavings}%`)
   } catch (error) {
-    console.error(`Failed to read directory: ${inputDir}`, error)
+    console.error(`Failed to process directory: ${inputDir}`, error)
     throw error
   }
 }
