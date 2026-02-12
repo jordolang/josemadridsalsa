@@ -12,6 +12,8 @@ export interface ComparisonProduct {
   description: string | null
   inventory: number
   ingredients: string[] | null
+  weight: string | null
+  dimensions: string | null
 }
 
 interface ComparisonStore {

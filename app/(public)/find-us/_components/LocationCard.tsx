@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { MapPin, Phone, ExternalLink, Navigation2 } from 'lucide-react'
 import type { RetailLocationRecord } from '@/lib/locations/shared'
 import { cn } from '@/lib/utils'
-import { getLocationImageUrl, getFallbackImage } from '@/lib/utils/image'
+import { getLocationImageUrl, getFallbackImage, isFaviconUrl } from '@/lib/utils/image'
 
 type LocationCardProps = {
   location: RetailLocationRecord
@@ -23,26 +23,27 @@ const formatWebsiteLabel = (url?: string | null) => {
 
 export function LocationCard({ location, isSelected = false, onSelect }: LocationCardProps) {
   const { businessName, address, city, state, zipCode, phone, website, distanceMiles, photoUrl, directionsUrl } = location
-  const [imageError, setImageError] = useState(false)
+  const [storedUrlFailed, setStoredUrlFailed] = useState(false)
   const [placeIdFailed, setPlaceIdFailed] = useState(false)
 
   const primaryImage = useMemo(() => {
-    // If error occurred, use placeholder
-    if (imageError) {
-      return getFallbackImage()
+    const gallery = location.photoGallery ?? []
+    const hero = gallery[0] ?? photoUrl
+    const hasStoredUrl = Boolean(hero && !isFaviconUrl(hero))
+
+    // Stage 1: Try stored photo URL first (cheaper, no live API call)
+    if (hasStoredUrl && !storedUrlFailed) {
+      return getLocationImageUrl(hero)
     }
 
-    // Try Place ID for fresh photos, but don't retry if it failed before
+    // Stage 2: Fall back to Place ID for fresh photos from Google
     if (location.googlePlaceId && !placeIdFailed) {
       return getLocationImageUrl(null, location.googlePlaceId)
     }
 
-    const gallery = location.photoGallery ?? []
-    const hero = gallery[0] ?? photoUrl
-
-    // Get the appropriate URL (will filter out low-quality favicons)
-    return getLocationImageUrl(hero)
-  }, [location.photoGallery, photoUrl, location.googlePlaceId, imageError, placeIdFailed])
+    // Stage 3: Placeholder
+    return getFallbackImage()
+  }, [location.photoGallery, photoUrl, location.googlePlaceId, storedUrlFailed, placeIdFailed])
 
   const fullAddress = `${address}, ${city}, ${state}${zipCode ? ` ${zipCode}` : ''}`
 
@@ -64,11 +65,11 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
           className="object-cover transition duration-500 group-hover:scale-[1.02]"
           sizes="(max-width: 640px) 90vw, (max-width: 768px) 45vw, (max-width: 1024px) 30vw, 25vw"
           onError={() => {
-            // If this was a Place ID request that failed, mark it as failed so we don't retry
+            // Cascade: stored URL failed → try Place ID; Place ID failed → placeholder
             if (primaryImage.includes('placeId=')) {
               setPlaceIdFailed(true)
             } else {
-              setImageError(true)
+              setStoredUrlFailed(true)
             }
           }}
           unoptimized={primaryImage.startsWith('/api/image-proxy')}
