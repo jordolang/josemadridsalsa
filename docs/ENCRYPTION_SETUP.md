@@ -139,26 +139,55 @@ Create a migration script to re-encrypt data with the new key:
 ```typescript
 // scripts/rotate-encryption-key.ts
 import { prisma } from '@/lib/prisma'
-import { encrypt, decrypt } from '@/lib/encryption'
+import crypto from 'crypto'
 
-// 1. Set old key in environment
-const oldKey = process.env.OLD_ENCRYPTION_KEY!
-const newKey = process.env.ENCRYPTION_KEY!
+// Helper functions that accept key as parameter
+function decryptWithKey(encryptedData: string, key: Buffer): string {
+  const parts = encryptedData.split(':')
+  const iv = Buffer.from(parts[0], 'base64')
+  const authTag = Buffer.from(parts[1], 'base64')
+  const encrypted = parts[2]
+  
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv)
+  decipher.setAuthTag(authTag)
+  
+  let decrypted = decipher.update(encrypted, 'base64', 'utf8')
+  decrypted += decipher.final('utf8')
+  
+  return decrypted
+}
 
-// 2. Decrypt with old key, re-encrypt with new key
+function encryptWithKey(plaintext: string, key: Buffer): string {
+  const iv = crypto.randomBytes(16)
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
+  
+  let encrypted = cipher.update(plaintext, 'utf8', 'base64')
+  encrypted += cipher.final('base64')
+  
+  const authTag = cipher.getAuthTag()
+  return `${iv.toString('base64')}:${authTag.toString('base64')}:${encrypted}`
+}
+
+// Derive keys from environment variables
+const oldKey = crypto.scryptSync(
+  process.env.OLD_ENCRYPTION_KEY!,
+  crypto.createHash('sha256').update('jose-madrid-salsa-v1').digest(),
+  32
+)
+const newKey = crypto.scryptSync(
+  process.env.ENCRYPTION_KEY!,
+  crypto.createHash('sha256').update('jose-madrid-salsa-v1').digest(),
+  32
+)
+
+// Re-encrypt all data
 const configs = await prisma.emailConfiguration.findMany()
 
 for (const config of configs) {
   if (config.smtpPassword) {
-    // Temporarily use old key to decrypt
-    process.env.ENCRYPTION_KEY = oldKey
-    const decrypted = decrypt(config.smtpPassword)
+    const decrypted = decryptWithKey(config.smtpPassword, oldKey)
+    const reencrypted = encryptWithKey(decrypted, newKey)
     
-    // Use new key to re-encrypt
-    process.env.ENCRYPTION_KEY = newKey
-    const reencrypted = encrypt(decrypted)
-    
-    // Update database
     await prisma.emailConfiguration.update({
       where: { id: config.id },
       data: { smtpPassword: reencrypted },

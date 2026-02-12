@@ -28,11 +28,15 @@ function getEncryptionKey(): Buffer {
     console.warn(
       '[Encryption] Using default key for development. Set ENCRYPTION_KEY in production!'
     )
-    return crypto.scryptSync('dev-encryption-key-change-in-production', 'salt', 32)
+    // Generate a session-specific key for development to avoid predictable patterns
+    const devKey = `dev-${Date.now()}-${Math.random()}`
+    return crypto.scryptSync(devKey, crypto.randomBytes(16), 32)
   }
   
   // Derive a 32-byte key from the environment variable using scrypt
-  return crypto.scryptSync(key, 'jose-madrid-salsa', 32)
+  // Use a unique salt derived from the key itself to avoid hardcoded salts
+  const salt = crypto.createHash('sha256').update('jose-madrid-salsa-v1').digest()
+  return crypto.scryptSync(key, salt, 32)
 }
 
 /**

@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     // Calculate shipping cost using shipping calculator
     const shippingResult = calculateShipping({
       items: items.map((item) => ({
-        weight: item.weight,
+        weight: item.weight ?? 1.0, // Default to 1 lb if weight not provided
         quantity: item.quantity,
       })),
       shippingAddress: {
