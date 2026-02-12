@@ -26,6 +26,9 @@ interface ProductImportDialogProps {
   onSuccess: () => void;
 }
 
+// File size limit in bytes (10 MB)
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
 interface ImportResult {
   success: boolean;
   message?: string;
@@ -50,6 +53,18 @@ export function ProductImportDialog({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
+      // Validate file size
+      if (selectedFile.size > MAX_FILE_SIZE) {
+        setResult({
+          success: false,
+          errors: [
+            `File size exceeds the maximum limit of ${(MAX_FILE_SIZE / 1024 / 1024).toFixed(0)}MB. ` +
+            `Selected file is ${(selectedFile.size / 1024 / 1024).toFixed(1)}MB.`
+          ],
+        });
+        return;
+      }
+
       setFile(selectedFile);
       setResult(null);
 
