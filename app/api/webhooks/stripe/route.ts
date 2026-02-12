@@ -154,7 +154,7 @@ export async function POST(request: Request) {
         const orderId = charge.metadata?.orderId
 
         if (!orderId) {
-          console.warn('Charge missing orderId in metadata:', charge.id)
+          console.warn('Skipping refund processing: charge missing orderId in metadata:', charge.id)
           return NextResponse.json({ received: true })
         }
 

@@ -11,8 +11,12 @@ export async function POST(
   try {
     // Authentication & authorization
     const user = await getCurrentUser()
-    if (!user || !isAdmin(user)) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    if (!isAdmin(user)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { id } = await params
@@ -60,7 +64,14 @@ export async function POST(
       order.stripePaymentId
     )
 
-    const chargeId = paymentIntent.latest_charge as string
+    // Extract charge ID - handle both string and object types
+    let chargeId: string | null = null
+    if (typeof paymentIntent.latest_charge === 'string') {
+      chargeId = paymentIntent.latest_charge
+    } else if (paymentIntent.latest_charge && typeof paymentIntent.latest_charge === 'object') {
+      chargeId = paymentIntent.latest_charge.id
+    }
+
     if (!chargeId) {
       return NextResponse.json(
         { error: 'No charge found for this payment' },
@@ -128,9 +139,9 @@ export async function POST(
     // Handle Stripe-specific errors
     if (error && typeof error === 'object' && 'type' in error) {
       const stripeError = error as any
-      if (stripeError.type === 'StripeCardError') {
+      if (stripeError.type === 'StripeInvalidRequestError') {
         return NextResponse.json(
-          { error: stripeError.message },
+          { error: stripeError.message || 'Invalid refund request' },
           { status: 400 }
         )
       }
