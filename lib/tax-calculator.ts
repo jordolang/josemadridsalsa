@@ -44,6 +44,44 @@ export interface TaxCalculationResult {
 }
 
 /**
+ * Check if a customer is tax exempt based on their wholesale account
+ * 
+ * Tax exemptions typically apply to:
+ * - Wholesale accounts with valid resale certificates
+ * - Non-profit organizations with valid tax-exempt status
+ */
+async function checkTaxExemption(customerEmail?: string): Promise<boolean> {
+  if (!customerEmail) {
+    return false
+  }
+  
+  try {
+    // Look up customer by email
+    const user = await prisma.user.findUnique({
+      where: { email: customerEmail },
+      include: {
+        wholesaleAccount: true,
+      },
+    })
+    
+    // Check if user has an approved wholesale account with resale number
+    if (
+      user?.wholesaleAccount &&
+      user.wholesaleAccount.status === 'APPROVED' &&
+      user.wholesaleAccount.resaleNumber
+    ) {
+      return true
+    }
+    
+    return false
+  } catch (error) {
+    console.error('[Tax Calculator] Error checking tax exemption:', error)
+    // In case of error, default to not exempt
+    return false
+  }
+}
+
+/**
  * Calculate tax using Stripe Tax API
  *
  * Stripe Tax automatically:

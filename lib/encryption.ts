@@ -10,7 +10,6 @@ import crypto from 'crypto'
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 16 // 16 bytes for AES
 const AUTH_TAG_LENGTH = 16 // 16 bytes for GCM authentication tag
-const SALT_LENGTH = 64
 
 /**
  * Get encryption key from environment
@@ -132,7 +131,7 @@ export function isEncrypted(value: string): boolean {
  * Use this to generate a secure key for production
  */
 export function generateEncryptionKey(): string {
-  return crypto.randomBytes(SALT_LENGTH).toString('base64')
+  return crypto.randomBytes(64).toString('base64')
 }
 
 /**
