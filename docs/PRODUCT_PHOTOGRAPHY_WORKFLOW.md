@@ -199,7 +199,13 @@ photography/
 mkdir -p photography/raw/session-$(date +%Y-%m-%d)
 
 # Import photos from camera/card
-cp /path/to/camera/* photography/raw/session-$(date +%Y-%m-%d)/
+# macOS example
+cp /Volumes/SD_CARD/DCIM/* photography/raw/session-$(date +%Y-%m-%d)/
+# Linux example
+# cp /media/$USER/SD_CARD/* photography/raw/session-$(date +%Y-%m-%d)/
+# Or use variables
+# CAMERA_PATH="/path/to/camera"
+# cp "$CAMERA_PATH"/* photography/raw/session-$(date +%Y-%m-%d)/
 
 # Sort and rename
 cd photography/raw/session-$(date +%Y-%m-%d)
@@ -448,12 +454,23 @@ interface ConversionStats {
 }
 
 async function optimizeToWebP(inputDir: string, quality: number = 85) {
+  // Validate quality parameter
+  if (quality < 0 || quality > 100) {
+    throw new Error('Quality must be between 0 and 100')
+  }
+
   const stats: ConversionStats[] = []
 
-  const files = await fs.readdir(inputDir)
-  const imageFiles = files.filter(f => /\.(jpg|jpeg|png)$/i.test(f))
+  try {
+    const files = await fs.readdir(inputDir)
+    const imageFiles = files.filter(f => /\.(jpg|jpeg|png)$/i.test(f))
 
-  console.log(`🔄 Converting ${imageFiles.length} images to WebP...\n`)
+    if (imageFiles.length === 0) {
+      console.warn(`No image files found in ${inputDir}`)
+      return
+    }
+
+    console.log(`🔄 Converting ${imageFiles.length} images to WebP...\n`)
 
   for (const file of imageFiles) {
     const inputPath = path.join(inputDir, file)
@@ -498,6 +515,10 @@ async function optimizeToWebP(inputDir: string, quality: number = 85) {
   console.log(`Total original size: ${(totalOriginal / 1024).toFixed(1)}KB`)
   console.log(`Total WebP size: ${(totalWebP / 1024).toFixed(1)}KB`)
   console.log(`Total savings: ${totalSavings}%`)
+  } catch (error) {
+    console.error(`Failed to read directory: ${inputDir}`, error)
+    throw error
+  }
 }
 
 // Run
@@ -614,6 +635,15 @@ cwebp input.jpg -q 95 -o output-95.webp
 # Check file sizes
 ls -lh output-*.webp
 ```
+
+**How to Choose Quality Level:**
+
+1. Start at q85 (recommended baseline)
+2. If file size > target: try q80
+3. If quality loss visible: try q90
+4. Check label text readability at each level
+5. Test on actual devices (mobile/desktop)
+6. Verify color accuracy for product representation
 
 ## Quality Control Checklist
 
@@ -805,7 +835,6 @@ Cloud:
 
 ## Related Documentation
 
-- [Image Management](./IMAGE_MANAGEMENT.md) - Overall image management system
 - [Image Audit Script](../scripts/audit-product-images.ts) - Verify image integrity
 
 ## Tools Reference
