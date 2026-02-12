@@ -4,6 +4,7 @@
  */
 
 import { getStripe } from './stripe'
+import { prisma } from './prisma'
 
 export interface TaxCalculationInput {
   /** Order line items */
@@ -55,6 +56,20 @@ export async function calculateTax(
   input: TaxCalculationInput
 ): Promise<TaxCalculationResult> {
   try {
+    // Check for tax exemption first
+    const taxExempt = await checkTaxExemption(input.customerEmail)
+    
+    if (taxExempt) {
+      // Return zero tax for exempt customers
+      return {
+        taxAmount: 0,
+        taxAmountDecimal: 0,
+        taxRate: 0,
+        taxBreakdown: [],
+        taxExempt: true,
+      }
+    }
+    
     const stripe = getStripe()
 
     // Create a tax calculation using Stripe Tax API
@@ -117,7 +132,7 @@ export async function calculateTax(
       taxAmountDecimal: taxAmount / 100,
       taxRate: parseFloat(taxRate.toFixed(2)),
       taxBreakdown,
-      taxExempt: false, // TODO: Implement tax exemption lookup if needed
+      taxExempt: false,
     }
   } catch (error) {
     console.error('[Tax Calculator] Error calculating tax:', error)

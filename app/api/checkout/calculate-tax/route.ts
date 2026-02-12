@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { calculateTax } from '@/lib/tax-calculator'
+import { calculateShipping } from '@/lib/shipping-calculator'
 
 /**
  * Tax Calculation API - Real-time tax estimates for checkout
@@ -14,6 +15,7 @@ const TaxCalculationSchema = z.object({
         productId: z.string().cuid(),
         quantity: z.number().int().positive(),
         price: z.number().positive(), // Price per unit in dollars
+        weight: z.number().positive().optional(), // Weight in pounds (optional)
       })
     )
     .min(1, 'Items array cannot be empty'),
@@ -73,7 +75,22 @@ export async function POST(request: Request) {
 
     // Calculate totals
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    const shippingCost = 0 // TODO: Implement shipping calculation
+    
+    // Calculate shipping cost using shipping calculator
+    const shippingResult = calculateShipping({
+      items: items.map((item) => ({
+        weight: item.weight,
+        quantity: item.quantity,
+      })),
+      shippingAddress: {
+        state: shippingAddress.state,
+        postalCode: shippingAddress.postalCode,
+        country: shippingAddress.country,
+      },
+      subtotal,
+    })
+    
+    const shippingCost = shippingResult.shippingCost
     const total = subtotal + taxResult.taxAmountDecimal + shippingCost
 
     return NextResponse.json({
@@ -83,6 +100,8 @@ export async function POST(request: Request) {
       taxRate: taxResult.taxRate,
       taxBreakdown: taxResult.taxBreakdown,
       shippingCost,
+      shippingMethod: shippingResult.shippingMethod,
+      estimatedDelivery: shippingResult.estimatedDelivery,
       total,
     })
   } catch (error) {

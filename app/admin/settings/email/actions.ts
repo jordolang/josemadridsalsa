@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
 import nodemailer from 'nodemailer'
+import { encrypt, decrypt } from '@/lib/encryption'
 
 export async function saveEmailConfig(formData: FormData) {
   const user = await getCurrentUser()
@@ -44,14 +45,16 @@ export async function saveEmailConfig(formData: FormData) {
     }
     
     // Create configuration
-    // Note: In production, you should encrypt smtpPassword before storing
+    // Encrypt SMTP password before storing
+    const encryptedPassword = smtpPassword ? encrypt(smtpPassword) : null
+    
     await prisma.emailConfiguration.create({
       data: {
         name,
         smtpHost,
         smtpPort,
         smtpUsername,
-        smtpPassword, // TODO: Encrypt this
+        smtpPassword: encryptedPassword,
         smtpSecure,
         fromEmail,
         fromName,
@@ -93,14 +96,16 @@ export async function testEmailConfig(configId: string) {
       return { success: false, message: 'No SMTP configuration to test' }
     }
     
-    // Create transporter
+    // Create transporter with decrypted password
+    const decryptedPassword = config.smtpPassword ? decrypt(config.smtpPassword) : null
+    
     const transporter = nodemailer.createTransport({
       host: config.smtpHost,
       port: config.smtpPort || 587,
       secure: config.smtpSecure,
-      auth: config.smtpUsername && config.smtpPassword ? {
+      auth: config.smtpUsername && decryptedPassword ? {
         user: config.smtpUsername,
-        pass: config.smtpPassword, // TODO: Decrypt if encrypted
+        pass: decryptedPassword,
       } : undefined,
     })
     
