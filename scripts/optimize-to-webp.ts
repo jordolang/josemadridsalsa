@@ -75,8 +75,9 @@ async function optimizeToWebP(inputDir: string, quality: number = 85) {
         console.log(`  Original: ${(originalSize / 1024).toFixed(1)}KB`)
         console.log(`  WebP: ${(webpSize / 1024).toFixed(1)}KB`)
         console.log(`  Savings: ${savings}%\n`)
-      } catch (error: any) {
-        console.error(`❌ Failed to convert ${file}:`, error.message)
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        console.error(`❌ Failed to convert ${file}:`, errorMessage)
       }
     }
 

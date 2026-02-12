@@ -19,6 +19,12 @@ async function batchProcess() {
     fit: 'contain', 
     background: '#ffffff' 
   }
+  
+  // Quality settings optimized for product photography
+  const JPEG_QUALITY = 90 // High quality for product detail
+  const PNG_COMPRESSION = 9 // Maximum compression for transparency
+  const WEBP_QUALITY = 85 // Balanced quality/size ratio
+  const WEBP_EFFORT = 6 // Higher effort for better compression
 
   try {
     // Verify input directory exists
@@ -54,19 +60,19 @@ async function batchProcess() {
         // Process to JPG
         await sharp(inputPath)
           .resize(TARGET_SIZE, TARGET_SIZE, RESIZE_CONFIG)
-          .jpeg({ quality: 90, progressive: true })
+          .jpeg({ quality: JPEG_QUALITY, progressive: true })
           .toFile(path.join(outputDir, 'jpg', `${name}.jpg`))
 
         // Process to PNG
         await sharp(inputPath)
           .resize(TARGET_SIZE, TARGET_SIZE, RESIZE_CONFIG)
-          .png({ compressionLevel: 9 })
+          .png({ compressionLevel: PNG_COMPRESSION })
           .toFile(path.join(outputDir, 'png', `${name}.png`))
 
         // Process to WebP
         await sharp(inputPath)
           .resize(TARGET_SIZE, TARGET_SIZE, RESIZE_CONFIG)
-          .webp({ quality: 85, effort: 6 })
+          .webp({ quality: WEBP_QUALITY, effort: WEBP_EFFORT })
           .toFile(path.join(outputDir, 'webp', `${name}.webp`))
 
         console.log(`✓ Processed: ${name}`)
