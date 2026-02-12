@@ -6,6 +6,10 @@ import { calculateShipping } from '@/lib/shipping-calculator'
 /**
  * Tax Calculation API - Real-time tax estimates for checkout
  * José Madrid Salsa E-commerce Platform
+ * 
+ * @note Product weight is optional. If not provided, defaults to 1 lb per item
+ *       which is a reasonable estimate for salsa jars (typically 0.5-2 lbs).
+ *       For accurate shipping costs, always include product weights.
  */
 
 const TaxCalculationSchema = z.object({

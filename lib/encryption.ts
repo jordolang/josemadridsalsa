@@ -15,6 +15,10 @@ const AUTH_TAG_LENGTH = 16 // 16 bytes for GCM authentication tag
  * Get encryption key from environment
  * In production, this should be a strong, randomly generated key stored securely
  */
+
+// Cache for development key to ensure consistency within a session
+let devKeyCache: Buffer | null = null
+
 function getEncryptionKey(): Buffer {
   const key = process.env.ENCRYPTION_KEY
   
@@ -25,12 +29,18 @@ function getEncryptionKey(): Buffer {
         'ENCRYPTION_KEY environment variable is required in production'
       )
     }
-    console.warn(
-      '[Encryption] Using default key for development. Set ENCRYPTION_KEY in production!'
-    )
-    // Generate a session-specific key for development to avoid predictable patterns
-    const devKey = `dev-${Date.now()}-${Math.random()}`
-    return crypto.scryptSync(devKey, crypto.randomBytes(16), 32)
+    
+    // Use cached development key for consistency within session
+    if (!devKeyCache) {
+      console.warn(
+        '[Encryption] Using default key for development. Set ENCRYPTION_KEY in production!'
+      )
+      // Generate a session-specific key for development to avoid predictable patterns
+      const devKey = `dev-${Date.now()}-${Math.random()}`
+      devKeyCache = crypto.scryptSync(devKey, crypto.randomBytes(16), 32)
+    }
+    
+    return devKeyCache
   }
   
   // Derive a 32-byte key from the environment variable using scrypt
