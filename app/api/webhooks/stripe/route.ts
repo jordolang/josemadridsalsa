@@ -91,16 +91,16 @@ export async function POST(request: Request) {
 
           // Update inventory for product orders (not gift certificates)
           if (order.items.length > 0) {
-            for (const item of order.items) {
-              await tx.product.update({
-                where: { id: item.productId },
-                data: {
-                  inventory: {
-                    decrement: item.quantity,
+            await Promise.all(
+              order.items.map((item) =>
+                tx.product.update({
+                  where: { id: item.productId },
+                  data: {
+                    inventory: { decrement: item.quantity },
                   },
-                },
-              })
-            }
+                })
+              )
+            )
           }
 
           // Gift certificates are already created, no additional action needed
@@ -146,6 +146,57 @@ export async function POST(request: Request) {
           })
           console.log('Order payment canceled via webhook:', orderId)
         }
+        break
+      }
+
+      case 'charge.refunded': {
+        const charge = event.data.object as Stripe.Charge
+        const orderId = charge.metadata?.orderId
+
+        if (!orderId) {
+          console.warn('Charge missing orderId in metadata:', charge.id)
+          return NextResponse.json({ received: true })
+        }
+
+        const isFullRefund = charge.amount_refunded === charge.amount
+
+        // Fetch order with items to restore inventory
+        const order = await prisma.order.findUnique({
+          where: { id: orderId },
+          include: { items: true },
+        })
+
+        if (!order) {
+          console.error('Order not found for refund:', orderId)
+          return NextResponse.json({ received: true })
+        }
+
+        await prisma.$transaction(async (tx) => {
+          // Update order status
+          await tx.order.update({
+            where: { id: orderId },
+            data: {
+              status: isFullRefund ? 'REFUNDED' : order.status,
+              paymentStatus: isFullRefund ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+            },
+          })
+
+          // Restore inventory on full refunds
+          if (isFullRefund && order.items.length > 0) {
+            await Promise.all(
+              order.items.map((item) =>
+                tx.product.update({
+                  where: { id: item.productId },
+                  data: {
+                    inventory: { increment: item.quantity },
+                  },
+                })
+              )
+            )
+          }
+        })
+
+        console.log('Order refund processed via webhook:', orderId, isFullRefund ? 'FULL' : 'PARTIAL')
         break
       }
 
