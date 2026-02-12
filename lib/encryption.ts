@@ -34,7 +34,9 @@ function getEncryptionKey(): Buffer {
   }
   
   // Derive a 32-byte key from the environment variable using scrypt
-  // Use a unique salt derived from the key itself to avoid hardcoded salts
+  // Use a consistent salt for key derivation - this is intentional and secure
+  // because each encryption operation uses a unique random IV
+  // The salt ensures the same ENCRYPTION_KEY always derives to the same key
   const salt = crypto.createHash('sha256').update('jose-madrid-salsa-v1').digest()
   return crypto.scryptSync(key, salt, 32)
 }

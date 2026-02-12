@@ -78,7 +78,11 @@ ENCRYPTION_KEY="your_generated_key_here"
 - **Algorithm**: AES-256-GCM (Galois/Counter Mode)
 - **Authentication**: GCM provides built-in authentication tags
 - **Key Derivation**: Uses scrypt to derive 32-byte keys from environment variable
-- **Random IVs**: Each encryption uses a unique initialization vector
+  - **Important**: The salt used for key derivation (`jose-madrid-salsa-v1`) is intentionally consistent
+  - This ensures the same `ENCRYPTION_KEY` always derives to the same encryption key
+  - Security comes from unique IVs per encryption operation, not from the key derivation salt
+  - **Do not change this salt** in key rotation - it must remain constant for backwards compatibility
+- **Random IVs**: Each encryption uses a unique initialization vector for security
 
 ---
 
@@ -169,6 +173,8 @@ function encryptWithKey(plaintext: string, key: Buffer): string {
 }
 
 // Derive keys from environment variables
+// Note: The salt 'jose-madrid-salsa-v1' must remain constant for backwards compatibility
+// Security comes from unique IVs per encryption, not from varying this salt
 const oldKey = crypto.scryptSync(
   process.env.OLD_ENCRYPTION_KEY!,
   crypto.createHash('sha256').update('jose-madrid-salsa-v1').digest(),

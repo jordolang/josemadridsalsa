@@ -15,7 +15,7 @@ const TaxCalculationSchema = z.object({
         productId: z.string().cuid(),
         quantity: z.number().int().positive(),
         price: z.number().positive(), // Price per unit in dollars
-        weight: z.number().positive().optional(), // Weight in pounds (optional)
+        weight: z.number().positive().optional(), // Weight in pounds (defaults to 1 lb if not provided)
       })
     )
     .min(1, 'Items array cannot be empty'),
@@ -77,6 +77,8 @@ export async function POST(request: Request) {
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
     
     // Calculate shipping cost using shipping calculator
+    // Note: Weight defaults to 1 lb per item if not provided
+    // This is a reasonable estimate for salsa jars which typically weigh 0.5-2 lbs
     const shippingResult = calculateShipping({
       items: items.map((item) => ({
         weight: item.weight ?? 1.0, // Default to 1 lb if weight not provided
