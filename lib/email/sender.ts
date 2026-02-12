@@ -6,6 +6,7 @@
 import { Resend } from 'resend'
 import { prisma } from '@/lib/prisma'
 import nodemailer from 'nodemailer'
+import { decrypt } from '@/lib/encryption'
 
 const resendApiKey = process.env.RESEND_API_KEY
 
@@ -71,13 +72,16 @@ async function getSMTPTransporter(configId?: string) {
     return null
   }
   
+  // Decrypt SMTP password if encrypted
+  const decryptedPassword = config.smtpPassword ? decrypt(config.smtpPassword) : null
+  
   const transporter = nodemailer.createTransport({
     host: config.smtpHost,
     port: config.smtpPort || 587,
     secure: config.smtpSecure,
-    auth: config.smtpUsername && config.smtpPassword ? {
+    auth: config.smtpUsername && decryptedPassword ? {
       user: config.smtpUsername,
-      pass: config.smtpPassword, // TODO: Decrypt if encrypted
+      pass: decryptedPassword,
     } : undefined,
   })
   
