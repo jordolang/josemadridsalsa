@@ -172,6 +172,45 @@ Provide specific adjustment recommendations for each image to achieve consistenc
 - Lightroom Presets
 - ImageMagick (command-line)
 
+### Security Best Practices for API-Based Tools
+
+**⚠️ Important Security Considerations:**
+
+When using API-based services like Remove.bg or other third-party tools:
+
+1. **API Key Management:**
+   - Never commit API keys to source code or version control
+   - Store keys in environment variables (`.env.local` file)
+   - Use different keys for development and production
+   - Rotate keys periodically
+
+2. **Cost Management:**
+   - Be aware that many services are paid (Remove.bg charges per image)
+   - Set up usage alerts and billing limits
+   - Test with small batches before processing hundreds of images
+   - Consider rate limiting for batch operations
+
+3. **Data Privacy:**
+   - Review the service's data retention policy
+   - Understand where your images are processed and stored
+   - Use secure HTTPS connections
+   - Consider self-hosted alternatives for sensitive images
+
+4. **Example Environment Variable Setup:**
+   ```bash
+   # .env.local (NEVER commit this file)
+   REMOVEBG_API_KEY=your_api_key_here
+   OPENAI_API_KEY=your_api_key_here
+   ```
+
+   Usage in scripts:
+   ```javascript
+   const apiKey = process.env.REMOVEBG_API_KEY
+   if (!apiKey) {
+     throw new Error('REMOVEBG_API_KEY not configured')
+   }
+   ```
+
 ## Batch Processing Workflow
 
 ### Directory Structure for Processing
