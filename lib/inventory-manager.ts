@@ -573,3 +573,191 @@ export async function dismissAlert(alertId: string, userId?: string, notes?: str
     },
   });
 }
+
+/**
+ * Create and send restock notification for critical stock levels
+ * Calculates recommended restock quantity and urgency level
+ *
+ * @param productId - Product ID to restock
+ * @param productName - Product name
+ * @param productSku - Product SKU
+ * @param currentStock - Current stock level
+ * @param lowStockThreshold - Low stock threshold
+ * @param averageDailySales - Average daily sales (optional, for calculating restock quantity)
+ * @returns Email send result
+ */
+export async function createRestockNotification(
+  productId: string,
+  productName: string,
+  productSku: string,
+  currentStock: number,
+  lowStockThreshold: number,
+  averageDailySales?: number
+) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) {
+    console.warn('RESEND_API_KEY not set; skipping restock notification');
+    return { skipped: true };
+  }
+
+  try {
+    // Calculate recommended restock quantity
+    // Base calculation: bring stock to 3x threshold or 30 days of sales (whichever is higher)
+    let recommendedRestock = lowStockThreshold * 3;
+
+    if (averageDailySales && averageDailySales > 0) {
+      const thirtyDaysStock = Math.ceil(averageDailySales * 30);
+      recommendedRestock = Math.max(recommendedRestock, thirtyDaysStock);
+    }
+
+    // Adjust for current stock - we need to add enough to reach the recommended level
+    const restockQuantity = Math.max(0, recommendedRestock - currentStock);
+
+    // Determine urgency level
+    let urgency: 'critical' | 'high' | 'medium';
+    let urgencyColor: string;
+    let urgencyIcon: string;
+    let urgencyText: string;
+
+    if (currentStock === 0) {
+      urgency = 'critical';
+      urgencyColor = '#dc2626';
+      urgencyIcon = '🔴';
+      urgencyText = 'CRITICAL - Out of Stock';
+    } else if (currentStock <= lowStockThreshold * 0.5) {
+      urgency = 'high';
+      urgencyColor = '#f59e0b';
+      urgencyIcon = '🟠';
+      urgencyText = 'HIGH - Critically Low Stock';
+    } else {
+      urgency = 'medium';
+      urgencyColor = '#eab308';
+      urgencyIcon = '🟡';
+      urgencyText = 'MEDIUM - Low Stock';
+    }
+
+    // Days of stock remaining (if we have sales data)
+    let daysRemaining = '';
+    if (averageDailySales && averageDailySales > 0 && currentStock > 0) {
+      const days = Math.floor(currentStock / averageDailySales);
+      daysRemaining = `
+        <p style="margin: 8px 0; font-size: 14px;">
+          <strong style="color: #374151;">Days of Stock Remaining:</strong>
+          <span style="color: ${days <= 7 ? '#dc2626' : '#111827'}; font-weight: ${days <= 7 ? 'bold' : 'normal'};">${days} days</span>
+        </p>
+      `;
+    }
+
+    const subject = `${urgencyIcon} RESTOCK NEEDED (${urgency.toUpperCase()}): ${productName}`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, ${urgencyColor} 0%, ${urgency === 'critical' ? '#991b1b' : urgency === 'high' ? '#d97706' : '#ca8a04'} 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">
+              ${urgencyIcon} Restock Required
+            </h1>
+            <p style="color: rgba(255,255,255,0.95); margin: 10px 0 0 0; font-size: 14px; font-weight: 600;">
+              Urgency Level: ${urgencyText}
+            </p>
+          </div>
+
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              The following product requires restocking:
+            </p>
+
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${urgencyColor};">
+              <p style="margin: 8px 0; font-size: 14px;">
+                <strong style="color: #374151;">Product:</strong>
+                <span style="color: #111827;">${productName}</span>
+              </p>
+              <p style="margin: 8px 0; font-size: 14px;">
+                <strong style="color: #374151;">SKU:</strong>
+                <span style="color: #111827;">${productSku}</span>
+              </p>
+              <p style="margin: 8px 0; font-size: 14px;">
+                <strong style="color: #374151;">Current Stock:</strong>
+                <span style="color: ${urgencyColor}; font-weight: bold; font-size: 18px;">${currentStock}</span>
+              </p>
+              <p style="margin: 8px 0; font-size: 14px;">
+                <strong style="color: #374151;">Low Stock Threshold:</strong>
+                <span style="color: #111827;">${lowStockThreshold}</span>
+              </p>
+              ${daysRemaining}
+            </div>
+
+            <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0 0 10px 0; font-size: 16px; color: #047857; font-weight: 600;">
+                📦 Recommended Restock Quantity
+              </p>
+              <p style="margin: 0; font-size: 28px; color: #059669; font-weight: bold;">
+                ${restockQuantity} units
+              </p>
+              <p style="margin: 10px 0 0 0; font-size: 13px; color: #065f46;">
+                This will bring stock to approximately ${recommendedRestock} units
+                ${averageDailySales && averageDailySales > 0 ? `(~${Math.ceil(recommendedRestock / averageDailySales)} days of inventory)` : '(3x threshold)'}
+              </p>
+            </div>
+
+            <div style="background: ${urgency === 'critical' ? '#fef2f2' : urgency === 'high' ? '#fef3c7' : '#fefce8'}; border-left: 4px solid ${urgencyColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; font-size: 14px; color: ${urgency === 'critical' ? '#991b1b' : urgency === 'high' ? '#92400e' : '#854d0e'};">
+                <strong>${urgencyIcon} ${urgency === 'critical' ? 'This product is out of stock and should be restocked immediately!' : urgency === 'high' ? 'Stock level is critically low. Immediate action recommended.' : 'Stock level is below threshold. Please plan for restocking soon.'}</strong>
+              </p>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXTAUTH_URL}/admin/products/${productId}"
+                 style="background: #3b82f6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">
+                View Product & Restock
+              </a>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              Jose Madrid Salsa - Inventory Management<br>
+              This is an automated message, please do not reply.
+            </p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Get admin email addresses from environment or database
+    const adminEmails = process.env.INVENTORY_ALERT_EMAILS?.split(',') || [];
+
+    if (adminEmails.length === 0) {
+      console.warn('No admin emails configured for restock notifications');
+      return { skipped: true, reason: 'No admin emails configured' };
+    }
+
+    // Send email to all admin addresses
+    const results = [];
+    for (const email of adminEmails) {
+      const res = await sendEmail({
+        to: email.trim(),
+        subject,
+        html,
+      });
+      results.push(res);
+    }
+
+    return {
+      success: true,
+      urgency,
+      restockQuantity,
+      recommendedStock: recommendedRestock,
+      emailsSent: adminEmails.length,
+      results,
+    };
+  } catch (e) {
+    console.error('Failed to send restock notification', e);
+    return { error: true };
+  }
+}
