@@ -18,59 +18,59 @@ model User {
   password        String?
   role            UserRole @default(CUSTOMER)
   isEmailVerified Boolean  @default(false)
-  
+
   // Customer profile
-  phone           String?
-  dateOfBirth     DateTime?
-  
+  phone       String?
+  dateOfBirth DateTime?
+
   // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  lastLoginAt     DateTime?
-  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
   // Relations
-  addresses       Address[]
-  orders          Order[]
-  reviews         Review[]
-  cartItems       CartItem[]
-  wishlistItems   WishlistItem[]
-  abandonedCarts  AbandonedCart[]
-  discountCodes   DiscountCode[]
-  discountUsages  DiscountUsage[]
-  loyaltyAccount  LoyaltyAccount?
-  partnerApiKeys  PartnerApiKey[]
+  addresses         Address[]
+  orders            Order[]
+  reviews           Review[]
+  cartItems         CartItem[]
+  wishlistItems     WishlistItem[]
+  abandonedCarts    AbandonedCart[]
+  discountCodes     DiscountCode[]
+  discountUsages    DiscountUsage[]
+  loyaltyAccount    LoyaltyAccount?
+  partnerApiKeys    PartnerApiKey[]
   analyticsSettings AnalyticsSetting[]
 
   // Wholesale account
-  wholesaleAccount WholesaleAccount?
-  conversations    Conversation[]
+  wholesaleAccount    WholesaleAccount?
+  conversations       Conversation[]
   passwordResetTokens PasswordResetToken[]
-  
+
   @@map("users")
 }
 
 model Address {
-  id          String      @id @default(cuid())
-  userId      String?
-  type        AddressType @default(SHIPPING)
+  id     String      @id @default(cuid())
+  userId String?
+  type   AddressType @default(SHIPPING)
 
-  firstName   String
-  lastName    String
-  company     String?
-  street      String
-  city        String
-  state       String
-  zipCode     String
-  country     String      @default("US")
-  phone       String?
+  firstName String
+  lastName  String
+  company   String?
+  street    String
+  city      String
+  state     String
+  zipCode   String
+  country   String  @default("US")
+  phone     String?
 
-  isDefault   Boolean     @default(false)
+  isDefault Boolean @default(false)
 
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user        User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Orders using this address
   shippingOrders Order[] @relation("ShippingAddress")
@@ -80,122 +80,142 @@ model Address {
 }
 
 model Category {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  slug        String    @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
   description String?
   image       String?
-  
+
   // SEO
   metaTitle       String?
   metaDescription String?
   ogImage         String?
-  
+
   // Display
-  isActive    Boolean   @default(true)
-  sortOrder   Int       @default(0)
-  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  products    Product[]
-  
+  products Product[]
+
   @@map("categories")
 }
 
 model Product {
-  id          String      @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
-  slug        String      @unique
+  slug        String  @unique
   description String?
-  
+
   // Salsa specific
   heatLevel   HeatLevel
   ingredients String[]
-  
+
   // Pricing
-  price       Decimal     @db.Decimal(10, 2)
+  price          Decimal  @db.Decimal(10, 2)
   compareAtPrice Decimal? @db.Decimal(10, 2)
-  costPrice   Decimal?    @db.Decimal(10, 2)
-  taxCode     String?     // Stripe Tax Code for tax calculation
+  costPrice      Decimal? @db.Decimal(10, 2)
+  taxCode        String? // Stripe Tax Code for tax calculation
 
   // Inventory
-  sku         String      @unique
-  barcode     String?
-  inventory   Int         @default(0)
-  lowStockThreshold Int   @default(5)
-  
+  sku               String  @unique
+  barcode           String?
+  inventory         Int     @default(0)
+  lowStockThreshold Int     @default(5)
+
   // Images
-  images      String[]
+  images        String[]
   featuredImage String?
-  
+
   // Attributes
-  weight      Decimal?    @db.Decimal(8, 2)
-  dimensions  Json?       // {length, width, height}
-  
+  weight     Decimal? @db.Decimal(8, 2)
+  dimensions Json? // {length, width, height}
+
   // SEO
   metaTitle       String?
   metaDescription String?
   ogImage         String?
   searchKeywords  String[]
-  
+
   // Display
-  isActive    Boolean     @default(true)
-  isFeatured  Boolean     @default(false)
-  sortOrder   Int         @default(0)
-  
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  
+  isActive   Boolean @default(true)
+  isFeatured Boolean @default(false)
+  sortOrder  Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  categoryId  String
-  category    Category    @relation(fields: [categoryId], references: [id])
-  
-  orderItems  OrderItem[]
-  cartItems   CartItem[]
-  reviews     Review[]
-  wishlistItems WishlistItem[]
-  fundraiserProducts FundraiserProduct[]
-  productTags ProductTag[]
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  orderItems            OrderItem[]
+  cartItems             CartItem[]
+  reviews               Review[]
+  wishlistItems         WishlistItem[]
+  fundraiserProducts    FundraiserProduct[]
+  productTags           ProductTag[]
   inventoryTransactions InventoryTransaction[]
-  inventoryAlerts InventoryAlert[]
-  shopListings    ShopListing[]
+  inventoryAlerts       InventoryAlert[]
+  shopListings          ShopListing[]
+  variants              ProductVariant[]
 
   @@map("products")
 }
 
+model ProductVariant {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  name String // e.g., "16 oz", "Mild", "Spicy"
+  type String // e.g., "size", "flavor"
+
+  price   Decimal? @db.Decimal(10, 2) // Override base price if set
+  sku     String?  @unique
+  inStock Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
 model ShopListing {
-  id              String            @id @default(cuid())
-  productId       String
-  product         Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   // Which shop platform
-  shopPlatform    ShopPlatform
+  shopPlatform ShopPlatform
 
   // Platform-specific external IDs
-  externalId      String?           // Product ID on the platform
-  externalUrl     String?           // URL to the listing on the platform
-  catalogId       String?           // Facebook catalog ID / TikTok shop ID
+  externalId  String? // Product ID on the platform
+  externalUrl String? // URL to the listing on the platform
+  catalogId   String? // Facebook catalog ID / TikTok shop ID
 
   // Sync status
-  status          ShopListingStatus @default(PENDING)
-  syncError       String?
+  status    ShopListingStatus @default(PENDING)
+  syncError String?
 
   // Listing overrides (null = use product values)
-  titleOverride   String?
-  descriptionOverride String?       @db.Text
-  priceOverride   Decimal?          @db.Decimal(10, 2)
+  titleOverride       String?
+  descriptionOverride String?  @db.Text
+  priceOverride       Decimal? @db.Decimal(10, 2)
 
   // Marketplace-specific
-  condition       String?           @default("new")
-  availability    String?           @default("in stock")
-  marketplaceCategory String?       // Platform's category mapping
+  condition           String? @default("new")
+  availability        String? @default("in stock")
+  marketplaceCategory String? // Platform's category mapping
 
-  lastSyncedAt    DateTime?
-  publishedAt     DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  lastSyncedAt DateTime?
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@unique([productId, shopPlatform])
   @@index([shopPlatform, status])
@@ -219,16 +239,16 @@ enum ShopListingStatus {
 }
 
 model Conversation {
-  id        String              @id @default(cuid())
+  id        String             @id @default(cuid())
   subject   String?
   userId    String?
-  user      User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user      User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
   email     String?
-  status    ConversationStatus  @default(OPEN)
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  status    ConversationStatus @default(OPEN)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 
-  messages  Message[]
+  messages Message[]
 
   @@map("conversations")
 }
@@ -241,7 +261,7 @@ model Message {
   readAt         DateTime?
   createdAt      DateTime          @default(now())
 
-  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
   @@map("messages")
@@ -258,61 +278,61 @@ enum MessageSenderType {
 }
 
 model CartItem {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   userId    String
   productId String
   quantity  Int
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
   @@unique([userId, productId])
   @@map("cart_items")
 }
 
 model WishlistItem {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   userId    String
   productId String
 
   createdAt DateTime @default(now())
 
   // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
   @@map("wishlist_items")
 }
 
 model AbandonedCart {
-  id              String    @id @default(cuid())
+  id String @id @default(cuid())
 
   // Customer identification (at least one must be present)
-  userId          String?
-  guestEmail      String?
+  userId     String?
+  guestEmail String?
 
   // Cart contents (JSON snapshot)
-  cartData        Json      // { items: CartItem[], totalItems: number, totalPrice: number }
+  cartData Json // { items: CartItem[], totalItems: number, totalPrice: number }
 
   // Recovery tracking
-  recoveryToken   String    @unique @default(cuid())
-  recoveredAt     DateTime?
+  recoveryToken String    @unique @default(cuid())
+  recoveredAt   DateTime?
 
   // Email tracking
-  emailSent       Boolean   @default(false)
-  emailSentAt     DateTime?
+  emailSent   Boolean   @default(false)
+  emailSentAt DateTime?
 
   // Timestamps
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([guestEmail])
@@ -327,35 +347,35 @@ enum DiscountType {
 }
 
 model DiscountCode {
-  id              String        @id @default(cuid())
-  code            String        @unique
-  description     String?
+  id          String  @id @default(cuid())
+  code        String  @unique
+  description String?
 
   // Discount configuration
-  type            DiscountType
-  value           Decimal       @db.Decimal(10, 2) // Percentage (e.g., 10.00 = 10%) or dollar amount
+  type  DiscountType
+  value Decimal      @db.Decimal(10, 2) // Percentage (e.g., 10.00 = 10%) or dollar amount
 
   // Usage limits
-  maxUses         Int?          // null = unlimited
-  usedCount       Int           @default(0)
-  maxUsesPerUser  Int?          // null = unlimited per user
-  minPurchase     Decimal?      @db.Decimal(10, 2) // Minimum cart value required
+  maxUses        Int? // null = unlimited
+  usedCount      Int      @default(0)
+  maxUsesPerUser Int? // null = unlimited per user
+  minPurchase    Decimal? @db.Decimal(10, 2) // Minimum cart value required
 
   // Validity period
-  startsAt        DateTime?
-  expiresAt       DateTime?
+  startsAt  DateTime?
+  expiresAt DateTime?
 
   // Status
-  isActive        Boolean       @default(true)
+  isActive Boolean @default(true)
 
   // Timestamps
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  createdById     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
 
   // Relations
-  createdBy       User?         @relation(fields: [createdById], references: [id])
-  usages          DiscountUsage[]
+  createdBy User?           @relation(fields: [createdById], references: [id])
+  usages    DiscountUsage[]
 
   @@index([code])
   @@index([isActive, expiresAt])
@@ -363,20 +383,20 @@ model DiscountCode {
 }
 
 model DiscountUsage {
-  id              String       @id @default(cuid())
-  discountCodeId  String
-  orderId         String
-  userId          String?
+  id             String  @id @default(cuid())
+  discountCodeId String
+  orderId        String
+  userId         String?
 
   // Usage details
-  discountAmount  Decimal      @db.Decimal(10, 2)
-  orderTotal      Decimal      @db.Decimal(10, 2)
+  discountAmount Decimal @db.Decimal(10, 2)
+  orderTotal     Decimal @db.Decimal(10, 2)
 
-  createdAt       DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  discountCode    DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
-  user            User?        @relation(fields: [userId], references: [id])
+  discountCode DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id])
 
   @@index([discountCodeId])
   @@index([userId])
@@ -385,9 +405,9 @@ model DiscountUsage {
 }
 
 enum LoyaltyTier {
-  BRONZE   // 0-499 points
-  SILVER   // 500-999 points
-  GOLD     // 1000-2499 points
+  BRONZE // 0-499 points
+  SILVER // 500-999 points
+  GOLD // 1000-2499 points
   PLATINUM // 2500+ points
 }
 
@@ -404,46 +424,46 @@ enum PointTransactionType {
 }
 
 model LoyaltyAccount {
-  id              String        @id @default(cuid())
-  userId          String        @unique
+  id     String @id @default(cuid())
+  userId String @unique
 
   // Points balance
-  pointsBalance   Int           @default(0)
-  lifetimePoints  Int           @default(0)
+  pointsBalance  Int @default(0)
+  lifetimePoints Int @default(0)
 
   // Tier
-  tier            LoyaltyTier   @default(BRONZE)
-  tierUpdatedAt   DateTime      @default(now())
+  tier          LoyaltyTier @default(BRONZE)
+  tierUpdatedAt DateTime    @default(now())
 
   // Timestamps
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions    PointTransaction[]
-  rewards         RewardRedemption[]
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions PointTransaction[]
+  rewards      RewardRedemption[]
 
   @@map("loyalty_accounts")
 }
 
 model PointTransaction {
-  id              String                @id @default(cuid())
-  accountId       String
+  id        String @id @default(cuid())
+  accountId String
 
   // Transaction details
-  type            PointTransactionType
-  points          Int                   // Positive for earned, negative for redeemed
-  description     String
+  type        PointTransactionType
+  points      Int // Positive for earned, negative for redeemed
+  description String
 
   // Reference data
-  orderId         String?
-  expiresAt       DateTime?             // For point expiration
+  orderId   String?
+  expiresAt DateTime? // For point expiration
 
-  createdAt       DateTime              @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  account         LoyaltyAccount        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account LoyaltyAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([accountId])
   @@index([createdAt])
@@ -452,53 +472,53 @@ model PointTransaction {
 }
 
 model LoyaltyReward {
-  id              String        @id @default(cuid())
-  name            String
-  description     String
+  id          String @id @default(cuid())
+  name        String
+  description String
 
   // Cost and type
-  pointsCost      Int
-  rewardType      String        // DISCOUNT, FREE_SHIPPING, FREE_PRODUCT, etc.
-  rewardValue     Decimal?      @db.Decimal(10, 2)
+  pointsCost  Int
+  rewardType  String // DISCOUNT, FREE_SHIPPING, FREE_PRODUCT, etc.
+  rewardValue Decimal? @db.Decimal(10, 2)
 
   // Availability
-  isActive        Boolean       @default(true)
-  minimumTier     LoyaltyTier   @default(BRONZE)
+  isActive    Boolean     @default(true)
+  minimumTier LoyaltyTier @default(BRONZE)
 
   // Limits
-  maxRedemptions  Int?          // null = unlimited
-  usedCount       Int           @default(0)
+  maxRedemptions Int? // null = unlimited
+  usedCount      Int  @default(0)
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  redemptions     RewardRedemption[]
+  redemptions RewardRedemption[]
 
   @@map("loyalty_rewards")
 }
 
 model RewardRedemption {
-  id              String        @id @default(cuid())
-  accountId       String
-  rewardId        String
+  id        String @id @default(cuid())
+  accountId String
+  rewardId  String
 
   // Redemption details
-  pointsSpent     Int
-  status          String        // PENDING, ACTIVE, USED, EXPIRED
+  pointsSpent Int
+  status      String // PENDING, ACTIVE, USED, EXPIRED
 
   // Discount code generated (if applicable)
-  discountCode    String?
+  discountCode String?
 
   // Expiration
-  expiresAt       DateTime?
-  usedAt          DateTime?
+  expiresAt DateTime?
+  usedAt    DateTime?
 
-  createdAt       DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  account         LoyaltyAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  reward          LoyaltyReward   @relation(fields: [rewardId], references: [id])
+  account LoyaltyAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  reward  LoyaltyReward  @relation(fields: [rewardId], references: [id])
 
   @@index([accountId])
   @@index([status])
@@ -507,288 +527,288 @@ model RewardRedemption {
 }
 
 model Order {
-  id              String      @id @default(cuid())
-  orderNumber     String      @unique
-  
+  id          String @id @default(cuid())
+  orderNumber String @unique
+
   // Customer
-  userId          String?
-  user            User?       @relation(fields: [userId], references: [id])
-  
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
   // Guest checkout info
-  guestEmail      String?
-  guestPhone      String?
-  
+  guestEmail String?
+  guestPhone String?
+
   // Addresses
   shippingAddressId String?
   billingAddressId  String?
   shippingAddress   Address? @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
   billingAddress    Address? @relation("BillingAddress", fields: [billingAddressId], references: [id])
-  
+
   // Order details
-  status          OrderStatus @default(PENDING)
-  
+  status OrderStatus @default(PENDING)
+
   // Pricing
-  subtotal        Decimal     @db.Decimal(10, 2)
-  shippingCost    Decimal     @default(0) @db.Decimal(10, 2)
-  tax             Decimal     @default(0) @db.Decimal(10, 2)
-  discountAmount  Decimal     @default(0) @db.Decimal(10, 2)
-  total           Decimal     @db.Decimal(10, 2)
-  
+  subtotal       Decimal @db.Decimal(10, 2)
+  shippingCost   Decimal @default(0) @db.Decimal(10, 2)
+  tax            Decimal @default(0) @db.Decimal(10, 2)
+  discountAmount Decimal @default(0) @db.Decimal(10, 2)
+  total          Decimal @db.Decimal(10, 2)
+
   // Shipping
-  shippingMethod  String?
-  trackingNumber  String?
+  shippingMethod    String?
+  trackingNumber    String?
   estimatedDelivery DateTime?
-  actualDelivery  DateTime?
-  shippingLabelUrl String?
-  packingSlipUrl  String?
-  
+  actualDelivery    DateTime?
+  shippingLabelUrl  String?
+  packingSlipUrl    String?
+
   // Invoicing
-  invoiceUrl      String?
-  invoiceSentAt   DateTime?
-  
+  invoiceUrl    String?
+  invoiceSentAt DateTime?
+
   // Modification history
   modificationHistory Json?
-  
+
   // Payment
   paymentStatus   PaymentStatus @default(PENDING)
   paymentMethod   String?
   stripePaymentId String?
-  
+
   // Notes
-  customerNotes   String?
-  adminNotes      String?
-  shopifyOrderId  String?  @unique
-  shopifyOrderName String?
-  shopifyFinancialStatus String?
+  customerNotes            String?
+  adminNotes               String?
+  shopifyOrderId           String?   @unique
+  shopifyOrderName         String?
+  shopifyFinancialStatus   String?
   shopifyFulfillmentStatus String?
-  shopifySyncedAt DateTime?
-  shopifySyncError String?
+  shopifySyncedAt          DateTime?
+  shopifySyncError         String?
 
   // Timestamps
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  shippedAt       DateTime?
-  deliveredAt     DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  shippedAt               DateTime?
+  deliveredAt             DateTime?
   confirmationEmailSentAt DateTime?
-  
+
   // Relations
-  items           OrderItem[]
-  
+  items OrderItem[]
+
   // Fundraiser connection
-  fundraiserId    String?
-  fundraiser      Fundraiser? @relation(fields: [fundraiserId], references: [id])
-  
+  fundraiserId String?
+  fundraiser   Fundraiser? @relation(fields: [fundraiserId], references: [id])
+
   // Gift certificates
-  giftCertificates GiftCertificate[]
+  giftCertificates      GiftCertificate[]
   giftCertificateUsages GiftCertificateUsage[]
 
   // Shipping labels
-  shippingLabels  ShippingLabel[]
+  shippingLabels ShippingLabel[]
 
   // Import tracking
-  importSource    String?
-  importBatchId   String?
-  importedAt      DateTime?
+  importSource  String?
+  importBatchId String?
+  importedAt    DateTime?
 
   // Printing tracking
-  printedInvoiceAt    DateTime?
+  printedInvoiceAt     DateTime?
   printedPackingSlipAt DateTime?
 
   @@map("orders")
 }
 
 model OrderItem {
-  id          String  @id @default(cuid())
-  orderId     String
-  productId   String
-  
-  quantity    Int
-  unitPrice   Decimal @db.Decimal(10, 2)
-  totalPrice  Decimal @db.Decimal(10, 2)
-  
+  id        String @id @default(cuid())
+  orderId   String
+  productId String
+
+  quantity   Int
+  unitPrice  Decimal @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
+
   // Product snapshot (in case product details change)
-  productName String
-  productSku  String
+  productName  String
+  productSku   String
   productImage String?
-  
-  createdAt   DateTime @default(now())
-  
+
+  createdAt DateTime @default(now())
+
   // Relations
-  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product @relation(fields: [productId], references: [id])
-  
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
   @@map("order_items")
 }
 
 model Review {
-  id          String      @id @default(cuid())
-  userId      String
-  productId   String
-  
-  rating      Int         // 1-5 stars
-  title       String?
-  comment     String?
-  isVerified  Boolean     @default(false) // Verified purchase
-  
+  id        String @id @default(cuid())
+  userId    String
+  productId String
+
+  rating     Int // 1-5 stars
+  title      String?
+  comment    String?
+  isVerified Boolean @default(false) // Verified purchase
+
   // Moderation
   status      ReviewStatus @default(PENDING)
   moderatedAt DateTime?
   moderatedBy String?
-  
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
   @@unique([userId, productId]) // One review per user per product
   @@map("reviews")
 }
 
 model Fundraiser {
-  id                String      @id @default(cuid())
-  name              String
-  slug              String      @unique
-  description       String?
-  
-  organizationName  String
-  contactEmail      String
-  contactPhone      String?
-  
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String?
+
+  organizationName String
+  contactEmail     String
+  contactPhone     String?
+
   // Fundraiser details
-  startDate         DateTime
-  endDate           DateTime
-  goal              Decimal?    @db.Decimal(10, 2)
-  commissionRate    Decimal     @db.Decimal(5, 2) // Percentage
-  
+  startDate      DateTime
+  endDate        DateTime
+  goal           Decimal? @db.Decimal(10, 2)
+  commissionRate Decimal  @db.Decimal(5, 2) // Percentage
+
   // Status
-  status            FundraiserStatus @default(DRAFT)
-  isActive          Boolean     @default(false)
-  
+  status   FundraiserStatus @default(DRAFT)
+  isActive Boolean          @default(false)
+
   // Tracking
-  totalOrders       Int         @default(0)
-  totalRevenue      Decimal     @default(0) @db.Decimal(10, 2)
-  totalCommission   Decimal     @default(0) @db.Decimal(10, 2)
-  
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  
+  totalOrders     Int     @default(0)
+  totalRevenue    Decimal @default(0) @db.Decimal(10, 2)
+  totalCommission Decimal @default(0) @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  orders            Order[]
-  products          FundraiserProduct[]
-  
+  orders   Order[]
+  products FundraiserProduct[]
+
   @@map("fundraisers")
 }
 
 model FundraiserProduct {
-  id            String     @id @default(cuid())
-  fundraiserId  String
-  productId     String
-  
+  id           String @id @default(cuid())
+  fundraiserId String
+  productId    String
+
   // Custom pricing for fundraiser
-  price         Decimal?   @db.Decimal(10, 2)
-  isActive      Boolean    @default(true)
-  
-  createdAt     DateTime   @default(now())
-  
+  price    Decimal? @db.Decimal(10, 2)
+  isActive Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+
   // Relations
-  fundraiser    Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
-  product       Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
+  fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
   @@unique([fundraiserId, productId])
   @@map("fundraiser_products")
 }
 
 model WholesaleAccount {
-  id              String    @id @default(cuid())
-  userId          String    @unique
-  
-  businessName    String
-  businessType    BusinessType
-  taxId           String?
-  resaleNumber    String?
-  
+  id     String @id @default(cuid())
+  userId String @unique
+
+  businessName String
+  businessType BusinessType
+  taxId        String?
+  resaleNumber String?
+
   // Contact info
-  contactName     String
-  website         String?
-  
+  contactName String
+  website     String?
+
   // Application details
   yearsInBusiness Int?
   estimatedVolume String?
-  
+
   // Status
-  status          WholesaleStatus @default(PENDING)
-  approvedAt      DateTime?
-  approvedBy      String?
-  
+  status     WholesaleStatus @default(PENDING)
+  approvedAt DateTime?
+  approvedBy String?
+
   // Wholesale pricing
-  discountRate    Decimal   @default(0) @db.Decimal(5, 2) // Percentage
-  minimumOrder    Decimal?  @db.Decimal(10, 2)
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  discountRate Decimal  @default(0) @db.Decimal(5, 2) // Percentage
+  minimumOrder Decimal? @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("wholesale_accounts")
 }
 
 model Recipe {
-  id          String    @id @default(cuid())
-  title       String    @unique
-  slug        String    @unique
+  id          String  @id @default(cuid())
+  title       String  @unique
+  slug        String  @unique
   description String
   category    String
   difficulty  String
   prepTime    String
   cookTime    String
   servings    Int
-  featured    Boolean   @default(false)
-  
+  featured    Boolean @default(false)
+
   featuredImage String
   ingredients   String[]
   instructions  String[]
-  
+
   // SEO
   metaTitle       String?
   metaDescription String?
   ogImage         String?
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  recipeTags    RecipeTag[]
-  
+  recipeTags RecipeTag[]
+
   @@map("recipes")
 }
 
 model Analytics {
-  id        String      @id @default(cuid())
-  type      AnalyticsType
+  id   String        @id @default(cuid())
+  type AnalyticsType
 
   // Event details
-  page      String?
-  action    String?
-  category  String?
-  label     String?
-  value     Int?
-  
+  page     String?
+  action   String?
+  category String?
+  label    String?
+  value    Int?
+
   // Session info
   sessionId String?
   userId    String?
   ipAddress String?
   userAgent String?
-  
+
   // Geo location
-  country   String?
-  region    String?
-  city      String?
-  
-  createdAt DateTime    @default(now())
-  
+  country String?
+  region  String?
+  city    String?
+
+  createdAt DateTime @default(now())
+
   @@index([type, createdAt])
   @@index([page])
   @@map("analytics")
@@ -804,22 +824,22 @@ model AnalyticsSetting {
   updatedAt        DateTime @updatedAt
   updatedById      String?
 
-  updatedBy        User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@map("analytics_settings")
 }
 
 model Permission {
-  id          String              @id @default(cuid())
-  name        String              @unique // e.g., "orders:read", "products:write"
+  id          String             @id @default(cuid())
+  name        String             @unique // e.g., "orders:read", "products:write"
   description String?
   category    PermissionCategory
-  
-  createdAt   DateTime            @default(now())
-  
+
+  createdAt DateTime @default(now())
+
   // Relations
   rolePermissions RolePermission[]
-  
+
   @@index([category])
   @@map("permissions")
 }
@@ -828,101 +848,101 @@ model RolePermission {
   id           String   @id @default(cuid())
   role         UserRole
   permissionId String
-  
-  createdAt    DateTime @default(now())
-  
+
+  createdAt DateTime @default(now())
+
   // Relations
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
   @@unique([role, permissionId])
   @@index([role])
   @@map("role_permissions")
 }
 
 model Tag {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  type      TagType
-  
+  id   String  @id @default(cuid())
+  name String
+  slug String  @unique
+  type TagType
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Relations
   productTags ProductTag[]
   recipeTags  RecipeTag[]
   mediaTags   MediaTag[]
   eventTags   EventTag[]
-  
+
   @@index([type])
   @@map("tags")
 }
 
 model ProductTag {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   productId String
   tagId     String
-  
+
   createdAt DateTime @default(now())
-  
+
   // Relations
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
   @@unique([productId, tagId])
   @@map("product_tags")
 }
 
 model RecipeTag {
-  id       String   @id @default(cuid())
+  id       String @id @default(cuid())
   recipeId String
   tagId    String
-  
+
   createdAt DateTime @default(now())
-  
+
   // Relations
-  recipe    Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  tag       Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
   @@unique([recipeId, tagId])
   @@map("recipe_tags")
 }
 
 model Media {
-  id          String   @id @default(cuid())
-  url         String
-  filename    String
-  mimeType    String
-  fileSize    Int      // bytes
-  
+  id       String @id @default(cuid())
+  url      String
+  filename String
+  mimeType String
+  fileSize Int // bytes
+
   // Metadata
-  alt         String?
-  caption     String?
-  width       Int?
-  height      Int?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  alt     String?
+  caption String?
+  width   Int?
+  height  Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  mediaTags   MediaTag[]
+  mediaTags        MediaTag[]
   socialMediaPosts SocialMediaPostMedia[]
-  
+
   @@index([mimeType])
   @@map("media")
 }
 
 model MediaTag {
-  id      String   @id @default(cuid())
+  id      String @id @default(cuid())
   mediaId String
   tagId   String
-  
+
   createdAt DateTime @default(now())
-  
+
   // Relations
-  media     Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
-  tag       Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
   @@unique([mediaId, tagId])
   @@map("media_tags")
 }
@@ -942,33 +962,33 @@ enum TrainingDocumentStatus {
 }
 
 model TrainingDocument {
-  id            String                     @id @default(cuid())
-  title         String
-  description   String?
-  sourceType    TrainingDocumentSourceType @default(UPLOAD)
-  status        TrainingDocumentStatus     @default(PROCESSING)
-  fileName      String?
-  mimeType      String?
-  fileSize      Int?
-  url           String?
-  content       String?                    @db.Text
-  contentHash   String?                    @unique
-  warnings      String[]                   @default([])
-  notes         String?
-  error         String?
-  scrapedAt     DateTime?
-  ingestedAt    DateTime?
-  
+  id          String                     @id @default(cuid())
+  title       String
+  description String?
+  sourceType  TrainingDocumentSourceType @default(UPLOAD)
+  status      TrainingDocumentStatus     @default(PROCESSING)
+  fileName    String?
+  mimeType    String?
+  fileSize    Int?
+  url         String?
+  content     String?                    @db.Text
+  contentHash String?                    @unique
+  warnings    String[]                   @default([])
+  notes       String?
+  error       String?
+  scrapedAt   DateTime?
+  ingestedAt  DateTime?
+
   // New fields for categorization
-  categoryId    String?
-  category      TrainingDocumentCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  priority      Int                        @default(0)
-  domain        ChatDomain?
-  isEnabled     Boolean                    @default(true)
-  version       Int                        @default(1)
-  
-  createdAt     DateTime                   @default(now())
-  updatedAt     DateTime                   @updatedAt
+  categoryId String?
+  category   TrainingDocumentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  priority   Int                       @default(0)
+  domain     ChatDomain?
+  isEnabled  Boolean                   @default(true)
+  version    Int                       @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([categoryId])
@@ -978,14 +998,14 @@ model TrainingDocument {
 }
 
 model FeaturedEvent {
-  id                String    @id @default(cuid())
-  googleEventId     String?   @unique // Null if manually created
-  title             String
-  description       String?
-  location          String?
-  startDate         DateTime
-  endDate           DateTime?
-  
+  id            String    @id @default(cuid())
+  googleEventId String?   @unique // Null if manually created
+  title         String
+  description   String?
+  location      String?
+  startDate     DateTime
+  endDate       DateTime?
+
   // Featured settings
   featuredFrom      DateTime
   featuredTo        DateTime?
@@ -999,11 +1019,11 @@ model FeaturedEvent {
   displayPriority   Int       @default(0)
   connectedByUserId String?
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  eventTags         EventTag[]
+  eventTags EventTag[]
 
   @@index([isWhereIsJose])
   @@index([featuredFrom, featuredTo])
@@ -1011,68 +1031,68 @@ model FeaturedEvent {
 }
 
 model EventTag {
-  id      String   @id @default(cuid())
+  id      String @id @default(cuid())
   eventId String
   tagId   String
-  
+
   createdAt DateTime @default(now())
-  
+
   // Relations
-  event     FeaturedEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  tag       Tag           @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  
+  event FeaturedEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tag   Tag           @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, tagId])
   @@map("event_tags")
 }
 
 model ServiceKey {
-  id             String   @id @default(cuid())
-  serviceName    String   // e.g., "stripe", "meta", "google_calendar"
-  keyName        String   // e.g., "api_key", "access_token", "refresh_token"
-  encryptedValue String   @db.Text
-  iv             String   // Initialization vector for AES-GCM
-  
-  isActive       Boolean  @default(true)
-  lastUsed       DateTime?
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+  id             String @id @default(cuid())
+  serviceName    String // e.g., "stripe", "meta", "google_calendar"
+  keyName        String // e.g., "api_key", "access_token", "refresh_token"
+  encryptedValue String @db.Text
+  iv             String // Initialization vector for AES-GCM
+
+  isActive Boolean   @default(true)
+  lastUsed DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([serviceName, keyName])
   @@index([serviceName])
   @@map("service_keys")
 }
 
 model SocialAccount {
-  id             String              @id @default(cuid())
-  platform       SocialMediaPlatform
+  id       String              @id @default(cuid())
+  platform SocialMediaPlatform
 
   // Account info
-  accountId      String              // Platform's account/page ID
-  accountName    String              // Display name (page name, @handle)
-  accountHandle  String?             // @username
+  accountId       String // Platform's account/page ID
+  accountName     String // Display name (page name, @handle)
+  accountHandle   String? // @username
   profileImageUrl String?
 
   // OAuth tokens (encrypted via ServiceKey pattern)
-  accessToken    String              @db.Text
+  accessToken    String    @db.Text
   accessTokenIv  String
-  refreshToken   String?             @db.Text
+  refreshToken   String?   @db.Text
   refreshTokenIv String?
   tokenExpiresAt DateTime?
 
   // Scopes / permissions granted
-  scopes         String[]
+  scopes String[]
 
   // Status
-  isActive       Boolean             @default(true)
-  lastVerifiedAt DateTime?
+  isActive        Boolean   @default(true)
+  lastVerifiedAt  DateTime?
   connectionError String?
 
   // Who connected this
-  connectedById  String?
+  connectedById String?
 
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   publishedPosts SocialPostPublish[]
@@ -1084,34 +1104,34 @@ model SocialAccount {
 }
 
 model SocialMediaPost {
-  id          String                   @id @default(cuid())
-  platforms   SocialMediaPlatform[]    // Array of platforms
-  content     String                   @db.Text
+  id        String                @id @default(cuid())
+  platforms SocialMediaPlatform[] // Array of platforms
+  content   String                @db.Text
 
   // Platform-specific content overrides
-  facebookContent  String?            @db.Text
-  twitterContent   String?            @db.Text
-  tiktokContent    String?            @db.Text
-  instagramContent String?            @db.Text
+  facebookContent  String? @db.Text
+  twitterContent   String? @db.Text
+  tiktokContent    String? @db.Text
+  instagramContent String? @db.Text
 
   scheduledAt DateTime?
-  status      SocialMediaPostStatus    @default(DRAFT)
+  status      SocialMediaPostStatus @default(DRAFT)
 
   // External IDs after publishing
-  externalIds Json?                    // {facebook: "123", instagram: "456"}
+  externalIds Json? // {facebook: "123", instagram: "456"}
 
   // Metadata
-  hashtags    String[]
-  linkUrl     String?
+  hashtags String[]
+  linkUrl  String?
 
-  createdAt   DateTime                 @default(now())
-  updatedAt   DateTime                 @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
   createdById String?
 
   // Relations
-  media       SocialMediaPostMedia[]
-  publishes   SocialPostPublish[]
+  media     SocialMediaPostMedia[]
+  publishes SocialPostPublish[]
 
   @@index([status])
   @@index([scheduledAt])
@@ -1120,33 +1140,33 @@ model SocialMediaPost {
 }
 
 model SocialPostPublish {
-  id              String              @id @default(cuid())
-  postId          String
-  accountId       String
+  id        String @id @default(cuid())
+  postId    String
+  accountId String
 
   // Result
-  platform        SocialMediaPlatform
-  externalPostId  String?             // ID on the platform
-  externalUrl     String?             // URL to the post on the platform
-  status          SocialPublishStatus @default(PENDING)
-  errorMessage    String?
+  platform       SocialMediaPlatform
+  externalPostId String? // ID on the platform
+  externalUrl    String? // URL to the post on the platform
+  status         SocialPublishStatus @default(PENDING)
+  errorMessage   String?
 
   // Engagement metrics (pulled from platform)
-  likes           Int                 @default(0)
-  comments        Int                 @default(0)
-  shares          Int                 @default(0)
-  impressions     Int                 @default(0)
-  reach           Int                 @default(0)
-  clicks          Int                 @default(0)
+  likes       Int @default(0)
+  comments    Int @default(0)
+  shares      Int @default(0)
+  impressions Int @default(0)
+  reach       Int @default(0)
+  clicks      Int @default(0)
 
-  publishedAt     DateTime?
+  publishedAt      DateTime?
   metricsUpdatedAt DateTime?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   // Relations
-  post            SocialMediaPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  account         SocialAccount       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  post    SocialMediaPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  account SocialAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@unique([postId, accountId])
   @@index([postId])
@@ -1156,170 +1176,171 @@ model SocialPostPublish {
 }
 
 model SocialMediaPostMedia {
-  id      String   @id @default(cuid())
+  id      String @id @default(cuid())
   postId  String
   mediaId String
-  order   Int      @default(0)
-  
+  order   Int    @default(0)
+
   createdAt DateTime @default(now())
-  
+
   // Relations
-  post      SocialMediaPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  media     Media           @relation(fields: [mediaId], references: [id], onDelete: Cascade)
-  
+  post  SocialMediaPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  media Media           @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
   @@unique([postId, mediaId])
   @@map("social_media_post_media")
 }
 
 model FormTemplate {
-  id                  String               @id @default(cuid())
-  slug                String               @unique
+  id                  String             @id @default(cuid())
+  slug                String             @unique
   name                String
   description         String?
   category            String
   tags                String[]
   estimatedCompletion String?            @map("estimated_completion")
   recommendedUses     String[]           @map("recommended_uses")
-  status              FormTemplateStatus   @default(DRAFT)
-  version             Int                  @default(1)
+  status              FormTemplateStatus @default(DRAFT)
+  version             Int                @default(1)
   structure           Json
-  publishedAt         DateTime?            @map("published_at")
+  publishedAt         DateTime?          @map("published_at")
 
-  createdById         String?              @map("created_by_id")
-  updatedById         String?              @map("updated_by_id")
+  createdById String? @map("created_by_id")
+  updatedById String? @map("updated_by_id")
 
-  createdAt           DateTime             @default(now()) @map("created_at")
-  updatedAt           DateTime             @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  versions            FormTemplateVersion[]
+  versions FormTemplateVersion[]
 
   @@map("form_templates")
 }
 
 model FormTemplateVersion {
-  id          String         @id @default(cuid())
-  templateId  String         @map("template_id")
-  version     Int
-  structure   Json
-  createdAt   DateTime       @default(now()) @map("created_at")
-  createdById String?        @map("created_by_id")
-  changelogNotes String?     @map("changelog_notes")
+  id             String   @id @default(cuid())
+  templateId     String   @map("template_id")
+  version        Int
+  structure      Json
+  createdAt      DateTime @default(now()) @map("created_at")
+  createdById    String?  @map("created_by_id")
+  changelogNotes String?  @map("changelog_notes")
 
-  template    FormTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template FormTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
   @@unique([templateId, version])
   @@map("form_template_versions")
 }
 
 model EmailTemplate {
-  id        String              @id @default(cuid())
-  key       String              @unique  // e.g., "order_confirmation", "shipping_notification"
+  id        String  @id @default(cuid())
+  key       String  @unique // e.g., "order_confirmation", "shipping_notification"
   name      String
   subject   String
-  html      String              @db.Text
-  text      String?             @db.Text
-  variables Json?               // {"name": "string", "orderNumber": "string"}
-  
+  html      String  @db.Text
+  text      String? @db.Text
+  variables Json? // {"name": "string", "orderNumber": "string"}
+
   // Template metadata
-  category  EmailTemplateCategory @default(TRANSACTIONAL)
-  isActive  Boolean             @default(true)
-  sentCount Int                 @default(0)
+  category   EmailTemplateCategory @default(TRANSACTIONAL)
+  isActive   Boolean               @default(true)
+  sentCount  Int                   @default(0)
   lastSentAt DateTime?
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Relations
-  campaigns EmailCampaign[]
+  campaigns    EmailCampaign[]
   compositions EmailTemplateComposition[]
-  
+
   @@map("email_templates")
 }
 
 model EmailTemplateComposition {
-  id          String         @id @default(cuid())
-  templateId  String
-  template    EmailTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  
+  id         String        @id @default(cuid())
+  templateId String
+  template   EmailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
   // Composition data
-  blocks       Json           // Array of email blocks
-  globalStyles Json?          // Global styling configuration
-  version      Int            @default(1)
-  
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  
+  blocks       Json // Array of email blocks
+  globalStyles Json? // Global styling configuration
+  version      Int   @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([templateId])
   @@map("email_template_compositions")
 }
 
 model EmailConfiguration {
-  id              String   @id @default(cuid())
-  name            String   // e.g., "Primary SMTP", "Backup Server"
-  
+  id   String @id @default(cuid())
+  name String // e.g., "Primary SMTP", "Backup Server"
+
   // SMTP settings
-  smtpHost        String?
-  smtpPort        Int?     @default(587)
-  smtpUsername    String?
-  smtpPassword    String?  @db.Text  // Encrypted
-  smtpSecure      Boolean  @default(true)  // Use TLS
-  
+  smtpHost     String?
+  smtpPort     Int?    @default(587)
+  smtpUsername String?
+  smtpPassword String? @db.Text // Encrypted
+  smtpSecure   Boolean @default(true) // Use TLS
+
   // Sender info
-  fromEmail       String
-  fromName        String?
-  replyToEmail    String?
-  
+  fromEmail    String
+  fromName     String?
+  replyToEmail String?
+
   // Settings
-  isDefault       Boolean  @default(false)
-  isActive        Boolean  @default(true)
-  useResend       Boolean  @default(true)  // Fallback to Resend
-  
+  isDefault Boolean @default(false)
+  isActive  Boolean @default(true)
+  useResend Boolean @default(true) // Fallback to Resend
+
   // Rate limiting
-  maxPerHour      Int      @default(1000)
-  maxPerDay       Int      @default(10000)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  maxPerHour Int @default(1000)
+  maxPerDay  Int @default(10000)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("email_configurations")
 }
 
 model EmailCampaign {
-  id              String              @id @default(cuid())
-  name            String
-  
+  id   String @id @default(cuid())
+  name String
+
   // Template
-  templateId      String
-  template        EmailTemplate       @relation(fields: [templateId], references: [id], onDelete: Restrict)
-  
+  templateId String
+  template   EmailTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
   // Campaign details
-  subject         String              // Can override template subject
-  status          EmailCampaignStatus @default(DRAFT)
-  
+  subject String // Can override template subject
+  status  EmailCampaignStatus @default(DRAFT)
+
   // Scheduling
-  scheduledAt     DateTime?
-  startedAt       DateTime?
-  completedAt     DateTime?
-  
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+
   // Tracking
-  totalRecipients Int                 @default(0)
-  sentCount       Int                 @default(0)
-  failedCount     Int                 @default(0)
-  bouncedCount    Int                 @default(0)
-  
+  totalRecipients Int @default(0)
+  sentCount       Int @default(0)
+  failedCount     Int @default(0)
+  bouncedCount    Int @default(0)
+
   // Settings
-  trackOpens      Boolean             @default(false)
-  trackClicks     Boolean             @default(false)
-  
+  trackOpens  Boolean @default(false)
+  trackClicks Boolean @default(false)
+
   // Metadata
-  notes           String?             @db.Text
-  createdById     String?
-  
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  
+  notes       String? @db.Text
+  createdById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  recipients      EmailRecipient[]
-  
+  recipients EmailRecipient[]
+
   @@index([status])
   @@index([scheduledAt])
   @@index([createdById])
@@ -1327,32 +1348,32 @@ model EmailCampaign {
 }
 
 model EmailRecipient {
-  id              String                @id @default(cuid())
-  campaignId      String
-  campaign        EmailCampaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  
+  id         String        @id @default(cuid())
+  campaignId String
+  campaign   EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
   // Recipient info
-  email           String
-  name            String?
-  
+  email String
+  name  String?
+
   // Variable data for personalization
-  variables       Json?                 // {"orderNumber": "12345", "discount": "20%"}
-  
+  variables Json? // {"orderNumber": "12345", "discount": "20%"}
+
   // Status
-  status          EmailRecipientStatus  @default(PENDING)
-  sentAt          DateTime?
-  failedAt        DateTime?
-  bouncedAt       DateTime?
-  openedAt        DateTime?
-  clickedAt       DateTime?
-  
+  status    EmailRecipientStatus @default(PENDING)
+  sentAt    DateTime?
+  failedAt  DateTime?
+  bouncedAt DateTime?
+  openedAt  DateTime?
+  clickedAt DateTime?
+
   // Error tracking
-  errorMessage    String?
-  retryCount      Int                   @default(0)
-  
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  
+  errorMessage String?
+  retryCount   Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([campaignId])
   @@index([email])
   @@index([status])
@@ -1360,17 +1381,17 @@ model EmailRecipient {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   userId     String?
-  action     String   // e.g., "order.update", "user.impersonate", "product.delete"
-  entityType String?  // e.g., "Order", "Product", "User"
+  action     String // e.g., "order.update", "user.impersonate", "product.delete"
+  entityType String? // e.g., "Order", "Product", "User"
   entityId   String?
-  changes    Json?    // Before/after snapshot
+  changes    Json? // Before/after snapshot
   ipAddress  String?
-  userAgent  String?  @db.Text
-  
-  createdAt  DateTime @default(now())
-  
+  userAgent  String? @db.Text
+
+  createdAt DateTime @default(now())
+
   @@index([userId])
   @@index([action])
   @@index([entityType, entityId])
@@ -1379,41 +1400,41 @@ model AuditLog {
 }
 
 model PartnerApiKey {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   name       String
-  keyHash    String   @unique @map("key_hash")
-  scopes     String[] @default([])
-  isActive   Boolean  @default(true) @map("is_active")
-  userId     String?  @map("user_id")
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  keyHash    String    @unique @map("key_hash")
+  scopes     String[]  @default([])
+  isActive   Boolean   @default(true) @map("is_active")
+  userId     String?   @map("user_id")
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   lastUsedAt DateTime? @map("last_used_at")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
 
   @@index([isActive])
   @@map("partner_api_keys")
 }
 
 model Invoice {
-  id         String        @id @default(cuid())
-  number     String        @unique // e.g., "INV-2024-001"
-  
+  id     String @id @default(cuid())
+  number String @unique // e.g., "INV-2024-001"
+
   customerId String?
-  orderId    String?       // Optional link to Order
-  
-  status     InvoiceStatus @default(DRAFT)
-  dueDate    DateTime
-  total      Decimal       @db.Decimal(10, 2)
-  
-  lines      Json          // Array of line items
-  notes      String?       @db.Text
-  
-  sentAt     DateTime?
-  paidAt     DateTime?
-  
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  
+  orderId    String? // Optional link to Order
+
+  status  InvoiceStatus @default(DRAFT)
+  dueDate DateTime
+  total   Decimal       @db.Decimal(10, 2)
+
+  lines Json // Array of line items
+  notes String? @db.Text
+
+  sentAt DateTime?
+  paidAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([customerId])
   @@index([status])
   @@index([dueDate])
@@ -1577,29 +1598,29 @@ enum GiftCertificateStatus {
 }
 
 enum EmailTemplateCategory {
-  TRANSACTIONAL  // Order confirmations, shipping notifications, etc.
-  MARKETING      // Promotions, product launches, newsletters
+  TRANSACTIONAL // Order confirmations, shipping notifications, etc.
+  MARKETING // Promotions, product launches, newsletters
   ADMINISTRATIVE // Account updates, password resets
 }
 
 enum EmailCampaignStatus {
-  DRAFT          // Being created
-  SCHEDULED      // Scheduled for future send
-  SENDING        // Currently sending
-  SENT           // Completed successfully
-  PAUSED         // Temporarily stopped
-  CANCELLED      // User cancelled
-  FAILED         // Send failed
+  DRAFT // Being created
+  SCHEDULED // Scheduled for future send
+  SENDING // Currently sending
+  SENT // Completed successfully
+  PAUSED // Temporarily stopped
+  CANCELLED // User cancelled
+  FAILED // Send failed
 }
 
 enum EmailRecipientStatus {
-  PENDING        // Not yet sent
-  SENDING        // Currently sending
-  SENT           // Successfully sent
-  FAILED         // Send failed
-  BOUNCED        // Email bounced
-  OPENED         // Recipient opened email
-  CLICKED        // Recipient clicked link
+  PENDING // Not yet sent
+  SENDING // Currently sending
+  SENT // Successfully sent
+  FAILED // Send failed
+  BOUNCED // Email bounced
+  OPENED // Recipient opened email
+  CLICKED // Recipient clicked link
 }
 
 enum EngagementType {
@@ -1619,17 +1640,17 @@ enum EngagementStatus {
 }
 
 model EngagementRequest {
-  id          String           @id @default(cuid())
-  type        EngagementType
-  status      EngagementStatus @default(PENDING)
+  id     String           @id @default(cuid())
+  type   EngagementType
+  status EngagementStatus @default(PENDING)
 
-  name        String?
-  email       String?
-  source      String?
-  metadata    Json?
+  name     String?
+  email    String?
+  source   String?
+  metadata Json?
 
   processedAt DateTime?
-  createdAt   DateTime         @default(now())
+  createdAt   DateTime  @default(now())
 
   @@index([type, status])
   @@index([createdAt])
@@ -1642,10 +1663,10 @@ model PasswordResetToken {
   userId    String
   expiresAt DateTime
   createdAt DateTime @default(now())
-  
+
   // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([expiresAt])
   @@map("password_reset_tokens")
@@ -1671,11 +1692,11 @@ model RetailLocation {
   updatedAt      DateTime        @updatedAt
   photos         LocationPhoto[]
 
+  @@unique([businessName, address])
   @@index([city])
   @@index([state])
   @@index([state, city])
   @@index([isActive])
-  @@unique([businessName, address])
   @@map("retail_locations")
 }
 
@@ -1693,43 +1714,43 @@ model LocationPhoto {
 }
 
 model GiftCertificate {
-  id              String                @id @default(cuid())
-  code            String                 @unique // e.g., "JMS-GC-XXXX-XXXX"
-  
+  id   String @id @default(cuid())
+  code String @unique // e.g., "JMS-GC-XXXX-XXXX"
+
   // Purchase info
-  orderId         String?                // Link to order that created this
-  order           Order?                 @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  
+  orderId String? // Link to order that created this
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
   // Amounts
-  originalAmount  Decimal                @db.Decimal(10, 2)
-  balance         Decimal                @db.Decimal(10, 2)
-  
+  originalAmount Decimal @db.Decimal(10, 2)
+  balance        Decimal @db.Decimal(10, 2)
+
   // Purchaser info
-  purchaserName   String
-  purchaserEmail  String
-  
+  purchaserName  String
+  purchaserEmail String
+
   // Recipient info
-  recipientName   String
-  recipientEmail  String?
-  
+  recipientName  String
+  recipientEmail String?
+
   // Gift certificate details
-  theme           GiftCertificateTheme
-  message         String?
-  
+  theme   GiftCertificateTheme
+  message String?
+
   // Status
-  status          GiftCertificateStatus  @default(ACTIVE)
-  
+  status GiftCertificateStatus @default(ACTIVE)
+
   // Expiration (optional)
-  expiresAt       DateTime?
-  
+  expiresAt DateTime?
+
   // Timestamps
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-  redeemedAt      DateTime?
-  
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  redeemedAt DateTime?
+
   // Relations
-  usages          GiftCertificateUsage[]
-  
+  usages GiftCertificateUsage[]
+
   @@index([code])
   @@index([purchaserEmail])
   @@index([recipientEmail])
@@ -1739,41 +1760,41 @@ model GiftCertificate {
 }
 
 model GiftCertificateUsage {
-  id                String           @id @default(cuid())
+  id                String          @id @default(cuid())
   giftCertificateId String
-  giftCertificate   GiftCertificate  @relation(fields: [giftCertificateId], references: [id], onDelete: Cascade)
-  
+  giftCertificate   GiftCertificate @relation(fields: [giftCertificateId], references: [id], onDelete: Cascade)
+
   // Order that used this certificate
-  orderId           String
-  order             Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
   // Amount used
-  amount            Decimal          @db.Decimal(10, 2)
-  
+  amount Decimal @db.Decimal(10, 2)
+
   // Balance after this usage
-  balanceAfter      Decimal          @db.Decimal(10, 2)
-  
-  createdAt         DateTime         @default(now())
-  
+  balanceAfter Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+
   @@index([giftCertificateId])
   @@index([orderId])
   @@map("gift_certificate_usages")
 }
 
 model DocumentationEntry {
-  id             String                  @id @default(cuid())
-  slug           String                  @unique
-  title          String
-  description    String?
-  category       String?
-  tags           String[]
-  visibility     DocumentationVisibility @default(PUBLIC)
-  isPublished    Boolean                 @default(true)
-  sourcePath     String
-  filePath       String
-  lastSyncedAt   DateTime?
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
+  id           String                  @id @default(cuid())
+  slug         String                  @unique
+  title        String
+  description  String?
+  category     String?
+  tags         String[]
+  visibility   DocumentationVisibility @default(PUBLIC)
+  isPublished  Boolean                 @default(true)
+  sourcePath   String
+  filePath     String
+  lastSyncedAt DateTime?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
 
   @@map("DocumentationEntry")
 }
@@ -1784,130 +1805,130 @@ enum DocumentationVisibility {
 }
 
 model SeoConfiguration {
-  id                  String   @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Global SEO settings
-  siteName            String
-  siteDescription     String   @db.Text
-  siteUrl             String
-  defaultOgImage      String?
-  twitterHandle       String?
-  facebookAppId       String?
-  defaultKeywords     String[]
-  
+  siteName        String
+  siteDescription String   @db.Text
+  siteUrl         String
+  defaultOgImage  String?
+  twitterHandle   String?
+  facebookAppId   String?
+  defaultKeywords String[]
+
   // Template strings for different entity types
-  productTitleTemplate     String?
-  productDescTemplate      String?
-  categoryTitleTemplate    String?
-  categoryDescTemplate     String?
-  recipeTitleTemplate      String?
-  recipeDescTemplate       String?
-  locationTitleTemplate    String?
-  locationDescTemplate     String?
-  
+  productTitleTemplate  String?
+  productDescTemplate   String?
+  categoryTitleTemplate String?
+  categoryDescTemplate  String?
+  recipeTitleTemplate   String?
+  recipeDescTemplate    String?
+  locationTitleTemplate String?
+  locationDescTemplate  String?
+
   // Robots & Sitemap
-  robotsTxt           String?  @db.Text
-  sitemapPriorities   Json?
-  
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  
+  robotsTxt         String? @db.Text
+  sitemapPriorities Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("seo_configurations")
 }
 
 model StructuredData {
-  id          String               @id @default(cuid())
-  entityType  StructuredDataType
-  entityId    String
-  schemaType  String               // e.g., "Organization", "Product", "Recipe"
-  jsonLd      Json
-  isActive    Boolean              @default(true)
-  
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-  
+  id         String             @id @default(cuid())
+  entityType StructuredDataType
+  entityId   String
+  schemaType String // e.g., "Organization", "Product", "Recipe"
+  jsonLd     Json
+  isActive   Boolean            @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([entityType, entityId])
   @@index([entityType])
   @@map("structured_data")
 }
 
 model OrderNotificationSetting {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-  
+  id     String @id @default(cuid())
+  userId String @unique
+
   // Notification preferences
-  newOrderEmail         Boolean  @default(true)
-  newOrderInApp         Boolean  @default(true)
-  orderStatusEmail      Boolean  @default(true)
-  orderStatusInApp      Boolean  @default(true)
-  highValueEmail        Boolean  @default(true)
-  highValueInApp        Boolean  @default(true)
-  highValueThreshold    Decimal  @default(100) @db.Decimal(10, 2)
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
+  newOrderEmail      Boolean @default(true)
+  newOrderInApp      Boolean @default(true)
+  orderStatusEmail   Boolean @default(true)
+  orderStatusInApp   Boolean @default(true)
+  highValueEmail     Boolean @default(true)
+  highValueInApp     Boolean @default(true)
+  highValueThreshold Decimal @default(100) @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("order_notification_settings")
 }
 
 model Notification {
-  id          String           @id @default(cuid())
-  userId      String
-  type        NotificationType
-  
-  title       String
-  message     String           @db.Text
-  entityType  String?
-  entityId    String?
-  
-  isRead      Boolean          @default(false)
-  readAt      DateTime?
-  
-  createdAt   DateTime         @default(now())
-  
+  id     String           @id @default(cuid())
+  userId String
+  type   NotificationType
+
+  title      String
+  message    String  @db.Text
+  entityType String?
+  entityId   String?
+
+  isRead Boolean   @default(false)
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
   @@index([userId, isRead])
   @@index([createdAt])
   @@map("notifications")
 }
 
 model TrainingDocumentCategory {
-  id          String              @id @default(cuid())
-  name        String              @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
   description String?
-  slug        String              @unique
-  sortOrder   Int                 @default(0)
-  isActive    Boolean             @default(true)
-  
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  
+  slug        String  @unique
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  documents   TrainingDocument[]
-  
+  documents TrainingDocument[]
+
   @@map("training_document_categories")
 }
 
 model ChatConversation {
-  id            String              @id @default(cuid())
-  userId        String?
-  sessionId     String
-  
+  id        String  @id @default(cuid())
+  userId    String?
+  sessionId String
+
   // Classification
   domain        ChatDomain?
-  isResolved    Boolean             @default(false)
-  requiresHuman Boolean             @default(false)
-  
+  isResolved    Boolean     @default(false)
+  requiresHuman Boolean     @default(false)
+
   // Metadata
-  email         String?
-  metadata      Json?
-  
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  resolvedAt    DateTime?
-  
+  email    String?
+  metadata Json?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  resolvedAt DateTime?
+
   // Relations
-  messages      ChatMessage[]
-  
+  messages ChatMessage[]
+
   @@index([userId])
   @@index([sessionId])
   @@index([domain])
@@ -1916,88 +1937,88 @@ model ChatConversation {
 }
 
 model ChatMessage {
-  id             String           @id @default(cuid())
+  id             String   @id @default(cuid())
   conversationId String
   role           ChatRole
-  content        String           @db.Text
-  
+  content        String   @db.Text
+
   // Function calling
   functionName   String?
   functionArgs   Json?
   functionResult Json?
-  
-  createdAt      DateTime         @default(now())
-  
+
+  createdAt DateTime @default(now())
+
   // Relations
-  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
   @@index([conversationId])
   @@map("chat_messages")
 }
 
 model ShippingProvider {
-  id            String                @id @default(cuid())
-  name          String
-  type          ShippingProviderType
+  id   String               @id @default(cuid())
+  name String
+  type ShippingProviderType
 
   // Configuration
-  apiKey        String?               @db.Text
-  apiSecret     String?               @db.Text
-  accountId     String?
+  apiKey    String? @db.Text
+  apiSecret String? @db.Text
+  accountId String?
 
   // Settings
-  isActive      Boolean               @default(true)
-  isDefault     Boolean               @default(false)
+  isActive  Boolean @default(true)
+  isDefault Boolean @default(false)
 
   // Metadata
-  config        Json?
+  config Json?
 
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("shipping_providers")
 }
 
 model ShippingCarrier {
-  id              String   @id @default(cuid())
-  name            String   // "FedEx", "USPS", "UPS"
-  code            String   @unique // "fedex", "usps", "ups"
-  apiEndpoint     String?
-  isActive        Boolean  @default(true)
+  id          String  @id @default(cuid())
+  name        String // "FedEx", "USPS", "UPS"
+  code        String  @unique // "fedex", "usps", "ups"
+  apiEndpoint String?
+  isActive    Boolean @default(true)
 
   // Credentials stored in ServiceKey
-  requiresAuth    Boolean  @default(true)
+  requiresAuth Boolean @default(true)
 
-  config          Json?    // Carrier-specific config
+  config Json? // Carrier-specific config
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  labels          ShippingLabel[]
+  labels ShippingLabel[]
 
   @@map("shipping_carriers")
 }
 
 model ShippingLabel {
-  id              String   @id @default(cuid())
-  orderId         String
-  order           Order    @relation(fields: [orderId], references: [id])
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
 
-  carrierId       String
-  carrier         ShippingCarrier @relation(fields: [carrierId], references: [id])
+  carrierId String
+  carrier   ShippingCarrier @relation(fields: [carrierId], references: [id])
 
-  trackingNumber  String
-  labelUrl        String?  // PDF URL or base64
-  cost            Decimal? @db.Decimal(10, 2)
+  trackingNumber String
+  labelUrl       String? // PDF URL or base64
+  cost           Decimal? @db.Decimal(10, 2)
 
-  shipDate        DateTime?
+  shipDate          DateTime?
   estimatedDelivery DateTime?
 
   // Raw API response
   carrierResponse Json?
 
-  createdAt       DateTime @default(now())
-  createdById     String?
+  createdAt   DateTime @default(now())
+  createdById String?
 
   @@index([orderId])
   @@index([trackingNumber])
@@ -2005,47 +2026,47 @@ model ShippingLabel {
 }
 
 model ThirdPartyIntegration {
-  id              String   @id @default(cuid())
-  name            String   // "ShipStation", "Shippo", etc.
-  type            IntegrationType
-  isActive        Boolean  @default(false)
-  isConfigured    Boolean  @default(false)
+  id           String          @id @default(cuid())
+  name         String // "ShipStation", "Shippo", etc.
+  type         IntegrationType
+  isActive     Boolean         @default(false)
+  isConfigured Boolean         @default(false)
 
   // Credentials in ServiceKey, referenced by service name
 
-  config          Json?    // Integration-specific settings
-  webhookUrl      String?
+  config     Json? // Integration-specific settings
+  webhookUrl String?
 
-  lastSyncAt      DateTime?
-  lastError       String?
+  lastSyncAt DateTime?
+  lastError  String?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("third_party_integrations")
 }
 
 model OrderNotificationRule {
-  id              String   @id @default(cuid())
-  name            String
+  id   String @id @default(cuid())
+  name String
 
   // Trigger conditions
-  triggerEvent    OrderNotificationEvent
-  statusFilter    OrderStatus?
-  minAmount       Decimal? @db.Decimal(10, 2)
+  triggerEvent OrderNotificationEvent
+  statusFilter OrderStatus?
+  minAmount    Decimal?               @db.Decimal(10, 2)
 
   // Notification channels
-  emailEnabled    Boolean  @default(true)
-  emailTo         String[] // Recipient addresses
+  emailEnabled Boolean  @default(true)
+  emailTo      String[] // Recipient addresses
 
   // Optional Slack/SMS
-  slackEnabled    Boolean  @default(false)
-  slackWebhook    String?
+  slackEnabled Boolean @default(false)
+  slackWebhook String?
 
-  isActive        Boolean  @default(true)
+  isActive Boolean @default(true)
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("order_notification_rules")
 }
@@ -2119,25 +2140,25 @@ enum OrderNotificationEvent {
 // ========================================
 
 model InventoryTransaction {
-  id              String                    @id @default(cuid())
-  productId       String
-  product         Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   // Transaction details
-  type            InventoryTransactionType
-  quantity        Int                       // Positive for additions, negative for removals
-  previousStock   Int
-  newStock        Int
+  type          InventoryTransactionType
+  quantity      Int // Positive for additions, negative for removals
+  previousStock Int
+  newStock      Int
 
   // Metadata
-  reason          String?
-  notes           String?                   @db.Text
+  reason String?
+  notes  String? @db.Text
 
   // Reference to related entity (order, etc.)
-  orderId         String?
-  userId          String?                   // Who made the change
+  orderId String?
+  userId  String? // Who made the change
 
-  createdAt       DateTime                  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([productId])
   @@index([type])
@@ -2146,27 +2167,27 @@ model InventoryTransaction {
 }
 
 model InventoryAlert {
-  id              String                @id @default(cuid())
-  productId       String
-  product         Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   // Alert details
-  type            InventoryAlertType    @default(LOW_STOCK)
-  status          InventoryAlertStatus  @default(ACTIVE)
-  stockLevel      Int                   // Stock level when alert was triggered
-  threshold       Int                   // Threshold that triggered the alert
+  type       InventoryAlertType   @default(LOW_STOCK)
+  status     InventoryAlertStatus @default(ACTIVE)
+  stockLevel Int // Stock level when alert was triggered
+  threshold  Int // Threshold that triggered the alert
 
   // Notification tracking
-  notifiedAt      DateTime?
-  notifiedTo      String[]              // Email addresses that were notified
+  notifiedAt DateTime?
+  notifiedTo String[] // Email addresses that were notified
 
   // Resolution
   resolvedAt      DateTime?
   resolvedBy      String?
   resolutionNotes String?
 
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([productId, status])
   @@index([type])
@@ -2175,25 +2196,25 @@ model InventoryAlert {
 }
 
 enum InventoryTransactionType {
-  SALE              // Product sold
-  RESTOCK           // Manual restock
-  ADJUSTMENT        // Manual adjustment
-  RETURN            // Customer return
-  DAMAGED           // Damaged/spoiled product
-  SAMPLE            // Given as sample
-  TRANSFER          // Transfer between locations
-  INITIAL           // Initial stock entry
+  SALE // Product sold
+  RESTOCK // Manual restock
+  ADJUSTMENT // Manual adjustment
+  RETURN // Customer return
+  DAMAGED // Damaged/spoiled product
+  SAMPLE // Given as sample
+  TRANSFER // Transfer between locations
+  INITIAL // Initial stock entry
 }
 
 enum InventoryAlertType {
-  LOW_STOCK         // Stock below threshold
-  OUT_OF_STOCK      // Stock at zero
-  OVERSTOCKED       // Stock above maximum
+  LOW_STOCK // Stock below threshold
+  OUT_OF_STOCK // Stock at zero
+  OVERSTOCKED // Stock above maximum
 }
 
 enum InventoryAlertStatus {
-  ACTIVE            // Alert is active
-  ACKNOWLEDGED      // Alert has been seen
-  RESOLVED          // Stock level corrected
-  DISMISSED         // Alert dismissed without action
+  ACTIVE // Alert is active
+  ACKNOWLEDGED // Alert has been seen
+  RESOLVED // Stock level corrected
+  DISMISSED // Alert dismissed without action
 }
