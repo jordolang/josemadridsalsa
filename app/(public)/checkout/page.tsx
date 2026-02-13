@@ -155,8 +155,8 @@ function CheckoutForm() {
 
   // Calculate tax when address is complete
   const calculateTaxEstimate = async () => {
-    // Only calculate if we have required address fields
-    if (!formState.city || !formState.state || !formState.postalCode || items.length === 0) {
+    // Only calculate if we have required address fields including address1
+    if (!formState.address1 || !formState.city || !formState.state || !formState.postalCode || items.length === 0) {
       return
     }
 
@@ -172,7 +172,7 @@ function CheckoutForm() {
             price: item.price,
           })),
           shippingAddress: {
-            address1: formState.address1 || '123 Main St', // Placeholder if not entered yet
+            address1: formState.address1,
             address2: formState.address2 || undefined,
             city: formState.city,
             state: formState.state,
@@ -199,7 +199,8 @@ function CheckoutForm() {
 
   // Calculate shipping when address is complete
   const calculateShippingEstimate = async () => {
-    if (!formState.city || !formState.state || !formState.postalCode || items.length === 0) {
+    // Only calculate if we have required address fields including address1
+    if (!formState.address1 || !formState.city || !formState.state || !formState.postalCode || items.length === 0) {
       return
     }
 
@@ -214,7 +215,7 @@ function CheckoutForm() {
             quantity: item.quantity,
           })),
           shippingAddress: {
-            address1: formState.address1 || '123 Main St',
+            address1: formState.address1,
             address2: formState.address2 || undefined,
             city: formState.city,
             state: formState.state,
@@ -254,7 +255,7 @@ function CheckoutForm() {
     }
 
     // Trigger tax and shipping calculation when address fields change
-    if (['city', 'state', 'postalCode'].includes(name)) {
+    if (['address1', 'city', 'state', 'postalCode'].includes(name)) {
       // Clear previous timeouts
       if (taxCalcTimeoutRef.current) {
         clearTimeout(taxCalcTimeoutRef.current)

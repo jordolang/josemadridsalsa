@@ -91,16 +91,16 @@ export async function POST(request: Request) {
 
           // Update inventory for product orders (not gift certificates)
           if (order.items.length > 0) {
-            for (const item of order.items) {
-              await tx.product.update({
-                where: { id: item.productId },
-                data: {
-                  inventory: {
-                    decrement: item.quantity,
+            await Promise.all(
+              order.items.map((item) =>
+                tx.product.update({
+                  where: { id: item.productId },
+                  data: {
+                    inventory: { decrement: item.quantity },
                   },
-                },
-              })
-            }
+                })
+              )
+            )
           }
 
           // Gift certificates are already created, no additional action needed
@@ -154,31 +154,49 @@ export async function POST(request: Request) {
         const orderId = charge.metadata?.orderId
 
         if (!orderId) {
-          console.warn('Charge missing orderId in metadata:', charge.id)
+          console.warn('Skipping refund processing: charge missing orderId in metadata:', charge.id)
           return NextResponse.json({ received: true })
         }
 
-        // Determine if full or partial refund
         const isFullRefund = charge.amount_refunded === charge.amount
 
-        if (isFullRefund) {
-          await prisma.order.update({
-            where: { id: orderId },
-            data: {
-              status: 'REFUNDED',
-              paymentStatus: 'REFUNDED',
-            },
-          })
-        } else {
-          await prisma.order.update({
-            where: { id: orderId },
-            data: {
-              paymentStatus: 'PARTIALLY_REFUNDED',
-            },
-          })
+        // Fetch order with items to restore inventory
+        const order = await prisma.order.findUnique({
+          where: { id: orderId },
+          include: { items: true },
+        })
+
+        if (!order) {
+          console.error('Order not found for refund:', orderId)
+          return NextResponse.json({ received: true })
         }
 
-        console.log(`Order ${isFullRefund ? 'fully' : 'partially'} refunded via webhook:`, orderId)
+        await prisma.$transaction(async (tx) => {
+          // Update order status
+          await tx.order.update({
+            where: { id: orderId },
+            data: {
+              status: isFullRefund ? 'REFUNDED' : order.status,
+              paymentStatus: isFullRefund ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+            },
+          })
+
+          // Restore inventory on full refunds
+          if (isFullRefund && order.items.length > 0) {
+            await Promise.all(
+              order.items.map((item) =>
+                tx.product.update({
+                  where: { id: item.productId },
+                  data: {
+                    inventory: { increment: item.quantity },
+                  },
+                })
+              )
+            )
+          }
+        })
+
+        console.log('Order refund processed via webhook:', orderId, isFullRefund ? 'FULL' : 'PARTIAL')
         break
       }
 
