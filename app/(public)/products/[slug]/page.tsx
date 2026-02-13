@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
-import Image from 'next/image'
 import { getProductBySlug } from '@/lib/db/products'
 import { formatPrice, getHeatLevelColor, getHeatLevelText } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { ImageGallery } from '@/components/products/ImageGallery'
 import { Metadata } from 'next'
 
 type Props = {
@@ -50,50 +50,16 @@ export default async function ProductDetailPage({ params }: Props) {
     ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
     : 0
 
-  // Use images array or fall back to featuredImage
-  const productImages = product.images && product.images.length > 0
-    ? product.images
-    : product.featuredImage
-    ? [product.featuredImage]
-    : ['/images/placeholder-salsa.jpg']
-
   return (
     <main className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Product Images Section */}
-          <div className="space-y-4">
-            <div className="bg-card rounded-lg overflow-hidden surface-shadow flex items-center justify-center min-h-[400px]">
-              <Image
-                src={productImages[0]}
-                alt={product.name}
-                width={600}
-                height={600}
-                className="w-full h-auto object-contain"
-                priority
-              />
-            </div>
-
-            {/* Thumbnails - only show if more than one image */}
-            {productImages.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto">
-                {productImages.map((image, index) => (
-                  <div
-                    key={index}
-                    className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-border flex items-center justify-center bg-card"
-                  >
-                    <Image
-                      src={image}
-                      alt={`${product.name} ${index + 1}`}
-                      width={80}
-                      height={80}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <ImageGallery
+            images={product.images || []}
+            productName={product.name}
+            featuredImage={product.featuredImage}
+          />
 
           {/* Product Info Section */}
           <div className="space-y-6">
