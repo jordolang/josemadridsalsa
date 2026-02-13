@@ -560,6 +560,32 @@ export async function resolveAlert(alertId: string, userId?: string, notes?: str
 }
 
 /**
+ * Resolve multiple inventory alerts (bulk operation)
+ */
+export async function resolveAlerts(
+  alertIds: string[],
+  userId?: string,
+  notes?: string
+) {
+  const results = [];
+
+  for (const alertId of alertIds) {
+    try {
+      const alert = await resolveAlert(alertId, userId, notes);
+      results.push({ success: true, alertId, alert });
+    } catch (error: any) {
+      results.push({
+        success: false,
+        alertId,
+        error: error.message,
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
  * Dismiss an inventory alert
  */
 export async function dismissAlert(alertId: string, userId?: string, notes?: string) {
