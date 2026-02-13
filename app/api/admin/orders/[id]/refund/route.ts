@@ -105,6 +105,10 @@ export async function POST(
     // We truncate sub-cent amounts rather than rounding them.
     const amountInCents = Math.floor(amount * 100);
     
+    // Generate deterministic idempotency key based on order and refund amount
+    // This ensures retries of the same refund use the same key, preventing duplicates
+    const idempotencyKey = `refund-${order.id}-${amountInCents}`;
+    
     const refund = await stripe.refunds.create({
       charge: chargeId,
       amount: amountInCents, // Amount in cents
@@ -116,7 +120,7 @@ export async function POST(
     },
     {
       // Use idempotency key to prevent duplicate refunds if request is retried
-      idempotencyKey: `refund-${order.id}-${Date.now()}`,
+      idempotencyKey,
     });
 
     // Log audit
