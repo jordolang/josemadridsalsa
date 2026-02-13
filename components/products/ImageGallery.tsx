@@ -37,10 +37,34 @@ export function ImageGallery({ images, productName, featuredImage }: ImageGaller
         />
       </div>
 
-      {/* Image count indicator (only show if multiple images) */}
+      {/* Thumbnail Navigation */}
       {galleryImages.length > 1 && (
-        <div className="text-center text-sm text-muted-foreground">
-          Image {selectedImageIndex + 1} of {galleryImages.length}
+        <div className="grid grid-cols-4 gap-4">
+          {galleryImages.map((image, index) => (
+            <button
+              key={index}
+              onClick={() => setSelectedImageIndex(index)}
+              className={cn(
+                "relative aspect-square overflow-hidden rounded-md bg-muted transition-all duration-200",
+                "hover:ring-2 hover:ring-salsa-500 hover:ring-offset-2",
+                "focus:outline-none focus:ring-2 focus:ring-salsa-500 focus:ring-offset-2",
+                selectedImageIndex === index
+                  ? "ring-2 ring-salsa-500 ring-offset-2 opacity-100"
+                  : "opacity-60 hover:opacity-100"
+              )}
+              aria-label={`View image ${index + 1} of ${galleryImages.length}`}
+              aria-pressed={selectedImageIndex === index}
+            >
+              <Image
+                src={image}
+                alt={`${productName} - Image ${index + 1}`}
+                fill
+                className="object-contain"
+                sizes="(max-width: 768px) 25vw, 100px"
+                onError={() => setImageError(true)}
+              />
+            </button>
+          ))}
         </div>
       )}
     </div>
