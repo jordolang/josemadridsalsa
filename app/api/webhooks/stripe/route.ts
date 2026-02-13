@@ -24,10 +24,10 @@ export async function POST(request: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
   if (!webhookSecret) {
-    console.error('STRIPE_WEBHOOK_SECRET is not set')
+    console.error('CRITICAL: STRIPE_WEBHOOK_SECRET is not set')
     return NextResponse.json(
-      { error: 'Webhook secret not configured' },
-      { status: 500 }
+      { error: 'Service unavailable' },
+      { status: 503 }
     )
   }
 
@@ -159,6 +159,12 @@ export async function POST(request: Request) {
         }
 
         const isFullRefund = charge.amount_refunded === charge.amount
+        const refundId = charge.refunds?.data[0]?.id
+
+        if (!refundId) {
+          console.warn('Skipping refund processing: no refund ID found in charge:', charge.id)
+          return NextResponse.json({ received: true })
+        }
 
         // Fetch order with items to restore inventory
         const order = await prisma.order.findUnique({
@@ -172,6 +178,24 @@ export async function POST(request: Request) {
         }
 
         await prisma.$transaction(async (tx) => {
+          // Check if refund was already processed (idempotency check)
+          // This prevents duplicate inventory restoration if the same webhook is delivered multiple times
+          const existingAudit = await tx.auditLog.findFirst({
+            where: {
+              action: 'webhook.refund',
+              entityId: orderId,
+              changes: {
+                path: ['refundId'],
+                equals: refundId,
+              },
+            },
+          })
+
+          if (existingAudit) {
+            console.log('Refund already processed, skipping:', refundId, 'for order:', orderId)
+            return // Already processed
+          }
+
           // Update order status
           await tx.order.update({
             where: { id: orderId },
@@ -181,7 +205,9 @@ export async function POST(request: Request) {
             },
           })
 
-          // Restore inventory on full refunds
+          // Restore inventory on full refunds only
+          // Note: Partial refunds do not restore inventory as they may not correspond to specific items being returned.
+          // For partial refunds, inventory must be manually adjusted by an administrator.
           if (isFullRefund && order.items.length > 0) {
             await Promise.all(
               order.items.map((item) =>
@@ -194,6 +220,22 @@ export async function POST(request: Request) {
               )
             )
           }
+
+          // Create audit log entry to track this refund processing
+          await tx.auditLog.create({
+            data: {
+              action: 'webhook.refund',
+              entityType: 'order',
+              entityId: orderId,
+              changes: {
+                refundId,
+                chargeId: charge.id,
+                isFullRefund,
+                amountRefunded: charge.amount_refunded,
+                inventoryRestored: isFullRefund && order.items.length > 0,
+              },
+            },
+          })
         })
 
         console.log('Order refund processed via webhook:', orderId, isFullRefund ? 'FULL' : 'PARTIAL')

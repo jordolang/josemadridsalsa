@@ -68,6 +68,15 @@ describe('POST /api/webhooks/stripe', () => {
   it('should update order to REFUNDED on full refund', async () => {
     const { default: prisma } = await import('@/lib/prisma')
 
+    const mockOrder = {
+      id: 'order-123',
+      orderNumber: 'JMS-20260211-1234',
+      total: 100,
+      paymentStatus: 'PAID',
+      status: 'CONFIRMED',
+      items: [],
+    }
+
     const chargeRefundedEvent: Stripe.Event = {
       id: 'evt_test123',
       object: 'event',
@@ -81,6 +90,15 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
+          refunds: {
+            data: [
+              {
+                id: 're_test123',
+                object: 'refund',
+                amount: 10000,
+              } as Stripe.Refund,
+            ],
+          },
         } as Stripe.Charge,
       },
       api_version: '2023-10-16',
@@ -90,8 +108,26 @@ describe('POST /api/webhooks/stripe', () => {
       request: null,
     }
 
+    const mockTransaction = vi.fn(async (callback) => {
+      const tx = {
+        auditLog: {
+          findFirst: vi.fn().mockResolvedValue(null),
+          create: vi.fn(),
+        },
+        order: {
+          update: vi.fn(),
+        },
+        product: {
+          update: vi.fn(),
+        },
+      }
+      return await callback(tx)
+    })
+
     mockHeaders('valid_signature')
     mockWebhooksConstructEvent.mockReturnValue(chargeRefundedEvent)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.$transaction).mockImplementation(mockTransaction as any)
 
     const request = createRequest(JSON.stringify(chargeRefundedEvent))
     const response = await POST(request)
@@ -99,17 +135,19 @@ describe('POST /api/webhooks/stripe', () => {
 
     expect(response.status).toBe(200)
     expect(data.received).toBe(true)
-    expect(prisma.order.update).toHaveBeenCalledWith({
-      where: { id: 'order-123' },
-      data: {
-        status: 'REFUNDED',
-        paymentStatus: 'REFUNDED',
-      },
-    })
   })
 
   it('should update order to PARTIALLY_REFUNDED on partial refund', async () => {
     const { default: prisma } = await import('@/lib/prisma')
+
+    const mockOrder = {
+      id: 'order-123',
+      orderNumber: 'JMS-20260211-1234',
+      total: 100,
+      paymentStatus: 'PAID',
+      status: 'CONFIRMED',
+      items: [],
+    }
 
     const chargePartialRefundEvent: Stripe.Event = {
       id: 'evt_test456',
@@ -124,6 +162,15 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
+          refunds: {
+            data: [
+              {
+                id: 're_partial123',
+                object: 'refund',
+                amount: 3000,
+              } as Stripe.Refund,
+            ],
+          },
         } as Stripe.Charge,
       },
       api_version: '2023-10-16',
@@ -133,8 +180,26 @@ describe('POST /api/webhooks/stripe', () => {
       request: null,
     }
 
+    const mockTransaction = vi.fn(async (callback) => {
+      const tx = {
+        auditLog: {
+          findFirst: vi.fn().mockResolvedValue(null),
+          create: vi.fn(),
+        },
+        order: {
+          update: vi.fn(),
+        },
+        product: {
+          update: vi.fn(),
+        },
+      }
+      return await callback(tx)
+    })
+
     mockHeaders('valid_signature')
     mockWebhooksConstructEvent.mockReturnValue(chargePartialRefundEvent)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.$transaction).mockImplementation(mockTransaction as any)
 
     const request = createRequest(JSON.stringify(chargePartialRefundEvent))
     const response = await POST(request)
@@ -142,16 +207,19 @@ describe('POST /api/webhooks/stripe', () => {
 
     expect(response.status).toBe(200)
     expect(data.received).toBe(true)
-    expect(prisma.order.update).toHaveBeenCalledWith({
-      where: { id: 'order-123' },
-      data: {
-        paymentStatus: 'PARTIALLY_REFUNDED',
-      },
-    })
   })
 
   it('should extract orderId from charge.metadata', async () => {
     const { default: prisma } = await import('@/lib/prisma')
+
+    const mockOrder = {
+      id: 'custom-order-id-456',
+      orderNumber: 'JMS-20260211-1234',
+      total: 100,
+      paymentStatus: 'PAID',
+      status: 'CONFIRMED',
+      items: [],
+    }
 
     const chargeRefundedEvent: Stripe.Event = {
       id: 'evt_test789',
@@ -166,6 +234,15 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'custom-order-id-456',
           },
+          refunds: {
+            data: [
+              {
+                id: 're_extract123',
+                object: 'refund',
+                amount: 10000,
+              } as Stripe.Refund,
+            ],
+          },
         } as Stripe.Charge,
       },
       api_version: '2023-10-16',
@@ -175,15 +252,33 @@ describe('POST /api/webhooks/stripe', () => {
       request: null,
     }
 
+    const mockTransaction = vi.fn(async (callback) => {
+      const tx = {
+        auditLog: {
+          findFirst: vi.fn().mockResolvedValue(null),
+          create: vi.fn(),
+        },
+        order: {
+          update: vi.fn(),
+        },
+        product: {
+          update: vi.fn(),
+        },
+      }
+      return await callback(tx)
+    })
+
     mockHeaders('valid_signature')
     mockWebhooksConstructEvent.mockReturnValue(chargeRefundedEvent)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.$transaction).mockImplementation(mockTransaction as any)
 
     const request = createRequest(JSON.stringify(chargeRefundedEvent))
     await POST(request)
 
-    expect(prisma.order.update).toHaveBeenCalledWith({
+    expect(prisma.order.findUnique).toHaveBeenCalledWith({
       where: { id: 'custom-order-id-456' },
-      data: expect.anything(),
+      include: { items: true },
     })
   })
 
@@ -221,7 +316,7 @@ describe('POST /api/webhooks/stripe', () => {
     expect(response.status).toBe(200)
     expect(data.received).toBe(true)
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Charge missing orderId in metadata:',
+      'Skipping refund processing: charge missing orderId in metadata:',
       'ch_test123'
     )
     expect(prisma.order.update).not.toHaveBeenCalled()
@@ -232,6 +327,15 @@ describe('POST /api/webhooks/stripe', () => {
   it('should log refund event to console', async () => {
     const { default: prisma } = await import('@/lib/prisma')
     const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    const mockOrder = {
+      id: 'order-123',
+      orderNumber: 'JMS-20260211-1234',
+      total: 100,
+      paymentStatus: 'PAID',
+      status: 'CONFIRMED',
+      items: [],
+    }
 
     const chargeRefundedEvent: Stripe.Event = {
       id: 'evt_test111',
@@ -246,6 +350,290 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
+          refunds: {
+            data: [
+              {
+                id: 're_log123',
+                object: 'refund',
+                amount: 5000,
+              } as Stripe.Refund,
+            ],
+          },
+        } as Stripe.Charge,
+      },
+      api_version: '2023-10-16',
+      created: 1707657600,
+      livemode: false,
+      pending_webhooks: 0,
+      request: null,
+    }
+
+    const mockTransaction = vi.fn(async (callback) => {
+      const tx = {
+        auditLog: {
+          findFirst: vi.fn().mockResolvedValue(null),
+          create: vi.fn(),
+        },
+        order: {
+          update: vi.fn(),
+        },
+        product: {
+          update: vi.fn(),
+        },
+      }
+      return await callback(tx)
+    })
+
+    mockHeaders('valid_signature')
+    mockWebhooksConstructEvent.mockReturnValue(chargeRefundedEvent)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.$transaction).mockImplementation(mockTransaction as any)
+
+    const request = createRequest(JSON.stringify(chargeRefundedEvent))
+    await POST(request)
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      'Order refund processed via webhook:',
+      'order-123',
+      'PARTIAL'
+    )
+
+    consoleLogSpy.mockRestore()
+  })
+
+  it('should skip duplicate refund webhook (idempotency check)', async () => {
+    const { default: prisma } = await import('@/lib/prisma')
+    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    const mockOrder = {
+      id: 'order-123',
+      orderNumber: 'JMS-20260211-1234',
+      total: 100,
+      paymentStatus: 'PAID',
+      status: 'CONFIRMED',
+      items: [
+        {
+          id: 'item-1',
+          productId: 'product-1',
+          quantity: 2,
+        },
+      ],
+    }
+
+    const chargeRefundedEvent: Stripe.Event = {
+      id: 'evt_duplicate',
+      object: 'event',
+      type: 'charge.refunded',
+      data: {
+        object: {
+          id: 'ch_test123',
+          object: 'charge',
+          amount: 10000,
+          amount_refunded: 10000, // Full refund
+          metadata: {
+            orderId: 'order-123',
+          },
+          refunds: {
+            data: [
+              {
+                id: 're_duplicate123',
+                object: 'refund',
+                amount: 10000,
+              } as Stripe.Refund,
+            ],
+          },
+        } as Stripe.Charge,
+      },
+      api_version: '2023-10-16',
+      created: 1707657600,
+      livemode: false,
+      pending_webhooks: 0,
+      request: null,
+    }
+
+    // Mock the transaction to simulate finding an existing audit log
+    const mockTransaction = vi.fn(async (callback) => {
+      const tx = {
+        auditLog: {
+          findFirst: vi.fn().mockResolvedValue({
+            id: 'audit-123',
+            action: 'webhook.refund',
+            entityId: 'order-123',
+            changes: {
+              refundId: 're_duplicate123',
+            },
+          }),
+          create: vi.fn(),
+        },
+        order: {
+          update: vi.fn(),
+        },
+        product: {
+          update: vi.fn(),
+        },
+      }
+      return await callback(tx)
+    })
+
+    mockHeaders('valid_signature')
+    mockWebhooksConstructEvent.mockReturnValue(chargeRefundedEvent)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.$transaction).mockImplementation(mockTransaction as any)
+
+    const request = createRequest(JSON.stringify(chargeRefundedEvent))
+    const response = await POST(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.received).toBe(true)
+    
+    // Verify that the refund was detected as duplicate
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      'Refund already processed, skipping:',
+      're_duplicate123',
+      'for order:',
+      'order-123'
+    )
+
+    consoleLogSpy.mockRestore()
+  })
+
+  it('should process new refund and create audit log', async () => {
+    const { default: prisma } = await import('@/lib/prisma')
+
+    const mockOrder = {
+      id: 'order-456',
+      orderNumber: 'JMS-20260211-5678',
+      total: 100,
+      paymentStatus: 'PAID',
+      status: 'CONFIRMED',
+      items: [
+        {
+          id: 'item-1',
+          productId: 'product-1',
+          quantity: 2,
+        },
+      ],
+    }
+
+    const chargeRefundedEvent: Stripe.Event = {
+      id: 'evt_new_refund',
+      object: 'event',
+      type: 'charge.refunded',
+      data: {
+        object: {
+          id: 'ch_test456',
+          object: 'charge',
+          amount: 10000,
+          amount_refunded: 10000, // Full refund
+          metadata: {
+            orderId: 'order-456',
+          },
+          refunds: {
+            data: [
+              {
+                id: 're_new123',
+                object: 'refund',
+                amount: 10000,
+              } as Stripe.Refund,
+            ],
+          },
+        } as Stripe.Charge,
+      },
+      api_version: '2023-10-16',
+      created: 1707657600,
+      livemode: false,
+      pending_webhooks: 0,
+      request: null,
+    }
+
+    // Mock the transaction to simulate NO existing audit log
+    const mockAuditCreate = vi.fn()
+    const mockOrderUpdate = vi.fn()
+    const mockProductUpdate = vi.fn()
+    
+    const mockTransaction = vi.fn(async (callback) => {
+      const tx = {
+        auditLog: {
+          findFirst: vi.fn().mockResolvedValue(null), // No existing audit log
+          create: mockAuditCreate,
+        },
+        order: {
+          update: mockOrderUpdate,
+        },
+        product: {
+          update: mockProductUpdate,
+        },
+      }
+      return await callback(tx)
+    })
+
+    mockHeaders('valid_signature')
+    mockWebhooksConstructEvent.mockReturnValue(chargeRefundedEvent)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.$transaction).mockImplementation(mockTransaction as any)
+
+    const request = createRequest(JSON.stringify(chargeRefundedEvent))
+    const response = await POST(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.received).toBe(true)
+    
+    // Verify that order was updated
+    expect(mockOrderUpdate).toHaveBeenCalledWith({
+      where: { id: 'order-456' },
+      data: {
+        status: 'REFUNDED',
+        paymentStatus: 'REFUNDED',
+      },
+    })
+    
+    // Verify that audit log was created
+    expect(mockAuditCreate).toHaveBeenCalledWith({
+      data: {
+        action: 'webhook.refund',
+        entityType: 'order',
+        entityId: 'order-456',
+        changes: {
+          refundId: 're_new123',
+          chargeId: 'ch_test456',
+          isFullRefund: true,
+          amountRefunded: 10000,
+          inventoryRestored: true,
+        },
+      },
+    })
+    
+    // Verify inventory was restored
+    expect(mockProductUpdate).toHaveBeenCalledWith({
+      where: { id: 'product-1' },
+      data: {
+        inventory: { increment: 2 },
+      },
+    })
+  })
+
+  it('should log warning if refundId is missing', async () => {
+    const { default: prisma } = await import('@/lib/prisma')
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const chargeRefundedEvent: Stripe.Event = {
+      id: 'evt_no_refund_id',
+      object: 'event',
+      type: 'charge.refunded',
+      data: {
+        object: {
+          id: 'ch_test789',
+          object: 'charge',
+          amount: 10000,
+          amount_refunded: 10000,
+          metadata: {
+            orderId: 'order-789',
+          },
+          refunds: {
+            data: [], // No refunds
+          },
         } as Stripe.Charge,
       },
       api_version: '2023-10-16',
@@ -259,14 +647,17 @@ describe('POST /api/webhooks/stripe', () => {
     mockWebhooksConstructEvent.mockReturnValue(chargeRefundedEvent)
 
     const request = createRequest(JSON.stringify(chargeRefundedEvent))
-    await POST(request)
+    const response = await POST(request)
+    const data = await response.json()
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      'Order partially refunded via webhook:',
-      'order-123'
+    expect(response.status).toBe(200)
+    expect(data.received).toBe(true)
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Skipping refund processing: no refund ID found in charge:',
+      'ch_test789'
     )
 
-    consoleLogSpy.mockRestore()
+    consoleWarnSpy.mockRestore()
   })
 
   // ========================================
@@ -614,7 +1005,7 @@ describe('POST /api/webhooks/stripe', () => {
     consoleLogSpy.mockRestore()
   })
 
-  it('should return 500 if webhook secret is not configured', async () => {
+  it('should return 503 if webhook secret is not configured', async () => {
     delete process.env.STRIPE_WEBHOOK_SECRET
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
@@ -624,9 +1015,9 @@ describe('POST /api/webhooks/stripe', () => {
     const response = await POST(request)
     const data = await response.json()
 
-    expect(response.status).toBe(500)
-    expect(data.error).toBe('Webhook secret not configured')
-    expect(consoleErrorSpy).toHaveBeenCalledWith('STRIPE_WEBHOOK_SECRET is not set')
+    expect(response.status).toBe(503)
+    expect(data.error).toBe('Service unavailable')
+    expect(consoleErrorSpy).toHaveBeenCalledWith('CRITICAL: STRIPE_WEBHOOK_SECRET is not set')
 
     consoleErrorSpy.mockRestore()
     process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret'

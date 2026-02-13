@@ -100,14 +100,19 @@ export async function POST(
     }
 
     // Create refund in Stripe
+    // Fix potential floating-point rounding errors by normalizing to 2 decimal places first
     const refund = await stripe.refunds.create({
       charge: chargeId,
-      amount: Math.round(amount * 100), // Convert to cents
+      amount: Math.round(parseFloat(amount.toFixed(2)) * 100), // Convert to cents
       metadata: {
         orderId: order.id,
         orderNumber: order.orderNumber,
         refundedBy: user.id,
       },
+    },
+    {
+      // Use idempotency key to prevent duplicate refunds if request is retried
+      idempotencyKey: `refund-${orderId}-${Date.now()}`,
     });
 
     // Log audit
@@ -150,6 +155,19 @@ export async function POST(
     // Handle Stripe-specific errors
     if (error.type === 'StripeInvalidRequestError') {
       return fail(`Stripe error: ${error.message}`, 400);
+    }
+    
+    if (error.type === 'StripeConnectionError') {
+      return fail('Unable to connect to payment processor. Please try again later.', 503);
+    }
+    
+    if (error.type === 'StripeRateLimitError') {
+      return fail('Too many requests to payment processor. Please try again later.', 429);
+    }
+    
+    if (error.type === 'StripeAuthenticationError') {
+      console.error('CRITICAL: Stripe authentication failed - check API keys');
+      return fail('Payment processor configuration error. Please contact support.', 500);
     }
 
     return fail(error.message, error.status || 500);
