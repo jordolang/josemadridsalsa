@@ -166,6 +166,7 @@ model Product {
   variants              ProductVariant[]
   nutritionalInfo       NutritionalInfo?
   productIngredients    ProductIngredient[]
+  restockNotifications  RestockNotification[]
 
   @@map("products")
 }
@@ -2355,6 +2356,26 @@ model InventoryAlert {
   @@index([type])
   @@index([createdAt])
   @@map("inventory_alerts")
+}
+
+model RestockNotification {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Notification details
+  stockLevel     Int // Stock when notification triggered
+  recommendedQty Int // Suggested restock quantity
+
+  // Delivery tracking
+  sentAt DateTime @default(now())
+  sentTo String[] // Email addresses
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+  @@map("restock_notifications")
 }
 
 enum InventoryTransactionType {
