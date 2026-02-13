@@ -178,6 +178,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Verify all products exist
+    const productIds = adjustments.map((adj: any) => adj.productId);
+    const existingProducts = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true },
+    });
+
+    if (existingProducts.length !== productIds.length) {
+      const existingIds = new Set(existingProducts.map((p) => p.id));
+      const missingIds = productIds.filter((id: string) => !existingIds.has(id));
+      return fail(`Products not found: ${missingIds.join(', ')}`, 404);
+    }
+
     // Add userId to each adjustment
     const adjustmentsWithUser: InventoryAdjustment[] = adjustments.map((adj: any) => ({
       ...adj,
@@ -239,6 +252,16 @@ export async function PUT(req: NextRequest) {
       return fail(`Invalid transaction type: ${type}`, 400);
     }
 
+    // Verify product exists
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true, name: true },
+    });
+
+    if (!product) {
+      return fail('Product not found', 404);
+    }
+
     // Adjust inventory
     const result = await adjustInventory({
       productId,
@@ -268,6 +291,7 @@ export async function PUT(req: NextRequest) {
       ...result,
     });
   } catch (error: any) {
+    console.error('Error adjusting inventory:', error);
     return fail(error.message, error.status || 500);
   }
 }
@@ -290,6 +314,16 @@ export async function PATCH(req: NextRequest) {
 
     if (typeof quantity !== 'number' || quantity <= 0) {
       return fail('quantity must be a positive number', 400);
+    }
+
+    // Verify product exists
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true, name: true },
+    });
+
+    if (!product) {
+      return fail('Product not found', 404);
     }
 
     // Adjust inventory
