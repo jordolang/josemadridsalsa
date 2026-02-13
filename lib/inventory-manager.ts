@@ -216,6 +216,73 @@ async function checkAndUpdateAlerts(
 }
 
 /**
+ * Check and create alert for low stock detection
+ * Prevents duplicate alerts and handles proper status management
+ *
+ * @param productId - Product ID to check
+ * @param currentStock - Current stock level
+ * @param lowStockThreshold - Low stock threshold for the product
+ * @returns Created alert or null if no alert needed or duplicate exists
+ */
+export async function checkAndCreateAlert(
+  productId: string,
+  currentStock: number,
+  lowStockThreshold: number
+) {
+  const isOutOfStock = currentStock === 0;
+  const isLowStock = currentStock > 0 && currentStock <= lowStockThreshold;
+
+  // No alert needed if stock is normal
+  if (!isOutOfStock && !isLowStock) {
+    return null;
+  }
+
+  // Determine alert type
+  const alertType = isOutOfStock
+    ? InventoryAlertType.OUT_OF_STOCK
+    : InventoryAlertType.LOW_STOCK;
+
+  // Check for existing active alerts of this type to prevent duplicates
+  const existingAlert = await prisma.inventoryAlert.findFirst({
+    where: {
+      productId,
+      type: alertType,
+      status: {
+        in: [InventoryAlertStatus.ACTIVE, InventoryAlertStatus.ACKNOWLEDGED],
+      },
+    },
+    include: {
+      product: {
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          inventory: true,
+        },
+      },
+    },
+  });
+
+  // Don't create duplicate alert if one already exists
+  if (existingAlert) {
+    return existingAlert;
+  }
+
+  // Create new alert
+  const alert = await createAlert(
+    productId,
+    alertType,
+    currentStock,
+    lowStockThreshold
+  );
+
+  // Send notification for new alert
+  await notifyLowStock(alert);
+
+  return alert;
+}
+
+/**
  * Create an inventory alert
  */
 async function createAlert(
