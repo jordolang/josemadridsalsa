@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "036-import-your-data-4",
+  "spec": "022-payment-processing-integration-stripe",
   "state": "building",
   "subtasks": {
-    "completed": 12,
-    "total": 16,
+    "completed": 8,
+    "total": 9,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Create Import Templates",
+    "current": "Integration Testing",
     "id": null,
-    "total": 4
+    "total": 3
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 14,
-    "started_at": "2026-01-28T02:18:42.712832"
+    "number": 9,
+    "started_at": "2026-02-11T01:08:48.777146"
   },
-  "last_update": "2026-01-28T03:08:11.100962"
+  "last_update": "2026-02-11T01:38:14.133359"
 }
