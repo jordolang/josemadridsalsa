@@ -1,42 +1,42 @@
 import { ProductsClient } from './products-client'
 import type { Product } from '@/components/store/product-card'
+import { getProducts, getCategories } from '@/lib/db/products'
 
 export const revalidate = 0
 
-export default async function ProductsPage() {
+interface SearchParams {
+  category?: string
+  heatLevel?: string
+  search?: string
+}
+
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}) {
+  // Next.js 16: searchParams is now a Promise
+  const params = await searchParams
+
   let products: Product[] = []
+  let categories: Array<{ id: string; name: string; slug: string; _count: { products: number } }> = []
 
   try {
-    const prisma = (await import('@/lib/prisma')).default
-
-    // Try to connect and query
-    await prisma.$connect()
-    const rawProducts = await prisma.product.findMany({
-      where: {
-        isActive: true,
-      },
-      orderBy: [
-        { isFeatured: 'desc' },
-        { sortOrder: 'asc' },
-        { name: 'asc' },
-      ],
-      include: {
-        productTags: {
-          include: {
-            tag: true,
-          },
-        },
-      },
+    // Fetch products using the new query layer with filters
+    const rawProducts = await getProducts({
+      category: params.category,
+      heatLevel: params.heatLevel,
+      search: params.search,
     })
 
-    // Convert Decimal prices to numbers and format response
+    // Convert to Product type expected by ProductCard
     products = rawProducts.map(product => ({
       id: product.id,
       name: product.name,
       slug: product.slug,
       description: product.description,
-      price: parseFloat(String(product.price)),
-      compareAtPrice: product.compareAtPrice ? parseFloat(String(product.compareAtPrice)) : undefined,
+      price: product.price,
+      compareAtPrice: product.compareAtPrice ?? undefined,
       featuredImage: product.featuredImage,
       images: product.images || [],
       heatLevel: product.heatLevel,
@@ -47,11 +47,23 @@ export default async function ProductsPage() {
       searchKeywords: product.searchKeywords || [],
       tags: product.productTags?.map(({ tag }) => tag.slug) || [],
     }))
+
+    // Fetch categories for filter UI
+    categories = await getCategories()
   } catch (error) {
     console.error('[Products Page] Error loading products:', error)
-    // Return empty array on error - page will show "no products" message
+    // Return empty arrays on error - page will show "no products" message
     products = []
+    categories = []
   }
 
-  return <ProductsClient initialProducts={products} />
+  return (
+    <ProductsClient
+      initialProducts={products}
+      categories={categories}
+      initialCategory={params.category}
+      initialHeatLevel={params.heatLevel}
+      initialSearch={params.search}
+    />
+  )
 }
