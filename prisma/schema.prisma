@@ -162,6 +162,7 @@ model Product {
   inventoryAlerts       InventoryAlert[]
   shopListings          ShopListing[]
   variants              ProductVariant[]
+  nutritionalInfo       NutritionalInfo?
 
   @@map("products")
 }
@@ -183,6 +184,25 @@ model ProductVariant {
 
   @@index([productId])
   @@map("product_variants")
+}
+
+model NutritionalInfo {
+  id        String  @id @default(cuid())
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  servingSize String // e.g., "2 tbsp (30g)"
+  calories    Int
+  totalFat    String // e.g., "0g"
+  sodium      String // e.g., "210mg"
+  totalCarbs  String // e.g., "3g"
+  protein     String // e.g., "1g"
+  allergens   String? // e.g., "Contains: Tomatoes"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("nutritional_info")
 }
 
 model ShopListing {
