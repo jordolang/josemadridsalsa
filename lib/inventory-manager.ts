@@ -313,6 +313,109 @@ async function createAlert(
 }
 
 /**
+ * Send low stock email notification
+ */
+export async function sendLowStockEmail(
+  to: string,
+  productName: string,
+  productSku: string,
+  productId: string,
+  stockLevel: number,
+  alertType: InventoryAlertType,
+  threshold?: number
+) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) {
+    console.warn('RESEND_API_KEY not set; skipping low stock email');
+    return { skipped: true };
+  }
+
+  try {
+    const subject = alertType === InventoryAlertType.OUT_OF_STOCK
+      ? `🚨 OUT OF STOCK: ${productName}`
+      : `⚠️ LOW STOCK ALERT: ${productName}`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#dc2626 0%, #991b1b 100%' : '#f59e0b 0%, #d97706 100%'}); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">
+              ${alertType === InventoryAlertType.OUT_OF_STOCK ? '🚨 Out of Stock Alert' : '⚠️ Low Stock Alert'}
+            </h1>
+          </div>
+
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              The following product needs immediate attention:
+            </p>
+
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#dc2626' : '#f59e0b'};">
+              <p style="margin: 8px 0; font-size: 14px;">
+                <strong style="color: #374151;">Product:</strong>
+                <span style="color: #111827;">${productName}</span>
+              </p>
+              <p style="margin: 8px 0; font-size: 14px;">
+                <strong style="color: #374151;">SKU:</strong>
+                <span style="color: #111827;">${productSku}</span>
+              </p>
+              <p style="margin: 8px 0; font-size: 14px;">
+                <strong style="color: #374151;">Current Stock:</strong>
+                <span style="color: ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#dc2626' : '#f59e0b'}; font-weight: bold; font-size: 18px;">${stockLevel}</span>
+              </p>
+              ${threshold !== undefined && alertType === InventoryAlertType.LOW_STOCK ? `
+              <p style="margin: 8px 0; font-size: 14px;">
+                <strong style="color: #374151;">Threshold:</strong>
+                <span style="color: #111827;">${threshold}</span>
+              </p>
+              ` : ''}
+            </div>
+
+            <div style="background: ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#fef2f2' : '#fef3c7'}; border-left: 4px solid ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#dc2626' : '#f59e0b'}; padding: 15px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; font-size: 14px; color: ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#991b1b' : '#92400e'};">
+                <strong>${alertType === InventoryAlertType.OUT_OF_STOCK ? '🔴 This product is completely out of stock!' : '⚠️ Stock level is below threshold.'}</strong>
+              </p>
+              <p style="margin: 8px 0 0 0; font-size: 14px; color: ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#991b1b' : '#92400e'};">
+                Please restock this product as soon as possible.
+              </p>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXTAUTH_URL}/admin/products/${productId}"
+                 style="background: #3b82f6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">
+                View Product Details
+              </a>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              Jose Madrid Salsa - Inventory Management<br>
+              This is an automated message, please do not reply.
+            </p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const res = await sendEmail({
+      to,
+      subject,
+      html,
+    });
+
+    return res;
+  } catch (e) {
+    console.error('Failed to send low stock email', e);
+    return { error: true };
+  }
+}
+
+/**
  * Send low stock notification email
  */
 async function notifyLowStock(alert: any) {
@@ -327,37 +430,17 @@ async function notifyLowStock(alert: any) {
       return;
     }
 
-    const subject = type === InventoryAlertType.OUT_OF_STOCK
-      ? `🚨 OUT OF STOCK: ${product.name}`
-      : `⚠️ LOW STOCK ALERT: ${product.name}`;
-
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: ${type === InventoryAlertType.OUT_OF_STOCK ? '#dc2626' : '#f59e0b'};">
-          ${type === InventoryAlertType.OUT_OF_STOCK ? 'Out of Stock Alert' : 'Low Stock Alert'}
-        </h2>
-        <p>The following product needs attention:</p>
-        <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
-          <p><strong>Product:</strong> ${product.name}</p>
-          <p><strong>SKU:</strong> ${product.sku}</p>
-          <p><strong>Current Stock:</strong> <span style="color: ${type === InventoryAlertType.OUT_OF_STOCK ? '#dc2626' : '#f59e0b'}; font-weight: bold;">${stockLevel}</span></p>
-          ${type === InventoryAlertType.LOW_STOCK ? `<p><strong>Threshold:</strong> ${alert.threshold}</p>` : ''}
-        </div>
-        <p>Please restock this product as soon as possible.</p>
-        <a href="${process.env.NEXTAUTH_URL}/admin/products/${product.id}"
-           style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px;">
-          View Product
-        </a>
-      </div>
-    `;
-
     // Send email to all admin addresses
     for (const email of adminEmails) {
-      await sendEmail({
-        to: email.trim(),
-        subject,
-        html: htmlContent,
-      });
+      await sendLowStockEmail(
+        email.trim(),
+        product.name,
+        product.sku,
+        product.id,
+        stockLevel,
+        type,
+        alert.threshold
+      );
     }
 
     // Update alert with notification info
