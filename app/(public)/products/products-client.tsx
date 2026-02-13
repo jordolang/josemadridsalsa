@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { Grid3X3, List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ProductCard, type Product } from '@/components/store/product-card'
 import { GiftBoxQuickAdd } from '@/components/store/gift-box-quick-add'
+import { cn } from '@/lib/utils'
 
 const heatLevels = [
   { value: 'all', label: 'All Heat Levels' },
@@ -29,6 +31,7 @@ interface ProductsClientProps {
   initialCategory?: string
   initialHeatLevel?: string
   initialSearch?: string
+  initialView?: 'grid' | 'list'
 }
 
 export function ProductsClient({
@@ -37,18 +40,21 @@ export function ProductsClient({
   initialCategory,
   initialHeatLevel,
   initialSearch,
+  initialView,
 }: ProductsClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'all')
   const [selectedHeatLevel, setSelectedHeatLevel] = useState(initialHeatLevel || 'all')
   const [searchTerm, setSearchTerm] = useState(initialSearch || '')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(initialView || 'grid')
 
   // Update URL when filters change
   const updateFilters = (updates: {
     category?: string
     heatLevel?: string
     search?: string
+    view?: 'grid' | 'list'
   }) => {
     const params = new URLSearchParams(searchParams.toString())
 
@@ -79,6 +85,15 @@ export function ProductsClient({
       setSearchTerm(updates.search)
     }
 
+    if (updates.view !== undefined) {
+      if (updates.view === 'grid') {
+        params.delete('view')
+      } else {
+        params.set('view', updates.view)
+      }
+      setViewMode(updates.view)
+    }
+
     router.push(`/products?${params.toString()}`, { scroll: false })
   }
 
@@ -106,7 +121,7 @@ export function ProductsClient({
       <section className="bg-card py-6 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-6">
-            {/* Search */}
+            {/* Search and View Toggle */}
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
               <div className="relative flex-1 max-w-md">
                 <Input
@@ -116,6 +131,34 @@ export function ProductsClient({
                   onChange={(e) => updateFilters({ search: e.target.value })}
                   className="pl-4 pr-4 focus:ring-salsa-500 focus:border-salsa-500"
                 />
+              </div>
+
+              {/* View Toggle */}
+              <div className="flex border rounded-md overflow-hidden">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => updateFilters({ view: 'grid' })}
+                  className={cn(
+                    'rounded-none border-0',
+                    viewMode === 'grid' && 'bg-salsa-500 hover:bg-salsa-600'
+                  )}
+                  aria-label="Grid view"
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => updateFilters({ view: 'list' })}
+                  className={cn(
+                    'rounded-none border-0 border-l',
+                    viewMode === 'list' && 'bg-salsa-500 hover:bg-salsa-600'
+                  )}
+                  aria-label="List view"
+                >
+                  <List className="w-4 h-4" />
+                </Button>
               </div>
             </div>
 
@@ -194,7 +237,13 @@ export function ProductsClient({
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div
+              className={cn(
+                viewMode === 'grid'
+                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8'
+                  : 'flex flex-col gap-6'
+              )}
+            >
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

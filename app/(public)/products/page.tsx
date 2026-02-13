@@ -8,6 +8,7 @@ interface SearchParams {
   category?: string
   heatLevel?: string
   search?: string
+  view?: 'grid' | 'list'
 }
 
 export default async function ProductsPage({
@@ -64,6 +65,7 @@ export default async function ProductsPage({
       initialCategory={params.category}
       initialHeatLevel={params.heatLevel}
       initialSearch={params.search}
+      initialView={params.view}
     />
   )
 }
