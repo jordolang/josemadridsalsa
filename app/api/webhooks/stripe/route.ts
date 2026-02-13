@@ -149,6 +149,39 @@ export async function POST(request: Request) {
         break
       }
 
+      case 'charge.refunded': {
+        const charge = event.data.object as Stripe.Charge
+        const orderId = charge.metadata?.orderId
+
+        if (!orderId) {
+          console.warn('Charge missing orderId in metadata:', charge.id)
+          return NextResponse.json({ received: true })
+        }
+
+        // Determine if full or partial refund
+        const isFullRefund = charge.amount_refunded === charge.amount
+
+        if (isFullRefund) {
+          await prisma.order.update({
+            where: { id: orderId },
+            data: {
+              status: 'REFUNDED',
+              paymentStatus: 'REFUNDED',
+            },
+          })
+        } else {
+          await prisma.order.update({
+            where: { id: orderId },
+            data: {
+              paymentStatus: 'PARTIALLY_REFUNDED',
+            },
+          })
+        }
+
+        console.log(`Order ${isFullRefund ? 'fully' : 'partially'} refunded via webhook:`, orderId)
+        break
+      }
+
       default:
         console.log(`Unhandled event type: ${event.type}`)
     }
