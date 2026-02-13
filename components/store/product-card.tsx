@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ShoppingCart, Heart, Eye, Scale } from 'lucide-react'
+import { Heart, Eye, Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useCartStore } from '@/lib/store/cart'
 import { useWishlistStore } from '@/lib/store/wishlist'
 import { useComparisonStore } from '@/lib/store/comparison'
 import { formatPrice, getHeatLevelColor, getHeatLevelText, cn } from '@/lib/utils'
@@ -21,6 +20,7 @@ import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { AddToCartButton } from '@/components/store/add-to-cart-button'
 
 export interface Product {
   id: string
@@ -44,8 +44,6 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const addItem = useCartStore((state) => state.addItem)
-  const openCart = useCartStore((state) => state.openCart)
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore()
   const { addProduct: addToComparison, removeProduct: removeFromComparison, isInComparison, canAddMore, openPanel } = useComparisonStore()
   const { data: session } = useSession()
@@ -55,20 +53,6 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const inWishlist = isInWishlist(product.id)
   const inComparison = isInComparison(product.id)
-
-  const handleAddToCart = () => {
-    addItem({
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      price: product.price,
-      image: product.featuredImage || '/images/placeholder-salsa.jpg',
-      sku: product.sku,
-      heatLevel: product.heatLevel,
-      maxQuantity: product.inventory,
-    })
-    openCart()
-  }
 
   const handleWishlistToggle = () => {
     if (!session) {
@@ -113,7 +97,6 @@ export function ProductCard({ product }: ProductCardProps) {
   }
 
   const handleQuickAddToCart = () => {
-    handleAddToCart()
     setQuickViewOpen(false)
   }
 
@@ -227,18 +210,10 @@ export function ProductCard({ product }: ProductCardProps) {
                     <span className="sr-only">{inWishlist ? "Remove from wishlist" : "Add to wishlist"}</span>
                   </Button>
                   {!isOutOfStock && (
-                    <Button
-                      size="sm"
-                      className="h-9 w-9 rounded-full p-0 bg-salsa-500 hover:bg-salsa-600 shadow-lg"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        handleAddToCart()
-                      }}
-                    >
-                      <ShoppingCart className="h-4 w-4" />
-                      <span className="sr-only">Add to cart</span>
-                    </Button>
+                    <AddToCartButton
+                      product={product}
+                      variant="icon"
+                    />
                   )}
                 </div>
               </div>
@@ -272,13 +247,7 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
             
             {!isOutOfStock ? (
-              <Button
-                size="sm"
-                onClick={handleAddToCart}
-                className="bg-salsa-500 hover:bg-salsa-600"
-              >
-                Add to Cart
-              </Button>
+              <AddToCartButton product={product} />
             ) : (
               <Button size="sm" disabled>
                 Out of Stock
@@ -347,13 +316,13 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
 
             {!isOutOfStock ? (
-              <Button
+              <AddToCartButton 
+                product={product} 
                 size="lg"
-                className="bg-salsa-500 hover:bg-salsa-600"
-                onClick={handleQuickAddToCart}
+                onAddToCart={handleQuickAddToCart}
               >
                 Quick add to cart
-              </Button>
+              </AddToCartButton>
             ) : (
               <Button size="lg" disabled>
                 Unavailable
