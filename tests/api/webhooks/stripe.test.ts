@@ -890,6 +890,15 @@ describe('POST /api/webhooks/stripe', () => {
   it('should handle duplicate webhook delivery (idempotency)', async () => {
     const { default: prisma } = await import('@/lib/prisma')
 
+    const mockOrder = {
+      id: 'order-123',
+      orderNumber: 'JMS-20260211-1234',
+      total: 100,
+      paymentStatus: 'PAID',
+      status: 'CONFIRMED',
+      items: [],
+    }
+
     const chargeRefundedEvent: Stripe.Event = {
       id: 'evt_duplicate',
       object: 'event',
@@ -903,6 +912,15 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
+          refunds: {
+            data: [
+              {
+                id: 're_dup123',
+                object: 'refund',
+                amount: 10000,
+              } as Stripe.Refund,
+            ],
+          },
         } as Stripe.Charge,
       },
       api_version: '2023-10-16',
@@ -912,21 +930,66 @@ describe('POST /api/webhooks/stripe', () => {
       request: null,
     }
 
+    // Mock first transaction - no existing audit log
+    const mockTransaction1 = vi.fn(async (callback) => {
+      const tx = {
+        auditLog: {
+          findFirst: vi.fn().mockResolvedValue(null), // First delivery - no existing audit
+          create: vi.fn(),
+        },
+        order: {
+          update: vi.fn(),
+        },
+        product: {
+          update: vi.fn(),
+        },
+      }
+      return await callback(tx)
+    })
+
+    // Mock second transaction - existing audit log found
+    const mockTransaction2 = vi.fn(async (callback) => {
+      const tx = {
+        auditLog: {
+          findFirst: vi.fn().mockResolvedValue({
+            id: 'audit-123',
+            action: 'webhook.refund',
+            entityId: 'order-123',
+            changes: {
+              refundId: 're_dup123',
+            },
+          }), // Second delivery - audit log exists
+          create: vi.fn(),
+        },
+        order: {
+          update: vi.fn(),
+        },
+        product: {
+          update: vi.fn(),
+        },
+      }
+      return await callback(tx)
+    })
+
     mockHeaders('valid_signature')
     mockWebhooksConstructEvent.mockReturnValue(chargeRefundedEvent)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
     // First webhook delivery
+    vi.mocked(prisma.$transaction).mockImplementation(mockTransaction1 as any)
     const request1 = createRequest(JSON.stringify(chargeRefundedEvent))
     const response1 = await POST(request1)
     expect(response1.status).toBe(200)
 
     // Duplicate webhook delivery
+    vi.mocked(prisma.$transaction).mockImplementation(mockTransaction2 as any)
     const request2 = createRequest(JSON.stringify(chargeRefundedEvent))
     const response2 = await POST(request2)
     expect(response2.status).toBe(200)
 
-    // Should be called twice (Prisma will handle duplicate updates)
-    expect(prisma.order.update).toHaveBeenCalledTimes(2)
+    // Both transactions should be called
+    expect(mockTransaction1).toHaveBeenCalledTimes(1)
+    expect(mockTransaction2).toHaveBeenCalledTimes(1)
   })
 
   it('should handle invalid order ID in metadata gracefully', async () => {
@@ -1027,7 +1090,14 @@ describe('POST /api/webhooks/stripe', () => {
     const { default: prisma } = await import('@/lib/prisma')
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    vi.mocked(prisma.order.update).mockRejectedValue(new Error('Database connection lost'))
+    const mockOrder = {
+      id: 'order-123',
+      orderNumber: 'JMS-20260211-1234',
+      total: 100,
+      paymentStatus: 'PAID',
+      status: 'CONFIRMED',
+      items: [],
+    }
 
     const chargeRefundedEvent: Stripe.Event = {
       id: 'evt_error',
@@ -1042,6 +1112,15 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
+          refunds: {
+            data: [
+              {
+                id: 're_error123',
+                object: 'refund',
+                amount: 10000,
+              } as Stripe.Refund,
+            ],
+          },
         } as Stripe.Charge,
       },
       api_version: '2023-10-16',
@@ -1050,6 +1129,10 @@ describe('POST /api/webhooks/stripe', () => {
       pending_webhooks: 0,
       request: null,
     }
+
+    // Mock transaction that throws an error
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.$transaction).mockRejectedValue(new Error('Database connection lost'))
 
     mockHeaders('valid_signature')
     mockWebhooksConstructEvent.mockReturnValue(chargeRefundedEvent)

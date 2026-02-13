@@ -101,9 +101,12 @@ export async function POST(
 
     // Create refund in Stripe
     // Fix potential floating-point rounding errors by normalizing to 2 decimal places first
+    // Round to 2 decimal places before converting to cents to avoid floating-point precision errors
+    const amountInCents = Math.round(Math.round(amount * 100));
+    
     const refund = await stripe.refunds.create({
       charge: chargeId,
-      amount: Math.round(parseFloat(amount.toFixed(2)) * 100), // Convert to cents
+      amount: amountInCents, // Amount in cents
       metadata: {
         orderId: order.id,
         orderNumber: order.orderNumber,
@@ -112,7 +115,7 @@ export async function POST(
     },
     {
       // Use idempotency key to prevent duplicate refunds if request is retried
-      idempotencyKey: `refund-${orderId}-${Date.now()}`,
+      idempotencyKey: `refund-${order.id}-${Date.now()}`,
     });
 
     // Log audit
