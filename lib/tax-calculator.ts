@@ -4,6 +4,7 @@
  */
 
 import { getStripe } from './stripe'
+import { prisma } from './prisma'
 
 export interface TaxCalculationInput {
   /** Order line items */
@@ -43,6 +44,44 @@ export interface TaxCalculationResult {
 }
 
 /**
+ * Check if a customer is tax exempt based on their wholesale account
+ * 
+ * Tax exemptions typically apply to:
+ * - Wholesale accounts with valid resale certificates
+ * - Non-profit organizations with valid tax-exempt status
+ */
+async function checkTaxExemption(customerEmail?: string): Promise<boolean> {
+  if (!customerEmail) {
+    return false
+  }
+  
+  try {
+    // Look up customer by email
+    const user = await prisma.user.findUnique({
+      where: { email: customerEmail },
+      include: {
+        wholesaleAccount: true,
+      },
+    })
+    
+    // Check if user has an approved wholesale account with resale number
+    if (
+      user?.wholesaleAccount &&
+      user.wholesaleAccount.status === 'APPROVED' &&
+      user.wholesaleAccount.resaleNumber
+    ) {
+      return true
+    }
+    
+    return false
+  } catch (error) {
+    console.error('[Tax Calculator] Error checking tax exemption:', error)
+    // In case of error, default to not exempt
+    return false
+  }
+}
+
+/**
  * Calculate tax using Stripe Tax API
  *
  * Stripe Tax automatically:
@@ -55,6 +94,20 @@ export async function calculateTax(
   input: TaxCalculationInput
 ): Promise<TaxCalculationResult> {
   try {
+    // Check for tax exemption first
+    const taxExempt = await checkTaxExemption(input.customerEmail)
+    
+    if (taxExempt) {
+      // Return zero tax for exempt customers
+      return {
+        taxAmount: 0,
+        taxAmountDecimal: 0,
+        taxRate: 0,
+        taxBreakdown: [],
+        taxExempt: true,
+      }
+    }
+    
     const stripe = getStripe()
 
     // Create a tax calculation using Stripe Tax API
@@ -117,7 +170,7 @@ export async function calculateTax(
       taxAmountDecimal: taxAmount / 100,
       taxRate: parseFloat(taxRate.toFixed(2)),
       taxBreakdown,
-      taxExempt: false, // TODO: Implement tax exemption lookup if needed
+      taxExempt: false,
     }
   } catch (error) {
     console.error('[Tax Calculator] Error calculating tax:', error)

@@ -172,6 +172,45 @@ Provide specific adjustment recommendations for each image to achieve consistenc
 - Lightroom Presets
 - ImageMagick (command-line)
 
+### Security Best Practices for API-Based Tools
+
+**⚠️ Important Security Considerations:**
+
+When using API-based services like Remove.bg or other third-party tools:
+
+1. **API Key Management:**
+   - Never commit API keys to source code or version control
+   - Store keys in environment variables (`.env.local` file)
+   - Use different keys for development and production
+   - Rotate keys periodically
+
+2. **Cost Management:**
+   - Be aware that many services are paid (Remove.bg charges per image)
+   - Set up usage alerts and billing limits
+   - Test with small batches before processing hundreds of images
+   - Consider rate limiting for batch operations
+
+3. **Data Privacy:**
+   - Review the service's data retention policy
+   - Understand where your images are processed and stored
+   - Use secure HTTPS connections
+   - Consider self-hosted alternatives for sensitive images
+
+4. **Example Environment Variable Setup:**
+   ```bash
+   # .env.local (NEVER commit this file)
+   REMOVEBG_API_KEY=your_api_key_here
+   OPENAI_API_KEY=your_api_key_here
+   ```
+
+   Usage in scripts:
+   ```javascript
+   const apiKey = process.env.REMOVEBG_API_KEY
+   if (!apiKey) {
+     throw new Error('REMOVEBG_API_KEY not configured')
+   }
+   ```
+
 ## Batch Processing Workflow
 
 ### Directory Structure for Processing
@@ -199,7 +238,13 @@ photography/
 mkdir -p photography/raw/session-$(date +%Y-%m-%d)
 
 # Import photos from camera/card
-cp /path/to/camera/* photography/raw/session-$(date +%Y-%m-%d)/
+# macOS example (using rsync for safer handling of spaces/special characters)
+rsync -av /Volumes/SD_CARD/DCIM/ photography/raw/session-$(date +%Y-%m-%d)/
+# Linux example
+# rsync -av /media/$USER/SD_CARD/ photography/raw/session-$(date +%Y-%m-%d)/
+# Or use cp with quoted paths
+# CAMERA_PATH="/Volumes/SD Card/DCIM"
+# cp -R "$CAMERA_PATH"/* photography/raw/session-$(date +%Y-%m-%d)/
 
 # Sort and rename
 cd photography/raw/session-$(date +%Y-%m-%d)
@@ -448,12 +493,23 @@ interface ConversionStats {
 }
 
 async function optimizeToWebP(inputDir: string, quality: number = 85) {
+  // Validate quality parameter
+  if (quality < 0 || quality > 100) {
+    throw new Error('Quality must be between 0 and 100')
+  }
+
   const stats: ConversionStats[] = []
 
-  const files = await fs.readdir(inputDir)
-  const imageFiles = files.filter(f => /\.(jpg|jpeg|png)$/i.test(f))
+  try {
+    const files = await fs.readdir(inputDir)
+    const imageFiles = files.filter(f => /\.(jpg|jpeg|png)$/i.test(f))
 
-  console.log(`🔄 Converting ${imageFiles.length} images to WebP...\n`)
+    if (imageFiles.length === 0) {
+      console.warn(`No image files found in ${inputDir}`)
+      return
+    }
+
+    console.log(`🔄 Converting ${imageFiles.length} images to WebP...\n`)
 
   for (const file of imageFiles) {
     const inputPath = path.join(inputDir, file)
@@ -498,6 +554,10 @@ async function optimizeToWebP(inputDir: string, quality: number = 85) {
   console.log(`Total original size: ${(totalOriginal / 1024).toFixed(1)}KB`)
   console.log(`Total WebP size: ${(totalWebP / 1024).toFixed(1)}KB`)
   console.log(`Total savings: ${totalSavings}%`)
+  } catch (error) {
+    console.error(`Failed to process directory: ${inputDir}`, error)
+    throw error
+  }
 }
 
 // Run
@@ -614,6 +674,15 @@ cwebp input.jpg -q 95 -o output-95.webp
 # Check file sizes
 ls -lh output-*.webp
 ```
+
+**How to Choose Quality Level:**
+
+1. Start at q85 (recommended baseline)
+2. If file size > target: try q80
+3. If quality loss visible: try q90
+4. Check label text readability at each level
+5. Test on actual devices (mobile/desktop)
+6. Verify color accuracy for product representation
 
 ## Quality Control Checklist
 
@@ -805,7 +874,6 @@ Cloud:
 
 ## Related Documentation
 
-- [Image Management](./IMAGE_MANAGEMENT.md) - Overall image management system
 - [Image Audit Script](../scripts/audit-product-images.ts) - Verify image integrity
 
 ## Tools Reference
