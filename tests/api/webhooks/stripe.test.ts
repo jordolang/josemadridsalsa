@@ -81,7 +81,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -124,7 +124,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -166,7 +166,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'custom-order-id-456',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -202,7 +202,7 @@ describe('POST /api/webhooks/stripe', () => {
           amount: 10000,
           amount_refunded: 10000,
           metadata: {}, // No orderId
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -246,7 +246,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -329,7 +329,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -389,7 +389,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.PaymentIntent,
+        } as unknown as Stripe.PaymentIntent,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -429,7 +429,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-456',
           },
-        } as Stripe.PaymentIntent,
+        } as unknown as Stripe.PaymentIntent,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -467,7 +467,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-789',
           },
-        } as Stripe.PaymentIntent,
+        } as unknown as Stripe.PaymentIntent,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -512,7 +512,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -555,7 +555,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'invalid-order-id',
           },
-        } as Stripe.PaymentIntent,
+        } as unknown as Stripe.PaymentIntent,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -651,7 +651,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
