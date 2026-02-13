@@ -3,13 +3,13 @@
   "spec": "026-product-catalog-detail-pages",
   "state": "building",
   "subtasks": {
-    "completed": 13,
+    "completed": 17,
     "total": 22,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Variant Selector Component",
+    "current": "Enhance Product Listing Page",
     "id": null,
     "total": 3
   },
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 14,
+    "number": 18,
     "started_at": "2026-02-13T14:25:59.044583"
   },
-  "last_update": "2026-02-13T15:32:04.917832"
+  "last_update": "2026-02-13T15:45:00.624790"
 }
