@@ -354,7 +354,7 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
         reason: 'Manual restock',
       });
 
-      // Verify alerts were resolved
+      // Verify alerts were resolved with all required fields
       expect(prisma.inventoryAlert.updateMany).toHaveBeenCalledWith({
         where: {
           productId: 'prod-1',
@@ -364,9 +364,192 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
         },
         data: expect.objectContaining({
           status: 'RESOLVED',
+          resolvedAt: expect.any(Date),
           resolutionNotes: 'Stock level returned to normal',
         }),
       });
+    });
+
+    it('should verify timestamp and fields on alert auto-resolution', async () => {
+      const prisma = (await import('@/lib/prisma')).default;
+
+      // Mock product with low stock
+      vi.mocked(prisma.product.findUnique).mockResolvedValue({
+        id: 'prod-1',
+        name: 'Test Salsa',
+        sku: 'TST-001',
+        inventory: 2,
+        lowStockThreshold: 5,
+      } as any);
+
+      // Mock existing ACTIVE and ACKNOWLEDGED alerts (both should be resolved)
+      vi.mocked(prisma.inventoryAlert.findMany).mockResolvedValue([
+        {
+          id: 'alert-1',
+          productId: 'prod-1',
+          type: 'LOW_STOCK',
+          status: 'ACTIVE',
+          stockLevel: 2,
+          threshold: 5,
+        } as any,
+        {
+          id: 'alert-2',
+          productId: 'prod-1',
+          type: 'LOW_STOCK',
+          status: 'ACKNOWLEDGED',
+          stockLevel: 2,
+          threshold: 5,
+        } as any,
+      ]);
+
+      // Mock transaction operations
+      vi.mocked(prisma.$transaction).mockResolvedValue([
+        { id: 'prod-1', inventory: 20 }, // Updated product
+        { id: 'trans-1', quantity: 18, newStock: 20 }, // Transaction record
+      ] as any);
+
+      const beforeRestock = new Date();
+
+      // Increase stock above threshold (from 2 to 20)
+      await adjustInventory({
+        productId: 'prod-1',
+        quantity: 18,
+        type: InventoryTransactionType.RESTOCK,
+        reason: 'Stock replenished',
+      });
+
+      const afterRestock = new Date();
+
+      // Verify updateMany was called
+      expect(prisma.inventoryAlert.updateMany).toHaveBeenCalled();
+
+      // Get the actual call arguments
+      const updateCall = vi.mocked(prisma.inventoryAlert.updateMany).mock.calls[0][0];
+
+      // Verify correct where clause (resolves both ACTIVE and ACKNOWLEDGED)
+      expect(updateCall.where).toEqual({
+        productId: 'prod-1',
+        status: {
+          in: ['ACTIVE', 'ACKNOWLEDGED'],
+        },
+      });
+
+      // Verify data contains all required fields
+      expect(updateCall.data).toMatchObject({
+        status: 'RESOLVED',
+        resolutionNotes: 'Stock level returned to normal',
+      });
+
+      // Verify resolvedAt is a Date object and within expected time range
+      expect(updateCall.data.resolvedAt).toBeInstanceOf(Date);
+      const resolvedAt = updateCall.data.resolvedAt as Date;
+      expect(resolvedAt.getTime()).toBeGreaterThanOrEqual(beforeRestock.getTime());
+      expect(resolvedAt.getTime()).toBeLessThanOrEqual(afterRestock.getTime());
+
+      // Note: Auto-resolution does NOT set resolvedBy (no user context in automated flow)
+      // Only manual resolution via resolveAlert() sets resolvedBy field
+      expect(updateCall.data.resolvedBy).toBeUndefined();
+    });
+
+    it('should auto-resolve OUT_OF_STOCK alerts when restocked', async () => {
+      const prisma = (await import('@/lib/prisma')).default;
+
+      // Mock product with zero stock
+      vi.mocked(prisma.product.findUnique).mockResolvedValue({
+        id: 'prod-1',
+        name: 'Test Salsa',
+        sku: 'TST-001',
+        inventory: 0,
+        lowStockThreshold: 5,
+      } as any);
+
+      // Mock existing OUT_OF_STOCK alert
+      vi.mocked(prisma.inventoryAlert.findMany).mockResolvedValue([
+        {
+          id: 'alert-1',
+          productId: 'prod-1',
+          type: 'OUT_OF_STOCK',
+          status: 'ACTIVE',
+          stockLevel: 0,
+          threshold: 5,
+        } as any,
+      ]);
+
+      // Mock transaction operations
+      vi.mocked(prisma.$transaction).mockResolvedValue([
+        { id: 'prod-1', inventory: 100 }, // Restocked to 100
+        { id: 'trans-1', quantity: 100, newStock: 100 }, // Transaction record
+      ] as any);
+
+      // Restock from 0 to 100
+      await adjustInventory({
+        productId: 'prod-1',
+        quantity: 100,
+        type: InventoryTransactionType.RESTOCK,
+        reason: 'Emergency restock',
+      });
+
+      // Verify OUT_OF_STOCK alert was resolved
+      expect(prisma.inventoryAlert.updateMany).toHaveBeenCalledWith({
+        where: {
+          productId: 'prod-1',
+          status: {
+            in: ['ACTIVE', 'ACKNOWLEDGED'],
+          },
+        },
+        data: expect.objectContaining({
+          status: 'RESOLVED',
+          resolvedAt: expect.any(Date),
+          resolutionNotes: 'Stock level returned to normal',
+        }),
+      });
+    });
+
+    it('should NOT auto-resolve alerts if stock increases but stays below threshold', async () => {
+      const prisma = (await import('@/lib/prisma')).default;
+
+      // Mock product with very low stock
+      vi.mocked(prisma.product.findUnique).mockResolvedValue({
+        id: 'prod-1',
+        name: 'Test Salsa',
+        sku: 'TST-001',
+        inventory: 1,
+        lowStockThreshold: 10,
+      } as any);
+
+      // Mock existing alert
+      vi.mocked(prisma.inventoryAlert.findMany).mockResolvedValue([
+        {
+          id: 'alert-1',
+          productId: 'prod-1',
+          type: 'LOW_STOCK',
+          status: 'ACTIVE',
+          stockLevel: 1,
+          threshold: 10,
+        } as any,
+      ]);
+
+      // Mock transaction operations (increase from 1 to 5, still below threshold of 10)
+      vi.mocked(prisma.$transaction).mockResolvedValue([
+        { id: 'prod-1', inventory: 5 },
+        { id: 'trans-1', quantity: 4, newStock: 5 },
+      ] as any);
+
+      // Increase stock but still below threshold
+      await adjustInventory({
+        productId: 'prod-1',
+        quantity: 4,
+        type: InventoryTransactionType.RESTOCK,
+        reason: 'Partial restock',
+      });
+
+      // Verify alerts were NOT resolved (stock still low)
+      // updateMany should not be called for resolution
+      const updateManyCalls = vi.mocked(prisma.inventoryAlert.updateMany).mock.calls;
+      const resolutionCalls = updateManyCalls.filter(
+        call => call[0].data.status === 'RESOLVED'
+      );
+      expect(resolutionCalls).toHaveLength(0);
     });
   });
 
