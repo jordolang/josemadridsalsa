@@ -3,6 +3,7 @@ import { getProductBySlug } from '@/lib/db/products'
 import { formatPrice, getHeatLevelColor, getHeatLevelText } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { ImageGallery } from '@/components/products/ImageGallery'
+import { VariantSelector } from '@/components/products/VariantSelector'
 import { Metadata } from 'next'
 
 type Props = {
@@ -189,37 +190,16 @@ export default async function ProductDetailPage({ params }: Props) {
               )}
             </div>
 
-            {/* Variants (if available) */}
+            {/* Variant Selector */}
             {product.variants && product.variants.length > 0 && (
               <div className="bg-card rounded-lg p-4 surface-shadow">
                 <h3 className="text-lg font-semibold text-foreground mb-3">
-                  Available Variants
+                  Select Options
                 </h3>
-                <div className="space-y-2">
-                  {product.variants.map((variant) => (
-                    <div
-                      key={variant.id}
-                      className="flex justify-between items-center p-2 border border-border rounded"
-                    >
-                      <div>
-                        <span className="font-medium">{variant.name}</span>
-                        <span className="text-sm text-muted-foreground ml-2">
-                          ({variant.type})
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {variant.price && (
-                          <span className="font-medium">{formatPrice(variant.price)}</span>
-                        )}
-                        {!variant.inStock && (
-                          <Badge variant="destructive" className="text-xs">
-                            Out of Stock
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <VariantSelector
+                  variants={product.variants}
+                  basePrice={product.price}
+                />
               </div>
             )}
 
