@@ -55,6 +55,11 @@ export async function updateStock(
 
 /**
  * Adjust inventory for a product and create transaction record
+ * Updates stock levels and creates an audit trail transaction in a single database transaction
+ *
+ * @param adjustment - Inventory adjustment parameters including product ID, quantity, and metadata
+ * @returns Updated product, transaction record, and stock levels
+ * @throws Error if product not found or insufficient inventory
  */
 export async function adjustInventory(adjustment: InventoryAdjustment) {
   const { productId, quantity, type, reason, notes, orderId, userId } = adjustment;
@@ -119,6 +124,10 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
 
 /**
  * Adjust inventory for multiple products (bulk operation)
+ * Processes each adjustment independently and returns results for all operations
+ *
+ * @param adjustments - Array of inventory adjustments to process
+ * @returns Array of results with success status and details for each adjustment
  */
 export async function bulkAdjustInventory(adjustments: InventoryAdjustment[]) {
   const results = [];
@@ -141,6 +150,12 @@ export async function bulkAdjustInventory(adjustments: InventoryAdjustment[]) {
 
 /**
  * Check inventory levels and create/resolve alerts
+ * Automatically creates low stock or out of stock alerts when thresholds are crossed
+ * Resolves alerts when stock returns to normal levels
+ *
+ * @param productId - Product ID to check
+ * @param currentStock - Current stock level after update
+ * @param lowStockThreshold - Low stock threshold for the product
  */
 async function checkAndUpdateAlerts(
   productId: string,
@@ -284,6 +299,13 @@ export async function checkAndCreateAlert(
 
 /**
  * Create an inventory alert
+ * Creates a new alert record in the database with ACTIVE status
+ *
+ * @param productId - Product ID to create alert for
+ * @param type - Type of alert (LOW_STOCK or OUT_OF_STOCK)
+ * @param stockLevel - Current stock level
+ * @param threshold - Low stock threshold value
+ * @returns Created alert with product details
  */
 async function createAlert(
   productId: string,
@@ -314,6 +336,16 @@ async function createAlert(
 
 /**
  * Send low stock email notification
+ * Sends formatted HTML email with stock level details and urgency indicators
+ *
+ * @param to - Recipient email address
+ * @param productName - Product name
+ * @param productSku - Product SKU
+ * @param productId - Product ID for deep link
+ * @param stockLevel - Current stock level
+ * @param alertType - Type of alert (LOW_STOCK or OUT_OF_STOCK)
+ * @param threshold - Optional low stock threshold value
+ * @returns Email send result or skip status
  */
 export async function sendLowStockEmail(
   to: string,
@@ -417,6 +449,9 @@ export async function sendLowStockEmail(
 
 /**
  * Send low stock notification email
+ * Sends email to all configured admin addresses and updates alert with notification info
+ *
+ * @param alert - Alert object with product details and stock information
  */
 async function notifyLowStock(alert: any) {
   try {
@@ -459,6 +494,11 @@ async function notifyLowStock(alert: any) {
 
 /**
  * Get inventory status for a product
+ * Retrieves current stock levels and calculates low stock and out of stock flags
+ *
+ * @param productId - Product ID to check
+ * @returns Inventory status with stock levels and flags
+ * @throws Error if product not found
  */
 export async function getInventoryStatus(productId: string): Promise<InventoryCheckResult> {
   const product = await prisma.product.findUnique({
@@ -485,6 +525,9 @@ export async function getInventoryStatus(productId: string): Promise<InventoryCh
 
 /**
  * Get all low stock products
+ * Retrieves all active products with stock at or below their low stock threshold
+ *
+ * @returns Array of products with stock status flags and active alerts
  */
 export async function getLowStockProducts() {
   const products = await prisma.product.findMany({
@@ -522,6 +565,11 @@ export async function getLowStockProducts() {
 
 /**
  * Get inventory transaction history for a product
+ * Retrieves the most recent inventory transactions ordered by creation date
+ *
+ * @param productId - Product ID to get history for
+ * @param limit - Maximum number of transactions to retrieve (default: 50)
+ * @returns Array of inventory transactions
  */
 export async function getInventoryHistory(productId: string, limit = 50) {
   return await prisma.inventoryTransaction.findMany({
@@ -533,6 +581,11 @@ export async function getInventoryHistory(productId: string, limit = 50) {
 
 /**
  * Acknowledge an inventory alert
+ * Changes alert status to ACKNOWLEDGED to indicate it has been reviewed
+ *
+ * @param alertId - Alert ID to acknowledge
+ * @param userId - Optional user ID performing the acknowledgment
+ * @returns Updated alert record
  */
 export async function acknowledgeAlert(alertId: string, userId?: string) {
   return await prisma.inventoryAlert.update({
@@ -546,6 +599,12 @@ export async function acknowledgeAlert(alertId: string, userId?: string) {
 
 /**
  * Resolve an inventory alert
+ * Marks alert as RESOLVED with timestamp and optional resolution notes
+ *
+ * @param alertId - Alert ID to resolve
+ * @param userId - Optional user ID performing the resolution
+ * @param notes - Optional resolution notes explaining how the issue was addressed
+ * @returns Updated alert record
  */
 export async function resolveAlert(alertId: string, userId?: string, notes?: string) {
   return await prisma.inventoryAlert.update({
@@ -561,6 +620,12 @@ export async function resolveAlert(alertId: string, userId?: string, notes?: str
 
 /**
  * Resolve multiple inventory alerts (bulk operation)
+ * Processes each alert independently and returns results for all operations
+ *
+ * @param alertIds - Array of alert IDs to resolve
+ * @param userId - Optional user ID performing the resolution
+ * @param notes - Optional resolution notes applied to all alerts
+ * @returns Array of results with success status and details for each alert
  */
 export async function resolveAlerts(
   alertIds: string[],
@@ -587,6 +652,12 @@ export async function resolveAlerts(
 
 /**
  * Dismiss an inventory alert
+ * Marks alert as DISMISSED when it should be ignored without restocking
+ *
+ * @param alertId - Alert ID to dismiss
+ * @param userId - Optional user ID performing the dismissal
+ * @param notes - Optional notes explaining why the alert was dismissed
+ * @returns Updated alert record
  */
 export async function dismissAlert(alertId: string, userId?: string, notes?: string) {
   return await prisma.inventoryAlert.update({
