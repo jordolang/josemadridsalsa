@@ -56,6 +56,17 @@ export async function getProducts(filters: ProductFilters = {}) {
           mode: 'insensitive',
         },
       },
+      {
+        searchKeywords: {
+          hasSome: [search.toLowerCase()],
+        },
+      },
+      {
+        sku: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      },
     ]
   }
 
@@ -241,6 +252,17 @@ export async function getProductsCount(filters: Omit<ProductFilters, 'take' | 's
       },
       {
         description: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      },
+      {
+        searchKeywords: {
+          hasSome: [search.toLowerCase()],
+        },
+      },
+      {
+        sku: {
           contains: search,
           mode: 'insensitive',
         },
