@@ -104,7 +104,8 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     expect(response.status).toBe(200)
     expect(data.success).toBe(true)
     expect(data.refund.amount).toBe(50)
-    expect(mockStripeRefundsCreate).toHaveBeenCalledWith({
+    expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
+      {
       charge: 'ch_test123',
       amount: 5000, // $50 in cents
       metadata: {
@@ -112,7 +113,11 @@ describe('POST /api/admin/orders/[id]/refund', () => {
         orderNumber: 'JMS-20260211-1234',
         refundedBy: 'user-admin-123',
       },
-    })
+      },
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^refund-order-123-\d+$/),
+      })
+    )
     expect(logAuditWithRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'user-admin-123',
@@ -239,6 +244,67 @@ describe('POST /api/admin/orders/[id]/refund', () => {
 
     expect(response.status).toBe(400)
     expect(data.error).toContain('amount is required')
+  })
+
+  it('should handle floating-point precision for refund amounts (e.g., 10.005)', async () => {
+    const { requirePermission } = await import('@/lib/rbac')
+    const { default: prisma } = await import('@/lib/prisma')
+    const { logAuditWithRequest } = await import('@/lib/audit')
+
+    vi.mocked(requirePermission).mockResolvedValue(mockUser)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeRefundsCreate.mockResolvedValue(mockRefund)
+
+    const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
+      method: 'POST',
+      body: JSON.stringify({ amount: 10.005 }), // Edge case that could cause rounding errors
+    })
+
+    const response = await POST(request, { params: Promise.resolve({ id: 'order-123' }) })
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.success).toBe(true)
+    
+    // Should round to 1000 cents ($10.00), not 1001 cents
+    expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: 1000,
+      }),
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^refund-order-123-\d+$/),
+      })
+    )
+  })
+
+  it('should use idempotency key to prevent duplicate refunds', async () => {
+    const { requirePermission } = await import('@/lib/rbac')
+    const { default: prisma } = await import('@/lib/prisma')
+    const { logAuditWithRequest } = await import('@/lib/audit')
+
+    vi.mocked(requirePermission).mockResolvedValue(mockUser)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeRefundsCreate.mockResolvedValue(mockRefund)
+
+    const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
+      method: 'POST',
+      body: JSON.stringify({ amount: 25.50 }),
+    })
+
+    const response = await POST(request, { params: Promise.resolve({ id: 'order-123' }) })
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    
+    // Verify idempotency key is passed to Stripe
+    expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^refund-order-123-\d+$/),
+      })
+    )
   })
 
   // ========================================
@@ -596,15 +662,20 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     await POST(request, { params: Promise.resolve({ id: 'order-123' }) })
 
     expect(mockStripePaymentIntentsRetrieve).toHaveBeenCalledWith('pi_test123')
-    expect(mockStripeRefundsCreate).toHaveBeenCalledWith({
-      charge: 'ch_test123',
-      amount: 5000,
-      metadata: expect.objectContaining({
-        orderId: 'order-123',
-        orderNumber: 'JMS-20260211-1234',
-        refundedBy: 'user-admin-123',
-      }),
-    })
+    expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
+      {
+        charge: 'ch_test123',
+        amount: 5000,
+        metadata: expect.objectContaining({
+          orderId: 'order-123',
+          orderNumber: 'JMS-20260211-1234',
+          refundedBy: 'user-admin-123',
+        }),
+      },
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^refund-order-123-\d+$/),
+      })
+    )
   })
 
   it('should convert refund amount to cents correctly', async () => {
@@ -626,7 +697,8 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         amount: 2550, // $25.50 in cents
-      })
+      }),
+      expect.any(Object)
     )
   })
 
@@ -646,7 +718,8 @@ describe('POST /api/admin/orders/[id]/refund', () => {
 
     await POST(request, { params: Promise.resolve({ id: 'order-123' }) })
 
-    expect(mockStripeRefundsCreate).toHaveBeenCalledWith({
+    expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
+      {
       charge: 'ch_test123',
       amount: 5000,
       metadata: {
@@ -654,7 +727,11 @@ describe('POST /api/admin/orders/[id]/refund', () => {
         orderNumber: 'JMS-20260211-1234',
         refundedBy: 'user-admin-123',
       },
-    })
+      },
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^refund-order-123-\d+$/),
+      })
+    )
   })
 
   // ========================================
@@ -751,5 +828,111 @@ describe('POST /api/admin/orders/[id]/refund', () => {
       }),
       request
     )
+  })
+
+  // ========================================
+  // 7. Error Handling Tests
+  // ========================================
+
+  it('should handle StripeInvalidRequestError', async () => {
+    const { requirePermission } = await import('@/lib/rbac')
+    const { default: prisma } = await import('@/lib/prisma')
+
+    vi.mocked(requirePermission).mockResolvedValue(mockUser)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    
+    const stripeError = new Error('Invalid charge')
+    ;(stripeError as any).type = 'StripeInvalidRequestError'
+    mockStripeRefundsCreate.mockRejectedValue(stripeError)
+
+    const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
+      method: 'POST',
+      body: JSON.stringify({ amount: 50 }),
+    })
+
+    const response = await POST(request, { params: Promise.resolve({ id: 'order-123' }) })
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toContain('Stripe error: Invalid charge')
+  })
+
+  it('should handle StripeConnectionError', async () => {
+    const { requirePermission } = await import('@/lib/rbac')
+    const { default: prisma } = await import('@/lib/prisma')
+
+    vi.mocked(requirePermission).mockResolvedValue(mockUser)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    
+    const stripeError = new Error('Network error')
+    ;(stripeError as any).type = 'StripeConnectionError'
+    mockStripeRefundsCreate.mockRejectedValue(stripeError)
+
+    const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
+      method: 'POST',
+      body: JSON.stringify({ amount: 50 }),
+    })
+
+    const response = await POST(request, { params: Promise.resolve({ id: 'order-123' }) })
+    const data = await response.json()
+
+    expect(response.status).toBe(503)
+    expect(data.error).toContain('Unable to connect to payment processor')
+  })
+
+  it('should handle StripeRateLimitError', async () => {
+    const { requirePermission } = await import('@/lib/rbac')
+    const { default: prisma } = await import('@/lib/prisma')
+
+    vi.mocked(requirePermission).mockResolvedValue(mockUser)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    
+    const stripeError = new Error('Rate limit exceeded')
+    ;(stripeError as any).type = 'StripeRateLimitError'
+    mockStripeRefundsCreate.mockRejectedValue(stripeError)
+
+    const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
+      method: 'POST',
+      body: JSON.stringify({ amount: 50 }),
+    })
+
+    const response = await POST(request, { params: Promise.resolve({ id: 'order-123' }) })
+    const data = await response.json()
+
+    expect(response.status).toBe(429)
+    expect(data.error).toContain('Too many requests to payment processor')
+  })
+
+  it('should handle StripeAuthenticationError', async () => {
+    const { requirePermission } = await import('@/lib/rbac')
+    const { default: prisma } = await import('@/lib/prisma')
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    vi.mocked(requirePermission).mockResolvedValue(mockUser)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    
+    const stripeError = new Error('Authentication failed')
+    ;(stripeError as any).type = 'StripeAuthenticationError'
+    mockStripeRefundsCreate.mockRejectedValue(stripeError)
+
+    const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
+      method: 'POST',
+      body: JSON.stringify({ amount: 50 }),
+    })
+
+    const response = await POST(request, { params: Promise.resolve({ id: 'order-123' }) })
+    const data = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(data.error).toContain('Payment processor configuration error')
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'CRITICAL: Stripe authentication failed - check API keys'
+    )
+
+    consoleErrorSpy.mockRestore()
   })
 })
