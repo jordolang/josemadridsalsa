@@ -104,7 +104,8 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     expect(response.status).toBe(200)
     expect(data.success).toBe(true)
     expect(data.refund.amount).toBe(50)
-    expect(mockStripeRefundsCreate).toHaveBeenCalledWith({
+    expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
+      {
       charge: 'ch_test123',
       amount: 5000, // $50 in cents
       metadata: {
@@ -112,7 +113,11 @@ describe('POST /api/admin/orders/[id]/refund', () => {
         orderNumber: 'JMS-20260211-1234',
         refundedBy: 'user-admin-123',
       },
-    })
+      },
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^refund-order-123-\d+$/),
+      })
+    )
     expect(logAuditWithRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'user-admin-123',
@@ -657,15 +662,20 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     await POST(request, { params: Promise.resolve({ id: 'order-123' }) })
 
     expect(mockStripePaymentIntentsRetrieve).toHaveBeenCalledWith('pi_test123')
-    expect(mockStripeRefundsCreate).toHaveBeenCalledWith({
-      charge: 'ch_test123',
-      amount: 5000,
-      metadata: expect.objectContaining({
-        orderId: 'order-123',
-        orderNumber: 'JMS-20260211-1234',
-        refundedBy: 'user-admin-123',
-      }),
-    })
+    expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
+      {
+        charge: 'ch_test123',
+        amount: 5000,
+        metadata: expect.objectContaining({
+          orderId: 'order-123',
+          orderNumber: 'JMS-20260211-1234',
+          refundedBy: 'user-admin-123',
+        }),
+      },
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^refund-order-123-\d+$/),
+      })
+    )
   })
 
   it('should convert refund amount to cents correctly', async () => {
@@ -687,7 +697,8 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         amount: 2550, // $25.50 in cents
-      })
+      }),
+      expect.any(Object)
     )
   })
 
@@ -707,7 +718,8 @@ describe('POST /api/admin/orders/[id]/refund', () => {
 
     await POST(request, { params: Promise.resolve({ id: 'order-123' }) })
 
-    expect(mockStripeRefundsCreate).toHaveBeenCalledWith({
+    expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
+      {
       charge: 'ch_test123',
       amount: 5000,
       metadata: {
@@ -715,7 +727,11 @@ describe('POST /api/admin/orders/[id]/refund', () => {
         orderNumber: 'JMS-20260211-1234',
         refundedBy: 'user-admin-123',
       },
-    })
+      },
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^refund-order-123-\d+$/),
+      })
+    )
   })
 
   // ========================================

@@ -100,9 +100,10 @@ export async function POST(
     }
 
     // Create refund in Stripe
-    // Fix potential floating-point rounding errors by normalizing to 2 decimal places first
-    // Round to 2 decimal places before converting to cents to avoid floating-point precision errors
-    const amountInCents = Math.round(Math.round(amount * 100));
+    // Fix potential floating-point rounding errors by first truncating to cents
+    // This prevents issues like 10.005 becoming 1001 cents instead of 1000 cents.
+    // We truncate sub-cent amounts rather than rounding them.
+    const amountInCents = Math.floor(amount * 100);
     
     const refund = await stripe.refunds.create({
       charge: chargeId,
