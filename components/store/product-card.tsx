@@ -96,7 +96,7 @@ export function ProductCard({ product }: ProductCardProps) {
     }
   }
 
-  const handleQuickAddToCart = () => {
+  const handleQuickAddSuccess = () => {
     setQuickViewOpen(false)
   }
 
@@ -319,7 +319,7 @@ export function ProductCard({ product }: ProductCardProps) {
               <AddToCartButton 
                 product={product} 
                 size="lg"
-                onAddToCart={handleQuickAddToCart}
+                onAddToCart={handleQuickAddSuccess}
               >
                 Quick add to cart
               </AddToCartButton>
