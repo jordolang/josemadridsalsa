@@ -23,6 +23,10 @@ vi.mock('@/lib/prisma', () => ({
       update: vi.fn(),
       updateMany: vi.fn(),
     },
+    restockNotification: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+    },
     $transaction: vi.fn((operations) => {
       if (Array.isArray(operations)) {
         return Promise.all(operations);
@@ -46,6 +50,7 @@ import {
   checkAndCreateAlert,
   sendLowStockEmail,
   getInventoryStatus,
+  createRestockNotification,
 } from '@/lib/inventory-manager';
 
 describe('Inventory Manager - Low Stock Alert Flow', () => {
@@ -502,6 +507,321 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
 
       expect(alert).toBeDefined();
       expect(alert?.type).toBe('LOW_STOCK');
+    });
+  });
+
+  describe('Restock Notification at Critical Stock Levels', () => {
+    it('should send restock notification when stock reaches 0 (critical)', async () => {
+      const prisma = (await import('@/lib/prisma')).default;
+      const { sendEmail } = await import('@/lib/email');
+
+      // Mock database record creation
+      const mockNotification = {
+        id: 'notif-1',
+        productId: 'prod-1',
+        stockLevel: 0,
+        recommendedQty: 60,
+        sentAt: new Date(),
+        sentTo: ['admin@josemadrid.net', 'inventory@josemadrid.net'],
+        createdAt: new Date(),
+      };
+      vi.mocked(prisma.restockNotification.create).mockResolvedValue(mockNotification as any);
+
+      const result = await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        0, // Critical: out of stock
+        5,
+        2 // Average daily sales
+      );
+
+      // Verify emails were sent to both admin addresses (from INVENTORY_ALERT_EMAILS env var)
+      expect(sendEmail).toHaveBeenCalledTimes(2);
+      const emailCall = vi.mocked(sendEmail).mock.calls[0][0];
+
+      // Verify urgency is critical
+      expect(emailCall.subject).toContain('🔴');
+      expect(emailCall.subject).toContain('CRITICAL');
+      expect(emailCall.subject).toContain('RESTOCK NEEDED');
+      expect(emailCall.html).toContain('CRITICAL - Out of Stock');
+      expect(emailCall.html).toContain('Test Salsa');
+      expect(emailCall.html).toContain('TST-001');
+
+      // Verify database record was created
+      expect(prisma.restockNotification.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          productId: 'prod-1',
+          stockLevel: 0,
+          sentTo: ['admin@josemadrid.net', 'inventory@josemadrid.net'],
+        }),
+      });
+
+      // Verify result
+      expect(result.success).toBe(true);
+      expect(result.urgency).toBe('critical');
+      expect(result.restockQuantity).toBeGreaterThan(0);
+      expect(result.notification).toBeDefined();
+      expect(result.notification?.id).toBe('notif-1');
+    });
+
+    it('should calculate recommended restock quantity correctly (3x threshold)', async () => {
+      const result = await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        0,
+        10, // Threshold of 10
+        undefined // No sales data
+      );
+
+      // Without sales data, should recommend 3x threshold = 30 units
+      expect(result.restockQuantity).toBe(30);
+      expect(result.recommendedStock).toBe(30);
+    });
+
+    it('should calculate recommended restock quantity based on 30 days sales', async () => {
+      const result = await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        2, // Current stock
+        5, // Threshold of 5
+        3 // 3 units per day average
+      );
+
+      // 30 days of sales = 3 * 30 = 90 units
+      // Current stock = 2, so need to restock 88 units
+      expect(result.recommendedStock).toBe(90);
+      expect(result.restockQuantity).toBe(88);
+    });
+
+    it('should use higher value between threshold and sales calculation', async () => {
+      const result = await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        0,
+        50, // High threshold = 150 (3x)
+        2 // Low sales = 60 (30 days)
+      );
+
+      // Should use 3x threshold (150) since it's higher than 30-day sales (60)
+      expect(result.recommendedStock).toBe(150);
+      expect(result.restockQuantity).toBe(150);
+    });
+
+    it('should set urgency to HIGH when stock is critically low (<=50% threshold)', async () => {
+      const result = await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        2, // 2 units is <= 50% of threshold (5)
+        5,
+        undefined
+      );
+
+      expect(result.urgency).toBe('high');
+
+      const { sendEmail } = await import('@/lib/email');
+      const emailCall = vi.mocked(sendEmail).mock.calls[0][0];
+      expect(emailCall.subject).toContain('🟠');
+      expect(emailCall.html).toContain('HIGH - Critically Low Stock');
+    });
+
+    it('should set urgency to MEDIUM when stock is low but > 50% threshold', async () => {
+      const result = await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        4, // 4 units is > 50% of threshold (5)
+        5,
+        undefined
+      );
+
+      expect(result.urgency).toBe('medium');
+
+      const { sendEmail } = await import('@/lib/email');
+      const emailCall = vi.mocked(sendEmail).mock.calls[0][0];
+      expect(emailCall.subject).toContain('🟡');
+      expect(emailCall.html).toContain('MEDIUM - Low Stock');
+    });
+
+    it('should include days remaining when sales data is available', async () => {
+      await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        10, // Current stock
+        5,
+        2 // 2 units per day = 5 days remaining
+      );
+
+      const { sendEmail } = await import('@/lib/email');
+      const emailCall = vi.mocked(sendEmail).mock.calls[0][0];
+
+      // Should show 5 days of stock remaining
+      expect(emailCall.html).toContain('5 days');
+      expect(emailCall.html).toContain('Days of Stock Remaining');
+    });
+
+    it('should send emails to all configured admin addresses', async () => {
+      process.env.INVENTORY_ALERT_EMAILS = 'admin1@test.com,admin2@test.com,admin3@test.com';
+
+      const result = await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        0,
+        5,
+        undefined
+      );
+
+      const { sendEmail } = await import('@/lib/email');
+
+      // Should send 3 emails (one to each admin)
+      expect(sendEmail).toHaveBeenCalledTimes(3);
+      expect(result.emailsSent).toBe(3);
+
+      // Verify emails were sent to correct addresses
+      const calls = vi.mocked(sendEmail).mock.calls;
+      expect(calls[0][0].to).toBe('admin1@test.com');
+      expect(calls[1][0].to).toBe('admin2@test.com');
+      expect(calls[2][0].to).toBe('admin3@test.com');
+    });
+
+    it('should skip notification if RESEND_API_KEY is not set', async () => {
+      delete process.env.RESEND_API_KEY;
+
+      const result = await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        0,
+        5,
+        undefined
+      );
+
+      const { sendEmail } = await import('@/lib/email');
+      expect(sendEmail).not.toHaveBeenCalled();
+      expect(result).toEqual({ skipped: true });
+    });
+
+    it('should skip notification if no admin emails configured', async () => {
+      delete process.env.INVENTORY_ALERT_EMAILS;
+      process.env.RESEND_API_KEY = 'test-key';
+
+      const result = await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        0,
+        5,
+        undefined
+      );
+
+      expect(result).toEqual({
+        skipped: true,
+        reason: 'No admin emails configured'
+      });
+    });
+
+    it('should handle email send failures gracefully', async () => {
+      const { sendEmail } = await import('@/lib/email');
+      vi.mocked(sendEmail).mockRejectedValueOnce(new Error('Email service unavailable'));
+
+      const result = await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        0,
+        5,
+        undefined
+      );
+
+      expect(result).toEqual({ error: true });
+    });
+
+    it('should include product deep link in email', async () => {
+      process.env.NEXTAUTH_URL = 'http://localhost:3000';
+
+      await createRestockNotification(
+        'prod-123',
+        'Test Salsa',
+        'TST-001',
+        0,
+        5,
+        undefined
+      );
+
+      const { sendEmail } = await import('@/lib/email');
+      const emailCall = vi.mocked(sendEmail).mock.calls[0][0];
+
+      expect(emailCall.html).toContain('http://localhost:3000/admin/products/prod-123');
+      expect(emailCall.html).toContain('View Product & Restock');
+    });
+
+    it('should format restock quantity and recommendations correctly', async () => {
+      await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        5, // Current stock
+        10, // Threshold
+        3 // Daily sales
+      );
+
+      const { sendEmail } = await import('@/lib/email');
+      const emailCall = vi.mocked(sendEmail).mock.calls[0][0];
+
+      // 30 days of sales = 90 units
+      // Current stock = 5, so need 85 units
+      expect(emailCall.html).toContain('85 units');
+      expect(emailCall.html).toContain('Recommended Restock Quantity');
+      expect(emailCall.html).toContain('approximately 90 units');
+      expect(emailCall.html).toContain('30 days');
+    });
+
+    it('should create RestockNotification record in database with correct fields', async () => {
+      const prisma = (await import('@/lib/prisma')).default;
+
+      const mockNotification = {
+        id: 'notif-123',
+        productId: 'prod-1',
+        stockLevel: 2,
+        recommendedQty: 13,
+        sentAt: new Date(),
+        sentTo: ['admin@josemadrid.net', 'inventory@josemadrid.net'],
+        createdAt: new Date(),
+      };
+      vi.mocked(prisma.restockNotification.create).mockResolvedValue(mockNotification as any);
+
+      const result = await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        2, // Current stock
+        5, // Threshold
+        undefined
+      );
+
+      // Verify create was called with correct data
+      expect(prisma.restockNotification.create).toHaveBeenCalledWith({
+        data: {
+          productId: 'prod-1',
+          stockLevel: 2,
+          recommendedQty: 13, // 3x threshold (15) - current stock (2)
+          sentAt: expect.any(Date),
+          sentTo: ['admin@josemadrid.net', 'inventory@josemadrid.net'],
+        },
+      });
+
+      // Verify notification is returned in result
+      expect(result.notification).toBeDefined();
+      expect(result.notification?.productId).toBe('prod-1');
+      expect(result.notification?.stockLevel).toBe(2);
+      expect(result.notification?.recommendedQty).toBe(13);
+      expect(result.notification?.sentTo).toEqual(['admin@josemadrid.net', 'inventory@josemadrid.net']);
     });
   });
 });

@@ -845,6 +845,17 @@ export async function createRestockNotification(
       results.push(res);
     }
 
+    // Create RestockNotification record in database
+    const restockNotification = await prisma.restockNotification.create({
+      data: {
+        productId,
+        stockLevel: currentStock,
+        recommendedQty: restockQuantity,
+        sentAt: new Date(),
+        sentTo: adminEmails.map(e => e.trim()),
+      },
+    });
+
     return {
       success: true,
       urgency,
@@ -852,6 +863,7 @@ export async function createRestockNotification(
       recommendedStock: recommendedRestock,
       emailsSent: adminEmails.length,
       results,
+      notification: restockNotification,
     };
   } catch (e) {
     console.error('Failed to send restock notification', e);
