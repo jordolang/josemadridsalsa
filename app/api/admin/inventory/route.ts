@@ -216,6 +216,63 @@ export async function POST(req: NextRequest) {
 }
 
 /**
+ * PUT /api/admin/inventory
+ * Update inventory for a single product with specified transaction type
+ */
+export async function PUT(req: NextRequest) {
+  try {
+    const user = await requirePermission('products:write');
+
+    const body = await req.json();
+    const { productId, quantity, type, reason, notes } = body;
+
+    // Validate input
+    if (!productId) {
+      return fail('productId is required', 400);
+    }
+
+    if (typeof quantity !== 'number') {
+      return fail('quantity must be a number', 400);
+    }
+
+    if (!type || !Object.values(InventoryTransactionType).includes(type)) {
+      return fail(`Invalid transaction type: ${type}`, 400);
+    }
+
+    // Adjust inventory
+    const result = await adjustInventory({
+      productId,
+      quantity,
+      type,
+      reason: reason || `Manual ${type.toLowerCase()}`,
+      notes,
+      userId: user.id,
+    });
+
+    // Log audit
+    await logAudit({
+      userId: user.id,
+      action: 'inventory.adjust',
+      entityType: 'product',
+      entityId: productId,
+      changes: {
+        type,
+        quantity,
+        previousStock: result.previousStock,
+        newStock: result.newStock,
+      },
+    });
+
+    return ok({
+      message: 'Inventory updated successfully',
+      ...result,
+    });
+  } catch (error: any) {
+    return fail(error.message, error.status || 500);
+  }
+}
+
+/**
  * PATCH /api/admin/inventory
  * Quick restock - add stock to a product
  */
