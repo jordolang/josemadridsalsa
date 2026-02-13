@@ -693,6 +693,278 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
     });
   });
 
+  describe('Additional Edge Cases - Authentication, Validation, and Concurrency', () => {
+    it('should handle product not found error', async () => {
+      const prisma = (await import('@/lib/prisma')).default;
+
+      vi.mocked(prisma.product.findUnique).mockResolvedValue(null);
+
+      await expect(
+        adjustInventory({
+          productId: 'non-existent-id',
+          quantity: 10,
+          type: InventoryTransactionType.RESTOCK,
+          reason: 'Test',
+        })
+      ).rejects.toThrow('Product not found');
+    });
+
+    it('should handle missing INVENTORY_ALERT_EMAILS environment variable', async () => {
+      delete process.env.INVENTORY_ALERT_EMAILS;
+      const prisma = (await import('@/lib/prisma')).default;
+
+      vi.mocked(prisma.inventoryAlert.findFirst).mockResolvedValue(null);
+
+      const mockAlert = {
+        id: 'alert-1',
+        productId: 'prod-1',
+        type: 'LOW_STOCK',
+        status: 'ACTIVE',
+        stockLevel: 3,
+        threshold: 5,
+        product: {
+          id: 'prod-1',
+          name: 'Test Salsa',
+          sku: 'TST-001',
+          inventory: 3,
+        },
+      };
+
+      vi.mocked(prisma.inventoryAlert.create).mockResolvedValue(mockAlert as any);
+
+      // Should not throw error, just log warning
+      const alert = await checkAndCreateAlert('prod-1', 3, 5);
+      expect(alert).toBeDefined();
+      expect(alert?.type).toBe('LOW_STOCK');
+    });
+
+    it('should handle missing RESEND_API_KEY gracefully', async () => {
+      delete process.env.RESEND_API_KEY;
+      const { sendEmail } = await import('@/lib/email');
+
+      const result = await sendLowStockEmail(
+        'admin@test.com',
+        'Test Product',
+        'TST-001',
+        'prod-1',
+        2,
+        'LOW_STOCK',
+        5
+      );
+
+      // Should skip email when API key is missing
+      expect(sendEmail).not.toHaveBeenCalled();
+      expect(result).toEqual({ skipped: true });
+    });
+
+    it('should handle zero quantity edge case', async () => {
+      const prisma = (await import('@/lib/prisma')).default;
+
+      vi.mocked(prisma.product.findUnique).mockResolvedValue({
+        id: 'prod-1',
+        name: 'Test Salsa',
+        sku: 'TST-001',
+        inventory: 10,
+        lowStockThreshold: 5,
+      } as any);
+
+      vi.mocked(prisma.$transaction).mockResolvedValue([
+        { id: 'prod-1', inventory: 10 },
+        { id: 'trans-1', quantity: 0, newStock: 10 },
+      ] as any);
+
+      vi.mocked(prisma.inventoryAlert.findMany).mockResolvedValue([]);
+
+      // Zero quantity adjustment should work (no-op)
+      const result = await adjustInventory({
+        productId: 'prod-1',
+        quantity: 0,
+        type: InventoryTransactionType.ADJUSTMENT,
+        reason: 'Test zero adjustment',
+      });
+
+      expect(result.previousStock).toBe(10);
+      expect(result.newStock).toBe(10);
+    });
+
+    it('should handle very large stock quantities', async () => {
+      const prisma = (await import('@/lib/prisma')).default;
+
+      vi.mocked(prisma.product.findUnique).mockResolvedValue({
+        id: 'prod-1',
+        name: 'Test Salsa',
+        sku: 'TST-001',
+        inventory: 1000000,
+        lowStockThreshold: 5,
+      } as any);
+
+      vi.mocked(prisma.$transaction).mockResolvedValue([
+        { id: 'prod-1', inventory: 1000100 },
+        { id: 'trans-1', quantity: 100, newStock: 1000100 },
+      ] as any);
+
+      vi.mocked(prisma.inventoryAlert.findMany).mockResolvedValue([]);
+
+      // Should handle large inventory numbers
+      const result = await adjustInventory({
+        productId: 'prod-1',
+        quantity: 100,
+        type: InventoryTransactionType.RESTOCK,
+        reason: 'Bulk restock',
+      });
+
+      expect(result.newStock).toBe(1000100);
+    });
+
+    it('should handle concurrent alert creation attempts (duplicate prevention)', async () => {
+      const prisma = (await import('@/lib/prisma')).default;
+
+      const existingAlert = {
+        id: 'alert-1',
+        productId: 'prod-1',
+        type: 'LOW_STOCK',
+        status: 'ACTIVE',
+        stockLevel: 3,
+        threshold: 5,
+        product: {
+          id: 'prod-1',
+          name: 'Test Salsa',
+          sku: 'TST-001',
+          inventory: 3,
+        },
+      };
+
+      // Simulate concurrent check - alert already exists
+      vi.mocked(prisma.inventoryAlert.findFirst).mockResolvedValue(existingAlert as any);
+
+      // Multiple simultaneous calls should not create duplicate alerts
+      const [alert1, alert2, alert3] = await Promise.all([
+        checkAndCreateAlert('prod-1', 3, 5),
+        checkAndCreateAlert('prod-1', 3, 5),
+        checkAndCreateAlert('prod-1', 3, 5),
+      ]);
+
+      // All should return the existing alert
+      expect(alert1).toEqual(existingAlert);
+      expect(alert2).toEqual(existingAlert);
+      expect(alert3).toEqual(existingAlert);
+
+      // Create should not have been called (returned existing alert)
+      expect(prisma.inventoryAlert.create).not.toHaveBeenCalled();
+    });
+
+    it('should handle database transaction failures gracefully', async () => {
+      const prisma = (await import('@/lib/prisma')).default;
+
+      vi.mocked(prisma.product.findUnique).mockResolvedValue({
+        id: 'prod-1',
+        name: 'Test Salsa',
+        sku: 'TST-001',
+        inventory: 10,
+        lowStockThreshold: 5,
+      } as any);
+
+      // Simulate database transaction failure
+      vi.mocked(prisma.$transaction).mockRejectedValue(new Error('Database connection lost'));
+
+      await expect(
+        adjustInventory({
+          productId: 'prod-1',
+          quantity: 5,
+          type: InventoryTransactionType.SALE,
+          reason: 'Test',
+        })
+      ).rejects.toThrow('Database connection lost');
+    });
+
+    it('should handle missing product fields gracefully', async () => {
+      const prisma = (await import('@/lib/prisma')).default;
+
+      // Product with missing optional fields
+      vi.mocked(prisma.product.findUnique).mockResolvedValue({
+        id: 'prod-1',
+        name: 'Test Salsa',
+        sku: 'TST-001',
+        inventory: 10,
+        lowStockThreshold: null, // Missing threshold
+      } as any);
+
+      const status = await getInventoryStatus('prod-1');
+
+      // Should handle null threshold by using default
+      expect(status.lowStockThreshold).toBeDefined();
+      expect(status.currentStock).toBe(10);
+    });
+
+    it('should validate email addresses in notification recipients', async () => {
+      process.env.INVENTORY_ALERT_EMAILS = 'invalid-email,admin@test.com';
+
+      // Should still attempt to send to all addresses (validation done by email service)
+      const result = await createRestockNotification(
+        'prod-1',
+        'Test Salsa',
+        'TST-001',
+        0,
+        5,
+        undefined
+      );
+
+      const { sendEmail } = await import('@/lib/email');
+
+      // Should attempt to send to both (even with invalid email)
+      expect(sendEmail).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle rapid successive stock updates (simulated concurrency)', async () => {
+      const prisma = (await import('@/lib/prisma')).default;
+
+      // Each call should see consistent state
+      let callCount = 0;
+      const stockLevels = [100, 90, 85]; // After each reduction
+
+      vi.mocked(prisma.product.findUnique).mockImplementation(() => {
+        const stock = stockLevels[callCount] || 82;
+        return Promise.resolve({
+          id: 'prod-1',
+          name: 'Test Salsa',
+          sku: 'TST-001',
+          inventory: stock,
+          lowStockThreshold: 5,
+        } as any);
+      });
+
+      vi.mocked(prisma.$transaction).mockImplementation((operations: any) => {
+        if (Array.isArray(operations)) {
+          const stock = stockLevels[callCount] || 82;
+          const newStock = stock + (callCount === 0 ? -10 : callCount === 1 ? -5 : -3);
+          callCount++;
+          return Promise.resolve([
+            { id: 'prod-1', inventory: newStock },
+            { id: 'trans-1', quantity: newStock, newStock },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+
+      vi.mocked(prisma.inventoryAlert.findMany).mockResolvedValue([]);
+
+      // Simulate multiple rapid updates
+      const updates = await Promise.all([
+        adjustInventory({ productId: 'prod-1', quantity: -10, type: InventoryTransactionType.SALE, reason: 'Sale 1' }),
+        adjustInventory({ productId: 'prod-1', quantity: -5, type: InventoryTransactionType.SALE, reason: 'Sale 2' }),
+        adjustInventory({ productId: 'prod-1', quantity: -3, type: InventoryTransactionType.SALE, reason: 'Sale 3' }),
+      ]);
+
+      // All updates should complete successfully
+      expect(updates).toHaveLength(3);
+      updates.forEach(update => {
+        expect(update).toBeDefined();
+        expect(update.newStock).toBeDefined();
+        expect(update.previousStock).toBeDefined();
+      });
+    });
+  });
+
   describe('Restock Notification at Critical Stock Levels', () => {
     it('should send restock notification when stock reaches 0 (critical)', async () => {
       const prisma = (await import('@/lib/prisma')).default;
