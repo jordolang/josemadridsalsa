@@ -21,6 +21,39 @@ export interface InventoryCheckResult {
 }
 
 /**
+ * Update product stock and record transaction
+ *
+ * @param productId - Product ID to update
+ * @param quantity - Quantity to add (positive) or remove (negative)
+ * @param type - Type of inventory transaction
+ * @param userId - User ID performing the update (optional)
+ * @param reason - Optional reason for the update
+ * @param notes - Optional notes about the update
+ * @param orderId - Optional order ID if transaction is order-related
+ * @returns Updated product with transaction details
+ * @throws Error if product not found or stock would go negative
+ */
+export async function updateStock(
+  productId: string,
+  quantity: number,
+  type: InventoryTransactionType,
+  userId?: string,
+  reason?: string,
+  notes?: string,
+  orderId?: string
+) {
+  return adjustInventory({
+    productId,
+    quantity,
+    type,
+    userId,
+    reason,
+    notes,
+    orderId,
+  });
+}
+
+/**
  * Adjust inventory for a product and create transaction record
  */
 export async function adjustInventory(adjustment: InventoryAdjustment) {
