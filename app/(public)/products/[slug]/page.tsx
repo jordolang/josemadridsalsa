@@ -4,6 +4,7 @@ import { formatPrice, getHeatLevelColor, getHeatLevelText } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { ImageGallery } from '@/components/products/ImageGallery'
 import { VariantSelector } from '@/components/products/VariantSelector'
+import { NutritionalInfo } from '@/components/products/NutritionalInfo'
 import { Metadata } from 'next'
 
 type Props = {
@@ -116,58 +117,12 @@ export default async function ProductDetailPage({ params }: Props) {
               </div>
             )}
 
-            {/* Ingredients */}
-            {product.ingredients && product.ingredients.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Ingredients
-                </h3>
-                <p className="text-muted-foreground">
-                  {product.ingredients.join(', ')}
-                </p>
-              </div>
-            )}
-
-            {/* Nutritional Info (if available) */}
+            {/* Nutritional Info and Ingredients */}
             {product.nutritionalInfo && (
-              <div className="bg-card rounded-lg p-4 space-y-2 surface-shadow">
-                <h3 className="text-lg font-semibold text-foreground mb-3">
-                  Nutritional Information
-                </h3>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Serving Size:</span>
-                    <span className="font-medium">{product.nutritionalInfo.servingSize}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Calories:</span>
-                    <span className="font-medium">{product.nutritionalInfo.calories}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Fat:</span>
-                    <span className="font-medium">{product.nutritionalInfo.totalFat}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Sodium:</span>
-                    <span className="font-medium">{product.nutritionalInfo.sodium}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Carbs:</span>
-                    <span className="font-medium">{product.nutritionalInfo.totalCarbs}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Protein:</span>
-                    <span className="font-medium">{product.nutritionalInfo.protein}</span>
-                  </div>
-                </div>
-                {product.nutritionalInfo.allergens && (
-                  <div className="pt-2 border-t border-border mt-2">
-                    <span className="text-sm text-muted-foreground">
-                      Allergens: {product.nutritionalInfo.allergens}
-                    </span>
-                  </div>
-                )}
-              </div>
+              <NutritionalInfo
+                nutritionalInfo={product.nutritionalInfo}
+                ingredients={product.ingredients}
+              />
             )}
 
             {/* Product Details */}
