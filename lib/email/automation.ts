@@ -84,11 +84,10 @@ export async function sendOrderConfirmationEmail(orderId: string) {
   }
 
   const items = order.items.map((item) => ({
-    name: item.productName,
+    productName: item.productName,
+    productSku: item.productSku,
+    totalPrice: `$${Number(item.totalPrice).toFixed(2)}`,
     quantity: item.quantity,
-    price: `$${Number(item.price).toFixed(2)}`,
-    total: `$${Number(item.totalPrice).toFixed(2)}`,
-    sku: item.productSku,
   }))
 
   const shippingAddress =

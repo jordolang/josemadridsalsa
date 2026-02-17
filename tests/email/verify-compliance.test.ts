@@ -4,6 +4,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// Set environment variable before imports
+process.env.RESEND_API_KEY = 'test_api_key'
+
 import { sendEmail } from '@/lib/email/client'
 import { OrderConfirmationEmail } from '@/emails/order-confirmation'
 import { ShippingNotificationEmail } from '@/emails/shipping-notification'
@@ -13,14 +17,14 @@ import { render } from '@react-email/render'
 
 // Mock Resend
 vi.mock('resend', () => ({
-  Resend: vi.fn().mockImplementation(() => ({
+  Resend: vi.fn(() => ({
     emails: {
       send: vi.fn().mockResolvedValue({
-        data: { id: 'test-email-id' },
-        error: null,
-      }),
-    },
-  })),
+        id: 'test-email-id',
+        error: null
+      })
+    }
+  }))
 }))
 
 describe('Email Compliance - List-Unsubscribe Headers', () => {

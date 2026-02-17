@@ -13,15 +13,15 @@ describe('OrderConfirmationEmail', () => {
   const mockItems: OrderItem[] = [
     {
       quantity: 2,
-      name: 'Original Salsa',
-      sku: 'SAL-ORG-16OZ',
-      lineTotal: '$19.98',
+      productName: 'Original Salsa',
+      productSku: 'SAL-ORG-16OZ',
+      totalPrice: '19.98',
     },
     {
       quantity: 1,
-      name: 'Spicy Salsa',
-      sku: 'SAL-SPI-16OZ',
-      lineTotal: '$9.99',
+      productName: 'Spicy Salsa',
+      productSku: 'SAL-SPI-16OZ',
+      totalPrice: '9.99',
     },
   ]
 
@@ -191,9 +191,9 @@ describe('OrderConfirmationEmail', () => {
     it('should handle many items', async () => {
       const manyItems: OrderItem[] = Array.from({ length: 10 }, (_, i) => ({
         quantity: i + 1,
-        name: `Product ${i + 1}`,
-        sku: `SKU-${i + 1}`,
-        lineTotal: `$${(i + 1) * 9.99}`,
+        productName: `Product ${i + 1}`,
+        productSku: `SKU-${i + 1}`,
+        totalPrice: ((i + 1) * 9.99).toFixed(2),
       }))
 
       const html = await render(
@@ -271,9 +271,9 @@ describe('OrderConfirmationEmail', () => {
     it('should handle zero-priced items', async () => {
       const freeItem: OrderItem = {
         quantity: 1,
-        name: 'Free Sample',
-        sku: 'SAL-SAMPLE',
-        lineTotal: '$0.00',
+        productName: 'Free Sample',
+        productSku: 'SAL-SAMPLE',
+        totalPrice: '0.00',
       }
 
       const html = await render(

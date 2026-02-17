@@ -5,9 +5,8 @@ import { POST as ShippingPOST } from '@/app/api/send-email/shipping/route'
 import { POST as DeliveryPOST } from '@/app/api/send-email/delivery/route'
 
 // Mock email client
-const mockSendEmail = vi.fn()
 vi.mock('@/lib/email/client', () => ({
-  sendEmail: mockSendEmail,
+  sendEmail: vi.fn().mockResolvedValue({ success: true, messageId: 'test-id' }),
 }))
 
 // Mock email templates
@@ -22,6 +21,9 @@ vi.mock('@/emails/shipping-notification', () => ({
 vi.mock('@/emails/delivery-confirmation', () => ({
   DeliveryConfirmationEmail: vi.fn(() => null),
 }))
+
+// Import the mocked sendEmail
+import { sendEmail as mockSendEmail } from '@/lib/email/client'
 
 describe('Send Email API', () => {
   beforeEach(() => {
