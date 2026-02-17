@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import ProductForm from '@/components/admin/ProductForm'
 import VariantEditorWrapper from '@/components/admin/VariantEditorWrapper'
+import ImageUploaderWrapper from '@/components/admin/ImageUploaderWrapper'
 import prisma from '@/lib/prisma'
 import { createMetadata } from '@/lib/metadata'
 
@@ -58,6 +59,8 @@ export default async function ProductEditorPage({
         <h1 className="text-3xl font-bold">Edit Product</h1>
         <p className="text-slate-600">Update product details</p>
       </div>
+
+      <ImageUploaderWrapper productId={id} initialImages={product.images} />
 
       <ProductForm product={product} categories={categories} />
 
