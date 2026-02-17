@@ -61,6 +61,8 @@ const nextConfig = {
     },
     // Use system TLS certificates for Turbopack font downloads
     turbopackUseSystemTlsCerts: true,
+    // React Email packages need to be external for server components
+    serverComponentsExternalPackages: ['@react-email/render'],
   },
   /**
    * Exclude large, unused directories from serverless traces to keep
