@@ -76,14 +76,19 @@ export async function POST(
       order.stripePaymentId
     );
 
-    if (!paymentIntent.charges?.data?.[0]?.id) {
+    const latestCharge = typeof paymentIntent.latest_charge === 'string'
+      ? paymentIntent.latest_charge
+      : paymentIntent.latest_charge?.id;
+
+    if (!latestCharge) {
       return fail('No charge found for this payment', 400);
     }
 
-    const chargeId = paymentIntent.charges.data[0].id;
+    const chargeId = latestCharge;
 
-    // Check if there are existing refunds
-    const existingRefunds = paymentIntent.charges.data[0].refunds?.data || [];
+    // Retrieve the charge to check existing refunds
+    const charge = await stripe.charges.retrieve(chargeId);
+    const existingRefunds = charge.refunds?.data || [];
     const totalRefunded = existingRefunds.reduce(
       (sum, refund) => sum + refund.amount,
       0
