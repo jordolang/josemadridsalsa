@@ -5,12 +5,12 @@ import { useParams, notFound, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ShoppingCart, Minus, Plus, Loader2, Heart, Scale } from 'lucide-react'
-import { useCartStore } from '@/lib/store/cart'
+import { Minus, Plus, Loader2, Heart, Scale } from 'lucide-react'
 import { useWishlistStore } from '@/lib/store/wishlist'
 import { useComparisonStore } from '@/lib/store/comparison'
 import { useRecentlyViewedStore } from '@/lib/store/recently-viewed'
 import { toast } from 'sonner'
+import { AddToCartButton } from '@/components/store/add-to-cart-button'
 import { formatPrice, getHeatLevelColor, getHeatLevelText, cn } from '@/lib/utils'
 import { HeatGauge } from '@/components/store/heat-gauge'
 import { getSalsaHeatRating } from '@/lib/salsa-heat'
@@ -52,8 +52,6 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
 
-  const addItem = useCartStore((state) => state.addItem)
-  const openCart = useCartStore((state) => state.openCart)
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore()
   const { addProduct: addToComparison, removeProduct: removeFromComparison, isInComparison, canAddMore, openPanel } = useComparisonStore()
   const addRecentlyViewed = useRecentlyViewedStore((state) => state.addProduct)
@@ -99,26 +97,6 @@ export default function ProductPage() {
       })
     }
   }, [product, addRecentlyViewed])
-
-  const handleAddToCart = () => {
-    if (!product) return
-
-    addItem(
-      {
-        id: product.id,
-        name: product.name,
-        slug: product.slug,
-        price: product.price,
-        image: product.featuredImage,
-        sku: product.sku,
-        heatLevel: product.heatLevel,
-        maxQuantity: product.inventory,
-        quantity,
-      }
-    )
-
-    openCart()
-  }
 
   const handleWishlistToggle = () => {
     if (!product) return
@@ -337,16 +315,21 @@ export default function ProductPage() {
               </div>
               
               <div className="flex gap-3">
-                <Button
-                  onClick={handleAddToCart}
+                <AddToCartButton
+                  product={{
+                    id: product.id,
+                    name: product.name,
+                    slug: product.slug,
+                    price: product.price,
+                    featuredImage: product.featuredImage,
+                    sku: product.sku,
+                    heatLevel: product.heatLevel,
+                    inventory: product.inventory,
+                  }}
+                  quantity={quantity}
                   size="lg"
-                  className="flex-1 bg-salsa-500 hover:bg-salsa-600 text-lg py-3"
-                  disabled={product.inventory === 0}
-                >
-                  <ShoppingCart className="w-5 h-5 mr-2" />
-                  {product.inventory === 0 ? 'Out of Stock' : 'Add to Cart'}
-                </Button>
-
+                  className="flex-1 text-lg py-3"
+                />
                 <Button
                   onClick={handleComparisonToggle}
                   size="lg"
