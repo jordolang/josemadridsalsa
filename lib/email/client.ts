@@ -6,6 +6,7 @@
 import { Resend } from 'resend'
 import { render } from '@react-email/render'
 import React from 'react'
+import { logEmailSend, checkUnsubscribed } from './logger'
 
 const resendApiKey = process.env.RESEND_API_KEY
 
@@ -55,8 +56,19 @@ export async function sendEmail({
       const errorMsg = 'Resend client not initialized - RESEND_API_KEY missing'
       console.error(errorMsg)
 
-      // Log error (import logger when available)
-      // await logEmailError({ type, to: recipientEmail, from, subject, error: errorMsg, orderId })
+      // Log error
+      await logEmailSend({
+        recipientEmail,
+        recipientName: undefined,
+        userId,
+        templateId: type,
+        subject,
+        status: 'FAILED',
+        errorMessage: errorMsg,
+        metadata: orderId ? { orderId } : undefined,
+      }).catch((err) => {
+        console.error('Failed to log email error:', err)
+      })
 
       return {
         success: false,
@@ -69,12 +81,11 @@ export async function sendEmail({
     const isTransactional = ['order-confirmation', 'shipping-notification', 'delivery-confirmation'].includes(type)
 
     if (!isTransactional) {
-      // When logger is available, check unsubscribe status:
-      // const isUnsubscribed = await checkUnsubscribed(recipientEmail)
-      // if (isUnsubscribed) {
-      //   console.log(`Email not sent - user unsubscribed: ${recipientEmail}`)
-      //   return { success: false, error: 'User unsubscribed' }
-      // }
+      const isUnsubscribed = await checkUnsubscribed({ email: recipientEmail })
+      if (isUnsubscribed) {
+        console.log(`Email not sent - user unsubscribed: ${recipientEmail}`)
+        return { success: false, error: 'User unsubscribed' }
+      }
     }
 
     // Render React Email template to HTML
@@ -99,15 +110,19 @@ export async function sendEmail({
     if (result.error) {
       console.error('Resend send error:', result.error)
 
-      // Log error (import logger when available)
-      // await logEmailError({
-      //   type,
-      //   to: recipientEmail,
-      //   from,
-      //   subject,
-      //   error: result.error.message,
-      //   orderId,
-      // })
+      // Log error
+      await logEmailSend({
+        recipientEmail,
+        recipientName: undefined,
+        userId,
+        templateId: type,
+        subject,
+        status: 'FAILED',
+        errorMessage: result.error.message,
+        metadata: orderId ? { orderId } : undefined,
+      }).catch((err) => {
+        console.error('Failed to log email error:', err)
+      })
 
       return {
         success: false,
@@ -115,16 +130,19 @@ export async function sendEmail({
       }
     }
 
-    // Log successful send (import logger when available)
-    // await logEmailSend({
-    //   type,
-    //   to: recipientEmail,
-    //   from,
-    //   subject,
-    //   emailId: result.data?.id,
-    //   orderId,
-    //   userId,
-    // })
+    // Log successful send
+    await logEmailSend({
+      recipientEmail,
+      recipientName: undefined, // Can be passed as parameter if available
+      userId,
+      templateId: type,
+      subject,
+      status: 'SENT',
+      metadata: orderId ? { orderId } : undefined,
+    }).catch((err) => {
+      // Don't fail email send if logging fails
+      console.error('Failed to log email send:', err)
+    })
 
     console.log(`Email sent successfully: ${type} to ${recipientEmail}`)
 
@@ -137,15 +155,19 @@ export async function sendEmail({
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     console.error('Email send error:', error)
 
-    // Log error (import logger when available)
-    // await logEmailError({
-    //   type,
-    //   to: recipientEmail,
-    //   from,
-    //   subject,
-    //   error: errorMessage,
-    //   orderId,
-    // })
+    // Log error
+    await logEmailSend({
+      recipientEmail,
+      recipientName: undefined,
+      userId,
+      templateId: type,
+      subject,
+      status: 'FAILED',
+      errorMessage,
+      metadata: orderId ? { orderId } : undefined,
+    }).catch((err) => {
+      console.error('Failed to log email error:', err)
+    })
 
     return {
       success: false,
