@@ -80,13 +80,20 @@ export async function sendEmail({
     // Render React Email template to HTML
     const html = render(react)
 
-    // Send email via Resend
+    // Construct unsubscribe URL
+    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://josemadrid.net'}/unsubscribe?email=${encodeURIComponent(recipientEmail)}`
+
+    // Send email via Resend with List-Unsubscribe header for compliance
     const result = await resend.emails.send({
       from,
       to,
       subject,
       html,
       replyTo,
+      headers: {
+        'List-Unsubscribe': `<${unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
     })
 
     if (result.error) {
