@@ -55,6 +55,270 @@ This e-commerce system is designed to handle the complete lifecycle of an online
 - Gitleaks for secret scanning
 - TypeScript for compile-time safety
 
+## Getting Started
+
+### Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js** 18.x or later ([Download](https://nodejs.org/))
+- **npm** 9.x or later (comes with Node.js)
+- **PostgreSQL** 14.x or later ([Download](https://www.postgresql.org/download/))
+- **Git** ([Download](https://git-scm.com/downloads))
+
+### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/josemadridsalsa.git
+cd josemadridsalsa
+```
+
+### Step 2: Install Dependencies
+
+```bash
+npm install
+```
+
+This will install all required packages and automatically run `prisma generate` via the postinstall script.
+
+### Step 3: Configure Environment Variables
+
+Create a `.env.local` file in the root directory:
+
+```bash
+cp .env.example .env.local
+```
+
+**Required Environment Variables (Minimum Setup):**
+
+```bash
+# Database - Required
+DATABASE_URL="postgresql://postgres:password@localhost:5432/josemadridsalsa"
+
+# NextAuth.js - Required
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-secret-key-here"  # Generate with: openssl rand -base64 32
+
+# Encryption - Required
+MASTER_KEY="your-master-key-here"  # Generate with: openssl rand -base64 32
+ENCRYPTION_KEY="your-encryption-key-here"  # Generate with: node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"
+
+# Stripe (Test Mode) - Required for checkout
+STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+
+# Email - Required for order confirmations
+RESEND_API_KEY="re_..."
+FROM_EMAIL="orders@yourdomain.com"
+```
+
+**Optional Environment Variables (Enhanced Features):**
+
+```bash
+# Google Maps & Places - For location features
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your-maps-api-key"
+GOOGLE_PLACES_API_KEY="your-places-api-key"
+
+# Google Calendar - For "Where is Jose" schedule
+GOOGLE_SERVICE_ACCOUNT_EMAIL="your-service-account@project.iam.gserviceaccount.com"
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+GOOGLE_CALENDAR_ID="your-calendar-id@group.calendar.google.com"
+
+# Analytics - For user behavior tracking
+GOOGLE_ANALYTICS_ID="G-XXXXXXXXXX"
+NEXT_PUBLIC_AMPLITUDE_API_KEY="your-amplitude-api-key"
+
+# OAuth - For social login
+GOOGLE_CLIENT_ID="your-google-oauth-client-id"
+GOOGLE_CLIENT_SECRET="your-google-oauth-client-secret"
+
+# File Upload - For product images and documents
+UPLOADTHING_SECRET="your-uploadthing-secret"
+UPLOADTHING_APP_ID="your-uploadthing-app-id"
+```
+
+> **Note:** See `.env.example` for complete list of all available environment variables.
+
+### Step 4: Setup Database
+
+**Create the database:**
+
+```bash
+# Using PostgreSQL command line
+createdb josemadridsalsa
+
+# Or connect to PostgreSQL and run:
+# CREATE DATABASE josemadridsalsa;
+```
+
+**Run database migrations:**
+
+```bash
+npm run db:push
+```
+
+This creates all required tables and schema in your database.
+
+**Seed initial data (optional but recommended):**
+
+```bash
+# Seed products, categories, and sample data
+npm run db:seed
+
+# Seed recipe data
+npm run db:seed:recipes
+
+# Seed email templates
+npm run db:seed:email-templates
+```
+
+### Step 5: Create an Admin Account
+
+```bash
+npm run create-admin
+```
+
+Follow the prompts to create your first admin user. You'll need:
+- Email address
+- Password
+- Name
+
+This account will have full admin access to the platform.
+
+### Step 6: Start Development Server
+
+```bash
+npm run dev
+```
+
+The application will start at **http://localhost:3000**
+
+**Alternative development commands:**
+
+```bash
+npm run dev:fast     # Fast refresh with Turbopack on port 3000
+npm run dev:debug    # Start with Node.js debugger enabled
+```
+
+### Step 7: Access the Application
+
+Once the server is running, you can access:
+
+- **🏠 Homepage:** http://localhost:3000
+- **🛒 Shop:** http://localhost:3000/shop
+- **🔐 Admin Dashboard:** http://localhost:3000/admin
+- **📊 Data Import:** http://localhost:3000/admin/import
+- **📍 Locations:** http://localhost:3000/locations
+- **📝 Admin Login:** http://localhost:3000/auth/signin
+
+**First-Time Admin Tasks:**
+
+1. **Login to Admin Dashboard** - Use the credentials you created in Step 5
+2. **Configure Site Settings** - Navigate to Admin > Settings
+3. **Add Products** - Go to Admin > Products or use Data Import
+4. **Setup Stripe Webhooks** - Configure in Stripe Dashboard (see [Stripe Setup Guide](./docs/STRIPE_SETUP.md))
+5. **Test Checkout Flow** - Use Stripe test cards to verify payment processing
+
+### Step 8: Setup Security (Recommended)
+
+**Install Gitleaks for secret scanning:**
+
+```bash
+# macOS
+brew install gitleaks
+
+# Linux
+wget https://github.com/gitleaks/gitleaks/releases/download/v8.18.0/gitleaks_8.18.0_linux_x64.tar.gz
+tar -xzf gitleaks_8.18.0_linux_x64.tar.gz
+sudo mv gitleaks /usr/local/bin/
+
+# Windows (using Chocolatey)
+choco install gitleaks
+```
+
+**Setup pre-commit hooks:**
+
+```bash
+npm run prepare
+```
+
+This enables automatic secret scanning before each commit.
+
+### Common Development Commands
+
+```bash
+# Database
+npm run db:studio          # Open Prisma Studio (database GUI)
+npm run db:migrate         # Create and run new migration
+npm run db:push            # Push schema changes to database
+npm run db:reset           # Reset database (destructive!)
+npm run db:seed            # Seed database with sample data
+
+# Development
+npm run dev                # Start development server
+npm run build              # Build for production
+npm run start              # Start production server
+npm run lint               # Run ESLint
+npm run type-check         # Run TypeScript compiler
+
+# Data Import
+npm run locations:import   # Import locations from markdown
+npm run products:import    # Import products from CSV
+
+# Testing
+npm run test               # Run test suite
+
+# Security
+npm run security:scan      # Scan for secrets in codebase
+npm run security:protect   # Check staged files before commit
+```
+
+### Troubleshooting
+
+**Port already in use:**
+```bash
+# Kill the process using port 3000
+lsof -ti:3000 | xargs kill -9
+```
+
+**Database connection issues:**
+```bash
+# Test database connection
+npm run db:diagnose
+
+# Verify PostgreSQL is running
+pg_isready
+```
+
+**Prisma Client errors:**
+```bash
+# Regenerate Prisma Client
+npm run db:generate
+```
+
+**Module not found errors:**
+```bash
+# Clean install
+npm run clean
+npm install
+```
+
+**Build errors:**
+```bash
+# Clear Next.js cache and rebuild
+npm run clean
+npm run build
+```
+
+### Next Steps
+
+- 📖 **Read the Documentation** - Check out [docs/](./docs/) for detailed guides
+- 🎨 **Customize Branding** - Update colors, logos, and content
+- 📦 **Import Data** - See [Data Import Guide](./docs/IMPORT_GUIDE.md)
+- 🚀 **Deploy to Production** - See [Deployment Guide](./docs/DEPLOYMENT.md)
+- 🤖 **Setup AI Chatbot** - See [AI Chatbot Quick Start](./docs/AI_CHATBOT_QUICK_START.md)
+
 ## Features
 
 ### E-Commerce Core
