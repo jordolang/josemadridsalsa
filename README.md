@@ -507,6 +507,224 @@ npm run build
 - 🚀 **Deploy to Production** - See [Deployment Guide](./docs/DEPLOYMENT.md)
 - 🤖 **Setup AI Chatbot** - See [AI Chatbot Quick Start](./docs/AI_CHATBOT_QUICK_START.md)
 
+## Development
+
+This section covers the available npm scripts and development workflows for working with the codebase.
+
+### Development Server
+
+**Start the development server:**
+
+```bash
+npm run dev                # Start Next.js dev server with Turbopack
+npm run dev:fast          # Fast refresh on port 3000 (optimized)
+npm run dev:debug         # Start with Node.js debugger enabled
+```
+
+The development server includes:
+- ⚡ **Turbopack** - Ultra-fast bundling and hot module replacement
+- 🔄 **Hot Reload** - Instant updates without losing component state
+- 🐛 **Error Overlay** - Detailed error messages in browser
+- 📊 **Build Analysis** - Webpack bundle analyzer integration
+
+### Build & Production
+
+**Build and run production builds:**
+
+```bash
+npm run build             # Build optimized production bundle
+npm run start             # Start production server (requires build first)
+npm run clean             # Clear Next.js cache and node_modules cache
+npm run fresh             # Clean install and start dev server
+```
+
+The build process:
+- Generates optimized production bundles with code splitting
+- Runs Prisma client generation automatically (via prebuild)
+- Syncs FindUs location data from external sources
+- Creates static and server-side rendered pages
+
+### Code Quality & Testing
+
+**Lint, type-check, and test your code:**
+
+```bash
+npm run lint              # Run ESLint on all JS/TS files
+npm run type-check        # Run TypeScript compiler (no emit)
+npm run test              # Run Vitest test suite
+npm run pre-commit        # Run lint-staged and security checks
+```
+
+- **ESLint** - Enforces code style and catches common errors
+- **TypeScript** - Compile-time type checking across the entire codebase
+- **Vitest** - Fast unit and integration testing with Vite
+- **Pre-commit Hooks** - Automated checks before each commit
+
+### Database Management
+
+**Manage your PostgreSQL database with Prisma:**
+
+```bash
+# Schema & Migrations
+npm run db:generate       # Generate Prisma Client from schema
+npm run db:push           # Push schema changes to database (no migration)
+npm run db:migrate        # Create and apply new migration
+npm run db:reset          # Reset database and run all migrations (destructive!)
+
+# Data Seeding
+npm run db:seed           # Seed products, categories, and base data
+npm run db:seed:recipes   # Seed recipe content
+npm run db:seed:email-templates  # Seed email template library
+
+# Database Tools
+npm run db:studio         # Open Prisma Studio (visual database editor)
+npm run db:diagnose       # Test database connection and diagnose issues
+```
+
+**Production Database:**
+
+```bash
+npm run db:production:sync        # Sync production schema
+npm run db:production:seed        # Seed production database
+npm run db:production:pull-env    # Pull production env vars from Vercel
+```
+
+### Data Import & Export
+
+**Import data from CSV, Excel, and JSON files:**
+
+```bash
+# Location Management
+npm run locations:import          # Import retail locations from markdown
+npm run locations:verify          # Verify location data integrity
+npm run locations:photos          # Generate location photos
+npm run locations:update-photos   # Update existing location photos
+npm run locations:geocode         # Backfill geocoding coordinates
+
+# Product Management
+npm run products:transform        # Transform product CSV data
+npm run products:ensure-category  # Ensure salsa category exists
+npm run products:test-import      # Test CSV import without committing
+```
+
+See the **[Data Import Guide](./docs/IMPORT_GUIDE.md)** for detailed documentation on import formats and options.
+
+### Admin & Utilities
+
+**Administrative scripts and tools:**
+
+```bash
+npm run create-admin              # Create admin user interactively
+npm run api-keys:create           # Create partner API key
+npm run templates:backfill-owners # Backfill form template owners
+npm run shopify:test-webhook      # Test Shopify webhook integration
+```
+
+### Security & Compliance
+
+**Scan for secrets and vulnerabilities:**
+
+```bash
+npm run security:scan             # Scan entire codebase for secrets
+npm run security:protect          # Check staged files before commit
+npm run security:baseline         # Generate security baseline report
+```
+
+**Security Tools:**
+- **Gitleaks** - Detects hardcoded secrets, API keys, and tokens
+- **Pre-commit Hooks** - Prevents accidental secret commits
+- **GitHub CodeQL** - Automated vulnerability scanning in CI/CD
+
+### Project Analysis
+
+**Analyze project structure and dependencies:**
+
+```bash
+npm run analyze                   # Analyze project structure
+npm run analyze:watch             # Watch mode for continuous analysis
+npm run analyze:report            # Export analysis as markdown report
+```
+
+### Vercel Deployment
+
+**Vercel-specific utilities:**
+
+```bash
+npm run vercel:setup-env          # Setup Vercel environment variables
+npm run db:production:pull-env    # Pull production environment variables
+```
+
+### Workflow Summary
+
+**Typical development workflow:**
+
+1. **Start Development**
+   ```bash
+   npm run dev
+   ```
+
+2. **Make Changes** - Edit files with hot reload enabled
+
+3. **Check Code Quality**
+   ```bash
+   npm run lint
+   npm run type-check
+   npm run test
+   ```
+
+4. **Database Changes**
+   ```bash
+   # Edit prisma/schema.prisma
+   npm run db:migrate        # Create migration
+   npm run db:generate       # Update Prisma Client
+   ```
+
+5. **Commit Changes** - Pre-commit hooks run automatically
+   ```bash
+   git add .
+   git commit -m "Your message"
+   ```
+
+6. **Build & Test Production**
+   ```bash
+   npm run build
+   npm run start
+   ```
+
+7. **Deploy** - Push to main branch for automatic Vercel deployment
+
+### Package Scripts Reference
+
+For a complete list of available scripts, see `package.json`. Key script categories:
+
+- **`dev:*`** - Development server variants
+- **`db:*`** - Database operations (Prisma)
+- **`locations:*`** - Retail location management
+- **`products:*`** - Product data utilities
+- **`security:*`** - Security scanning and protection
+- **`analyze:*`** - Project analysis and reporting
+
+### Development Tips
+
+**Performance:**
+- Use `npm run dev:fast` for the fastest development experience
+- Run `npm run clean` if you encounter caching issues
+- Use `npm run build` locally to catch production-only errors
+
+**Database:**
+- Run `npm run db:studio` for a visual database editor
+- Use `npm run db:push` for quick schema changes during development
+- Create migrations with `npm run db:migrate` before committing schema changes
+
+**Debugging:**
+- Use `npm run dev:debug` to attach a debugger
+- Check `npm run db:diagnose` for database connection issues
+- Run `npm run security:scan` before pushing code
+
+**Testing:**
+- Run `npm run test` to verify changes don't break existing functionality
+- Use `npm run type-check` to catch type errors before runtime
+
 ## Features
 
 ### E-Commerce Core
