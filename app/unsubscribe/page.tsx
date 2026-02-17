@@ -44,13 +44,13 @@ function UnsubscribeFormInner() {
     }
   }
 
-  // Fetch current preferences
+  // Fetch current preferences only once for the URL-provided email
   useEffect(() => {
-    if (email) {
+    if (emailParam) {
       fetchPreferences()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email])
+  }, [emailParam])
 
   const handleCategoryToggle = (categoryId: string) => {
     setSelectedCategories((prev) =>
@@ -79,6 +79,14 @@ function UnsubscribeFormInner() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
+
+    // Client-side email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!email || !emailRegex.test(email)) {
+      setError('Please enter a valid email address.')
+      return
+    }
+
     setIsLoading(true)
 
     try {

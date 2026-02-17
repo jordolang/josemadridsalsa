@@ -13,15 +13,15 @@ describe('ShippingNotificationEmail', () => {
   const mockItems: OrderItem[] = [
     {
       quantity: 2,
-      name: 'Original Salsa',
-      sku: 'SAL-ORG-16OZ',
-      lineTotal: '$19.98',
+      productName: 'Original Salsa',
+      productSku: 'SAL-ORG-16OZ',
+      totalPrice: '$19.98',
     },
     {
       quantity: 1,
-      name: 'Spicy Salsa',
-      sku: 'SAL-SPI-16OZ',
-      lineTotal: '$9.99',
+      productName: 'Spicy Salsa',
+      productSku: 'SAL-SPI-16OZ',
+      totalPrice: '$9.99',
     },
   ]
 
@@ -123,7 +123,7 @@ describe('ShippingNotificationEmail', () => {
     it('should handle different carriers', async () => {
       const carriers = ['USPS', 'FedEx', 'UPS', 'DHL']
 
-      carriers.forEach((carrier) => {
+      for (const carrier of carriers) {
         const html = await render(
           ShippingNotificationEmail({
             ...baseProps,
@@ -143,7 +143,7 @@ describe('ShippingNotificationEmail', () => {
         '9374889691090175442040', // USPS Priority
       ]
 
-      trackingNumbers.forEach((trackingNumber) => {
+      for (const trackingNumber of trackingNumbers) {
         const html = await render(
           ShippingNotificationEmail({
             ...baseProps,
@@ -213,7 +213,7 @@ describe('ShippingNotificationEmail', () => {
         'Tuesday, February 20',
       ]
 
-      dateFormats.forEach((estimatedDelivery) => {
+      for (const estimatedDelivery of dateFormats) {
         const html = await render(
           ShippingNotificationEmail({
             ...baseProps,
@@ -230,7 +230,7 @@ describe('ShippingNotificationEmail', () => {
         quantity: i + 1,
         name: `Product ${i + 1}`,
         sku: `SKU-${i + 1}`,
-        lineTotal: `$${(i + 1) * 9.99}`,
+        totalPrice: `$${(i + 1) * 9.99}`,
       }))
 
       const html = await render(
@@ -291,7 +291,7 @@ describe('ShippingNotificationEmail', () => {
         'https://tools.usps.com/track/789',
       ]
 
-      urls.forEach((trackingUrl) => {
+      for (const trackingUrl of urls) {
         const html = await render(
           ShippingNotificationEmail({
             ...baseProps,
@@ -307,8 +307,7 @@ describe('ShippingNotificationEmail', () => {
       const html = await render(
         <ShippingNotificationEmail
           {...baseProps}
-          trackingUrl:
-            'https://tracking.example.com/track?num=123&ref=order&source=email',
+          trackingUrl={'https://tracking.example.com/track?num=123&ref=order&source=email'}
         />
       )
 
@@ -340,9 +339,9 @@ describe('ShippingNotificationEmail', () => {
     it('should list all items in the shipment', async () => {
       const html = await render(<ShippingNotificationEmail {...baseProps} />)
 
-      mockItems.forEach((item) => {
-        expect(html).toContain(item.name)
-        expect(html).toContain(item.sku)
+      for (const item of mockItems) {
+        expect(html).toContain(item.productName)
+        expect(html).toContain(item.productSku)
       })
     })
   })

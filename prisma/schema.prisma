@@ -1411,6 +1411,7 @@ model EmailLog {
   userId         String?
 
   // Email details
+  from       String?
   templateId String?
   subject    String
   status     EmailLogStatus @default(PENDING)

@@ -13,15 +13,15 @@ describe('DeliveryConfirmationEmail', () => {
   const mockItems: OrderItem[] = [
     {
       quantity: 2,
-      name: 'Original Salsa',
-      sku: 'SAL-ORG-16OZ',
-      lineTotal: '$19.98',
+      productName: 'Original Salsa',
+      productSku: 'SAL-ORG-16OZ',
+      totalPrice: '$19.98',
     },
     {
       quantity: 1,
-      name: 'Spicy Salsa',
-      sku: 'SAL-SPI-16OZ',
-      lineTotal: '$9.99',
+      productName: 'Spicy Salsa',
+      productSku: 'SAL-SPI-16OZ',
+      totalPrice: '$9.99',
     },
   ]
 
@@ -232,7 +232,7 @@ describe('DeliveryConfirmationEmail', () => {
         'Tuesday, February 20, 2024 at 2:30 PM',
       ]
 
-      dateFormats.forEach((deliveryDate) => {
+      for (const deliveryDate of dateFormats) {
         const html = await render(
           DeliveryConfirmationEmail({
             ...baseProps,
@@ -249,7 +249,7 @@ describe('DeliveryConfirmationEmail', () => {
         quantity: i + 1,
         name: `Product ${i + 1}`,
         sku: `SKU-${i + 1}`,
-        lineTotal: `$${(i + 1) * 9.99}`,
+        totalPrice: `$${(i + 1) * 9.99}`,
       }))
 
       const html = await render(
@@ -337,8 +337,7 @@ describe('DeliveryConfirmationEmail', () => {
       const html = await render(
         <DeliveryConfirmationEmail
           {...baseProps}
-          feedbackUrl:
-            'https://example.com/feedback?order=ORD-12345&source=email',
+          feedbackUrl={'https://example.com/feedback?order=ORD-12345&source=email'}
         />
       )
 
@@ -353,7 +352,7 @@ describe('DeliveryConfirmationEmail', () => {
         'https://example.com/track/ORD-12345',
       ]
 
-      urls.forEach((orderDetailsUrl) => {
+      for (const orderDetailsUrl of urls) {
         const html = await render(
           DeliveryConfirmationEmail({
             ...baseProps,
@@ -376,9 +375,9 @@ describe('DeliveryConfirmationEmail', () => {
     it('should list all delivered items with quantities', async () => {
       const html = await render(<DeliveryConfirmationEmail {...baseProps} />)
 
-      mockItems.forEach((item) => {
-        expect(html).toContain(item.name)
-        expect(html).toContain(item.sku)
+      for (const item of mockItems) {
+        expect(html).toContain(item.productName)
+        expect(html).toContain(item.productSku)
       })
     })
 

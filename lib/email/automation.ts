@@ -325,7 +325,7 @@ export async function sendAbandonedCartEmail(options: {
     ),
     React.createElement(
       Section,
-      { style: { padding: '24px 0', textAlign: 'center' } },
+      { style: { padding: '24px 0', textAlign: 'center' as const } },
       React.createElement(Button, {
         href: recoveryUrl,
         variant: 'primary',

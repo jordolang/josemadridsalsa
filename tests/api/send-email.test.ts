@@ -196,10 +196,10 @@ describe('Send Email API', () => {
       shippingAddress: '123 Main St, Portland, OR 97201',
       items: [
         {
-          name: 'Habanero Salsa',
+          productName: 'Habanero Salsa',
           quantity: 2,
-          price: 8.99,
-          image: 'https://example.com/salsa.jpg',
+          productSku: 'HAB-001',
+          totalPrice: 17.98,
         },
       ],
       orderId: 'order-123',
@@ -415,10 +415,10 @@ describe('Send Email API', () => {
       shippingAddress: '456 Oak Ave, Seattle, WA 98101',
       items: [
         {
-          name: 'Mild Salsa',
+          productName: 'Mild Salsa',
           quantity: 3,
-          price: 7.99,
-          image: 'https://example.com/mild-salsa.jpg',
+          productSku: 'MILD-001',
+          totalPrice: 23.97,
         },
       ],
       feedbackUrl: 'https://example.com/feedback',

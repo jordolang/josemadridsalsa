@@ -78,8 +78,10 @@ export type EmailType =
   | 'shipping-notification'
   | 'delivery-confirmation'
   | 'contact-form'
+  | 'contact-confirmation'
   | 'welcome'
   | 'newsletter'
+  | 'newsletter-welcome'
   | 'abandoned-cart'
   | 'fundraiser-followup'
 
@@ -98,7 +100,7 @@ export type EmailResult = {
  * Email logging data
  */
 export type EmailLogData = {
-  type: EmailType | string
+  type: EmailType
   to: string
   from: string
   subject: string

@@ -26,7 +26,7 @@ The SPF record tells email receivers which mail servers are authorized to send e
 **Record Type:** TXT
 **Host/Name:** `@` (or leave blank, depending on your DNS provider)
 **Value:**
-```
+```txt
 v=spf1 include:_spf.resend.com ~all
 ```
 
@@ -46,7 +46,7 @@ DKIM adds a cryptographic signature to your emails. The public key is stored in 
 **Value:** *(Obtained from Resend Dashboard - see instructions below)*
 
 The DKIM value will look similar to:
-```
+```txt
 v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
 ```
 
@@ -221,7 +221,7 @@ After DNS records are verified, send a test email and check the headers:
 2. Open the email in Gmail
 3. Click the three dots (⋮) > **Show original**
 4. Look for these authentication results:
-   ```
+```txt
    SPF: PASS with IP xxx.xxx.xxx.xxx
    DKIM: 'PASS' with domain resend.com
    DMARC: 'PASS'
@@ -264,7 +264,7 @@ For a comprehensive deliverability test:
 **Solution:**
 Do NOT create a second SPF record. Instead, modify the existing one:
 
-```
+```txt
 # Old SPF record:
 v=spf1 include:_spf.google.com ~all
 
@@ -298,7 +298,7 @@ DMARC (Domain-based Message Authentication, Reporting, and Conformance) builds o
 **Record Type:** TXT
 **Host/Name:** `_dmarc`
 **Value:**
-```
+```txt
 v=DMARC1; p=none; rua=mailto:dmarc@josemadrid.net
 ```
 

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { createHash, createHmac } from 'crypto'
 import { prisma } from '@/lib/prisma'
+import { checkRateLimit } from '@/lib/email/rate-limit'
 
 const UnsubscribeSchema = z.object({
   email: z.string().email(),
@@ -8,8 +10,33 @@ const UnsubscribeSchema = z.object({
   unsubscribeAll: z.boolean().optional(),
 })
 
+/** Generate a signed token for email verification */
+function generateEmailToken(email: string): string {
+  const secret = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-secret'
+  return createHmac('sha256', secret).update(email.toLowerCase().trim()).digest('hex').slice(0, 32)
+}
+
+/** Verify a signed token for an email */
+function verifyEmailToken(email: string, token: string): boolean {
+  return generateEmailToken(email) === token
+}
+
 export async function POST(request: Request) {
   try {
+    // CSRF: verify request origin
+    const origin = request.headers.get('origin')
+    const host = request.headers.get('host')
+    if (origin && host && !origin.includes(host)) {
+      return NextResponse.json({ error: 'Invalid origin.' }, { status: 403 })
+    }
+
+    // Rate limit
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const { allowed } = checkRateLimit(`unsub:${ip}`, { maxRequests: 10, windowMs: 60_000 })
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many requests.' }, { status: 429 })
+    }
+
     const payload = await request.json()
     const parsed = UnsubscribeSchema.safeParse(payload)
 
@@ -23,31 +50,20 @@ export async function POST(request: Request) {
     const { email, categories, unsubscribeAll } = parsed.data
     const normalizedEmail = email.trim().toLowerCase()
 
-    // Find or create unsubscribe preference
-    const existing = await prisma.unsubscribePreference.findUnique({
+    // Atomic upsert instead of find-then-create/update
+    await prisma.unsubscribePreference.upsert({
       where: { email: normalizedEmail },
+      create: {
+        email: normalizedEmail,
+        unsubscribeAll: unsubscribeAll ?? false,
+        unsubscribedFrom: categories ?? [],
+      },
+      update: {
+        unsubscribeAll: unsubscribeAll ?? undefined,
+        unsubscribedFrom: categories ?? undefined,
+        updatedAt: new Date(),
+      },
     })
-
-    if (existing) {
-      // Update existing preference
-      await prisma.unsubscribePreference.update({
-        where: { email: normalizedEmail },
-        data: {
-          unsubscribeAll: unsubscribeAll ?? existing.unsubscribeAll,
-          unsubscribedFrom: categories ?? existing.unsubscribedFrom,
-          updatedAt: new Date(),
-        },
-      })
-    } else {
-      // Create new preference
-      await prisma.unsubscribePreference.create({
-        data: {
-          email: normalizedEmail,
-          unsubscribeAll: unsubscribeAll ?? false,
-          unsubscribedFrom: categories ?? [],
-        },
-      })
-    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
@@ -63,12 +79,29 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')
+    const token = searchParams.get('token')
 
     if (!email) {
       return NextResponse.json(
         { error: 'Email is required.' },
         { status: 400 }
       )
+    }
+
+    // Validate signed token to prevent email enumeration
+    if (!token || !verifyEmailToken(email, token)) {
+      // Return empty defaults instead of revealing whether email exists
+      return NextResponse.json({
+        unsubscribeAll: false,
+        unsubscribedFrom: [],
+      })
+    }
+
+    // Rate limit
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const { allowed } = checkRateLimit(`unsub-get:${ip}`, { maxRequests: 20, windowMs: 60_000 })
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many requests.' }, { status: 429 })
     }
 
     const normalizedEmail = email.trim().toLowerCase()

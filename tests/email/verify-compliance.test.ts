@@ -27,6 +27,12 @@ vi.mock('resend', () => ({
   }))
 }))
 
+// Mock logger to avoid DB hits
+vi.mock('@/lib/email/logger', () => ({
+  checkUnsubscribed: vi.fn().mockResolvedValue(false),
+  logEmailSend: vi.fn().mockResolvedValue({ id: 'log-id' }),
+}))
+
 describe('Email Compliance - List-Unsubscribe Headers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -177,8 +183,8 @@ describe('Email Compliance - List-Unsubscribe Headers', () => {
 })
 
 describe('Email Compliance - Unsubscribe Links in Footer', () => {
-  it('should include unsubscribe link in order confirmation email footer', () => {
-    const html = render(
+  it('should include unsubscribe link in order confirmation email footer', async () => {
+    const html = await render(
       OrderConfirmationEmail({
         orderNumber: '12345',
         orderDate: '2024-01-15',
@@ -193,8 +199,8 @@ describe('Email Compliance - Unsubscribe Links in Footer', () => {
     expect(html).toContain('/unsubscribe')
   })
 
-  it('should include unsubscribe link in shipping notification email footer', () => {
-    const html = render(
+  it('should include unsubscribe link in shipping notification email footer', async () => {
+    const html = await render(
       ShippingNotificationEmail({
         orderNumber: '12345',
         trackingNumber: 'TRACK123',
@@ -211,8 +217,8 @@ describe('Email Compliance - Unsubscribe Links in Footer', () => {
     expect(html).toContain('/unsubscribe')
   })
 
-  it('should include unsubscribe link in delivery confirmation email footer', () => {
-    const html = render(
+  it('should include unsubscribe link in delivery confirmation email footer', async () => {
+    const html = await render(
       DeliveryConfirmationEmail({
         orderNumber: '12345',
         deliveryDate: '2024-01-20',
@@ -226,8 +232,8 @@ describe('Email Compliance - Unsubscribe Links in Footer', () => {
     expect(html).toContain('/unsubscribe')
   })
 
-  it('should include unsubscribe link in contact form email footer', () => {
-    const html = render(
+  it('should include unsubscribe link in contact form email footer', async () => {
+    const html = await render(
       ContactFormEmail({
         name: 'John Doe',
         email: 'john@example.com',
@@ -240,8 +246,8 @@ describe('Email Compliance - Unsubscribe Links in Footer', () => {
     expect(html).toContain('/unsubscribe')
   })
 
-  it('should use default unsubscribe link (#) when URL not provided', () => {
-    const html = render(
+  it('should use default unsubscribe link (#) when URL not provided', async () => {
+    const html = await render(
       OrderConfirmationEmail({
         orderNumber: '12345',
         orderDate: '2024-01-15',
@@ -277,7 +283,7 @@ describe('Email Compliance - Full Integration', () => {
       unsubscribeUrl: 'https://example.com/unsubscribe?email=test@example.com',
     })
 
-    const html = render(template)
+    const html = await render(template)
 
     await sendEmail({
       to: 'test@example.com',

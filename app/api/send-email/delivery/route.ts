@@ -1,79 +1,84 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { sendEmail } from '@/lib/email/client'
 import { DeliveryConfirmationEmail } from '@/emails/delivery-confirmation'
-import type { OrderItem } from '@/emails/components/OrderItemsTable'
+import { checkRateLimit, validateServiceApiKey } from '@/lib/email/rate-limit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-interface DeliveryConfirmationRequest {
-  email: string
-  name?: string
-  orderNumber: string
-  deliveryDate: string
-  shippingAddress: string
-  items: OrderItem[]
-  feedbackUrl?: string
-  orderDetailsUrl?: string
-  orderId?: string
-  userId?: string
-  unsubscribeUrl?: string
-}
+const OrderItemSchema = z.object({
+  quantity: z.number(),
+  productName: z.string(),
+  productSku: z.string(),
+  totalPrice: z.union([z.number(), z.string()]),
+})
+
+const DeliveryConfirmationSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  name: z.string().optional(),
+  orderNumber: z.string().min(1),
+  deliveryDate: z.string().min(1),
+  shippingAddress: z.string().min(1),
+  items: z.array(OrderItemSchema).default([]),
+  feedbackUrl: z.string().url().optional(),
+  orderDetailsUrl: z.string().url().optional(),
+  orderId: z.string().optional(),
+  userId: z.string().optional(),
+  unsubscribeUrl: z.string().url().optional(),
+})
 
 // API route for sending delivery confirmation emails
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as DeliveryConfirmationRequest
+    // Authenticate service requests
+    if (!validateServiceApiKey(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    // Validate required fields
-    if (!body.email) {
+    // Rate limit
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const { allowed, retryAfterMs } = checkRateLimit(`delivery:${ip}`, { maxRequests: 30, windowMs: 60_000 })
+    if (!allowed) {
       return NextResponse.json(
-        { error: 'Missing required field: email' },
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((retryAfterMs || 60000) / 1000)) } }
+      )
+    }
+
+    const body = await request.json()
+    const parsed = DeliveryConfirmationSchema.safeParse(body)
+
+    if (!parsed.success) {
+      const firstError = parsed.error.errors[0]
+      return NextResponse.json(
+        { error: `Validation error: ${firstError.message}` },
         { status: 400 }
       )
     }
 
-    if (!body.orderNumber) {
-      return NextResponse.json(
-        { error: 'Missing required field: orderNumber' },
-        { status: 400 }
-      )
-    }
-
-    if (!body.deliveryDate) {
-      return NextResponse.json(
-        { error: 'Missing required field: deliveryDate' },
-        { status: 400 }
-      )
-    }
-
-    if (!body.shippingAddress) {
-      return NextResponse.json(
-        { error: 'Missing required field: shippingAddress' },
-        { status: 400 }
-      )
-    }
+    const data = parsed.data
 
     // Prepare email data
     const emailProps = {
-      name: body.name,
-      orderNumber: body.orderNumber,
-      deliveryDate: body.deliveryDate,
-      shippingAddress: body.shippingAddress,
-      items: body.items || [],
-      feedbackUrl: body.feedbackUrl,
-      orderDetailsUrl: body.orderDetailsUrl,
-      unsubscribeUrl: body.unsubscribeUrl,
+      name: data.name,
+      orderNumber: data.orderNumber,
+      deliveryDate: data.deliveryDate,
+      shippingAddress: data.shippingAddress,
+      items: data.items,
+      feedbackUrl: data.feedbackUrl,
+      orderDetailsUrl: data.orderDetailsUrl,
+      unsubscribeUrl: data.unsubscribeUrl,
     }
 
     // Send email
     const result = await sendEmail({
-      to: body.email,
-      subject: `Your Order #${body.orderNumber} Has Been Delivered!`,
+      to: data.email,
+      subject: `Your Order #${data.orderNumber} Has Been Delivered!`,
       react: DeliveryConfirmationEmail(emailProps),
       type: 'delivery-confirmation',
-      orderId: body.orderId,
-      userId: body.userId,
+      orderId: data.orderId,
+      userId: data.userId,
       replyTo: 'orders@josemadridsalsa.com',
     })
 
@@ -87,12 +92,12 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       messageId: result.messageId,
-      orderNumber: body.orderNumber,
+      orderNumber: data.orderNumber,
     })
   } catch (error) {
     console.error('Delivery confirmation email API error:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

@@ -97,15 +97,17 @@ export const DeliveryConfirmationEmail = ({
           We&apos;d love to hear what you think! Your feedback helps us improve and helps other salsa lovers discover our products.
         </Text>
         {feedbackUrl && (
-          <div style={ctaButtonContainer}>
+          <Section style={ctaButtonContainer}>
             <Button href={feedbackUrl} variant="primary" size="medium">
               Leave a Review
             </Button>
-          </div>
+          </Section>
         )}
-        <Text style={feedbackSubtext}>
-          Your honest opinion means the world to us and takes just a minute to share.
-        </Text>
+        {feedbackUrl && (
+          <Text style={feedbackSubtext}>
+            Your honest opinion means the world to us and takes just a minute to share.
+          </Text>
+        )}
       </Section>
 
       <Hr style={divider} />

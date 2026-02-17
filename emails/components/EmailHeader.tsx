@@ -7,7 +7,7 @@ interface EmailHeaderProps {
 }
 
 export const EmailHeader = ({
-  logoUrl = 'https://placehold.co/180x60',
+  logoUrl = 'https://josemadrid.net/images/logo.png',
   companyName = 'Jose Madrid Salsa',
   tagline = 'Authentic homemade salsa delivered to your door',
 }: EmailHeaderProps) => {

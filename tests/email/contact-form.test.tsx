@@ -140,7 +140,7 @@ describe('ContactFormEmail', () => {
         'name_123@sub.example.com',
       ]
 
-      emails.forEach((email) => {
+      for (const email of emails) {
         const html = await render(
           ContactFormEmail({
             ...baseProps,
@@ -150,7 +150,7 @@ describe('ContactFormEmail', () => {
 
         expect(html).toContain(email)
         expect(html).toContain(`mailto:${email}`)
-      })
+      }
     })
   })
 
@@ -250,7 +250,7 @@ Symbols: © ® ™`
         'Jean-François',
       ]
 
-      specialNames.forEach((name) => {
+      for (const name of specialNames) {
         const html = await render(
           ContactFormEmail({
             ...baseProps,
@@ -260,7 +260,7 @@ Symbols: © ® ™`
 
         expect(html).toMatch(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, '.*')))
         expect(html).toContain('Reply to')
-      })
+      }
     })
 
     it('should handle long names', async () => {
@@ -298,7 +298,7 @@ Symbols: © ® ™`
         '+1 (512) 555-1234 ext. 123',
       ]
 
-      phoneFormats.forEach((phone) => {
+      for (const phone of phoneFormats) {
         const html = await render(
           ContactFormEmail({
             ...baseProps,
@@ -307,7 +307,7 @@ Symbols: © ® ™`
         )
 
         expect(html).toContain(phone)
-      })
+      }
     })
 
     it('should handle international phone numbers', async () => {
@@ -317,7 +317,7 @@ Symbols: © ® ™`
         '+61 2 1234 5678',
       ]
 
-      internationalPhones.forEach((phone) => {
+      for (const phone of internationalPhones) {
         const html = await render(
           ContactFormEmail({
             ...baseProps,
@@ -326,7 +326,7 @@ Symbols: © ® ™`
         )
 
         expect(html).toContain(phone)
-      })
+      }
     })
   })
 
@@ -420,7 +420,7 @@ Symbols: © ® ™`
         'Friday, February 17, 2024',
       ]
 
-      timestamps.forEach((submittedAt) => {
+      for (const submittedAt of timestamps) {
         const html = await render(
           ContactFormEmail({
             ...baseProps,
@@ -429,7 +429,7 @@ Symbols: © ® ™`
         )
 
         expect(html).toContain(submittedAt)
-      })
+      }
     })
   })
 

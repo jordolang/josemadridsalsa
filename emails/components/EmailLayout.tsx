@@ -12,19 +12,9 @@ export const EmailLayout = ({ children, previewText }: EmailLayoutProps) => {
       {previewText && <Preview>{previewText}</Preview>}
       <Body style={main}>
         <Container style={container}>
-          {/* Header section - will be replaced with EmailHeader component */}
-          <Section style={header}>
-            {/* Placeholder for EmailHeader */}
-          </Section>
-
-          {/* Main content */}
+          {/* Main content (EmailHeader/EmailFooter rendered by each template) */}
           <Section style={content}>
             {children}
-          </Section>
-
-          {/* Footer section - will be replaced with EmailFooter component */}
-          <Section style={footer}>
-            {/* Placeholder for EmailFooter */}
           </Section>
         </Container>
       </Body>
@@ -45,14 +35,6 @@ const container = {
   maxWidth: '600px',
 };
 
-const header = {
-  padding: '0',
-};
-
 const content = {
   padding: '0 48px',
-};
-
-const footer = {
-  padding: '0',
 };

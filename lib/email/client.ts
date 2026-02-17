@@ -6,16 +6,27 @@
 import { Resend } from 'resend'
 import { render } from '@react-email/render'
 import React from 'react'
+import { createHash } from 'crypto'
 import { logEmailSend, checkUnsubscribed } from './logger'
 
-const resendApiKey = process.env.RESEND_API_KEY
+let resendApiKeyWarned = false
 
-if (!resendApiKey) {
-  console.warn('RESEND_API_KEY environment variable is not set')
+function getResendClient(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    if (!resendApiKeyWarned) {
+      console.warn('RESEND_API_KEY environment variable is not set')
+      resendApiKeyWarned = true
+    }
+    return null
+  }
+  return new Resend(apiKey)
 }
 
-// Initialize Resend client
-export const resend = resendApiKey ? new Resend(resendApiKey) : null
+/** Hash email for safe logging */
+function hashEmail(email: string): string {
+  return createHash('sha256').update(email.toLowerCase()).digest('hex').slice(0, 12)
+}
 
 interface SendEmailOptions {
   to: string | string[]
@@ -49,8 +60,11 @@ export async function sendEmail({
   userId,
 }: SendEmailOptions): Promise<EmailSendResult> {
   const recipientEmail = Array.isArray(to) ? to[0] : to
+  const emailHash = hashEmail(recipientEmail)
 
   try {
+    const resend = getResendClient()
+
     // Check if Resend is configured
     if (!resend) {
       const errorMsg = 'Resend client not initialized - RESEND_API_KEY missing'
@@ -81,15 +95,15 @@ export async function sendEmail({
     const isTransactional = ['order-confirmation', 'shipping-notification', 'delivery-confirmation'].includes(type)
 
     if (!isTransactional) {
-      const isUnsubscribed = await checkUnsubscribed({ email: recipientEmail })
+      const isUnsubscribed = await checkUnsubscribed({ email: recipientEmail, category: type })
       if (isUnsubscribed) {
-        console.log(`Email not sent - user unsubscribed: ${recipientEmail}`)
+        console.log(`Email not sent - user unsubscribed: ${emailHash}`)
         return { success: false, error: 'User unsubscribed' }
       }
     }
 
     // Render React Email template to HTML
-    const html = render(react)
+    const html = await render(react)
 
     // Construct unsubscribe URL
     const unsubscribeUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://josemadrid.net'}/unsubscribe?email=${encodeURIComponent(recipientEmail)}`
@@ -133,7 +147,7 @@ export async function sendEmail({
     // Log successful send
     await logEmailSend({
       recipientEmail,
-      recipientName: undefined, // Can be passed as parameter if available
+      recipientName: undefined,
       userId,
       templateId: type,
       subject,
@@ -144,7 +158,7 @@ export async function sendEmail({
       console.error('Failed to log email send:', err)
     })
 
-    console.log(`Email sent successfully: ${type} to ${recipientEmail}`)
+    console.log(`Email sent successfully: ${type} to ${emailHash}`)
 
     return {
       success: true,
@@ -179,6 +193,6 @@ export async function sendEmail({
 /**
  * Render React Email template to HTML (for preview/testing)
  */
-export function renderEmailTemplate(react: React.ReactElement): string {
-  return render(react)
+export async function renderEmailTemplate(react: React.ReactElement): Promise<string> {
+  return await render(react)
 }

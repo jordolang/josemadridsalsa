@@ -55,14 +55,14 @@ const nextConfig = {
       },
     ],
   },
+  // React Email packages need to be external for server components
+  serverExternalPackages: ['@react-email/render'],
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000'],
     },
     // Use system TLS certificates for Turbopack font downloads
     turbopackUseSystemTlsCerts: true,
-    // React Email packages need to be external for server components
-    serverComponentsExternalPackages: ['@react-email/render'],
   },
   /**
    * Exclude large, unused directories from serverless traces to keep

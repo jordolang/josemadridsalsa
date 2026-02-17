@@ -84,11 +84,20 @@ export async function updateEmailLog(options: UpdateEmailLogOptions) {
   }
 }
 
+/** Categories considered marketing (fail-closed on DB error) */
+const MARKETING_CATEGORIES = ['marketing', 'newsletter', 'promotions', 'announcements']
+
 /**
  * Check if a user has unsubscribed from emails
  * Returns true if user is unsubscribed from the specified category or all emails
+ * Fails closed for marketing emails (returns true on DB error)
  */
 export async function checkUnsubscribed(options: CheckUnsubscribedOptions): Promise<boolean> {
+  const isMarketing = options.category
+    ? (Array.isArray(options.category) ? options.category : [options.category])
+        .some((c) => MARKETING_CATEGORIES.includes(c))
+    : false
+
   try {
     const preference = await prisma.unsubscribePreference.findUnique({
       where: { email: options.email },
@@ -113,12 +122,14 @@ export async function checkUnsubscribed(options: CheckUnsubscribedOptions): Prom
     return false
   } catch (error) {
     console.error('Error checking unsubscribe status:', error)
-    return false
+    // Fail closed for marketing emails - don't send if we can't verify
+    return isMarketing
   }
 }
 
 /**
  * Add an unsubscribe preference for an email address
+ * Uses Set to deduplicate categories
  */
 export async function unsubscribeFromCategory(
   email: string,
@@ -127,6 +138,15 @@ export async function unsubscribeFromCategory(
 ) {
   try {
     const categories = Array.isArray(category) ? category : [category]
+
+    // First check for existing record to deduplicate
+    const existing = await prisma.unsubscribePreference.findUnique({
+      where: { email },
+    })
+
+    const mergedCategories = existing
+      ? [...new Set([...existing.unsubscribedFrom, ...categories])]
+      : categories
 
     const preference = await prisma.unsubscribePreference.upsert({
       where: { email },
@@ -137,9 +157,7 @@ export async function unsubscribeFromCategory(
         unsubscribeAll: false,
       },
       update: {
-        unsubscribedFrom: {
-          push: categories,
-        },
+        unsubscribedFrom: mergedCategories,
       },
     })
 
@@ -197,7 +215,8 @@ export async function resubscribeToCategory(email: string, category: string | st
       where: { email },
       data: {
         unsubscribedFrom: updatedCategories,
-        unsubscribeAll: false,
+        // Only clear unsubscribeAll if resubscribing to all categories
+        // Don't force unsubscribeAll: false when resubscribing to a single category
       },
     })
 
@@ -213,28 +232,26 @@ export async function resubscribeToCategory(email: string, category: string | st
  */
 export async function getEmailStats(email: string) {
   try {
-    const stats = await prisma.emailLog.groupBy({
-      by: ['status'],
-      where: { recipientEmail: email },
-      _count: true,
-    })
-
-    const totalSent = await prisma.emailLog.count({
-      where: { recipientEmail: email, status: 'SENT' },
-    })
-
-    const totalOpened = await prisma.emailLog.count({
-      where: { recipientEmail: email, openedAt: { not: null } },
-    })
-
-    const totalClicked = await prisma.emailLog.count({
-      where: { recipientEmail: email, clickedAt: { not: null } },
-    })
-
-    const lastEmail = await prisma.emailLog.findFirst({
-      where: { recipientEmail: email },
-      orderBy: { createdAt: 'desc' },
-    })
+    const [stats, totalSent, totalOpened, totalClicked, lastEmail] = await Promise.all([
+      prisma.emailLog.groupBy({
+        by: ['status'],
+        where: { recipientEmail: email },
+        _count: true,
+      }),
+      prisma.emailLog.count({
+        where: { recipientEmail: email, status: 'SENT' },
+      }),
+      prisma.emailLog.count({
+        where: { recipientEmail: email, openedAt: { not: null } },
+      }),
+      prisma.emailLog.count({
+        where: { recipientEmail: email, clickedAt: { not: null } },
+      }),
+      prisma.emailLog.findFirst({
+        where: { recipientEmail: email },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ])
 
     return {
       stats,

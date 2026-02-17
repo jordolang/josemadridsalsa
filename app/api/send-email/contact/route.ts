@@ -1,65 +1,66 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { sendEmail } from '@/lib/email/client'
 import { ContactFormEmail } from '@/emails/contact-form'
+import { checkRateLimit } from '@/lib/email/rate-limit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-interface ContactFormRequest {
-  name: string
-  email: string
-  phone?: string
-  message: string
-  submittedAt?: string
-  userId?: string
-  unsubscribeUrl?: string
-}
+const ContactFormSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200),
+  email: z.string().email('Invalid email address').max(320),
+  phone: z.string().max(30).optional(),
+  message: z.string().min(1, 'Message is required').max(5000),
+  submittedAt: z.string().optional(),
+  userId: z.string().optional(),
+  unsubscribeUrl: z.string().url().optional(),
+})
 
 // API route for sending contact form emails
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as ContactFormRequest
-
-    // Validate required fields
-    if (!body.name) {
+    // Rate limit by IP
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const { allowed, retryAfterMs } = checkRateLimit(`contact:${ip}`, { maxRequests: 5, windowMs: 60_000 })
+    if (!allowed) {
       return NextResponse.json(
-        { error: 'Missing required field: name' },
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((retryAfterMs || 60000) / 1000)) } }
+      )
+    }
+
+    const body = await request.json()
+    const parsed = ContactFormSchema.safeParse(body)
+
+    if (!parsed.success) {
+      const firstError = parsed.error.errors[0]
+      return NextResponse.json(
+        { error: `Validation error: ${firstError.message}` },
         { status: 400 }
       )
     }
 
-    if (!body.email) {
-      return NextResponse.json(
-        { error: 'Missing required field: email' },
-        { status: 400 }
-      )
-    }
-
-    if (!body.message) {
-      return NextResponse.json(
-        { error: 'Missing required field: message' },
-        { status: 400 }
-      )
-    }
+    const { name, email, phone, message, submittedAt, userId, unsubscribeUrl } = parsed.data
 
     // Prepare email data
     const emailProps = {
-      name: body.name,
-      email: body.email,
-      phone: body.phone,
-      message: body.message,
-      submittedAt: body.submittedAt || new Date().toISOString(),
-      unsubscribeUrl: body.unsubscribeUrl,
+      name,
+      email,
+      phone,
+      message,
+      submittedAt: submittedAt || new Date().toISOString(),
+      unsubscribeUrl,
     }
 
     // Send email to company
     const result = await sendEmail({
       to: 'info@josemadridsalsa.com',
-      subject: `New Contact Form Submission from ${body.name}`,
+      subject: `New Contact Form Submission from ${name}`,
       react: ContactFormEmail(emailProps),
       type: 'contact-form',
-      userId: body.userId,
-      replyTo: body.email,
+      userId,
+      replyTo: email,
     })
 
     if (!result.success) {
@@ -72,12 +73,12 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       messageId: result.messageId,
-      from: body.email,
+      from: email,
     })
   } catch (error) {
     console.error('Contact form email API error:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

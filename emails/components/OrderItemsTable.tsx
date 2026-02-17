@@ -31,9 +31,10 @@ export const OrderItemsTable = ({
   return (
     <Section style={tableSection}>
       {items.map((item, index) => {
-        const lineTotal = typeof item.totalPrice === 'number'
-          ? item.totalPrice.toFixed(2)
-          : Number(item.totalPrice).toFixed(2);
+        const parsed = typeof item.totalPrice === 'number'
+          ? item.totalPrice
+          : Number(item.totalPrice);
+        const lineTotal = Number.isFinite(parsed) ? parsed.toFixed(2) : '0.00';
 
         return (
           <Row key={`${item.productSku}-${index}`} style={itemRow}>

@@ -5,13 +5,17 @@ interface EmailFooterProps {
   companyAddress?: string;
   unsubscribeUrl?: string;
   supportEmail?: string;
+  privacyUrl?: string;
+  termsUrl?: string;
 }
 
 export const EmailFooter = ({
   companyName = 'Jose Madrid Salsa',
   companyAddress = '123 Main Street, Austin, TX 78701',
-  unsubscribeUrl = '#',
+  unsubscribeUrl,
   supportEmail = 'support@josemadrid.net',
+  privacyUrl = 'https://josemadrid.net/privacy',
+  termsUrl = 'https://josemadrid.net/terms',
 }: EmailFooterProps) => {
   return (
     <>
@@ -30,15 +34,19 @@ export const EmailFooter = ({
           </Link>
         </Text>
         <Text style={footerTextSmall}>
-          <Link href={unsubscribeUrl} style={link}>
-            Unsubscribe
-          </Link>
-          {' · '}
-          <Link href="#" style={link}>
+          {unsubscribeUrl && (
+            <>
+              <Link href={unsubscribeUrl} style={link}>
+                Unsubscribe
+              </Link>
+              {' · '}
+            </>
+          )}
+          <Link href={privacyUrl} style={link}>
             Privacy Policy
           </Link>
           {' · '}
-          <Link href="#" style={link}>
+          <Link href={termsUrl} style={link}>
             Terms of Service
           </Link>
         </Text>
