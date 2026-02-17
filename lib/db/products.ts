@@ -114,6 +114,10 @@ export async function getProducts(filters: ProductFilters = {}) {
         category: true,
         variants: true,
         nutritionalInfo: true,
+        productIngredients: {
+          include: { ingredient: true },
+          orderBy: { sortOrder: 'asc' as const },
+        },
         productTags: {
           include: {
             tag: true,
@@ -153,6 +157,10 @@ export async function getProductBySlug(slug: string) {
         category: true,
         variants: true,
         nutritionalInfo: true,
+        productIngredients: {
+          include: { ingredient: true },
+          orderBy: { sortOrder: 'asc' as const },
+        },
         productTags: {
           include: {
             tag: true,
