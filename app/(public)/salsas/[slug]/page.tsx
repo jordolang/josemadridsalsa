@@ -160,6 +160,7 @@ export default function ProductPage() {
         ingredients: product.ingredients || null,
         weight: product.weight || null,
         dimensions: product.dimensions || null,
+        nutritionalInfo: null,
       })
       toast.success('Added to comparison')
       openPanel()

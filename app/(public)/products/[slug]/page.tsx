@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { ImageGallery } from '@/components/products/ImageGallery'
 import { VariantSelector } from '@/components/products/VariantSelector'
 import { NutritionalInfo } from '@/components/products/NutritionalInfo'
+import { buildProductSchema } from '@/lib/seo/schema-generator'
 import { Metadata } from 'next'
 
 type Props = {
@@ -24,12 +25,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   }
 
+  const ingredientNames = product.productIngredients
+    ?.map((pi: any) => pi.ingredient.name)
+    .slice(0, 5)
+    .join(', ')
+
+  const metaDescription = product.description
+    || `Buy ${product.name} - Premium handcrafted salsa from Jose Madrid Salsa.${ingredientNames ? ` Made with ${ingredientNames}.` : ''}`
+
   return {
     title: `${product.name} | Jose Madrid Salsa`,
-    description: product.description || `Buy ${product.name} - Premium handcrafted salsa from Jose Madrid Salsa`,
+    description: metaDescription,
     openGraph: {
       title: product.name,
-      description: product.description || undefined,
+      description: metaDescription,
+      images: product.featuredImage ? [product.featuredImage] : undefined,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: product.name,
+      description: metaDescription,
       images: product.featuredImage ? [product.featuredImage] : undefined,
     },
   }
@@ -52,8 +68,33 @@ export default async function ProductDetailPage({ params }: Props) {
     ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
     : 0
 
+  // Build JSON-LD structured data
+  const jsonLd = buildProductSchema({
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    description: product.description,
+    price: product.price,
+    compareAtPrice: product.compareAtPrice,
+    featuredImage: product.featuredImage,
+    images: product.images || [],
+    sku: product.sku,
+    inventory: product.inventory,
+    heatLevel: product.heatLevel,
+    weight: product.weight,
+    ingredients: product.ingredients,
+    nutritionalInfo: product.nutritionalInfo,
+    productIngredients: product.productIngredients,
+  })
+
   return (
     <main className="min-h-screen bg-background">
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Product Images Section */}
@@ -121,6 +162,7 @@ export default async function ProductDetailPage({ params }: Props) {
             {product.nutritionalInfo && (
               <NutritionalInfo
                 nutritionalInfo={product.nutritionalInfo}
+                productIngredients={product.productIngredients}
                 ingredients={product.ingredients}
               />
             )}

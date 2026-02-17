@@ -80,6 +80,7 @@ export function ComparisonURLHandler() {
             ingredients: product.ingredients || null,
             weight: product.weight || null,
             dimensions: product.dimensions || null,
+            nutritionalInfo: null,
           })
         })
 

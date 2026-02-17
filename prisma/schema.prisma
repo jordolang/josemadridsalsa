@@ -163,6 +163,7 @@ model Product {
   shopListings          ShopListing[]
   variants              ProductVariant[]
   nutritionalInfo       NutritionalInfo?
+  productIngredients    ProductIngredient[]
 
   @@map("products")
 }
@@ -191,18 +192,81 @@ model NutritionalInfo {
   productId String  @unique
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  servingSize String // e.g., "2 tbsp (30g)"
-  calories    Int
-  totalFat    String // e.g., "0g"
-  sodium      String // e.g., "210mg"
-  totalCarbs  String // e.g., "3g"
-  protein     String // e.g., "1g"
-  allergens   String? // e.g., "Contains: Tomatoes"
+  // Serving info
+  servingSize         String // e.g., "2 Tbsp (30ml)"
+  servingsPerContainer Int    @default(13)
+
+  // Calories
+  calories        Int @default(0)
+  caloriesFromFat Int @default(0)
+
+  // Fats
+  totalFatG      Float @default(0)
+  totalFatDV     Int   @default(0)
+  saturatedFatG  Float @default(0)
+  saturatedFatDV Int   @default(0)
+  transFatG      Float @default(0)
+
+  // Cholesterol
+  cholesterolMg Float @default(0)
+  cholesterolDV Int   @default(0)
+
+  // Sodium
+  sodiumMg Float @default(0)
+  sodiumDV Int   @default(0)
+
+  // Carbohydrates
+  totalCarbG     Float @default(0)
+  totalCarbDV    Int   @default(0)
+  dietaryFiberG  Float @default(0)
+  dietaryFiberDV Int   @default(0)
+  sugarsG        Float @default(0)
+
+  // Protein
+  proteinG Float @default(0)
+
+  // Vitamins & Minerals (% Daily Value)
+  vitaminADV Int @default(0)
+  vitaminCDV Int @default(0)
+  calciumDV  Int @default(0)
+  ironDV     Int @default(0)
+
+  // Allergens
+  allergens String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("nutritional_info")
+}
+
+model Ingredient {
+  id   String @id @default(cuid())
+  name String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  products ProductIngredient[]
+
+  @@map("ingredients")
+}
+
+model ProductIngredient {
+  id           String @id @default(cuid())
+  productId    String
+  ingredientId String
+  sortOrder    Int    @default(0)
+  qualifier    String? // e.g., "Tomatoes, Citric Acid, Calcium Chloride" for Diced Tomatoes
+
+  // Relations
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, ingredientId])
+  @@index([productId])
+  @@map("product_ingredients")
 }
 
 model ShopListing {
