@@ -13,9 +13,9 @@ import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuL
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { CartIcon } from "@/components/store/cart-icon";
 import { useWishlistStore } from "@/lib/store/wishlist";
 import { cn } from "@/lib/utils";
+import { CartIcon } from "@/components/store/cart-icon";
 
 const salsaCategories = [
   { name: "Mild & Sweet", href: "/products?heat=mild", description: "Perfect for beginners and families" },

@@ -7,47 +7,37 @@ import { useCartStore } from '@/lib/store/cart'
 import { cn } from '@/lib/utils'
 
 interface CartIconProps {
-  className?: string
+  variant?: 'default' | 'ghost'
   size?: 'sm' | 'default' | 'lg'
+  className?: string
   showBadge?: boolean
 }
 
 export function CartIcon({
-  className,
+  variant = 'ghost',
   size = 'sm',
-  showBadge = true
+  className,
+  showBadge = true,
 }: CartIconProps) {
-  const { totalItems, toggleCart } = useCartStore()
-
-  const itemCount = totalItems()
-
-  const iconSize = {
-    sm: 'h-4 w-4',
-    default: 'h-5 w-5',
-    lg: 'h-6 w-6',
-  }[size]
-
-  const buttonSize = {
-    sm: 'p-1.5',
-    default: 'p-2',
-    lg: 'p-2.5',
-  }[size]
+  const { items, toggleCart } = useCartStore()
+  const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
     <Button
-      variant="ghost"
+      variant={variant}
       size={size}
       onClick={toggleCart}
-      className={cn('relative', buttonSize, className)}
-      aria-label={`Shopping cart with ${itemCount} items`}
+      className={cn('relative p-1.5', className)}
+      aria-label={`Shopping cart with ${cartItemCount} items`}
     >
-      <ShoppingCart className={iconSize} />
-      {showBadge && itemCount > 0 && (
+      <ShoppingCart className="w-4 h-4" />
+      {showBadge && cartItemCount > 0 && (
         <Badge
           variant="destructive"
-          className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center p-0 text-[10px] bg-salsa-500 hover:bg-salsa-600"
+          className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center p-0 text-[10px] bg-salsa-500"
+          aria-label={`${cartItemCount} items in cart`}
         >
-          {itemCount}
+          {cartItemCount}
         </Badge>
       )}
     </Button>
