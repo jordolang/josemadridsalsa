@@ -1,99 +1,64 @@
 import { format } from 'date-fns'
-import { sendEmail, substituteVariables } from '@/lib/email/sender'
+import React from 'react'
+import { sendEmail } from '@/lib/email/client'
 import { prisma } from '@/lib/prisma'
-
-type TemplateContent = {
-  subject: string
-  html: string
-  text?: string
-}
-
-interface SendTemplateEmailOptions {
-  templateKey: string
-  to: string
-  variables: Record<string, any>
-  fallback: TemplateContent
-  replyTo?: string
-  configId?: string
-}
+import { OrderConfirmationEmail } from '@/emails/order-confirmation'
+import { Text, Section } from '@react-email/components'
+import { EmailLayout } from '@/emails/components/EmailLayout'
+import { EmailHeader } from '@/emails/components/EmailHeader'
+import { EmailFooter } from '@/emails/components/EmailFooter'
+import { Button } from '@/emails/components/Button'
 
 const defaultAppUrl =
   process.env.NEXT_PUBLIC_APP_URL ||
   process.env.NEXTAUTH_URL ||
   'https://www.josemadridsalsa.com'
 
-async function loadTemplate(
-  templateKey: string
-): Promise<TemplateContent | null> {
-  try {
-    const template = await prisma.emailTemplate.findUnique({
-      where: { key: templateKey },
-    })
-
-    if (!template) {
-      return null
-    }
-
-    return {
-      subject: template.subject,
-      html: template.html,
-      text: template.text ?? undefined,
-    }
-  } catch (error) {
-    console.error(`[EmailAutomation] Failed to load template ${templateKey}`, error)
-    return null
-  }
-}
-
-async function sendTemplateEmail({
-  templateKey,
-  to,
-  variables,
-  fallback,
-  replyTo,
-  configId,
-}: SendTemplateEmailOptions) {
-  const template = await loadTemplate(templateKey)
-  const content = template ?? fallback
-
-  const subject = substituteVariables(content.subject, variables)
-  const html = substituteVariables(content.html, variables)
-  const text = content.text
-    ? substituteVariables(content.text, variables)
-    : undefined
-
-  return sendEmail(
-    {
-      to,
-      subject,
-      html,
-      text,
-      replyTo,
-    },
-    configId
-  )
-}
-
 export async function sendWelcomeEmail(options: {
   email: string
   name?: string | null
   discountCode?: string
 }) {
-  const variables = {
-    name: options.name || 'Friend',
-    discountCode: options.discountCode || 'WELCOME15',
-    unsubscribe_url: `${defaultAppUrl}/account/preferences`,
-  }
+  const name = options.name || 'Friend'
+  const discountCode = options.discountCode || 'WELCOME15'
+  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
 
-  return sendTemplateEmail({
-    templateKey: 'welcome_email',
+  const emailContent = React.createElement(
+    EmailLayout,
+    { previewText: 'Welcome to Jose Madrid Salsa!' },
+    React.createElement(EmailHeader, null),
+    React.createElement(
+      Section,
+      { style: { padding: '0', margin: '24px 0' } },
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 24px', fontSize: '24px', fontWeight: '700', color: '#dc2626', fontFamily: 'Arial, sans-serif', lineHeight: '1.3' } },
+        'Welcome to Jose Madrid Salsa!'
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        `Hi ${name},`
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        `Welcome to the Jose Madrid Salsa family. Use code ${discountCode} to save on your first order.`
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        "We're excited to cook with you."
+      )
+    ),
+    React.createElement(EmailFooter, { unsubscribeUrl })
+  )
+
+  return sendEmail({
     to: options.email,
-    variables,
-    fallback: {
-      subject: 'Welcome to Jose Madrid Salsa!',
-      html: `<p>Hi {{name}},</p><p>Welcome to the Jose Madrid Salsa family. Use code <strong>{{discountCode}}</strong> to save on your first order.</p><p>We&apos;re excited to cook with you.</p>`,
-      text: 'Welcome to Jose Madrid Salsa! Use code {{discountCode}} to save on your first order.',
-    },
+    subject: 'Welcome to Jose Madrid Salsa!',
+    react: emailContent,
+    type: 'welcome',
   })
 }
 
@@ -118,55 +83,45 @@ export async function sendOrderConfirmationEmail(orderId: string) {
     return { success: false, error: 'Order email missing' }
   }
 
-  const orderItemsHtml = order.items.length
-    ? order.items
-        .map((item) => {
-          const lineTotal = Number(item.totalPrice).toFixed(2)
-          return `<div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-              <div><strong>${item.quantity}× ${item.productName}</strong><br/><span style="color:#6b7280;">SKU: ${item.productSku}</span></div>
-              <div style="font-weight:600;">$${lineTotal}</div>
-            </div>`
-        })
-        .join('')
-    : '<p style="margin:0;color:#6b7280;">This order contains digital items.</p>'
-
-  const orderItemsText = order.items.length
-    ? order.items
-        .map((item) => `${item.quantity}× ${item.productName} — $${Number(item.totalPrice).toFixed(2)}`)
-        .join('\n')
-    : 'Digital items'
+  const items = order.items.map((item) => ({
+    name: item.productName,
+    quantity: item.quantity,
+    price: `$${Number(item.price).toFixed(2)}`,
+    total: `$${Number(item.totalPrice).toFixed(2)}`,
+    sku: item.productSku,
+  }))
 
   const shippingAddress =
     order.shippingMethod ||
     order.fundraiser?.name ||
     'Digital fulfillment'
 
-  const trackingUrl =
+  const trackingLink =
     order.trackingNumber
       ? `${defaultAppUrl}/track/${order.trackingNumber}`
       : `${defaultAppUrl}/account/orders`
 
-  const variables = {
+  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+
+  const emailContent = React.createElement(OrderConfirmationEmail, {
     name: order.user?.name || 'there',
     orderNumber: order.orderNumber,
     orderDate: format(order.createdAt, 'MMMM d, yyyy'),
     orderTotal: `$${Number(order.total).toFixed(2)}`,
-    orderItems: orderItemsHtml,
-    orderItemsText,
+    items,
     shippingAddress,
-    trackingLink: trackingUrl,
-  }
+    trackingLink,
+    unsubscribeUrl,
+  })
 
-  const result = await sendTemplateEmail({
-    templateKey: 'order_confirmation',
+  const result = await sendEmail({
     to: recipientEmail,
-    variables,
-    fallback: {
-      subject: `Order Confirmation #{{orderNumber}}`,
-      html: `<p>Hi {{name}},</p><p>Thanks for your order #{{orderNumber}} placed on {{orderDate}}.</p><p><strong>Items:</strong><br/>{{orderItems}}</p><p>Total: {{orderTotal}}</p>`,
-      text: `Order {{orderNumber}} confirmed on {{orderDate}} for {{orderTotal}}.\n\nItems:\n{{orderItemsText}}`,
-    },
+    subject: `Order Confirmation #${order.orderNumber}`,
+    react: emailContent,
     replyTo: 'orders@josemadridsalsa.com',
+    type: 'order-confirmation',
+    orderId: order.id,
+    userId: order.userId ?? undefined,
   })
 
   if (result.success) {
@@ -183,26 +138,40 @@ export async function sendNewsletterWelcomeEmail(options: {
   email: string
   name?: string
 }) {
-  const variables = {
-    name: options.name ?? 'Salsa Fan',
-    unsubscribe_url: `${defaultAppUrl}/account/preferences`,
-    month: format(new Date(), 'MMMM'),
-    featuredRecipe: 'Family Salsa Flight',
-    recipeLink: `${defaultAppUrl}/recipes`,
-    newsUpdate: 'Thanks for subscribing to our monthly newsletter!',
-    specialOffer: 'Save 10% on your next online order.',
-    offerCode: 'SALSA10',
-  }
+  const name = options.name ?? 'Salsa Fan'
+  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
 
-  return sendTemplateEmail({
-    templateKey: 'monthly_newsletter',
+  const emailContent = React.createElement(
+    EmailLayout,
+    { previewText: "You're on the list - welcome!" },
+    React.createElement(EmailHeader, null),
+    React.createElement(
+      Section,
+      { style: { padding: '0', margin: '24px 0' } },
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 24px', fontSize: '24px', fontWeight: '700', color: '#dc2626', fontFamily: 'Arial, sans-serif', lineHeight: '1.3' } },
+        "You're on the list!"
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        `Hi ${name},`
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        'Thanks for subscribing to the Jose Madrid Salsa newsletter. Look out for recipes, tastings, and exclusive offers in your inbox.'
+      )
+    ),
+    React.createElement(EmailFooter, { unsubscribeUrl })
+  )
+
+  return sendEmail({
     to: options.email,
-    variables,
-    fallback: {
-      subject: 'You’re on the list — welcome!',
-      html: `<p>Hi {{name}},</p><p>Thanks for subscribing to the Jose Madrid Salsa newsletter. Look out for recipes, tastings, and exclusive offers in your inbox.</p>`,
-      text: 'Thanks for subscribing to Jose Madrid Salsa news!',
-    },
+    subject: "You're on the list — welcome!",
+    react: emailContent,
+    type: 'newsletter-welcome',
   })
 }
 
@@ -211,21 +180,42 @@ export async function sendContactConfirmationEmail(options: {
   name?: string
   subject?: string
 }) {
-  const variables = {
-    name: options.name ?? 'there',
-    subject: options.subject ?? 'your recent message',
-  }
+  const name = options.name ?? 'there'
+  const messageSubject = options.subject ?? 'your recent message'
+  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
 
-  return sendTemplateEmail({
-    templateKey: 'thank_you',
+  const emailContent = React.createElement(
+    EmailLayout,
+    { previewText: 'Thanks for reaching out to Jose Madrid Salsa' },
+    React.createElement(EmailHeader, null),
+    React.createElement(
+      Section,
+      { style: { padding: '0', margin: '24px 0' } },
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 24px', fontSize: '24px', fontWeight: '700', color: '#dc2626', fontFamily: 'Arial, sans-serif', lineHeight: '1.3' } },
+        'Thanks for reaching out!'
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        `Hi ${name},`
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        `Thanks for contacting us about ${messageSubject}. Our team will follow up shortly.`
+      )
+    ),
+    React.createElement(EmailFooter, { unsubscribeUrl })
+  )
+
+  return sendEmail({
     to: options.email,
-    variables,
-    fallback: {
-      subject: 'Thanks for reaching out to Jose Madrid Salsa',
-      html: `<p>Hi {{name}},</p><p>Thanks for contacting us about {{subject}}. Our team will follow up shortly.</p>`,
-      text: 'Thanks for contacting Jose Madrid Salsa. We will follow up shortly.',
-    },
+    subject: 'Thanks for reaching out to Jose Madrid Salsa',
+    react: emailContent,
     replyTo: 'support@josemadridsalsa.com',
+    type: 'contact-confirmation',
   })
 }
 
@@ -236,27 +226,46 @@ export async function sendFundraiserFollowupEmail(options: {
   goal?: string
   supportEmail?: string
 }) {
-  const variables = {
-    contactName: options.contactName,
-    organizationName: options.organizationName,
-    fundraiserGoal: options.goal || '5,000',
-    fundraiserEndDate: format(new Date(Date.now() + 1000 * 60 * 60 * 24 * 21), 'MMMM d, yyyy'),
-    orderFormUrl: `${defaultAppUrl}/fundraising/forms`,
-    dashboardUrl: `${defaultAppUrl}/admin/fundraisers`,
-    supportEmail: options.supportEmail || 'fundraising@josemadridsalsa.com',
-    profitPerJar: '4',
-  }
+  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const supportEmail = options.supportEmail || 'fundraising@josemadridsalsa.com'
 
-  return sendTemplateEmail({
-    templateKey: 'fundraiser_kickoff',
+  const emailContent = React.createElement(
+    EmailLayout,
+    { previewText: "Let's get your fundraiser started!" },
+    React.createElement(EmailHeader, null),
+    React.createElement(
+      Section,
+      { style: { padding: '0', margin: '24px 0' } },
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 24px', fontSize: '24px', fontWeight: '700', color: '#dc2626', fontFamily: 'Arial, sans-serif', lineHeight: '1.3' } },
+        "Let's get your fundraiser started!"
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        `Hi ${options.contactName},`
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        `Thanks for your interest in fundraising with Jose Madrid Salsa for ${options.organizationName}. We'll be in touch shortly to build your plan.`
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        `Questions? Contact us at ${supportEmail}.`
+      )
+    ),
+    React.createElement(EmailFooter, { unsubscribeUrl })
+  )
+
+  return sendEmail({
     to: options.email,
-    variables,
-    fallback: {
-      subject: 'Let\'s get your fundraiser started!',
-      html: `<p>Hi {{contactName}},</p><p>Thanks for your interest in fundraising with Jose Madrid Salsa. We&apos;ll be in touch shortly to build your plan.</p>`,
-      text: 'Thanks for your interest in fundraising with Jose Madrid Salsa.',
-    },
-    replyTo: options.supportEmail ?? 'fundraising@josemadridsalsa.com',
+    subject: "Let's get your fundraiser started!",
+    react: emailContent,
+    replyTo: supportEmail,
+    type: 'fundraiser-followup',
   })
 }
 
@@ -278,73 +287,60 @@ export async function sendAbandonedCartEmail(options: {
   totalPrice: number
   recoveryToken: string
 }) {
-  const cartItemsHtml = options.cartItems
-    .map((item) => {
-      const lineTotal = (item.price * item.quantity).toFixed(2)
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid #e5e7eb;">
-          <div style="display:flex;align-items:center;gap:16px;">
-            <img src="${item.image}" alt="${item.name}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;" />
-            <div>
-              <div style="font-weight:600;font-size:16px;margin-bottom:4px;">${item.name}</div>
-              <div style="color:#6b7280;font-size:14px;">Quantity: ${item.quantity}</div>
-              <div style="color:#6b7280;font-size:14px;">Heat Level: ${item.heatLevel}</div>
-            </div>
-          </div>
-          <div style="font-weight:600;font-size:16px;">$${lineTotal}</div>
-        </div>`
-    })
-    .join('')
-
-  const cartItemsText = options.cartItems
-    .map((item) => `${item.quantity}× ${item.name} ($${item.price}) — $${(item.price * item.quantity).toFixed(2)}`)
-    .join('\n')
-
+  const name = options.name || 'there'
   const recoveryUrl = `${defaultAppUrl}/checkout?recover=${options.recoveryToken}`
+  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
 
-  const variables = {
-    name: options.name || 'there',
-    cartItems: cartItemsHtml,
-    cartItemsText,
-    totalPrice: `$${options.totalPrice.toFixed(2)}`,
-    recoveryLink: recoveryUrl,
-    discountCode: 'COMEBACK10',
-    discountAmount: '10',
-    unsubscribe_url: `${defaultAppUrl}/account/preferences`,
-  }
+  const emailContent = React.createElement(
+    EmailLayout,
+    { previewText: "Don't forget your salsa!" },
+    React.createElement(EmailHeader, null),
+    React.createElement(
+      Section,
+      { style: { padding: '0', margin: '24px 0' } },
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 24px', fontSize: '24px', fontWeight: '700', color: '#dc2626', fontFamily: 'Arial, sans-serif', lineHeight: '1.3' } },
+        "Don't forget your salsa!"
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        `Hi ${name},`
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        "You left some delicious items in your cart. We've saved them for you!"
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '16px 0', fontSize: '16px', fontWeight: '600', color: '#1f2937', fontFamily: 'Arial, sans-serif' } },
+        `Total: $${options.totalPrice.toFixed(2)}`
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        'Special offer: Use code COMEBACK10 at checkout to save 10% on your order!'
+      )
+    ),
+    React.createElement(
+      Section,
+      { style: { padding: '24px 0', textAlign: 'center' } },
+      React.createElement(Button, {
+        href: recoveryUrl,
+        variant: 'primary',
+        size: 'medium',
+      }, 'Complete Your Order')
+    ),
+    React.createElement(EmailFooter, { unsubscribeUrl })
+  )
 
-  return sendTemplateEmail({
-    templateKey: 'abandoned_cart',
+  return sendEmail({
     to: options.email,
-    variables,
-    fallback: {
-      subject: 'You left something behind! Complete your order now',
-      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-        <h1 style="color:#dc2626;font-size:28px;margin-bottom:24px;">Don't forget your salsa!</h1>
-        <p style="font-size:16px;line-height:1.6;margin-bottom:24px;">Hi {{name}},</p>
-        <p style="font-size:16px;line-height:1.6;margin-bottom:24px;">
-          You left some delicious items in your cart. We've saved them for you!
-        </p>
-        <div style="background:#f9fafb;border-radius:12px;padding:16px;margin-bottom:24px;">
-          {{cartItems}}
-          <div style="display:flex;justify-content:space-between;padding:16px;font-size:18px;font-weight:700;border-top:2px solid #dc2626;">
-            <span>Total:</span>
-            <span style="color:#dc2626;">{{totalPrice}}</span>
-          </div>
-        </div>
-        <p style="font-size:16px;line-height:1.6;margin-bottom:24px;">
-          <strong>Special offer:</strong> Use code <strong style="color:#dc2626;">{{discountCode}}</strong> at checkout to save {{discountAmount}}% on your order!
-        </p>
-        <div style="text-align:center;margin:32px 0;">
-          <a href="{{recoveryLink}}" style="display:inline-block;background:#dc2626;color:white;padding:16px 32px;text-decoration:none;border-radius:8px;font-weight:600;font-size:16px;">
-            Complete Your Order
-          </a>
-        </div>
-        <p style="font-size:14px;color:#6b7280;line-height:1.6;margin-top:32px;">
-          Questions? Reply to this email or visit our store to browse more products.
-        </p>
-      </div>`,
-      text: `Hi {{name}},\n\nYou left some items in your cart at Jose Madrid Salsa:\n\n{{cartItemsText}}\n\nTotal: {{totalPrice}}\n\nComplete your order now and use code {{discountCode}} to save {{discountAmount}}%!\n\n{{recoveryLink}}\n\nThanks,\nJose Madrid Salsa`,
-    },
+    subject: 'You left something behind! Complete your order now',
+    react: emailContent,
     replyTo: 'support@josemadridsalsa.com',
+    type: 'abandoned-cart',
   })
 }
