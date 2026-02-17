@@ -221,18 +221,6 @@ The platform uses a normalized PostgreSQL schema with the following core entitie
 
 See `prisma/schema.prisma` for the complete schema definition.
 
-### Security Architecture
-
-- **Authentication:** NextAuth.js with secure session management
-- **Authorization:** Role-based access control (RBAC) throughout the application
-- **Data Encryption:** Sensitive data encrypted at rest (gift certificates, API keys)
-- **Secret Management:** Environment variables, never committed to version control
-- **Pre-commit Hooks:** Automated secret scanning before commits (Gitleaks)
-- **Code Scanning:** GitHub CodeQL for vulnerability detection
-- **Input Validation:** Zod schemas on all user inputs and API requests
-- **CSRF Protection:** Built-in Next.js CSRF protection
-- **Rate Limiting:** API endpoint throttling to prevent abuse
-
 ### Development Workflow
 
 1. **Local Development** - Next.js dev server with hot reload and Turbopack
@@ -410,28 +398,24 @@ Once the server is running, you can access:
 
 ### Step 8: Setup Security (Recommended)
 
-**Install Gitleaks for secret scanning:**
+For production deployments, it's highly recommended to configure security features. See the **[Security](#security)** section for detailed setup instructions including:
+
+- Installing Gitleaks for secret scanning
+- Configuring pre-commit hooks
+- Enabling GitHub security features
+- Setting up CodeQL analysis
+
+**Quick setup:**
 
 ```bash
-# macOS
-brew install gitleaks
-
-# Linux
-wget https://github.com/gitleaks/gitleaks/releases/download/v8.18.0/gitleaks_8.18.0_linux_x64.tar.gz
-tar -xzf gitleaks_8.18.0_linux_x64.tar.gz
-sudo mv gitleaks /usr/local/bin/
-
-# Windows (using Chocolatey)
-choco install gitleaks
-```
-
-**Setup pre-commit hooks:**
-
-```bash
+# Install pre-commit hooks
 npm run prepare
+
+# Scan for secrets before committing
+npm run security:scan
 ```
 
-This enables automatic secret scanning before each commit.
+See the full **[Security](#security)** section below for comprehensive security configuration.
 
 ### Common Development Commands
 
@@ -630,10 +614,7 @@ npm run security:protect          # Check staged files before commit
 npm run security:baseline         # Generate security baseline report
 ```
 
-**Security Tools:**
-- **Gitleaks** - Detects hardcoded secrets, API keys, and tokens
-- **Pre-commit Hooks** - Prevents accidental secret commits
-- **GitHub CodeQL** - Automated vulnerability scanning in CI/CD
+For complete security setup, configuration, and best practices, see the **[Security](#security)** section.
 
 ### Project Analysis
 
@@ -903,19 +884,246 @@ For a complete list of available scripts, see `package.json`. Key script categor
 
 - **🔒 Security & Compliance**
   - CodeQL security scanning for vulnerabilities
-  - Secret detection and prevention
-  - Pre-commit hooks for code quality
+  - Secret detection and prevention (Gitleaks)
+  - Pre-commit hooks for code quality and security
   - GDPR compliance features
-  - Secure password hashing
+  - Secure password hashing with bcrypt
   - API rate limiting and abuse prevention
+  - Role-based access control (RBAC)
+  - Encrypted sensitive data at rest
+  - See **[Security](#security)** section for detailed configuration
 
-## Security Features
+## Security
+
+The Jose Madrid Salsa platform is built with enterprise-grade security in mind, implementing multiple layers of protection to safeguard customer data, payment information, and business operations.
+
+### Security Architecture
+
+- **Authentication:** NextAuth.js with secure session management
+- **Authorization:** Role-based access control (RBAC) throughout the application
+- **Data Encryption:** Sensitive data encrypted at rest (gift certificates, API keys)
+- **Secret Management:** Environment variables, never committed to version control
+- **Pre-commit Hooks:** Automated secret scanning before commits (Gitleaks)
+- **Code Scanning:** GitHub CodeQL for vulnerability detection
+- **Input Validation:** Zod schemas on all user inputs and API requests
+- **CSRF Protection:** Built-in Next.js CSRF protection
+- **Rate Limiting:** API endpoint throttling to prevent abuse
+
+### Security Features
 
 ✅ **CodeQL Security Scanning** - Automated code analysis for vulnerabilities
 ✅ **Secret Detection** - Multiple layers of API key and credential protection
 ✅ **Pre-commit Hooks** - Local prevention of secret commits
 ✅ **GitHub Actions Integration** - Automated CI/CD security checks
 ✅ **Dependency Monitoring** - Track vulnerable packages
+
+### Quick Setup
+
+#### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+#### 2. Setup Pre-commit Hooks
+
+```bash
+npm run prepare
+```
+
+#### 3. Install Gitleaks (for local scanning)
+
+**macOS:**
+```bash
+brew install gitleaks
+```
+
+**Linux:**
+```bash
+# Download latest release
+wget https://github.com/gitleaks/gitleaks/releases/download/v8.18.0/gitleaks_8.18.0_linux_x64.tar.gz
+tar -xzf gitleaks_8.18.0_linux_x64.tar.gz
+sudo mv gitleaks /usr/local/bin/
+```
+
+**Windows:**
+```bash
+# Using Chocolatey
+choco install gitleaks
+
+# Or download from GitHub releases
+```
+
+#### 4. Copy Workflows to Your Repository
+
+```bash
+# Copy the .github folder to your repository root
+cp -r .github /path/to/your/repository/
+
+# Copy security configs
+cp .gitleaks.toml /path/to/your/repository/
+cp .pre-commit-config.yaml /path/to/your/repository/
+cp SECURITY.md /path/to/your/repository/
+cp .gitignore /path/to/your/repository/
+```
+
+#### 5. Enable GitHub Security Features
+
+1. Go to your repository **Settings**
+2. Navigate to **Security & analysis**
+3. Enable:
+   - ✅ Dependency graph
+   - ✅ Dependabot alerts
+   - ✅ Dependabot security updates
+   - ✅ Secret scanning
+   - ✅ Push protection
+
+### Usage
+
+#### Local Secret Scanning
+
+Before committing:
+```bash
+npm run security:scan
+```
+
+#### Protect Staged Changes
+
+Check staged files for secrets:
+```bash
+npm run security:protect
+```
+
+#### Generate Security Baseline
+
+Create a baseline report:
+```bash
+npm run security:baseline
+```
+
+### Security Commands
+
+**Scan for secrets and vulnerabilities:**
+
+```bash
+npm run security:scan             # Scan entire codebase for secrets
+npm run security:protect          # Check staged files before commit
+npm run security:baseline         # Generate security baseline report
+```
+
+**Security Tools:**
+- **Gitleaks** - Detects hardcoded secrets, API keys, and tokens
+- **Pre-commit Hooks** - Prevents accidental secret commits
+- **GitHub CodeQL** - Automated vulnerability scanning in CI/CD
+
+### GitHub Actions Workflows
+
+#### CodeQL Analysis
+- Runs on: Push, Pull Request, Weekly schedule
+- Languages: JavaScript, TypeScript
+- Queries: Security-extended and quality checks
+
+#### Secret Scanning
+- Runs on: Every push and PR
+- Tools: TruffleHog + Gitleaks
+- Detects: API keys, tokens, credentials
+
+### Detected Secret Types
+
+- Vercel API tokens
+- Google API keys (Maps, Places)
+- Stripe keys (test & live)
+- GitHub tokens (PAT, OAuth, App)
+- NPM tokens
+- Generic API keys
+- Environment variable exposures
+
+### Environment Variables Best Practices
+
+#### Local Development
+
+Create a `.env.local` file (never commit):
+```bash
+NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=your_key_here
+VERCEL_TOKEN=your_token_here
+```
+
+#### Vercel Deployment
+
+Add environment variables in Vercel dashboard:
+1. Go to Project Settings
+2. Navigate to Environment Variables
+3. Add variables for each environment
+
+#### Example `.env.example`
+
+Create this file to document required variables:
+```bash
+# Google Places API
+NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=
+
+# Vercel
+VERCEL_TOKEN=
+
+# Add other required variables
+```
+
+### Troubleshooting
+
+#### Pre-commit Hook Fails
+
+If the hook prevents your commit:
+1. Review the flagged files
+2. Remove any secrets
+3. Use environment variables instead
+4. Try committing again
+
+#### False Positives
+
+Edit `.gitleaks.toml` to add to allowlist:
+```toml
+[allowlist]
+regexes = [
+  '''YOUR_EXAMPLE_STRING'''
+]
+```
+
+#### Skip Hooks (Emergency Only)
+
+```bash
+git commit --no-verify -m "your message"
+```
+
+**⚠️ Use sparingly and scan manually afterward!**
+
+### Additional Security
+
+#### Vercel-Specific
+
+- Use environment variables for all secrets
+- Enable "Deployment Protection" in Vercel
+- Restrict API to specific domains
+- Use different keys per environment
+
+#### GitHub-Specific
+
+- Enable branch protection rules
+- Require status checks to pass
+- Require pull request reviews
+- Enable "Require signed commits"
+
+### Payment Security
+
+- **PCI Compliance:** Stripe handles all payment card processing
+- **Stripe Checkout:** Hosted checkout pages for secure transactions
+- **Webhooks:** Signed webhook verification for order updates
+- **Tax Calculation:** Stripe Tax API integration
+
+### Reporting Security Issues
+
+For security issues, see [SECURITY.md](./SECURITY.md)
+
+---
 
 ## Data Import
 
@@ -940,190 +1148,12 @@ The platform includes comprehensive data import capabilities for migrating exist
 
 For detailed documentation, field specifications, and troubleshooting, see the **[Data Import Guide](./docs/IMPORT_GUIDE.md)**.
 
-## Quick Setup
-
-### 1. Install Dependencies
-
-```bash
-npm install
-```
-
-### 2. Setup Pre-commit Hooks
-
-```bash
-npm run prepare
-```
-
-### 3. Install Gitleaks (for local scanning)
-
-**macOS:**
-```bash
-brew install gitleaks
-```
-
-**Linux:**
-```bash
-# Download latest release
-wget https://github.com/gitleaks/gitleaks/releases/download/v8.18.0/gitleaks_8.18.0_linux_x64.tar.gz
-tar -xzf gitleaks_8.18.0_linux_x64.tar.gz
-sudo mv gitleaks /usr/local/bin/
-```
-
-**Windows:**
-```bash
-# Using Chocolatey
-choco install gitleaks
-
-# Or download from GitHub releases
-```
-
-### 4. Copy Workflows to Your Repository
-
-```bash
-# Copy the .github folder to your repository root
-cp -r .github /path/to/your/repository/
-
-# Copy security configs
-cp .gitleaks.toml /path/to/your/repository/
-cp .pre-commit-config.yaml /path/to/your/repository/
-cp SECURITY.md /path/to/your/repository/
-cp .gitignore /path/to/your/repository/
-```
-
-### 5. Enable GitHub Security Features
-
-1. Go to your repository **Settings**
-2. Navigate to **Security & analysis**
-3. Enable:
-   - ✅ Dependency graph
-   - ✅ Dependabot alerts
-   - ✅ Dependabot security updates
-   - ✅ Secret scanning
-   - ✅ Push protection
-
-## Usage
-
-### Local Secret Scanning
-
-Before committing:
-```bash
-npm run security:scan
-```
-
-### Protect Staged Changes
-
-Check staged files for secrets:
-```bash
-npm run security:protect
-```
-
-### Generate Security Baseline
-
-Create a baseline report:
-```bash
-npm run security:baseline
-```
-
-## GitHub Actions Workflows
-
-### CodeQL Analysis
-- Runs on: Push, Pull Request, Weekly schedule
-- Languages: JavaScript, TypeScript
-- Queries: Security-extended and quality checks
-
-### Secret Scanning
-- Runs on: Every push and PR
-- Tools: TruffleHog + Gitleaks
-- Detects: API keys, tokens, credentials
-
-## Detected Secret Types
-
-- Vercel API tokens
-- Google API keys (Maps, Places)
-- Stripe keys (test & live)
-- GitHub tokens (PAT, OAuth, App)
-- NPM tokens
-- Generic API keys
-- Environment variable exposures
-
-## Environment Variables Best Practices
-
-### Local Development
-
-Create a `.env.local` file (never commit):
-```bash
-NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=your_key_here
-VERCEL_TOKEN=your_token_here
-```
-
-### Vercel Deployment
-
-Add environment variables in Vercel dashboard:
-1. Go to Project Settings
-2. Navigate to Environment Variables
-3. Add variables for each environment
-
-### Example `.env.example`
-
-Create this file to document required variables:
-```bash
-# Google Places API
-NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=
-
-# Vercel
-VERCEL_TOKEN=
-
-# Add other required variables
-```
-
-## Troubleshooting
-
-### Pre-commit Hook Fails
-
-If the hook prevents your commit:
-1. Review the flagged files
-2. Remove any secrets
-3. Use environment variables instead
-4. Try committing again
-
-### False Positives
-
-Edit `.gitleaks.toml` to add to allowlist:
-```toml
-[allowlist]
-regexes = [
-  '''YOUR_EXAMPLE_STRING'''
-]
-```
-
-### Skip Hooks (Emergency Only)
-
-```bash
-git commit --no-verify -m "your message"
-```
-
-**⚠️ Use sparingly and scan manually afterward!**
-
-## Additional Security
-
-### Vercel-Specific
-
-- Use environment variables for all secrets
-- Enable "Deployment Protection" in Vercel
-- Restrict API to specific domains
-- Use different keys per environment
-
-### GitHub-Specific
-
-- Enable branch protection rules
-- Require status checks to pass
-- Require pull request reviews
-- Enable "Require signed commits"
-
 ## Support
 
-For security issues, see [SECURITY.md](./SECURITY.md)
+For support issues or questions, please open an issue on the GitHub repository.
+
+For security vulnerabilities, see [SECURITY.md](./SECURITY.md) and follow responsible disclosure guidelines.
 
 ---
 
-**Built for Jlang.dev** | Protecting your code and credentials
+**Built for Jlang.dev** | Enterprise-grade e-commerce platform
