@@ -57,6 +57,190 @@ This e-commerce system is designed to handle the complete lifecycle of an online
 
 ## Features
 
+### E-Commerce Core
+
+- **🛒 Product Catalog Management**
+  - Multi-variant products with SKU tracking and barcode support
+  - Heat level categorization system for hot sauces (Mild, Medium, Hot, Extra Hot, Fruit)
+  - Rich product descriptions with Markdown support
+  - Nutritional information and ingredient tracking
+  - Product tags and search keywords for discoverability
+  - Featured products and customizable sort ordering
+  - Product images with featured image selection
+
+- **📦 Order Processing & Fulfillment**
+  - Complete order lifecycle management with status tracking
+  - Multi-item orders with line item details
+  - Shipping address validation and storage
+  - Billing address management (separate from shipping)
+  - Order notes and customer communication
+  - Tax calculation integration with Stripe Tax
+  - Order history and tracking for customers
+
+- **💳 Payment Processing**
+  - Stripe payment integration for secure transactions
+  - Support for credit cards, debit cards, and digital wallets
+  - Test and live mode support
+  - Automatic tax calculation by location
+  - Refund and partial refund capabilities
+  - Payment failure handling and retry logic
+
+- **📊 Inventory Management**
+  - Real-time inventory tracking with SKU-level accuracy
+  - Low stock threshold alerts and notifications
+  - Inventory transaction history and audit trail
+  - Multi-location inventory support
+  - Automated inventory adjustments on orders
+  - Cost price tracking for margin analysis
+
+### Customer Experience
+
+- **🛍️ Shopping Cart & Wishlist**
+  - Persistent shopping cart across sessions
+  - Guest and authenticated user carts
+  - Wishlist functionality for saved products
+  - Abandoned cart tracking and recovery
+  - Cart item quantity management
+  - Real-time price and availability updates
+
+- **🎁 Gift Certificate System**
+  - Digital gift certificates with custom amounts
+  - Customizable themes and personalized messages
+  - Scheduled delivery for future dates
+  - Recipient email delivery with professional templates
+  - Gift certificate balance tracking
+  - Redemption code generation and validation
+
+- **⭐ Product Reviews & Ratings**
+  - Customer product reviews with star ratings
+  - Verified purchase badges
+  - Review moderation and approval workflow
+  - Helpful vote system for reviews
+  - Image uploads in reviews
+  - Review filtering and sorting
+
+- **🔐 User Authentication & Profiles**
+  - Secure user registration and login with NextAuth.js
+  - Role-based access control (Customer, Admin, Wholesale Partner)
+  - Email verification system
+  - Password reset functionality with secure tokens
+  - Customer profile management
+  - Address book with multiple saved addresses
+  - Order history and tracking
+
+### Business Features
+
+- **🏪 Wholesale & Partner Management**
+  - Wholesale account system with volume pricing
+  - Partner-specific pricing tiers
+  - Wholesale order minimum requirements
+  - Partner API keys for integrations
+  - Retail partner dashboard
+  - Wholesale catalog management
+
+- **📍 Retail Location Directory**
+  - Interactive store locator with Google Maps integration
+  - Google Places API integration for location data
+  - Store hours and contact information
+  - Product availability by location
+  - Distance-based search and filtering
+  - Location verification and management
+
+- **🎯 Fundraising Platform**
+  - Customizable fundraising campaigns
+  - Fundraiser-specific product selection
+  - Revenue sharing and tracking
+  - Campaign goals and progress tracking
+  - Fundraiser dashboard for organizers
+  - Participant management
+
+- **💰 Loyalty & Rewards Program**
+  - Points-based loyalty system
+  - Earn points on purchases
+  - Redeem points for discounts
+  - Loyalty tier management
+  - Transaction history and balance tracking
+  - Automated point accrual on orders
+
+### Marketing & Promotions
+
+- **🎫 Discount & Coupon System**
+  - Percentage and fixed-amount discounts
+  - Single-use and multi-use coupon codes
+  - Minimum purchase requirements
+  - Expiration date management
+  - Usage tracking and analytics
+  - Customer-specific discount codes
+
+- **📧 Email Marketing & Campaigns**
+  - Newsletter subscription management
+  - Transactional email system (order confirmations, shipping notifications)
+  - Marketing campaign builder
+  - Email template customization
+  - Subscriber segmentation
+  - Integration with Resend and Nodemailer
+
+- **📱 Subscription Management**
+  - Recurring product subscriptions
+  - Flexible delivery schedules (weekly, monthly, quarterly)
+  - Subscription pause and resume
+  - Automatic billing and order creation
+  - Subscription modification and cancellation
+  - Subscriber dashboard
+
+### Analytics & Insights
+
+- **📈 Business Analytics**
+  - Amplitude integration for event tracking
+  - User behavior analysis and session replay
+  - Conversion funnel tracking
+  - Product performance metrics
+  - Sales reporting and trends
+  - Customer lifetime value analysis
+
+- **🔍 Search & Discovery**
+  - Product search with keyword matching
+  - Category-based navigation
+  - Heat level filtering for hot sauces
+  - Price range filtering
+  - Sort by price, popularity, newest
+  - Search keyword optimization
+
+### Administrative Tools
+
+- **🛠️ Data Import & Export**
+  - Bulk product import (CSV, Excel, JSON)
+  - Order history import for migrations
+  - Gift certificate batch creation
+  - Retail location bulk upload
+  - Comprehensive validation and error reporting
+  - Template downloads for each import type
+  - See [Data Import Guide](./docs/IMPORT_GUIDE.md) for details
+
+- **👥 Customer Service**
+  - Customer conversation tracking
+  - Support ticket system
+  - Order issue resolution
+  - Customer communication history
+  - Admin notes on customer accounts
+
+- **🌍 Internationalization**
+  - Multi-language support with next-intl
+  - Localized content and translations
+  - Currency formatting by locale
+  - Date and time localization
+  - RTL language support
+
+- **🔒 Security & Compliance**
+  - CodeQL security scanning for vulnerabilities
+  - Secret detection and prevention
+  - Pre-commit hooks for code quality
+  - GDPR compliance features
+  - Secure password hashing
+  - API rate limiting and abuse prevention
+
+## Security Features
+
 ✅ **CodeQL Security Scanning** - Automated code analysis for vulnerabilities
 ✅ **Secret Detection** - Multiple layers of API key and credential protection
 ✅ **Pre-commit Hooks** - Local prevention of secret commits
