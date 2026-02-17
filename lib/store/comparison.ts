@@ -1,6 +1,17 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
+export interface ComparisonNutrition {
+  calories: number
+  sodiumMg: number
+  totalFatG: number
+  totalCarbG: number
+  sugarsG: number
+  dietaryFiberG: number
+  proteinG: number
+  servingSize: string
+}
+
 export interface ComparisonProduct {
   id: string
   name: string
@@ -14,6 +25,7 @@ export interface ComparisonProduct {
   ingredients: string[] | null
   weight: string | null
   dimensions: string | null
+  nutritionalInfo: ComparisonNutrition | null
 }
 
 interface ComparisonStore {
