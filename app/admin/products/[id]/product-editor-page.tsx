@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import ProductForm from '@/components/admin/ProductForm'
+import VariantEditorWrapper from '@/components/admin/VariantEditorWrapper'
 import prisma from '@/lib/prisma'
 import { createMetadata } from '@/lib/metadata'
 
@@ -12,7 +13,7 @@ export const metadata: Metadata = createMetadata({
 })
 
 async function getFormData(productId: string) {
-  const [product, categories] = await Promise.all([
+  const [product, categories, variants] = await Promise.all([
     prisma.product.findUnique({
       where: { id: productId },
       include: {
@@ -24,13 +25,17 @@ async function getFormData(productId: string) {
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
+    prisma.productVariant.findMany({
+      where: { productId },
+      orderBy: { createdAt: 'desc' },
+    }),
   ])
 
   if (!product) {
     notFound()
   }
 
-  return { product, categories }
+  return { product, categories, variants }
 }
 
 export default async function ProductEditorPage({
@@ -45,7 +50,7 @@ export default async function ProductEditorPage({
     redirect('/admin/products')
   }
 
-  const { product, categories } = await getFormData(id)
+  const { product, categories, variants } = await getFormData(id)
 
   return (
     <div className="space-y-6">
@@ -55,6 +60,8 @@ export default async function ProductEditorPage({
       </div>
 
       <ProductForm product={product} categories={categories} />
+
+      <VariantEditorWrapper productId={id} variants={variants} />
     </div>
   )
 }
