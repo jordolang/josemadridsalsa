@@ -2,7 +2,7 @@ import { Link } from '@react-email/components';
 
 interface ButtonProps {
   href: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   backgroundColor?: string;
   textColor?: string;
   variant?: 'primary' | 'secondary' | 'white';
