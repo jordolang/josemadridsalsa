@@ -6,6 +6,55 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC.svg)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
+## Overview
+
+**Jose Madrid Salsa** is a modern, full-featured e-commerce platform built for selling artisan hot sauces and food products. The platform provides a complete solution for product management, order processing, customer engagement, and retail location tracking.
+
+### About the Platform
+
+This e-commerce system is designed to handle the complete lifecycle of an online food business, from product catalog management to order fulfillment and customer support. Built with enterprise-grade security and scalability in mind, it supports both direct-to-consumer sales and wholesale distribution through retail partner networks.
+
+**Key Capabilities:**
+- 🛒 **Product Catalog** - Comprehensive product management with SKU tracking, inventory control, and heat level categorization for hot sauces
+- 📦 **Order Management** - Complete order processing with shipping integration, payment handling via Stripe, and automated fulfillment workflows
+- 🎁 **Gift Certificates** - Digital gift certificate system with custom themes, scheduling, and automated delivery
+- 📍 **Retail Locations** - Interactive store locator with Google Places integration for finding retail partners
+- 📊 **Data Import/Export** - Bulk import capabilities for products, orders, gift certificates, and locations (CSV, Excel, JSON)
+- 🔐 **Authentication & Authorization** - Secure user authentication with NextAuth.js, role-based access control, and admin dashboard
+- 🌍 **Internationalization** - Multi-language support with next-intl for global markets
+- 📧 **Email Marketing** - Transactional emails and marketing campaigns with Nodemailer and Resend integration
+- 📈 **Analytics** - Amplitude integration for user behavior tracking and session replay
+- 🔒 **Security** - CodeQL scanning, secret detection, pre-commit hooks, and comprehensive security monitoring
+
+### Tech Stack
+
+**Frontend:**
+- Next.js 15 with App Router and React Server Components
+- TypeScript for type safety
+- Tailwind CSS + Radix UI for responsive design
+- Framer Motion for animations
+- React Hook Form + Zod for form validation
+
+**Backend:**
+- Next.js API Routes with serverless functions
+- Prisma ORM with PostgreSQL database
+- NextAuth.js for authentication
+- Stripe for payment processing
+- Google APIs for location services
+
+**Infrastructure:**
+- Vercel deployment and hosting
+- Prisma Accelerate for database connection pooling
+- Vercel Analytics for performance monitoring
+- Resend for transactional emails
+
+**Developer Tools:**
+- Husky for git hooks
+- ESLint + Prettier for code quality
+- Vitest for testing
+- Gitleaks for secret scanning
+- TypeScript for compile-time safety
+
 ## Features
 
 ✅ **CodeQL Security Scanning** - Automated code analysis for vulnerabilities
