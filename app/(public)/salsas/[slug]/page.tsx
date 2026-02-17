@@ -320,7 +320,7 @@ export default function ProductPage() {
                     name: product.name,
                     slug: product.slug,
                     price: product.price,
-                    image: product.featuredImage,
+                    featuredImage: product.featuredImage,
                     sku: product.sku,
                     heatLevel: product.heatLevel,
                     inventory: product.inventory,

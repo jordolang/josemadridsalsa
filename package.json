@@ -80,6 +80,8 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-toast": "^1.2.15",
+    "@react-email/components": "^0.0.30",
+    "@react-email/render": "^1.0.3",
     "@react-pdf/renderer": "^4.3.1",
     "@stripe/react-stripe-js": "^5.2.0",
     "@stripe/stripe-js": "^8.0.0",
@@ -145,7 +147,8 @@
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vercel": "^50.13.2",
-    "vitest": "^4.0.6"
+    "vitest": "^4.0.6",
+    "react-email": "^3.0.3"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

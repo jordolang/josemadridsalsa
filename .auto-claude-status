@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "026-product-catalog-detail-pages",
+  "spec": "021-email-notification-system",
   "state": "building",
   "subtasks": {
-    "completed": 21,
-    "total": 22,
+    "completed": 22,
+    "total": 26,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Integration & Testing",
+    "current": "Testing & Verification",
     "id": null,
-    "total": 1
+    "total": 4
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 22,
-    "started_at": "2026-02-13T14:25:59.044583"
+    "number": 23,
+    "started_at": "2026-02-16T23:59:07.624379"
   },
-  "last_update": "2026-02-13T16:03:39.677410"
+  "last_update": "2026-02-17T10:46:06.052226"
 }

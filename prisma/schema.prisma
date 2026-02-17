@@ -42,9 +42,11 @@ model User {
   analyticsSettings AnalyticsSetting[]
 
   // Wholesale account
-  wholesaleAccount    WholesaleAccount?
-  conversations       Conversation[]
-  passwordResetTokens PasswordResetToken[]
+  wholesaleAccount        WholesaleAccount?
+  conversations           Conversation[]
+  passwordResetTokens     PasswordResetToken[]
+  emailLogs               EmailLog[]
+  unsubscribePreferences  UnsubscribePreference[]
 
   @@map("users")
 }
@@ -1400,6 +1402,69 @@ model EmailRecipient {
   @@map("email_recipients")
 }
 
+model EmailLog {
+  id String @id @default(cuid())
+
+  // Recipient info
+  recipientEmail String
+  recipientName  String?
+  userId         String?
+
+  // Email details
+  from       String?
+  templateId String?
+  subject    String
+  status     EmailLogStatus @default(PENDING)
+
+  // Tracking
+  sentAt    DateTime?
+  openedAt  DateTime?
+  clickedAt DateTime?
+  bouncedAt DateTime?
+  failedAt  DateTime?
+
+  // Error tracking
+  errorMessage String?
+
+  // Metadata
+  metadata Json? // Additional data like variables, campaign info
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([recipientEmail])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("email_logs")
+}
+
+model UnsubscribePreference {
+  id String @id @default(cuid())
+
+  email  String
+  userId String?
+
+  // What they've unsubscribed from
+  unsubscribedFrom String[] // e.g., ["marketing", "newsletter", "promotions"]
+
+  // Unsubscribe all
+  unsubscribeAll Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([email])
+  @@index([userId])
+  @@map("unsubscribe_preferences")
+}
+
 model AuditLog {
   id         String  @id @default(cuid())
   userId     String?
@@ -1634,6 +1699,16 @@ enum EmailCampaignStatus {
 }
 
 enum EmailRecipientStatus {
+  PENDING // Not yet sent
+  SENDING // Currently sending
+  SENT // Successfully sent
+  FAILED // Send failed
+  BOUNCED // Email bounced
+  OPENED // Recipient opened email
+  CLICKED // Recipient clicked link
+}
+
+enum EmailLogStatus {
   PENDING // Not yet sent
   SENDING // Currently sending
   SENT // Successfully sent
