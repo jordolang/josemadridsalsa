@@ -55,6 +55,194 @@ This e-commerce system is designed to handle the complete lifecycle of an online
 - Gitleaks for secret scanning
 - TypeScript for compile-time safety
 
+## Architecture
+
+The platform follows a modern, modular architecture built on Next.js 15's App Router with a clear separation of concerns and a feature-based organization pattern.
+
+### Project Structure
+
+```
+josemadridsalsa/
+├── app/                          # Next.js App Router (frontend routes)
+│   ├── (auth)/                   # Authentication routes (signin, signup, reset)
+│   ├── (marketing)/              # Public marketing pages (home, about)
+│   ├── (shop)/                   # E-commerce pages (products, cart, checkout)
+│   ├── admin/                    # Admin dashboard and management tools
+│   ├── api/                      # API routes (serverless functions)
+│   │   ├── auth/                 # NextAuth.js authentication endpoints
+│   │   ├── stripe/               # Stripe webhooks and payment processing
+│   │   ├── locations/            # Retail location API endpoints
+│   │   ├── products/             # Product management endpoints
+│   │   ├── orders/               # Order processing endpoints
+│   │   └── import/               # Data import endpoints
+│   └── layout.tsx                # Root layout with providers
+│
+├── components/                   # React components (organized by feature)
+│   ├── ui/                       # Reusable UI components (Radix UI + custom)
+│   ├── forms/                    # Form components with validation
+│   ├── products/                 # Product display and management
+│   ├── cart/                     # Shopping cart components
+│   ├── admin/                    # Admin-specific components
+│   └── layouts/                  # Layout components (header, footer, nav)
+│
+├── lib/                          # Core business logic and utilities
+│   ├── auth/                     # Authentication utilities and NextAuth config
+│   ├── db/                       # Database utilities and Prisma client
+│   ├── stripe/                   # Stripe integration and payment processing
+│   ├── email/                    # Email services (Resend, Nodemailer)
+│   ├── validation/               # Zod schemas and validation logic
+│   ├── import/                   # Data import/export processors
+│   └── utils/                    # Shared utility functions
+│
+├── prisma/                       # Database schema and migrations
+│   ├── schema.prisma             # Prisma schema definition
+│   ├── migrations/               # Database migration history
+│   └── seed.ts                   # Database seeding scripts
+│
+├── scripts/                      # Utility scripts and automation
+│   ├── seed-*.ts                 # Various data seeding scripts
+│   ├── import-*.ts               # Data import utilities
+│   ├── backfill-*.ts             # Data migration scripts
+│   └── create-admin.ts           # Admin user creation
+│
+├── public/                       # Static assets (images, fonts, icons)
+│   ├── images/                   # Product images and media
+│   └── uploads/                  # User-uploaded content
+│
+├── docs/                         # Project documentation
+│   ├── IMPORT_GUIDE.md           # Data import documentation
+│   ├── DEPLOYMENT.md             # Deployment instructions
+│   └── STRIPE_SETUP.md           # Stripe configuration guide
+│
+└── messages/                     # Internationalization translations
+    ├── en.json                   # English translations
+    └── es.json                   # Spanish translations
+```
+
+### Key Components
+
+#### 1. **Application Layer** (`app/`)
+- **Route Groups:** Organized by feature with layout isolation (`(auth)`, `(shop)`, etc.)
+- **Server Components:** Default rendering strategy for optimal performance
+- **API Routes:** Serverless functions for backend operations
+- **Middleware:** Authentication, localization, and request processing
+
+#### 2. **Data Layer** (`prisma/`)
+- **PostgreSQL Database:** Primary data store with Prisma ORM
+- **Schema-First Design:** Type-safe database access with auto-generated client
+- **Migrations:** Version-controlled schema changes
+- **Connection Pooling:** Prisma Accelerate for optimized database connections
+
+#### 3. **Business Logic Layer** (`lib/`)
+- **Service Modules:** Encapsulated business logic for each feature domain
+- **Validation:** Centralized Zod schemas for type-safe validation
+- **Integration Services:** Third-party API integrations (Stripe, Google, etc.)
+- **Utilities:** Shared helper functions and common operations
+
+#### 4. **Presentation Layer** (`components/`)
+- **UI Components:** Radix UI primitives with custom styling
+- **Feature Components:** Domain-specific components (products, cart, admin)
+- **Form Components:** React Hook Form with Zod validation
+- **Layout Components:** Consistent page structure and navigation
+
+### Data Flow Architecture
+
+```
+User Request
+    ↓
+Next.js Middleware (Auth, i18n)
+    ↓
+App Router / API Route
+    ↓
+Business Logic Layer (lib/)
+    ↓
+Prisma Client
+    ↓
+PostgreSQL Database
+    ↓
+Response (Server Component / JSON API)
+```
+
+### Key Integration Points
+
+#### **Payment Processing**
+- **Stripe Checkout:** Hosted checkout pages for PCI compliance
+- **Webhooks:** Automated order updates from Stripe events
+- **Tax Calculation:** Stripe Tax API for accurate sales tax
+
+#### **Authentication**
+- **NextAuth.js:** Session management and OAuth providers
+- **Role-Based Access:** Multi-tier authorization (Customer, Admin, Partner)
+- **Secure Sessions:** JWT tokens with database session storage
+
+#### **Email Delivery**
+- **Transactional Emails:** Order confirmations, shipping notifications (Resend)
+- **Marketing Emails:** Newsletter campaigns (Resend)
+- **Template System:** Reusable email templates with variable substitution
+
+#### **Location Services**
+- **Google Maps API:** Interactive store locator map
+- **Google Places API:** Location autocomplete and geocoding
+- **Google Calendar API:** "Where is Jose" event schedule integration
+
+#### **Analytics & Monitoring**
+- **Amplitude:** User behavior tracking and product analytics
+- **Session Replay:** Debug user interactions and issues
+- **Vercel Analytics:** Performance monitoring and web vitals
+
+### Module Organization
+
+The codebase follows a **feature-based architecture** where related functionality is grouped together:
+
+- **`/products`** - Product catalog, variants, inventory, search
+- **`/orders`** - Order processing, fulfillment, history
+- **`/cart`** - Shopping cart, wishlist, checkout
+- **`/auth`** - Authentication, authorization, user management
+- **`/locations`** - Retail store finder, Google Maps integration
+- **`/admin`** - Admin dashboard, data management, imports
+- **`/fundraising`** - Fundraising campaigns, tracking, reporting
+- **`/loyalty`** - Loyalty program, points, rewards
+- **`/subscriptions`** - Recurring orders, subscription management
+- **`/gift-certificates`** - Digital gift certificates, themes, delivery
+
+### Database Schema
+
+The platform uses a normalized PostgreSQL schema with the following core entities:
+
+- **Users** - Customer accounts, authentication, roles
+- **Products** - Catalog items, variants, SKUs, inventory
+- **Orders** - Purchases, line items, fulfillment status
+- **Payments** - Stripe payment records, transactions
+- **Locations** - Retail partners, store information, geocoding
+- **GiftCertificates** - Digital certificates, balances, redemptions
+- **Fundraisers** - Campaign data, goals, progress
+- **LoyaltyTransactions** - Points accrual, redemptions
+- **Subscriptions** - Recurring order schedules
+
+See `prisma/schema.prisma` for the complete schema definition.
+
+### Security Architecture
+
+- **Authentication:** NextAuth.js with secure session management
+- **Authorization:** Role-based access control (RBAC) throughout the application
+- **Data Encryption:** Sensitive data encrypted at rest (gift certificates, API keys)
+- **Secret Management:** Environment variables, never committed to version control
+- **Pre-commit Hooks:** Automated secret scanning before commits (Gitleaks)
+- **Code Scanning:** GitHub CodeQL for vulnerability detection
+- **Input Validation:** Zod schemas on all user inputs and API requests
+- **CSRF Protection:** Built-in Next.js CSRF protection
+- **Rate Limiting:** API endpoint throttling to prevent abuse
+
+### Development Workflow
+
+1. **Local Development** - Next.js dev server with hot reload and Turbopack
+2. **Type Safety** - TypeScript across the entire stack
+3. **Database Changes** - Prisma migrations with schema versioning
+4. **Code Quality** - ESLint, Prettier, pre-commit hooks
+5. **Testing** - Vitest for unit and integration tests
+6. **Security Checks** - Gitleaks scanning, dependency audits
+7. **Deployment** - Vercel with preview deployments for PRs
+
 ## Getting Started
 
 ### Prerequisites
