@@ -138,6 +138,7 @@ export default function ProductPage() {
         ingredients: product.ingredients || null,
         weight: product.weight || null,
         dimensions: product.dimensions || null,
+        nutritionalInfo: null,
       })
       toast.success('Added to comparison')
       openPanel()
@@ -329,7 +330,6 @@ export default function ProductPage() {
                   size="lg"
                   className="flex-1 text-lg py-3"
                 />
-
                 <Button
                   onClick={handleComparisonToggle}
                   size="lg"
