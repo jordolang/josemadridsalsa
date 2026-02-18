@@ -156,5 +156,10 @@
     "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "resolutions": {
+    "next": "16.1.5",
+    "fast-xml-parser": ">=5.3.6",
+    "prismjs": ">=1.30.0"
   }
 }
