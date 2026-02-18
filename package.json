@@ -118,7 +118,8 @@
     "tailwindcss-animate": "^1.0.7",
     "workflow": "^4.0.1-beta.29",
     "zod": "^4.1.12",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.8",
+    "@stripe/react-stripe-js": "^3.2.0"
   },
   "devDependencies": {
     "@axe-core/cli": "^4.11.0",
