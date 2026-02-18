@@ -1782,6 +1782,17 @@ enum EmailLogStatus {
   CLICKED // Recipient clicked link
 }
 
+enum EngagementType {
+  WHOLESALE_INQUIRY
+  CATERING_REQUEST
+  PARTNERSHIP
+  FEEDBACK
+  GENERAL
+}
+
+enum EngagementStatus {
+  PENDING
+  IN_PROGRESS
   CLOSED
   IGNORED
 }
