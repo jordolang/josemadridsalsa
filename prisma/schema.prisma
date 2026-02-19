@@ -1788,6 +1788,10 @@ enum EngagementType {
   PARTNERSHIP
   FEEDBACK
   GENERAL
+  CONTACT
+  SIGNUP
+  NEWSLETTER
+  FUNDRAISER
 }
 
 enum EngagementStatus {

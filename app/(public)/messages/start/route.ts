@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
           subject: subject || undefined,
         }),
         logEngagementRequest({
-          type: 'GENERAL',
+          type: 'CONTACT',
           email: recipientEmail,
           name: session?.user?.name || null,
           source: 'messages:start',
