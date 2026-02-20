@@ -19,6 +19,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:recipes": "tsx scripts/seed-recipes.ts",
     "db:seed:email-templates": "tsx scripts/seed-email-templates.ts",
+    "db:seed:nutrition": "tsx scripts/seed-nutrition-ingredients.ts",
     "locations:import": "tsx scripts/import-locations-from-markdown.ts",
     "locations:verify": "tsx scripts/verify-locations.ts",
     "locations:photos": "node scripts/generate-location-photos.js",
