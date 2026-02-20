@@ -11,6 +11,9 @@ npx prisma db push --skip-generate
 echo "Seeding database..."
 npm run db:seed
 
+echo "Seeding nutrition facts & ingredients..."
+npm run db:seed:nutrition
+
 echo "Checking if products exist..."
 npx prisma db execute --stdin << 'SQL'
 SELECT COUNT(*) as product_count FROM products;
