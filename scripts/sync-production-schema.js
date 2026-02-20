@@ -2,27 +2,31 @@
 
 /**
  * Production Schema Sync Script
- * 
+ *
  * This script syncs the Prisma schema to the production database.
- * 
+ *
  * Usage:
- *   node scripts/sync-production-schema.js
- * 
+ *   node scripts/sync-production-schema.js              # incremental push (may fail with FK/index conflicts)
+ *   node scripts/sync-production-schema.js --force-reset # drops & recreates public schema first (clean slate)
+ *
  * Prerequisites:
  *   - .env.vercel.production file must exist (run: vercel env pull .env.vercel.production --environment=production)
- * 
+ *
  * What it does:
- *   - Reads POSTGRES_URL from .env.vercel.production (direct connection, not Prisma Accelerate)
+ *   - Reads DATABASE_URL (or POSTGRES_URL) from .env.vercel.production
+ *   - Optionally drops and recreates the public schema to clear orphaned data / stale indexes
  *   - Runs `prisma db push` to sync schema without creating migrations
  *   - Creates or updates all tables to match prisma/schema.prisma
- * 
- * Note: This uses POSTGRES_URL instead of DATABASE_URL because DATABASE_URL 
+ *
+ * Note: This uses POSTGRES_URL instead of DATABASE_URL because DATABASE_URL
  *       uses the Prisma Accelerate protocol which isn't compatible with db push.
  */
 
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+
+const forceReset = process.argv.includes('--force-reset');
 
 // Colors for terminal output
 const colors = {
@@ -83,6 +87,9 @@ function main() {
 
   // Confirm with user
   log('⚠️  This will sync your schema to production database', 'yellow');
+  if (forceReset) {
+    log('   🔴 --force-reset: ALL TABLES AND DATA WILL BE DROPPED', 'red');
+  }
   log('   - New tables will be created', 'yellow');
   log('   - Existing tables may be altered', 'yellow');
   log('   - Data may be lost if schema changes are incompatible', 'yellow');
@@ -91,26 +98,61 @@ function main() {
   // Wait 5 seconds
   execSync('sleep 5', { stdio: 'inherit' });
 
+  const execEnv = { ...process.env, DATABASE_URL: dbUrl };
+  const execOpts = { encoding: 'utf8', stdio: 'inherit', env: execEnv, cwd: path.join(__dirname, '..') };
+
+  // ── Force-reset: drop and recreate the public schema ──────────────
+  if (forceReset) {
+    log('🗑️  Dropping and recreating public schema...\n', 'yellow');
+    try {
+      execSync(
+        `psql "${dbUrl}" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO PUBLIC;"`,
+        execOpts
+      );
+      log('✅ Public schema recreated\n', 'green');
+    } catch (err) {
+      // psql not installed – fall back to prisma db execute
+      log('⚠️  psql not available, falling back to prisma db execute...\n', 'yellow');
+      try {
+        // Write a temp SQL file for prisma db execute
+        const tmpSql = path.join(__dirname, '..', '.tmp-reset.sql');
+        fs.writeFileSync(tmpSql, 'DROP SCHEMA public CASCADE;\nCREATE SCHEMA public;\nGRANT ALL ON SCHEMA public TO PUBLIC;\n');
+        execSync(`npx prisma db execute --file ${tmpSql} --schema prisma/schema.prisma`, execOpts);
+        fs.unlinkSync(tmpSql);
+        log('✅ Public schema recreated via prisma db execute\n', 'green');
+      } catch (innerErr) {
+        log('\n❌ Failed to reset schema', 'red');
+        log(innerErr.message, 'red');
+        process.exit(1);
+      }
+    }
+  }
+
+  // ── Push schema ───────────────────────────────────────────────────
   try {
     log('🔄 Syncing schema to production database...\n', 'green');
-    
-    execSync('npx prisma db push --skip-generate --accept-data-loss', {
-      encoding: 'utf8',
-      stdio: 'inherit',
-      env: { ...process.env, DATABASE_URL: dbUrl },
-      cwd: path.join(__dirname, '..')
-    });
-    
+
+    execSync('npx prisma db push --skip-generate --accept-data-loss', execOpts);
+
     log('\n✅ Schema successfully synced to production!', 'green');
     log('\n📊 Next Steps:', 'blue');
+    if (forceReset) {
+      log('   ⚠️  Database was reset — you MUST re-seed:', 'yellow');
+      log('      npm run db:seed\n', 'blue');
+    }
     log('   1. If this is a fresh database, seed it with data:');
     log('      node scripts/seed-production.js\n', 'blue');
     log('   2. Verify your application is working:');
     log('      https://www.josemadrid.net\n', 'blue');
-    
+
   } catch (error) {
     log('\n❌ Error syncing schema', 'red');
     log(error.message, 'red');
+    if (!forceReset) {
+      log('\n💡 Tip: If this is a FK constraint or duplicate index error, try:', 'yellow');
+      log('      npm run db:production:sync -- --force-reset', 'blue');
+      log('   This will drop all tables and push a clean schema.\n', 'yellow');
+    }
     process.exit(1);
   }
 }
