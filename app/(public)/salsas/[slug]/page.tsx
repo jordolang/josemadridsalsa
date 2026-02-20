@@ -19,6 +19,46 @@ import { SocialShare } from '@/components/ui/social-share'
 import { ShareContent } from '@/types/sharing'
 import { generateHashtags } from '@/lib/sharing/metadata-extractor'
 import { RecentlyViewedProducts } from '@/components/store/recently-viewed'
+import { NutritionalInfo } from '@/components/products/NutritionalInfo'
+
+type NutritionalInfoData = {
+  id: string
+  productId: string
+  servingSize: string
+  servingsPerContainer: number
+  calories: number
+  caloriesFromFat: number
+  totalFatG: number
+  totalFatDV: number
+  saturatedFatG: number
+  saturatedFatDV: number
+  transFatG: number
+  cholesterolMg: number
+  cholesterolDV: number
+  sodiumMg: number
+  sodiumDV: number
+  totalCarbG: number
+  totalCarbDV: number
+  dietaryFiberG: number
+  dietaryFiberDV: number
+  sugarsG: number
+  proteinG: number
+  vitaminADV: number
+  vitaminCDV: number
+  calciumDV: number
+  ironDV: number
+  allergens: string | null
+}
+
+type ProductIngredientData = {
+  id: string
+  sortOrder: number
+  qualifier: string | null
+  ingredient: {
+    id: string
+    name: string
+  }
+}
 
 type Product = {
   id: string
@@ -39,6 +79,8 @@ type Product = {
   packSize?: number
   weight?: string
   dimensions?: string
+  nutritionalInfo?: NutritionalInfoData | null
+  productIngredients?: ProductIngredientData[]
 }
 
 export default function ProductPage() {
@@ -138,7 +180,7 @@ export default function ProductPage() {
         ingredients: product.ingredients || null,
         weight: product.weight || null,
         dimensions: product.dimensions || null,
-        nutritionalInfo: null,
+        nutritionalInfo: product.nutritionalInfo || null,
       })
       toast.success('Added to comparison')
       openPanel()
@@ -265,8 +307,17 @@ export default function ProductPage() {
               {product.description}
             </p>
             
-            {/* Ingredients */}
-            {product.ingredients.length > 0 && (
+            {/* Nutrition Facts & Ingredients */}
+            {product.nutritionalInfo && (
+              <NutritionalInfo
+                nutritionalInfo={product.nutritionalInfo}
+                productIngredients={product.productIngredients}
+                ingredients={product.ingredients}
+              />
+            )}
+
+            {/* Fallback: plain ingredients list when no nutritional info */}
+            {!product.nutritionalInfo && product.ingredients.length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
                   Ingredients
@@ -276,7 +327,7 @@ export default function ProductPage() {
                 </p>
               </div>
             )}
-            
+
             {/* Product Details */}
             <div className="bg-card rounded-lg p-4 space-y-2 surface-shadow">
               <div className="flex justify-between">
