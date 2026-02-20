@@ -8,8 +8,6 @@
  */
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
-
 // ─── Nutrition data per product slug ────────────────────────────────────────
 // Values extracted from OCR'd product labels. All products are 13 oz (369g).
 // Serving Size: 2 Tbsp (30ml), 13 servings per container
@@ -586,8 +584,8 @@ const ingredientData: Record<string, IngredientEntry[]> = {
   ],
 }
 
-// ─── Main seeding function ──────────────────────────────────────────────────
-async function main() {
+// ─── Exported seeding function (can be called from main seed or standalone) ─
+export async function seedNutritionAndIngredients(prisma: PrismaClient) {
   console.log('Starting nutrition & ingredients seed...\n')
 
   // 1. Get all products
@@ -669,10 +667,19 @@ async function main() {
   console.log('\nSeed complete!')
 }
 
-main()
-  .then(() => prisma.$disconnect())
-  .catch((e) => {
-    console.error(e)
-    prisma.$disconnect()
-    process.exit(1)
-  })
+// ─── Standalone execution ────────────────────────────────────────────────────
+// Allows running directly: npx tsx scripts/seed-nutrition-ingredients.ts
+const isMainModule =
+  typeof import.meta.url !== 'undefined' &&
+  import.meta.url === `file://${process.argv[1]}`
+
+if (isMainModule) {
+  const prisma = new PrismaClient()
+  seedNutritionAndIngredients(prisma)
+    .then(() => prisma.$disconnect())
+    .catch(async (e) => {
+      console.error(e)
+      await prisma.$disconnect()
+      process.exit(1)
+    })
+}

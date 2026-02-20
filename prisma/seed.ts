@@ -1,6 +1,7 @@
 import { PrismaClient, HeatLevel } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { recipeData } from '../lib/data/recipes'
+import { seedNutritionAndIngredients } from '../scripts/seed-nutrition-ingredients'
 
 const prisma = new PrismaClient()
 
@@ -508,6 +509,9 @@ async function main() {
   }
 
   console.log('✅ Created products')
+
+  // Seed nutrition facts and relational ingredient data
+  await seedNutritionAndIngredients(prisma)
 
   // Prepare seeded credentials
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@josemadridsalsa.com'

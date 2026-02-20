@@ -18,6 +18,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:recipes": "tsx scripts/seed-recipes.ts",
+    "db:seed:nutrition": "tsx scripts/seed-nutrition-ingredients.ts",
     "db:seed:email-templates": "tsx scripts/seed-email-templates.ts",
     "locations:import": "tsx scripts/import-locations-from-markdown.ts",
     "locations:verify": "tsx scripts/verify-locations.ts",
