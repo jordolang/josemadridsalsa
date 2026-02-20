@@ -39,6 +39,7 @@ mkdocs.yml
 
 # Scripts (keep only essential ones)
 scripts/seed-*.ts
+!scripts/seed-nutrition-ingredients.ts
 scripts/import-*.ts
 
 # Examples

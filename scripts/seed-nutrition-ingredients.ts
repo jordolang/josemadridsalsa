@@ -669,13 +669,17 @@ export async function seedNutritionAndIngredients(prisma: PrismaClient) {
 
 // ─── Standalone execution ────────────────────────────────────────────────────
 // Allows running directly: npx tsx scripts/seed-nutrition-ingredients.ts
-if (require.main === module) {
+const isMainModule =
+  typeof import.meta.url !== 'undefined' &&
+  import.meta.url === `file://${process.argv[1]}`
+
+if (isMainModule) {
   const prisma = new PrismaClient()
   seedNutritionAndIngredients(prisma)
     .then(() => prisma.$disconnect())
-    .catch((e) => {
+    .catch(async (e) => {
       console.error(e)
-      prisma.$disconnect()
+      await prisma.$disconnect()
       process.exit(1)
     })
 }
