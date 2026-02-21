@@ -23,6 +23,14 @@ export const permissionDefinitions: PermissionDefinition[] = [
   { name: 'products:export', description: 'Export products', category: 'PRODUCTS' },
   { name: 'products:import', description: 'Import products from files', category: 'PRODUCTS' },
 
+  // Inventory
+  { name: 'inventory:read', description: 'View inventory levels and history', category: 'INVENTORY' },
+  { name: 'inventory:write', description: 'Adjust inventory stock levels', category: 'INVENTORY' },
+  { name: 'inventory:bulk', description: 'Bulk inventory operations', category: 'INVENTORY' },
+  { name: 'inventory:export', description: 'Export inventory reports', category: 'INVENTORY' },
+  { name: 'inventory:import', description: 'Import inventory data from CSV', category: 'INVENTORY' },
+  { name: 'inventory:delete', description: 'Delete inventory records', category: 'INVENTORY' },
+
   // Users
   { name: 'users:read', description: 'View users', category: 'USERS' },
   { name: 'users:write', description: 'Create, update, and manage users', category: 'USERS' },
@@ -89,6 +97,8 @@ export const permissionDefinitions: PermissionDefinition[] = [
 ] as const
 
 export const defaultRolePermissions: Record<UserRole, string[]> = {
+  // OWNER has all permissions (super admin - only one can exist)
+  OWNER: permissionDefinitions.map((perm) => perm.name),
   ADMIN: permissionDefinitions.map((perm) => perm.name),
   DEVELOPER: permissionDefinitions.map((perm) => perm.name),
   STAFF: [
@@ -102,6 +112,8 @@ export const defaultRolePermissions: Record<UserRole, string[]> = {
     'products:write',
     'products:bulk',
     'products:import',
+    'inventory:read',
+    'inventory:write',
     'users:read',
     'content:read',
     'content:write',

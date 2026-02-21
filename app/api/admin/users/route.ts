@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma'
-import { requirePermission } from '@/lib/rbac'
+import { requirePermission, getCurrentUser, isOwner } from '@/lib/rbac'
 import { ok, fail } from '@/lib/api'
 import { logAudit } from '@/lib/audit'
 import { z } from 'zod'
@@ -12,7 +12,7 @@ const userSchema = z.object({
   name: z.string().nullable().optional(),
   password: z.string().min(8),
   phone: z.string().nullable().optional(),
-  role: z.enum(['CUSTOMER', 'WHOLESALE', 'STAFF', 'ADMIN', 'DEVELOPER']),
+  role: z.enum(['CUSTOMER', 'WHOLESALE', 'STAFF', 'ADMIN', 'DEVELOPER', 'OWNER']),
   isEmailVerified: z.boolean().optional(),
 })
 
@@ -71,6 +71,26 @@ export async function POST(req: NextRequest) {
     const currentUser = await requirePermission('users:write')
     const body = await req.json()
     const data = userSchema.parse(body)
+
+    // OWNER role protection: only the current OWNER can create another OWNER
+    // and only one OWNER can exist at a time
+    if (data.role === 'OWNER') {
+      if (!isOwner(currentUser)) {
+        return fail('Only the OWNER can assign the OWNER role', 403)
+      }
+
+      // Check if an OWNER already exists
+      const existingOwner = await prisma.user.findFirst({
+        where: { role: UserRole.OWNER },
+      })
+
+      if (existingOwner) {
+        return fail(
+          'An OWNER account already exists. Only one OWNER is allowed. The existing OWNER must transfer ownership.',
+          409
+        )
+      }
+    }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(data.password, 10)
