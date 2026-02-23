@@ -1,151 +1,257 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Package, AlertTriangle, TrendingUp, TrendingDown, Bell } from 'lucide-react';
+import { Package, AlertTriangle, TrendingDown, Bell, DollarSign, Warehouse } from 'lucide-react';
 import { getCurrentUser, hasPermission } from '@/lib/rbac';
 import { prisma } from '@/lib/prisma';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { InventoryAdjustmentDialog } from '@/components/admin/inventory/InventoryAdjustmentDialog';
+import { InventoryFilters } from '@/components/admin/inventory/InventoryFilters';
+import { InventoryPageClient } from '@/components/admin/inventory/InventoryPageClient';
+import { InventoryExportButton } from '@/components/admin/inventory/InventoryExportButton';
+import { InventoryImportDialog } from '@/components/admin/inventory/InventoryImportDialog';
 import { InventoryAlertsTable } from '@/components/admin/inventory/InventoryAlertsTable';
 import { InventoryAlertStatus, InventoryAlertType } from '@prisma/client';
 
-async function getInventoryData() {
-  // Get low stock products
-  const lowStockProducts = await prisma.product.findMany({
-    where: {
-      isActive: true,
-      inventory: {
-        lte: prisma.product.fields.lowStockThreshold,
-      },
-    },
-    include: {
-      category: {
-        select: {
-          name: true,
+interface SearchParams {
+  search?: string;
+  category?: string;
+  stockStatus?: string;
+  sort?: string;
+  page?: string;
+}
+
+async function getInventoryData(searchParams: SearchParams) {
+  const page = Number(searchParams.page) || 1;
+  const limit = 50;
+  const skip = (page - 1) * limit;
+
+  // Build where clause for products
+  const where: any = {};
+
+  if (searchParams.search) {
+    where.OR = [
+      { name: { contains: searchParams.search, mode: 'insensitive' } },
+      { sku: { contains: searchParams.search, mode: 'insensitive' } },
+    ];
+  }
+
+  if (searchParams.category && searchParams.category !== 'all') {
+    where.categoryId = searchParams.category;
+  }
+
+  if (searchParams.stockStatus && searchParams.stockStatus !== 'all') {
+    switch (searchParams.stockStatus) {
+      case 'out_of_stock':
+        where.inventory = 0;
+        break;
+      case 'low_stock':
+        where.AND = [
+          { inventory: { gt: 0 } },
+          { inventory: { lte: prisma.product.fields.lowStockThreshold } },
+        ];
+        break;
+      case 'in_stock':
+        where.inventory = { gt: prisma.product.fields.lowStockThreshold };
+        break;
+    }
+  }
+
+  // Build orderBy
+  let orderBy: any = { name: 'asc' };
+  switch (searchParams.sort) {
+    case 'name_desc':
+      orderBy = { name: 'desc' };
+      break;
+    case 'stock_asc':
+      orderBy = { inventory: 'asc' };
+      break;
+    case 'stock_desc':
+      orderBy = { inventory: 'desc' };
+      break;
+    case 'sku_asc':
+      orderBy = { sku: 'asc' };
+      break;
+    case 'value_desc':
+      orderBy = { inventory: 'desc' };
+      break;
+  }
+
+  // Fetch all data in parallel
+  const [products, totalProducts, categories, activeAlerts, recentTransactions, aggregates] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        inventory: true,
+        lowStockThreshold: true,
+        price: true,
+        costPrice: true,
+        isActive: true,
+        category: {
+          select: { name: true },
         },
       },
-    },
-    orderBy: {
-      inventory: 'asc',
-    },
-  });
-
-  // Get active alerts
-  const activeAlerts = await prisma.inventoryAlert.findMany({
-    where: {
-      status: {
-        in: [InventoryAlertStatus.ACTIVE, InventoryAlertStatus.ACKNOWLEDGED],
+    }),
+    prisma.product.count({ where }),
+    prisma.category.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.inventoryAlert.findMany({
+      where: {
+        status: {
+          in: [InventoryAlertStatus.ACTIVE, InventoryAlertStatus.ACKNOWLEDGED],
+        },
       },
-    },
-    include: {
-      product: {
-        select: {
-          id: true,
-          name: true,
-          sku: true,
-          inventory: true,
-          category: {
-            select: {
-              name: true,
-            },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            inventory: true,
+            category: { select: { name: true } },
           },
         },
       },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
-
-  // Get recent inventory transactions
-  const recentTransactions = await prisma.inventoryTransaction.findMany({
-    take: 10,
-    orderBy: {
-      createdAt: 'desc',
-    },
-    include: {
-      product: {
-        select: {
-          name: true,
-          sku: true,
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    }),
+    prisma.inventoryTransaction.findMany({
+      take: 10,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        product: {
+          select: { name: true, sku: true },
         },
       },
-    },
-  });
+    }),
+    prisma.product.aggregate({
+      where: { isActive: true },
+      _sum: { inventory: true },
+      _count: true,
+    }),
+  ]);
 
-  // Calculate statistics
-  const totalProducts = await prisma.product.count({
+  // Calculate additional stats
+  const allActiveProducts = await prisma.product.findMany({
     where: { isActive: true },
+    select: { inventory: true, lowStockThreshold: true, price: true, costPrice: true },
   });
 
-  const outOfStockCount = lowStockProducts.filter((p) => p.inventory === 0).length;
-  const lowStockCount = lowStockProducts.filter(
+  const outOfStockCount = allActiveProducts.filter((p) => p.inventory === 0).length;
+  const lowStockCount = allActiveProducts.filter(
     (p) => p.inventory > 0 && p.inventory <= p.lowStockThreshold
   ).length;
-
-  const totalInventoryValue = await prisma.product.aggregate({
-    _sum: {
-      inventory: true,
-    },
-    where: {
-      isActive: true,
-    },
-  });
+  const totalInventoryValue = allActiveProducts.reduce((acc, p) => {
+    const cost = p.costPrice ? Number(p.costPrice) : Number(p.price);
+    return acc + cost * p.inventory;
+  }, 0);
 
   return {
-    lowStockProducts,
+    products,
+    totalProducts,
+    page,
+    totalPages: Math.ceil(totalProducts / limit),
+    categories,
     activeAlerts,
     recentTransactions,
     stats: {
-      totalProducts,
+      totalActiveProducts: aggregates._count,
+      totalUnits: aggregates._sum.inventory || 0,
       outOfStockCount,
       lowStockCount,
-      totalInventoryUnits: totalInventoryValue._sum.inventory || 0,
+      totalInventoryValue,
+      activeAlertsCount: activeAlerts.length,
     },
   };
 }
 
-export default async function InventoryPage() {
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
   const user = await getCurrentUser();
 
   if (!user) {
     redirect('/auth/signin');
   }
 
-  const canRead = await hasPermission(user, 'products:read');
-  const canWrite = await hasPermission(user, 'products:write');
+  const canRead = await hasPermission(user, 'inventory:read') || await hasPermission(user, 'products:read');
+  const canWrite = await hasPermission(user, 'inventory:write') || await hasPermission(user, 'products:write');
+  const canExport = await hasPermission(user, 'inventory:export') || await hasPermission(user, 'products:export');
+  const canImport = await hasPermission(user, 'inventory:import') || await hasPermission(user, 'products:import');
 
   if (!canRead) {
     redirect('/admin');
   }
 
-  const { lowStockProducts, activeAlerts, recentTransactions, stats } = await getInventoryData();
-
-  const outOfStockAlerts = activeAlerts.filter((a) => a.type === InventoryAlertType.OUT_OF_STOCK);
-  const lowStockAlerts = activeAlerts.filter((a) => a.type === InventoryAlertType.LOW_STOCK);
+  const {
+    products,
+    totalProducts,
+    page,
+    totalPages,
+    categories,
+    activeAlerts,
+    recentTransactions,
+    stats,
+  } = await getInventoryData(params);
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Inventory Management</h1>
-          <p className="text-muted-foreground mt-2">
-            Real-time inventory tracking and alerts
+          <p className="text-muted-foreground mt-1">
+            Full product inventory control - view, adjust, import, and export stock levels
           </p>
+        </div>
+        <div className="flex gap-2">
+          {canExport && <InventoryExportButton />}
+          {canImport && <InventoryImportDialog />}
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Products</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalProducts}</div>
-            <p className="text-xs text-muted-foreground">Active products in catalog</p>
+            <div className="text-2xl font-bold">{stats.totalActiveProducts}</div>
+            <p className="text-xs text-muted-foreground">Active in catalog</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Units</CardTitle>
+            <Warehouse className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalUnits.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Across all products</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${stats.totalInventoryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <p className="text-xs text-muted-foreground">Total stock value</p>
           </CardContent>
         </Card>
 
@@ -156,7 +262,7 @@ export default async function InventoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{stats.outOfStockCount}</div>
-            <p className="text-xs text-muted-foreground">Products requiring immediate attention</p>
+            <p className="text-xs text-muted-foreground">Needs restocking</p>
           </CardContent>
         </Card>
 
@@ -177,17 +283,20 @@ export default async function InventoryPage() {
             <Bell className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeAlerts.length}</div>
-            <p className="text-xs text-muted-foreground">Pending inventory alerts</p>
+            <div className="text-2xl font-bold">{stats.activeAlertsCount}</div>
+            <p className="text-xs text-muted-foreground">Pending attention</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Active Alerts */}
+      {/* Active Alerts (collapsible) */}
       {activeAlerts.length > 0 && (
-        <Card className="mb-8">
+        <Card>
           <CardHeader>
-            <CardTitle>Active Inventory Alerts</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-yellow-600" />
+              Active Inventory Alerts ({activeAlerts.length})
+            </CardTitle>
             <CardDescription>Products requiring immediate attention</CardDescription>
           </CardHeader>
           <CardContent>
@@ -196,68 +305,40 @@ export default async function InventoryPage() {
         </Card>
       )}
 
-      {/* Low Stock Products */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Low Stock Products</CardTitle>
-          <CardDescription>
-            {lowStockProducts.length} product(s) below stock threshold
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {lowStockProducts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">All products are adequately stocked</p>
-              <p className="text-sm">No low stock alerts at this time</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {lowStockProducts.map((product) => {
-                const isOutOfStock = product.inventory === 0;
-                const stockPercentage = (product.inventory / product.lowStockThreshold) * 100;
-
-                return (
-                  <div
-                    key={product.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Link
-                          href={`/admin/products/${product.id}`}
-                          className="font-medium hover:underline"
-                        >
-                          {product.name}
-                        </Link>
-                        {isOutOfStock ? (
-                          <Badge variant="destructive">Out of Stock</Badge>
-                        ) : (
-                          <Badge variant="warning">Low Stock</Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>SKU: {product.sku}</span>
-                        <span>Category: {product.category.name}</span>
-                        <span>
-                          Current Stock:{' '}
-                          <span className={isOutOfStock ? 'text-destructive font-medium' : 'text-yellow-600 font-medium'}>
-                            {product.inventory}
-                          </span>
-                        </span>
-                        <span>Threshold: {product.lowStockThreshold}</span>
-                      </div>
-                    </div>
-                    {canWrite && (
-                      <InventoryAdjustmentDialog productId={product.id} productName={product.name} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
+      {/* Filters */}
+      <Card className="p-4">
+        <InventoryFilters categories={categories} />
       </Card>
+
+      {/* Full Inventory Table */}
+      <InventoryPageClient products={products} canWrite={canWrite} />
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {(page - 1) * 50 + 1} to {Math.min(page * 50, totalProducts)} of {totalProducts} products
+          </p>
+          <div className="flex gap-2">
+            {page > 1 && (
+              <Link
+                href={`/admin/inventory?page=${page - 1}${params.search ? `&search=${params.search}` : ''}${params.category ? `&category=${params.category}` : ''}${params.stockStatus ? `&stockStatus=${params.stockStatus}` : ''}${params.sort ? `&sort=${params.sort}` : ''}`}
+                className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent"
+              >
+                Previous
+              </Link>
+            )}
+            {page < totalPages && (
+              <Link
+                href={`/admin/inventory?page=${page + 1}${params.search ? `&search=${params.search}` : ''}${params.category ? `&category=${params.category}` : ''}${params.stockStatus ? `&stockStatus=${params.stockStatus}` : ''}${params.sort ? `&sort=${params.sort}` : ''}`}
+                className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent"
+              >
+                Next
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Recent Transactions */}
       <Card>
