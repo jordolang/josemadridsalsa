@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "020-payment-processing-integration-stripe",
+  "spec": "021-email-notification-system",
   "state": "building",
   "subtasks": {
-    "completed": 10,
-    "total": 12,
+    "completed": 22,
+    "total": 26,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Integration Testing",
+    "current": "Testing & Verification",
     "id": null,
-    "total": 2
+    "total": 4
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 11,
-    "started_at": "2026-02-28T13:56:03.426651"
+    "number": 23,
+    "started_at": "2026-02-16T23:59:07.624379"
   },
-  "last_update": "2026-02-28T14:36:10.515364"
+  "last_update": "2026-02-17T10:46:06.052226"
 }
