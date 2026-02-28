@@ -1,0 +1,62 @@
+{
+  "cascadeColors": true,
+  "colorBackground": true,
+  "palette": [
+    {
+      "id": "wKN61fAhcIh--LXfm8k90",
+      "name": "White",
+      "value": "#ffffff"
+    },
+    {
+      "id": "nVS4vwio1hs7hYaj62iEP",
+      "name": "Black",
+      "value": "#000000"
+    },
+    {
+      "id": "L-M-wSg00MD8bb4g5g-7E",
+      "name": "Green",
+      "value": "#0b6a30"
+    },
+    {
+      "id": "qsXsOjyrLmrGXaIEccyNJ",
+      "name": "Blue",
+      "value": "#1100ff"
+    },
+    {
+      "id": "gKCNq9OEg1Btq10L_q6kr",
+      "name": "Red",
+      "value": "#ff0000"
+    },
+    {
+      "id": "-CZpDKfTAeb2GBAE-V8bl",
+      "name": "Yellow",
+      "value": "#d4ff00"
+    },
+    {
+      "id": "Ly4z2W8QbnVkrGaU-dyTG",
+      "name": "Orange",
+      "value": "#ff4000"
+    },
+    {
+      "id": "L4k7uxkjYMX8ceY_8TDIa",
+      "name": "Pink",
+      "value": "#ff0088"
+    },
+    {
+      "id": "7_F7FgMsw4SvAvKDVYdNO",
+      "name": "Purple",
+      "value": "#55057a"
+    },
+    {
+      "id": "SoK16iLLwJ-xHXM_yt9qn",
+      "name": "Teal",
+      "value": "#6292a3"
+    },
+    {
+      "id": "urfVSrE29UdXDzly_FMtx",
+      "name": "Gray",
+      "value": "#858585"
+    }
+  ],
+  "fileColors": []
+}
