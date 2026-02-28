@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { requireAnyPermission } from '@/lib/rbac';
+import { requirePermission } from '@/lib/rbac';
 import { ok, fail } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import {
@@ -18,7 +18,7 @@ export async function GET(
   { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
-    const user = await requireAnyPermission(['inventory:read', 'products:read']);
+    const user = await requirePermission('products:read');
     const { productId } = await params;
 
     const { searchParams } = new URL(req.url);
@@ -55,7 +55,7 @@ export async function POST(
   { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
-    const user = await requireAnyPermission(['inventory:write', 'products:write']);
+    const user = await requirePermission('products:write');
     const { productId } = await params;
 
     const body = await req.json();
