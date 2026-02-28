@@ -17,13 +17,13 @@ const updateSchema = z.object({
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireCredentialAccess()
     if (!user) return forbidden('Not Permitted')
 
-    const { id } = params
+    const { id } = await params
     const credential = await prisma.serviceCredential.findUnique({ where: { id } })
     if (!credential) return notFound('Credential not found')
 
@@ -55,13 +55,13 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireCredentialAccess()
     if (!user) return forbidden('Not Permitted')
 
-    const { id } = params
+    const { id } = await params
     const existing = await prisma.serviceCredential.findUnique({ where: { id } })
     if (!existing) return notFound('Credential not found')
 
@@ -129,13 +129,13 @@ export async function PUT(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireCredentialAccess()
     if (!user) return forbidden('Not Permitted')
 
-    const { id } = params
+    const { id } = await params
     const existing = await prisma.serviceCredential.findUnique({ where: { id } })
     if (!existing) return notFound('Credential not found')
 
