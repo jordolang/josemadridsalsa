@@ -29,7 +29,7 @@ export default async function AdminLayout({
     }
 
     // Check if user has staff access
-    const allowedRoles = ['OWNER', 'ADMIN', 'DEVELOPER', 'STAFF']
+    const allowedRoles = ['ADMIN', 'DEVELOPER', 'STAFF']
     if (!allowedRoles.includes(user.role)) {
       redirect('/')
     }

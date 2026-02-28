@@ -23,7 +23,7 @@ function fallbackHasPermission(role: UserRole, permissionName: string): boolean 
  */
 export async function getCurrentUser() {
   const session = await getServerSession(authOptions)
-
+  
   if (!session?.user) {
     return null
   }
@@ -48,29 +48,21 @@ export function hasRole(
 }
 
 /**
- * Check if user is the OWNER (super admin)
- */
-export function isOwner(user: { role: UserRole } | null): boolean {
-  return hasRole(user, [UserRole.OWNER])
-}
-
-/**
- * Check if user is an admin (includes OWNER)
+ * Check if user is an admin
  */
 export function isAdmin(user: { role: UserRole } | null): boolean {
-  return hasRole(user, [UserRole.OWNER, UserRole.ADMIN])
+  return hasRole(user, [UserRole.ADMIN])
 }
 
 /**
- * Check if user is staff or higher (OWNER, ADMIN, DEVELOPER, STAFF)
+ * Check if user is staff or higher (ADMIN, DEVELOPER, STAFF)
  */
 export function isStaff(user: { role: UserRole } | null): boolean {
-  return hasRole(user, [UserRole.OWNER, UserRole.ADMIN, UserRole.DEVELOPER, UserRole.STAFF])
+  return hasRole(user, [UserRole.ADMIN, UserRole.DEVELOPER, UserRole.STAFF])
 }
 
 /**
  * Check if user has a specific permission
- * OWNER role bypasses all permission checks (super admin).
  * @param user - User with role
  * @param permissionName - Permission name (e.g., "orders:read", "products:write")
  */
@@ -79,9 +71,6 @@ export async function hasPermission(
   permissionName: string
 ): Promise<boolean> {
   if (!user) return false
-
-  // OWNER bypasses all permission checks
-  if (user.role === UserRole.OWNER) return true
 
   try {
     const rolePermission = await prisma.rolePermission.findFirst({
@@ -128,9 +117,6 @@ export async function hasAllPermissions(
 ): Promise<boolean> {
   if (!user) return false
 
-  // OWNER bypasses all permission checks
-  if (user.role === UserRole.OWNER) return true
-
   const checks = await Promise.all(
     permissionNames.map((name) => hasPermission(user, name))
   )
@@ -147,9 +133,6 @@ export async function hasAnyPermission(
 ): Promise<boolean> {
   if (!user) return false
 
-  // OWNER bypasses all permission checks
-  if (user.role === UserRole.OWNER) return true
-
   const checks = await Promise.all(
     permissionNames.map((name) => hasPermission(user, name))
   )
@@ -164,11 +147,6 @@ export async function getUserPermissions(
   user: { role: UserRole } | null
 ): Promise<string[]> {
   if (!user) return []
-
-  // OWNER gets all permissions
-  if (user.role === UserRole.OWNER) {
-    return fallbackPermissionsFor(UserRole.OWNER)
-  }
 
   try {
     const rolePermissions = await prisma.rolePermission.findMany({
@@ -254,23 +232,6 @@ export async function requireAnyPermission(permissionNames: string[]) {
     throw new Error(
       `Forbidden - requires one of: ${permissionNames.join(', ')}`
     )
-  }
-
-  return user
-}
-
-/**
- * Require OWNER role specifically (for super admin actions)
- */
-export async function requireOwner() {
-  const user = await getCurrentUser()
-
-  if (!user) {
-    throw new Error('Unauthorized - not authenticated')
-  }
-
-  if (!isOwner(user)) {
-    throw new Error('Forbidden - OWNER access required')
   }
 
   return user

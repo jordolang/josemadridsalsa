@@ -56,24 +56,6 @@ export const adminNavigation: NavItem[] = [
     ],
   },
   {
-    label: 'Inventory',
-    href: '/admin/inventory',
-    icon: 'Warehouse',
-    permission: 'inventory:read',
-    children: [
-      {
-        label: 'Overview',
-        href: '/admin/inventory',
-        permission: 'inventory:read',
-      },
-      {
-        label: 'Bulk Operations',
-        href: '/admin/inventory/bulk',
-        permission: 'inventory:bulk',
-      },
-    ],
-  },
-  {
     label: 'Users',
     href: '/admin/users',
     icon: 'Users',
@@ -210,12 +192,6 @@ export const adminNavigation: NavItem[] = [
     permission: 'users:read',
   },
   {
-    label: 'Credentials',
-    href: '/admin/credentials',
-    icon: 'KeyRound',
-    permission: 'settings:read',
-  },
-  {
     label: 'Settings',
     href: '/admin/settings',
     icon: 'Settings',
@@ -269,14 +245,6 @@ export const featurePermissions = {
   'products:delete': 'products:write',
   'products:bulk': 'products:bulk',
   'products:export': 'products:export',
-
-  // Inventory
-  'inventory:list': 'inventory:read',
-  'inventory:view': 'inventory:read',
-  'inventory:adjust': 'inventory:write',
-  'inventory:bulk-adjust': 'inventory:bulk',
-  'inventory:export-report': 'inventory:export',
-  'inventory:import-data': 'inventory:import',
   
   // Users
   'users:list': 'users:read',

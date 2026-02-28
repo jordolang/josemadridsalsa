@@ -80,7 +80,6 @@ async function getUsers(searchParams: SearchParams) {
 }
 
 const roleColors: Record<UserRole, string> = {
-  OWNER: 'bg-red-100 text-red-800',
   CUSTOMER: 'bg-blue-100 text-blue-800',
   STAFF: 'bg-green-100 text-green-800',
   ADMIN: 'bg-purple-100 text-purple-800',
@@ -161,7 +160,6 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
             defaultValue={params.role || 'all'}
           >
             <option value="all">All Roles</option>
-            <option value="OWNER">Owner</option>
             <option value="CUSTOMER">Customer</option>
             <option value="WHOLESALE">Wholesale</option>
             <option value="STAFF">Staff</option>
