@@ -12,6 +12,12 @@ function getEncryptionKey(): Buffer {
       'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
     )
   }
+  if (!/^[0-9a-fA-F]{64}$/.test(key)) {
+    throw new Error(
+      'CREDENTIALS_ENCRYPTION_KEY must be a 64-character hex string (32 bytes). ' +
+      'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    )
+  }
   return Buffer.from(key, 'hex')
 }
 

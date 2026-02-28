@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File | null
 
     if (!file) return fail('No file provided', 400)
-    if (!file.name.endsWith('.csv')) return fail('Only .csv files are accepted', 400)
+    if (!file.name.toLowerCase().endsWith('.csv')) return fail('Only .csv files are accepted', 400)
 
     const MAX_SIZE = 2 * 1024 * 1024 // 2 MB
     if (file.size > MAX_SIZE) return fail('File size must be under 2 MB', 400)
