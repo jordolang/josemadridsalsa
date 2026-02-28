@@ -47,6 +47,29 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Idempotency check: prevent duplicate processing of the same webhook event
+    const existingWebhookEvent = await prisma.webhookEvent.findUnique({
+      where: { stripeEventId: event.id },
+    })
+
+    if (existingWebhookEvent?.processed) {
+      console.log('Webhook event already processed, skipping:', event.id)
+      return NextResponse.json({ received: true })
+    }
+
+    // Create webhook event record (or update if exists but not processed)
+    await prisma.webhookEvent.upsert({
+      where: { stripeEventId: event.id },
+      create: {
+        stripeEventId: event.id,
+        type: event.type,
+        processed: false,
+      },
+      update: {
+        type: event.type,
+      },
+    })
+
     // Handle the event
     switch (event.type) {
       case 'payment_intent.succeeded': {
@@ -78,7 +101,7 @@ export async function POST(request: Request) {
           return NextResponse.json({ received: true })
         }
 
-        // Update order status
+        // Update order status and payment record
         await prisma.$transaction(async (tx) => {
           await tx.order.update({
             where: { id: order.id },
@@ -86,6 +109,23 @@ export async function POST(request: Request) {
               paymentStatus: 'PAID',
               status: 'CONFIRMED',
               stripePaymentId: paymentIntent.id,
+            },
+          })
+
+          // Update or create Payment record
+          await tx.payment.upsert({
+            where: { stripePaymentIntentId: paymentIntent.id },
+            create: {
+              stripePaymentIntentId: paymentIntent.id,
+              orderId: order.id,
+              amount: paymentIntent.amount,
+              currency: paymentIntent.currency,
+              status: 'SUCCEEDED',
+              paymentMethod: paymentIntent.payment_method_types?.[0],
+            },
+            update: {
+              status: 'SUCCEEDED',
+              paymentMethod: paymentIntent.payment_method_types?.[0],
             },
           })
 
@@ -121,11 +161,29 @@ export async function POST(request: Request) {
         const orderId = paymentIntent.metadata?.orderId
 
         if (orderId) {
-          await prisma.order.update({
-            where: { id: orderId },
-            data: {
-              paymentStatus: 'FAILED',
-            },
+          await prisma.$transaction(async (tx) => {
+            await tx.order.update({
+              where: { id: orderId },
+              data: {
+                paymentStatus: 'FAILED',
+              },
+            })
+
+            // Update Payment record
+            await tx.payment.upsert({
+              where: { stripePaymentIntentId: paymentIntent.id },
+              create: {
+                stripePaymentIntentId: paymentIntent.id,
+                orderId,
+                amount: paymentIntent.amount,
+                currency: paymentIntent.currency,
+                status: 'FAILED',
+                paymentMethod: paymentIntent.payment_method_types?.[0],
+              },
+              update: {
+                status: 'FAILED',
+              },
+            })
           })
           console.log('Order payment failed via webhook:', orderId)
         }
@@ -137,12 +195,30 @@ export async function POST(request: Request) {
         const orderId = paymentIntent.metadata?.orderId
 
         if (orderId) {
-          await prisma.order.update({
-            where: { id: orderId },
-            data: {
-              paymentStatus: 'FAILED',
-              status: 'CANCELLED',
-            },
+          await prisma.$transaction(async (tx) => {
+            await tx.order.update({
+              where: { id: orderId },
+              data: {
+                paymentStatus: 'FAILED',
+                status: 'CANCELLED',
+              },
+            })
+
+            // Update Payment record
+            await tx.payment.upsert({
+              where: { stripePaymentIntentId: paymentIntent.id },
+              create: {
+                stripePaymentIntentId: paymentIntent.id,
+                orderId,
+                amount: paymentIntent.amount,
+                currency: paymentIntent.currency,
+                status: 'CANCELED',
+                paymentMethod: paymentIntent.payment_method_types?.[0],
+              },
+              update: {
+                status: 'CANCELED',
+              },
+            })
           })
           console.log('Order payment canceled via webhook:', orderId)
         }
@@ -159,10 +235,10 @@ export async function POST(request: Request) {
         }
 
         const isFullRefund = charge.amount_refunded === charge.amount
-        const refundId = charge.refunds?.data[0]?.id
+        const stripeRefund = charge.refunds?.data[0]
 
-        if (!refundId) {
-          console.warn('Skipping refund processing: no refund ID found in charge:', charge.id)
+        if (!stripeRefund) {
+          console.warn('Skipping refund processing: no refund found in charge:', charge.id)
           return NextResponse.json({ received: true })
         }
 
@@ -177,31 +253,46 @@ export async function POST(request: Request) {
           return NextResponse.json({ received: true })
         }
 
+        // Find the payment record
+        const payment = await prisma.payment.findFirst({
+          where: { orderId },
+        })
+
+        if (!payment) {
+          console.error('Payment not found for order:', orderId)
+          return NextResponse.json({ received: true })
+        }
+
         await prisma.$transaction(async (tx) => {
-          // Check if refund was already processed (idempotency check)
-          // This prevents duplicate inventory restoration if the same webhook is delivered multiple times
-          const existingAudit = await tx.auditLog.findFirst({
-            where: {
-              action: 'webhook.refund',
-              entityId: orderId,
-              changes: {
-                path: ['refundId'],
-                equals: refundId,
-              },
-            },
-          })
-
-          if (existingAudit) {
-            console.log('Refund already processed, skipping:', refundId, 'for order:', orderId)
-            return // Already processed
-          }
-
           // Update order status
           await tx.order.update({
             where: { id: orderId },
             data: {
               status: isFullRefund ? 'REFUNDED' : order.status,
               paymentStatus: isFullRefund ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+            },
+          })
+
+          // Update payment status
+          await tx.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: isFullRefund ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+            },
+          })
+
+          // Create refund record
+          await tx.refund.upsert({
+            where: { stripeRefundId: stripeRefund.id },
+            create: {
+              stripeRefundId: stripeRefund.id,
+              paymentId: payment.id,
+              amount: stripeRefund.amount,
+              reason: stripeRefund.reason || undefined,
+              status: 'SUCCEEDED',
+            },
+            update: {
+              status: 'SUCCEEDED',
             },
           })
 
@@ -228,7 +319,7 @@ export async function POST(request: Request) {
               entityType: 'order',
               entityId: orderId,
               changes: {
-                refundId,
+                refundId: stripeRefund.id,
                 chargeId: charge.id,
                 isFullRefund,
                 amountRefunded: charge.amount_refunded,
@@ -245,6 +336,12 @@ export async function POST(request: Request) {
       default:
         console.log(`Unhandled event type: ${event.type}`)
     }
+
+    // Mark webhook event as processed
+    await prisma.webhookEvent.update({
+      where: { stripeEventId: event.id },
+      data: { processed: true },
+    })
 
     return NextResponse.json({ received: true })
   } catch (error) {
