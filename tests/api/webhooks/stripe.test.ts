@@ -12,6 +12,10 @@ vi.mock('@/lib/prisma', () => ({
     product: {
       update: vi.fn(),
     },
+    webhookEvent: {
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }))
