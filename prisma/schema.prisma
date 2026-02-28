@@ -678,7 +678,8 @@ model Order {
   confirmationEmailSentAt DateTime?
 
   // Relations
-  items OrderItem[]
+  items    OrderItem[]
+  payments Payment[]
 
   // Fundraiser connection
   fundraiserId String?
@@ -724,6 +725,70 @@ model OrderItem {
   product Product @relation(fields: [productId], references: [id])
 
   @@map("order_items")
+}
+
+model Payment {
+  id                      String        @id @default(cuid())
+  stripePaymentIntentId   String        @unique
+  stripeCheckoutSessionId String?       @unique
+
+  // Payment details
+  amount        Int           // Amount in cents
+  currency      String        @default("usd")
+  status        PaymentStatus @default(PENDING)
+  paymentMethod String?       // card, apple_pay, google_pay
+
+  // Relations
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  refunds Refund[]
+
+  // Metadata
+  metadata         Json?
+  stripeCustomerId String?
+
+  // Timestamps
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  paidAt    DateTime?
+
+  @@index([orderId])
+  @@index([status])
+  @@map("payments")
+}
+
+model Refund {
+  id             String       @id @default(cuid())
+  stripeRefundId String       @unique
+
+  // Refund details
+  amount Int          // Amount in cents
+  reason String?
+  status RefundStatus @default(PENDING)
+
+  // Relations
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  processedAt DateTime?
+
+  @@index([paymentId])
+  @@map("refunds")
+}
+
+model WebhookEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique
+  type          String
+  processed     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([stripeEventId])
+  @@index([processed])
+  @@map("webhook_events")
 }
 
 model Review {
@@ -1689,10 +1754,19 @@ enum OrderStatus {
 
 enum PaymentStatus {
   PENDING
-  PAID
+  PROCESSING
+  SUCCEEDED
   FAILED
+  CANCELED
   REFUNDED
   PARTIALLY_REFUNDED
+}
+
+enum RefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELED
 }
 
 enum ReviewStatus {
