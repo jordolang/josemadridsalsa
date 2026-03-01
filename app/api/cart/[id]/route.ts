@@ -120,3 +120,77 @@ export async function PUT(
     )
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Require authentication
+    const user = await getCurrentUser()
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - authentication required' },
+        { status: 401 }
+      )
+    }
+
+    const cartItemId = params.id
+
+    // Find the cart item and verify it belongs to the user
+    const cartItem = await prisma.cartItem.findUnique({
+      where: { id: cartItemId },
+      include: {
+        product: true,
+      },
+    })
+
+    if (!cartItem) {
+      return NextResponse.json(
+        { error: 'Cart item not found' },
+        { status: 404 }
+      )
+    }
+
+    // Verify the cart item belongs to the authenticated user
+    if (cartItem.userId !== user.id) {
+      return NextResponse.json(
+        { error: 'Forbidden - cannot delete another user\'s cart item' },
+        { status: 403 }
+      )
+    }
+
+    // Delete the cart item
+    await prisma.cartItem.delete({
+      where: { id: cartItemId },
+    })
+
+    // Log audit event
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'delete',
+        entityType: 'CartItem',
+        entityId: cartItem.id,
+        changes: {
+          productId: cartItem.productId,
+          productName: cartItem.product.name,
+          quantity: cartItem.quantity,
+        },
+      },
+      request
+    )
+
+    return NextResponse.json({
+      success: true,
+      message: 'Cart item removed successfully',
+    })
+  } catch (error) {
+    console.error('[Cart API] Error deleting cart item:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
