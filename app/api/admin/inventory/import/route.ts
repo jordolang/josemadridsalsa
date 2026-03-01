@@ -236,8 +236,7 @@ export async function POST(req: NextRequest) {
           await adjustInventory({
             productId: product.id,
             quantity: quantityChange,
-            type: InventoryTransactionType.ADJUSTMENT,
-            reason: 'IMPORT',
+            type: InventoryTransactionType.IMPORT,
             notes: `Inventory import: ${currentInventory} → ${targetInventory}`,
             userId: user.id,
           });

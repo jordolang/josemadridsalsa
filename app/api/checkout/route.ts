@@ -8,7 +8,7 @@ import { calculateTax } from '@/lib/tax-calculator'
 import { calculateShipping } from '@/lib/shipping-calculator'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
-import { reserveInventory } from '@/lib/inventory-manager'
+import { reserveInventory, releaseInventory } from '@/lib/inventory-manager'
 
 const CheckoutSchema = z.object({
   items: z
@@ -119,13 +119,11 @@ export async function POST(request: NextRequest) {
         // If reservation fails, release any already reserved items
         for (const reserved of reservationResults) {
           try {
-            await prisma.product.update({
-              where: { id: reserved.product.id },
-              data: {
-                stockReserved: {
-                  decrement: reserved.newReserved - reserved.previousReserved,
-                },
-              },
+            await releaseInventory({
+              productId: reserved.product.id,
+              quantity: reserved.newReserved - reserved.previousReserved,
+              userId: user?.id,
+              notes: 'Checkout failed - releasing reservation',
             })
           } catch (releaseError) {
             console.error('[Checkout] Failed to release reservation:', releaseError)

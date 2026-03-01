@@ -2368,6 +2368,9 @@ enum InventoryTransactionType {
   SAMPLE // Given as sample
   TRANSFER // Transfer between locations
   INITIAL // Initial stock entry
+  RESERVATION // Stock reserved for checkout
+  RELEASE // Reserved stock released
+  IMPORT // Bulk import/update
 }
 
 enum InventoryAlertType {

@@ -165,15 +165,13 @@ export async function reserveInventory(reservation: InventoryReservation) {
       });
 
       // Create inventory transaction record
-      // Note: Using ADJUSTMENT type until RESERVATION type is added to schema
       const transaction = await tx.inventoryTransaction.create({
         data: {
           productId,
-          type: InventoryTransactionType.ADJUSTMENT,
+          type: InventoryTransactionType.RESERVATION,
           quantity,
           previousStock: product.inventory,
           newStock: product.inventory, // Inventory doesn't change, only reserved
-          reason: 'RESERVATION',
           notes: notes || `Reserved ${quantity} units${orderId ? ` for order ${orderId}` : ''}`,
           orderId,
           userId,
@@ -197,25 +195,128 @@ export async function reserveInventory(reservation: InventoryReservation) {
 }
 
 /**
- * Reserve inventory for multiple products (bulk operation)
+ * Helper function to reserve inventory within an existing transaction
+ * Used by reserveMultipleProducts to enable atomic multi-product reservations
  */
-export async function reserveMultipleProducts(reservations: InventoryReservation[]) {
-  const results = [];
+async function reserveInventorySingleTransaction(
+  reservation: InventoryReservation,
+  tx: any
+) {
+  const { productId, quantity, orderId, userId, notes } = reservation;
 
-  for (const reservation of reservations) {
-    try {
-      const result = await reserveInventory(reservation);
-      results.push({ success: true, ...result });
-    } catch (error: any) {
-      results.push({
-        success: false,
-        productId: reservation.productId,
-        error: error.message,
-      });
-    }
+  if (quantity <= 0) {
+    throw new Error('Reservation quantity must be positive');
   }
 
-  return results;
+  // Get current product with lock
+  const product = await tx.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+      inventory: true,
+      stockReserved: true,
+      lowStockThreshold: true,
+    },
+  });
+
+  if (!product) {
+    throw new Error(`Product not found: ${productId}`);
+  }
+
+  const currentReserved = product.stockReserved;
+  const availableStock = product.inventory - currentReserved;
+
+  // Validate sufficient available stock
+  if (availableStock < quantity) {
+    throw new Error(
+      `Insufficient available inventory for ${product.name} (SKU: ${product.sku}). ` +
+      `Available: ${availableStock}, Requested: ${quantity}`
+    );
+  }
+
+  const newReserved = currentReserved + quantity;
+
+  // Update product's reserved stock
+  const updatedProduct = await tx.product.update({
+    where: { id: productId },
+    data: { stockReserved: newReserved },
+  });
+
+  // Create inventory transaction record
+  const transaction = await tx.inventoryTransaction.create({
+    data: {
+      productId,
+      type: InventoryTransactionType.RESERVATION,
+      quantity,
+      previousStock: product.inventory,
+      newStock: product.inventory, // Inventory doesn't change, only reserved
+      notes: notes || `Reserved ${quantity} units${orderId ? ` for order ${orderId}` : ''}`,
+      orderId,
+      userId,
+    },
+  });
+
+  return {
+    product: updatedProduct,
+    transaction,
+    previousReserved: currentReserved,
+    newReserved,
+    availableStock: product.inventory - newReserved,
+  };
+}
+
+/**
+ * Reserve inventory for multiple products (bulk operation)
+ * Uses a single Serializable transaction for atomic all-or-nothing behavior
+ * If any product has insufficient stock, the entire reservation fails and rolls back
+ */
+export async function reserveMultipleProducts(reservations: InventoryReservation[]) {
+  return await prisma.$transaction(
+    async (tx) => {
+      const results = [];
+
+      // Step 1: Validate all products have sufficient stock BEFORE reserving anything
+      for (const reservation of reservations) {
+        const product = await tx.product.findUnique({
+          where: { id: reservation.productId },
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            inventory: true,
+            stockReserved: true,
+          },
+        });
+
+        if (!product) {
+          throw new Error(`Product not found: ${reservation.productId}`);
+        }
+
+        const available = product.inventory - product.stockReserved;
+        if (available < reservation.quantity) {
+          throw new Error(
+            `Insufficient stock for ${product.name} (SKU: ${product.sku}). ` +
+            `Available: ${available}, Requested: ${reservation.quantity}`
+          );
+        }
+      }
+
+      // Step 2: If ALL validations pass, reserve inventory for ALL products atomically
+      for (const reservation of reservations) {
+        const result = await reserveInventorySingleTransaction(reservation, tx);
+        results.push({ success: true, ...result });
+      }
+
+      return results;
+    },
+    {
+      isolationLevel: 'Serializable',
+      maxWait: 5000,
+      timeout: 10000,
+    }
+  );
 }
 
 /**
@@ -268,15 +369,13 @@ export async function releaseInventory(reservation: InventoryReservation) {
       });
 
       // Create inventory transaction record
-      // Note: Using ADJUSTMENT type until RELEASE type is added to schema
       const transaction = await tx.inventoryTransaction.create({
         data: {
           productId,
-          type: InventoryTransactionType.ADJUSTMENT,
+          type: InventoryTransactionType.RELEASE,
           quantity: -quantity, // Negative to indicate release
           previousStock: product.inventory,
           newStock: product.inventory, // Inventory doesn't change, only reserved
-          reason: 'RELEASE',
           notes: notes || `Released ${quantity} units${orderId ? ` for order ${orderId}` : ''}`,
           orderId,
           userId,
