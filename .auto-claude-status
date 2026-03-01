@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "027-automated-development-monitoring-system",
+  "spec": "023-api-endpoints-development",
   "state": "building",
   "subtasks": {
-    "completed": 11,
-    "total": 13,
+    "completed": 0,
+    "total": 18,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Quality Assurance Verification",
+    "current": "Foundation: Validation Schemas & Utilities",
     "id": null,
-    "total": 3
+    "total": 5
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 12,
-    "started_at": "2026-02-27T22:17:30.060455"
+    "number": 1,
+    "started_at": "2026-03-01T10:10:27.170386"
   },
-  "last_update": "2026-02-27T22:38:56.205172"
+  "last_update": "2026-03-01T10:10:27.240587"
 }
