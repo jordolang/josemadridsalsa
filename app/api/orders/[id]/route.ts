@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
+import { withRateLimit } from '@/lib/middleware/api-helpers'
+import { RATE_LIMITS } from '@/lib/rate-limiter'
 
-export async function GET(
+async function handleGet(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: unknown
 ) {
   try {
     // Require authentication for viewing order details
@@ -18,7 +20,7 @@ export async function GET(
     }
 
     // Await params in Next.js 15+
-    const { id } = await params
+    const { id } = await (context as { params: Promise<{ id: string }> }).params
 
     // Fetch order with items and product details
     const order = await prisma.order.findUnique({
@@ -42,10 +44,11 @@ export async function GET(
     }
 
     // Verify that the order belongs to the authenticated user
+    // Returns 403 Forbidden (not 401) when authenticated but not the owner
     if (order.userId !== user.id) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: 'Forbidden' },
+        { status: 403 }
       )
     }
 
@@ -63,10 +66,10 @@ export async function GET(
       shippingMethod: order.shippingMethod,
       trackingNumber: order.trackingNumber,
       customerNotes: order.customerNotes,
-      stripePaymentIntentId: order.stripePaymentIntentId,
+      stripePaymentId: order.stripePaymentId,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
-      items: order.items.map(item => ({
+      items: order.items.map((item) => ({
         id: item.id,
         productId: item.productId,
         productName: item.productName,
@@ -75,21 +78,26 @@ export async function GET(
         quantity: item.quantity,
         unitPrice: parseFloat(String(item.unitPrice)),
         totalPrice: parseFloat(String(item.totalPrice)),
-        product: item.product ? {
-          id: item.product.id,
-          name: item.product.name,
-          slug: item.product.slug,
-          featuredImage: item.product.featuredImage,
-          heatLevel: item.product.heatLevel,
-        } : null,
+        product: item.product
+          ? {
+              id: item.product.id,
+              name: item.product.name,
+              slug: item.product.slug,
+              featuredImage: item.product.featuredImage,
+              heatLevel: item.product.heatLevel,
+            }
+          : null,
       })),
     }
 
     return NextResponse.json(parsedOrder)
-  } catch (error: any) {
+  } catch (error) {
+    console.error('[Orders API] Error fetching order:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch order', details: error.message },
+      { error: 'Failed to fetch order' },
       { status: 500 }
     )
   }
 }
+
+export const GET = withRateLimit(handleGet, RATE_LIMITS.API_GENERAL)

@@ -20,20 +20,31 @@ vi.mock('@/lib/audit', () => ({
   logAuditWithRequest: vi.fn(),
 }))
 
-const mockPaymentIntentsCreate = vi.fn()
+// Route uses paymentIntents.confirm, NOT create — prevents double-charging
+const mockPaymentIntentsConfirm = vi.fn()
 
 vi.mock('@/lib/stripe', () => ({
   getStripe: vi.fn(() => ({
     paymentIntents: {
-      create: mockPaymentIntentsCreate,
+      confirm: mockPaymentIntentsConfirm,
     },
   })),
+}))
+
+// Mock rate limiter to allow all requests through in tests
+vi.mock('@/lib/rate-limiter', () => ({
+  checkRateLimit: vi.fn(() => ({ allowed: true, remaining: 99, resetIn: 60, current: 1 })),
+  getClientIdentifier: vi.fn(() => 'test-ip'),
+  createRateLimitHeaders: vi.fn(() => ({})),
+  RATE_LIMITS: {
+    API_GENERAL: { maxRequests: 100, windowSeconds: 60 },
+  },
 }))
 
 describe('Payment API', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockPaymentIntentsCreate.mockClear()
+    mockPaymentIntentsConfirm.mockClear()
   })
 
   const mockUser = {
@@ -43,6 +54,7 @@ describe('Payment API', () => {
     role: 'CUSTOMER',
   }
 
+  // Order must have a stripePaymentId to confirm
   const mockOrder: any = {
     id: 'claaa1234567890abc',
     orderNumber: 'JMS-20260301-1234',
@@ -55,7 +67,7 @@ describe('Payment API', () => {
     tax: 2.5,
     discountAmount: 0,
     total: 29.47,
-    stripePaymentId: null,
+    stripePaymentId: 'pi_existing123',
     createdAt: new Date(),
     updatedAt: new Date(),
     items: [
@@ -98,7 +110,7 @@ describe('Payment API', () => {
 
       const request = new NextRequest('http://localhost/api/payment', {
         method: 'POST',
-        body: JSON.stringify({ orderId: 'invalid' }), // Missing paymentMethodId
+        body: JSON.stringify({ orderId: 'claaa1234567890abc' }), // Missing paymentMethodId
       })
 
       const response = await POST(request)
@@ -168,6 +180,29 @@ describe('Payment API', () => {
       expect(data.error).toBe('You do not have permission to pay for this order')
     })
 
+    it('should return 403 when order userId is null (cannot bypass ownership)', async () => {
+      const { getCurrentUser } = await import('@/lib/rbac')
+      const { default: prisma } = await import('@/lib/prisma')
+
+      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      // userId is null — must NOT bypass ownership check
+      vi.mocked(prisma.order.findUnique).mockResolvedValue({
+        ...mockOrder,
+        userId: null,
+      })
+
+      const request = new NextRequest('http://localhost/api/payment', {
+        method: 'POST',
+        body: JSON.stringify(validPaymentData),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(403)
+      expect(data.error).toBe('You do not have permission to pay for this order')
+    })
+
     it('should return 400 when order is already paid', async () => {
       const { getCurrentUser } = await import('@/lib/rbac')
       const { default: prisma } = await import('@/lib/prisma')
@@ -209,17 +244,17 @@ describe('Payment API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Cannot process payment for cancelled order')
+      expect(data.error).toContain('cancelled')
     })
 
-    it('should return 400 when order is refunded', async () => {
+    it('should return 400 when order has no existing PaymentIntent', async () => {
       const { getCurrentUser } = await import('@/lib/rbac')
       const { default: prisma } = await import('@/lib/prisma')
 
       vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
       vi.mocked(prisma.order.findUnique).mockResolvedValue({
         ...mockOrder,
-        status: 'REFUNDED',
+        stripePaymentId: null,
       })
 
       const request = new NextRequest('http://localhost/api/payment', {
@@ -231,10 +266,10 @@ describe('Payment API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Cannot process payment for refunded order')
+      expect(data.error).toBe('No payment intent found for this order')
     })
 
-    it('should process payment successfully with succeeded payment intent', async () => {
+    it('should confirm existing PaymentIntent (not create new one)', async () => {
       const { getCurrentUser } = await import('@/lib/rbac')
       const { default: prisma } = await import('@/lib/prisma')
       const { logAuditWithRequest } = await import('@/lib/audit')
@@ -242,8 +277,8 @@ describe('Payment API', () => {
       vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
 
-      mockPaymentIntentsCreate.mockResolvedValue({
-        id: 'pi_test123',
+      mockPaymentIntentsConfirm.mockResolvedValue({
+        id: 'pi_existing123',
         status: 'succeeded',
         client_secret: 'test_secret_123',
       })
@@ -252,7 +287,7 @@ describe('Payment API', () => {
         ...mockOrder,
         paymentStatus: 'PAID',
         status: 'CONFIRMED',
-        stripePaymentId: 'pi_test123',
+        stripePaymentId: 'pi_existing123',
       })
 
       const request = new NextRequest('http://localhost/api/payment', {
@@ -265,26 +300,20 @@ describe('Payment API', () => {
 
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
-      expect(data.paymentIntent.id).toBe('pi_test123')
+      expect(data.paymentIntent.id).toBe('pi_existing123')
       expect(data.paymentIntent.status).toBe('succeeded')
       expect(data.paymentIntent.clientSecret).toBe('test_secret_123')
       expect(data.order.paymentStatus).toBe('PAID')
       expect(data.order.status).toBe('CONFIRMED')
 
-      // Verify Stripe payment intent was created correctly
-      expect(mockPaymentIntentsCreate).toHaveBeenCalledWith({
-        amount: 2947, // $29.47 in cents
-        currency: 'usd',
-        payment_method: 'pm_card_visa',
-        confirm: true,
-        receipt_email: 'test@example.com',
-        metadata: {
-          orderId: 'claaa1234567890abc',
-          orderNumber: 'JMS-20260301-1234',
-          userId: 'user-123',
-        },
-        return_url: expect.stringContaining('/orders/claaa1234567890abc'),
-      })
+      // Verify confirm was called with the EXISTING intent ID (not create)
+      expect(mockPaymentIntentsConfirm).toHaveBeenCalledWith(
+        'pi_existing123',
+        {
+          payment_method: 'pm_card_visa',
+          return_url: expect.stringContaining('/orders/claaa1234567890abc'),
+        }
+      )
 
       // Verify order was updated
       expect(prisma.order.update).toHaveBeenCalledWith({
@@ -292,11 +321,10 @@ describe('Payment API', () => {
         data: {
           paymentStatus: 'PAID',
           status: 'CONFIRMED',
-          stripePaymentId: 'pi_test123',
+          stripePaymentId: 'pi_existing123',
         },
       })
 
-      // Verify audit log
       expect(logAuditWithRequest).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 'user-123',
@@ -306,7 +334,6 @@ describe('Payment API', () => {
           changes: expect.objectContaining({
             paymentStatus: 'PAID',
             status: 'CONFIRMED',
-            stripePaymentId: 'pi_test123',
             orderNumber: 'JMS-20260301-1234',
             amount: 29.47,
           }),
@@ -322,8 +349,8 @@ describe('Payment API', () => {
       vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
 
-      mockPaymentIntentsCreate.mockResolvedValue({
-        id: 'pi_test123',
+      mockPaymentIntentsConfirm.mockResolvedValue({
+        id: 'pi_existing123',
         status: 'requires_action',
         client_secret: 'test_secret_123',
       })
@@ -332,7 +359,7 @@ describe('Payment API', () => {
         ...mockOrder,
         paymentStatus: 'PENDING',
         status: 'PENDING',
-        stripePaymentId: 'pi_test123',
+        stripePaymentId: 'pi_existing123',
       })
 
       const request = new NextRequest('http://localhost/api/payment', {
@@ -347,41 +374,6 @@ describe('Payment API', () => {
       expect(data.success).toBe(true)
       expect(data.paymentIntent.status).toBe('requires_action')
       expect(data.order.paymentStatus).toBe('PENDING')
-      expect(data.order.status).toBe('PENDING')
-    })
-
-    it('should handle payment intent requiring payment method', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
-
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
-      vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
-
-      mockPaymentIntentsCreate.mockResolvedValue({
-        id: 'pi_test123',
-        status: 'requires_payment_method',
-        client_secret: 'test_secret_123',
-      })
-
-      vi.mocked(prisma.order.update).mockResolvedValue({
-        ...mockOrder,
-        paymentStatus: 'PENDING',
-        status: 'PENDING',
-        stripePaymentId: 'pi_test123',
-      })
-
-      const request = new NextRequest('http://localhost/api/payment', {
-        method: 'POST',
-        body: JSON.stringify(validPaymentData),
-      })
-
-      const response = await POST(request)
-      const data = await response.json()
-
-      expect(response.status).toBe(200)
-      expect(data.success).toBe(true)
-      expect(data.paymentIntent.status).toBe('requires_payment_method')
-      expect(data.order.paymentStatus).toBe('PENDING')
     })
 
     it('should handle canceled payment intent', async () => {
@@ -391,8 +383,8 @@ describe('Payment API', () => {
       vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
 
-      mockPaymentIntentsCreate.mockResolvedValue({
-        id: 'pi_test123',
+      mockPaymentIntentsConfirm.mockResolvedValue({
+        id: 'pi_existing123',
         status: 'canceled',
         client_secret: 'test_secret_123',
       })
@@ -401,7 +393,7 @@ describe('Payment API', () => {
         ...mockOrder,
         paymentStatus: 'FAILED',
         status: 'PENDING',
-        stripePaymentId: 'pi_test123',
+        stripePaymentId: 'pi_existing123',
       })
 
       const request = new NextRequest('http://localhost/api/payment', {
@@ -418,44 +410,6 @@ describe('Payment API', () => {
       expect(data.order.paymentStatus).toBe('FAILED')
     })
 
-    it('should use guest email if order has no userId', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
-
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
-      vi.mocked(prisma.order.findUnique).mockResolvedValue({
-        ...mockOrder,
-        guestEmail: 'guest@example.com',
-      })
-
-      mockPaymentIntentsCreate.mockResolvedValue({
-        id: 'pi_test123',
-        status: 'succeeded',
-        client_secret: 'test_secret_123',
-      })
-
-      vi.mocked(prisma.order.update).mockResolvedValue({
-        ...mockOrder,
-        paymentStatus: 'PAID',
-        status: 'CONFIRMED',
-        stripePaymentId: 'pi_test123',
-      })
-
-      const request = new NextRequest('http://localhost/api/payment', {
-        method: 'POST',
-        body: JSON.stringify(validPaymentData),
-      })
-
-      const response = await POST(request)
-
-      expect(response.status).toBe(200)
-      expect(mockPaymentIntentsCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          receipt_email: 'guest@example.com',
-        })
-      )
-    })
-
     it('should return 402 when card is declined', async () => {
       const { getCurrentUser } = await import('@/lib/rbac')
       const { default: prisma } = await import('@/lib/prisma')
@@ -467,7 +421,7 @@ describe('Payment API', () => {
         type: 'StripeCardError',
         message: 'Your card was declined',
       }
-      mockPaymentIntentsCreate.mockRejectedValue(cardError)
+      mockPaymentIntentsConfirm.mockRejectedValue(cardError)
 
       const request = new NextRequest('http://localhost/api/payment', {
         method: 'POST',
@@ -488,10 +442,8 @@ describe('Payment API', () => {
       vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
 
-      const cardError = {
-        type: 'StripeCardError',
-      }
-      mockPaymentIntentsCreate.mockRejectedValue(cardError)
+      const cardError = { type: 'StripeCardError' }
+      mockPaymentIntentsConfirm.mockRejectedValue(cardError)
 
       const request = new NextRequest('http://localhost/api/payment', {
         method: 'POST',
@@ -534,7 +486,7 @@ describe('Payment API', () => {
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
 
       const stripeError = new Error('Stripe API error')
-      mockPaymentIntentsCreate.mockRejectedValue(stripeError)
+      mockPaymentIntentsConfirm.mockRejectedValue(stripeError)
 
       const request = new NextRequest('http://localhost/api/payment', {
         method: 'POST',

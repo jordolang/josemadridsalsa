@@ -63,6 +63,16 @@ vi.mock('@/lib/shipping-calculator', () => ({
   })),
 }))
 
+// Mock rate limiter to allow all requests through in tests
+vi.mock('@/lib/rate-limiter', () => ({
+  checkRateLimit: vi.fn(() => ({ allowed: true, remaining: 99, resetIn: 60, current: 1 })),
+  getClientIdentifier: vi.fn(() => 'test-ip'),
+  createRateLimitHeaders: vi.fn(() => ({})),
+  RATE_LIMITS: {
+    API_GENERAL: { maxRequests: 100, windowSeconds: 60 },
+  },
+}))
+
 describe('Orders API', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -117,7 +127,7 @@ describe('Orders API', () => {
     shippingMethod: '123 Main St\nPortland, OR 97201',
     trackingNumber: null,
     customerNotes: null,
-    stripePaymentIntentId: null,
+    stripePaymentId: 'pi_test123',
     createdAt: new Date(),
     updatedAt: new Date(),
     items: [
@@ -325,13 +335,14 @@ describe('Orders API', () => {
       expect(data.orderNumber).toBe('JMS-20260301-1234')
       expect(data.amount).toBeGreaterThan(0)
 
-      // Verify order creation
+      // Verify order creation includes stripePaymentId
       expect(prisma.order.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             userId: 'user-123',
             paymentStatus: 'PENDING',
             status: 'PENDING',
+            stripePaymentId: 'pi_test123',
           }),
           include: {
             items: true,
@@ -484,7 +495,25 @@ describe('Orders API', () => {
       )
     })
 
-    it('should filter orders by status', async () => {
+    it('should return 400 for invalid status filter', async () => {
+      const { getCurrentUser } = await import('@/lib/rbac')
+      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+
+      const request = new NextRequest(
+        'http://localhost/api/orders?status=INVALID_STATUS',
+        {
+          method: 'GET',
+        }
+      )
+
+      const response = await GET(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toContain('Invalid query parameters')
+    })
+
+    it('should filter orders by valid status', async () => {
       const { getCurrentUser } = await import('@/lib/rbac')
       const { default: prisma } = await import('@/lib/prisma')
 
@@ -492,7 +521,7 @@ describe('Orders API', () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([])
 
       const request = new NextRequest(
-        'http://localhost/api/orders?status=COMPLETED',
+        'http://localhost/api/orders?status=DELIVERED',
         {
           method: 'GET',
         }
@@ -505,7 +534,7 @@ describe('Orders API', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             userId: 'user-123',
-            status: 'COMPLETED',
+            status: 'DELIVERED',
           }),
         })
       )
@@ -612,7 +641,7 @@ describe('Orders API', () => {
       expect(typeof data[0].items[0].totalPrice).toBe('number')
     })
 
-    it('should handle database errors gracefully', async () => {
+    it('should handle database errors gracefully without leaking details', async () => {
       const { getCurrentUser } = await import('@/lib/rbac')
       const { default: prisma } = await import('@/lib/prisma')
 
@@ -630,6 +659,8 @@ describe('Orders API', () => {
 
       expect(response.status).toBe(500)
       expect(data.error).toBe('Failed to fetch orders')
+      // Must NOT leak internal error details
+      expect(data.details).toBeUndefined()
     })
   })
 
@@ -677,7 +708,7 @@ describe('Orders API', () => {
       expect(data.error).toBe('Order not found')
     })
 
-    it('should return 401 when order belongs to different user', async () => {
+    it('should return 403 Forbidden when order belongs to different user', async () => {
       const { getCurrentUser } = await import('@/lib/rbac')
       const { default: prisma } = await import('@/lib/prisma')
 
@@ -699,8 +730,9 @@ describe('Orders API', () => {
       })
       const data = await response.json()
 
-      expect(response.status).toBe(401)
-      expect(data.error).toBe('Unauthorized')
+      // Must be 403, not 401 — authenticated but not the owner
+      expect(response.status).toBe(403)
+      expect(data.error).toBe('Forbidden')
     })
 
     it('should return order details for authenticated user', async () => {
@@ -769,7 +801,7 @@ describe('Orders API', () => {
       expect(typeof data.items[0].totalPrice).toBe('number')
     })
 
-    it('should handle database errors gracefully', async () => {
+    it('should handle database errors gracefully without leaking details', async () => {
       const { getCurrentUser } = await import('@/lib/rbac')
       const { default: prisma } = await import('@/lib/prisma')
 
@@ -792,6 +824,8 @@ describe('Orders API', () => {
 
       expect(response.status).toBe(500)
       expect(data.error).toBe('Failed to fetch order')
+      // Must NOT leak internal error details
+      expect(data.details).toBeUndefined()
     })
   })
 })

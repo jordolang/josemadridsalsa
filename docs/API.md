@@ -367,8 +367,7 @@ Create a new order from cart items. This endpoint:
     "postalCode": "78701",
     "country": "US"
   },
-  "notes": "Please ring doorbell",
-  "discountCode": "SUMMER2026"
+  "notes": "Please ring doorbell"
 }
 ```
 
@@ -383,7 +382,6 @@ Create a new order from cart items. This endpoint:
   - `country` (optional): Country code (defaults to "US")
 - `billingAddress` (optional): Same structure as shipping address
 - `notes` (optional): Customer notes
-- `discountCode` (optional): Discount code to apply
 
 **Response (200 OK):**
 ```json
@@ -558,7 +556,8 @@ Retrieve detailed information about a specific order.
 ```
 
 **Error Responses:**
-- `401 Unauthorized` - User not authenticated or order belongs to another user
+- `401 Unauthorized` - User not authenticated
+- `403 Forbidden` - Order belongs to a different user
 - `404 Not Found` - Order not found
 - `500 Internal Server Error` - Database error
 
@@ -578,7 +577,7 @@ curl -X GET https://josemadrid.net/api/orders/cm5order789ghi \
 Process payment for an existing order using Stripe. This endpoint:
 - Validates order ownership and status
 - Prevents duplicate payments
-- Creates/confirms Stripe payment intent
+- Confirms the existing Stripe PaymentIntent created by `POST /api/orders`
 - Updates order payment and status
 - Logs audit events
 

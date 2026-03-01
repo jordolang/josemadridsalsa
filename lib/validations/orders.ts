@@ -5,6 +5,26 @@ import { z } from 'zod'
  * Following patterns from app/api/checkout/route.ts
  */
 
+// Allowed values derived from Prisma OrderStatus enum
+export const ORDER_STATUSES = [
+  'PENDING',
+  'CONFIRMED',
+  'PROCESSING',
+  'SHIPPED',
+  'DELIVERED',
+  'CANCELLED',
+  'REFUNDED',
+] as const
+
+// Allowed values derived from Prisma PaymentStatus enum
+export const PAYMENT_STATUSES = [
+  'PENDING',
+  'PAID',
+  'FAILED',
+  'REFUNDED',
+  'PARTIALLY_REFUNDED',
+] as const
+
 // Base order item schema - reusable for order operations
 export const OrderItemSchema = z.object({
   productId: z.string().cuid(),
@@ -26,69 +46,40 @@ export const ShippingAddressSchema = z.object({
   city: z.string().min(1),
   state: z.string().min(1),
   postalCode: z.string().min(1),
+  country: z.string().default('US'),
 })
 
-// Full checkout/order creation schema
-export const CheckoutSchema = z.object({
-  items: z
-    .array(OrderItemSchema)
+// Order creation schema (used by POST /api/orders)
+export const CreateOrderSchema = z.object({
+  cartItemIds: z
+    .array(z.string().cuid())
     .min(1, 'Cart is empty'),
-  customer: CustomerInfoSchema,
-  shipping: ShippingAddressSchema,
+  shippingAddress: ShippingAddressSchema,
+  billingAddress: ShippingAddressSchema.optional(),
   notes: z.string().optional(),
-  discountCode: z.string().optional(),
-  recoveryToken: z.string().optional(),
 })
 
 // Order status update schema
 export const UpdateOrderStatusSchema = z.object({
   orderId: z.string().cuid(),
-  status: z.enum([
-    'PENDING',
-    'PROCESSING',
-    'SHIPPED',
-    'DELIVERED',
-    'CANCELLED',
-    'REFUNDED',
-  ]),
+  status: z.enum(ORDER_STATUSES),
   notes: z.string().optional(),
 })
 
 // Order payment status update schema
 export const UpdateOrderPaymentStatusSchema = z.object({
   orderId: z.string().cuid(),
-  paymentStatus: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']),
+  paymentStatus: z.enum(PAYMENT_STATUSES),
 })
 
 // Order query/filter schema for listing orders
 export const OrderQuerySchema = z.object({
-  userId: z.string().cuid().optional(),
-  status: z.enum([
-    'PENDING',
-    'PROCESSING',
-    'SHIPPED',
-    'DELIVERED',
-    'CANCELLED',
-    'REFUNDED',
-  ]).optional(),
-  paymentStatus: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']).optional(),
-  orderNumber: z.string().optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  limit: z.number().int().positive().max(100).default(20),
-  offset: z.number().int().min(0).default(0),
+  status: z.enum(ORDER_STATUSES).optional(),
+  paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
+  take: z.coerce.number().int().positive().optional(),
+  skip: z.coerce.number().int().min(0).default(0),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
 })
-
-// Order details retrieval schema
-export const GetOrderSchema = z.object({
-  orderId: z.string().cuid().optional(),
-  orderNumber: z.string().optional(),
-}).refine(
-  (data) => data.orderId || data.orderNumber,
-  {
-    message: 'Either orderId or orderNumber must be provided',
-  }
-)
 
 // Order cancellation schema
 export const CancelOrderSchema = z.object({
@@ -109,10 +100,9 @@ export const UpdateOrderTrackingSchema = z.object({
 export type OrderItem = z.infer<typeof OrderItemSchema>
 export type CustomerInfo = z.infer<typeof CustomerInfoSchema>
 export type ShippingAddress = z.infer<typeof ShippingAddressSchema>
-export type Checkout = z.infer<typeof CheckoutSchema>
+export type CreateOrder = z.infer<typeof CreateOrderSchema>
 export type UpdateOrderStatus = z.infer<typeof UpdateOrderStatusSchema>
 export type UpdateOrderPaymentStatus = z.infer<typeof UpdateOrderPaymentStatusSchema>
 export type OrderQuery = z.infer<typeof OrderQuerySchema>
-export type GetOrder = z.infer<typeof GetOrderSchema>
 export type CancelOrder = z.infer<typeof CancelOrderSchema>
 export type UpdateOrderTracking = z.infer<typeof UpdateOrderTrackingSchema>

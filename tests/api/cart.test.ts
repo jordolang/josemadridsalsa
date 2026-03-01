@@ -28,6 +28,16 @@ vi.mock('@/lib/audit', () => ({
   logAuditWithRequest: vi.fn(),
 }))
 
+// Mock rate limiter to allow all requests through in tests
+vi.mock('@/lib/rate-limiter', () => ({
+  checkRateLimit: vi.fn(() => ({ allowed: true, remaining: 99, resetIn: 60, current: 1 })),
+  getClientIdentifier: vi.fn(() => 'test-ip'),
+  createRateLimitHeaders: vi.fn(() => ({})),
+  RATE_LIMITS: {
+    API_GENERAL: { maxRequests: 100, windowSeconds: 60 },
+  },
+}))
+
 describe('Cart API', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -103,7 +113,7 @@ describe('Cart API', () => {
       expect(data.subtotal).toBe(0)
     })
 
-    it('should return cart items for authenticated user', async () => {
+    it('should return cart items with serialized prices', async () => {
       const { getCurrentUser } = await import('@/lib/rbac')
       const { default: prisma } = await import('@/lib/prisma')
 
@@ -122,6 +132,8 @@ describe('Cart API', () => {
       expect(data.items[0].id).toBe('cart-item-123')
       expect(data.items[0].quantity).toBe(2)
       expect(data.items[0].product.name).toBe('Test Salsa')
+      // Price must be a number, not a Prisma Decimal object
+      expect(typeof data.items[0].product.price).toBe('number')
       expect(data.items[0].product.price).toBe(8.99)
       expect(data.itemCount).toBe(1)
       expect(data.totalQuantity).toBe(2)
@@ -231,7 +243,7 @@ describe('Cart API', () => {
       expect(data.error).toBe('Product not found')
     })
 
-    it('should return 400 when inventory is insufficient', async () => {
+    it('should return 400 when inventory is insufficient for new item', async () => {
       const { getCurrentUser } = await import('@/lib/rbac')
       const { default: prisma } = await import('@/lib/prisma')
 
@@ -240,6 +252,7 @@ describe('Cart API', () => {
         ...mockProduct,
         inventory: 5,
       })
+      vi.mocked(prisma.cartItem.findFirst).mockResolvedValue(null)
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
@@ -249,6 +262,35 @@ describe('Cart API', () => {
       const response = await POST(request)
       const data = await response.json()
 
+      expect(response.status).toBe(400)
+      expect(data.error).toContain('Insufficient inventory')
+      expect(data.error).toContain('Available: 5')
+    })
+
+    it('should return 400 when accumulated quantity exceeds inventory', async () => {
+      const { getCurrentUser } = await import('@/lib/rbac')
+      const { default: prisma } = await import('@/lib/prisma')
+
+      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(prisma.product.findUnique).mockResolvedValue({
+        ...mockProduct,
+        inventory: 5,
+      })
+      // Existing item already has quantity 4
+      vi.mocked(prisma.cartItem.findFirst).mockResolvedValue({
+        ...mockCartItem,
+        quantity: 4,
+      })
+
+      const request = new NextRequest('http://localhost/api/cart', {
+        method: 'POST',
+        body: JSON.stringify({ productId: 'clxxx1234567890abc', quantity: 3 }),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      // 4 existing + 3 requested = 7, inventory = 5 → should fail
       expect(response.status).toBe(400)
       expect(data.error).toContain('Insufficient inventory')
       expect(data.error).toContain('Available: 5')
@@ -297,7 +339,7 @@ describe('Cart API', () => {
       )
     })
 
-    it('should update existing cart item when product already in cart', async () => {
+    it('should update existing cart item with accumulated quantity', async () => {
       const { getCurrentUser } = await import('@/lib/rbac')
       const { default: prisma } = await import('@/lib/prisma')
 
@@ -368,7 +410,7 @@ describe('Cart API', () => {
         }
       )
 
-      const response = await PUT(request, { params: { id: 'cart-item-123' } })
+      const response = await PUT(request, { params: Promise.resolve({ id: 'cart-item-123' }) })
       const data = await response.json()
 
       expect(response.status).toBe(401)
@@ -387,7 +429,7 @@ describe('Cart API', () => {
         }
       )
 
-      const response = await PUT(request, { params: { id: 'cart-item-123' } })
+      const response = await PUT(request, { params: Promise.resolve({ id: 'cart-item-123' }) })
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -409,7 +451,7 @@ describe('Cart API', () => {
         }
       )
 
-      const response = await PUT(request, { params: { id: 'cart-item-123' } })
+      const response = await PUT(request, { params: Promise.resolve({ id: 'cart-item-123' }) })
       const data = await response.json()
 
       expect(response.status).toBe(404)
@@ -434,7 +476,7 @@ describe('Cart API', () => {
         }
       )
 
-      const response = await PUT(request, { params: { id: 'cart-item-123' } })
+      const response = await PUT(request, { params: Promise.resolve({ id: 'cart-item-123' }) })
       const data = await response.json()
 
       expect(response.status).toBe(403)
@@ -459,7 +501,7 @@ describe('Cart API', () => {
         }
       )
 
-      const response = await PUT(request, { params: { id: 'cart-item-123' } })
+      const response = await PUT(request, { params: Promise.resolve({ id: 'cart-item-123' }) })
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -487,7 +529,7 @@ describe('Cart API', () => {
         }
       )
 
-      const response = await PUT(request, { params: { id: 'cart-item-123' } })
+      const response = await PUT(request, { params: Promise.resolve({ id: 'cart-item-123' }) })
       const data = await response.json()
 
       expect(response.status).toBe(200)
@@ -536,7 +578,7 @@ describe('Cart API', () => {
         }
       )
 
-      const response = await PUT(request, { params: { id: 'cart-item-123' } })
+      const response = await PUT(request, { params: Promise.resolve({ id: 'cart-item-123' }) })
       const data = await response.json()
 
       expect(response.status).toBe(500)
@@ -551,13 +593,11 @@ describe('Cart API', () => {
 
       const request = new NextRequest(
         'http://localhost/api/cart/cart-item-123',
-        {
-          method: 'DELETE',
-        }
+        { method: 'DELETE' }
       )
 
       const response = await DELETE(request, {
-        params: { id: 'cart-item-123' },
+        params: Promise.resolve({ id: 'cart-item-123' }),
       })
       const data = await response.json()
 
@@ -574,13 +614,11 @@ describe('Cart API', () => {
 
       const request = new NextRequest(
         'http://localhost/api/cart/cart-item-123',
-        {
-          method: 'DELETE',
-        }
+        { method: 'DELETE' }
       )
 
       const response = await DELETE(request, {
-        params: { id: 'cart-item-123' },
+        params: Promise.resolve({ id: 'cart-item-123' }),
       })
       const data = await response.json()
 
@@ -600,13 +638,11 @@ describe('Cart API', () => {
 
       const request = new NextRequest(
         'http://localhost/api/cart/cart-item-123',
-        {
-          method: 'DELETE',
-        }
+        { method: 'DELETE' }
       )
 
       const response = await DELETE(request, {
-        params: { id: 'cart-item-123' },
+        params: Promise.resolve({ id: 'cart-item-123' }),
       })
       const data = await response.json()
 
@@ -625,13 +661,11 @@ describe('Cart API', () => {
 
       const request = new NextRequest(
         'http://localhost/api/cart/cart-item-123',
-        {
-          method: 'DELETE',
-        }
+        { method: 'DELETE' }
       )
 
       const response = await DELETE(request, {
-        params: { id: 'cart-item-123' },
+        params: Promise.resolve({ id: 'cart-item-123' }),
       })
       const data = await response.json()
 
@@ -668,13 +702,11 @@ describe('Cart API', () => {
 
       const request = new NextRequest(
         'http://localhost/api/cart/cart-item-123',
-        {
-          method: 'DELETE',
-        }
+        { method: 'DELETE' }
       )
 
       const response = await DELETE(request, {
-        params: { id: 'cart-item-123' },
+        params: Promise.resolve({ id: 'cart-item-123' }),
       })
       const data = await response.json()
 

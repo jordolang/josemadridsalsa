@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
+import { withRateLimit } from '@/lib/middleware/api-helpers'
+import { AddCartItemSchema } from '@/lib/validations/cart'
+import { RATE_LIMITS } from '@/lib/rate-limiter'
 
-const AddToCartSchema = z.object({
-  productId: z.string().cuid(),
-  quantity: z.number().int().positive(),
-})
-
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   try {
     // Require authentication
     const user = await getCurrentUser()
@@ -77,7 +74,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   try {
     // Require authentication
     const user = await getCurrentUser()
@@ -90,7 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     const json = await request.json()
-    const parsed = AddToCartSchema.safeParse(json)
+    const parsed = AddCartItemSchema.safeParse(json)
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -101,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     const { productId, quantity } = parsed.data
 
-    // Check if product exists
+    // Look up the product to verify it exists and check inventory
     const product = await prisma.product.findUnique({
       where: { id: productId },
     })
@@ -113,8 +110,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check inventory
-    if (product.inventory < quantity) {
+    // Check if user already has this product in their cart
+    const existingItem = await prisma.cartItem.findFirst({
+      where: {
+        userId: user.id,
+        productId,
+      },
+    })
+
+    // Validate inventory against accumulated quantity (existing + new)
+    const accumulatedQuantity = (existingItem?.quantity ?? 0) + quantity
+    if (product.inventory < accumulatedQuantity) {
       return NextResponse.json(
         {
           error: `Insufficient inventory for ${product.name}. Available: ${product.inventory}`,
@@ -123,21 +129,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if cart item already exists
-    const existingCartItem = await prisma.cartItem.findFirst({
-      where: {
-        userId: user.id,
-        productId: productId,
-      },
-    })
-
     let cartItem
-    if (existingCartItem) {
-      // Update quantity
+
+    if (existingItem) {
+      // Update quantity if item already in cart
       cartItem = await prisma.cartItem.update({
-        where: { id: existingCartItem.id },
+        where: { id: existingItem.id },
         data: {
-          quantity: existingCartItem.quantity + quantity,
+          quantity: accumulatedQuantity,
         },
         include: {
           product: true,
@@ -148,8 +147,8 @@ export async function POST(request: NextRequest) {
       cartItem = await prisma.cartItem.create({
         data: {
           userId: user.id,
-          productId: productId,
-          quantity: quantity,
+          productId,
+          quantity,
         },
         include: {
           product: true,
@@ -161,32 +160,34 @@ export async function POST(request: NextRequest) {
     await logAuditWithRequest(
       {
         userId: user.id,
-        action: 'create',
+        action: existingItem ? 'update' : 'create',
         entityType: 'CartItem',
         entityId: cartItem.id,
         changes: {
           productId,
-          quantity,
           productName: product.name,
+          quantity: cartItem.quantity,
         },
       },
       request
     )
 
-    return NextResponse.json({
-      success: true,
-      cartItem: {
-        id: cartItem.id,
-        productId: cartItem.productId,
-        quantity: cartItem.quantity,
-        product: {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          featuredImage: product.featuredImage,
+    return NextResponse.json(
+      {
+        success: true,
+        cartItem: {
+          id: cartItem.id,
+          productId: cartItem.productId,
+          quantity: cartItem.quantity,
+          product: {
+            id: cartItem.product.id,
+            name: cartItem.product.name,
+            price: parseFloat(String(cartItem.product.price)),
+            featuredImage: cartItem.product.featuredImage,
+          },
         },
       },
-    })
+    )
   } catch (error) {
     console.error('[Cart API] Error adding to cart:', error)
     return NextResponse.json(
@@ -195,3 +196,6 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+export const GET = withRateLimit(handleGet, RATE_LIMITS.API_GENERAL)
+export const POST = withRateLimit(handlePost, RATE_LIMITS.API_GENERAL)
