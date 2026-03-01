@@ -1,17 +1,16 @@
 import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma'
-import { requirePermission, isOwner } from '@/lib/rbac'
+import { requirePermission } from '@/lib/rbac'
 import { ok, fail } from '@/lib/api'
 import { logAudit } from '@/lib/audit'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
-import { UserRole } from '@prisma/client'
 
 const userUpdateSchema = z.object({
   name: z.string().nullable().optional(),
   password: z.string().min(8).optional(),
   phone: z.string().nullable().optional(),
-  role: z.enum(['CUSTOMER', 'WHOLESALE', 'STAFF', 'ADMIN', 'DEVELOPER', 'OWNER']).optional(),
+  role: z.enum(['CUSTOMER', 'WHOLESALE', 'STAFF', 'ADMIN', 'DEVELOPER']).optional(),
   isEmailVerified: z.boolean().optional(),
 })
 
@@ -50,29 +49,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const existing = await prisma.user.findUnique({ where: { id } })
     if (!existing) return fail('User not found', 404)
-
-    // OWNER protection: cannot change an OWNER's role unless you are the OWNER
-    if (existing.role === UserRole.OWNER && !isOwner(currentUser)) {
-      return fail('Only the OWNER can modify the OWNER account', 403)
-    }
-
-    // Prevent assigning OWNER role unless current user is OWNER
-    if (data.role === 'OWNER' && !isOwner(currentUser)) {
-      return fail('Only the OWNER can assign the OWNER role', 403)
-    }
-
-    // If transferring OWNER role to someone else, ensure only one OWNER
-    if (data.role === 'OWNER' && existing.role !== UserRole.OWNER) {
-      const existingOwner = await prisma.user.findFirst({
-        where: { role: UserRole.OWNER, id: { not: id } },
-      })
-      if (existingOwner) {
-        return fail(
-          'An OWNER account already exists. Only one OWNER is allowed.',
-          409
-        )
-      }
-    }
 
     // Hash password if provided
     const updateData: any = { ...data }
@@ -113,11 +89,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     // Prevent deleting yourself
     if (existing.id === currentUser.id) {
       return fail('Cannot delete your own account', 400)
-    }
-
-    // OWNER protection: cannot delete the OWNER account unless you are the OWNER
-    if (existing.role === UserRole.OWNER && !isOwner(currentUser)) {
-      return fail('Only the OWNER can delete the OWNER account', 403)
     }
 
     await prisma.user.delete({ where: { id } })

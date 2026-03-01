@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { requireAnyPermission } from '@/lib/rbac';
+import { requirePermission } from '@/lib/rbac';
 import { ok, fail } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import {
@@ -8,94 +8,27 @@ import {
   getLowStockProducts,
   type InventoryAdjustment,
 } from '@/lib/inventory-manager';
-import { prisma } from '@/lib/prisma';
 import { InventoryTransactionType } from '@prisma/client';
 
 /**
  * GET /api/admin/inventory
- * Get inventory data - supports full product listing with filters
+ * Get low stock products
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = await requireAnyPermission(['inventory:read', 'products:read']);
+    const user = await requirePermission('products:read');
 
-    const { searchParams } = new URL(req.url);
-    const mode = searchParams.get('mode') || 'low_stock';
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
-    const search = searchParams.get('search') || '';
-    const category = searchParams.get('category') || '';
-    const stockStatus = searchParams.get('stockStatus') || '';
-
-    if (mode === 'low_stock') {
-      const lowStockProducts = await getLowStockProducts();
-      return ok({
-        products: lowStockProducts,
-        totalCount: lowStockProducts.length,
-      });
-    }
-
-    // Full inventory mode
-    const where: any = {};
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    if (category) {
-      where.categoryId = category;
-    }
-
-    if (stockStatus === 'out_of_stock') {
-      where.inventory = 0;
-    } else if (stockStatus === 'low_stock') {
-      where.AND = [
-        { inventory: { gt: 0 } },
-        { inventory: { lte: prisma.product.fields.lowStockThreshold } },
-      ];
-    } else if (stockStatus === 'in_stock') {
-      where.inventory = { gt: prisma.product.fields.lowStockThreshold };
-    }
-
-    const skip = (page - 1) * limit;
-
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { name: 'asc' },
-        select: {
-          id: true,
-          name: true,
-          sku: true,
-          inventory: true,
-          lowStockThreshold: true,
-          price: true,
-          costPrice: true,
-          isActive: true,
-          category: {
-            select: { id: true, name: true },
-          },
-        },
-      }),
-      prisma.product.count({ where }),
-    ]);
+    const lowStockProducts = await getLowStockProducts();
 
     await logAudit({
       userId: user.id,
-      action: 'inventory.list',
+      action: 'inventory.list_low_stock',
       entityType: 'product',
     });
 
     return ok({
-      products,
-      totalCount: total,
-      page,
-      totalPages: Math.ceil(total / limit),
+      products: lowStockProducts,
+      totalCount: lowStockProducts.length,
     });
   } catch (error: any) {
     return fail(error.message, error.status || 500);
@@ -108,7 +41,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireAnyPermission(['inventory:write', 'products:write']);
+    const user = await requirePermission('products:write');
 
     const body = await req.json();
     const { adjustments } = body;
@@ -172,7 +105,7 @@ export async function POST(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
   try {
-    const user = await requireAnyPermission(['inventory:write', 'products:write']);
+    const user = await requirePermission('products:write');
 
     const body = await req.json();
     const { productId, quantity, notes } = body;

@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
 const authSecret = process.env.NEXTAUTH_SECRET
-const STAFF_ROLES = ['OWNER', 'ADMIN', 'DEVELOPER', 'STAFF']
+const STAFF_ROLES = ['ADMIN', 'DEVELOPER', 'STAFF']
 
 function buildCallbackUrl(request: NextRequest) {
   const callbackPath = `${request.nextUrl.pathname}${request.nextUrl.search}`

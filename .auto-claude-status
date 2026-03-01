@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "021-email-notification-system",
+  "spec": "027-automated-development-monitoring-system",
   "state": "building",
   "subtasks": {
-    "completed": 22,
-    "total": 26,
+    "completed": 11,
+    "total": 13,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Testing & Verification",
+    "current": "Quality Assurance Verification",
     "id": null,
-    "total": 4
+    "total": 3
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 23,
-    "started_at": "2026-02-16T23:59:07.624379"
+    "number": 12,
+    "started_at": "2026-02-27T22:17:30.060455"
   },
-  "last_update": "2026-02-17T10:46:06.052226"
+  "last_update": "2026-02-27T22:38:56.205172"
 }
