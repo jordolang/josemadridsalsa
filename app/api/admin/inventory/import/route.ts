@@ -4,6 +4,7 @@ import { ok, fail } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import prisma from '@/lib/prisma';
 import Papa from 'papaparse';
+import ExcelJS from 'exceljs';
 import { adjustInventory } from '@/lib/inventory-manager';
 import { InventoryTransactionType } from '@prisma/client';
 
@@ -21,7 +22,7 @@ interface ImportError {
 
 /**
  * POST /api/admin/inventory/import
- * Import inventory updates from CSV file
+ * Import inventory updates from CSV or Excel file
  */
 export async function POST(req: NextRequest) {
   try {
@@ -47,12 +48,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Parse the file
-    const text = await file.text();
     let importData: InventoryImportRow[] = [];
     const errors: string[] = [];
     const validationErrors: ImportError[] = [];
 
     if (fileType === 'csv') {
+      const text = await file.text();
       const parsed = Papa.parse<InventoryImportRow>(text, {
         header: true,
         dynamicTyping: true,
@@ -70,9 +71,61 @@ export async function POST(req: NextRequest) {
       }
 
       importData = parsed.data;
-    } else {
-      // Excel support will be added in subtask-5-2
-      return fail('Excel import not yet implemented', 501);
+    } else if (fileType === 'excel') {
+      try {
+        // Convert File to Buffer
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        // Load Excel workbook
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(buffer as any);
+
+        // Use the first sheet
+        const worksheet = workbook.worksheets[0];
+        if (!worksheet) {
+          return fail('Excel file is empty or has no sheets', 400);
+        }
+
+        const data: any[] = [];
+        const headers: string[] = [];
+
+        // Get headers from first row
+        worksheet.getRow(1).eachCell((cell) => {
+          headers.push(cell.value?.toString().trim() || '');
+        });
+
+        // Process data rows
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return; // Skip header row
+
+          const rowData: any = {};
+          row.eachCell((cell, colNumber) => {
+            const header = headers[colNumber - 1];
+            if (header) {
+              // Handle numeric values properly
+              const value = cell.value;
+              if (value !== null && value !== undefined) {
+                // For inventory and lowStockThreshold, convert to number
+                if (header === 'inventory' || header === 'lowStockThreshold') {
+                  rowData[header] = typeof value === 'number' ? value : parseFloat(value.toString());
+                } else {
+                  rowData[header] = value.toString();
+                }
+              }
+            }
+          });
+
+          // Only add row if it has data
+          if (Object.keys(rowData).length > 0) {
+            data.push(rowData);
+          }
+        });
+
+        importData = data as InventoryImportRow[];
+      } catch (error: any) {
+        return fail(`Excel parsing error: ${error.message}`, 400);
+      }
     }
 
     if (importData.length === 0) {
