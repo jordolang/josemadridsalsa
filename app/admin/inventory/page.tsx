@@ -247,6 +247,14 @@ export default async function InventoryPage() {
                         </span>
                         <span>Threshold: {product.lowStockThreshold}</span>
                       </div>
+                      <div className="mt-2">
+                        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${isOutOfStock ? 'bg-destructive' : 'bg-yellow-500'}`}
+                            style={{ width: `${Math.min(stockPercentage, 100)}%` }}
+                          />
+                        </div>
+                      </div>
                     </div>
                     {canWrite && (
                       <InventoryAdjustmentDialog productId={product.id} productName={product.name} />
