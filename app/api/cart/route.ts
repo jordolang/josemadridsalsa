@@ -9,6 +9,74 @@ const AddToCartSchema = z.object({
   quantity: z.number().int().positive(),
 })
 
+export async function GET(request: NextRequest) {
+  try {
+    // Require authentication
+    const user = await getCurrentUser()
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - authentication required' },
+        { status: 401 }
+      )
+    }
+
+    // Fetch all cart items for the user
+    const cartItems = await prisma.cartItem.findMany({
+      where: {
+        userId: user.id,
+      },
+      include: {
+        product: true,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    })
+
+    // Format cart items and convert Decimal prices to numbers
+    const formattedCartItems = cartItems.map((item) => ({
+      id: item.id,
+      productId: item.productId,
+      quantity: item.quantity,
+      product: {
+        id: item.product.id,
+        name: item.product.name,
+        slug: item.product.slug,
+        price: parseFloat(String(item.product.price)),
+        compareAtPrice: item.product.compareAtPrice
+          ? parseFloat(String(item.product.compareAtPrice))
+          : undefined,
+        featuredImage: item.product.featuredImage,
+        heatLevel: item.product.heatLevel,
+        inventory: item.product.inventory,
+      },
+    }))
+
+    // Calculate cart totals
+    const subtotal = formattedCartItems.reduce(
+      (total, item) => total + item.product.price * item.quantity,
+      0
+    )
+
+    return NextResponse.json({
+      items: formattedCartItems,
+      itemCount: formattedCartItems.length,
+      totalQuantity: formattedCartItems.reduce(
+        (total, item) => total + item.quantity,
+        0
+      ),
+      subtotal: parseFloat(subtotal.toFixed(2)),
+    })
+  } catch (error) {
+    console.error('[Cart API] Error fetching cart:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Require authentication
