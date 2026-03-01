@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Package, AlertTriangle, TrendingUp, TrendingDown, Bell, Upload, Download } from 'lucide-react';
+import { Package, AlertTriangle, TrendingUp, TrendingDown, Bell } from 'lucide-react';
 import { getCurrentUser, hasPermission } from '@/lib/rbac';
 import { prisma } from '@/lib/prisma';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { InventoryAdjustmentDialog } from '@/components/admin/inventory/InventoryAdjustmentDialog';
 import { InventoryAlertsTable } from '@/components/admin/inventory/InventoryAlertsTable';
 import { InventoryAlertStatus, InventoryAlertType } from '@prisma/client';
+import { InventoryClientActions } from './client-page';
 
 async function getInventoryData() {
   // Get low stock products
@@ -134,16 +135,7 @@ export default async function InventoryPage() {
             Real-time inventory tracking and alerts
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline">
-            <Upload className="h-4 w-4 mr-2" />
-            Import
-          </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
+        <InventoryClientActions />
       </div>
 
       {/* Stats Cards */}
