@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { deductReservedInventory } from '@/lib/inventory-manager'
 
 const CompleteSchema = z.object({
   orderId: z.string().cuid(),
@@ -61,17 +62,6 @@ export async function POST(request: Request) {
         },
       })
 
-      for (const item of order.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            inventory: {
-              decrement: item.quantity,
-            },
-          },
-        })
-      }
-
       // Mark any abandoned carts as recovered
       if (order.userId) {
         await tx.abandonedCart.updateMany({
@@ -95,6 +85,17 @@ export async function POST(request: Request) {
         })
       }
     })
+
+    // Deduct reserved inventory for each item
+    for (const item of order.items) {
+      await deductReservedInventory({
+        productId: item.productId,
+        quantity: item.quantity,
+        orderId: order.id,
+        userId: order.userId || undefined,
+        notes: `Payment completed for order ${order.id}`,
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
