@@ -20,6 +20,14 @@ export interface InventoryCheckResult {
   isOutOfStock: boolean;
 }
 
+export interface InventoryReservation {
+  productId: string;
+  quantity: number;
+  orderId?: string;
+  userId?: string;
+  notes?: string;
+}
+
 /**
  * Adjust inventory for a product and create transaction record
  */
@@ -104,6 +112,88 @@ export async function bulkAdjustInventory(adjustments: InventoryAdjustment[]) {
   }
 
   return results;
+}
+
+/**
+ * Reserve inventory for a product (e.g., during checkout)
+ * Uses Serializable transaction isolation to prevent race conditions
+ */
+export async function reserveInventory(reservation: InventoryReservation) {
+  const { productId, quantity, orderId, userId, notes } = reservation;
+
+  if (quantity <= 0) {
+    throw new Error('Reservation quantity must be positive');
+  }
+
+  // Use Serializable isolation level to prevent race conditions
+  const result = await prisma.$transaction(
+    async (tx) => {
+      // Get current product with lock
+      const product = await tx.product.findUnique({
+        where: { id: productId },
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          inventory: true,
+          stockReserved: true,
+          lowStockThreshold: true,
+        },
+      });
+
+      if (!product) {
+        throw new Error(`Product not found: ${productId}`);
+      }
+
+      const currentReserved = product.stockReserved;
+      const availableStock = product.inventory - currentReserved;
+
+      // Validate sufficient available stock
+      if (availableStock < quantity) {
+        throw new Error(
+          `Insufficient available inventory for ${product.name} (SKU: ${product.sku}). ` +
+          `Available: ${availableStock}, Requested: ${quantity}`
+        );
+      }
+
+      const newReserved = currentReserved + quantity;
+
+      // Update product's reserved stock
+      const updatedProduct = await tx.product.update({
+        where: { id: productId },
+        data: { stockReserved: newReserved },
+      });
+
+      // Create inventory transaction record
+      // Note: Using ADJUSTMENT type until RESERVATION type is added to schema
+      const transaction = await tx.inventoryTransaction.create({
+        data: {
+          productId,
+          type: InventoryTransactionType.ADJUSTMENT,
+          quantity,
+          previousStock: product.inventory,
+          newStock: product.inventory, // Inventory doesn't change, only reserved
+          reason: 'RESERVATION',
+          notes: notes || `Reserved ${quantity} units${orderId ? ` for order ${orderId}` : ''}`,
+          orderId,
+          userId,
+        },
+      });
+
+      return {
+        product: updatedProduct,
+        transaction,
+        previousReserved: currentReserved,
+        newReserved,
+        availableStock: product.inventory - newReserved,
+      };
+    },
+    {
+      isolationLevel: 'Serializable',
+    }
+  );
+
+  return result;
 }
 
 /**
