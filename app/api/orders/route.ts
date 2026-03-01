@@ -276,3 +276,102 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+export async function GET(request: NextRequest) {
+  try {
+    // Require authentication for viewing orders
+    const user = await getCurrentUser()
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    // Parse query parameters for filtering and pagination
+    const { searchParams } = new URL(request.url)
+    const status = searchParams.get('status')
+    const paymentStatus = searchParams.get('paymentStatus')
+
+    const rawTake = Number(searchParams.get('take'))
+    const take = Number.isFinite(rawTake) && rawTake > 0 ? rawTake : undefined
+
+    const rawSkip = Number(searchParams.get('skip'))
+    const skip = Number.isFinite(rawSkip) && rawSkip >= 0 ? rawSkip : 0
+
+    const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc'
+
+    // Build where clause - orders belong to the authenticated user
+    const where: any = {
+      userId: user.id,
+    }
+
+    if (status && status !== 'all') {
+      where.status = status
+    }
+
+    if (paymentStatus && paymentStatus !== 'all') {
+      where.paymentStatus = paymentStatus
+    }
+
+    const orders = await prisma.order.findMany({
+      where,
+      orderBy: {
+        createdAt: sortOrder,
+      },
+      skip,
+      take,
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    })
+
+    // Convert Decimal prices to numbers and format response
+    const parsedOrders = orders.map(order => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      subtotal: parseFloat(String(order.subtotal)),
+      shippingCost: parseFloat(String(order.shippingCost)),
+      tax: parseFloat(String(order.tax)),
+      discountAmount: parseFloat(String(order.discountAmount)),
+      total: parseFloat(String(order.total)),
+      shippingMethod: order.shippingMethod,
+      trackingNumber: order.trackingNumber,
+      customerNotes: order.customerNotes,
+      stripePaymentIntentId: order.stripePaymentIntentId,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      items: order.items.map(item => ({
+        id: item.id,
+        productId: item.productId,
+        productName: item.productName,
+        productSku: item.productSku,
+        productImage: item.productImage,
+        quantity: item.quantity,
+        unitPrice: parseFloat(String(item.unitPrice)),
+        totalPrice: parseFloat(String(item.totalPrice)),
+        product: item.product ? {
+          id: item.product.id,
+          name: item.product.name,
+          slug: item.product.slug,
+          featuredImage: item.product.featuredImage,
+          heatLevel: item.product.heatLevel,
+        } : null,
+      })),
+    }))
+
+    return NextResponse.json(parsedOrders)
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: 'Failed to fetch orders', details: error.message },
+      { status: 500 }
+    )
+  }
+}
