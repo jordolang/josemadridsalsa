@@ -3,10 +3,11 @@ import { requirePermission } from '@/lib/rbac';
 import { fail } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import prisma from '@/lib/prisma';
+import ExcelJS from 'exceljs';
 
 /**
  * GET /api/admin/inventory/export
- * Export inventory as CSV
+ * Export inventory as CSV or Excel
  */
 export async function GET(req: NextRequest) {
   try {
@@ -15,6 +16,7 @@ export async function GET(req: NextRequest) {
 
     // Parse query params for filtering
     const { searchParams } = new URL(req.url);
+    const format = searchParams.get('format') || 'csv';
     const search = searchParams.get('search') || '';
     const categoryId = searchParams.get('category') || '';
     const stockStatus = searchParams.get('stockStatus') || '';
@@ -51,10 +53,9 @@ export async function GET(req: NextRequest) {
       userId: user.id,
       action: 'inventory.export',
       entityType: 'product',
-      changes: { count: products.length, filters: { search, categoryId, stockStatus } },
+      changes: { count: products.length, filters: { search, categoryId, stockStatus }, format },
     });
 
-    // Build CSV content
     const headers = [
       'SKU',
       'Product Name',
@@ -71,8 +72,8 @@ export async function GET(req: NextRequest) {
 
       return [
         product.sku,
-        `"${product.name.replace(/"/g, '""')}"`,
-        product.category ? `"${product.category.name.replace(/"/g, '""')}"` : '',
+        product.name,
+        product.category?.name || '',
         product.inventory,
         product.stockReserved,
         availableStock,
@@ -81,9 +82,55 @@ export async function GET(req: NextRequest) {
       ];
     });
 
-    const csv = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+    // Export as Excel
+    if (format === 'excel') {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Inventory');
 
-    // Return CSV file
+      // Add headers with styling
+      worksheet.addRow(headers);
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' },
+      };
+
+      // Add data rows
+      rows.forEach((row) => {
+        worksheet.addRow(row);
+      });
+
+      // Auto-fit columns
+      worksheet.columns.forEach((column) => {
+        let maxLength = 0;
+        column.eachCell?.({ includeEmpty: true }, (cell) => {
+          const columnLength = cell.value ? cell.value.toString().length : 10;
+          if (columnLength > maxLength) {
+            maxLength = columnLength;
+          }
+        });
+        column.width = maxLength < 10 ? 10 : maxLength + 2;
+      });
+
+      // Generate Excel buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+
+      return new Response(buffer, {
+        headers: {
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'Content-Disposition': `attachment; filename="inventory-${new Date().toISOString().split('T')[0]}.xlsx"`,
+        },
+      });
+    }
+
+    // Export as CSV (default)
+    const csvRows = rows.map((row) =>
+      row.map((cell) => (typeof cell === 'string' ? `"${cell.replace(/"/g, '""')}"` : cell))
+    );
+
+    const csv = [headers.join(','), ...csvRows.map((row) => row.join(','))].join('\n');
+
     return new Response(csv, {
       headers: {
         'Content-Type': 'text/csv',
