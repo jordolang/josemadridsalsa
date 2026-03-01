@@ -361,7 +361,7 @@ describe('DeliveryConfirmationEmail', () => {
         )
 
         expect(html).toContain(orderDetailsUrl)
-      })
+      }
     })
   })
 
@@ -378,7 +378,7 @@ describe('DeliveryConfirmationEmail', () => {
       for (const item of mockItems) {
         expect(html).toContain(item.productName)
         expect(html).toContain(item.productSku)
-      })
+      }
     })
 
     it('should show delivery address', async () => {

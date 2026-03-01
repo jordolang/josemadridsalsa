@@ -190,7 +190,7 @@ async function handlePost(request: NextRequest) {
           postal_code: shippingAddress.postalCode,
           country: shippingAddress.country,
         },
-        phone: user.phone ?? undefined,
+        // phone not in schema
       },
     })
 
@@ -292,7 +292,7 @@ async function handleGet(request: NextRequest) {
     const { status, paymentStatus, take, skip, sortOrder } = parsed.data
 
     // Build where clause - orders belong to the authenticated user
-    const where: { userId: string; status?: string; paymentStatus?: string } = {
+    const where: { userId: string; status?: import('@prisma/client').OrderStatus; paymentStatus?: import('@prisma/client').PaymentStatus } = {
       userId: user.id,
     }
 

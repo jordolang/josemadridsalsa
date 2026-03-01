@@ -7,9 +7,7 @@ import { z } from 'zod'
 
 // Payment Method Schema
 export const PaymentMethodSchema = z.object({
-  type: z.enum(['card', 'us_bank_account', 'link'], {
-    errorMap: () => ({ message: 'Invalid payment method type' }),
-  }),
+  type: z.enum(['card', 'us_bank_account', 'link']),
   card: z
     .object({
       number: z.string().regex(/^\d{13,19}$/, 'Invalid card number'),
@@ -68,7 +66,7 @@ export const CreatePaymentIntentSchema = z.object({
 
 // Payment Confirmation Schema
 export const ConfirmPaymentSchema = z.object({
-  paymentIntentId: z.string().startsWith('pi_', 'Invalid payment intent ID'),
+  paymentIntentId: z.string().startsWith('pi_', { message: 'Invalid payment intent ID' }),
   paymentMethodId: z.string().min(1, 'Payment method ID is required'),
   orderId: z.string().cuid(),
   returnUrl: z.string().url().optional(),
@@ -77,10 +75,8 @@ export const ConfirmPaymentSchema = z.object({
 // Payment Status Update Schema
 export const UpdatePaymentStatusSchema = z.object({
   orderId: z.string().cuid(),
-  paymentIntentId: z.string().startsWith('pi_'),
-  status: z.enum(['PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'CANCELED'], {
-    errorMap: () => ({ message: 'Invalid payment status' }),
-  }),
+  paymentIntentId: z.string().startsWith('pi_', { message: 'Must start with pi_' }),
+  status: z.enum(['PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'CANCELED']),
   metadata: z
     .object({
       failureReason: z.string().optional(),
@@ -93,12 +89,10 @@ export const UpdatePaymentStatusSchema = z.object({
 // Refund Request Schema
 export const RefundRequestSchema = z.object({
   orderId: z.string().cuid(),
-  paymentIntentId: z.string().startsWith('pi_'),
+  paymentIntentId: z.string().startsWith('pi_', { message: 'Must start with pi_' }),
   amount: z.number().positive('Refund amount must be positive').optional(),
   reason: z
-    .enum(['duplicate', 'fraudulent', 'requested_by_customer'], {
-      errorMap: () => ({ message: 'Invalid refund reason' }),
-    })
+    .enum(['duplicate', 'fraudulent', 'requested_by_customer'])
     .default('requested_by_customer'),
   metadata: z
     .object({
@@ -110,10 +104,10 @@ export const RefundRequestSchema = z.object({
 
 // Webhook Event Schema
 export const StripeWebhookEventSchema = z.object({
-  id: z.string().startsWith('evt_'),
+  id: z.string().startsWith('evt_', { message: 'Must start with evt_' }),
   type: z.string().min(1),
   data: z.object({
-    object: z.record(z.any()),
+    object: z.record(z.string(), z.any()),
   }),
   created: z.number().int().positive(),
   livemode: z.boolean(),
@@ -150,7 +144,7 @@ export const CreateStripeCustomerSchema = z.object({
       country: z.string().length(2).default('US'),
     })
     .optional(),
-  metadata: z.record(z.string()).optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 })
 
 // Type exports for TypeScript usage

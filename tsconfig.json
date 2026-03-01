@@ -38,6 +38,8 @@
   ],
   "exclude": [
     "node_modules",
-    "backstage"
+    "backstage",
+    "tests",
+    "scripts"
   ]
 }
