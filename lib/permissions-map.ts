@@ -192,6 +192,12 @@ export const adminNavigation: NavItem[] = [
     permission: 'users:read',
   },
   {
+    label: 'Credentials',
+    href: '/admin/credentials',
+    icon: 'KeyRound',
+    permission: 'settings:read',
+  },
+  {
     label: 'Settings',
     href: '/admin/settings',
     icon: 'Settings',

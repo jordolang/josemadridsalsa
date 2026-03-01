@@ -2380,3 +2380,41 @@ enum InventoryAlertStatus {
   RESOLVED // Stock level corrected
   DISMISSED // Alert dismissed without action
 }
+
+// ========================================
+// ADMIN CREDENTIALS VAULT
+// ========================================
+
+model ServiceCredential {
+  id          String @id @default(cuid())
+  serviceName String @map("service_name")
+  label       String
+  username    String?
+  encValue    String @map("enc_value") @db.Text // AES-256-GCM encrypted
+  encIv       String @map("enc_iv")            // Initialization vector
+  encTag      String @map("enc_tag")           // Auth tag
+  url         String?
+  notes       String? @db.Text
+
+  createdById String  @map("created_by_id")
+  updatedById String? @map("updated_by_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([serviceName])
+  @@map("service_credentials")
+}
+
+model CredentialAccessGrant {
+  id      String @id @default(cuid())
+  email   String // email of the user granted access
+  grantedByEmail String @map("granted_by_email") // must be jordolang@gmail.com
+
+  createdAt DateTime @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  @@unique([email])
+  @@index([email])
+  @@map("credential_access_grants")
+}
