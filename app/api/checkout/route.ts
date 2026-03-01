@@ -8,6 +8,7 @@ import { calculateTax } from '@/lib/tax-calculator'
 import { calculateShipping } from '@/lib/shipping-calculator'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
+import { reserveInventory } from '@/lib/inventory-manager'
 
 const CheckoutSchema = z.object({
   items: z
@@ -87,15 +88,6 @@ export async function POST(request: NextRequest) {
       const product = productMap.get(item.productId)
       if (!product) continue
 
-      if (product.inventory < item.quantity) {
-        return NextResponse.json(
-          {
-            error: `Insufficient inventory for ${product.name}. Available: ${product.inventory}`,
-          },
-          { status: 400 }
-        )
-      }
-
       const unitPrice = Number(product.price)
       const lineTotal = unitPrice * item.quantity
       subtotal += lineTotal
@@ -109,6 +101,44 @@ export async function POST(request: NextRequest) {
         productSku: product.sku,
         productImage: product.featuredImage ?? undefined,
       })
+    }
+
+    // Reserve inventory for all items before proceeding with checkout
+    // This prevents race conditions where multiple customers try to checkout the same product
+    const reservationResults = []
+    for (const item of items) {
+      try {
+        const reservation = await reserveInventory({
+          productId: item.productId,
+          quantity: item.quantity,
+          userId: user?.id,
+          notes: `Checkout reservation for ${customer.email}`,
+        })
+        reservationResults.push(reservation)
+      } catch (error: any) {
+        // If reservation fails, release any already reserved items
+        for (const reserved of reservationResults) {
+          try {
+            await prisma.product.update({
+              where: { id: reserved.product.id },
+              data: {
+                stockReserved: {
+                  decrement: reserved.newReserved - reserved.previousReserved,
+                },
+              },
+            })
+          } catch (releaseError) {
+            console.error('[Checkout] Failed to release reservation:', releaseError)
+          }
+        }
+
+        return NextResponse.json(
+          {
+            error: error.message || 'Unable to reserve inventory',
+          },
+          { status: 400 }
+        )
+      }
     }
 
     // Calculate tax using Stripe Tax API
