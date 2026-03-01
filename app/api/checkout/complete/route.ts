@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { deductReservedInventory } from '@/lib/inventory-manager'
+import { deductReservedInventory, releaseInventory } from '@/lib/inventory-manager'
 
 const CompleteSchema = z.object({
   orderId: z.string().cuid(),
@@ -11,6 +11,8 @@ const CompleteSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  let order: Awaited<ReturnType<typeof prisma.order.findUnique>> | null = null
+
   try {
     const json = await request.json()
     const parsed = CompleteSchema.safeParse(json)
@@ -26,13 +28,15 @@ export async function POST(request: Request) {
 
     const stripe = getStripe()
 
-    const [order, paymentIntent] = await Promise.all([
+    const [fetchedOrder, paymentIntent] = await Promise.all([
       prisma.order.findUnique({
         where: { id: orderId },
         include: { items: true },
       }),
       stripe.paymentIntents.retrieve(paymentIntentId),
     ])
+
+    order = fetchedOrder
 
     if (!order) {
       return NextResponse.json(
@@ -46,6 +50,21 @@ export async function POST(request: Request) {
     }
 
     if (!paymentIntent || paymentIntent.status !== 'succeeded') {
+      // Release reserved inventory for each item since payment failed
+      for (const item of order.items) {
+        try {
+          await releaseInventory({
+            productId: item.productId,
+            quantity: item.quantity,
+            orderId: order.id,
+            userId: order.userId || undefined,
+            notes: `Payment failed for order ${order.id}`,
+          })
+        } catch (releaseError) {
+          console.error('Failed to release inventory:', releaseError)
+        }
+      }
+
       return NextResponse.json(
         { error: 'Payment has not been confirmed.' },
         { status: 400 }
@@ -100,6 +119,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Checkout completion error:', error)
+
+    // Release reserved inventory if order exists and hasn't been paid
+    if (order && order.items && order.paymentStatus !== 'PAID') {
+      for (const item of order.items) {
+        try {
+          await releaseInventory({
+            productId: item.productId,
+            quantity: item.quantity,
+            orderId: order.id,
+            userId: order.userId || undefined,
+            notes: `Error during checkout completion for order ${order.id}`,
+          })
+        } catch (releaseError) {
+          console.error('Failed to release inventory:', releaseError)
+        }
+      }
+    }
+
     return NextResponse.json(
       { error: 'Unable to finalize checkout.' },
       { status: 500 }
