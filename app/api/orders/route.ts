@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
@@ -8,30 +7,9 @@ import { calculateTax } from '@/lib/tax-calculator'
 import { calculateShipping } from '@/lib/shipping-calculator'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
-
-const CreateOrderSchema = z.object({
-  cartItemIds: z
-    .array(z.string().cuid())
-    .min(1, 'Cart is empty'),
-  shippingAddress: z.object({
-    address1: z.string().min(1),
-    address2: z.string().optional(),
-    city: z.string().min(1),
-    state: z.string().min(1),
-    postalCode: z.string().min(1),
-    country: z.string().default('US'),
-  }),
-  billingAddress: z.object({
-    address1: z.string().min(1),
-    address2: z.string().optional(),
-    city: z.string().min(1),
-    state: z.string().min(1),
-    postalCode: z.string().min(1),
-    country: z.string().default('US'),
-  }).optional(),
-  notes: z.string().optional(),
-  discountCode: z.string().optional(),
-})
+import { withRateLimit } from '@/lib/middleware/api-helpers'
+import { CreateOrderSchema, OrderQuerySchema } from '@/lib/validations/orders'
+import { RATE_LIMITS } from '@/lib/rate-limiter'
 
 const toDecimal = (value: number) =>
   new Prisma.Decimal(value.toFixed(2))
@@ -42,11 +20,12 @@ const generateOrderNumber = () => {
     .toISOString()
     .slice(0, 10)
     .replace(/-/g, '')
-  const randomPart = Math.floor(Math.random() * 9000 + 1000)
+  // Use crypto.randomUUID for collision-resistant identifiers
+  const randomPart = crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()
   return `JMS-${datePart}-${randomPart}`
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   try {
     // Require authentication for creating orders from cart
     const user = await getCurrentUser()
@@ -68,7 +47,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { cartItemIds, shippingAddress, billingAddress, notes, discountCode } = parsed.data
+    const { cartItemIds, shippingAddress, billingAddress, notes } = parsed.data
 
     // Fetch cart items for the authenticated user
     const cartItems = await prisma.cartItem.findMany({
@@ -134,9 +113,9 @@ export async function POST(request: NextRequest) {
     try {
       const taxResult = await calculateTax({
         lineItems: orderItems.map((item) => ({
-          amount: Math.round(Number(item.totalPrice) * 100), // Convert to cents
+          amount: Math.round(Number(item.totalPrice) * 100),
           reference: item.productId,
-          taxCode: 'txcd_30011000', // Food & beverage - Packaged food
+          taxCode: 'txcd_30011000',
         })),
         shippingAddress: {
           line1: shippingAddress.address1,
@@ -150,7 +129,7 @@ export async function POST(request: NextRequest) {
       })
 
       taxAmount = taxResult.taxAmountDecimal
-    } catch (error) {
+    } catch {
       // Continue with 0 tax rather than blocking checkout
     }
 
@@ -178,7 +157,7 @@ export async function POST(request: NextRequest) {
 
       shippingCost = shippingResult.shippingCost
       shippingMethod = shippingResult.shippingMethod
-    } catch (error) {
+    } catch {
       // Continue with 0 shipping rather than blocking checkout
     }
 
@@ -188,6 +167,32 @@ export async function POST(request: NextRequest) {
       `${shippingAddress.address1}${shippingAddress.address2 ? `, ${shippingAddress.address2}` : ''}`,
       `${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.postalCode}`,
     ].join('\n')
+
+    void billingAddress // billingAddress accepted but stored via shippingMethod summary for now
+
+    // Create Stripe PaymentIntent before persisting order
+    const stripe = getStripe()
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(total * 100),
+      currency: 'usd',
+      receipt_email: user.email,
+      metadata: {
+        orderNumber: generateOrderNumber(),
+        customerName: user.name ?? user.email,
+      },
+      shipping: {
+        name: user.name ?? user.email,
+        address: {
+          line1: shippingAddress.address1,
+          line2: shippingAddress.address2 ?? undefined,
+          city: shippingAddress.city,
+          state: shippingAddress.state,
+          postal_code: shippingAddress.postalCode,
+          country: shippingAddress.country,
+        },
+        phone: user.phone ?? undefined,
+      },
+    })
 
     const order = await prisma.order.create({
       data: {
@@ -202,6 +207,7 @@ export async function POST(request: NextRequest) {
         total: toDecimal(total),
         paymentStatus: 'PENDING',
         status: 'PENDING',
+        stripePaymentId: paymentIntent.id,
         items: {
           create: orderItems,
         },
@@ -238,31 +244,6 @@ export async function POST(request: NextRequest) {
 
     queueShopifySync(order.id)
 
-    const stripe = getStripe()
-
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(total * 100),
-      currency: 'usd',
-      receipt_email: user.email,
-      metadata: {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        customerName: user.name ?? user.email,
-      },
-      shipping: {
-        name: user.name ?? user.email,
-        address: {
-          line1: shippingAddress.address1,
-          line2: shippingAddress.address2 ?? undefined,
-          city: shippingAddress.city,
-          state: shippingAddress.state,
-          postal_code: shippingAddress.postalCode,
-          country: shippingAddress.country,
-        },
-        phone: user.phone ?? undefined,
-      },
-    })
-
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
       orderId: order.id,
@@ -270,6 +251,7 @@ export async function POST(request: NextRequest) {
       amount: total,
     })
   } catch (error) {
+    console.error('[Orders API] Error creating order:', error)
     return NextResponse.json(
       { error: 'Unable to create order. Please try again.' },
       { status: 500 }
@@ -277,7 +259,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   try {
     // Require authentication for viewing orders
     const user = await getCurrentUser()
@@ -289,29 +271,36 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Parse query parameters for filtering and pagination
+    // Parse and validate query parameters
     const { searchParams } = new URL(request.url)
-    const status = searchParams.get('status')
-    const paymentStatus = searchParams.get('paymentStatus')
+    const rawParams = {
+      status: searchParams.get('status') ?? undefined,
+      paymentStatus: searchParams.get('paymentStatus') ?? undefined,
+      take: searchParams.get('take') ?? undefined,
+      skip: searchParams.get('skip') ?? undefined,
+      sortOrder: searchParams.get('sortOrder') ?? undefined,
+    }
 
-    const rawTake = Number(searchParams.get('take'))
-    const take = Number.isFinite(rawTake) && rawTake > 0 ? rawTake : undefined
+    const parsed = OrderQuerySchema.safeParse(rawParams)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid query parameters', details: parsed.error.flatten() },
+        { status: 400 }
+      )
+    }
 
-    const rawSkip = Number(searchParams.get('skip'))
-    const skip = Number.isFinite(rawSkip) && rawSkip >= 0 ? rawSkip : 0
-
-    const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc'
+    const { status, paymentStatus, take, skip, sortOrder } = parsed.data
 
     // Build where clause - orders belong to the authenticated user
-    const where: any = {
+    const where: { userId: string; status?: string; paymentStatus?: string } = {
       userId: user.id,
     }
 
-    if (status && status !== 'all') {
+    if (status) {
       where.status = status
     }
 
-    if (paymentStatus && paymentStatus !== 'all') {
+    if (paymentStatus) {
       where.paymentStatus = paymentStatus
     }
 
@@ -332,7 +321,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Convert Decimal prices to numbers and format response
-    const parsedOrders = orders.map(order => ({
+    const parsedOrders = orders.map((order) => ({
       id: order.id,
       orderNumber: order.orderNumber,
       status: order.status,
@@ -345,10 +334,10 @@ export async function GET(request: NextRequest) {
       shippingMethod: order.shippingMethod,
       trackingNumber: order.trackingNumber,
       customerNotes: order.customerNotes,
-      stripePaymentIntentId: order.stripePaymentIntentId,
+      stripePaymentId: order.stripePaymentId,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
-      items: order.items.map(item => ({
+      items: order.items.map((item) => ({
         id: item.id,
         productId: item.productId,
         productName: item.productName,
@@ -357,21 +346,27 @@ export async function GET(request: NextRequest) {
         quantity: item.quantity,
         unitPrice: parseFloat(String(item.unitPrice)),
         totalPrice: parseFloat(String(item.totalPrice)),
-        product: item.product ? {
-          id: item.product.id,
-          name: item.product.name,
-          slug: item.product.slug,
-          featuredImage: item.product.featuredImage,
-          heatLevel: item.product.heatLevel,
-        } : null,
+        product: item.product
+          ? {
+              id: item.product.id,
+              name: item.product.name,
+              slug: item.product.slug,
+              featuredImage: item.product.featuredImage,
+              heatLevel: item.product.heatLevel,
+            }
+          : null,
       })),
     }))
 
     return NextResponse.json(parsedOrders)
-  } catch (error: any) {
+  } catch (error) {
+    console.error('[Orders API] Error fetching orders:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch orders', details: error.message },
+      { error: 'Failed to fetch orders' },
       { status: 500 }
     )
   }
 }
+
+export const POST = withRateLimit(handlePost, RATE_LIMITS.API_GENERAL)
+export const GET = withRateLimit(handleGet, RATE_LIMITS.API_GENERAL)

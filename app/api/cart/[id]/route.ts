@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
+import { withRateLimit } from '@/lib/middleware/api-helpers'
+import { UpdateCartItemSchema } from '@/lib/validations/cart'
+import { RATE_LIMITS } from '@/lib/rate-limiter'
 
-const UpdateCartItemSchema = z.object({
-  quantity: z.number().int().positive(),
-})
-
-export async function PUT(
+async function handlePut(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: unknown
 ) {
   try {
     // Require authentication
@@ -34,7 +32,8 @@ export async function PUT(
     }
 
     const { quantity } = parsed.data
-    const cartItemId = params.id
+    // Await params per Next.js 15 pattern
+    const { id: cartItemId } = await (context as { params: Promise<{ id: string }> }).params
 
     // Find the cart item and verify it belongs to the user
     const cartItem = await prisma.cartItem.findUnique({
@@ -54,12 +53,12 @@ export async function PUT(
     // Verify the cart item belongs to the authenticated user
     if (cartItem.userId !== user.id) {
       return NextResponse.json(
-        { error: 'Forbidden - cannot update another user\'s cart' },
+        { error: "Forbidden - cannot update another user's cart" },
         { status: 403 }
       )
     }
 
-    // Check inventory
+    // Check inventory against the new desired quantity
     if (cartItem.product.inventory < quantity) {
       return NextResponse.json(
         {
@@ -73,7 +72,7 @@ export async function PUT(
     const updatedCartItem = await prisma.cartItem.update({
       where: { id: cartItemId },
       data: {
-        quantity: quantity,
+        quantity,
       },
       include: {
         product: true,
@@ -121,9 +120,9 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+async function handleDelete(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: unknown
 ) {
   try {
     // Require authentication
@@ -136,7 +135,8 @@ export async function DELETE(
       )
     }
 
-    const cartItemId = params.id
+    // Await params per Next.js 15 pattern
+    const { id: cartItemId } = await (context as { params: Promise<{ id: string }> }).params
 
     // Find the cart item and verify it belongs to the user
     const cartItem = await prisma.cartItem.findUnique({
@@ -156,7 +156,7 @@ export async function DELETE(
     // Verify the cart item belongs to the authenticated user
     if (cartItem.userId !== user.id) {
       return NextResponse.json(
-        { error: 'Forbidden - cannot delete another user\'s cart item' },
+        { error: "Forbidden - cannot delete another user's cart item" },
         { status: 403 }
       )
     }
@@ -194,3 +194,6 @@ export async function DELETE(
     )
   }
 }
+
+export const PUT = withRateLimit(handlePut, RATE_LIMITS.API_GENERAL)
+export const DELETE = withRateLimit(handleDelete, RATE_LIMITS.API_GENERAL)

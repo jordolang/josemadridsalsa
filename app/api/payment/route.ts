@@ -4,13 +4,15 @@ import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
+import { withRateLimit } from '@/lib/middleware/api-helpers'
+import { RATE_LIMITS } from '@/lib/rate-limiter'
 
 const PaymentSchema = z.object({
   orderId: z.string().cuid(),
   paymentMethodId: z.string().min(1),
 })
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   try {
     // Payment processing requires authentication
     const user = await getCurrentUser()
@@ -49,8 +51,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify order belongs to user or user has access
-    if (order.userId && order.userId !== user.id) {
+    // Verify order belongs to user - null/undefined userId does NOT bypass ownership
+    if (order.userId !== user.id) {
       return NextResponse.json(
         { error: 'You do not have permission to pay for this order' },
         { status: 403 }
@@ -73,23 +75,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const stripe = getStripe()
-    const totalInCents = Math.round(Number(order.total) * 100)
+    if (!order.stripePaymentId) {
+      return NextResponse.json(
+        { error: 'No payment intent found for this order' },
+        { status: 400 }
+      )
+    }
 
-    // Create or confirm payment intent with Stripe
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: totalInCents,
-      currency: 'usd',
-      payment_method: paymentMethodId,
-      confirm: true,
-      receipt_email: order.guestEmail ?? user.email ?? undefined,
-      metadata: {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        userId: user.id,
-      },
-      return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/orders/${order.id}`,
-    })
+    const stripe = getStripe()
+
+    // Confirm the existing PaymentIntent instead of creating a new one
+    // This prevents double-charging: POST /api/orders already created the intent
+    const paymentIntent = await stripe.paymentIntents.confirm(
+      order.stripePaymentId,
+      {
+        payment_method: paymentMethodId,
+        return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/orders/${order.id}`,
+      }
+    )
 
     // Update order status based on payment intent status
     let paymentStatus: 'PENDING' | 'PAID' | 'FAILED' = 'PENDING'
@@ -98,7 +101,10 @@ export async function POST(request: NextRequest) {
     if (paymentIntent.status === 'succeeded') {
       paymentStatus = 'PAID'
       orderStatus = 'CONFIRMED'
-    } else if (paymentIntent.status === 'requires_action' || paymentIntent.status === 'requires_payment_method') {
+    } else if (
+      paymentIntent.status === 'requires_action' ||
+      paymentIntent.status === 'requires_payment_method'
+    ) {
       paymentStatus = 'PENDING'
     } else if (paymentIntent.status === 'canceled') {
       paymentStatus = 'FAILED'
@@ -166,3 +172,5 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+export const POST = withRateLimit(handlePost, RATE_LIMITS.API_GENERAL)

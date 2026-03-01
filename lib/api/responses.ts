@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server'
  * @param status - HTTP status code (default: 200)
  * @returns NextResponse with the data
  */
-export function successResponse<T = any>(
+export function successResponse<T = unknown>(
   data: T,
   status: number = 200
 ): NextResponse {
@@ -23,9 +23,9 @@ export function successResponse<T = any>(
 export function errorResponse(
   error: string,
   status: number = 500,
-  details?: any
+  details?: unknown
 ): NextResponse {
-  const response: { error: string; details?: any } = { error }
+  const response: { error: string; details?: unknown } = { error }
   if (details !== undefined) {
     response.details = details
   }

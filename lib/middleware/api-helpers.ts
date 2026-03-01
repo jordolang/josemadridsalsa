@@ -19,7 +19,7 @@ import {
 
 type ApiHandler = (
   request: NextRequest,
-  context?: any
+  context?: unknown
 ) => Promise<NextResponse> | NextResponse
 
 interface AuthOptions {
@@ -57,7 +57,7 @@ export function withAuth(
 ): ApiHandler {
   const { required = true, roles, permission } = options
 
-  return async (request: NextRequest, context?: any) => {
+  return async (request: NextRequest, context?: unknown) => {
     try {
       const user = await getCurrentUser()
 
@@ -116,7 +116,7 @@ export function withRateLimit(
 ): ApiHandler {
   const { maxRequests, windowSeconds, useUserId = false } = options
 
-  return async (request: NextRequest, context?: any) => {
+  return async (request: NextRequest, context?: unknown) => {
     try {
       // Determine rate limit identifier
       let identifier = getClientIdentifier(request)
@@ -158,7 +158,7 @@ export function withRateLimit(
 
       // Add rate limit headers to successful response
       Object.entries(headers).forEach(([key, value]) => {
-        response.headers.set(key, value)
+        response.headers.set(key, String(value))
       })
 
       return response
@@ -186,7 +186,9 @@ export function withRateLimit(
  * })
  * ```
  */
-export function compose(...middlewares: ((handler: ApiHandler) => ApiHandler)[]): (handler: ApiHandler) => ApiHandler {
+export function compose(
+  ...middlewares: ((handler: ApiHandler) => ApiHandler)[]
+): (handler: ApiHandler) => ApiHandler {
   return (handler: ApiHandler) => {
     return middlewares.reduceRight(
       (wrapped, middleware) => middleware(wrapped),
