@@ -157,7 +157,7 @@ export async function findPlaceByNameAddress(input: {
         headers: {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': API_KEY,
-          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.photos,places.types',
+          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.photos,places.types',
         },
         body: JSON.stringify({
           textQuery: query,
