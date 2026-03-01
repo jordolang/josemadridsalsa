@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Package, AlertTriangle, TrendingUp, TrendingDown, Bell } from 'lucide-react';
+import { Package, AlertTriangle, TrendingUp, TrendingDown, Bell, Upload, Download } from 'lucide-react';
 import { getCurrentUser, hasPermission } from '@/lib/rbac';
 import { prisma } from '@/lib/prisma';
 import { Button } from '@/components/ui/button';
@@ -133,6 +133,16 @@ export default async function InventoryPage() {
           <p className="text-muted-foreground mt-2">
             Real-time inventory tracking and alerts
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline">
+            <Upload className="h-4 w-4 mr-2" />
+            Import
+          </Button>
+          <Button variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
         </div>
       </div>
 
