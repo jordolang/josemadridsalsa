@@ -3,23 +3,23 @@
   "spec": "023-api-endpoints-development",
   "state": "building",
   "subtasks": {
-    "completed": 2,
+    "completed": 11,
     "total": 18,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Foundation: Validation Schemas & Utilities",
+    "current": "Order Management Endpoints",
     "id": null,
-    "total": 5
+    "total": 3
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 3,
+    "number": 12,
     "started_at": "2026-03-01T10:10:27.170386"
   },
-  "last_update": "2026-03-01T10:14:25.542116"
+  "last_update": "2026-03-01T10:32:26.105541"
 }
