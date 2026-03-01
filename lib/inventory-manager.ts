@@ -300,6 +300,105 @@ export async function releaseInventory(reservation: InventoryReservation) {
 }
 
 /**
+ * Deduct reserved inventory when order is completed
+ * Decreases both stockReserved and actual inventory
+ * Uses Serializable transaction isolation to prevent race conditions
+ */
+export async function deductReservedInventory(reservation: InventoryReservation) {
+  const { productId, quantity, orderId, userId, notes } = reservation;
+
+  if (quantity <= 0) {
+    throw new Error('Deduction quantity must be positive');
+  }
+
+  // Use Serializable isolation level to prevent race conditions
+  const result = await prisma.$transaction(
+    async (tx) => {
+      // Get current product with lock
+      const product = await tx.product.findUnique({
+        where: { id: productId },
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          inventory: true,
+          stockReserved: true,
+          lowStockThreshold: true,
+        },
+      });
+
+      if (!product) {
+        throw new Error(`Product not found: ${productId}`);
+      }
+
+      const currentReserved = product.stockReserved;
+      const currentInventory = product.inventory;
+
+      // Validate sufficient reserved stock to deduct
+      if (currentReserved < quantity) {
+        throw new Error(
+          `Cannot deduct more than reserved for ${product.name} (SKU: ${product.sku}). ` +
+          `Reserved: ${currentReserved}, Requested: ${quantity}`
+        );
+      }
+
+      // Validate sufficient inventory to deduct
+      if (currentInventory < quantity) {
+        throw new Error(
+          `Insufficient inventory for ${product.name} (SKU: ${product.sku}). ` +
+          `Current: ${currentInventory}, Requested: ${quantity}`
+        );
+      }
+
+      const newReserved = currentReserved - quantity;
+      const newInventory = currentInventory - quantity;
+
+      // Update product's reserved stock and inventory
+      const updatedProduct = await tx.product.update({
+        where: { id: productId },
+        data: {
+          stockReserved: newReserved,
+          inventory: newInventory,
+        },
+      });
+
+      // Create inventory transaction record
+      const transaction = await tx.inventoryTransaction.create({
+        data: {
+          productId,
+          type: InventoryTransactionType.SALE,
+          quantity: -quantity, // Negative to indicate deduction
+          previousStock: currentInventory,
+          newStock: newInventory,
+          reason: 'ORDER_COMPLETION',
+          notes: notes || `Deducted ${quantity} units${orderId ? ` for order ${orderId}` : ''}`,
+          orderId,
+          userId,
+        },
+      });
+
+      return {
+        product: updatedProduct,
+        transaction,
+        previousInventory: currentInventory,
+        newInventory,
+        previousReserved: currentReserved,
+        newReserved,
+        availableStock: newInventory - newReserved,
+      };
+    },
+    {
+      isolationLevel: 'Serializable',
+    }
+  );
+
+  // Check if we need to create alerts after deduction
+  await checkAndUpdateAlerts(productId, result.newInventory, result.product.lowStockThreshold);
+
+  return result;
+}
+
+/**
  * Check inventory levels and create/resolve alerts
  */
 async function checkAndUpdateAlerts(
