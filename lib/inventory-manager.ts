@@ -197,6 +197,28 @@ export async function reserveInventory(reservation: InventoryReservation) {
 }
 
 /**
+ * Reserve inventory for multiple products (bulk operation)
+ */
+export async function reserveMultipleProducts(reservations: InventoryReservation[]) {
+  const results = [];
+
+  for (const reservation of reservations) {
+    try {
+      const result = await reserveInventory(reservation);
+      results.push({ success: true, ...result });
+    } catch (error: any) {
+      results.push({
+        success: false,
+        productId: reservation.productId,
+        error: error.message,
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
  * Release previously reserved inventory for a product (e.g., after order cancellation)
  * Uses Serializable transaction isolation to prevent race conditions
  */
