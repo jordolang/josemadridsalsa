@@ -84,7 +84,7 @@ async function getInventoryData() {
     (p) => p.inventory > 0 && p.inventory <= p.lowStockThreshold
   ).length;
 
-  const totalInventoryValue = await prisma.product.aggregate({
+  const inventoryUnitsAgg = await prisma.product.aggregate({
     _sum: {
       inventory: true,
     },
@@ -101,7 +101,7 @@ async function getInventoryData() {
       totalProducts,
       outOfStockCount,
       lowStockCount,
-      totalInventoryUnits: totalInventoryValue._sum.inventory || 0,
+      totalInventoryUnits: inventoryUnitsAgg._sum.inventory || 0,
     },
   };
 }
