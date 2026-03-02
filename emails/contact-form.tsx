@@ -25,7 +25,7 @@ export const ContactFormEmail = ({
 
   return (
     <EmailLayout previewText={previewText}>
-      <EmailHeader />
+      <EmailHeader headerImage="email-header.png" headerAlt="Jose Madrid Salsa" />
 
       {/* Heading */}
       <Section style={section}>
