@@ -635,6 +635,7 @@ function CheckoutForm() {
                         name="firstName"
                         value={formState.firstName}
                         onChange={handleInputChange}
+                        autoComplete="given-name"
                         required
                       />
                     </div>
@@ -645,6 +646,7 @@ function CheckoutForm() {
                         name="lastName"
                         value={formState.lastName}
                         onChange={handleInputChange}
+                        autoComplete="family-name"
                         required
                       />
                     </div>
@@ -658,6 +660,7 @@ function CheckoutForm() {
                         type="email"
                         value={formState.email}
                         onChange={handleInputChange}
+                        autoComplete="email"
                         required
                       />
                     </div>
@@ -666,8 +669,10 @@ function CheckoutForm() {
                       <Input
                         id="phone"
                         name="phone"
+                        type="tel"
                         value={formState.phone}
                         onChange={handleInputChange}
+                        autoComplete="tel"
                       />
                     </div>
                   </div>
@@ -683,6 +688,7 @@ function CheckoutForm() {
                         name="address1"
                         value={formState.address1}
                         onChange={handleInputChange}
+                        autoComplete="address-line1"
                         required
                       />
                     </div>
@@ -693,6 +699,7 @@ function CheckoutForm() {
                         name="address2"
                         value={formState.address2}
                         onChange={handleInputChange}
+                        autoComplete="address-line2"
                       />
                     </div>
                     <div className="grid gap-4 md:grid-cols-3">
@@ -703,6 +710,7 @@ function CheckoutForm() {
                           name="city"
                           value={formState.city}
                           onChange={handleInputChange}
+                          autoComplete="address-level2"
                           required
                         />
                       </div>
@@ -713,6 +721,7 @@ function CheckoutForm() {
                           name="state"
                           value={formState.state}
                           onChange={handleInputChange}
+                          autoComplete="address-level1"
                           required
                         />
                       </div>
@@ -725,6 +734,7 @@ function CheckoutForm() {
                           name="postalCode"
                           value={formState.postalCode}
                           onChange={handleInputChange}
+                          autoComplete="postal-code"
                           required
                         />
                       </div>
