@@ -20,7 +20,6 @@
     "db:seed:recipes": "tsx scripts/seed-recipes.ts",
     "db:seed:nutrition": "tsx scripts/seed-nutrition-ingredients.ts",
     "db:seed:email-templates": "tsx scripts/seed-email-templates.ts",
-    "db:seed:nutrition": "tsx scripts/seed-nutrition-ingredients.ts",
     "locations:import": "tsx scripts/import-locations-from-markdown.ts",
     "locations:verify": "tsx scripts/verify-locations.ts",
     "locations:photos": "node scripts/generate-location-photos.js",
@@ -84,6 +83,8 @@
     "@radix-ui/react-toast": "^1.2.15",
     "@react-email/components": "^0.0.30",
     "@react-email/render": "^1.0.3",
+    "@sentry/nextjs": "^10.40.0",
+    "@stripe/react-stripe-js": "^5.2.0",
     "@stripe/stripe-js": "^8.0.0",
     "@tailwindcss/postcss": "^4.1.14",
     "@types/bcryptjs": "^2.4.6",
@@ -120,8 +121,7 @@
     "tailwindcss-animate": "^1.0.7",
     "workflow": "^4.0.1-beta.29",
     "zod": "^4.1.12",
-    "zustand": "^5.0.8",
-    "@stripe/react-stripe-js": "^5.2.0"
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@axe-core/cli": "^4.11.0",
@@ -144,12 +144,12 @@
     "lint-staged": "^15.2.0",
     "postcss": "^8.5.6",
     "prisma": "6.19.0",
+    "react-email": "^3.0.3",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vercel": "^50.13.2",
-    "vitest": "^4.0.6",
-    "react-email": "^3.0.3"
+    "vitest": "^4.0.6"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
