@@ -14,10 +14,15 @@ export interface EmailTemplateDefinition {
   text: string
 }
 
+const IMAGE_BASE_URL = 'https://www.josemadridsalsa.com/email-templates'
+
+const headerImg = (filename: string, alt: string) =>
+  `<img src="${IMAGE_BASE_URL}/${filename}" alt="${alt}" width="600" style="display:block;width:100%;max-width:600px;height:auto;" />`
+
 const baseStyles = {
   container: 'width:100%;background-color:#f4f4f7;padding:40px 0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;',
   wrapper: 'max-width:600px;margin:0 auto;background-color:#ffffff;',
-  header: 'background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%);padding:40px 32px;text-align:center;',
+  header: 'padding:0;text-align:center;',
   headerTitle: 'color:#ffffff;font-size:28px;font-weight:700;margin:0;',
   content: 'padding:40px 32px;color:#333333;line-height:1.6;',
   button: 'display:inline-block;padding:14px 32px;background-color:#dc2626;color:#ffffff !important;text-decoration:none;border-radius:6px;font-weight:600;margin:20px 0;',
@@ -44,7 +49,7 @@ export const emailTemplates: EmailTemplateDefinition[] = [
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <h1 style="${baseStyles.headerTitle}">Welcome to the Family!</h1>
+      ${headerImg('welcome.png', 'Welcome to the Family')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -112,8 +117,7 @@ Jose Madrid Salsa Team`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <h1 style="${baseStyles.headerTitle}">Order Confirmed!</h1>
-      <p style="color:#ffffff;margin:10px 0 0;font-size:18px;">Order #{{orderNumber}}</p>
+      ${headerImg('order-confirmed.png', 'Order Confirmed')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -184,7 +188,7 @@ Questions? Email orders@josemadridsalsa.com`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <h1 style="${baseStyles.headerTitle}">Your Order Has Shipped!</h1>
+      ${headerImg('shipping-notification.png', 'Your Order Has Shipped')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -254,7 +258,7 @@ Questions? Call 740-349-3144`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <h1 style="${baseStyles.headerTitle}">Don't Miss Out!</h1>
+      ${headerImg('abandoned-cart.png', 'Don\\'t Miss Out')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -322,8 +326,7 @@ This offer expires in 24 hours!`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <p style="color:#ffffff;margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:2px;">New Release</p>
-      <h1 style="${baseStyles.headerTitle}">{{productName}}</h1>
+      ${headerImg('product-launch.png', 'New Product Launch')}
     </div>
     <div style="text-align:center;padding:0;">
       <img src="{{productImage}}" alt="{{productName}}" style="width:100%;max-width:600px;display:block;" />
@@ -392,8 +395,7 @@ Early bird bonus: FREE recipe cards with orders in next 48 hours!`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <p style="color:#ffffff;margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:2px;">The Salsa Scoop</p>
-      <h1 style="${baseStyles.headerTitle}">{{month}} Edition</h1>
+      ${headerImg('newsletter.png', 'The Salsa Scoop Newsletter')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:30px;">Hello Salsa Lovers! Here's what's cooking this month at Jose Madrid Salsa.</p>
@@ -477,9 +479,8 @@ Shop: https://www.josemadridsalsa.com/store`,
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Event Invitation</title></head>
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
-    <div style="background:linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%);padding:50px 32px;text-align:center;">
-      <p style="color:#ffffff;margin:0 0 15px;font-size:14px;text-transform:uppercase;letter-spacing:3px;">You're Invited</p>
-      <h1 style="color:#ffffff;font-size:32px;font-weight:700;margin:0;line-height:1.3;">{{eventName}}</h1>
+    <div style="${baseStyles.header}">
+      ${headerImg('event-notification.png', 'Event Invitation')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:18px;margin-bottom:30px;line-height:1.6;">{{eventDescription}}</p>
@@ -575,7 +576,7 @@ Questions? Call 740-349-3144`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <h1 style="${baseStyles.headerTitle}">Welcome, {{businessName}}!</h1>
+      ${headerImg('wholesale-welcome.png', 'Welcome to Wholesale')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Dear {{contactName}},</p>
@@ -689,9 +690,8 @@ Questions? Contact {{accountManager}} directly.`,
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Fundraiser Kickoff</title></head>
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
-    <div style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);padding:50px 32px;text-align:center;">
-      <p style="color:#ffffff;margin:0 0 15px;font-size:14px;text-transform:uppercase;letter-spacing:3px;">Fundraiser Kickoff</p>
-      <h1 style="color:#ffffff;font-size:32px;font-weight:700;margin:0;">Let's Do This, {{organizationName}}!</h1>
+    <div style="${baseStyles.header}">
+      ${headerImg('fundraiser-kickoff.png', 'Fundraiser Kickoff')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{contactName}},</p>
@@ -799,7 +799,7 @@ Let\'s reach that goal together!`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <h1 style="${baseStyles.headerTitle}">Thank You! 💚</h1>
+      ${headerImg('thank-you.png', 'Thank You')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Dear {{name}},</p>
@@ -893,7 +893,7 @@ The Jose Madrid Family`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <h1 style="${baseStyles.headerTitle}">Reset Your Password</h1>
+      ${headerImg('password-reset.png', 'Reset Your Password')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -951,7 +951,7 @@ Jose Madrid Salsa Support`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <h1 style="${baseStyles.headerTitle}">Verify Your Email</h1>
+      ${headerImg('account-created.png', 'Verify Your Email')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1012,7 +1012,7 @@ Jose Madrid Salsa Team`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <h1 style="${baseStyles.headerTitle}">📦 Your Order Arrived!</h1>
+      ${headerImg('order-delivered.png', 'Your Order Arrived')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1092,7 +1092,7 @@ The Jose Madrid Salsa Team`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <h1 style="${baseStyles.headerTitle}">Refund Processed</h1>
+      ${headerImg('refund-processed.png', 'Refund Processed')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1179,7 +1179,7 @@ The Jose Madrid Salsa Team`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <h1 style="${baseStyles.headerTitle}">Welcome to Jose Madrid Salsa!</h1>
+      ${headerImg('account-created.png', 'Welcome to Jose Madrid Salsa')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1265,7 +1265,7 @@ The Jose Madrid Salsa Team`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      <h1 style="${baseStyles.headerTitle}">Subscription Renewal</h1>
+      ${headerImg('subscription-renewal.png', 'Subscription Renewal')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1336,7 +1336,7 @@ The Jose Madrid Salsa Team`,
   <body style="${baseStyles.container}">
     <div style="${baseStyles.wrapper}">
       <div style="${baseStyles.header}">
-        <h1 style="${baseStyles.headerTitle}">Payment Failed</h1>
+        ${headerImg('payment-failure.png', 'Payment Failed')}
       </div>
       <div style="${baseStyles.content}">
         <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1391,8 +1391,7 @@ The Jose Madrid Salsa Team`,
   <body style="${baseStyles.container}">
     <div style="${baseStyles.wrapper}">
       <div style="${baseStyles.header}">
-        <h1 style="${baseStyles.headerTitle}">Wholesale Order Confirmed</h1>
-        <p style="color:#ffffff;margin:10px 0 0;font-size:18px;">Order #{{orderNumber}}</p>
+        ${headerImg('wholesale-order-confirm.png', 'Wholesale Order Confirmed')}
       </div>
       <div style="${baseStyles.content}">
         <p style="font-size:16px;margin-bottom:20px;">Hello {{businessName}},</p>
@@ -1454,7 +1453,7 @@ The Jose Madrid Salsa Team`,
   <body style="${baseStyles.container}">
     <div style="${baseStyles.wrapper}">
       <div style="${baseStyles.header}">
-        <h1 style="${baseStyles.headerTitle}">Fundraiser Update</h1>
+        ${headerImg('fundraiser-update.png', 'Fundraiser Update')}
       </div>
       <div style="${baseStyles.content}">
         <p style="font-size:16px;margin-bottom:20px;">Hi {{contactName}},</p>
@@ -1510,7 +1509,7 @@ The Jose Madrid Salsa Team`,
   <body style="${baseStyles.container}">
     <div style="${baseStyles.wrapper}">
       <div style="${baseStyles.header}">
-        <h1 style="${baseStyles.headerTitle}">Order Canceled</h1>
+        ${headerImg('order-cancellation.png', 'Order Canceled')}
       </div>
       <div style="${baseStyles.content}">
         <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1553,7 +1552,7 @@ The Jose Madrid Salsa Team`,
         <body style="${baseStyles.container}">
           <div style="${baseStyles.wrapper}">
             <div style="${baseStyles.header}">
-              <h1 style="${baseStyles.headerTitle}">⚡ Flash Sale! ⚡</h1>
+              ${headerImg('flash-sale.png', 'Flash Sale')}
             </div>
             <div style="${baseStyles.content}">
               <p style="font-size:24px;font-weight:bold;text-align:center;color:#dc2626;">25% Off Everything!</p>
@@ -1596,7 +1595,7 @@ The Jose Madrid Salsa Team`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    <h1 style="${baseStyles.headerTitle}">☀️ Summer is Here!</h1>
+                    ${headerImg('summer.png', 'Summer is Here')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:18px;text-align:center;">Fire up the grill and get ready for a season of flavor!</p>
@@ -1644,7 +1643,7 @@ The Jose Madrid Salsa Team`,
                 <body style="${baseStyles.container}">
                     <div style="${baseStyles.wrapper}">
                     <div style="${baseStyles.header}">
-                        <h1 style="${baseStyles.headerTitle}">🏈 Game Day Ready!</h1>
+                        ${headerImg('fall.png', 'Game Day Ready')}
                     </div>
                     <div style="${baseStyles.content}">
                         <p style="font-size:18px;text-align:center;">The weather is cooling down, but the salsa is heating up!</p>
@@ -1686,7 +1685,7 @@ The Jose Madrid Salsa Team`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    <h1 style="${baseStyles.headerTitle}">🎄 Happy Holidays!</h1>
+                    ${headerImg('christmas.png', 'Happy Holidays')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:18px;text-align:center;">Find the perfect gift for the salsa lover in your life!</p>
@@ -1728,7 +1727,7 @@ Order by {{shippingDeadline}} for Christmas delivery.`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    <h1 style="${baseStyles.headerTitle}">It's Back!</h1>
+                    ${headerImg('back-in-stock.png', 'Back in Stock')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1769,7 +1768,7 @@ Order by {{shippingDeadline}} for Christmas delivery.`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    <h1 style="${baseStyles.headerTitle}">👋 We Miss You!</h1>
+                    ${headerImg('miss-you.png', 'We Miss You')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1816,7 +1815,7 @@ Order by {{shippingDeadline}} for Christmas delivery.`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    <h1 style="${baseStyles.headerTitle}">🎉 Happy Birthday!</h1>
+                    ${headerImg('happy-birthday.png', 'Happy Birthday')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1862,7 +1861,7 @@ Order by {{shippingDeadline}} for Christmas delivery.`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    <h1 style="${baseStyles.headerTitle}">Share the Love!</h1>
+                    ${headerImg('referral.png', 'Share the Love')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1906,7 +1905,7 @@ Order by {{shippingDeadline}} for Christmas delivery.`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    <h1 style="${baseStyles.headerTitle}">How Did We Do?</h1>
+                    ${headerImg('review-request.png', 'How Did We Do')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1945,7 +1944,7 @@ Leave a review: {{reviewUrl}}`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    <h1 style="${baseStyles.headerTitle}">We Value Your Opinion</h1>
+                    ${headerImg('share-feedback.png', 'We Value Your Opinion')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1987,7 +1986,7 @@ Thank you for your time!`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    <h1 style="${baseStyles.headerTitle}">New Recipe!</h1>
+                    ${headerImg('recipe.png', 'New Recipe')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -2031,7 +2030,7 @@ Thank you for your time!`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    <h1 style="${baseStyles.headerTitle}">Congratulations!</h1>
+                    ${headerImg('loyalty-milestone.png', 'Congratulations')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -2070,7 +2069,7 @@ Thank you for your time!`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    <h1 style="${baseStyles.headerTitle}">Order Update</h1>
+                    ${headerImg('order-update.png', 'Order Update')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -2111,7 +2110,7 @@ Thank you for your time!`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    <h1 style="${baseStyles.headerTitle}">Security Alert</h1>
+                    ${headerImg('security-notice.png', 'Security Alert')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -2151,7 +2150,7 @@ Thank you for your time!`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    <h1 style="${baseStyles.headerTitle}">{{title}}</h1>
+                    ${headerImg('service-announcement.png', 'Service Announcement')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p>{{message}}</p>
