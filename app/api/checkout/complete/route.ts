@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 
 const CompleteSchema = z.object({
   orderId: z.string().cuid(),
@@ -10,6 +11,8 @@ const CompleteSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  let order: Awaited<ReturnType<typeof prisma.order.findUnique>> | null = null
+
   try {
     const json = await request.json()
     const parsed = CompleteSchema.safeParse(json)
@@ -25,13 +28,15 @@ export async function POST(request: Request) {
 
     const stripe = getStripe()
 
-    const [order, paymentIntent] = await Promise.all([
+    const [fetchedOrder, paymentIntent] = await Promise.all([
       prisma.order.findUnique({
         where: { id: orderId },
         include: { items: true },
       }),
       stripe.paymentIntents.retrieve(paymentIntentId),
     ])
+
+    order = fetchedOrder
 
     if (!order) {
       return NextResponse.json(
@@ -45,60 +50,125 @@ export async function POST(request: Request) {
     }
 
     if (!paymentIntent || paymentIntent.status !== 'succeeded') {
+      // Release reserved inventory for each item since payment failed
+      for (const item of order.items) {
+        try {
+          await releaseInventory({
+            productId: item.productId,
+            quantity: item.quantity,
+            orderId: order.id,
+            userId: order.userId || undefined,
+            notes: `Payment failed for order ${order.id}`,
+          })
+        } catch (releaseError) {
+          console.error('Failed to release inventory:', releaseError)
+        }
+      }
+
       return NextResponse.json(
         { error: 'Payment has not been confirmed.' },
         { status: 400 }
       )
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.order.update({
-        where: { id: order.id },
-        data: {
-          paymentStatus: 'PAID',
-          status: 'CONFIRMED',
-          stripePaymentId: paymentIntentId,
-        },
-      })
+    // Collect deduction results for post-transaction alert firing
+    const itemDeductions: Array<{
+      productId: string
+      newInventory: number
+      lowStockThreshold: number
+    }> = []
 
-      for (const item of order.items) {
-        await tx.product.update({
-          where: { id: item.productId },
+    // Atomically mark the order PAID and deduct inventory in the same transaction.
+    // If deduction fails, the order stays PENDING and inventory stays reserved.
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.order.update({
+          where: { id: order!.id },
           data: {
-            inventory: {
-              decrement: item.quantity,
+            paymentStatus: 'PAID',
+            status: 'CONFIRMED',
+            stripePaymentId: paymentIntentId,
+          },
+        })
+
+        // Mark any abandoned carts as recovered
+        if (order!.userId) {
+          await tx.abandonedCart.updateMany({
+            where: {
+              userId: order!.userId,
+              recoveredAt: null,
             },
-          },
-        })
-      }
+            data: {
+              recoveredAt: new Date(),
+            },
+          })
+        } else if (order!.guestEmail) {
+          await tx.abandonedCart.updateMany({
+            where: {
+              guestEmail: order!.guestEmail.toLowerCase(),
+              recoveredAt: null,
+            },
+            data: {
+              recoveredAt: new Date(),
+            },
+          })
+        }
 
-      // Mark any abandoned carts as recovered
-      if (order.userId) {
-        await tx.abandonedCart.updateMany({
-          where: {
-            userId: order.userId,
-            recoveredAt: null,
-          },
-          data: {
-            recoveredAt: new Date(),
-          },
-        })
-      } else if (order.guestEmail) {
-        await tx.abandonedCart.updateMany({
-          where: {
-            guestEmail: order.guestEmail.toLowerCase(),
-            recoveredAt: null,
-          },
-          data: {
-            recoveredAt: new Date(),
-          },
-        })
+        // Deduct reserved inventory for each item inside the same transaction
+        for (const item of order!.items) {
+          const result = await deductReservedInventoryInTx(
+            {
+              productId: item.productId,
+              quantity: item.quantity,
+              orderId: order!.id,
+              userId: order!.userId || undefined,
+              notes: `Payment completed for order ${order!.id}`,
+            },
+            tx
+          )
+          itemDeductions.push({
+            productId: item.productId,
+            newInventory: result.newInventory,
+            lowStockThreshold: result.product.lowStockThreshold,
+          })
+        }
+      },
+      { isolationLevel: 'Serializable' }
+    )
+
+    // Fire inventory alerts after the committed transaction (non-critical)
+    for (const { productId, newInventory, lowStockThreshold } of itemDeductions) {
+      try {
+        await checkAndUpdateAlerts(productId, newInventory, lowStockThreshold)
+      } catch (alertError) {
+        console.error(
+          `[checkout/complete] Alert sync failed for product ${productId} (order ${order.id}):`,
+          alertError
+        )
       }
-    })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Checkout completion error:', error)
+
+    // Release reserved inventory if order exists and hasn't been paid
+    if (order && order.items && order.paymentStatus !== 'PAID') {
+      for (const item of order.items) {
+        try {
+          await releaseInventory({
+            productId: item.productId,
+            quantity: item.quantity,
+            orderId: order.id,
+            userId: order.userId || undefined,
+            notes: `Error during checkout completion for order ${order.id}`,
+          })
+        } catch (releaseError) {
+          console.error('Failed to release inventory:', releaseError)
+        }
+      }
+    }
+
     return NextResponse.json(
       { error: 'Unable to finalize checkout.' },
       { status: 500 }

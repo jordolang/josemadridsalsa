@@ -42,11 +42,11 @@ model User {
   analyticsSettings AnalyticsSetting[]
 
   // Wholesale account
-  wholesaleAccount        WholesaleAccount?
-  conversations           Conversation[]
-  passwordResetTokens     PasswordResetToken[]
-  emailLogs               EmailLog[]
-  unsubscribePreferences  UnsubscribePreference[]
+  wholesaleAccount       WholesaleAccount?
+  conversations          Conversation[]
+  passwordResetTokens    PasswordResetToken[]
+  emailLogs              EmailLog[]
+  unsubscribePreferences UnsubscribePreference[]
 
   @@map("users")
 }
@@ -123,10 +123,12 @@ model Product {
   taxCode        String? // Stripe Tax Code for tax calculation
 
   // Inventory
-  sku               String  @unique
+  sku               String      @unique
   barcode           String?
-  inventory         Int     @default(0)
-  lowStockThreshold Int     @default(5)
+  inventory         Int         @default(0)
+  stockReserved     Int         @default(0)
+  stockStatus       StockStatus @default(IN_STOCK)
+  lowStockThreshold Int         @default(5)
 
   // Images
   images        String[]
@@ -167,6 +169,7 @@ model Product {
   nutritionalInfo       NutritionalInfo?
   productIngredients    ProductIngredient[]
 
+  @@index([stockStatus])
   @@map("products")
 }
 
@@ -195,7 +198,7 @@ model NutritionalInfo {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   // Serving info
-  servingSize         String // e.g., "2 Tbsp (30ml)"
+  servingSize          String // e.g., "2 Tbsp (30ml)"
   servingsPerContainer Int    @default(13)
 
   // Calories
@@ -256,10 +259,10 @@ model Ingredient {
 }
 
 model ProductIngredient {
-  id           String @id @default(cuid())
+  id           String  @id @default(cuid())
   productId    String
   ingredientId String
-  sortOrder    Int    @default(0)
+  sortOrder    Int     @default(0)
   qualifier    String? // e.g., "Tomatoes, Citric Acid, Calcium Chloride" for Diced Tomatoes
 
   // Relations
@@ -2366,6 +2369,9 @@ enum InventoryTransactionType {
   SAMPLE // Given as sample
   TRANSFER // Transfer between locations
   INITIAL // Initial stock entry
+  RESERVATION // Stock reserved for checkout
+  RELEASE // Reserved stock released
+  IMPORT // Bulk import/update
 }
 
 enum InventoryAlertType {
@@ -2381,18 +2387,24 @@ enum InventoryAlertStatus {
   DISMISSED // Alert dismissed without action
 }
 
+enum StockStatus {
+  IN_STOCK // Product is available
+  LOW_STOCK // Product is running low
+  OUT_OF_STOCK // Product is out of stock
+}
+
 // ========================================
 // ADMIN CREDENTIALS VAULT
 // ========================================
 
 model ServiceCredential {
-  id          String @id @default(cuid())
-  serviceName String @map("service_name")
+  id          String  @id @default(cuid())
+  serviceName String  @map("service_name")
   label       String
   username    String?
-  encValue    String @map("enc_value") @db.Text // AES-256-GCM encrypted
-  encIv       String @map("enc_iv")            // Initialization vector
-  encTag      String @map("enc_tag")           // Auth tag
+  encValue    String  @map("enc_value") @db.Text // AES-256-GCM encrypted
+  encIv       String  @map("enc_iv") // Initialization vector
+  encTag      String  @map("enc_tag") // Auth tag
   url         String?
   notes       String? @db.Text
 
@@ -2407,11 +2419,11 @@ model ServiceCredential {
 }
 
 model CredentialAccessGrant {
-  id      String @id @default(cuid())
-  email   String // email of the user granted access
+  id             String @id @default(cuid())
+  email          String // email of the user granted access
   grantedByEmail String @map("granted_by_email") // must be jordolang@gmail.com
 
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime  @default(now()) @map("created_at")
   revokedAt DateTime? @map("revoked_at")
 
   @@unique([email])
