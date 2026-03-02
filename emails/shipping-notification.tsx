@@ -32,7 +32,7 @@ export const ShippingNotificationEmail = ({
 
   return (
     <EmailLayout previewText={previewText}>
-      <EmailHeader />
+      <EmailHeader headerImage="shipping-notification.png" headerAlt="Your Order Has Shipped" />
 
       {/* Greeting */}
       <Section style={section}>

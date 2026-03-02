@@ -1,0 +1,313 @@
+{
+  "settings": {
+    "migrated": 6,
+    "iconPacksPath": ".obsidian/icons",
+    "fontSize": 16,
+    "emojiStyle": "native",
+    "iconColor": null,
+    "recentlyUsedIcons": [
+      "RiMoneyDollarCircleLine",
+      "SiContactlesspayment",
+      "FabDev",
+      "TiTemplate",
+      "TiNumber25Small"
+    ],
+    "recentlyUsedIconsSize": 5,
+    "rules": [],
+    "extraMargin": {
+      "top": 0,
+      "right": 4,
+      "bottom": 0,
+      "left": 0
+    },
+    "iconInTabsEnabled": true,
+    "iconInTitleEnabled": true,
+    "iconInTitlePosition": "inline",
+    "iconInFrontmatterEnabled": true,
+    "iconInFrontmatterFieldName": "icon",
+    "iconColorInFrontmatterFieldName": "iconColor",
+    "iconsBackgroundCheckEnabled": false,
+    "iconsInNotesEnabled": true,
+    "iconsInLinksEnabled": true,
+    "iconIdentifier": ":",
+    "lucideIconPackType": "native",
+    "debugMode": false,
+    "useInternalPlugins": true
+  },
+  "1. Projects/zanesville-store": {
+    "iconName": "SiHomeassistantcommunitystore",
+    "iconColor": "#73ff00"
+  },
+  "1. Projects/neff-paving": {
+    "iconName": "FasRoadLock",
+    "iconColor": "#4dff00"
+  },
+  "1. Projects": {
+    "iconName": "SiVercel",
+    "iconColor": "#001dad"
+  },
+  "2. Areas": {
+    "iconName": "FasTimeline",
+    "iconColor": "#31fb09"
+  },
+  "3. Resources": {
+    "iconName": "RiGitRepositoryFill",
+    "iconColor": "#010101"
+  },
+  "4. Archives": {
+    "iconName": "RiArchiveFill",
+    "iconColor": "#ffffff"
+  },
+  "5. Personal": "FasPersonFallingBurst",
+  "5. Personal/God": {
+    "iconName": "TiGenderHermaphrodite",
+    "iconColor": "#8000ff"
+  },
+  "6. Templates": {
+    "iconName": "TiTemplate",
+    "iconColor": "#e1ff00"
+  },
+  "7. Online": {
+    "iconName": "FabInternetExplorer",
+    "iconColor": "#1100ff"
+  },
+  "9. Capture": {
+    "iconName": "RiCamera3Fill",
+    "iconColor": "#66a37b"
+  },
+  "Tags": {
+    "iconName": "FasTags",
+    "iconColor": "#00aaff"
+  },
+  "Clippings": {
+    "iconName": "CoPaperclipAttechmentTilt",
+    "iconColor": "#afeee1"
+  },
+  "0. PeriodicNotes": {
+    "iconName": "SiCalendly",
+    "iconColor": "#ff0000"
+  },
+  "1. Projects/Homesh.app": {
+    "iconName": "TiHome",
+    "iconColor": "#ff00a2"
+  },
+  "5. Personal/Letters": {
+    "iconName": "FasEnvelopeOpen",
+    "iconColor": "#ff0000"
+  },
+  "5. Personal/Pastebin": {
+    "iconName": "SiPastebin",
+    "iconColor": "#19a30f"
+  },
+  "2. Areas/personal-brand": {
+    "iconName": "FabDev",
+    "iconColor": "#ff4d00"
+  },
+  "1. Projects/StreamForge": {
+    "iconName": "LiAirplay",
+    "iconColor": "#017e31"
+  },
+  "3. Resources/Graphic-Design": {
+    "iconName": "RiCamera3Fill",
+    "iconColor": "#9b64af"
+  },
+  "3. Resources/Computers-Tech": {
+    "iconName": "FasComputer",
+    "iconColor": "#5ec918"
+  },
+  "3. Resources/Development": {
+    "iconName": "FabDev",
+    "iconColor": "#ff6600"
+  },
+  "3. Resources/Computers-Tech/Linux": {
+    "iconName": "SiLinux",
+    "iconColor": "#9b7878"
+  },
+  "3. Resources/Computers-Tech/Mac": {
+    "iconName": "SiApple",
+    "iconColor": "#008bf5"
+  },
+  "3. Resources/Computers-Tech/PC": {
+    "iconName": "SiWindowsxp",
+    "iconColor": "#ff0000"
+  },
+  "1. Projects/Jose Madrid Salsa": {
+    "iconName": "FasPepperHot",
+    "iconColor": "#ff0000"
+  },
+  "5. Personal/Templates": {
+    "iconName": "LiLayoutTemplate",
+    "iconColor": "#eeff05"
+  },
+  "3. Resources/Computers-Tech/Github": {
+    "iconName": "RiGithubFill",
+    "iconColor": "#ffffff"
+  },
+  "1. Projects/Jose Madrid Salsa/Pricing": {
+    "iconName": "BoBxDollar",
+    "iconColor": "#049506"
+  },
+  "1. Projects/Success Management Corp": {
+    "iconName": "SiSuckless",
+    "iconColor": "#9d6401"
+  },
+  "1. Projects/Jose Madrid Salsa/Github": {
+    "iconName": "RiGithubFill",
+    "iconColor": "#ff0000"
+  },
+  "1. Projects/DopeSites": {
+    "iconName": "RaSyringe",
+    "iconColor": "#2d93d2"
+  },
+  "1. Projects/Dev-Container": {
+    "iconName": "FabDev",
+    "iconColor": "#ff0000"
+  },
+  "1. Projects/Jlang.dev (Portfolio)": {
+    "iconName": "FasIdCard",
+    "iconColor": "#6ba0d1"
+  },
+  "1. Projects/Jlang.dev (Portfolio)/blog": {
+    "iconName": "SiBloglovin",
+    "iconColor": "#2c2ab7"
+  },
+  "1. Projects/Jlang.dev (Portfolio)/Services Section": {
+    "iconName": "RiServiceFill",
+    "iconColor": "#02f21e"
+  },
+  "1. Projects/Jose Madrid Salsa/Forms": {
+    "iconName": "TiForms",
+    "iconColor": "#49a5df"
+  },
+  "1. Projects/Google-Scraper": {
+    "iconName": "FabGoogle",
+    "iconColor": "#1eff00"
+  },
+  "1. Projects/Google-Scraper/App-Specific Password.md": {
+    "iconName": "RiLockPasswordFill",
+    "iconColor": "#bdad00"
+  },
+  "1. Projects/Dev-Container/Dev Container Setup.md": {
+    "iconName": "SiDocker",
+    "iconColor": "#0011ff"
+  },
+  "1. Projects/Jose Madrid Salsa/Pages": {
+    "iconName": "SiPagespeedinsights",
+    "iconColor": "#37e92b"
+  },
+  "1. Projects/Jose Madrid Salsa/Pages/About Jose.md": {
+    "iconName": "SiAboutdotme",
+    "iconColor": "#258def"
+  },
+  "1. Projects/Jose Madrid Salsa/Pages/Contact.md": {
+    "iconName": "BoBxsContact",
+    "iconColor": "#2a8523"
+  },
+  "1. Projects/Jose Madrid Salsa/Pages/Fundraise With Jose!.md": {
+    "iconName": "SiCashapp",
+    "iconColor": "#346183"
+  },
+  "1. Projects/Jose Madrid Salsa/Pages/Customer Testimonials And Comments.md": "FasPersonHarassing",
+  "1. Projects/Jose Madrid Salsa/Pages/Fundraiser Testimonials.md": {
+    "iconName": "RiRefund2Line",
+    "iconColor": "#ffffff"
+  },
+  "1. Projects/Jose Madrid Salsa/Pages/Recipes.md": {
+    "iconName": "LiReceiptText",
+    "iconColor": "#ff0095"
+  },
+  "1. Projects/Jose Madrid Salsa/Github/Salsa Json Reference.md": {
+    "iconName": "FasJar",
+    "iconColor": "#ff0000"
+  },
+  "1. Projects/Jose Madrid Salsa/Pages/Salsas.md": {
+    "iconName": "TiPepper",
+    "iconColor": "#9ff500"
+  },
+  "1. Projects/Jose Madrid Salsa/Pages/Wholesale.md": {
+    "iconName": "FasTags",
+    "iconColor": "#fa5700"
+  },
+  "1. Projects/Jose Madrid Salsa/Pages/Start Your Fundraiser.md": {
+    "iconName": "SiGofundme",
+    "iconColor": "#1b8841"
+  },
+  "1. Projects/Jose Madrid Salsa/Pages/Find Us Locally": {
+    "iconName": "LiLocate",
+    "iconColor": "#00ff91"
+  },
+  "1. Projects/Jose Madrid Salsa/Pages/Find Us Locally/Find Us Locally.md": {
+    "iconName": "RiFinderFill",
+    "iconColor": "#0084ff"
+  },
+  "1. Projects/Jose Madrid Salsa/Forms/IRS-Forms.md": {
+    "iconName": "SiTransifex",
+    "iconColor": "#ff0000"
+  },
+  "1. Projects/Jose Madrid Salsa/docs": {
+    "iconName": "FabDochub",
+    "iconColor": "#00b3ff"
+  },
+  "3. Resources/Computers-Tech/Argon": "SiPix",
+  "1. Projects/Helpless": {
+    "iconName": "OcHome16",
+    "iconColor": "#ffffff"
+  },
+  "1. Projects/Jose Madrid Salsa/Environment Variables": {
+    "iconName": "FabEnvira",
+    "iconColor": "#297a1f"
+  },
+  "copilot": {
+    "iconName": "SiGithubcopilot",
+    "iconColor": "#8a6500"
+  },
+  "1. Projects/Jose Madrid Salsa/Archive": {
+    "iconName": "TiArchive",
+    "iconColor": "#2b00ff"
+  },
+  "1. Projects/Jose Madrid Salsa/Archive/To-Do": {
+    "iconName": "LiListTodo",
+    "iconColor": "#167450"
+  },
+  "1. Projects/Jose Madrid Salsa/Archive/To-Do/Additions Required.md": {
+    "iconName": "RiAddCircleFill",
+    "iconColor": "#db0075"
+  },
+  "1. Projects/Jose Madrid Salsa/Archive/To-Do/Jose Madrid Website.md": {
+    "iconName": "IbWebsiteWithImage",
+    "iconColor": "#4400ff"
+  },
+  "1. Projects/portfolio": {
+    "iconName": "SiMajorleaguehacking",
+    "iconColor": "#7c1379"
+  },
+  "1. Projects/Jose Madrid Salsa/Images": {
+    "iconName": "FasImage",
+    "iconColor": "#ffffff"
+  },
+  "0. Inbox/Clippings/Best Open-Source Admin Dashboards on Github 1.md": {
+    "iconName": "SiPhpmyadmin",
+    "iconColor": "#778d8d"
+  },
+  "0. Inbox/Clippings": {
+    "iconName": "FasScissors",
+    "iconColor": "#fa3e00"
+  },
+  "0. Inbox": "📥",
+  "0. PeriodicNotes/2025": {
+    "iconName": "TiNumber25Small",
+    "iconColor": "#ffffff"
+  },
+  "0. PeriodicNotes/Templates": {
+    "iconName": "TiTemplate",
+    "iconColor": "#030202"
+  },
+  "1. Projects/Jose Madrid Salsa/Future Development": {
+    "iconName": "FabDev",
+    "iconColor": "#7247d7"
+  },
+  "1. Projects/Jose Madrid Salsa/Contact": {
+    "iconName": "SiContactlesspayment",
+    "iconColor": "#b0740c"
+  }
+}

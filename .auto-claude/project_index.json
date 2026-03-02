@@ -8,12 +8,61 @@
       "language": "TypeScript",
       "framework": "Next.js",
       "type": "frontend",
-      "package_manager": "yarn",
+      "package_manager": "npm",
       "default_port": 3000,
       "styling": "Tailwind CSS",
       "state_management": "Zustand",
       "orm": "Prisma",
       "dev_command": "npm run dev",
+      "scripts": {
+        "dev": "next dev --turbo",
+        "dev:fast": "next dev --turbo --port 3000",
+        "dev:debug": "next dev --turbo --inspect",
+        "prebuild": "node scripts/sync-findus.js",
+        "build": "cross-env NODE_ENV=production next build",
+        "start": "next start",
+        "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+        "type-check": "tsc --noEmit",
+        "test": "vitest run",
+        "postinstall": "prisma generate",
+        "db:generate": "prisma generate",
+        "db:push": "prisma db push",
+        "db:migrate": "prisma migrate dev",
+        "db:seed": "tsx prisma/seed.ts",
+        "db:seed:recipes": "tsx scripts/seed-recipes.ts",
+        "db:seed:nutrition": "tsx scripts/seed-nutrition-ingredients.ts",
+        "db:seed:email-templates": "tsx scripts/seed-email-templates.ts",
+        "locations:import": "tsx scripts/import-locations-from-markdown.ts",
+        "locations:verify": "tsx scripts/verify-locations.ts",
+        "locations:photos": "node scripts/generate-location-photos.js",
+        "locations:update-photos": "node scripts/update-location-photos.mjs",
+        "locations:geocode": "tsx scripts/backfill-location-coordinates.ts",
+        "templates:backfill-owners": "tsx scripts/backfill-form-template-owners.ts",
+        "api-keys:create": "tsx scripts/create-partner-api-key.ts",
+        "products:transform": "tsx scripts/transform-products-csv.ts",
+        "products:ensure-category": "tsx scripts/ensure-salsa-category.ts",
+        "products:test-import": "tsx scripts/test-csv-import.ts",
+        "shopify:test-webhook": "tsx scripts/test-shopify-webhook.ts",
+        "db:studio": "prisma studio",
+        "db:reset": "prisma migrate reset --force",
+        "db:production:sync": "node scripts/sync-production-schema.js",
+        "db:production:seed": "node scripts/seed-production.js",
+        "db:production:pull-env": "vercel env pull .env.vercel.production --environment=production --yes",
+        "db:diagnose": "node scripts/diagnose-db-connection.js",
+        "vercel:setup-env": "bash scripts/setup-vercel-env.sh",
+        "create-admin": "tsx scripts/create-admin.ts",
+        "clean": "rm -rf .next && rm -rf node_modules/.cache",
+        "fresh": "npm run clean && npm install && npm run dev",
+        "prepare": "husky install",
+        "security:scan": "gitleaks detect --source . --verbose --redact",
+        "security:protect": "gitleaks protect --verbose --redact --staged",
+        "security:baseline": "gitleaks detect --source . --verbose --report-format json --report-path gitleaks-report.json",
+        "pre-commit": "lint-staged && npm run security:protect",
+        "analyze": "tsx scripts/analyze-project.ts",
+        "analyze:watch": "tsx scripts/analyze-project.ts --watch",
+        "analyze:report": "tsx scripts/analyze-project.ts --export markdown",
+        "auto-execute": "tsx scripts/auto-execute-session.ts"
+      },
       "key_directories": {
         "lib": {
           "path": "lib",
@@ -70,541 +119,86 @@
         "cheerio",
         "cross-env"
       ],
+      "dependency_locations": [
+        {
+          "type": "node_modules",
+          "path": "node_modules",
+          "exists": false
+        }
+      ],
       "testing": "Vitest",
       "test_directory": "tests",
       "environment": {
         "variables": {
-          "CLERK_SECRET_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
           "DATABASE_URL": {
-            "value": "postgresql://neondb_owner:npg_suRSly1DjCn8@ep-holy-leaf-ahscccxe-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require\\n",
-            "source": ".env.production",
-            "type": "url",
-            "sensitive": false,
-            "required": true
-          },
-          "FROM_EMAIL": {
-            "value": "orders@josemadrid.net",
-            "source": ".env.production",
-            "type": "email",
-            "sensitive": false,
-            "required": true
-          },
-          "GOOGLE_ANALYTICS_ID": {
-            "value": "G-HG4QV5GFKH",
-            "source": ".env.production",
+            "value": null,
+            "source": ".env.example",
             "type": "string",
             "sensitive": false,
             "required": true
           },
-          "GOOGLE_CLIENT_ID": {
-            "value": "AIzaSyDxe-YN1kZ0YMFBz2c0RYWVXNWyE-Beyag",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": false,
-            "required": true
-          },
-          "GOOGLE_CLIENT_NAME": {
-            "value": "Josemadrid.net",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "GOOGLE_CLIENT_SECRET": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": true
-          },
-          "GOOGLE_PLACES_API_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.local",
-            "type": "path",
-            "sensitive": true,
-            "required": true
-          },
-          "GOOGLE_SERVICE_ACCOUNT_EMAIL": {
-            "value": "service-josemadrid@quick-flame-477020-k3.iam.gserviceaccount.com",
-            "source": ".env.production",
-            "type": "email",
-            "sensitive": false,
-            "required": true
-          },
-          "GOOGLE_SERVICE_ACCOUNT_ID": {
-            "value": "105527441625968712666",
-            "source": ".env.production",
-            "type": "number",
-            "sensitive": false,
-            "required": true
-          },
-          "GOOGLE_SERVICE_ACCOUNT_NAME": {
-            "value": "service-josemadrid",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": false,
-            "required": true
-          },
-          "MASTER_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
+          "NEXTAUTH_URL": {
+            "value": null,
+            "source": ".env.example",
             "type": "string",
             "sensitive": true,
             "required": true
           },
           "NEXTAUTH_SECRET": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "path",
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
             "sensitive": true,
             "required": true
           },
-          "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
+          "MASTER_KEY": {
+            "value": null,
+            "source": ".env.example",
             "type": "string",
             "sensitive": true,
-            "required": false
+            "required": true
+          },
+          "ENCRYPTION_KEY": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": true,
+            "required": true
+          },
+          "GOOGLE_CLIENT_ID": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": false,
+            "required": true
+          },
+          "GOOGLE_CLIENT_SECRET": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": true,
+            "required": true
           },
           "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": true,
+            "required": true
+          },
+          "GOOGLE_PLACES_API_KEY": {
+            "value": null,
+            "source": ".env.example",
             "type": "string",
             "sensitive": true,
             "required": true
           },
           "NEXT_PUBLIC_GOOGLE_PLACE_ID": {
-            "value": "ChIJacuLdG7uN4gRiL0GCG3CI5o",
-            "source": ".env.production",
+            "value": null,
+            "source": ".env.example",
             "type": "string",
             "sensitive": false,
             "required": true
-          },
-          "NEXT_PUBLIC_HQ_LOCATION": {
-            "value": "601 Putnam Ave, Zanesville, OH 43701\\n",
-            "source": ".env.production",
-            "type": "path",
-            "sensitive": false,
-            "required": false
-          },
-          "NEXT_PUBLIC_SHOPIFY_ADMIN_URL": {
-            "value": "https://jose-madrid-salsa-9269.myshopify.com/admin",
-            "source": ".env.production",
-            "type": "url",
-            "sensitive": false,
-            "required": false
-          },
-          "NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN": {
-            "value": "jose-madrid-salsa-9269.myshopify.com",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "NEXT_PUBLIC_STACK_PROJECT_ID": {
-            "value": "fa1f0068-a2bf-4d0a-9d55-f8568cf9a0c4",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "NEXT_PUBLIC_SUPPORT_EMAIL": {
-            "value": "mike@josemadrid.net\\n",
-            "source": ".env.production",
-            "type": "email",
-            "sensitive": false,
-            "required": false
-          },
-          "NEXT_PUBLIC_SUPPORT_PHONE": {
-            "value": "(740) 521-4304\\n",
-            "source": ".env.production",
-            "type": "path",
-            "sensitive": false,
-            "required": false
-          },
-          "NODE_ENV": {
-            "value": "development",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "OPENAI_API_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "RESEND_API_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": true
-          },
-          "SHOPIFY_ACCESS_TOKEN": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "SHOPIFY_ADMIN_API_TOKEN": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "SHOPIFY_API_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "SHOPIFY_API_SECRET": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "SHOPIFY_API_VERSION": {
-            "value": "2024-10",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "SHOPIFY_STOREFRONT_ACCESS_TOKEN": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "SHOPIFY_STOREFRONT_API_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "SHOPIFY_STOREFRONT_API_SECRET": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "SHOPIFY_STORE_DOMAIN": {
-            "value": "jose-madrid-salsa-9269.myshopify.com",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "SHOPIFY_WEBHOOK_SECRET": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "STACK_SECRET_SERVER_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "STRIPE_MCP_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "STRIPE_PUBLISHABLE_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": true
-          },
-          "STRIPE_SECRET_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": true
-          },
-          "STRIPE_WEBHOOK_SECRET": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": true
-          },
-          "UPLOADTHING_APP_ID": {
-            "value": "o041xzl1m7",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": false,
-            "required": true
-          },
-          "UPLOADTHING_SECRET": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": true
-          },
-          "UPLOADTHING_TOKEN": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "VERCEL_OIDC_TOKEN": {
-            "value": "<REDACTED>",
-            "source": ".env.production",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "CRON_SECRET": {
-            "value": "<REDACTED>",
-            "source": ".env.local",
-            "type": "path",
-            "sensitive": true,
-            "required": false
-          },
-          "DATABASE_URL_UNPOOLED": {
-            "value": "postgresql://neondb_owner:npg_suRSly1DjCn8@ep-holy-leaf-ahscccxe.c-3.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require",
-            "source": ".env.local",
-            "type": "url",
-            "sensitive": false,
-            "required": false
-          },
-          "NEXTAUTH_URL": {
-            "value": "<REDACTED>",
-            "source": ".env.local",
-            "type": "url",
-            "sensitive": true,
-            "required": true
-          },
-          "NEXT_PUBLIC_SENTRY_DSN": {
-            "value": "https://98b04ae9086c6cb3b8136686e088d957@o4509068102139904.ingest.us.sentry.io/4510733629587456",
-            "source": ".env.local",
-            "type": "url",
-            "sensitive": false,
-            "required": false
-          },
-          "NX_DAEMON": {
-            "value": "false",
-            "source": ".env.local",
-            "type": "boolean",
-            "sensitive": false,
-            "required": false
-          },
-          "SENTRY_AUTH_TOKEN": {
-            "value": "<REDACTED>",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "SENTRY_ORG": {
-            "value": "josemadridsalsa",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "SENTRY_OTLP_TRACES_URL": {
-            "value": "https://o4509068102139904.ingest.us.sentry.io/api/4510733629587456/integration/otlp/v1/traces",
-            "source": ".env.local",
-            "type": "url",
-            "sensitive": false,
-            "required": false
-          },
-          "SENTRY_PROJECT": {
-            "value": "javascript-nextjs",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "SENTRY_PUBLIC_KEY": {
-            "value": "<REDACTED>",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "SENTRY_VERCEL_LOG_DRAIN_URL": {
-            "value": "https://o4509068102139904.ingest.us.sentry.io/api/4510733629587456/integration/vercel/logs/",
-            "source": ".env.local",
-            "type": "url",
-            "sensitive": false,
-            "required": false
-          },
-          "TURBO_CACHE": {
-            "value": "remote:rw",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "TURBO_DOWNLOAD_LOCAL_ENABLED": {
-            "value": "true",
-            "source": ".env.local",
-            "type": "boolean",
-            "sensitive": false,
-            "required": false
-          },
-          "TURBO_REMOTE_ONLY": {
-            "value": "true",
-            "source": ".env.local",
-            "type": "boolean",
-            "sensitive": false,
-            "required": false
-          },
-          "TURBO_RUN_SUMMARY": {
-            "value": "true",
-            "source": ".env.local",
-            "type": "boolean",
-            "sensitive": false,
-            "required": false
-          },
-          "VERCEL": {
-            "value": "1",
-            "source": ".env.local",
-            "type": "boolean",
-            "sensitive": false,
-            "required": false
-          },
-          "VERCEL_ENV": {
-            "value": "production",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "VERCEL_GIT_COMMIT_AUTHOR_LOGIN": {
-            "value": "<REDACTED>",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "VERCEL_GIT_COMMIT_AUTHOR_NAME": {
-            "value": "<REDACTED>",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": true,
-            "required": false
-          },
-          "VERCEL_GIT_COMMIT_MESSAGE": {
-            "value": "",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "VERCEL_GIT_COMMIT_REF": {
-            "value": "",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "VERCEL_GIT_COMMIT_SHA": {
-            "value": "",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "VERCEL_GIT_PREVIOUS_SHA": {
-            "value": "",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "VERCEL_GIT_PROVIDER": {
-            "value": "",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "VERCEL_GIT_PULL_REQUEST_ID": {
-            "value": "",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "VERCEL_GIT_REPO_ID": {
-            "value": "",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "VERCEL_GIT_REPO_OWNER": {
-            "value": "",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "VERCEL_GIT_REPO_SLUG": {
-            "value": "",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "VERCEL_TARGET_ENV": {
-            "value": "production",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
-          },
-          "VERCEL_URL": {
-            "value": "",
-            "source": ".env.local",
-            "type": "string",
-            "sensitive": false,
-            "required": false
           },
           "GOOGLE_PLACE_ID": {
             "value": null,
@@ -621,6 +215,27 @@
             "required": true
           },
           "NEXT_PUBLIC_GOOGLE_STREETVIEW_PANO": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": false,
+            "required": true
+          },
+          "GOOGLE_SERVICE_ACCOUNT_EMAIL": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": false,
+            "required": true
+          },
+          "GOOGLE_SERVICE_ACCOUNT_NAME": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": false,
+            "required": true
+          },
+          "GOOGLE_SERVICE_ACCOUNT_ID": {
             "value": null,
             "source": ".env.example",
             "type": "string",
@@ -648,6 +263,62 @@
             "sensitive": false,
             "required": true
           },
+          "STRIPE_PUBLISHABLE_KEY": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": true,
+            "required": true
+          },
+          "STRIPE_SECRET_KEY": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": true,
+            "required": true
+          },
+          "STRIPE_WEBHOOK_SECRET": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": true,
+            "required": true
+          },
+          "RESEND_API_KEY": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": true,
+            "required": true
+          },
+          "FROM_EMAIL": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": false,
+            "required": true
+          },
+          "UPLOADTHING_SECRET": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": true,
+            "required": true
+          },
+          "UPLOADTHING_APP_ID": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": false,
+            "required": true
+          },
+          "GOOGLE_ANALYTICS_ID": {
+            "value": null,
+            "source": ".env.example",
+            "type": "string",
+            "sensitive": false,
+            "required": true
+          },
           "NEXT_PUBLIC_AMPLITUDE_API_KEY": {
             "value": null,
             "source": ".env.example",
@@ -663,9 +334,9 @@
             "required": true
           }
         },
-        "required_count": 28,
+        "required_count": 29,
         "optional_count": 0,
-        "detected_count": 84
+        "detected_count": 29
       },
       "database": {
         "models": {
@@ -830,6 +501,18 @@
               },
               "passwordResetTokens": {
                 "type": "PasswordResetToken",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "emailLogs": {
+                "type": "EmailLog",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "unsubscribePreferences": {
+                "type": "UnsubscribePreference",
                 "primary_key": false,
                 "unique": false,
                 "nullable": false
@@ -1163,6 +846,545 @@
               },
               "dimensions": {
                 "type": "Json",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              }
+            },
+            "file": "prisma/schema.prisma",
+            "orm": "Prisma"
+          },
+          "ProductVariant": {
+            "table": "productvariant",
+            "fields": {
+              "id": {
+                "type": "String",
+                "primary_key": true,
+                "unique": false,
+                "nullable": false
+              },
+              "productId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "product": {
+                "type": "Product",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "name": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "16": {
+                "type": "oz",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "type": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "price": {
+                "type": "Decimal",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Override": {
+                "type": "base",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "sku": {
+                "type": "String",
+                "primary_key": false,
+                "unique": true,
+                "nullable": false
+              },
+              "inStock": {
+                "type": "Boolean",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "createdAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "updatedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              }
+            },
+            "file": "prisma/schema.prisma",
+            "orm": "Prisma"
+          },
+          "NutritionalInfo": {
+            "table": "nutritionalinfo",
+            "fields": {
+              "id": {
+                "type": "String",
+                "primary_key": true,
+                "unique": false,
+                "nullable": false
+              },
+              "productId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": true,
+                "nullable": false
+              },
+              "product": {
+                "type": "Product",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Serving": {
+                "type": "info",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "servingSize": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "2": {
+                "type": "Tbsp",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "servingsPerContainer": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Calories": {
+                "type": "calories",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "caloriesFromFat": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Fats": {
+                "type": "totalFatG",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "totalFatDV": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "saturatedFatG": {
+                "type": "Float",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "saturatedFatDV": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "transFatG": {
+                "type": "Float",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Cholesterol": {
+                "type": "cholesterolMg",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "cholesterolDV": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Sodium": {
+                "type": "sodiumMg",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "sodiumDV": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Carbohydrates": {
+                "type": "totalCarbG",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "totalCarbDV": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "dietaryFiberG": {
+                "type": "Float",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "dietaryFiberDV": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "sugarsG": {
+                "type": "Float",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Protein": {
+                "type": "proteinG",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Daily": {
+                "type": "Value",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "vitaminADV": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "vitaminCDV": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "calciumDV": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "ironDV": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Allergens": {
+                "type": "allergens",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "createdAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "updatedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              }
+            },
+            "file": "prisma/schema.prisma",
+            "orm": "Prisma"
+          },
+          "Ingredient": {
+            "table": "ingredient",
+            "fields": {
+              "id": {
+                "type": "String",
+                "primary_key": true,
+                "unique": false,
+                "nullable": false
+              },
+              "name": {
+                "type": "String",
+                "primary_key": false,
+                "unique": true,
+                "nullable": false
+              },
+              "createdAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "updatedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Relations": {
+                "type": "products",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              }
+            },
+            "file": "prisma/schema.prisma",
+            "orm": "Prisma"
+          },
+          "ProductIngredient": {
+            "table": "productingredient",
+            "fields": {
+              "id": {
+                "type": "String",
+                "primary_key": true,
+                "unique": false,
+                "nullable": false
+              },
+              "productId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "ingredientId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "sortOrder": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "qualifier": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Citric": {
+                "type": "Acid",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Relations": {
+                "type": "product",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "ingredient": {
+                "type": "Ingredient",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              }
+            },
+            "file": "prisma/schema.prisma",
+            "orm": "Prisma"
+          },
+          "ShopListing": {
+            "table": "shoplisting",
+            "fields": {
+              "id": {
+                "type": "String",
+                "primary_key": true,
+                "unique": false,
+                "nullable": false
+              },
+              "productId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "product": {
+                "type": "Product",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Which": {
+                "type": "shop",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "shopPlatform": {
+                "type": "ShopPlatform",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "specific": {
+                "type": "condition",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "externalId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Product": {
+                "type": "ID",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "externalUrl": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "URL": {
+                "type": "to",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "catalogId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Facebook": {
+                "type": "catalog",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "TikTok": {
+                "type": "shop",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Sync": {
+                "type": "status",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "status": {
+                "type": "ShopListingStatus",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "syncError": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Listing": {
+                "type": "overrides",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "titleOverride": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "descriptionOverride": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "priceOverride": {
+                "type": "Decimal",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "availability": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "marketplaceCategory": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "s": {
+                "type": "category",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "lastSyncedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "publishedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "createdAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "updatedAt": {
+                "type": "DateTime",
                 "primary_key": false,
                 "unique": false,
                 "nullable": false
@@ -3914,6 +4136,169 @@
             "file": "prisma/schema.prisma",
             "orm": "Prisma"
           },
+          "SocialAccount": {
+            "table": "socialaccount",
+            "fields": {
+              "id": {
+                "type": "String",
+                "primary_key": true,
+                "unique": false,
+                "nullable": false
+              },
+              "platform": {
+                "type": "SocialMediaPlatform",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Account": {
+                "type": "info",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "accountId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "s": {
+                "type": "account",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "page": {
+                "type": "ID",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "accountName": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Display": {
+                "type": "name",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "accountHandle": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "username": {
+                "type": "profileImageUrl",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "OAuth": {
+                "type": "tokens",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "accessToken": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "accessTokenIv": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "refreshToken": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "refreshTokenIv": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "tokenExpiresAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "permissions": {
+                "type": "granted",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "scopes": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Status": {
+                "type": "isActive",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "lastVerifiedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "connectionError": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Who": {
+                "type": "connected",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "connectedById": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "createdAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "updatedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Relations": {
+                "type": "publishedPosts",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              }
+            },
+            "file": "prisma/schema.prisma",
+            "orm": "Prisma"
+          },
           "SocialMediaPost": {
             "table": "socialmediapost",
             "fields": {
@@ -3941,6 +4326,36 @@
                 "unique": false,
                 "nullable": false
               },
+              "specific": {
+                "type": "content",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "facebookContent": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "twitterContent": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "tiktokContent": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "instagramContent": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
               "scheduledAt": {
                 "type": "DateTime",
                 "primary_key": false,
@@ -3961,6 +4376,151 @@
               },
               "externalIds": {
                 "type": "Json",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              }
+            },
+            "file": "prisma/schema.prisma",
+            "orm": "Prisma"
+          },
+          "SocialPostPublish": {
+            "table": "socialpostpublish",
+            "fields": {
+              "id": {
+                "type": "String",
+                "primary_key": true,
+                "unique": false,
+                "nullable": false
+              },
+              "postId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "accountId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Result": {
+                "type": "platform",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "externalPostId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "ID": {
+                "type": "on",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "externalUrl": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "URL": {
+                "type": "to",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "status": {
+                "type": "SocialPublishStatus",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "errorMessage": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Engagement": {
+                "type": "metrics",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "likes": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "comments": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "shares": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "impressions": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "reach": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "clicks": {
+                "type": "Int",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "publishedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "metricsUpdatedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "createdAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "updatedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Relations": {
+                "type": "post",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "account": {
+                "type": "SocialAccount",
                 "primary_key": false,
                 "unique": false,
                 "nullable": false
@@ -4635,6 +5195,212 @@
               },
               "variables": {
                 "type": "Json",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              }
+            },
+            "file": "prisma/schema.prisma",
+            "orm": "Prisma"
+          },
+          "EmailLog": {
+            "table": "emaillog",
+            "fields": {
+              "id": {
+                "type": "String",
+                "primary_key": true,
+                "unique": false,
+                "nullable": false
+              },
+              "Recipient": {
+                "type": "info",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "recipientEmail": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "recipientName": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "userId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Email": {
+                "type": "details",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "from": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "templateId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "subject": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "status": {
+                "type": "EmailLogStatus",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Tracking": {
+                "type": "sentAt",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "openedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "clickedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "bouncedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "failedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Error": {
+                "type": "tracking",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "errorMessage": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Metadata": {
+                "type": "metadata",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Additional": {
+                "type": "data",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "createdAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "updatedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Relations": {
+                "type": "user",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              }
+            },
+            "file": "prisma/schema.prisma",
+            "orm": "Prisma"
+          },
+          "UnsubscribePreference": {
+            "table": "unsubscribepreference",
+            "fields": {
+              "id": {
+                "type": "String",
+                "primary_key": true,
+                "unique": false,
+                "nullable": false
+              },
+              "email": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "userId": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "What": {
+                "type": "they",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "unsubscribedFrom": {
+                "type": "String",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Unsubscribe": {
+                "type": "all",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "unsubscribeAll": {
+                "type": "Boolean",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "createdAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "updatedAt": {
+                "type": "DateTime",
+                "primary_key": false,
+                "unique": false,
+                "nullable": false
+              },
+              "Relations": {
+                "type": "user",
                 "primary_key": false,
                 "unique": false,
                 "nullable": false
@@ -6654,12 +7420,17 @@
             "orm": "Prisma"
           }
         },
-        "total_models": 68,
+        "total_models": 77,
         "model_names": [
           "User",
           "Address",
           "Category",
           "Product",
+          "ProductVariant",
+          "NutritionalInfo",
+          "Ingredient",
+          "ProductIngredient",
+          "ShopListing",
           "Conversation",
           "Message",
           "CartItem",
@@ -6691,7 +7462,9 @@
           "FeaturedEvent",
           "EventTag",
           "ServiceKey",
+          "SocialAccount",
           "SocialMediaPost",
+          "SocialPostPublish",
           "SocialMediaPostMedia",
           "FormTemplate",
           "FormTemplateVersion",
@@ -6700,6 +7473,8 @@
           "EmailConfiguration",
           "EmailCampaign",
           "EmailRecipient",
+          "EmailLog",
+          "UnsubscribePreference",
           "AuditLog",
           "PartnerApiKey",
           "Invoice",
@@ -6771,15 +7546,28 @@
   "infrastructure": {
     "ci": "GitHub Actions",
     "ci_workflows": [
+      "gemini-review.yml",
+      "gemini-dispatch.yml",
+      "gemini-invoke.yml",
       "claude-code-review.yml",
       "claude.yml",
-      "ci.yml"
+      "ci.yml",
+      "gemini-triage.yml",
+      "gemini-scheduled-triage.yml"
     ],
     "deployment": "Vercel"
   },
   "conventions": {
     "js_linting": "ESLint",
-    "typescript": true,
-    "git_hooks": "Husky"
-  }
+    "typescript": true
+  },
+  "dependency_locations": [
+    {
+      "type": "node_modules",
+      "path": "node_modules",
+      "exists": false,
+      "service": "main",
+      "package_manager": "npm"
+    }
+  ]
 }

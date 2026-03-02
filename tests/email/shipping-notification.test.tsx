@@ -342,7 +342,7 @@ describe('ShippingNotificationEmail', () => {
       for (const item of mockItems) {
         expect(html).toContain(item.productName)
         expect(html).toContain(item.productSku)
-      })
+      }
     })
   })
 })

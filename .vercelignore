@@ -16,6 +16,7 @@ docs/
 !docs/PRODUCTION_DATABASE.md
 !DEPLOYMENT_COMPLETE.md
 *.md
+!public/find-us-locally/find-us-locally.md
 
 # Backstage
 backstage/
@@ -67,6 +68,7 @@ public/images/Jose-*.png
 # Note: Hero-Image-Mike.png is used and should be deployed
 
 # Heavy development/AI directories
+.claude
 .auto-claude/
 .project-analysis/
 .smart-env/
