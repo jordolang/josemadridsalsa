@@ -169,6 +169,7 @@ model Product {
   nutritionalInfo       NutritionalInfo?
   productIngredients    ProductIngredient[]
 
+  @@index([stockStatus])
   @@map("products")
 }
 

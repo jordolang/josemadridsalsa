@@ -8,7 +8,7 @@ import { calculateTax } from '@/lib/tax-calculator'
 import { calculateShipping } from '@/lib/shipping-calculator'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
-import { reserveInventory, releaseInventory } from '@/lib/inventory-manager'
+import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manager'
 
 const CheckoutSchema = z.object({
   items: z
@@ -103,42 +103,28 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Reserve inventory for all items before proceeding with checkout
-    // This prevents race conditions where multiple customers try to checkout the same product
-    const reservationResults = []
-    for (const item of items) {
-      try {
-        const reservation = await reserveInventory({
+    // Reserve inventory for all items atomically before proceeding with checkout.
+    // reserveMultipleProducts uses a single Serializable transaction: if any item
+    // has insufficient stock the entire reservation is rolled back automatically.
+    let reservationResults: Awaited<ReturnType<typeof reserveMultipleProducts>>
+    try {
+      reservationResults = await reserveMultipleProducts(
+        items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
           userId: user?.id,
-          notes: `Checkout reservation for ${customer.email}`,
-        })
-        reservationResults.push(reservation)
-      } catch (error: any) {
-        // If reservation fails, release any already reserved items
-        for (const reserved of reservationResults) {
-          try {
-            await releaseInventory({
-              productId: reserved.product.id,
-              quantity: reserved.newReserved - reserved.previousReserved,
-              userId: user?.id,
-              notes: 'Checkout failed - releasing reservation',
-            })
-          } catch (releaseError) {
-            console.error('[Checkout] Failed to release reservation:', releaseError)
-          }
-        }
-
-        return NextResponse.json(
-          {
-            error: error.message || 'Unable to reserve inventory',
-          },
-          { status: 400 }
-        )
-      }
+          notes: 'Checkout reservation',
+        }))
+      )
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: error.message || 'Unable to reserve inventory' },
+        { status: 400 }
+      )
     }
 
+    // Wrap all post-reservation logic so we can release reservations on any failure
+    try {
     // Calculate tax using Stripe Tax API
     let taxAmount = 0
     try {
@@ -300,11 +286,28 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({
-      clientSecret: paymentIntent.client_secret,
-      orderId: order.id,
-      amount: total,
-    })
+      return NextResponse.json({
+        clientSecret: paymentIntent.client_secret,
+        orderId: order.id,
+        amount: total,
+      })
+    } catch (postReservationError) {
+      // Release all reservations on any downstream failure
+      console.error('[Checkout] Post-reservation error, releasing all reservations:', postReservationError)
+      for (const item of items) {
+        try {
+          await releaseInventory({
+            productId: item.productId,
+            quantity: item.quantity,
+            userId: user?.id,
+            notes: 'Checkout failed - releasing reservation',
+          })
+        } catch (releaseError) {
+          console.error('[Checkout] Failed to release reservation:', releaseError)
+        }
+      }
+      throw postReservationError
+    }
   } catch (error) {
     console.error('Checkout error:', error)
     return NextResponse.json(

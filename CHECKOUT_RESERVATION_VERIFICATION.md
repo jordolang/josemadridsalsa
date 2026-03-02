@@ -234,6 +234,7 @@ Since automated tests require database access, here's a manual verification guid
 ### Test Steps
 
 #### Test 1: Successful Checkout Flow
+
 ```bash
 # 1. Check initial inventory
 SELECT id, sku, inventory, stockReserved FROM products WHERE sku = 'TEST-SKU';
@@ -266,6 +267,7 @@ WHERE productId = '...' ORDER BY createdAt DESC LIMIT 2;
 ```
 
 #### Test 2: Payment Failure Flow
+
 ```bash
 # 1. Initiate checkout
 POST /api/checkout (same as above)
@@ -295,6 +297,7 @@ This test verifies:
 - ✅ Audit trail completeness
 
 **Note**: Test requires database access to run. In production environment with database access, run:
+
 ```bash
 npm test tests/integration/checkout-reservation-flow.test.ts
 ```

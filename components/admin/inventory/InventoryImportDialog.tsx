@@ -43,6 +43,8 @@ export function InventoryImportDialog() {
           description: 'Please select a CSV file',
           variant: 'destructive',
         });
+        setFile(null);
+        e.currentTarget.value = '';
         return;
       }
       if (format === 'excel' && !['xlsx', 'xls'].includes(extension || '')) {
@@ -51,6 +53,8 @@ export function InventoryImportDialog() {
           description: 'Please select an Excel file (.xlsx or .xls)',
           variant: 'destructive',
         });
+        setFile(null);
+        e.currentTarget.value = '';
         return;
       }
       setFile(selectedFile);
@@ -81,10 +85,16 @@ export function InventoryImportDialog() {
         body: formData,
       });
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error('Unexpected server response — could not parse JSON');
+      }
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to import inventory');
+      if (!response.ok || data.success === false || data.errors?.length || data.failed) {
+        const detail = data.errors?.[0] || data.message || 'Failed to import inventory';
+        throw new Error(detail);
       }
 
       toast({
@@ -95,10 +105,10 @@ export function InventoryImportDialog() {
       setOpen(false);
       setFile(null);
       router.refresh();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Import failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
         variant: 'destructive',
       });
     } finally {

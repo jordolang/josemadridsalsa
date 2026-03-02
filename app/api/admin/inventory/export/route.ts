@@ -21,6 +21,17 @@ export async function GET(req: NextRequest) {
     const categoryId = searchParams.get('category') || '';
     const stockStatus = searchParams.get('stockStatus') || '';
 
+    // Validate format and stockStatus params
+    const validFormats = ['csv', 'excel'];
+    if (!validFormats.includes(format)) {
+      return fail(`Invalid format "${format}". Must be one of: ${validFormats.join(', ')}`, 400);
+    }
+
+    const validStockStatuses = ['IN_STOCK', 'LOW_STOCK', 'OUT_OF_STOCK'];
+    if (stockStatus && !validStockStatuses.includes(stockStatus)) {
+      return fail(`Invalid stockStatus "${stockStatus}". Must be one of: ${validStockStatuses.join(', ')}`, 400);
+    }
+
     // Build where clause (same as list endpoint)
     const where: any = {};
 

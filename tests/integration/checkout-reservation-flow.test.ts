@@ -11,7 +11,9 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import prisma from '@/lib/prisma'
 import { reserveInventory, releaseInventory, deductReservedInventory } from '@/lib/inventory-manager'
 
-describe('Checkout Reservation Flow', () => {
+const runIntegration = !!(process.env.DATABASE_URL || process.env.RUN_INTEGRATION_TESTS)
+
+describe.skipIf(!runIntegration)('Checkout Reservation Flow', () => {
   let testProduct: any
   const INITIAL_INVENTORY = 50
   const RESERVE_QUANTITY_1 = 5
@@ -182,7 +184,7 @@ describe('Checkout Reservation Flow', () => {
     expect(transactions).toHaveLength(4)
 
     // Transaction 1: Reservation
-    expect(transactions[0].reason).toBe('RESERVATION')
+    expect(transactions[0].type).toBe('RESERVATION')
     expect(transactions[0].quantity).toBe(RESERVE_QUANTITY_1)
     expect(transactions[0].orderId).toBe('test-order-1')
 
@@ -192,12 +194,12 @@ describe('Checkout Reservation Flow', () => {
     expect(transactions[1].orderId).toBe('test-order-1')
 
     // Transaction 3: Reservation
-    expect(transactions[2].reason).toBe('RESERVATION')
+    expect(transactions[2].type).toBe('RESERVATION')
     expect(transactions[2].quantity).toBe(RESERVE_QUANTITY_2)
     expect(transactions[2].orderId).toBe('test-order-2')
 
     // Transaction 4: Release
-    expect(transactions[3].reason).toBe('RELEASE')
+    expect(transactions[3].type).toBe('RELEASE')
     expect(transactions[3].quantity).toBe(-RESERVE_QUANTITY_2)
     expect(transactions[3].orderId).toBe('test-order-2')
 

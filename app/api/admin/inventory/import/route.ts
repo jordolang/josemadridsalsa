@@ -21,6 +21,24 @@ interface ImportError {
 }
 
 /**
+ * Map exported CSV/Excel header names to the canonical internal field names.
+ * The export produces headers like 'SKU', 'Current Stock', 'Low Stock Threshold';
+ * the importer expects 'sku', 'inventory', 'lowStockThreshold'.
+ */
+function toCanonicalHeader(header: string): string {
+  const normalised = header.trim();
+  const map: Record<string, string> = {
+    'SKU': 'sku',
+    'sku': 'sku',
+    'Current Stock': 'inventory',
+    'inventory': 'inventory',
+    'Low Stock Threshold': 'lowStockThreshold',
+    'lowStockThreshold': 'lowStockThreshold',
+  };
+  return map[normalised] ?? normalised;
+}
+
+/**
  * POST /api/admin/inventory/import
  * Import inventory updates from CSV or Excel file
  */
@@ -49,7 +67,6 @@ export async function POST(req: NextRequest) {
 
     // Parse the file
     let importData: InventoryImportRow[] = [];
-    const errors: string[] = [];
     const validationErrors: ImportError[] = [];
 
     if (fileType === 'csv') {
@@ -58,7 +75,7 @@ export async function POST(req: NextRequest) {
         header: true,
         dynamicTyping: true,
         skipEmptyLines: 'greedy',
-        transformHeader: (header) => header.trim(),
+        transformHeader: toCanonicalHeader,
       });
 
       if (parsed.errors.length > 0) {
@@ -90,9 +107,9 @@ export async function POST(req: NextRequest) {
         const data: any[] = [];
         const headers: string[] = [];
 
-        // Get headers from first row
+        // Get headers from first row and normalise them
         worksheet.getRow(1).eachCell((cell) => {
-          headers.push(cell.value?.toString().trim() || '');
+          headers.push(toCanonicalHeader(cell.value?.toString() || ''));
         });
 
         // Process data rows
@@ -179,6 +196,27 @@ export async function POST(req: NextRequest) {
       }, 400);
     }
 
+    // Detect duplicate SKUs in the import file
+    const skuCounts = new Map<string, number>();
+    for (const row of validRows) {
+      skuCounts.set(row.sku, (skuCounts.get(row.sku) ?? 0) + 1);
+    }
+    const duplicateSKUs = [...skuCounts.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([sku]) => sku);
+
+    if (duplicateSKUs.length > 0) {
+      return ok({
+        success: false,
+        errors: [
+          `Duplicate SKUs found in import file: ${duplicateSKUs.join(', ')}. Each SKU must appear only once.`,
+        ],
+        totalRows: importData.length,
+        validRows: validRows.length,
+        updated: 0,
+      }, 400);
+    }
+
     // Get all SKUs to validate they exist
     const skus = validRows.map(r => r.sku);
     const products = await prisma.product.findMany({
@@ -189,6 +227,7 @@ export async function POST(req: NextRequest) {
         id: true,
         sku: true,
         inventory: true,
+        stockReserved: true,
       },
     });
 
@@ -236,7 +275,8 @@ export async function POST(req: NextRequest) {
           await adjustInventory({
             productId: product.id,
             quantity: quantityChange,
-            type: InventoryTransactionType.IMPORT,
+            type: InventoryTransactionType.ADJUSTMENT,
+            reason: 'IMPORT',
             notes: `Inventory import: ${currentInventory} → ${targetInventory}`,
             userId: user.id,
           });

@@ -15,7 +15,9 @@ import prisma from '@/lib/prisma'
 import Papa from 'papaparse'
 import ExcelJS from 'exceljs'
 
-describe('Import/Export Round-Trip', () => {
+const runIntegration = !!(process.env.DATABASE_URL || process.env.RUN_INTEGRATION_TESTS)
+
+describe.skipIf(!runIntegration)('Import/Export Round-Trip', () => {
   let testProducts: any[] = []
   const TEST_PRODUCTS = [
     {

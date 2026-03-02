@@ -3,11 +3,16 @@
 import { InventoryExportDialog } from '@/components/admin/inventory/InventoryExportDialog';
 import { InventoryImportDialog } from '@/components/admin/inventory/InventoryImportDialog';
 
-export function InventoryClientActions() {
+interface InventoryClientActionsProps {
+  canImport: boolean;
+  canExport: boolean;
+}
+
+export function InventoryClientActions({ canImport, canExport }: InventoryClientActionsProps) {
   return (
     <div className="flex items-center gap-2">
-      <InventoryImportDialog />
-      <InventoryExportDialog />
+      {canImport && <InventoryImportDialog />}
+      {canExport && <InventoryExportDialog />}
     </div>
   );
 }

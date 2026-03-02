@@ -35,8 +35,14 @@ export function InventoryExportDialog() {
       const response = await fetch(`/api/admin/inventory/export?format=${format}`);
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to export inventory');
+        let errorMessage = 'Failed to export inventory';
+        try {
+          const data = await response.json();
+          errorMessage = data.error || data.details || data.message || errorMessage;
+        } catch {
+          // Response body is not JSON
+        }
+        throw new Error(errorMessage);
       }
 
       // Get the blob from the response
@@ -60,10 +66,10 @@ export function InventoryExportDialog() {
       });
 
       setOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Export failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
         variant: 'destructive',
       });
     } finally {

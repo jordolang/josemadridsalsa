@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { deductReservedInventory, releaseInventory } from '@/lib/inventory-manager'
+import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 
 const CompleteSchema = z.object({
   orderId: z.string().cuid(),
@@ -71,49 +71,81 @@ export async function POST(request: Request) {
       )
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.order.update({
-        where: { id: order.id },
-        data: {
-          paymentStatus: 'PAID',
-          status: 'CONFIRMED',
-          stripePaymentId: paymentIntentId,
-        },
-      })
+    // Collect deduction results for post-transaction alert firing
+    const itemDeductions: Array<{
+      productId: string
+      newInventory: number
+      lowStockThreshold: number
+    }> = []
 
-      // Mark any abandoned carts as recovered
-      if (order.userId) {
-        await tx.abandonedCart.updateMany({
-          where: {
-            userId: order.userId,
-            recoveredAt: null,
-          },
+    // Atomically mark the order PAID and deduct inventory in the same transaction.
+    // If deduction fails, the order stays PENDING and inventory stays reserved.
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.order.update({
+          where: { id: order!.id },
           data: {
-            recoveredAt: new Date(),
+            paymentStatus: 'PAID',
+            status: 'CONFIRMED',
+            stripePaymentId: paymentIntentId,
           },
         })
-      } else if (order.guestEmail) {
-        await tx.abandonedCart.updateMany({
-          where: {
-            guestEmail: order.guestEmail.toLowerCase(),
-            recoveredAt: null,
-          },
-          data: {
-            recoveredAt: new Date(),
-          },
-        })
+
+        // Mark any abandoned carts as recovered
+        if (order!.userId) {
+          await tx.abandonedCart.updateMany({
+            where: {
+              userId: order!.userId,
+              recoveredAt: null,
+            },
+            data: {
+              recoveredAt: new Date(),
+            },
+          })
+        } else if (order!.guestEmail) {
+          await tx.abandonedCart.updateMany({
+            where: {
+              guestEmail: order!.guestEmail.toLowerCase(),
+              recoveredAt: null,
+            },
+            data: {
+              recoveredAt: new Date(),
+            },
+          })
+        }
+
+        // Deduct reserved inventory for each item inside the same transaction
+        for (const item of order!.items) {
+          const result = await deductReservedInventoryInTx(
+            {
+              productId: item.productId,
+              quantity: item.quantity,
+              orderId: order!.id,
+              userId: order!.userId || undefined,
+              notes: `Payment completed for order ${order!.id}`,
+            },
+            tx
+          )
+          itemDeductions.push({
+            productId: item.productId,
+            newInventory: result.newInventory,
+            lowStockThreshold: result.product.lowStockThreshold,
+          })
+        }
+      },
+      { isolationLevel: 'Serializable' }
+    )
+
+    // Fire inventory alerts after the committed transaction (non-critical)
+    for (const { productId, newInventory, lowStockThreshold } of itemDeductions) {
+      try {
+        await checkAndUpdateAlerts(productId, newInventory, lowStockThreshold)
+      } catch (alertError) {
+        console.error(
+          `[checkout/complete] Alert sync failed for product ${productId} (order ${order.id}):`,
+          alertError
+        )
       }
-    })
-
-    // Deduct reserved inventory for each item
-    for (const item of order.items) {
-      await deductReservedInventory({
-        productId: item.productId,
-        quantity: item.quantity,
-        orderId: order.id,
-        userId: order.userId || undefined,
-        notes: `Payment completed for order ${order.id}`,
-      })
     }
 
     return NextResponse.json({ success: true })

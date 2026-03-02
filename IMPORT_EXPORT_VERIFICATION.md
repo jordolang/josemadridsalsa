@@ -123,7 +123,7 @@ The import/export feature allows administrators to:
 - Import rejects negative inventory values
 - Import validates file type and size (max 10MB)
 - Returns row-level validation errors with line numbers
-- No partial updates (all-or-nothing per row)
+- Each individual row update is atomic (the DB update + transaction record commit together), but the overall import may partially succeed: rows that pass validation are applied even if other rows fail
 
 **Verification Method:**
 ```typescript
