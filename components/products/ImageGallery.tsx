@@ -13,6 +13,8 @@ interface ImageGalleryProps {
 export function ImageGallery({ images, productName, featuredImage }: ImageGalleryProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [imageError, setImageError] = useState(false)
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
   // Build the gallery images array
   const galleryImages = images.length > 0 ? images : featuredImage ? [featuredImage] : []
@@ -22,10 +24,50 @@ export function ImageGallery({ images, productName, featuredImage }: ImageGaller
     ? '/images/placeholder-salsa.jpg'
     : galleryImages[selectedImageIndex]
 
+  // Minimum swipe distance (in px) to trigger image change
+  const minSwipeDistance = 50
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+
+    if (galleryImages.length > 1) {
+      if (isLeftSwipe) {
+        // Swipe left - go to next image
+        setSelectedImageIndex((prev) =>
+          prev === galleryImages.length - 1 ? 0 : prev + 1
+        )
+      }
+      if (isRightSwipe) {
+        // Swipe right - go to previous image
+        setSelectedImageIndex((prev) =>
+          prev === 0 ? galleryImages.length - 1 : prev - 1
+        )
+      }
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Main Image Display */}
-      <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted">
+      <div
+        className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted touch-pan-y"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         <Image
           src={currentImage}
           alt={productName}
