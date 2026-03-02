@@ -5,6 +5,7 @@ import type { Metadata } from 'next'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { createMetadata } from '@/lib/metadata'
+import { LocationMapClient } from '@/components/store/location-map-client'
 
 // Lazy load heavy below-the-fold components for better performance
 const AnimatedTestimonials = dynamic(
@@ -20,14 +21,6 @@ const GiftBoxSelector = dynamic(
   {
     loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" />,
     ssr: true
-  }
-)
-
-const LocationMap = dynamic(
-  () => import('@/components/store/location-map').then(mod => ({ default: mod.LocationMap })),
-  {
-    loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" />,
-    ssr: false // Google Maps should only load on client
   }
 )
 
@@ -217,7 +210,7 @@ export default function Home() {
       <GiftBoxSelector />
 
       {/* Location Map Section */}
-      <LocationMap />
+      <LocationMapClient />
 
       {/* Reviews Section */}
       <AnimatedTestimonials />
