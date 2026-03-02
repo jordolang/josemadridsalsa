@@ -1,12 +1,35 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import type { Metadata } from 'next'
-import { AnimatedTestimonials } from '@/components/store/animated-testimonials'
-import { GiftBoxSelector } from '@/components/store/gift-box-selector'
-import { LocationMap } from '@/components/store/location-map'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { createMetadata } from '@/lib/metadata'
+
+// Lazy load heavy below-the-fold components for better performance
+const AnimatedTestimonials = dynamic(
+  () => import('@/components/store/animated-testimonials').then(mod => ({ default: mod.AnimatedTestimonials })),
+  {
+    loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" />,
+    ssr: true
+  }
+)
+
+const GiftBoxSelector = dynamic(
+  () => import('@/components/store/gift-box-selector').then(mod => ({ default: mod.GiftBoxSelector })),
+  {
+    loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" />,
+    ssr: true
+  }
+)
+
+const LocationMap = dynamic(
+  () => import('@/components/store/location-map').then(mod => ({ default: mod.LocationMap })),
+  {
+    loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" />,
+    ssr: false // Google Maps should only load on client
+  }
+)
 
 export const metadata: Metadata = createMetadata({
   title: 'Jose Madrid Salsa - Premium Gourmet Salsa',
