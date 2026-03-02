@@ -11,6 +11,7 @@ const nextConfig = {
     return `build-${Date.now()}`
   },
   images: {
+    quality: 75,
     remotePatterns: [
       {
         protocol: 'https',
