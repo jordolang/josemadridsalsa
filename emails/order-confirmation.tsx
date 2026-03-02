@@ -30,7 +30,7 @@ export const OrderConfirmationEmail = ({
 
   return (
     <EmailLayout previewText={previewText}>
-      <EmailHeader />
+      <EmailHeader headerImage="order-confirmed.png" headerAlt="Order Confirmed" />
 
       {/* Greeting */}
       <Section style={section}>

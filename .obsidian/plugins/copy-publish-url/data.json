@@ -1,0 +1,9 @@
+{
+  "homeNote": "",
+  "publishPath": "http/",
+  "enableContext": true,
+  "enableOpenUrl": true,
+  "enableGithub": true,
+  "remoteUrl": "https://github.com/jordolang/LIFEOS-REPO.git/",
+  "branch": "main"
+}
