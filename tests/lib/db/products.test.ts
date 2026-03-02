@@ -354,6 +354,14 @@ describe('getProductBySlug', () => {
         category: true,
         variants: true,
         nutritionalInfo: true,
+        productIngredients: {
+          include: {
+            ingredient: true,
+          },
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
         productTags: {
           include: {
             tag: true,
