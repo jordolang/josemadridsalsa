@@ -5,6 +5,7 @@ import type { CheckoutSessionRequest } from '@/lib/stripe/types'
 
 // Mock Stripe checkout sessions create
 const mockCheckoutSessionsCreate = vi.fn()
+const mockCheckoutSessionsRetrieve = vi.fn()
 
 // Mock Prisma
 vi.mock('@/lib/prisma', () => ({
@@ -14,6 +15,7 @@ vi.mock('@/lib/prisma', () => ({
     },
     payment: {
       create: vi.fn(),
+      findFirst: vi.fn(),
     },
   },
 }))
@@ -24,6 +26,7 @@ vi.mock('@/lib/stripe', () => ({
     checkout: {
       sessions: {
         create: mockCheckoutSessionsCreate,
+        retrieve: mockCheckoutSessionsRetrieve,
       },
     },
   })),
@@ -49,12 +52,14 @@ const mockOrder = {
 const mockStripeSession = {
   id: 'cs_test_123',
   url: 'https://checkout.stripe.com/pay/cs_test_123',
+  status: 'open',
 }
 
-describe('Stripe checkout session creation', () => {
+describe('POST /api/checkout/create-session', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCheckoutSessionsCreate.mockClear()
+    mockCheckoutSessionsRetrieve.mockClear()
     process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000'
   })
 
@@ -62,6 +67,7 @@ describe('Stripe checkout session creation', () => {
     const { default: prisma } = await import('@/lib/prisma')
 
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(null)
     mockCheckoutSessionsCreate.mockResolvedValue(mockStripeSession)
     vi.mocked(prisma.payment.create).mockResolvedValue({
       id: 'payment-123',
@@ -139,7 +145,7 @@ describe('Stripe checkout session creation', () => {
 
     vi.mocked(prisma.order.findUnique).mockResolvedValue({
       ...mockOrder,
-      paymentStatus: 'PAID',
+      paymentStatus: 'SUCCEEDED',
     } as any)
 
     const requestBody: CheckoutSessionRequest = {
@@ -158,6 +164,118 @@ describe('Stripe checkout session creation', () => {
     expect(data.error).toBe('Order has already been paid')
   })
 
+  it('returns existing open session when same orderId submitted twice (idempotency)', async () => {
+    const { default: prisma } = await import('@/lib/prisma')
+
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue({
+      id: 'payment-existing',
+      orderId: 'order-123',
+      stripeCheckoutSessionId: 'cs_existing_123',
+      status: 'PENDING',
+    } as any)
+    mockCheckoutSessionsRetrieve.mockResolvedValue({
+      id: 'cs_existing_123',
+      url: 'https://checkout.stripe.com/pay/cs_existing_123',
+      status: 'open',
+    })
+
+    const requestBody: CheckoutSessionRequest = {
+      orderId: 'clxxx1234567890abc',
+    }
+
+    const request = new NextRequest('http://localhost/api/checkout/create-session', {
+      method: 'POST',
+      body: JSON.stringify(requestBody),
+    })
+
+    const response = await POST(request)
+    const data = await response.json()
+
+    // Should return the existing session, not create a new one
+    expect(response.status).toBe(200)
+    expect(data.sessionId).toBe('cs_existing_123')
+    expect(data.url).toBe('https://checkout.stripe.com/pay/cs_existing_123')
+    expect(mockCheckoutSessionsCreate).not.toHaveBeenCalled()
+    expect(prisma.payment.create).not.toHaveBeenCalled()
+  })
+
+  it('rejects successUrl from a different origin (open redirect protection)', async () => {
+    const { default: prisma } = await import('@/lib/prisma')
+
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+
+    const requestBody = {
+      orderId: 'clxxx1234567890abc',
+      successUrl: 'https://evil.example.com/steal-data',
+    }
+
+    const request = new NextRequest('http://localhost/api/checkout/create-session', {
+      method: 'POST',
+      body: JSON.stringify(requestBody),
+    })
+
+    const response = await POST(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toContain('Invalid success URL')
+    expect(mockCheckoutSessionsCreate).not.toHaveBeenCalled()
+  })
+
+  it('rejects cancelUrl from a different origin (open redirect protection)', async () => {
+    const { default: prisma } = await import('@/lib/prisma')
+
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+
+    const requestBody = {
+      orderId: 'clxxx1234567890abc',
+      cancelUrl: 'https://evil.example.com/phish',
+    }
+
+    const request = new NextRequest('http://localhost/api/checkout/create-session', {
+      method: 'POST',
+      body: JSON.stringify(requestBody),
+    })
+
+    const response = await POST(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toContain('Invalid cancel URL')
+    expect(mockCheckoutSessionsCreate).not.toHaveBeenCalled()
+  })
+
+  it('accepts successUrl matching the app URL', async () => {
+    const { default: prisma } = await import('@/lib/prisma')
+
+    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(null)
+    mockCheckoutSessionsCreate.mockResolvedValue(mockStripeSession)
+    vi.mocked(prisma.payment.create).mockResolvedValue({} as any)
+
+    const requestBody = {
+      orderId: 'clxxx1234567890abc',
+      successUrl: 'http://localhost:3000/checkout/success',
+      cancelUrl: 'http://localhost:3000/checkout/cancel',
+    }
+
+    const request = new NextRequest('http://localhost/api/checkout/create-session', {
+      method: 'POST',
+      body: JSON.stringify(requestBody),
+    })
+
+    const response = await POST(request)
+
+    expect(response.status).toBe(200)
+    expect(mockCheckoutSessionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success_url: 'http://localhost:3000/checkout/success',
+        cancel_url: 'http://localhost:3000/checkout/cancel',
+      })
+    )
+  })
+
   it('uses authenticated user email when available', async () => {
     const { default: prisma } = await import('@/lib/prisma')
 
@@ -171,6 +289,7 @@ describe('Stripe checkout session creation', () => {
     }
 
     vi.mocked(prisma.order.findUnique).mockResolvedValue(orderWithUser as any)
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(null)
     mockCheckoutSessionsCreate.mockResolvedValue(mockStripeSession)
     vi.mocked(prisma.payment.create).mockResolvedValue({} as any)
 
@@ -192,38 +311,11 @@ describe('Stripe checkout session creation', () => {
     )
   })
 
-  it('uses custom success and cancel URLs when provided', async () => {
-    const { default: prisma } = await import('@/lib/prisma')
-
-    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
-    mockCheckoutSessionsCreate.mockResolvedValue(mockStripeSession)
-    vi.mocked(prisma.payment.create).mockResolvedValue({} as any)
-
-    const requestBody: CheckoutSessionRequest = {
-      orderId: 'clxxx1234567890abc',
-      successUrl: 'https://example.com/success',
-      cancelUrl: 'https://example.com/cancel',
-    }
-
-    const request = new NextRequest('http://localhost/api/checkout/create-session', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    })
-
-    await POST(request)
-
-    expect(mockCheckoutSessionsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success_url: 'https://example.com/success',
-        cancel_url: 'https://example.com/cancel',
-      })
-    )
-  })
-
   it('uses default URLs when not provided', async () => {
     const { default: prisma } = await import('@/lib/prisma')
 
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(null)
     mockCheckoutSessionsCreate.mockResolvedValue(mockStripeSession)
     vi.mocked(prisma.payment.create).mockResolvedValue({} as any)
 
@@ -250,6 +342,7 @@ describe('Stripe checkout session creation', () => {
     const { default: prisma } = await import('@/lib/prisma')
 
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(null)
     mockCheckoutSessionsCreate.mockResolvedValue(mockStripeSession)
     vi.mocked(prisma.payment.create).mockResolvedValue({} as any)
 
@@ -282,6 +375,7 @@ describe('Stripe checkout session creation', () => {
     const { default: prisma } = await import('@/lib/prisma')
 
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(null)
     mockCheckoutSessionsCreate.mockResolvedValue(mockStripeSession)
     vi.mocked(prisma.payment.create).mockResolvedValue({} as any)
 
@@ -313,10 +407,11 @@ describe('Stripe checkout session creation', () => {
     )
   })
 
-  it('creates pending payment record', async () => {
+  it('creates pending payment record without stripePaymentIntentId', async () => {
     const { default: prisma } = await import('@/lib/prisma')
 
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(null)
     mockCheckoutSessionsCreate.mockResolvedValue(mockStripeSession)
     vi.mocked(prisma.payment.create).mockResolvedValue({} as any)
 
@@ -335,7 +430,6 @@ describe('Stripe checkout session creation', () => {
       data: {
         orderId: 'order-123',
         stripeCheckoutSessionId: 'cs_test_123',
-        stripePaymentIntentId: '',
         amount: 2999,
         currency: 'usd',
         status: 'PENDING',
@@ -351,6 +445,7 @@ describe('Stripe checkout session creation', () => {
     const { default: prisma } = await import('@/lib/prisma')
 
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(null)
     mockCheckoutSessionsCreate.mockRejectedValue(new Error('Stripe API error'))
 
     const requestBody: CheckoutSessionRequest = {

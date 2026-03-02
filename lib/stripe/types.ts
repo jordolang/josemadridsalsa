@@ -26,7 +26,6 @@ export type RefundRequest = {
 
 export type RefundResponse = {
   refundId: string
-  amount: number
   status: 'pending' | 'succeeded' | 'failed' | 'canceled'
 }
 

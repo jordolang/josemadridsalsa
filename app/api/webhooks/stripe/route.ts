@@ -96,7 +96,7 @@ export async function POST(request: Request) {
         }
 
         // Skip if already paid
-        if (order.paymentStatus === 'PAID') {
+        if (order.paymentStatus === 'SUCCEEDED') {
           console.log('Order already marked as paid:', orderId)
           return NextResponse.json({ received: true })
         }
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
           await tx.order.update({
             where: { id: order.id },
             data: {
-              paymentStatus: 'PAID',
+              paymentStatus: 'SUCCEEDED',
               status: 'CONFIRMED',
               stripePaymentId: paymentIntent.id,
             },

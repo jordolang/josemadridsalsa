@@ -1,13 +1,20 @@
--- CreateEnum
-CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'CANCELED', 'REFUNDED', 'PARTIALLY_REFUNDED');
+-- CreateEnum (guarded: only create if not already defined)
+DO $$ BEGIN
+  CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'CANCELED', 'REFUNDED', 'PARTIALLY_REFUNDED');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
--- CreateEnum
-CREATE TYPE "RefundStatus" AS ENUM ('PENDING', 'SUCCEEDED', 'FAILED', 'CANCELED');
+DO $$ BEGIN
+  CREATE TYPE "RefundStatus" AS ENUM ('PENDING', 'SUCCEEDED', 'FAILED', 'CANCELED');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- CreateTable
 CREATE TABLE "payments" (
     "id" TEXT NOT NULL,
-    "stripePaymentIntentId" TEXT NOT NULL,
+    "stripePaymentIntentId" TEXT,
     "stripeCheckoutSessionId" TEXT,
     "amount" INTEGER NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'usd',
@@ -70,8 +77,7 @@ CREATE INDEX "refunds_paymentId_idx" ON "refunds"("paymentId");
 -- CreateIndex
 CREATE UNIQUE INDEX "webhook_events_stripeEventId_key" ON "webhook_events"("stripeEventId");
 
--- CreateIndex
-CREATE INDEX "webhook_events_stripeEventId_idx" ON "webhook_events"("stripeEventId");
+-- CreateIndex (stripeEventId_idx removed: unique constraint already provides an implicit index)
 
 -- CreateIndex
 CREATE INDEX "webhook_events_processed_idx" ON "webhook_events"("processed");

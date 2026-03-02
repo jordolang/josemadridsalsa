@@ -729,7 +729,7 @@ model OrderItem {
 
 model Payment {
   id                      String        @id @default(cuid())
-  stripePaymentIntentId   String        @unique
+  stripePaymentIntentId   String?       @unique
   stripeCheckoutSessionId String?       @unique
 
   // Payment details
@@ -786,7 +786,6 @@ model WebhookEvent {
   processed     Boolean  @default(false)
   createdAt     DateTime @default(now())
 
-  @@index([stripeEventId])
   @@index([processed])
   @@map("webhook_events")
 }

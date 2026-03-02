@@ -6,8 +6,8 @@ import type { CheckoutSessionRequest, CheckoutSessionResponse } from '@/lib/stri
 
 const CheckoutSessionSchema = z.object({
   orderId: z.string().cuid(),
-  successUrl: z.string().url().optional(),
-  cancelUrl: z.string().url().optional(),
+  successUrl: z.string().optional(),
+  cancelUrl: z.string().optional(),
 })
 
 export async function POST(request: Request) {
@@ -24,6 +24,22 @@ export async function POST(request: Request) {
 
     const { orderId, successUrl, cancelUrl } = parsed.data
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+
+    // Validate successUrl/cancelUrl to prevent open redirect attacks
+    if (successUrl && !successUrl.startsWith(appUrl) && !successUrl.startsWith('/')) {
+      return NextResponse.json(
+        { error: 'Invalid success URL: must be a relative path or start with the app URL' },
+        { status: 400 }
+      )
+    }
+    if (cancelUrl && !cancelUrl.startsWith(appUrl) && !cancelUrl.startsWith('/')) {
+      return NextResponse.json(
+        { error: 'Invalid cancel URL: must be a relative path or start with the app URL' },
+        { status: 400 }
+      )
+    }
+
     // Fetch order with items
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -38,23 +54,41 @@ export async function POST(request: Request) {
     }
 
     // Check if order is already paid
-    if (order.paymentStatus === 'PAID') {
+    if (order.paymentStatus === 'SUCCEEDED') {
       return NextResponse.json(
         { error: 'Order has already been paid' },
         { status: 400 }
       )
     }
 
+    // Idempotency: return existing active session if one already exists for this order
+    const stripe = getStripe()
+
+    const existingPayment = await prisma.payment.findFirst({
+      where: {
+        orderId: order.id,
+        status: 'PENDING',
+        stripeCheckoutSessionId: { not: null },
+      },
+    })
+
+    if (existingPayment?.stripeCheckoutSessionId) {
+      const existingSession = await stripe.checkout.sessions.retrieve(
+        existingPayment.stripeCheckoutSessionId
+      )
+      if (existingSession.status === 'open') {
+        return NextResponse.json({
+          sessionId: existingSession.id,
+          url: existingSession.url,
+        } as CheckoutSessionResponse)
+      }
+    }
+
     // Get customer email
     const customerEmail = order.guestEmail || order.user?.email
 
-    // Create Stripe checkout session
-    const stripe = getStripe()
-
     // Convert total from Decimal to number and then to cents
     const totalInCents = Math.round(Number(order.total) * 100)
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -80,12 +114,11 @@ export async function POST(request: Request) {
       },
     })
 
-    // Create pending payment record
+    // Create pending payment record (stripePaymentIntentId is null until populated by webhook)
     await prisma.payment.create({
       data: {
         orderId: order.id,
         stripeCheckoutSessionId: session.id,
-        stripePaymentIntentId: '', // Will be populated by webhook
         amount: totalInCents,
         currency: 'usd',
         status: 'PENDING',
