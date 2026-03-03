@@ -98,3 +98,6 @@ gha-creds-*.json
 # Logs
 logs/
 logs/security/
+
+# Claude Code local settings (do not commit)
+.claude/settings.local.json
