@@ -51,7 +51,8 @@
     "analyze:report": "tsx scripts/analyze-project.ts --export markdown",
     "auto-execute": "tsx scripts/auto-execute-session.ts",
     "db:deploy": "prisma migrate deploy",
-    "vercel-build": "prisma generate && prisma db push --skip-generate --accept-data-loss && next build"
+    "vercel-build": "prisma generate && next build",
+    "db:sync": "prisma db push --skip-generate --accept-data-loss"
   },
   "keywords": [
     "salsa",
