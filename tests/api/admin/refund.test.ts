@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/admin/orders/[id]/refund/route'
+import { UserRole } from '@prisma/client'
 
 // Mock dependencies
 vi.mock('@/lib/rbac', () => ({
@@ -44,7 +45,7 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     id: 'user-admin-123',
     email: 'admin@example.com',
     name: 'Admin User',
-    role: 'ADMIN',
+    role: UserRole.ADMIN,
   }
 
   const mockOrder = {

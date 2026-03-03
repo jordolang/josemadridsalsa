@@ -73,8 +73,9 @@ export async function POST(
 
     // Retrieve the payment intent to get the charge ID
     const paymentIntent = await stripe.paymentIntents.retrieve(
-      order.stripePaymentId
-    );
+      order.stripePaymentId,
+      { expand: ['charges'] }
+    ) as any;
 
     const latestCharge = typeof paymentIntent.latest_charge === 'string'
       ? paymentIntent.latest_charge
@@ -90,7 +91,7 @@ export async function POST(
     const charge = await stripe.charges.retrieve(chargeId);
     const existingRefunds = charge.refunds?.data || [];
     const totalRefunded = existingRefunds.reduce(
-      (sum, refund) => sum + refund.amount,
+      (sum: number, refund: any) => sum + refund.amount,
       0
     ) / 100; // Convert from cents to dollars
 

@@ -42,7 +42,9 @@ async function getRefundableAmount(order: {
 
   try {
     const stripe = getStripe()
-    const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentId)
+    const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentId, {
+      expand: ['charges']
+    }) as any
 
     const chargeId = typeof paymentIntent.latest_charge === 'string'
       ? paymentIntent.latest_charge
