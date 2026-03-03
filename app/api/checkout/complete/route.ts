@@ -11,7 +11,7 @@ const CompleteSchema = z.object({
 })
 
 export async function POST(request: Request) {
-  let order: Awaited<ReturnType<typeof prisma.order.findUnique>> | null = null
+  let order: Awaited<ReturnType<typeof prisma.order.findUnique<{ where: { id: string }; include: { items: true } }>>> | null = null
 
   try {
     const json = await request.json()
