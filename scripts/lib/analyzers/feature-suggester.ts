@@ -188,7 +188,7 @@ export class FeatureSuggester {
         businessImpact: 'high',
         technicalComplexity: 'medium',
         dependencies: ['Email service (Resend)', 'Background job queue'],
-        files: ['/app/api/cron/abandoned-cart/route.ts', '/lib/email/abandoned-cart.ts'],
+        files: ['/lib/email/abandoned-cart.ts'],
       })
     }
 

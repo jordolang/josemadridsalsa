@@ -55,6 +55,7 @@ josemadridsalsa/
 
 # Data files
 data/
+public/location-photos.json
 
 # Examples and docs
 examples/
@@ -76,13 +77,24 @@ docs/backstage/
 tsconfig.tsbuildinfo
 *. tsbuildinfo
 
-# Auto Claude data directory
-.auto-claude/
+# Gemini
+.gemini/
+gha-creds-*.json
 
-# Auto Claude generated files
+# Claude AI settings and symlinks
+.claude
+.claude_settings.json
+
+# Auto-Claude
+.auto-claude/
 .auto-claude-security.json
 .auto-claude-status
-.claude_settings.json
 .worktrees/
 .security-key
+
+# Project Analysis
+.project-analysis/
+
+# Logs
+logs/
 logs/security/

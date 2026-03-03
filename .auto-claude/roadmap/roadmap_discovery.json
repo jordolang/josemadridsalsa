@@ -1,0 +1,145 @@
+{
+  "project_name": "Jose Madrid Salsa",
+  "project_type": "web-app",
+  "tech_stack": {
+    "primary_language": "TypeScript",
+    "frameworks": ["Next.js 16", "React 19", "Prisma", "Tailwind CSS"],
+    "key_dependencies": [
+      "Stripe (payments)",
+      "NextAuth (authentication)",
+      "Zustand (state management)",
+      "Resend (email)",
+      "Shopify API (e-commerce integration)",
+      "Google Maps/Places API",
+      "Amplitude (analytics)",
+      "Framer Motion (animations)",
+      "Zod (validation)"
+    ]
+  },
+  "target_audience": {
+    "primary_persona": "Gourmet salsa enthusiasts and food lovers seeking premium, artisan salsa products made with quality ingredients",
+    "secondary_personas": [
+      "Wholesale partners (grocery stores, gourmet shops, retailers)",
+      "Fundraising organizations (schools, churches, sports teams, nonprofits)",
+      "Gift shoppers looking for unique food gifts",
+      "Health-conscious consumers interested in authentic, quality ingredients"
+    ],
+    "pain_points": [
+      "Difficulty finding high-quality, authentic gourmet salsa products",
+      "Limited heat level options in mass-market salsas",
+      "Lack of transparency about ingredients and sourcing",
+      "Need for easy fundraising products that sell well",
+      "Wholesale buyers seeking reliable artisan food suppliers"
+    ],
+    "goals": [
+      "Purchase premium salsa with authentic New Mexico-style flavors",
+      "Find the perfect heat level (mild to extra hot) for their taste",
+      "Support local, family-owned food businesses",
+      "Run successful fundraising campaigns with quality products",
+      "Discover new recipes and ways to enjoy salsa"
+    ],
+    "usage_context": "Online shopping for direct-to-consumer purchases, wholesale ordering for retail partners, fundraising program management for organizations, gift purchases for special occasions"
+  },
+  "product_vision": {
+    "one_liner": "Premium gourmet salsa e-commerce platform bringing 35+ years of authentic New Mexico-style family recipes direct to customers",
+    "problem_statement": "Mass-market salsas lack authentic flavor, quality ingredients, and variety. Consumers seeking premium artisan salsa products have limited options for direct purchase, and organizations need reliable fundraising products.",
+    "value_proposition": "Jose Madrid Salsa offers 25+ unique flavors with a 35-year family tradition, authentic New Mexico recipes, premium ingredients (California Pear tomatoes, authentic chiles), multiple heat levels, and established wholesale/fundraising programs - all with direct online ordering.",
+    "success_metrics": [
+      "Online sales revenue growth",
+      "Customer acquisition and retention rates",
+      "Wholesale partner growth",
+      "Fundraising program participation",
+      "Average order value",
+      "Customer satisfaction ratings and reviews",
+      "Cart abandonment rate reduction",
+      "Gift certificate redemption rates"
+    ]
+  },
+  "current_state": {
+    "maturity": "growth",
+    "existing_features": [
+      "Full e-commerce functionality (products, cart, checkout)",
+      "Stripe payment processing integration",
+      "User authentication with NextAuth",
+      "Product catalog with heat level filtering",
+      "Gift certificate purchase and balance checking",
+      "Wholesale account portal",
+      "Fundraising program management",
+      "Store locator (Find Us) with Google Maps",
+      "Recipe collection pages",
+      "Email marketing campaigns and templates",
+      "Admin dashboard with analytics",
+      "Order management system",
+      "Inventory tracking and alerts",
+      "Customer reviews system",
+      "Wishlist functionality",
+      "Abandoned cart recovery",
+      "Shopify integration for inventory sync",
+      "SEO optimization with metadata management",
+      "Responsive design with Tailwind CSS"
+    ],
+    "known_gaps": [
+      "SMTP password encryption not implemented",
+      "Shipping cost calculation not fully implemented",
+      "Tax exemption lookup not implemented",
+      "Product comparison functionality limited",
+      "Subscription/recurring order options not available",
+      "Loyalty/rewards program not fully implemented",
+      "Mobile app not available"
+    ],
+    "technical_debt": [
+      "SMTP password stored without encryption (noted TODO)",
+      "Shipping calculation returns 0 (TODO in calculate-tax route)",
+      "Tax exemption lookup needs implementation",
+      "Some admin pages may need refactoring for consistency",
+      "Email template system could benefit from preview functionality"
+    ]
+  },
+  "competitive_context": {
+    "alternatives": [
+      "Mrs. Renfro's",
+      "Herdez",
+      "Green Mountain Gringo",
+      "Desert Pepper",
+      "Local farmers market salsa vendors",
+      "Regional artisan salsa brands"
+    ],
+    "differentiators": [
+      "35+ year family business heritage with authentic New Mexico recipes",
+      "Named after legendary cowboy grandfather José Madrid",
+      "First four-pepper salsa in the United States",
+      "Award-winning fruit salsa line",
+      "25+ unique flavors across multiple heat levels",
+      "Established fundraising program for organizations",
+      "Direct-to-consumer and wholesale channels",
+      "Ohio-based with Midwest regional presence"
+    ],
+    "market_position": "Premium artisan gourmet salsa brand positioned between mass-market grocery brands and high-end specialty food products, with strong regional presence in the Midwest and growing national reach through e-commerce",
+    "competitor_pain_points": [],
+    "competitor_analysis_available": false
+  },
+  "constraints": {
+    "technical": [
+      "Vercel deployment platform (serverless functions)",
+      "Neon PostgreSQL database",
+      "Stripe payment processing requirements",
+      "Shopify API rate limits for inventory sync",
+      "Google Maps/Places API quotas",
+      "Email sending limits (Resend)"
+    ],
+    "resources": [
+      "Small development team (2-3 primary contributors)",
+      "Family-owned small business operations",
+      "Need to balance development with day-to-day business operations"
+    ],
+    "dependencies": [
+      "Stripe for all payment processing",
+      "Shopify for inventory management integration",
+      "Google APIs for location/maps features",
+      "Resend for transactional emails",
+      "Vercel for hosting and deployment",
+      "Neon for database hosting"
+    ]
+  },
+  "created_at": "2025-01-20T18:30:00Z"
+}

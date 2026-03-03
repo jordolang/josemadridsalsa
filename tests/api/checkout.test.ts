@@ -91,19 +91,35 @@ describe('Checkout API', () => {
     notes: 'Please handle with care',
   }
 
-  const mockProduct = {
+  const mockProduct: any = {
     id: 'clxxx1234567890abc',
     name: 'Test Salsa',
     slug: 'test-salsa',
     description: 'Test description',
     sku: 'TEST-001',
     price: 8.99,
-    inventory: 100,
-    featuredImage: '/images/test.jpg',
+    lowStockThreshold: 5,
     weight: 1.5,
     status: 'ACTIVE',
     createdAt: new Date(),
     updatedAt: new Date(),
+    // Add missing required fields
+    categoryId: 'category-123',
+    heatLevel: 'MEDIUM',
+    ingredients: ['tomatoes', 'onions', 'peppers'],
+    images: [],
+    barcode: null,
+    compareAtPrice: null,
+    costPrice: null,
+    taxCode: null,
+    dimensions: null,
+    metaTitle: null,
+    metaDescription: null,
+    ogImage: null,
+    searchKeywords: [],
+    isActive: true,
+    isFeatured: false,
+    sortOrder: 0,
   }
 
   const mockOrder = {
@@ -149,7 +165,7 @@ describe('Checkout API', () => {
       const { default: prisma } = await import('@/lib/prisma')
 
       vi.mocked(prisma.product.findMany).mockResolvedValue([
-        { ...mockProduct, inventory: 1 }, // Not enough inventory
+        { ...mockProduct, inventory: 1 } as any, // Not enough inventory
       ])
 
       const request = new NextRequest('http://localhost/api/checkout', {

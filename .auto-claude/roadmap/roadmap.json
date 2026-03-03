@@ -1,0 +1,609 @@
+{
+  "id": "roadmap-2025-01-20T18-50-00Z",
+  "project_name": "Jose Madrid Salsa",
+  "version": "1.0",
+  "vision": "Premium gourmet salsa e-commerce platform bringing 35+ years of authentic New Mexico-style family recipes direct to customers",
+  "target_audience": {
+    "primary": "Gourmet salsa enthusiasts and food lovers seeking premium, artisan salsa products made with quality ingredients",
+    "secondary": [
+      "Wholesale partners (grocery stores, gourmet shops, retailers)",
+      "Fundraising organizations (schools, churches, sports teams, nonprofits)",
+      "Gift shoppers looking for unique food gifts",
+      "Health-conscious consumers interested in authentic, quality ingredients"
+    ]
+  },
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "Foundation & Technical Debt",
+      "description": "Address critical technical debt, security issues, and implement quick-win features that improve core e-commerce functionality",
+      "order": 1,
+      "status": "planned",
+      "features": [
+        "feature-1",
+        "feature-2",
+        "feature-3",
+        "feature-4"
+      ],
+      "milestones": [
+        {
+          "id": "milestone-1-1",
+          "title": "Secure Email Configuration",
+          "description": "SMTP passwords are encrypted at rest and securely handled throughout the application",
+          "features": [
+            "feature-1"
+          ],
+          "status": "planned"
+        },
+        {
+          "id": "milestone-1-2",
+          "title": "Complete Checkout Experience",
+          "description": "Shipping costs are accurately calculated and tax exemptions work for eligible customers",
+          "features": [
+            "feature-2",
+            "feature-3"
+          ],
+          "status": "planned"
+        },
+        {
+          "id": "milestone-1-3",
+          "title": "Enhanced Heat Level Discovery",
+          "description": "Customers can easily understand and find products matching their heat preference",
+          "features": [
+            "feature-4"
+          ],
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "Growth & Differentiation",
+      "description": "Launch subscription program and loyalty rewards to drive recurring revenue and customer retention - key differentiators from competitors",
+      "order": 2,
+      "status": "planned",
+      "features": [
+        "feature-5",
+        "feature-6",
+        "feature-7",
+        "feature-8"
+      ],
+      "milestones": [
+        {
+          "id": "milestone-2-1",
+          "title": "Subscription Program Launch",
+          "description": "Customers can subscribe for regular salsa deliveries with customizable preferences",
+          "features": [
+            "feature-5"
+          ],
+          "status": "planned"
+        },
+        {
+          "id": "milestone-2-2",
+          "title": "Loyalty Program Live",
+          "description": "Customers earn and redeem points for purchases, creating stickiness and repeat business",
+          "features": [
+            "feature-6"
+          ],
+          "status": "planned"
+        },
+        {
+          "id": "milestone-2-3",
+          "title": "Enhanced Shopping Experience",
+          "description": "Product comparison and ingredient transparency help customers make confident purchase decisions",
+          "features": [
+            "feature-7",
+            "feature-8"
+          ],
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "Channel Expansion",
+      "description": "Strengthen wholesale and fundraising channels with improved tools and expand customer engagement features",
+      "order": 3,
+      "status": "planned",
+      "features": [
+        "feature-9",
+        "feature-10",
+        "feature-11",
+        "feature-12"
+      ],
+      "milestones": [
+        {
+          "id": "milestone-3-1",
+          "title": "Fundraising Program 2.0",
+          "description": "Organizations can easily manage campaigns with online ordering and real-time tracking",
+          "features": [
+            "feature-9"
+          ],
+          "status": "planned"
+        },
+        {
+          "id": "milestone-3-2",
+          "title": "Customer Engagement Hub",
+          "description": "Heat preference quiz and referral program drive discovery and word-of-mouth growth",
+          "features": [
+            "feature-10",
+            "feature-11"
+          ],
+          "status": "planned"
+        },
+        {
+          "id": "milestone-3-3",
+          "title": "Wholesale Portal Enhancement",
+          "description": "Wholesale partners have streamlined ordering with better inventory visibility",
+          "features": [
+            "feature-12"
+          ],
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "Future Vision",
+      "description": "Long-term features for market expansion and new customer segments",
+      "order": 4,
+      "status": "planned",
+      "features": [
+        "feature-13",
+        "feature-14",
+        "feature-15"
+      ],
+      "milestones": [
+        {
+          "id": "milestone-4-1",
+          "title": "Mobile Experience",
+          "description": "Native mobile app provides convenient shopping and push notifications",
+          "features": [
+            "feature-13"
+          ],
+          "status": "planned"
+        },
+        {
+          "id": "milestone-4-2",
+          "title": "Gift & Corporate Expansion",
+          "description": "Custom gift bundles and corporate ordering capture new market segments",
+          "features": [
+            "feature-14",
+            "feature-15"
+          ],
+          "status": "planned"
+        }
+      ]
+    }
+  ],
+  "features": [
+    {
+      "id": "feature-1",
+      "title": "SMTP Password Encryption",
+      "description": "Implement encryption for SMTP passwords stored in the database. Passwords should be encrypted at rest using AES-256 and decrypted only when needed for email sending.",
+      "rationale": "Security requirement - storing passwords in plaintext is a significant vulnerability. This protects customer data and email infrastructure credentials.",
+      "priority": "must",
+      "complexity": "low",
+      "impact": "medium",
+      "phase_id": "phase-1",
+      "dependencies": [],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "SMTP passwords are encrypted before storage in database",
+        "Passwords are decrypted only when establishing SMTP connection",
+        "Existing unencrypted passwords are migrated to encrypted format",
+        "Admin can update SMTP password without issues"
+      ],
+      "user_stories": [
+        "As an admin, I want email credentials stored securely so that our email infrastructure is protected from unauthorized access"
+      ],
+      "competitor_insight_ids": []
+    },
+    {
+      "id": "feature-2",
+      "title": "Shipping Cost Calculator",
+      "description": "Implement dynamic shipping cost calculation based on order weight, destination, and shipping method. Support flat-rate, weight-based, and real-time carrier rates.",
+      "rationale": "Currently returns $0 which impacts revenue and customer expectations. Accurate shipping costs are essential for a functional e-commerce checkout experience.",
+      "priority": "must",
+      "complexity": "medium",
+      "impact": "high",
+      "phase_id": "phase-1",
+      "dependencies": [],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "Shipping cost calculated based on package weight and dimensions",
+        "Support for multiple shipping zones with different rates",
+        "Free shipping threshold configurable by admin",
+        "Shipping options displayed clearly at checkout",
+        "Integration with at least one carrier API (USPS/UPS/FedEx) for real-time rates"
+      ],
+      "user_stories": [
+        "As a customer, I want to see accurate shipping costs at checkout so that I know the total cost before purchasing",
+        "As an admin, I want to configure shipping rates so that I can balance customer satisfaction with business profitability"
+      ],
+      "competitor_insight_ids": [
+        "pain-2-4"
+      ]
+    },
+    {
+      "id": "feature-3",
+      "title": "Tax Exemption System",
+      "description": "Implement tax exemption lookup and application for eligible customers including nonprofits, wholesale accounts, and fundraising organizations.",
+      "rationale": "Supports wholesale and fundraising programs which are key differentiators. Many organizations require tax-exempt ordering capability.",
+      "priority": "must",
+      "complexity": "medium",
+      "impact": "medium",
+      "phase_id": "phase-1",
+      "dependencies": [],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "Wholesale accounts can be marked as tax-exempt with certificate storage",
+        "Tax exemption automatically applied at checkout for eligible accounts",
+        "Admin can manage tax exemption certificates and expiration dates",
+        "Tax exemption status visible in order details and invoices"
+      ],
+      "user_stories": [
+        "As a wholesale partner, I want my tax-exempt status applied automatically so that I don't have to manually claim exemptions",
+        "As a fundraising organization, I want to purchase without sales tax so that more funds go to our cause"
+      ],
+      "competitor_insight_ids": []
+    },
+    {
+      "id": "feature-4",
+      "title": "Enhanced Heat Level Discovery",
+      "description": "Improve the heat level filtering and display system with detailed descriptions, visual heat scale indicators, and customer-friendly guidance on each level from mild to extra hot.",
+      "rationale": "Addresses major competitor pain point - Mrs. Renfro's, Herdez, and Desert Pepper all have complaints about inaccurate or confusing heat levels. Clear heat guidance is a key differentiator.",
+      "priority": "should",
+      "complexity": "low",
+      "impact": "high",
+      "phase_id": "phase-1",
+      "dependencies": [],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "Visual heat scale (1-5 pepper icons) displayed on all product cards",
+        "Detailed heat level descriptions explaining what to expect (e.g., 'Level 3: Medium - noticeable kick, great for most palates')",
+        "Filter products by heat level on catalog pages",
+        "Heat level comparison when viewing multiple products",
+        "Consistent heat labeling across all 25+ products"
+      ],
+      "user_stories": [
+        "As a salsa enthusiast, I want to clearly understand the heat level before purchasing so that I get products matching my spice tolerance",
+        "As a gift buyer, I want clear heat guidance so that I can select appropriate products for recipients"
+      ],
+      "competitor_insight_ids": [
+        "pain-1-1",
+        "pain-2-3",
+        "pain-3-1",
+        "pain-4-3",
+        "gap-1"
+      ]
+    },
+    {
+      "id": "feature-5",
+      "title": "Subscription Program",
+      "description": "Launch a customizable salsa subscription service with flexible delivery schedules, flavor preferences, heat level preferences, and easy management portal. Unlike Amazing Clubs which curates random brands, Jose Madrid subscriptions guarantee consistent quality from trusted family recipes.",
+      "rationale": "Major market gap - no artisan salsa brand offers customizable subscriptions. Amazing Clubs offers subscriptions but with no flavor control and inconsistent quality across makers. This creates recurring revenue and deepens customer relationships.",
+      "priority": "must",
+      "complexity": "high",
+      "impact": "high",
+      "phase_id": "phase-2",
+      "dependencies": [
+        "feature-2"
+      ],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "Customers can select subscription frequency (weekly, bi-weekly, monthly)",
+        "Flavor preferences allow including/excluding specific products",
+        "Heat level preference ensures all products match desired spiciness",
+        "Subscription management portal for pause, skip, cancel, and modify",
+        "Automatic billing via Stripe recurring payments",
+        "Subscription discount applied (e.g., 10% off regular prices)",
+        "Email notifications before each shipment with option to modify"
+      ],
+      "user_stories": [
+        "As a salsa enthusiast, I want regular deliveries of my favorite salsas so that I never run out",
+        "As a subscriber, I want to customize my box so that I only receive flavors and heat levels I enjoy",
+        "As a busy professional, I want to easily manage my subscription online so that I can pause or adjust as needed"
+      ],
+      "competitor_insight_ids": [
+        "pain-5-1",
+        "pain-5-2",
+        "pain-5-3",
+        "gap-2"
+      ]
+    },
+    {
+      "id": "feature-6",
+      "title": "Loyalty Rewards Program",
+      "description": "Implement a points-based loyalty program where customers earn points on purchases, reviews, and referrals, redeemable for discounts on future orders.",
+      "rationale": "No competitor has a strong loyalty program. This addresses customer retention, increases lifetime value, and creates competitive moat. Rewards repeat purchasers who currently have no incentive beyond product quality.",
+      "priority": "should",
+      "complexity": "medium",
+      "impact": "high",
+      "phase_id": "phase-2",
+      "dependencies": [],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "Customers earn points for every dollar spent (e.g., 1 point per $1)",
+        "Bonus points for leaving reviews, referrals, and birthday",
+        "Points dashboard showing balance, history, and redemption options",
+        "Tiered membership levels (Bronze, Silver, Gold) with increasing benefits",
+        "Points redeemable for dollar discounts at checkout",
+        "Email notifications for points earned and milestone achievements"
+      ],
+      "user_stories": [
+        "As a repeat customer, I want to earn rewards for my purchases so that my loyalty is recognized",
+        "As a customer, I want to see my points balance so that I know how close I am to a reward",
+        "As a salsa lover, I want to earn bonus points for writing reviews so that I'm incentivized to share my experience"
+      ],
+      "competitor_insight_ids": [
+        "gap-8"
+      ]
+    },
+    {
+      "id": "feature-7",
+      "title": "Product Comparison Tool",
+      "description": "Allow customers to compare multiple salsa products side-by-side, showing heat level, ingredients, flavor profile, customer ratings, and suggested uses.",
+      "rationale": "Identified as a known gap in current functionality. Helps customers make confident decisions when choosing between 25+ flavors, reducing choice paralysis and abandoned carts.",
+      "priority": "should",
+      "complexity": "low",
+      "impact": "medium",
+      "phase_id": "phase-2",
+      "dependencies": [],
+      "status": "done",
+      "acceptance_criteria": [
+        "Add to compare button on product cards and detail pages",
+        "Compare up to 4 products side-by-side",
+        "Comparison shows: heat level, ingredients, price, ratings, sizes available",
+        "Highlight differences between compared products",
+        "Add to cart directly from comparison view",
+        "Share comparison via link"
+      ],
+      "user_stories": [
+        "As a new customer, I want to compare different salsas so that I can choose the best ones for my taste",
+        "As a gift buyer, I want to compare products so that I can select the perfect variety pack"
+      ],
+      "linked_spec_id": "001-product-comparison-tool",
+      "task_outcome": "deleted",
+      "previous_status": "planned",
+      "competitor_insight_ids": []
+    },
+    {
+      "id": "feature-8",
+      "title": "Ingredient Sourcing Stories",
+      "description": "Add detailed ingredient sourcing information to product pages, including stories about California Pear tomatoes, authentic chile peppers, and the 35-year family recipe commitment.",
+      "rationale": "Addresses competitor pain points around processed taste (Mrs. Renfro's, Herdez) and recipe changes. Customers want transparency - showcasing premium ingredients and unchanged recipes builds trust and justifies premium positioning.",
+      "priority": "should",
+      "complexity": "low",
+      "impact": "medium",
+      "phase_id": "phase-2",
+      "dependencies": [],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "Each product page includes ingredient sourcing highlights",
+        "Dedicated 'Our Ingredients' page with full sourcing stories",
+        "Visual badges for key ingredients (California Pear tomatoes, authentic chiles)",
+        "'Recipe Never Changed' badge/messaging on applicable products",
+        "Mobile-friendly expandable sections for ingredient details"
+      ],
+      "user_stories": [
+        "As a health-conscious consumer, I want to know where ingredients come from so that I can trust the quality",
+        "As a customer, I want to know the recipes haven't changed so that I can trust the product will taste the same"
+      ],
+      "competitor_insight_ids": [
+        "pain-1-4",
+        "pain-2-2",
+        "gap-3",
+        "gap-7"
+      ]
+    },
+    {
+      "id": "feature-9",
+      "title": "Enhanced Fundraising Portal",
+      "description": "Upgrade the fundraising program with online campaign management, participant tracking, real-time sales dashboards, and digital ordering for supporters.",
+      "rationale": "Fundraising is a key differentiator - very few competitors offer this channel. Enhancing it with modern tools makes the program more attractive to schools, churches, and nonprofits, driving volume sales.",
+      "priority": "should",
+      "complexity": "high",
+      "impact": "high",
+      "phase_id": "phase-3",
+      "dependencies": [],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "Organizations can create and manage fundraising campaigns online",
+        "Participants get unique referral links to share with supporters",
+        "Real-time dashboard showing campaign progress and individual sales",
+        "Supporters can order online with automatic attribution to participant",
+        "Automated profit calculation and payout tracking",
+        "Email templates for campaign promotion",
+        "Mobile-friendly ordering for supporters"
+      ],
+      "user_stories": [
+        "As a fundraising coordinator, I want to track campaign progress in real-time so that I can motivate participants",
+        "As a fundraiser participant, I want a shareable link so that my supporters can easily order online",
+        "As a supporter, I want to order online so that I don't need to handle cash or paper forms"
+      ],
+      "competitor_insight_ids": [
+        "gap-4"
+      ]
+    },
+    {
+      "id": "feature-10",
+      "title": "Salsa Heat Preference Quiz",
+      "description": "Interactive quiz that helps customers discover their ideal heat level and recommends products based on their taste preferences, spice tolerance, and intended uses.",
+      "rationale": "Engages customers who are unsure about their heat preference - a common barrier to purchase. Addresses competitor issue of mismatched expectations on heat levels by setting appropriate expectations upfront.",
+      "priority": "could",
+      "complexity": "medium",
+      "impact": "medium",
+      "phase_id": "phase-3",
+      "dependencies": [
+        "feature-4"
+      ],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "5-7 question quiz about spice tolerance and flavor preferences",
+        "Personalized results with recommended products",
+        "Option to save preferences to account",
+        "Results shareable on social media",
+        "Quiz accessible from homepage and product pages",
+        "Email capture option for non-logged-in users"
+      ],
+      "user_stories": [
+        "As a new customer, I want to take a quiz so that I can find salsas matching my taste",
+        "As a gift buyer, I want to know what heat level to buy so that I don't get something too spicy for the recipient"
+      ],
+      "competitor_insight_ids": [
+        "pain-1-1",
+        "pain-2-3",
+        "gap-1"
+      ]
+    },
+    {
+      "id": "feature-11",
+      "title": "Referral Program",
+      "description": "Implement refer-a-friend program where existing customers earn rewards for bringing in new customers, who also receive a welcome discount.",
+      "rationale": "Word-of-mouth is powerful for artisan food brands. Referrals have higher conversion and retention rates. Creates viral loop for customer acquisition.",
+      "priority": "could",
+      "complexity": "medium",
+      "impact": "medium",
+      "phase_id": "phase-3",
+      "dependencies": [
+        "feature-6"
+      ],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "Unique referral link for each customer",
+        "Referred customer gets $5 off first order",
+        "Referrer earns $10 credit when referee makes first purchase",
+        "Referral dashboard showing invites sent and conversions",
+        "Social sharing buttons for referral link",
+        "Integration with loyalty program for bonus points"
+      ],
+      "user_stories": [
+        "As a happy customer, I want to share my referral link so that I can earn rewards for spreading the word",
+        "As a new customer, I want a discount for being referred so that I'm incentivized to try the products"
+      ],
+      "competitor_insight_ids": []
+    },
+    {
+      "id": "feature-12",
+      "title": "Wholesale Portal Improvements",
+      "description": "Enhance the wholesale ordering experience with bulk pricing tiers, inventory visibility, order templates for repeat orders, and improved account management.",
+      "rationale": "Wholesale is a key revenue channel. Competitors like Mateo's primarily rely on Costco distribution - direct wholesale relationships are a competitive advantage.",
+      "priority": "could",
+      "complexity": "medium",
+      "impact": "medium",
+      "phase_id": "phase-3",
+      "dependencies": [
+        "feature-3"
+      ],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "Volume-based pricing tiers displayed clearly",
+        "Real-time inventory levels visible to wholesale customers",
+        "Saved order templates for quick reordering",
+        "Net payment terms management (Net 30, etc.)",
+        "Dedicated account manager contact displayed",
+        "Order history with invoice downloads",
+        "Shipping tracking integration"
+      ],
+      "user_stories": [
+        "As a wholesale buyer, I want to see bulk pricing so that I can calculate my margins",
+        "As a retail store manager, I want to quickly reorder my regular products so that I save time",
+        "As a wholesale customer, I want to see inventory levels so that I know what's available before ordering"
+      ],
+      "competitor_insight_ids": [
+        "pain-6-2"
+      ]
+    },
+    {
+      "id": "feature-13",
+      "title": "Mobile App",
+      "description": "Native mobile application for iOS and Android providing streamlined shopping experience, push notifications for orders and promotions, and loyalty program integration.",
+      "rationale": "Identified as a known gap. Mobile commerce continues to grow. App provides direct channel to customers without competing with email inbox clutter.",
+      "priority": "could",
+      "complexity": "high",
+      "impact": "medium",
+      "phase_id": "phase-4",
+      "dependencies": [
+        "feature-5",
+        "feature-6"
+      ],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "Native iOS and Android apps",
+        "Full product catalog with search and filtering",
+        "Checkout with Apple Pay and Google Pay",
+        "Push notifications for order updates",
+        "Loyalty points balance and redemption",
+        "Subscription management",
+        "Reorder from order history with one tap"
+      ],
+      "user_stories": [
+        "As a mobile user, I want an app so that I can quickly reorder my favorite salsas",
+        "As a subscriber, I want push notifications so that I know when my next shipment is coming"
+      ],
+      "competitor_insight_ids": []
+    },
+    {
+      "id": "feature-14",
+      "title": "Custom Gift Bundle Builder",
+      "description": "Allow customers to create custom gift boxes by selecting individual products, adding gift messages, and choosing premium packaging options.",
+      "rationale": "Gift buyers are a key secondary audience. Custom bundles increase average order value and make Jose Madrid a go-to destination for food gifts.",
+      "priority": "could",
+      "complexity": "medium",
+      "impact": "medium",
+      "phase_id": "phase-4",
+      "dependencies": [],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "Visual gift box builder with drag-and-drop",
+        "Pre-set bundle suggestions for different occasions",
+        "Custom gift message included with order",
+        "Premium packaging options at additional cost",
+        "Gift-specific checkout flow",
+        "Option to ship directly to recipient with no pricing shown"
+      ],
+      "user_stories": [
+        "As a gift buyer, I want to create a custom gift box so that I can personalize the gift",
+        "As a corporate gift buyer, I want to ship directly to recipients so that gifts arrive without my intervention"
+      ],
+      "competitor_insight_ids": []
+    },
+    {
+      "id": "feature-15",
+      "title": "Corporate & Events Portal",
+      "description": "Dedicated ordering portal for corporate customers and event planners with bulk ordering, custom labeling options, and dedicated account support.",
+      "rationale": "Expands into B2B market with corporate gifting and event catering. Higher margins and larger orders than typical consumer purchases.",
+      "priority": "wont",
+      "complexity": "high",
+      "impact": "medium",
+      "phase_id": "phase-4",
+      "dependencies": [
+        "feature-12"
+      ],
+      "status": "under_review",
+      "acceptance_criteria": [
+        "Separate corporate account registration and approval process",
+        "Custom labeling options for corporate gifts",
+        "Event quantity ordering with delivery coordination",
+        "Dedicated account support contact",
+        "Invoice-based payment options",
+        "Corporate discount tiers"
+      ],
+      "user_stories": [
+        "As a corporate buyer, I want to order branded gifts for employees so that I can give meaningful, quality gifts",
+        "As an event planner, I want to order large quantities with coordinated delivery so that I can feature salsa at my event"
+      ],
+      "competitor_insight_ids": []
+    }
+  ],
+  "metadata": {
+    "created_at": "2025-01-20T18:50:00Z",
+    "updated_at": "2026-02-28T00:30:43.813Z",
+    "generated_by": "roadmap_features agent",
+    "prioritization_framework": "MoSCoW",
+    "competitor_analysis_used": true,
+    "competitor_pain_points_addressed": 16,
+    "market_gaps_addressed": 7
+  }
+}

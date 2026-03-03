@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { GET, POST } from '@/app/api/forms/route'
 
 // Mock dependencies
@@ -51,15 +51,29 @@ describe('Forms API', () => {
   const mockPartner = {
     id: 'partner-123',
     name: 'Test Partner',
+    keyHash: 'hashed-key',
+    scopes: [],
+    isActive: true,
     apiKey: 'test-key',
     userId: 'user-123',
-  }
+    lastUsedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as any
 
   const mockOwner = {
     id: 'owner-123',
     email: 'owner@example.com',
     name: 'Form Owner',
-  }
+    password: null,
+    role: 'ADMIN',
+    isEmailVerified: true,
+    phone: null,
+    dateOfBirth: null,
+    lastLoginAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as any
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -70,7 +84,7 @@ describe('Forms API', () => {
       const { requirePartner } = await import('@/lib/api/partner-keys')
 
       vi.mocked(requirePartner).mockResolvedValue({
-        error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
+        error: new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
       })
 
       const request = new NextRequest('http://localhost/api/forms', {
@@ -96,7 +110,17 @@ describe('Forms API', () => {
           slug: 'contact-form',
           name: 'Contact Form',
           description: 'A simple contact form',
+          category: 'contact',
+          tags: ['contact', 'form'],
+          estimatedCompletion: '5 minutes',
+          recommendedUses: ['Customer inquiries'],
           status: 'PUBLISHED',
+          version: 1,
+          structure: [],
+          publishedAt: new Date(),
+          createdById: 'owner-123',
+          updatedById: 'owner-123',
+          createdAt: new Date(),
           updatedAt: new Date(),
         },
         {
@@ -104,10 +128,20 @@ describe('Forms API', () => {
           slug: 'survey-form',
           name: 'Survey Form',
           description: 'A customer survey',
+          category: 'survey',
+          tags: ['survey', 'feedback'],
+          estimatedCompletion: '10 minutes',
+          recommendedUses: ['Customer feedback'],
           status: 'DRAFT',
+          version: 1,
+          structure: [],
+          publishedAt: null,
+          createdById: 'owner-123',
+          updatedById: 'owner-123',
+          createdAt: new Date(),
           updatedAt: new Date(),
         },
-      ]
+      ] as any
 
       vi.mocked(prisma.formTemplate.count).mockResolvedValue(2)
       vi.mocked(prisma.formTemplate.findMany).mockResolvedValue(mockTemplates)
@@ -321,7 +355,7 @@ describe('Forms API', () => {
       const { requirePartner } = await import('@/lib/api/partner-keys')
 
       vi.mocked(requirePartner).mockResolvedValue({
-        error: new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 }),
+        error: new NextResponse(JSON.stringify({ error: 'Forbidden' }), { status: 403 }),
       })
 
       const request = new NextRequest('http://localhost/api/forms', {

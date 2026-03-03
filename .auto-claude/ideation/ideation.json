@@ -1,0 +1,758 @@
+{
+  "id": "ideation-20260120-084040",
+  "project_id": "/Users/jordanlang/Repos/josemadridsalsa",
+  "config": {
+    "enabled_types": [
+      "code_improvements",
+      "ui_ux_improvements",
+      "security_hardening",
+      "documentation_gaps",
+      "performance_optimizations",
+      "code_quality"
+    ],
+    "include_roadmap_context": true,
+    "include_kanban_context": true,
+    "max_ideas_per_type": 5
+  },
+  "ideas": [
+    {
+      "id": "ci-001",
+      "type": "code_improvements",
+      "title": "Add Users CSV Export Endpoint",
+      "description": "Add a CSV export endpoint for users in the admin panel, allowing administrators to export user lists with filters applied (role, search, etc.) for reporting and CRM integration purposes.",
+      "rationale": "The codebase already has well-established CSV export patterns for products (app/api/admin/products/export/route.ts) and orders (app/api/admin/orders/export/route.ts). The users API (app/api/admin/users/route.ts) has the same filter pattern and RBAC protection but lacks an export capability. This is a direct pattern replication.",
+      "builds_upon": [
+        "Products CSV Export",
+        "Orders CSV Export",
+        "Users List API",
+        "RBAC Permission System"
+      ],
+      "estimated_effort": "trivial",
+      "affected_files": [
+        "app/api/admin/users/export/route.ts"
+      ],
+      "existing_patterns": [
+        "app/api/admin/products/export/route.ts - CSV generation and response headers",
+        "app/api/admin/orders/export/route.ts - Filter application from query params",
+        "lib/rbac.ts - requirePermission() pattern for authorization",
+        "lib/audit.ts - logAudit() for tracking exports"
+      ],
+      "implementation_approach": "Create new route.ts file at app/api/admin/users/export/. Copy the products export pattern: (1) requirePermission('users:export'), (2) parse search/role filters from searchParams, (3) query prisma.user.findMany() with filters, (4) build CSV with headers [ID, Email, Name, Role, Phone, Email Verified, Created At, Last Login], (5) return Response with Content-Type: text/csv and Content-Disposition header.",
+      "status": "draft",
+      "created_at": "2026-01-20T08:40:00.000Z"
+    },
+    {
+      "id": "ci-002",
+      "type": "code_improvements",
+      "title": "Add Audit Logs CSV Export",
+      "description": "Add CSV export functionality to the audit logs API, enabling administrators to download filtered audit log data for compliance reporting, security reviews, and external analysis.",
+      "rationale": "The audit logs API (app/api/admin/audit-logs/route.ts) already supports rich filtering (action, userId, entityType, date ranges) and pagination. The CSV export pattern from products/orders can be directly applied. This supports compliance requirements and enables offline analysis.",
+      "builds_upon": [
+        "Audit Logs API",
+        "Products CSV Export Pattern",
+        "Orders CSV Export Pattern"
+      ],
+      "estimated_effort": "trivial",
+      "affected_files": [
+        "app/api/admin/audit-logs/export/route.ts"
+      ],
+      "existing_patterns": [
+        "app/api/admin/audit-logs/route.ts - Filter logic and Prisma queries",
+        "app/api/admin/products/export/route.ts - CSV generation pattern",
+        "lib/rbac.ts - Permission checking with hasPermission()"
+      ],
+      "implementation_approach": "Create export route following products export pattern. Reuse the same filter logic from audit-logs/route.ts (action, userId, entityType, date range). Build CSV with headers [ID, Action, User ID, Entity Type, Entity ID, IP Address, User Agent, Created At, Changes]. Use JSON.stringify for the changes column. Apply analytics:export permission.",
+      "status": "draft",
+      "created_at": "2026-01-20T08:40:00.000Z"
+    },
+    {
+      "id": "ci-003",
+      "type": "code_improvements",
+      "title": "Add Cart Authentication Sync Hook",
+      "description": "Create a useCartSync hook that synchronizes the local cart with the server when a user logs in, merging any guest cart items with their existing saved cart. This mirrors the existing useWishlistSync pattern.",
+      "rationale": "The wishlist already has a sync hook (lib/hooks/use-wishlist-sync.ts) that fetches/clears based on authentication status. The cart store (lib/store/cart.ts) tracks items locally and has guest email support, but doesn't sync with authenticated users' server-side carts. This would complete the authenticated shopping experience.",
+      "builds_upon": [
+        "useWishlistSync Hook",
+        "Cart Store with Zustand",
+        "NextAuth Session Handling"
+      ],
+      "estimated_effort": "small",
+      "affected_files": [
+        "lib/hooks/use-cart-sync.ts",
+        "app/api/cart/sync/route.ts",
+        "app/providers.tsx"
+      ],
+      "existing_patterns": [
+        "lib/hooks/use-wishlist-sync.ts - Session-based sync with useEffect, hasFetched ref",
+        "lib/store/cart.ts - Zustand store with fetchWishlist() style actions",
+        "lib/store/wishlist.ts - API integration pattern with optimistic updates"
+      ],
+      "implementation_approach": "Create use-cart-sync.ts following wishlist sync exactly: useSession() to detect auth changes, useEffect with hasFetched.current ref to prevent duplicate calls, call fetchCart() on authenticated, mergeWithServerCart() to combine guest items with saved cart. Create /api/cart/sync endpoint that accepts local items and merges with DB cart. Add hook to providers.tsx alongside wishlist sync.",
+      "status": "draft",
+      "created_at": "2026-01-20T08:40:00.000Z"
+    },
+    {
+      "id": "ci-004",
+      "type": "code_improvements",
+      "title": "Add Bulk Delete API for Admin Entities",
+      "description": "Implement bulk delete endpoints for Tags and Categories that allow selecting and deleting multiple items at once, reducing repetitive actions in the admin panel.",
+      "rationale": "The admin panel has individual delete operations for tags and categories via [id]/route.ts endpoints. The RBAC pattern (requirePermission) and audit logging pattern are already established. Bulk operations follow a common REST pattern and would significantly improve admin efficiency.",
+      "builds_upon": [
+        "Tags CRUD API",
+        "Categories CRUD API",
+        "Audit Logging System",
+        "RBAC Permissions"
+      ],
+      "estimated_effort": "small",
+      "affected_files": [
+        "app/api/admin/tags/bulk/route.ts",
+        "app/api/admin/categories/bulk/route.ts"
+      ],
+      "existing_patterns": [
+        "app/api/admin/tags/[id]/route.ts - Single delete with permission check",
+        "app/api/admin/categories/[id]/route.ts - Single delete pattern",
+        "lib/audit.ts - logAudit() with entityType and changes tracking",
+        "lib/validation.ts - Zod schema patterns"
+      ],
+      "implementation_approach": "Create bulk/route.ts for each entity. DELETE handler accepts { ids: string[] } body, validates with z.array(z.string()), checks tags:delete or categories:delete permission, uses prisma.deleteMany({ where: { id: { in: ids } } }), logs audit with action 'bulk_delete' and changes: { count, ids }. Return { deleted: count } response.",
+      "status": "draft",
+      "created_at": "2026-01-20T08:40:00.000Z"
+    },
+    {
+      "id": "ci-005",
+      "type": "code_improvements",
+      "title": "Add Recently Viewed Products UI Section",
+      "description": "Create a RecentlyViewedSection component that displays products the user has recently viewed, utilizing the existing recently-viewed Zustand store that already tracks viewing history but isn't exposed in the UI.",
+      "rationale": "The recently-viewed store (lib/store/recently-viewed.ts) is fully implemented with addProduct(), getRecent(), and clearHistory() methods, but there's no UI component displaying this data. The store tracks up to 20 products with timestamps. The ProductCardSkeleton and ProductGrid patterns already exist for displaying products.",
+      "builds_upon": [
+        "Recently Viewed Store",
+        "Product Card Component",
+        "Loading States Pattern"
+      ],
+      "estimated_effort": "medium",
+      "affected_files": [
+        "components/store/recently-viewed-section.tsx",
+        "app/(store)/products/[slug]/page.tsx"
+      ],
+      "existing_patterns": [
+        "lib/store/recently-viewed.ts - getRecent(limit) returns products array",
+        "components/store/product-grid.tsx - Grid layout for products",
+        "components/ui/loading-states.tsx - ProductCardSkeleton, ProductGridSkeleton",
+        "components/store/cart-sidebar.tsx - Store integration example"
+      ],
+      "implementation_approach": "Create RecentlyViewedSection.tsx: 'use client', import useRecentlyViewedStore, call getRecent(8), if no items return null, render horizontal scrollable grid with product cards (image, name, price, link to /products/[slug]). Add to product detail page below main content. Use ProductCardSkeleton for loading state. Add responsive design following existing grid patterns.",
+      "status": "draft",
+      "created_at": "2026-01-20T08:40:00.000Z"
+    },
+    {
+      "id": "uiux-001",
+      "type": "ui_ux_improvements",
+      "title": "Add Slide-In Animation to Cart Sidebar",
+      "description": "The cart sidebar currently appears and disappears without animation, making the transition feel abrupt. Add a smooth slide-in/out animation from the right edge.",
+      "rationale": "Animated transitions provide visual continuity and help users understand spatial relationships in the interface. A smooth slide animation makes the cart feel more polished and professional.",
+      "category": "interaction",
+      "affected_components": [
+        "components/store/cart-sidebar.tsx"
+      ],
+      "screenshots": [],
+      "current_state": "Cart sidebar uses 'fixed right-0' positioning but only has 'transition-transform' class without transform state changes. When isOpen is false, component returns null entirely, preventing any exit animation.",
+      "proposed_change": "1. Wrap sidebar in AnimatePresence from framer-motion (already installed). 2. Add initial={{ x: '100%' }}, animate={{ x: 0 }}, exit={{ x: '100%' }} with smooth easing. 3. Alternatively, use CSS: always render component but toggle translate-x-full/translate-x-0 classes based on isOpen state instead of returning null.",
+      "user_benefit": "Users get a more polished, professional shopping experience. The animation provides clear feedback that the cart opened/closed and maintains spatial context of where the cart 'lives' in the interface.",
+      "status": "draft",
+      "created_at": "2026-01-20T08:40:00.000Z"
+    },
+    {
+      "id": "uiux-002",
+      "type": "ui_ux_improvements",
+      "title": "Expand Mobile Search Icon to Inline Search",
+      "description": "The mobile search icon button in the navigation header doesn't visually do anything. Clicking it should expand into an inline search field that overlays the header.",
+      "rationale": "Mobile users need quick access to search. Currently they must open the full mobile menu to access search, which requires extra taps and isn't discoverable.",
+      "category": "usability",
+      "affected_components": [
+        "components/store/navigation.tsx"
+      ],
+      "screenshots": [],
+      "current_state": "Line 254-256 shows a search icon button with 'md:hidden' that has no onClick handler - it's purely visual with no functionality attached.",
+      "proposed_change": "1. Add useState for isSearchExpanded. 2. On search icon click, expand to show Input field that slides in from right, covering the logo area temporarily. 3. Add X button to close search. 4. Focus input automatically when expanded. 5. Handle form submission same as desktop. Include smooth width/opacity transition animation.",
+      "user_benefit": "Mobile users can quickly search for products without navigating through the mobile menu. Reduces friction by 2-3 taps for the common search action.",
+      "status": "draft",
+      "created_at": "2026-01-20T08:40:00.000Z"
+    },
+    {
+      "id": "uiux-003",
+      "type": "ui_ux_improvements",
+      "title": "Enlarge Filter Badge Remove Buttons for Better Touch Targets",
+      "description": "The active filter badges in the product grid use tiny X icons (w-3 h-3 = 12x12px) for removal which fail WCAG touch target guidelines of minimum 44x44px.",
+      "rationale": "Small touch targets cause frustration on mobile devices, leading to mis-taps and requiring precise finger placement. WCAG 2.2 Success Criterion 2.5.8 recommends minimum 24x24px with 44x44px being optimal.",
+      "category": "accessibility",
+      "affected_components": [
+        "components/store/product-grid.tsx"
+      ],
+      "screenshots": [],
+      "current_state": "Lines 281-303 show Badge components with X icons inside using 'w-3 h-3' class (12px). The entire badge is small and the X is even smaller, making removal difficult on touch devices.",
+      "proposed_change": "1. Increase X icon size to w-4 h-4 (16px) minimum. 2. Wrap X in a button element with min-w-[44px] min-h-[44px] invisible padding or make entire badge clickable as a button with proper touch padding. 3. Add hover:bg-destructive/20 effect on the X area. 4. Consider making entire badge a button that removes filter on click.",
+      "user_benefit": "Mobile users can easily remove filters without precise tapping. Improves accessibility for users with motor impairments. Reduces frustration from accidental filter changes.",
+      "status": "draft",
+      "created_at": "2026-01-20T08:40:00.000Z"
+    },
+    {
+      "id": "uiux-004",
+      "type": "ui_ux_improvements",
+      "title": "Add Urgency Animation to Low Stock Warning",
+      "description": "The 'Only X left in stock!' warning on product cards is plain static text. Add subtle visual emphasis like a pulsing dot or gentle color animation to draw attention and create appropriate urgency.",
+      "rationale": "Low stock warnings are important conversion triggers but can be easily overlooked. Subtle animation draws the eye without being annoying, creating genuine FOMO that drives purchases.",
+      "category": "visual",
+      "affected_components": [
+        "components/store/product-card.tsx"
+      ],
+      "screenshots": [],
+      "current_state": "Lines 284-288 show a simple div with 'text-sm text-orange-600' displaying 'Only {product.inventory} left in stock!' as plain text with no visual emphasis beyond color.",
+      "proposed_change": "1. Add a small pulsing dot before the text using animate-pulse class. 2. Wrap in a pill-shaped badge with bg-orange-50 border-orange-200 border for more visual weight. 3. Consider adding Flame or AlertTriangle icon from lucide-react. 4. For extremely low stock (<=2), use more urgent red styling.",
+      "user_benefit": "Users are more likely to notice low stock warnings, helping them make timely purchase decisions. Creates appropriate urgency without being deceptive. Better visual hierarchy makes important information stand out.",
+      "status": "draft",
+      "created_at": "2026-01-20T08:40:00.000Z"
+    },
+    {
+      "id": "uiux-005",
+      "type": "ui_ux_improvements",
+      "title": "Improve Sign-In Form with Real-Time Validation",
+      "description": "The sign-in form only shows validation errors after form submission. Add inline real-time validation feedback as users type to provide immediate guidance.",
+      "rationale": "Real-time validation reduces form submission errors and user frustration. Users know immediately if their input is valid rather than discovering errors after submission.",
+      "category": "usability",
+      "affected_components": [
+        "app/auth/signin/page.tsx",
+        "components/ui/input.tsx"
+      ],
+      "screenshots": [],
+      "current_state": "Sign-in form validates on submit only. Input component has no built-in validation state styling. Errors display below submit button after failed attempt.",
+      "proposed_change": "1. Add validation state to Input component with valid/invalid/pending visual states (green checkmark, red border, etc). 2. Validate email format on blur with debounce. 3. Show inline error message under each field instead of single error at bottom. 4. Add success checkmark icon when email format is valid. 5. Create reusable FormField component that wraps Input with validation state.",
+      "user_benefit": "Users get immediate feedback on input validity, reducing form submission errors. Clearer per-field feedback helps users fix issues faster. Professional, polished form experience builds trust.",
+      "status": "draft",
+      "created_at": "2026-01-20T08:40:00.000Z"
+    },
+    {
+      "id": "sec-001",
+      "type": "security_hardening",
+      "title": "Remove or Disable Emergency Setup-DB Endpoint",
+      "description": "The /api/setup-db endpoint exists and allows database seeding via a simple MASTER_KEY query parameter. While protected, this endpoint should not exist in production environments as it provides a direct path to modifying production data.",
+      "rationale": "Even with key protection, the endpoint presents an attack surface. The file itself warns '\u26a0\ufe0f DELETE THIS FILE AFTER RUNNING ONCE!' Query string parameters are logged by proxies, CDNs, and web servers, potentially exposing the MASTER_KEY in logs.",
+      "category": "configuration",
+      "severity": "high",
+      "affectedFiles": [
+        "app/api/setup-db/route.ts"
+      ],
+      "vulnerability": "CWE-749: Exposed Dangerous Method or Function",
+      "currentRisk": "An attacker who obtains the MASTER_KEY could seed/modify the production database. Query parameters may leak in logs, referrer headers, or browser history.",
+      "remediation": "Delete the setup-db route entirely or implement proper safeguards: (1) Delete the file after first use as the comment suggests, (2) If needed for future use, move to a CLI-only script that cannot be triggered via HTTP, (3) Add IP whitelist restrictions, (4) Require additional authentication beyond a single key.",
+      "references": [
+        "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/05-Enumerate_Infrastructure_and_Application_Admin_Interfaces"
+      ],
+      "compliance": [
+        "SOC2",
+        "PCI-DSS"
+      ]
+    },
+    {
+      "id": "sec-002",
+      "type": "security_hardening",
+      "title": "Add Global Security Headers via Next.js Middleware",
+      "description": "The application lacks global security headers. Only the image-proxy endpoint sets X-Content-Type-Options and X-Frame-Options. Critical headers like Content-Security-Policy, Strict-Transport-Security, and others are missing application-wide.",
+      "rationale": "Security headers provide defense-in-depth against common web attacks including XSS, clickjacking, MIME sniffing, and protocol downgrade attacks. Modern browsers honor these headers to restrict potentially dangerous behaviors.",
+      "category": "configuration",
+      "severity": "medium",
+      "affectedFiles": [
+        "middleware.ts",
+        "next.config.mjs"
+      ],
+      "vulnerability": "CWE-693: Protection Mechanism Failure",
+      "currentRisk": "Application is vulnerable to clickjacking attacks (missing X-Frame-Options globally), XSS payload execution (missing CSP), MIME type confusion (missing X-Content-Type-Options globally), and protocol downgrade attacks (missing HSTS).",
+      "remediation": "Add security headers in next.config.mjs using the `headers` config option or in middleware.ts. Recommended headers: Content-Security-Policy (start with report-only mode), X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Strict-Transport-Security: max-age=31536000; includeSubDomains, Referrer-Policy: strict-origin-when-cross-origin, Permissions-Policy to restrict features.",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://nextjs.org/docs/app/api-reference/next-config-js/headers",
+        "https://securityheaders.com"
+      ],
+      "compliance": [
+        "SOC2",
+        "PCI-DSS",
+        "OWASP-A05"
+      ]
+    },
+    {
+      "id": "sec-003",
+      "type": "security_hardening",
+      "title": "Implement Distributed Rate Limiting for Authentication",
+      "description": "The current rate limiter uses an in-memory Map() store, which doesn't persist across serverless function invocations on Vercel. This means rate limiting for brute-force protection on authentication endpoints is effectively disabled in production.",
+      "rationale": "Vercel serverless functions are stateless and may be executed on different instances. In-memory rate limiting provides no protection when requests hit different function instances. This exposes authentication endpoints to credential stuffing and brute force attacks.",
+      "category": "authentication",
+      "severity": "high",
+      "affectedFiles": [
+        "lib/rate-limiter.ts",
+        "app/api/auth/[...nextauth]/route.ts",
+        "app/api/auth/forgot-password/route.ts"
+      ],
+      "vulnerability": "CWE-307: Improper Restriction of Excessive Authentication Attempts",
+      "currentRisk": "Attackers can perform unlimited authentication attempts by rotating requests across different serverless instances, making credential stuffing and brute force attacks feasible.",
+      "remediation": "Replace in-memory rate limiting with a distributed solution: (1) Use Vercel KV (Redis) or Upstash Redis for rate limit state, (2) Implement exponential backoff for failed login attempts, (3) Add account lockout after N failed attempts, (4) Consider using Vercel's built-in Edge Config or rate limiting capabilities. The rate limiter comment already notes: 'For production with multiple servers, use Redis or database'.",
+      "references": [
+        "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#protect-against-automated-attacks",
+        "https://vercel.com/docs/storage/vercel-kv"
+      ],
+      "compliance": [
+        "SOC2",
+        "PCI-DSS",
+        "OWASP-A07"
+      ]
+    },
+    {
+      "id": "sec-004",
+      "type": "security_hardening",
+      "title": "Sanitize HTML Content Before dangerouslySetInnerHTML",
+      "description": "Multiple components use dangerouslySetInnerHTML to render HTML content, including email templates, form previews, and admin interfaces. Without proper sanitization, this creates XSS vulnerabilities if any content source is compromised or contains malicious input.",
+      "rationale": "The dangerouslySetInnerHTML prop bypasses React's XSS protections. While some uses appear to render admin-controlled content (email templates), the form preview and other uses could potentially render user-influenced content. Defense-in-depth requires sanitization regardless of assumed content safety.",
+      "category": "input_validation",
+      "severity": "medium",
+      "affectedFiles": [
+        "components/admin/form-template-builder.tsx",
+        "components/admin/email-composer.tsx",
+        "components/admin/email-template-gallery.tsx",
+        "app/admin/emails/[id]/page.tsx",
+        "app/admin/emails/[id]/edit/_components/template-editor.tsx",
+        "app/(public)/find-us/_components/LocationsMap.tsx"
+      ],
+      "vulnerability": "CWE-79: Improper Neutralization of Input During Web Page Generation (XSS)",
+      "currentRisk": "Stored XSS if email templates, form content, or location data contains malicious scripts. Admin users with template editing access could inject persistent XSS affecting other admin users.",
+      "remediation": "Implement HTML sanitization before rendering: (1) Install DOMPurify or sanitize-html, (2) Create a utility function to sanitize all HTML before passing to dangerouslySetInnerHTML, (3) For email templates specifically, use an allowlist of safe HTML tags and attributes, (4) Consider using a sandboxed iframe for previewing untrusted HTML content.",
+      "references": [
+        "https://owasp.org/www-community/attacks/xss/",
+        "https://github.com/cure53/DOMPurify",
+        "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html"
+      ],
+      "compliance": [
+        "SOC2",
+        "PCI-DSS",
+        "OWASP-A03"
+      ]
+    },
+    {
+      "id": "sec-005",
+      "type": "security_hardening",
+      "title": "Address High-Severity npm Dependency Vulnerabilities",
+      "description": "npm audit reveals multiple high and moderate severity vulnerabilities in dependencies, primarily through the vercel CLI package (tar, path-to-regexp, esbuild, undici). While most are in dev dependencies, some affect production code paths.",
+      "rationale": "Known vulnerabilities in dependencies can be exploited if the affected code paths are reachable. The tar vulnerability (CVE-2024-28863) and path-to-regexp ReDoS issues could impact availability or allow arbitrary code execution in specific scenarios.",
+      "category": "dependencies",
+      "severity": "medium",
+      "affectedFiles": [
+        "package.json",
+        "package-lock.json"
+      ],
+      "vulnerability": "CWE-1395: Dependency on Vulnerable Third-Party Component",
+      "currentRisk": "High severity vulnerabilities in @vercel/fun (tar), @vercel/node, and @vercel/remix-builder (path-to-regexp). Moderate vulnerabilities in cookie package affecting @auth/core (next-auth). While primarily dev dependencies, security best practice requires addressing all known CVEs.",
+      "remediation": "(1) Run `npm audit fix` to apply available automatic fixes, (2) For vercel CLI, consider updating to version 32.3.0+ which resolves many issues or downgrade to a non-vulnerable version if newer versions break compatibility, (3) For next-auth, evaluate updating to resolve the cookie vulnerability, (4) Set up Dependabot or Snyk for automated vulnerability monitoring, (5) Add `npm audit --audit-level=high` to CI pipeline to catch regressions.",
+      "references": [
+        "https://docs.npmjs.com/auditing-package-dependencies-for-security-vulnerabilities",
+        "https://nvd.nist.gov/"
+      ],
+      "compliance": [
+        "SOC2",
+        "PCI-DSS",
+        "OWASP-A06"
+      ]
+    },
+    {
+      "id": "doc-001",
+      "type": "documentation_gaps",
+      "title": "Fix README with proper project overview and getting started guide",
+      "description": "The current README.md has merge conflict markers and only discusses security setup. It lacks essential information about the Jose Madrid Salsa e-commerce project including: project overview, features list, quick start guide, architecture summary, and development setup.",
+      "rationale": "The README is the first entry point for any developer or contributor. The current state with merge conflicts makes the project appear unmaintained and provides no context about what the application does (gourmet salsa e-commerce with admin panel, AI chatbot, loyalty system, etc.).",
+      "category": "readme",
+      "targetAudience": "developers",
+      "affectedAreas": [
+        "README.md"
+      ],
+      "currentDocumentation": "Contains merge conflict markers (<<<<<<< HEAD) and only security configuration details. Missing project overview entirely.",
+      "proposedContent": "Create a comprehensive README with: 1) Project description and badges, 2) Features overview (e-commerce, admin panel, AI chatbot, loyalty program), 3) Tech stack (Next.js 15, TypeScript, Prisma, Tailwind), 4) Quick start guide, 5) Environment setup reference, 6) Project structure overview, 7) Links to detailed docs",
+      "priority": "high",
+      "estimatedEffort": "medium"
+    },
+    {
+      "id": "doc-002",
+      "type": "documentation_gaps",
+      "title": "Add JSDoc documentation to core library modules",
+      "description": "Critical business logic modules in /lib lack JSDoc documentation. Key files like loyalty.ts (10+ functions for points/rewards), shipping-calculator.ts, tax-calculator.ts, discounts.ts, and recommendations.ts have no function-level documentation explaining parameters, return values, or usage.",
+      "rationale": "These modules handle critical business operations (pricing, taxes, shipping, loyalty). Developers need to understand function signatures and behavior without reading implementation details. Currently 453 exports exist across 104 lib files but only ~50 have any JSDoc coverage.",
+      "category": "api_docs",
+      "targetAudience": "developers",
+      "affectedAreas": [
+        "lib/loyalty.ts",
+        "lib/shipping-calculator.ts",
+        "lib/tax-calculator.ts",
+        "lib/discounts.ts",
+        "lib/recommendations.ts",
+        "lib/inventory-manager.ts"
+      ],
+      "currentDocumentation": "lib/rbac.ts demonstrates good JSDoc patterns that should be replicated. Most other files have no documentation.",
+      "proposedContent": "Add JSDoc blocks with @param, @returns, @throws, and @example tags for all exported functions. Include: awardPoints(), calculateTier(), redeemReward(), calculateShipping(), calculateTax(), validateDiscount(), getPersonalizedRecommendations()",
+      "priority": "high",
+      "estimatedEffort": "medium"
+    },
+    {
+      "id": "doc-003",
+      "type": "documentation_gaps",
+      "title": "Create API endpoint reference documentation",
+      "description": "The project has 90+ API routes in /app/api covering checkout, authentication, admin operations, webhooks, and integrations. There is no central API reference documenting endpoints, request/response formats, authentication requirements, or error codes.",
+      "rationale": "API routes are the backbone of the application. Without reference documentation, developers must read each route.ts file to understand available endpoints. This is especially problematic for the checkout flow, gift certificate APIs, and admin endpoints that have complex payloads.",
+      "category": "api_docs",
+      "targetAudience": "developers",
+      "affectedAreas": [
+        "app/api/checkout/route.ts",
+        "app/api/loyalty/route.ts",
+        "app/api/gift-certificates/",
+        "app/api/admin/",
+        "app/api/webhooks/"
+      ],
+      "currentDocumentation": "docs/openapi.yaml exists but may be incomplete. Individual routes have inline Zod schemas but no API documentation.",
+      "proposedContent": "Generate/update OpenAPI spec or create markdown documentation for: 1) Public endpoints (products, checkout, newsletter), 2) Auth endpoints (register, login, password reset), 3) Admin endpoints (CRUD for products, orders, users), 4) Integration endpoints (Shopify, Stripe webhooks). Include request examples and response schemas.",
+      "priority": "medium",
+      "estimatedEffort": "high"
+    },
+    {
+      "id": "doc-004",
+      "type": "documentation_gaps",
+      "title": "Document architecture and data flow for e-commerce system",
+      "description": "No documentation exists explaining the overall system architecture: how checkout flows from cart to Stripe to Shopify sync, how the loyalty system integrates with orders, or how the AI chatbot retrieves product/order information.",
+      "rationale": "The system has complex integrations (Stripe payments, Shopify sync, Google services, AI chat). Understanding data flow is essential for debugging, extending features, and onboarding. The /docs folder contains session summaries and fix notes but no architectural overview.",
+      "category": "architecture",
+      "targetAudience": "developers",
+      "affectedAreas": [
+        "docs/",
+        "lib/shopify/",
+        "lib/stripe.ts",
+        "lib/loyalty.ts",
+        "lib/ai-rag/"
+      ],
+      "currentDocumentation": "Scattered phase completion docs and integration setup guides exist (STRIPE_WEBHOOK_SETUP.md, shopify-integration.md) but no unified architecture view.",
+      "proposedContent": "Create ARCHITECTURE.md covering: 1) System overview diagram, 2) Checkout flow (cart \u2192 order \u2192 Stripe \u2192 Shopify sync), 3) Authentication flow (NextAuth with RBAC), 4) Loyalty system integration, 5) AI chatbot RAG pipeline, 6) Email automation triggers, 7) Admin panel capabilities",
+      "priority": "medium",
+      "estimatedEffort": "medium"
+    },
+    {
+      "id": "doc-005",
+      "type": "documentation_gaps",
+      "title": "Add inline comments for complex business logic in checkout and tax calculation",
+      "description": "The checkout route (/app/api/checkout/route.ts) contains 288 lines of complex logic including inventory validation, tax calculation via Stripe API, shipping calculation, abandoned cart recovery, Shopify sync queuing, and payment intent creation - all without explanatory comments.",
+      "rationale": "Checkout is the most critical user flow. The current implementation mixes multiple concerns (validation, pricing, payment, sync) without comments explaining business rules like why tax defaults to $0 on failure, how recovery tokens work, or the order number generation format.",
+      "category": "inline_comments",
+      "targetAudience": "developers",
+      "affectedAreas": [
+        "app/api/checkout/route.ts",
+        "app/api/checkout/complete/route.ts",
+        "lib/tax-calculator.ts",
+        "lib/shipping-calculator.ts"
+      ],
+      "currentDocumentation": "Some console.log statements provide runtime hints, but no explanatory comments for business decisions.",
+      "proposedContent": "Add block comments explaining: 1) Why checkout continues with $0 tax/shipping on calculation failure, 2) Order number format (JMS-YYYYMMDD-XXXX) and uniqueness, 3) Guest vs authenticated checkout differences, 4) Abandoned cart recovery flow, 5) Stripe metadata requirements for reconciliation, 6) Shopify sync queue timing",
+      "priority": "medium",
+      "estimatedEffort": "low"
+    },
+    {
+      "id": "perf-001",
+      "type": "performance_optimizations",
+      "title": "Replace googleapis with @googleapis/calendar for 95%+ bundle reduction",
+      "description": "The project imports the full `googleapis` package (~100MB installed, ~15MB+ bundled) but only uses the Google Calendar API in `lib/google-calendar.ts`. The modular `@googleapis/calendar` package provides the same Calendar functionality at a fraction of the size (~500KB).",
+      "rationale": "googleapis is one of the largest dependencies in the bundle. The codebase only uses `google.calendar()` for fetching calendar events. Switching to the modular package would dramatically reduce server bundle size and improve cold start times on Vercel serverless functions.",
+      "category": "bundle_size",
+      "impact": "high",
+      "affectedAreas": [
+        "lib/google-calendar.ts",
+        "package.json"
+      ],
+      "currentMetric": "googleapis package: ~100MB installed, contributes ~15MB+ to server bundle",
+      "expectedImprovement": "~95% reduction in Google API bundle size, ~14MB+ savings, faster serverless cold starts",
+      "implementation": "1. Install @googleapis/calendar\n2. Update lib/google-calendar.ts imports:\n   - Change `import { google } from 'googleapis'` to `import { calendar } from '@googleapis/calendar'`\n   - Update `google.auth.JWT` to use `GoogleAuth` from google-auth-library\n   - Update `google.calendar()` calls to use the new import\n3. Remove googleapis from dependencies\n4. Test calendar functionality",
+      "tradeoffs": "Minor API differences require code updates. If other Google APIs are added in the future, they would need separate modular packages.",
+      "estimatedEffort": "small"
+    },
+    {
+      "id": "perf-002",
+      "type": "performance_optimizations",
+      "title": "Memoize ProductCard component to prevent unnecessary re-renders",
+      "description": "The ProductCard component in `components/store/product-card.tsx` is rendered in lists (ProductGrid) but is not wrapped in React.memo. Each state change in the parent causes all ProductCards to re-render, even when their props haven't changed.",
+      "rationale": "ProductCard is a complex component with multiple hooks (useCartStore, useWishlistStore, useComparisonStore, useSession) and child components. When used in ProductGrid with filtering/sorting, parent state changes cause all cards to re-render unnecessarily. With ~20+ products displayed, this creates significant render overhead.",
+      "category": "rendering",
+      "impact": "medium",
+      "affectedAreas": [
+        "components/store/product-card.tsx",
+        "components/store/product-grid.tsx"
+      ],
+      "currentMetric": "All ProductCards re-render when filters change, even unchanged items",
+      "expectedImprovement": "~50-70% reduction in unnecessary re-renders when filtering/sorting, smoother UI interactions",
+      "implementation": "1. Wrap ProductCard in React.memo: `export const ProductCard = memo(function ProductCard({ product }: ProductCardProps) { ... })`\n2. Memoize event handlers with useCallback (handleAddToCart, handleWishlistToggle, handleComparisonToggle)\n3. Extract store selectors to be stable: `const addItem = useCartStore((state) => state.addItem)` is already correct\n4. Consider using useMemo for computed values like discountPercentage",
+      "tradeoffs": "Adds slight memory overhead for memoization. Event handlers need useCallback to maintain memo benefits.",
+      "estimatedEffort": "small"
+    },
+    {
+      "id": "perf-003",
+      "type": "performance_optimizations",
+      "title": "Replace framer-motion with CSS animations for simple transitions",
+      "description": "framer-motion (~60KB gzipped) is used in only 3 components: sidebar.tsx (slide-in), demo.tsx (demo component), and animated-testimonials.tsx (carousel). The sidebar and demo transitions could be replaced with native CSS transitions, keeping framer-motion only for the complex testimonials animation.",
+      "rationale": "framer-motion is a powerful animation library but adds significant bundle size. The sidebar slide-in animation and demo transitions are simple effects that CSS can handle natively with `transition`, `transform`, and `@keyframes`. Only the animated-testimonials truly benefits from framer-motion's AnimatePresence and spring physics.",
+      "category": "bundle_size",
+      "impact": "medium",
+      "affectedAreas": [
+        "components/ui/sidebar.tsx",
+        "components/ui/demo.tsx"
+      ],
+      "currentMetric": "framer-motion adds ~60KB gzipped to client bundle, used in 3 components",
+      "expectedImprovement": "If converted to CSS: ~60KB client bundle reduction for pages not using testimonials. With code splitting: load framer-motion only when testimonials are visible.",
+      "implementation": "Option A - Replace with CSS:\n1. Update sidebar.tsx to use CSS transitions: `transition: transform 0.3s ease-out` with conditional classes\n2. Update demo.tsx similarly\n3. Keep framer-motion only for animated-testimonials.tsx\n\nOption B - Dynamic import:\n1. Use `next/dynamic` with ssr: false for AnimatedTestimonials\n2. This defers framer-motion loading until component is needed",
+      "tradeoffs": "CSS animations lack spring physics and gesture support. Dynamic imports add loading states. Keep framer-motion if more complex animations are planned.",
+      "estimatedEffort": "medium"
+    },
+    {
+      "id": "perf-004",
+      "type": "performance_optimizations",
+      "title": "Optimize recommendations queries with combined database calls",
+      "description": "The `getFrequentlyBoughtTogether` function in `lib/recommendations.ts` makes 3 sequential database queries (find orders, group co-occurrences, fetch products). These could be combined into fewer queries or optimized with a raw SQL query for better performance.",
+      "rationale": "For a product page, the recommendations queries add significant latency. Each query has network round-trip overhead to the database. The current pattern: 1) Find 100 orders \u2192 2) Group by productId \u2192 3) Fetch product details. This could be a single optimized query.",
+      "category": "database",
+      "impact": "medium",
+      "affectedAreas": [
+        "lib/recommendations.ts"
+      ],
+      "currentMetric": "3 sequential Prisma queries per recommendations request, ~50-150ms total",
+      "expectedImprovement": "~40-60% reduction in recommendations query time, better product page load times",
+      "implementation": "1. Use Prisma's raw SQL for a single optimized query:\n```sql\nSELECT p.*, COUNT(oi2.order_id) as co_occurrence_count\nFROM order_items oi1\nJOIN order_items oi2 ON oi1.order_id = oi2.order_id AND oi2.product_id != $1\nJOIN products p ON p.id = oi2.product_id\nWHERE oi1.product_id = $1 AND p.is_active = true AND p.inventory > 0\nGROUP BY p.id\nORDER BY co_occurrence_count DESC\nLIMIT $2\n```\n2. Alternatively, cache recommendations per product with a TTL (1 hour)\n3. Use Prisma's query batching with `$transaction`",
+      "tradeoffs": "Raw SQL is less type-safe than Prisma queries. Caching requires cache invalidation strategy when orders change.",
+      "estimatedEffort": "medium"
+    },
+    {
+      "id": "perf-005",
+      "type": "performance_optimizations",
+      "title": "Convert cart store computed values to Zustand selectors with derived state",
+      "description": "The cart store in `lib/store/cart.ts` defines `totalItems()` and `totalPrice()` as methods that compute values each time they're called. These should be converted to selectors or computed values that cache results until items change.",
+      "rationale": "Components calling `totalItems()` and `totalPrice()` (like navigation header showing cart count, cart sidebar showing total) trigger recomputation on every render. With Zustand, computed values can be optimized using selectors or by pre-computing in the state update.",
+      "category": "runtime",
+      "impact": "low",
+      "affectedAreas": [
+        "lib/store/cart.ts",
+        "components/store/navigation.tsx",
+        "components/store/cart-sidebar.tsx"
+      ],
+      "currentMetric": "totalItems() and totalPrice() recompute array reduce on every call",
+      "expectedImprovement": "Eliminate redundant array iterations, ~10-20 reduce operations avoided per navigation render",
+      "implementation": "1. Store computed values in state and update them in addItem/removeItem/updateQuantity:\n```ts\ninterface CartStore {\n  items: CartItem[]\n  totalItems: number  // Store directly\n  totalPrice: number  // Store directly\n  ...\n}\n\naddItem: (newItem) => {\n  // ... existing logic ...\n  const totalItems = updatedItems.reduce((t, i) => t + i.quantity, 0)\n  const totalPrice = updatedItems.reduce((t, i) => t + i.price * i.quantity, 0)\n  set({ items: updatedItems, totalItems, totalPrice })\n}\n```\n2. Or use Zustand's `subscribeWithSelector` middleware for derived state\n3. Update components to use `useCartStore(state => state.totalItems)` instead of `useCartStore().totalItems()`",
+      "tradeoffs": "Slightly more complex state updates. Need to ensure computed values stay in sync with items array.",
+      "estimatedEffort": "small"
+    },
+    {
+      "id": "cq-001",
+      "type": "code_quality",
+      "title": "Remove 20 duplicate backup files with ' 2' suffix",
+      "description": "There are 20 files in the codebase with ' 2' appended to their names (e.g., 'domain-router 2.ts', 'calendar-sync 2.ts', 'import-orders-dialog 2.tsx'). These appear to be accidental duplicates or manual backups that should not be in version control.",
+      "rationale": "Dead code creates confusion for developers, increases bundle size (for included files), causes IDE autocomplete pollution, and may lead to accidental edits in the wrong file. These files serve no purpose and should be removed.",
+      "category": "dead_code",
+      "severity": "critical",
+      "affectedFiles": [
+        "app/(public)/layout 2.tsx",
+        "app/(public)/page 2.tsx",
+        "app/admin/orders/_components/import-orders-dialog 2.tsx",
+        "app/api/admin/events/route 2.ts",
+        "app/api/admin/orders/import/route 2.ts",
+        "app/api/checkout/apply-gift-certificate/route 2.ts",
+        "app/robots 2.ts",
+        "app/sitemap 2.ts",
+        "components/ui/scroll-reveal 2.tsx",
+        "lib/ai-rag/domain-router 2.ts",
+        "lib/events/calendar-sync 2.ts",
+        "lib/gift-certificates/import 2.ts",
+        "lib/locations/import 2.ts",
+        "lib/notifications/order-notifications 2.ts",
+        "lib/orders/import 2.ts",
+        "lib/orders/modify 2.ts",
+        "lib/seo/configuration 2.ts",
+        "lib/seo/schema-generator 2.ts",
+        "lib/utils/image 2.ts",
+        "scripts/verify-locations 2.ts"
+      ],
+      "currentState": "20 duplicate files with ' 2' suffix scattered across lib/, app/, components/, and scripts/ directories",
+      "proposedChange": "Delete all ' 2' suffix files after verifying they don't contain unique changes compared to their non-suffixed counterparts using `diff`. Add .gitignore pattern to prevent future occurrences.",
+      "codeExample": "# Verification command:\nfor f in $(find . -name '* 2.ts' -o -name '* 2.tsx'); do\n  original=\"${f% 2.*}.${f##*.}\"\n  if [ -f \"$original\" ]; then\n    diff -q \"$f\" \"$original\"\n  fi\ndone\n\n# Then delete:\ngit rm 'lib/ai-rag/domain-router 2.ts'\ngit rm 'lib/events/calendar-sync 2.ts'\n# ... etc",
+      "bestPractice": "Version control should track file history, not manual backups. Use git branches for experimental changes.",
+      "metrics": {
+        "lineCount": null,
+        "complexity": null,
+        "duplicateLines": null,
+        "testCoverage": null,
+        "fileCount": 20
+      },
+      "estimatedEffort": "small",
+      "breakingChange": false,
+      "prerequisites": [
+        "Verify each file against its original before deletion"
+      ]
+    },
+    {
+      "id": "cq-002",
+      "type": "code_quality",
+      "title": "Split email template library into modular template files",
+      "description": "The file lib/email/template-library.ts is 2,169 lines long and contains all email templates as inline HTML strings. This monolithic structure makes templates hard to edit, review, and maintain.",
+      "rationale": "Large files increase cognitive load, make code reviews difficult, and create merge conflicts. Email templates specifically benefit from separation because they can be previewed, tested, and maintained independently. The current structure also mixes concerns (template definitions with template content).",
+      "category": "large_files",
+      "severity": "major",
+      "affectedFiles": [
+        "lib/email/template-library.ts"
+      ],
+      "currentState": "Single 2,169-line file containing all email templates with inline HTML, text versions, and metadata",
+      "proposedChange": "Split into modular structure:\n- lib/email/templates/welcome.html + welcome.txt\n- lib/email/templates/order-confirmation.html + order-confirmation.txt\n- lib/email/templates/index.ts (exports template registry)\n- lib/email/templates/types.ts (shared types)\n- lib/email/templates/base-styles.ts (shared styles object)\n\nUse a template loader that reads HTML files, enabling proper syntax highlighting and easier editing.",
+      "codeExample": "// Current (inline HTML in TS):\nexport const emailTemplates: EmailTemplateDefinition[] = [\n  {\n    key: 'welcome_email',\n    html: `<!DOCTYPE html>...2000 chars...`\n  }\n];\n\n// Proposed (separate files with loader):\n// lib/email/templates/welcome.html - actual HTML file\n// lib/email/templates/index.ts:\nimport { loadTemplate } from './loader';\nexport const templates = {\n  welcome: loadTemplate('welcome', { subject: 'Welcome!' }),\n  orderConfirmation: loadTemplate('order-confirmation', {...})\n};",
+      "bestPractice": "Separation of concerns - keep template content separate from template configuration. Use proper file types for syntax highlighting and tooling support.",
+      "metrics": {
+        "lineCount": 2169,
+        "complexity": null,
+        "duplicateLines": null,
+        "testCoverage": null
+      },
+      "estimatedEffort": "large",
+      "breakingChange": false,
+      "prerequisites": [
+        "Ensure all template variables are documented",
+        "Create template rendering tests before refactoring"
+      ]
+    },
+    {
+      "id": "cq-003",
+      "type": "code_quality",
+      "title": "Refactor analytics page into modular components and separate concerns",
+      "description": "The admin analytics page (app/admin/analytics/page.tsx) is 1,211 lines and combines data fetching, server actions, multiple chart components, settings forms, and complex UI rendering in a single file.",
+      "rationale": "This monolithic page violates single responsibility principle. It's difficult to test, navigate, and maintain. Changes to one section risk breaking others. Server actions mixed with UI make the component hard to reason about.",
+      "category": "large_files",
+      "severity": "major",
+      "affectedFiles": [
+        "app/admin/analytics/page.tsx"
+      ],
+      "currentState": "1,211-line page.tsx with inline server actions, data fetching, chart rendering, settings forms, and summary cards all in one file",
+      "proposedChange": "Split into modular architecture:\n- app/admin/analytics/page.tsx (~100 lines, layout/composition)\n- app/admin/analytics/_actions/ga-settings.ts (server actions)\n- app/admin/analytics/_components/AnalyticsSummary.tsx\n- app/admin/analytics/_components/RevenueChart.tsx\n- app/admin/analytics/_components/TrafficSourcesChart.tsx\n- app/admin/analytics/_components/TopProductsTable.tsx\n- app/admin/analytics/_components/GASettingsForm.tsx\n- app/admin/analytics/_lib/data-fetching.ts",
+      "codeExample": "// Current structure (all in page.tsx):\nasync function saveGaSettingsAction(formData: FormData) { 'use server' ... }\nasync function addGaChartAction(formData: FormData) { 'use server' ... }\nexport default async function AnalyticsPage() {\n  // 1000+ lines of data fetching, state, and JSX\n}\n\n// Proposed structure:\n// _actions/ga-settings.ts\nexport async function saveGaSettings(formData: FormData) { 'use server' ... }\n\n// _components/AnalyticsSummary.tsx\nexport function AnalyticsSummary({ data }: { data: AnalyticsOverview }) { ... }\n\n// page.tsx\nimport { AnalyticsSummary } from './_components/AnalyticsSummary';\nimport { fetchAnalyticsData } from './_lib/data-fetching';\nexport default async function Page() {\n  const data = await fetchAnalyticsData();\n  return <AnalyticsSummary data={data} />;\n}",
+      "bestPractice": "Single Responsibility Principle - each module should have one reason to change. Next.js App Router supports colocated files in _components and _lib folders.",
+      "metrics": {
+        "lineCount": 1211,
+        "complexity": null,
+        "duplicateLines": null,
+        "testCoverage": null
+      },
+      "estimatedEffort": "medium",
+      "breakingChange": false,
+      "prerequisites": [
+        "Document current functionality",
+        "Add integration tests before refactoring"
+      ]
+    },
+    {
+      "id": "cq-004",
+      "type": "code_quality",
+      "title": "Reduce excessive `any` type usage across codebase",
+      "description": "There are 249 occurrences of `: any` type annotation across 124 source files. This significantly undermines TypeScript's type safety benefits and can hide bugs that would otherwise be caught at compile time.",
+      "rationale": "TypeScript's main value is catching type errors before runtime. Excessive `any` usage creates 'type holes' where bugs can slip through. It also makes code harder to refactor safely and reduces IDE support (autocomplete, go-to-definition).",
+      "category": "types",
+      "severity": "major",
+      "affectedFiles": [
+        "lib/product-import.ts (10 occurrences)",
+        "lib/orders/import.ts (9 occurrences)",
+        "app/(public)/find-us/_components/LocationsMap.tsx (9 occurrences)",
+        "lib/google-places.ts (7 occurrences)",
+        "lib/store/wishlist.ts (5 occurrences)",
+        "app/api/admin/products/route.ts (5 occurrences)",
+        "app/api/admin/users/[id]/route.ts (4 occurrences)",
+        "... and 117 more files"
+      ],
+      "currentState": "249 `: any` annotations across 124 files, with some files having 5-10 occurrences",
+      "proposedChange": "1. Add `@typescript-eslint/no-explicit-any` rule to ESLint config as 'warn'\n2. Create proper types for external API responses (Google Places, Shopify, etc.)\n3. Use generics and utility types instead of any\n4. For truly unknown types, use `unknown` with type guards\n5. Address highest-concentration files first (lib/product-import.ts, lib/orders/import.ts)",
+      "codeExample": "// Current:\nconst data: any = await response.json();\nconst result: any = process(data);\n\n// Proposed:\ninterface GooglePlaceResult {\n  place_id: string;\n  name: string;\n  geometry: { location: { lat: number; lng: number } };\n}\nconst data: GooglePlaceResult = await response.json();\n\n// For truly unknown external data:\nconst data: unknown = await response.json();\nif (isGooglePlaceResult(data)) {\n  // data is now typed as GooglePlaceResult\n}",
+      "bestPractice": "TypeScript strict mode with no explicit any - use unknown + type guards for truly unknown data, proper interfaces for known structures",
+      "metrics": {
+        "lineCount": null,
+        "complexity": null,
+        "duplicateLines": null,
+        "testCoverage": null,
+        "anyCount": 249,
+        "filesAffected": 124
+      },
+      "estimatedEffort": "large",
+      "breakingChange": false,
+      "prerequisites": [
+        "Update ESLint config with @typescript-eslint/no-explicit-any rule"
+      ]
+    },
+    {
+      "id": "cq-005",
+      "type": "code_quality",
+      "title": "Strengthen ESLint configuration with TypeScript and code quality rules",
+      "description": "The current ESLint configuration is minimal - it only extends 'next/core-web-vitals' and disables 'react/no-unescaped-entities'. There are no TypeScript-specific rules, no rules for code complexity, unused variables warnings, or consistent code style enforcement.",
+      "rationale": "A comprehensive ESLint configuration catches bugs early, enforces consistent patterns, and improves code quality automatically. The current minimal config misses opportunities to prevent common issues like unused imports, type safety problems, and complexity concerns.",
+      "category": "linting",
+      "severity": "minor",
+      "affectedFiles": [
+        ".eslintrc.json",
+        "eslint.config.mjs"
+      ],
+      "currentState": "Minimal ESLint config with only next/core-web-vitals and one disabled rule",
+      "proposedChange": "Add comprehensive rules:\n- @typescript-eslint/no-explicit-any: 'warn'\n- @typescript-eslint/no-unused-vars: 'error'\n- @typescript-eslint/consistent-type-imports: 'error'\n- complexity: ['warn', 15]\n- max-depth: ['warn', 4]\n- no-console: ['warn', { allow: ['warn', 'error'] }]\n- import/order for consistent imports\n- Prettier integration for formatting",
+      "codeExample": "// eslint.config.mjs (proposed additions):\nimport tseslint from '@typescript-eslint/eslint-plugin';\n\nconst config = [\n  ...compat.extends('next/core-web-vitals'),\n  {\n    plugins: { '@typescript-eslint': tseslint },\n    rules: {\n      '@typescript-eslint/no-explicit-any': 'warn',\n      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],\n      '@typescript-eslint/consistent-type-imports': 'error',\n      'complexity': ['warn', 15],\n      'max-depth': ['warn', 4],\n      'no-console': ['warn', { allow: ['warn', 'error'] }],\n    },\n  },\n];",
+      "bestPractice": "Use ESLint as first line of defense for code quality. Enable rules progressively - start with 'warn' level and escalate to 'error' once existing violations are fixed.",
+      "metrics": {
+        "lineCount": null,
+        "complexity": null,
+        "duplicateLines": null,
+        "testCoverage": null,
+        "rulesConfigured": 1
+      },
+      "estimatedEffort": "small",
+      "breakingChange": false,
+      "prerequisites": [
+        "Install @typescript-eslint/eslint-plugin if not present"
+      ]
+    }
+  ],
+  "project_context": {
+    "existing_features": [],
+    "tech_stack": [
+      "Next.js",
+      "TypeScript"
+    ],
+    "target_audience": "Gourmet salsa enthusiasts and food lovers seeking premium, artisan salsa products made with quality ingredients",
+    "planned_features": [
+      "Tax Exemption System",
+      "Loyalty Rewards Program",
+      "Subscription Program",
+      "Custom Gift Bundle Builder",
+      "Wholesale Portal Improvements",
+      "Enhanced Heat Level Discovery",
+      "Shipping Cost Calculator",
+      "Salsa Heat Preference Quiz",
+      "SMTP Password Encryption",
+      "Product Comparison Tool",
+      "Ingredient Sourcing Stories",
+      "Referral Program",
+      "Mobile App",
+      "Enhanced Fundraising Portal",
+      "Corporate & Events Portal"
+    ]
+  },
+  "summary": {
+    "total_ideas": 30,
+    "by_type": {
+      "code_improvements": 5,
+      "ui_ux_improvements": 5,
+      "security_hardening": 5,
+      "documentation_gaps": 5,
+      "performance_optimizations": 5,
+      "code_quality": 5
+    },
+    "by_status": {
+      "draft": 30
+    }
+  },
+  "generated_at": "2026-01-20T08:40:40.725424",
+  "updated_at": "2026-01-20T08:40:40.725503"
+}

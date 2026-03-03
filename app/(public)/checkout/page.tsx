@@ -69,6 +69,61 @@ const CardElementOptions = {
   hidePostalCode: true,
 }
 
+// Map Stripe error codes to user-friendly messages
+function getPaymentErrorMessage(error: any): string {
+  const code = error?.code
+  const declineCode = error?.decline_code
+
+  // Handle specific decline codes
+  if (declineCode) {
+    switch (declineCode) {
+      case 'insufficient_funds':
+        return 'Your card has insufficient funds. Please use a different payment method.'
+      case 'lost_card':
+      case 'stolen_card':
+        return 'This card has been reported as lost or stolen. Please use a different payment method.'
+      case 'expired_card':
+        return 'Your card has expired. Please use a different payment method.'
+      case 'incorrect_cvc':
+        return 'The security code (CVC) is incorrect. Please check your card and try again.'
+      case 'processing_error':
+        return 'An error occurred while processing your card. Please try again or use a different payment method.'
+      case 'generic_decline':
+        return 'Your card was declined. Please contact your card issuer or use a different payment method.'
+      default:
+        return 'Your card was declined. Please contact your card issuer or use a different payment method.'
+    }
+  }
+
+  // Handle specific error codes
+  switch (code) {
+    case 'card_declined':
+      return 'Your card was declined. Please contact your card issuer or use a different payment method.'
+    case 'expired_card':
+      return 'Your card has expired. Please use a different payment method.'
+    case 'incorrect_cvc':
+      return 'The security code (CVC) is incorrect. Please check your card and try again.'
+    case 'processing_error':
+      return 'An error occurred while processing your payment. Please try again.'
+    case 'incorrect_number':
+      return 'The card number is incorrect. Please check your card and try again.'
+    case 'invalid_expiry_month':
+    case 'invalid_expiry_year':
+      return 'The expiration date is invalid. Please check your card and try again.'
+    case 'invalid_cvc':
+      return 'The security code (CVC) is invalid. Please check your card and try again.'
+    case 'insufficient_funds':
+      return 'Your card has insufficient funds. Please use a different payment method.'
+    case 'card_velocity_exceeded':
+      return 'You have exceeded the number of allowed transactions. Please try again later or use a different payment method.'
+    case 'fraudulent':
+      return 'This transaction has been flagged as potentially fraudulent. Please contact your card issuer.'
+    default:
+      // Return the original error message if available, otherwise a generic message
+      return error?.message || 'Payment failed. Please check your card information and try again.'
+  }
+}
+
 function CheckoutForm() {
   const stripe = useStripe()
   const elements = useElements()
@@ -100,8 +155,8 @@ function CheckoutForm() {
 
   // Calculate tax when address is complete
   const calculateTaxEstimate = async () => {
-    // Only calculate if we have required address fields
-    if (!formState.city || !formState.state || !formState.postalCode || items.length === 0) {
+    // Only calculate if we have required address fields including address1
+    if (!formState.address1 || !formState.city || !formState.state || !formState.postalCode || items.length === 0) {
       return
     }
 
@@ -117,7 +172,7 @@ function CheckoutForm() {
             price: item.price,
           })),
           shippingAddress: {
-            address1: formState.address1 || '123 Main St', // Placeholder if not entered yet
+            address1: formState.address1,
             address2: formState.address2 || undefined,
             city: formState.city,
             state: formState.state,
@@ -144,7 +199,8 @@ function CheckoutForm() {
 
   // Calculate shipping when address is complete
   const calculateShippingEstimate = async () => {
-    if (!formState.city || !formState.state || !formState.postalCode || items.length === 0) {
+    // Only calculate if we have required address fields including address1
+    if (!formState.address1 || !formState.city || !formState.state || !formState.postalCode || items.length === 0) {
       return
     }
 
@@ -159,7 +215,7 @@ function CheckoutForm() {
             quantity: item.quantity,
           })),
           shippingAddress: {
-            address1: formState.address1 || '123 Main St',
+            address1: formState.address1,
             address2: formState.address2 || undefined,
             city: formState.city,
             state: formState.state,
@@ -199,7 +255,7 @@ function CheckoutForm() {
     }
 
     // Trigger tax and shipping calculation when address fields change
-    if (['city', 'state', 'postalCode'].includes(name)) {
+    if (['address1', 'city', 'state', 'postalCode'].includes(name)) {
       // Clear previous timeouts
       if (taxCalcTimeoutRef.current) {
         clearTimeout(taxCalcTimeoutRef.current)
@@ -342,7 +398,7 @@ function CheckoutForm() {
       })
 
       if (paymentResult.error) {
-        throw new Error(paymentResult.error.message || 'Payment failed.')
+        throw new Error(getPaymentErrorMessage(paymentResult.error))
       }
 
       const paymentIntentId = paymentResult.paymentIntent?.id
@@ -366,7 +422,7 @@ function CheckoutForm() {
 
       clearCart()
       setSuccessMessage('Payment successful!')
-      router.push(`/checkout/success?order=${orderId}`)
+      router.push(`/order-confirmation/${orderId}`)
     } catch (error) {
       console.error(error)
       setErrorMessage(

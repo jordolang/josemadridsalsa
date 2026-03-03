@@ -16,6 +16,7 @@ docs/
 !docs/PRODUCTION_DATABASE.md
 !DEPLOYMENT_COMPLETE.md
 *.md
+!public/find-us-locally/find-us-locally.md
 
 # Backstage
 backstage/
@@ -39,6 +40,7 @@ mkdocs.yml
 
 # Scripts (keep only essential ones)
 scripts/seed-*.ts
+!scripts/seed-nutrition-ingredients.ts
 scripts/import-*.ts
 
 # Examples
@@ -64,3 +66,20 @@ public/images/Hero-Image-Mike-Watermark-Dark.png
 public/images/Hero-Image-Mike-Watermark.png
 public/images/Jose-*.png
 # Note: Hero-Image-Mike.png is used and should be deployed
+
+# Heavy development/AI directories
+.claude
+.auto-claude/
+.project-analysis/
+.smart-env/
+.smtcmp_json_db/
+.smtcmp_vector_db.tar.gz
+.claude/
+.gemini/
+.obsidian/
+Chats/
+logs/
+mnt/
+Users/
+piecesdb.json
+.claude-worktrees/

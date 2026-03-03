@@ -26,7 +26,7 @@ async function main() {
 
   let userId: string | undefined
   if (userEmail) {
-    const user = await prisma.user.findUnique({ where: { email: userEmail } })
+    const user = await prisma.user.findUnique({ where: { email: userEmail.toLowerCase().trim() } })
     if (!user) {
       throw new Error(`User with email ${userEmail} not found`)
     }

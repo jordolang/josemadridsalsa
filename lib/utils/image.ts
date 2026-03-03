@@ -3,15 +3,17 @@
  */
 
 export const GOOGLE_PLACES_HOST = 'places.googleapis.com'
+const LEGACY_PLACES_HOST = 'maps.googleapis.com'
 const FALLBACK_IMAGE = '/images/Hero-Image-Mike.png'
 
 /**
- * Validates if a URL is a Google Places image URL
+ * Validates if a URL is a Google Places image URL (supports both new and legacy API)
  */
 export function isGooglePlacesUrl(url: string): boolean {
   try {
     const urlObj = new URL(url)
-    return urlObj.hostname === GOOGLE_PLACES_HOST && urlObj.protocol === 'https:'
+    if (urlObj.protocol !== 'https:') return false
+    return urlObj.hostname === GOOGLE_PLACES_HOST || urlObj.hostname === LEGACY_PLACES_HOST
   } catch {
     return false
   }

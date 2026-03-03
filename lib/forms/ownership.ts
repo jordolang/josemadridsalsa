@@ -10,7 +10,7 @@ export async function resolveTemplateOwner(preferredUserId?: string | null) {
 
   const configuredEmail = process.env.SYSTEM_OWNER_EMAIL
   if (configuredEmail) {
-    const configuredUser = await prisma.user.findUnique({ where: { email: configuredEmail } })
+    const configuredUser = await prisma.user.findUnique({ where: { email: configuredEmail.toLowerCase().trim() } })
     if (configuredUser) {
       return configuredUser
     }

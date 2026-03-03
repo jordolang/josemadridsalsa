@@ -14,7 +14,7 @@ I've created a **fully autonomous AI development system** that:
 
 ```
 scripts/
-├── analyze-project.ts                    # Main analyzer
+├── analyze-project.ts                    # Project Analyzer (main)
 ├── auto-execute-session.ts               # Autonomous executor
 ├── run-analysis-cron.sh                  # Cron wrapper (updated)
 └── lib/

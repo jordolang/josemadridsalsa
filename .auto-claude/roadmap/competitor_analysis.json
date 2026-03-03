@@ -1,0 +1,389 @@
+{
+  "project_context": {
+    "project_name": "Jose Madrid Salsa",
+    "project_type": "Premium gourmet salsa e-commerce platform",
+    "target_audience": "Gourmet salsa enthusiasts and food lovers seeking premium, artisan salsa products made with quality ingredients"
+  },
+  "competitors": [
+    {
+      "id": "competitor-1",
+      "name": "Mrs. Renfro's",
+      "url": "https://rfrenfro.com/",
+      "description": "Texas-based gourmet salsa brand with a wide variety of flavors including ghost pepper and fruit salsas. Known for affordable premium positioning.",
+      "relevance": "high",
+      "pain_points": [
+        {
+          "id": "pain-1-1",
+          "description": "Ghost Pepper Salsa lacks expected heat level - customers complain it 'doesn't even have the heat of a habanero' despite being advertised as ghost pepper",
+          "source": "The Hot Pepper Forum (thehotpepper.com)",
+          "severity": "high",
+          "frequency": "Common complaint across multiple reviews",
+          "opportunity": "Jose Madrid can differentiate with accurately labeled heat levels and authentic spiciness"
+        },
+        {
+          "id": "pain-1-2",
+          "description": "Texture issues - some customers find products 'too thin and watery' requiring mixing with other brands",
+          "source": "The Hot Pepper Forum reviews",
+          "severity": "medium",
+          "frequency": "Mentioned in multiple reviews",
+          "opportunity": "Emphasize chunky, substantial texture in Jose Madrid products"
+        },
+        {
+          "id": "pain-1-3",
+          "description": "Fruit salsas have unexpected flavor profiles - customers expecting sweet tropical flavors get salty taste instead",
+          "source": "Budget Earth review",
+          "severity": "medium",
+          "frequency": "Occasional complaint",
+          "opportunity": "Highlight Jose Madrid's award-winning fruit salsa line with accurate flavor descriptions"
+        },
+        {
+          "id": "pain-1-4",
+          "description": "Some products taste of vinegar and tomato paste rather than fresh ingredients",
+          "source": "Multiple review sites",
+          "severity": "medium",
+          "frequency": "Moderate frequency",
+          "opportunity": "Emphasize fresh, premium ingredients and authentic recipes"
+        }
+      ],
+      "strengths": [
+        "Wide variety of flavors including specialty options",
+        "Good price-to-quality ratio",
+        "Available in major grocery stores nationwide",
+        "Established brand recognition"
+      ],
+      "market_position": "Mass-market premium salsa brand positioned as an affordable gourmet option available in mainstream grocery stores"
+    },
+    {
+      "id": "competitor-2",
+      "name": "Herdez",
+      "url": "https://herdez.com/",
+      "description": "Mexican-owned brand known for authentic salsa casera and verde varieties. Widely distributed in US supermarkets.",
+      "relevance": "high",
+      "pain_points": [
+        {
+          "id": "pain-2-1",
+          "description": "Extremely watery texture - customers report it 'makes your food soggy' and is 'too soupy and liquidy to be useful for any application'",
+          "source": "NeoGAF forums, Walmart reviews",
+          "severity": "high",
+          "frequency": "Very common complaint",
+          "opportunity": "Jose Madrid can emphasize thick, chunky texture that holds up for dipping"
+        },
+        {
+          "id": "pain-2-2",
+          "description": "Recipe changes - long-time customers complain Herdez has added xanthan gum, guar gum, vinegar, and modified food starch, making it 'taste like regular gringo salsa'",
+          "source": "NeoGAF forums",
+          "severity": "high",
+          "frequency": "Passionate complaints from loyal customers",
+          "opportunity": "Highlight Jose Madrid's consistent 35-year family recipe with no recipe changes or additives"
+        },
+        {
+          "id": "pain-2-3",
+          "description": "Heat level inconsistency - mislabeled heat levels where 'mild' products are unexpectedly spicy",
+          "source": "Walmart customer reviews",
+          "severity": "medium",
+          "frequency": "Occasional",
+          "opportunity": "Provide clear, accurate heat level descriptions with 5-level scale"
+        },
+        {
+          "id": "pain-2-4",
+          "description": "Shipping/packaging problems when ordering online - dented and bulging cans, leaking jars",
+          "source": "Amazon and Walmart reviews",
+          "severity": "medium",
+          "frequency": "Common in online orders",
+          "opportunity": "Invest in proper packaging for e-commerce shipments"
+        }
+      ],
+      "strengths": [
+        "Authentic Mexican brand heritage",
+        "Consistent availability in stores",
+        "Affordable pricing",
+        "Salsa verde is highly rated"
+      ],
+      "market_position": "Mass-market authentic Mexican salsa brand focused on traditional recipes at accessible price points"
+    },
+    {
+      "id": "competitor-3",
+      "name": "Green Mountain Gringo",
+      "url": "https://greenmountaingringo.com/",
+      "description": "Vermont-based salsa brand emphasizing natural ingredients, low sodium, and clean labels. Known for chunky texture.",
+      "relevance": "high",
+      "pain_points": [
+        {
+          "id": "pain-3-1",
+          "description": "Heat levels don't differ noticeably between mild and medium varieties",
+          "source": "Walmart and Influenster reviews",
+          "severity": "low",
+          "frequency": "Occasional mention",
+          "opportunity": "Jose Madrid's 5-heat-level system from mild to extra hot provides better differentiation"
+        },
+        {
+          "id": "pain-3-2",
+          "description": "Limited flavor variety - primarily offers classic tomato-based salsas without specialty options",
+          "source": "Product lineup analysis",
+          "severity": "medium",
+          "frequency": "Implicit in product selection",
+          "opportunity": "Jose Madrid's 25+ unique flavors including fruit salsas offers more variety"
+        },
+        {
+          "id": "pain-3-3",
+          "description": "Jar sizes feel too small for enthusiasts who use salsa frequently",
+          "source": "Customer reviews (humorous but real complaint)",
+          "severity": "low",
+          "frequency": "Occasional",
+          "opportunity": "Offer larger sizes and bulk ordering options"
+        }
+      ],
+      "strengths": [
+        "Chunky, fresh-tasting texture praised by customers",
+        "Low sodium option appeals to health-conscious consumers",
+        "Clean label with no preservatives or artificial ingredients",
+        "Non-GMO, gluten-free, kosher certifications"
+      ],
+      "market_position": "Health-conscious premium salsa brand targeting customers who want natural, clean-label products"
+    },
+    {
+      "id": "competitor-4",
+      "name": "Desert Pepper Trading Company",
+      "url": "https://www.desertpepper.com/",
+      "description": "Texas-based artisan salsa company known for unique flavors like Tequila Salsa and specialty corn/bean varieties.",
+      "relevance": "high",
+      "pain_points": [
+        {
+          "id": "pain-4-1",
+          "description": "Premium pricing - customers note products are 'a little spendy' compared to alternatives",
+          "source": "Influenster reviews",
+          "severity": "medium",
+          "frequency": "Common mention",
+          "opportunity": "Jose Madrid can offer competitive premium pricing with clear value proposition"
+        },
+        {
+          "id": "pain-4-2",
+          "description": "Some products have watery texture - green salsa described as 'not as chunky as hoped and kind of watery'",
+          "source": "Multiple review sites",
+          "severity": "medium",
+          "frequency": "Occasional",
+          "opportunity": "Consistent thick texture across all Jose Madrid products"
+        },
+        {
+          "id": "pain-4-3",
+          "description": "Heat levels underwhelming for spice lovers - customers note 'could be spicier' even for hot varieties",
+          "source": "Influenster and product reviews",
+          "severity": "medium",
+          "frequency": "Moderate",
+          "opportunity": "Jose Madrid's extra hot options satisfy heat seekers"
+        },
+        {
+          "id": "pain-4-4",
+          "description": "Fruit salsas (Peach Mango) receive lower ratings (3.4/5) compared to traditional varieties",
+          "source": "Amazon reviews",
+          "severity": "medium",
+          "frequency": "Consistent pattern in ratings",
+          "opportunity": "Jose Madrid's award-winning fruit salsa line can capture this market"
+        }
+      ],
+      "strengths": [
+        "Unique flavor combinations (Tequila, Corn Black Bean)",
+        "Quality ingredients and short ingredient lists",
+        "Balanced, approachable heat levels",
+        "Strong editorial reviews and taste test wins"
+      ],
+      "market_position": "Premium artisan salsa brand with creative flavor profiles targeting food enthusiasts"
+    },
+    {
+      "id": "competitor-5",
+      "name": "Amazing Clubs Salsa of the Month",
+      "url": "https://www.amazingclubs.com/salsa.html",
+      "description": "Subscription service delivering 2 artisan salsas monthly from boutique makers. $29.95/month with free shipping.",
+      "relevance": "medium",
+      "pain_points": [
+        {
+          "id": "pain-5-1",
+          "description": "No control over flavor selection - subscribers receive whatever is curated, which may not match preferences",
+          "source": "Hello Subscription reviews",
+          "severity": "medium",
+          "frequency": "Implied in subscription model",
+          "opportunity": "Jose Madrid could offer customizable subscription with flavor preferences"
+        },
+        {
+          "id": "pain-5-2",
+          "description": "Inconsistent quality across different featured makers - not all salsas are equal quality",
+          "source": "Food For Net reviews",
+          "severity": "medium",
+          "frequency": "Variable by shipment",
+          "opportunity": "Jose Madrid subscription would guarantee consistent quality from one trusted source"
+        },
+        {
+          "id": "pain-5-3",
+          "description": "Price point of $29.95/month for 2 jars may not provide best value",
+          "source": "Subscription review sites",
+          "severity": "low",
+          "frequency": "Price comparison discussions",
+          "opportunity": "Jose Madrid could offer competitive subscription pricing with better value"
+        }
+      ],
+      "strengths": [
+        "Variety from different artisan makers",
+        "Gift-friendly with announcement cards",
+        "Established brand featured on major media",
+        "Free shipping included"
+      ],
+      "market_position": "Premium salsa discovery subscription service for enthusiasts seeking variety"
+    },
+    {
+      "id": "competitor-6",
+      "name": "Mateo's Gourmet Salsa",
+      "url": "https://mateosgourmetsalsa.com/",
+      "description": "Gourmet salsa brand known for complex cumin-forward flavor profile. Available at Costco and specialty retailers.",
+      "relevance": "medium",
+      "pain_points": [
+        {
+          "id": "pain-6-1",
+          "description": "Strong cumin flavor may be polarizing - described as 'smoky backbone' that doesn't appeal to all palates",
+          "source": "Taste of Home, The Kitchn reviews",
+          "severity": "low",
+          "frequency": "Matter of taste preference",
+          "opportunity": "Jose Madrid's traditional New Mexico style offers different flavor profile option"
+        },
+        {
+          "id": "pain-6-2",
+          "description": "Limited direct-to-consumer options - primarily available through Costco",
+          "source": "Distribution analysis",
+          "severity": "medium",
+          "frequency": "Structural limitation",
+          "opportunity": "Jose Madrid's robust e-commerce platform enables direct relationships with customers"
+        }
+      ],
+      "strengths": [
+        "Unique flavor profile with cumin",
+        "Perfect texture praised consistently",
+        "Good Costco availability",
+        "Top rankings in taste tests"
+      ],
+      "market_position": "Premium gourmet salsa with distinctive flavor profile targeting discerning taste"
+    }
+  ],
+  "market_gaps": [
+    {
+      "id": "gap-1",
+      "description": "Consistent, accurate heat level labeling - customers across multiple brands complain about mislabeled or inconsistent spiciness",
+      "affected_competitors": ["competitor-1", "competitor-2", "competitor-4"],
+      "opportunity_size": "high",
+      "suggested_feature": "Implement detailed heat scale (1-5) with descriptions and maintain consistency across production batches"
+    },
+    {
+      "id": "gap-2",
+      "description": "Subscription/recurring order options for premium artisan salsa - no major artisan brand offers customizable subscriptions",
+      "affected_competitors": ["competitor-1", "competitor-2", "competitor-3", "competitor-4"],
+      "opportunity_size": "high",
+      "suggested_feature": "Launch subscription program with flavor customization, heat level preferences, and flexible delivery schedules"
+    },
+    {
+      "id": "gap-3",
+      "description": "Recipe consistency over time - major brands change recipes and add preservatives/emulsifiers, frustrating loyal customers",
+      "affected_competitors": ["competitor-2"],
+      "opportunity_size": "high",
+      "suggested_feature": "Marketing emphasis on 35-year unchanged family recipes and commitment to never adding preservatives"
+    },
+    {
+      "id": "gap-4",
+      "description": "School/nonprofit fundraising salsa programs - very few competitors offer this specialized channel",
+      "affected_competitors": [],
+      "opportunity_size": "high",
+      "suggested_feature": "Expand and promote fundraising program with easy online ordering, 50% profit margins, and no minimum orders"
+    },
+    {
+      "id": "gap-5",
+      "description": "Reliable e-commerce packaging - competitors have shipping damage issues (dented cans, broken jars, leaking)",
+      "affected_competitors": ["competitor-2"],
+      "opportunity_size": "medium",
+      "suggested_feature": "Invest in premium packaging with damage guarantee for shipped orders"
+    },
+    {
+      "id": "gap-6",
+      "description": "Wide variety of specialty flavors including fruit salsas - competitors have limited fruit salsa success",
+      "affected_competitors": ["competitor-1", "competitor-4"],
+      "opportunity_size": "medium",
+      "suggested_feature": "Highlight award-winning fruit salsa line and expand specialty flavor offerings"
+    },
+    {
+      "id": "gap-7",
+      "description": "Transparent ingredient sourcing - customers want to know where ingredients come from",
+      "affected_competitors": ["competitor-1", "competitor-2"],
+      "opportunity_size": "medium",
+      "suggested_feature": "Add ingredient sourcing stories (California Pear tomatoes, authentic chiles) to product pages"
+    },
+    {
+      "id": "gap-8",
+      "description": "Loyalty/rewards program for repeat salsa purchasers - no competitor has strong loyalty program",
+      "affected_competitors": ["competitor-1", "competitor-3", "competitor-4"],
+      "opportunity_size": "medium",
+      "suggested_feature": "Implement loyalty rewards program with points for purchases, reviews, and referrals"
+    }
+  ],
+  "insights_summary": {
+    "top_pain_points": [
+      "Watery, thin texture that makes chips soggy - affects Herdez and Desert Pepper",
+      "Inaccurate heat level labeling - ghost pepper salsas aren't hot, mild labels are too spicy",
+      "Recipe changes adding preservatives and emulsifiers - loss of authentic taste",
+      "Shipping damage for online orders - dented cans, broken jars, leaking packages",
+      "Mass-market salsas taste processed and lack fresh ingredient flavor"
+    ],
+    "differentiator_opportunities": [
+      "35-year unchanged family recipes - authenticity competitors can't match",
+      "First four-pepper salsa in the United States - unique heritage claim",
+      "25+ flavor varieties including award-winning fruit salsas - unmatched selection",
+      "Established fundraising program with 50% profit - unique channel",
+      "Direct-to-consumer e-commerce with wholesale portal - multi-channel strength",
+      "Ohio-based regional brand with growing national reach - local story appeal"
+    ],
+    "market_trends": [
+      "Growing preference for refrigerated fresh salsas over shelf-stable options",
+      "Clean label movement - customers want short ingredient lists without additives",
+      "Health-conscious buyers seeking low-sodium, natural options",
+      "Subscription economy - recurring delivery models gaining popularity",
+      "Local and small-batch artisan foods preferred over corporate brands",
+      "E-commerce food sales growing, requiring better packaging solutions",
+      "Authentic regional recipes (New Mexico, Texas) valued over generic flavors"
+    ]
+  },
+  "research_metadata": {
+    "search_queries_used": [
+      "Mrs. Renfro's salsa reviews complaints reddit",
+      "Herdez salsa reviews complaints problems",
+      "Green Mountain Gringo salsa reviews customer feedback",
+      "Desert Pepper salsa reviews complaints",
+      "best gourmet salsa online 2024 artisan salsa brands",
+      "jarred salsa problems complaints mass market quality",
+      "salsa subscription box reviews 2024",
+      "gourmet food gift box salsa complaints shipping",
+      "salsa fundraiser program reviews complaints school fundraising",
+      "wholesale gourmet salsa supplier problems food service complaints",
+      "artisan food e-commerce complaints online ordering specialty food"
+    ],
+    "sources_consulted": [
+      "The Hot Pepper Forum (thehotpepper.com)",
+      "NeoGAF forums",
+      "Walmart.com customer reviews",
+      "Amazon.com product reviews",
+      "Influenster reviews",
+      "Chowhound salsa rankings",
+      "Taste of Home salsa brand reviews",
+      "The Kitchn best salsa reviews",
+      "Sporked store-bought salsa reviews",
+      "Hello Subscription subscription box reviews",
+      "Food For Net salsa club reviews",
+      "Better Business Bureau complaints",
+      "Trustpilot gourmet food reviews",
+      "Straight Dope Message Board food discussions",
+      "TODAY.com salsa taste tests"
+    ],
+    "limitations": [
+      "Some competitor websites may have changed since research was conducted",
+      "Reddit-specific threads were limited in search results",
+      "Wholesale/B2B complaints are less publicly documented than consumer complaints",
+      "Some smaller regional artisan competitors were not included due to limited online presence",
+      "Review sentiment can be biased toward negative experiences (people more likely to complain)"
+    ]
+  },
+  "created_at": "2025-01-20T18:45:00Z"
+}

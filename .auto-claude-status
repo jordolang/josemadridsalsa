@@ -1,0 +1,25 @@
+{
+  "active": true,
+  "spec": "029-automated-development-monitoring-system",
+  "state": "complete",
+  "subtasks": {
+    "completed": 15,
+    "total": 15,
+    "in_progress": 0,
+    "failed": 0
+  },
+  "phase": {
+    "current": "End-to-End Integration",
+    "id": null,
+    "total": 2
+  },
+  "workers": {
+    "active": 0,
+    "max": 1
+  },
+  "session": {
+    "number": 15,
+    "started_at": "2026-02-13T14:56:23.574320"
+  },
+  "last_update": "2026-02-13T15:54:34.313396"
+}

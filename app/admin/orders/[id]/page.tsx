@@ -7,6 +7,9 @@ import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import RefundDialog from '@/components/admin/RefundDialog'
+import { getStripe } from '@/lib/stripe'
+import { Decimal } from '@prisma/client/runtime/library'
 
 async function getOrder(id: string) {
   const order = await prisma.order.findUnique({
@@ -24,6 +27,42 @@ async function getOrder(id: string) {
   })
 
   return order
+}
+
+async function getRefundableAmount(order: {
+  stripePaymentId: string | null
+  paymentStatus: string
+  total: number | Decimal
+}): Promise<number> {
+  // If order can't be refunded, return 0
+  if (!order.stripePaymentId) return 0
+  if (order.paymentStatus !== 'PAID' && order.paymentStatus !== 'PARTIALLY_REFUNDED') {
+    return 0
+  }
+
+  try {
+    const stripe = getStripe()
+    const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentId, {
+      expand: ['charges']
+    }) as any
+
+    const chargeId = typeof paymentIntent.latest_charge === 'string'
+      ? paymentIntent.latest_charge
+      : paymentIntent.latest_charge?.id
+    if (!chargeId) return 0
+
+    const charge = await stripe.charges.retrieve(chargeId)
+
+    // Calculate refunded amount (Stripe stores in cents)
+    const totalRefunded = (charge.amount_refunded || 0) / 100
+    const totalPaid = Number(order.total)
+
+    // Return remaining refundable amount
+    return Math.max(0, totalPaid - totalRefunded)
+  } catch (error) {
+    console.error('Error fetching refundable amount:', error)
+    return 0
+  }
 }
 
 const statusInfo = {
@@ -55,6 +94,14 @@ export default async function OrderDetailPage({
   }
 
   const canWrite = await hasPermission(user, 'orders:write')
+
+  // Calculate actual refundable amount
+  const refundableAmount = await getRefundableAmount({
+    stripePaymentId: order.stripePaymentId,
+    paymentStatus: order.paymentStatus,
+    total: order.total,
+  })
+
   const status = statusInfo[order.status as keyof typeof statusInfo]
   const StatusIcon = status.icon
   const shopifyAdminBase =
@@ -278,6 +325,13 @@ export default async function OrderDetailPage({
               <div className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Actions</h2>
                 <div className="space-y-2">
+                  <RefundDialog
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                    totalPaid={Number(order.total)}
+                    refundableAmount={refundableAmount}
+                    paymentStatus={order.paymentStatus}
+                  />
                   <Button variant="outline" className="w-full" disabled>
                     Update Status
                   </Button>

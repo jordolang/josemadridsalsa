@@ -40,6 +40,7 @@ export function RecentlyViewedProducts({ currentProductId }: { currentProductId?
               sku: '',
               inventory: 1,
               isFeatured: false,
+              ingredients: null,
             }}
           />
         ))}

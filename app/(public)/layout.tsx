@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Script from 'next/script'
 import { CartSidebar } from '@/components/store/cart-sidebar'
 import { Toaster } from '@/components/ui/toaster'
@@ -10,6 +11,7 @@ import { getPublicGoogleAnalyticsMeasurementId } from '@/lib/google-analytics-co
 import { Analytics } from '@vercel/analytics/react'
 import { WishlistSyncProvider } from '@/components/providers/wishlist-sync-provider'
 import { CompareFloatingButton, ProductComparison } from '@/components/store/product-comparison'
+import { ComparisonURLHandler } from '@/components/store/comparison-url-handler'
 
 export default async function PublicLayout({
   children,
@@ -46,6 +48,9 @@ export default async function PublicLayout({
       {measurementId && <GoogleAnalytics measurementId={measurementId} />}
       <AmplitudeAnalytics />
       <WishlistSyncProvider />
+      <Suspense fallback={null}>
+        <ComparisonURLHandler />
+      </Suspense>
       <div className="flex min-h-screen flex-col">
         <Navigation />
         <div className="flex-1">

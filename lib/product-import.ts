@@ -89,6 +89,7 @@ export async function parseCSV(buffer: Buffer): Promise<ImportResult> {
       Papa.parse(text, {
         header: true,
         skipEmptyLines: true,
+        comments: '#',
         transformHeader: (header) => header.trim(),
         complete: (results) => {
           if (results.errors.length > 0) {

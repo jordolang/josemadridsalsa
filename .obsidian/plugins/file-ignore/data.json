@@ -1,0 +1,8 @@
+{
+  "rules": "temp/\n*.tmp\n.DS_Store\n",
+  "ignoredFiles": [],
+  "debug": false,
+  "rulesHistory": [
+    "temp/\n*.tmp\n.DS_Store\n"
+  ]
+}

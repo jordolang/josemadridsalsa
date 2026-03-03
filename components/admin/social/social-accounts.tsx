@@ -1,0 +1,332 @@
+'use client'
+
+import { useState } from 'react'
+import {
+  Facebook,
+  Instagram,
+  Twitter,
+  Music2,
+  Store,
+  ExternalLink,
+  Trash2,
+  RefreshCw,
+  Shield,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
+  Plus,
+} from 'lucide-react'
+import type { SocialMediaPlatform } from '@prisma/client'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import type { SocialAccountInfo } from '@/types/social'
+
+const PLATFORM_ICONS: Record<SocialMediaPlatform, React.ElementType> = {
+  FACEBOOK: Facebook,
+  INSTAGRAM: Instagram,
+  TWITTER: Twitter,
+  TIKTOK: Music2,
+  GOOGLE_MY_BUSINESS: Store,
+}
+
+const PLATFORM_META: Record<SocialMediaPlatform, { label: string; color: string; bgColor: string; description: string }> = {
+  FACEBOOK: {
+    label: 'Facebook',
+    color: 'text-[#1877F2]',
+    bgColor: 'bg-[#1877F2]',
+    description: 'Connect your Facebook Business Page to publish posts, photos, and links directly from the dashboard.',
+  },
+  INSTAGRAM: {
+    label: 'Instagram',
+    color: 'text-[#E4405F]',
+    bgColor: 'bg-[#E4405F]',
+    description: 'Connect Instagram via Facebook Business Suite for photo posts, carousels, and stories.',
+  },
+  TWITTER: {
+    label: 'X (Twitter)',
+    color: 'text-black',
+    bgColor: 'bg-black',
+    description: 'Connect your X account to post tweets, threads, and media directly from here.',
+  },
+  TIKTOK: {
+    label: 'TikTok',
+    color: 'text-black',
+    bgColor: 'bg-black',
+    description: 'Connect TikTok to upload videos and manage your short-form content strategy.',
+  },
+  GOOGLE_MY_BUSINESS: {
+    label: 'Google Business',
+    color: 'text-[#4285F4]',
+    bgColor: 'bg-[#4285F4]',
+    description: 'Connect your Google Business Profile to post updates and keep your listing fresh.',
+  },
+}
+
+const ALL_PLATFORMS: SocialMediaPlatform[] = ['FACEBOOK', 'TWITTER', 'TIKTOK', 'INSTAGRAM', 'GOOGLE_MY_BUSINESS']
+
+type Props = {
+  accounts: SocialAccountInfo[]
+}
+
+export function SocialAccounts({ accounts }: Props) {
+  const [connecting, setConnecting] = useState<SocialMediaPlatform | null>(null)
+  const [disconnecting, setDisconnecting] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [localAccounts, setLocalAccounts] = useState(accounts)
+
+  const handleConnect = async (platform: SocialMediaPlatform) => {
+    setConnecting(platform)
+    setError(null)
+    try {
+      const res = await fetch(`/api/social/oauth/connect?platform=${platform}`)
+      const data = await res.json()
+      if (data.error) {
+        setError(data.error)
+        setConnecting(null)
+        return
+      }
+      // Redirect to OAuth provider
+      window.location.href = data.url
+    } catch {
+      setError('Failed to initiate connection. Check your configuration.')
+      setConnecting(null)
+    }
+  }
+
+  const handleDisconnect = async (accountId: string) => {
+    if (!confirm('Disconnect this account? You can reconnect anytime.')) return
+    setDisconnecting(accountId)
+    try {
+      await fetch(`/api/social/accounts?id=${accountId}`, { method: 'DELETE' })
+      setLocalAccounts((prev) => prev.filter((a) => a.id !== accountId))
+    } catch {
+      setError('Failed to disconnect account.')
+    }
+    setDisconnecting(null)
+  }
+
+  const connectedPlatforms = new Set(localAccounts.map((a) => a.platform))
+
+  return (
+    <div className="space-y-6">
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+          <button className="ml-2 underline" onClick={() => setError(null)}>
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Connected accounts */}
+      {localAccounts.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-slate-900">Connected Accounts</h3>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {localAccounts.map((account) => {
+              const Icon = PLATFORM_ICONS[account.platform]
+              const meta = PLATFORM_META[account.platform]
+              const isExpired = account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()
+
+              return (
+                <Card key={account.id} className="relative overflow-hidden">
+                  {/* Color bar */}
+                  <div className={cn('h-1.5', meta.bgColor)} />
+                  <div className="p-5">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        {account.profileImageUrl ? (
+                          <img
+                            src={account.profileImageUrl}
+                            alt=""
+                            className="h-10 w-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className={cn('flex h-10 w-10 items-center justify-center rounded-full bg-slate-100', meta.color)}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-slate-900">{account.accountName}</p>
+                          {account.accountHandle && (
+                            <p className="text-sm text-slate-500">{account.accountHandle}</p>
+                          )}
+                        </div>
+                      </div>
+                      <Badge className={cn('text-xs', meta.color)}>{meta.label}</Badge>
+                    </div>
+
+                    {/* Status */}
+                    <div className="mt-4 space-y-2">
+                      {account.connectionError ? (
+                        <div className="flex items-center gap-2 text-sm text-red-600">
+                          <AlertTriangle className="h-4 w-4" />
+                          {account.connectionError}
+                        </div>
+                      ) : isExpired ? (
+                        <div className="flex items-center gap-2 text-sm text-amber-600">
+                          <AlertTriangle className="h-4 w-4" />
+                          Token expired. Reconnect to continue posting.
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-sm text-emerald-600">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Connected and active
+                        </div>
+                      )}
+
+                      {/* Scopes */}
+                      <div className="flex flex-wrap gap-1">
+                        {account.scopes.slice(0, 3).map((scope) => (
+                          <Badge
+                            key={scope}
+                            variant="outline"
+                            className="border-slate-200 text-[10px] text-slate-500"
+                          >
+                            <Shield className="mr-1 h-2.5 w-2.5" />
+                            {scope.split('.').pop() || scope}
+                          </Badge>
+                        ))}
+                        {account.scopes.length > 3 && (
+                          <Badge variant="outline" className="border-slate-200 text-[10px] text-slate-500">
+                            +{account.scopes.length - 3} more
+                          </Badge>
+                        )}
+                      </div>
+
+                      {account.lastVerifiedAt && (
+                        <p className="text-xs text-slate-400">
+                          Verified {new Date(account.lastVerifiedAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="mt-4 flex gap-2 border-t border-slate-100 pt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleConnect(account.platform)}
+                        disabled={connecting === account.platform}
+                      >
+                        {connecting === account.platform ? (
+                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="mr-2 h-3 w-3" />
+                        )}
+                        Reconnect
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDisconnect(account.id)}
+                        disabled={disconnecting === account.id}
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                      >
+                        {disconnecting === account.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Available platforms to connect */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">
+          {localAccounts.length > 0 ? 'Connect More Platforms' : 'Connect Your Social Accounts'}
+        </h3>
+        <p className="text-sm text-slate-500">
+          Link your social media accounts to publish content directly from this dashboard.
+          Your credentials are encrypted and stored securely.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {ALL_PLATFORMS.filter((p) => !connectedPlatforms.has(p)).map((platform) => {
+            const Icon = PLATFORM_ICONS[platform]
+            const meta = PLATFORM_META[platform]
+
+            return (
+              <Card
+                key={platform}
+                className="group flex flex-col border-dashed border-slate-300 p-5 transition hover:border-solid hover:border-slate-400 hover:shadow-md"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={cn('rounded-xl p-2.5', meta.color, 'bg-slate-100')}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900">{meta.label}</p>
+                    <p className="text-xs text-slate-400">Not connected</p>
+                  </div>
+                </div>
+                <p className="mt-3 flex-1 text-sm text-slate-600">{meta.description}</p>
+                <Button
+                  className="mt-4 w-full"
+                  onClick={() => handleConnect(platform)}
+                  disabled={connecting === platform}
+                >
+                  {connecting === platform ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
+                  {connecting === platform ? 'Connecting...' : `Connect ${meta.label}`}
+                </Button>
+              </Card>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Setup info */}
+      <Card className="border-blue-200 bg-blue-50 p-5">
+        <h4 className="font-semibold text-blue-900">Platform Setup Requirements</h4>
+        <div className="mt-3 grid gap-4 text-sm text-blue-800 sm:grid-cols-2">
+          <div>
+            <p className="font-medium">Facebook & Instagram</p>
+            <ul className="mt-1 list-inside list-disc space-y-1 text-blue-700">
+              <li>Facebook App created at developers.facebook.com</li>
+              <li>App ID and Secret in environment variables</li>
+              <li>Business Page with admin access</li>
+              <li>Instagram Business account linked to Page</li>
+            </ul>
+          </div>
+          <div>
+            <p className="font-medium">X (Twitter)</p>
+            <ul className="mt-1 list-inside list-disc space-y-1 text-blue-700">
+              <li>Twitter Developer App at developer.x.com</li>
+              <li>OAuth 2.0 with PKCE enabled</li>
+              <li>Client ID and Secret configured</li>
+            </ul>
+          </div>
+          <div>
+            <p className="font-medium">TikTok</p>
+            <ul className="mt-1 list-inside list-disc space-y-1 text-blue-700">
+              <li>TikTok Developer App at developers.tiktok.com</li>
+              <li>Content Posting API access approved</li>
+              <li>Client Key and Secret configured</li>
+            </ul>
+          </div>
+          <div>
+            <p className="font-medium">Environment Variables</p>
+            <ul className="mt-1 list-inside list-disc space-y-1 text-blue-700">
+              <li>FACEBOOK_APP_ID, FACEBOOK_APP_SECRET</li>
+              <li>TWITTER_CLIENT_ID, TWITTER_CLIENT_SECRET</li>
+              <li>TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET</li>
+            </ul>
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
+}

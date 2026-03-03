@@ -5,10 +5,12 @@ import { useParams, notFound, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ShoppingCart, Minus, Plus, Loader2, Heart } from 'lucide-react'
-import { useCartStore } from '@/lib/store/cart'
+import { Minus, Plus, Loader2, Heart, Scale } from 'lucide-react'
 import { useWishlistStore } from '@/lib/store/wishlist'
+import { useComparisonStore } from '@/lib/store/comparison'
 import { useRecentlyViewedStore } from '@/lib/store/recently-viewed'
+import { toast } from 'sonner'
+import { AddToCartButton } from '@/components/store/add-to-cart-button'
 import { formatPrice, getHeatLevelColor, getHeatLevelText, cn } from '@/lib/utils'
 import { HeatGauge } from '@/components/store/heat-gauge'
 import { getSalsaHeatRating } from '@/lib/salsa-heat'
@@ -17,6 +19,46 @@ import { SocialShare } from '@/components/ui/social-share'
 import { ShareContent } from '@/types/sharing'
 import { generateHashtags } from '@/lib/sharing/metadata-extractor'
 import { RecentlyViewedProducts } from '@/components/store/recently-viewed'
+import { NutritionalInfo } from '@/components/products/NutritionalInfo'
+
+type NutritionalInfoData = {
+  id: string
+  productId: string
+  servingSize: string
+  servingsPerContainer: number
+  calories: number
+  caloriesFromFat: number
+  totalFatG: number
+  totalFatDV: number
+  saturatedFatG: number
+  saturatedFatDV: number
+  transFatG: number
+  cholesterolMg: number
+  cholesterolDV: number
+  sodiumMg: number
+  sodiumDV: number
+  totalCarbG: number
+  totalCarbDV: number
+  dietaryFiberG: number
+  dietaryFiberDV: number
+  sugarsG: number
+  proteinG: number
+  vitaminADV: number
+  vitaminCDV: number
+  calciumDV: number
+  ironDV: number
+  allergens: string | null
+}
+
+type ProductIngredientData = {
+  id: string
+  sortOrder: number
+  qualifier: string | null
+  ingredient: {
+    id: string
+    name: string
+  }
+}
 
 type Product = {
   id: string
@@ -35,6 +77,10 @@ type Product = {
   searchKeywords: string[]
   productType: string
   packSize?: number
+  weight?: string
+  dimensions?: string
+  nutritionalInfo?: NutritionalInfoData | null
+  productIngredients?: ProductIngredientData[]
 }
 
 export default function ProductPage() {
@@ -48,9 +94,8 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
 
-  const addItem = useCartStore((state) => state.addItem)
-  const openCart = useCartStore((state) => state.openCart)
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore()
+  const { addProduct: addToComparison, removeProduct: removeFromComparison, isInComparison, canAddMore, openPanel } = useComparisonStore()
   const addRecentlyViewed = useRecentlyViewedStore((state) => state.addProduct)
   const { data: session } = useSession()
 
@@ -95,26 +140,6 @@ export default function ProductPage() {
     }
   }, [product, addRecentlyViewed])
 
-  const handleAddToCart = () => {
-    if (!product) return
-
-    addItem(
-      {
-        id: product.id,
-        name: product.name,
-        slug: product.slug,
-        price: product.price,
-        image: product.featuredImage,
-        sku: product.sku,
-        heatLevel: product.heatLevel,
-        maxQuantity: product.inventory,
-        quantity,
-      }
-    )
-
-    openCart()
-  }
-
   const handleWishlistToggle = () => {
     if (!product) return
 
@@ -130,7 +155,40 @@ export default function ProductPage() {
     }
   }
 
+  const handleComparisonToggle = () => {
+    if (!product) return
+
+    if (inComparison) {
+      removeFromComparison(product.id)
+      toast.success('Removed from comparison')
+    } else {
+      if (!canAddMore()) {
+        toast.error('Maximum 4 products can be compared')
+        return
+      }
+
+      addToComparison({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: product.featuredImage,
+        heatLevel: product.heatLevel,
+        sku: product.sku,
+        description: product.description,
+        inventory: product.inventory,
+        ingredients: product.ingredients || null,
+        weight: product.weight || null,
+        dimensions: product.dimensions || null,
+        nutritionalInfo: product.nutritionalInfo || null,
+      })
+      toast.success('Added to comparison')
+      openPanel()
+    }
+  }
+
   const inWishlist = product ? isInWishlist(product.id) : false
+  const inComparison = product ? isInComparison(product.id) : false
 
   if (loading) {
     return (
@@ -249,8 +307,17 @@ export default function ProductPage() {
               {product.description}
             </p>
             
-            {/* Ingredients */}
-            {product.ingredients.length > 0 && (
+            {/* Nutrition Facts & Ingredients */}
+            {product.nutritionalInfo && (
+              <NutritionalInfo
+                nutritionalInfo={product.nutritionalInfo}
+                productIngredients={product.productIngredients}
+                ingredients={product.ingredients}
+              />
+            )}
+
+            {/* Fallback: plain ingredients list when no nutritional info */}
+            {!product.nutritionalInfo && product.ingredients.length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
                   Ingredients
@@ -260,7 +327,7 @@ export default function ProductPage() {
                 </p>
               </div>
             )}
-            
+
             {/* Product Details */}
             <div className="bg-card rounded-lg p-4 space-y-2 surface-shadow">
               <div className="flex justify-between">
@@ -299,14 +366,36 @@ export default function ProductPage() {
               </div>
               
               <div className="flex gap-3">
-                <Button
-                  onClick={handleAddToCart}
+                <AddToCartButton
+                  product={{
+                    id: product.id,
+                    name: product.name,
+                    slug: product.slug,
+                    price: product.price,
+                    featuredImage: product.featuredImage,
+                    sku: product.sku,
+                    heatLevel: product.heatLevel,
+                    inventory: product.inventory,
+                  }}
+                  quantity={quantity}
                   size="lg"
-                  className="flex-1 bg-salsa-500 hover:bg-salsa-600 text-lg py-3"
-                  disabled={product.inventory === 0}
+                  className="flex-1 text-lg py-3"
+                />
+                <Button
+                  onClick={handleComparisonToggle}
+                  size="lg"
+                  variant={inComparison ? "default" : "outline"}
+                  className={cn(
+                    "px-4 py-3",
+                    inComparison ? "bg-blue-500 hover:bg-blue-600 text-white" : "text-blue-600 border-blue-600 hover:bg-blue-50"
+                  )}
+                  aria-label={inComparison ? "Remove from comparison" : "Add to comparison"}
+                  aria-pressed={inComparison}
                 >
-                  <ShoppingCart className="w-5 h-5 mr-2" />
-                  {product.inventory === 0 ? 'Out of Stock' : 'Add to Cart'}
+                  <Scale className="w-5 h-5" />
+                  <span className="sr-only">
+                    {inComparison ? "Remove from comparison" : "Add to comparison"}
+                  </span>
                 </Button>
 
                 <Button

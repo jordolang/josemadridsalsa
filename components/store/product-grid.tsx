@@ -1,27 +1,11 @@
-"use client";
-
 import { useState, useMemo } from "react";
-import { ProductCard } from "./product-card";
+import { ProductCard, type Product } from "./product-card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Grid3X3, List, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  price: number;
-  compareAtPrice?: number | null;
-  featuredImage: string | null;
-  heatLevel: string;
-  sku: string;
-  inventory: number;
-  isFeatured: boolean;
-}
 
 interface ProductGridProps {
   products: Product[];
@@ -87,7 +71,7 @@ export function ProductGrid({
     if (searchQuery) {
       filtered = filtered.filter((product) =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
