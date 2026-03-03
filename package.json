@@ -20,7 +20,6 @@
     "db:seed:recipes": "tsx scripts/seed-recipes.ts",
     "db:seed:nutrition": "tsx scripts/seed-nutrition-ingredients.ts",
     "db:seed:email-templates": "tsx scripts/seed-email-templates.ts",
-    "db:seed:nutrition": "tsx scripts/seed-nutrition-ingredients.ts",
     "locations:import": "tsx scripts/import-locations-from-markdown.ts",
     "locations:verify": "tsx scripts/verify-locations.ts",
     "locations:photos": "node scripts/generate-location-photos.js",
@@ -50,7 +49,9 @@
     "analyze": "tsx scripts/analyze-project.ts",
     "analyze:watch": "tsx scripts/analyze-project.ts --watch",
     "analyze:report": "tsx scripts/analyze-project.ts --export markdown",
-    "auto-execute": "tsx scripts/auto-execute-session.ts"
+    "auto-execute": "tsx scripts/auto-execute-session.ts",
+    "db:deploy": "prisma migrate deploy",
+    "vercel-build": "prisma generate && prisma db push --skip-generate --accept-data-loss && next build"
   },
   "keywords": [
     "salsa",
