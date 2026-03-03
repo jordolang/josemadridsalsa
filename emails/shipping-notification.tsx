@@ -34,85 +34,87 @@ export const ShippingNotificationEmail = ({
     <EmailLayout previewText={previewText}>
       <EmailHeader headerImage="shipping-notification.png" headerAlt="Your Order Has Shipped" />
 
-      {/* Greeting */}
-      <Section style={section}>
-        <Text style={heading}>
-          Your Order Has Shipped!
-        </Text>
-        <Text style={paragraph}>
-          Hi {name},
-        </Text>
-        <Text style={paragraph}>
-          Great news! Your Jose Madrid Salsa order is on its way to you. We hope you enjoy it!
-        </Text>
-      </Section>
+      <Section style={bodyContent}>
+        {/* Greeting */}
+        <Section style={section}>
+          <Text style={heading}>
+            Your Order Has Shipped!
+          </Text>
+          <Text style={paragraph}>
+            Hi {name},
+          </Text>
+          <Text style={paragraph}>
+            Great news! Your Jose Madrid Salsa order is on its way to you. We hope you enjoy it!
+          </Text>
+        </Section>
 
-      {/* Tracking Information */}
-      <Section style={trackingSection}>
-        <Text style={sectionHeading}>
-          Tracking Information
-        </Text>
-        <Row style={detailRow}>
-          <Column style={detailLabel}>
-            <Text style={labelText}>Tracking Number:</Text>
-          </Column>
-          <Column style={detailValue}>
-            <Text style={valueText}>{trackingNumber}</Text>
-          </Column>
-        </Row>
-        <Row style={detailRow}>
-          <Column style={detailLabel}>
-            <Text style={labelText}>Carrier:</Text>
-          </Column>
-          <Column style={detailValue}>
-            <Text style={valueText}>{carrier}</Text>
-          </Column>
-        </Row>
-        <Row style={detailRow}>
-          <Column style={detailLabel}>
-            <Text style={labelText}>Estimated Delivery:</Text>
-          </Column>
-          <Column style={detailValue}>
-            <Text style={valueText}>{estimatedDelivery}</Text>
-          </Column>
-        </Row>
-        <Row style={detailRow}>
-          <Column style={detailLabel}>
-            <Text style={labelText}>Shipping To:</Text>
-          </Column>
-          <Column style={detailValue}>
-            <Text style={valueText}>{shippingAddress}</Text>
-          </Column>
-        </Row>
-      </Section>
+        {/* Tracking Information */}
+        <Section style={trackingSection}>
+          <Text style={sectionHeading}>
+            Tracking Information
+          </Text>
+          <Row style={detailRow}>
+            <Column style={detailLabel}>
+              <Text style={labelText}>Tracking Number:</Text>
+            </Column>
+            <Column style={detailValue}>
+              <Text style={valueText}>{trackingNumber}</Text>
+            </Column>
+          </Row>
+          <Row style={detailRow}>
+            <Column style={detailLabel}>
+              <Text style={labelText}>Carrier:</Text>
+            </Column>
+            <Column style={detailValue}>
+              <Text style={valueText}>{carrier}</Text>
+            </Column>
+          </Row>
+          <Row style={detailRow}>
+            <Column style={detailLabel}>
+              <Text style={labelText}>Estimated Delivery:</Text>
+            </Column>
+            <Column style={detailValue}>
+              <Text style={valueText}>{estimatedDelivery}</Text>
+            </Column>
+          </Row>
+          <Row style={detailRow}>
+            <Column style={detailLabel}>
+              <Text style={labelText}>Shipping To:</Text>
+            </Column>
+            <Column style={detailValue}>
+              <Text style={valueText}>{shippingAddress}</Text>
+            </Column>
+          </Row>
+        </Section>
 
-      {/* Track Shipment CTA */}
-      <Section style={ctaSection}>
-        <Button href={trackingUrl} variant="primary" size="medium">
-          Track Your Shipment
-        </Button>
-      </Section>
+        {/* Track Shipment CTA */}
+        <Section style={ctaSection}>
+          <Button href={trackingUrl} variant="primary" size="medium">
+            Track Your Shipment
+          </Button>
+        </Section>
 
-      <Hr style={divider} />
+        <Hr style={divider} />
 
-      {/* Order Details */}
-      <Section style={section}>
-        <Text style={sectionHeading}>
-          Order #{orderNumber}
-        </Text>
-        <OrderItemsTable items={items} />
-      </Section>
+        {/* Order Details */}
+        <Section style={section}>
+          <Text style={sectionHeading}>
+            Order #{orderNumber}
+          </Text>
+          <OrderItemsTable items={items} />
+        </Section>
 
-      <Hr style={divider} />
+        <Hr style={divider} />
 
-      {/* Support Message */}
-      <Section style={supportSection}>
-        <Text style={supportText}>
-          Questions about your shipment? We&apos;re here to help! Reply to this email or contact us at{' '}
-          <a href="mailto:orders@josemadridsalsa.com" style={link}>
-            orders@josemadridsalsa.com
-          </a>
-        </Text>
+        {/* Support Message */}
+        <Section style={supportSection}>
+          <Text style={supportText}>
+            Questions about your shipment? We&apos;re here to help! Reply to this email or contact us at{' '}
+            <a href="mailto:orders@josemadridsalsa.com" style={link}>
+              orders@josemadridsalsa.com
+            </a>
+          </Text>
+        </Section>
       </Section>
 
       <EmailFooter unsubscribeUrl={unsubscribeUrl} />
@@ -121,6 +123,10 @@ export const ShippingNotificationEmail = ({
 };
 
 export default ShippingNotificationEmail;
+
+const bodyContent = {
+  padding: '0 48px',
+};
 
 const section = {
   padding: '0',
