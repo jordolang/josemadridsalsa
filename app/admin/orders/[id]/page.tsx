@@ -46,8 +46,12 @@ async function getRefundableAmount(order: {
       expand: ['charges']
     }) as any
 
-    const charge = paymentIntent.charges?.data?.[0]
-    if (!charge) return 0
+    const chargeId = typeof paymentIntent.latest_charge === 'string'
+      ? paymentIntent.latest_charge
+      : paymentIntent.latest_charge?.id
+    if (!chargeId) return 0
+
+    const charge = await stripe.charges.retrieve(chargeId)
 
     // Calculate refunded amount (Stripe stores in cents)
     const totalRefunded = (charge.amount_refunded || 0) / 100

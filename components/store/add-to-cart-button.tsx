@@ -16,8 +16,9 @@ export interface AddToCartButtonProduct {
   inventory: number
 }
 
-interface AddToCartButtonProps {
+export interface AddToCartButtonProps {
   product: AddToCartButtonProduct
+  quantity?: number
   variant?: 'default' | 'icon' | 'ghost'
   size?: 'sm' | 'default' | 'lg'
   className?: string
@@ -30,6 +31,7 @@ interface AddToCartButtonProps {
 
 export function AddToCartButton({
   product,
+  quantity = 1,
   variant = 'default',
   size = 'sm',
   className,
@@ -64,6 +66,7 @@ export function AddToCartButton({
       sku: product.sku,
       heatLevel: product.heatLevel,
       maxQuantity: product.inventory,
+      quantity,
     })
     openCart()
 

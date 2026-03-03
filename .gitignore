@@ -79,6 +79,10 @@ tsconfig.tsbuildinfo
 .gemini/
 gha-creds-*.json
 
+# Claude AI settings and symlinks
+.claude
+.claude_settings.json
+
 # Auto-Claude
 .auto-claude/
 

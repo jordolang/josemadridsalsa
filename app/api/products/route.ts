@@ -143,6 +143,15 @@ export async function GET(request: NextRequest) {
             tag: true,
           },
         },
+        nutritionalInfo: true,
+        productIngredients: {
+          include: {
+            ingredient: true,
+          },
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
       },
     })
 
@@ -163,6 +172,8 @@ export async function GET(request: NextRequest) {
       ingredients: product.ingredients || [],
       searchKeywords: product.searchKeywords || [],
       tags: product.productTags?.map(({ tag }) => tag.slug) || [],
+      nutritionalInfo: product.nutritionalInfo || null,
+      productIngredients: product.productIngredients || [],
     }))
 
     return NextResponse.json(parsedProducts)

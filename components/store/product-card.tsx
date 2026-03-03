@@ -37,6 +37,16 @@ export interface Product {
   ingredients: string[] | null
   weight?: string | null
   dimensions?: string | null
+  nutritionalInfo?: {
+    calories: number
+    sodiumMg: number
+    totalFatG: number
+    totalCarbG: number
+    sugarsG: number
+    dietaryFiberG: number
+    proteinG: number
+    servingSize: string
+  } | null
 }
 
 interface ProductCardProps {
@@ -90,6 +100,7 @@ export function ProductCard({ product }: ProductCardProps) {
         ingredients: product.ingredients,
         weight: product.weight || null,
         dimensions: product.dimensions || null,
+        nutritionalInfo: product.nutritionalInfo || null,
       })
       toast.success('Added to comparison')
       openPanel()
