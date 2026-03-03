@@ -3,6 +3,7 @@ import { EmailLayout } from './components/EmailLayout';
 import { EmailHeader } from './components/EmailHeader';
 import { EmailFooter } from './components/EmailFooter';
 import { Button } from './components/Button';
+import { bodyContent } from './styles';
 
 interface ContactFormEmailProps {
   name: string;
@@ -116,10 +117,6 @@ export const ContactFormEmail = ({
 };
 
 export default ContactFormEmail;
-
-const bodyContent = {
-  padding: '0 48px',
-};
 
 const section = {
   padding: '0',

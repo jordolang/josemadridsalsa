@@ -4,6 +4,7 @@ import { EmailHeader } from './components/EmailHeader';
 import { EmailFooter } from './components/EmailFooter';
 import { OrderItemsTable, OrderItem } from './components/OrderItemsTable';
 import { Button } from './components/Button';
+import { bodyContent } from './styles';
 
 interface DeliveryConfirmationEmailProps {
   name?: string;
@@ -36,7 +37,7 @@ export const DeliveryConfirmationEmail = ({
         {/* Greeting */}
         <Section style={section}>
           <Text style={heading}>
-            Your Order Has Been Delivered!
+            Your Order Has Been Delivered! 🎉
           </Text>
           <Text style={paragraph}>
             Hi {name},
@@ -142,10 +143,6 @@ export const DeliveryConfirmationEmail = ({
 };
 
 export default DeliveryConfirmationEmail;
-
-const bodyContent = {
-  padding: '0 48px',
-};
 
 const section = {
   padding: '0',
