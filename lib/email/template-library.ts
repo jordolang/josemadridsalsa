@@ -258,7 +258,7 @@ Questions? Call 740-349-3144`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('abandoned-cart.png', 'Don\\'t Miss Out')}
+      ${headerImg('abandoned-cart.png', "Don't Miss Out")}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>

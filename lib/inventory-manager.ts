@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
-import { InventoryTransactionType, InventoryAlertType, InventoryAlertStatus } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+import { InventoryTransactionType, InventoryAlertType, InventoryAlertStatus, StockStatus } from '@prisma/client';
 import { sendEmail } from '@/lib/email';
 
 export interface InventoryAdjustment {
@@ -20,46 +21,45 @@ export interface InventoryCheckResult {
   isOutOfStock: boolean;
 }
 
+export interface InventoryReservation {
+  productId: string;
+  quantity: number;
+  orderId?: string;
+  userId?: string;
+  notes?: string;
+}
+
 /**
- * Update product stock and record transaction
- *
- * @param productId - Product ID to update
- * @param quantity - Quantity to add (positive) or remove (negative)
- * @param type - Type of inventory transaction
- * @param userId - User ID performing the update (optional)
- * @param reason - Optional reason for the update
- * @param notes - Optional notes about the update
- * @param orderId - Optional order ID if transaction is order-related
- * @returns Updated product with transaction details
- * @throws Error if product not found or stock would go negative
+ * Compute stock status from available quantity and threshold
  */
-export async function updateStock(
-  productId: string,
-  quantity: number,
-  type: InventoryTransactionType,
-  userId?: string,
-  reason?: string,
-  notes?: string,
-  orderId?: string
-) {
-  return adjustInventory({
-    productId,
-    quantity,
-    type,
-    userId,
-    reason,
-    notes,
-    orderId,
-  });
+function computeStockStatus(available: number, lowStockThreshold: number): StockStatus {
+  if (available <= 0) return StockStatus.OUT_OF_STOCK;
+  if (available <= lowStockThreshold) return StockStatus.LOW_STOCK;
+  return StockStatus.IN_STOCK;
+}
+
+/**
+ * Retry a Prisma serializable transaction up to maxRetries times on P2034
+ * (serialization conflict / write conflict).
+ */
+async function withSerializableRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (error?.code === 'P2034' && attempt < maxRetries - 1) {
+        lastError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw lastError;
 }
 
 /**
  * Adjust inventory for a product and create transaction record
- * Updates stock levels and creates an audit trail transaction in a single database transaction
- *
- * @param adjustment - Inventory adjustment parameters including product ID, quantity, and metadata
- * @returns Updated product, transaction record, and stock levels
- * @throws Error if product not found or insufficient inventory
  */
 export async function adjustInventory(adjustment: InventoryAdjustment) {
   const { productId, quantity, type, reason, notes, orderId, userId } = adjustment;
@@ -72,7 +72,8 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
       name: true,
       sku: true,
       inventory: true,
-      lowStockThreshold: true
+      stockReserved: true,
+      lowStockThreshold: true,
     },
   });
 
@@ -90,11 +91,22 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
     );
   }
 
+  // Validate that new inventory doesn't drop below reserved stock
+  if (newStock < product.stockReserved) {
+    throw new Error(
+      `Cannot set inventory below reserved stock for ${product.name} (SKU: ${product.sku}). ` +
+      `New inventory: ${newStock}, Reserved: ${product.stockReserved}`
+    );
+  }
+
+  const newAvailable = newStock - product.stockReserved;
+  const newStockStatus = computeStockStatus(newAvailable, product.lowStockThreshold);
+
   // Update product inventory and create transaction in a single transaction
   const [updatedProduct, transaction] = await prisma.$transaction([
     prisma.product.update({
       where: { id: productId },
-      data: { inventory: newStock },
+      data: { inventory: newStock, stockStatus: newStockStatus },
     }),
     prisma.inventoryTransaction.create({
       data: {
@@ -112,7 +124,11 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
   ]);
 
   // Check if we need to create or resolve alerts
-  await checkAndUpdateAlerts(productId, newStock, product.lowStockThreshold);
+  try {
+    await checkAndUpdateAlerts(productId, newStock, product.lowStockThreshold);
+  } catch (alertError) {
+    console.error(`[adjustInventory] Alert sync failed for product ${productId}:`, alertError);
+  }
 
   return {
     product: updatedProduct,
@@ -124,10 +140,6 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
 
 /**
  * Adjust inventory for multiple products (bulk operation)
- * Processes each adjustment independently and returns results for all operations
- *
- * @param adjustments - Array of inventory adjustments to process
- * @returns Array of results with success status and details for each adjustment
  */
 export async function bulkAdjustInventory(adjustments: InventoryAdjustment[]) {
   const results = [];
@@ -149,15 +161,431 @@ export async function bulkAdjustInventory(adjustments: InventoryAdjustment[]) {
 }
 
 /**
- * Check inventory levels and create/resolve alerts
- * Automatically creates low stock or out of stock alerts when thresholds are crossed
- * Resolves alerts when stock returns to normal levels
- *
- * @param productId - Product ID to check
- * @param currentStock - Current stock level after update
- * @param lowStockThreshold - Low stock threshold for the product
+ * Reserve inventory for a product (e.g., during checkout)
+ * Uses Serializable transaction isolation to prevent race conditions.
+ * Retries up to 3 times on serialization conflicts (P2034).
  */
-async function checkAndUpdateAlerts(
+export async function reserveInventory(reservation: InventoryReservation) {
+  const { productId, quantity, orderId, userId, notes } = reservation;
+
+  if (quantity <= 0) {
+    throw new Error('Reservation quantity must be positive');
+  }
+
+  return withSerializableRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        // Get current product with lock
+        const product = await tx.product.findUnique({
+          where: { id: productId },
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            inventory: true,
+            stockReserved: true,
+            lowStockThreshold: true,
+          },
+        });
+
+        if (!product) {
+          throw new Error(`Product not found: ${productId}`);
+        }
+
+        const currentReserved = product.stockReserved;
+        const availableStock = product.inventory - currentReserved;
+
+        // Validate sufficient available stock
+        if (availableStock < quantity) {
+          throw new Error(
+            `Insufficient available inventory for ${product.name} (SKU: ${product.sku}). ` +
+            `Available: ${availableStock}, Requested: ${quantity}`
+          );
+        }
+
+        const newReserved = currentReserved + quantity;
+        const newAvailable = product.inventory - newReserved;
+        const newStockStatus = computeStockStatus(newAvailable, product.lowStockThreshold);
+
+        // Update product's reserved stock and stockStatus
+        const updatedProduct = await tx.product.update({
+          where: { id: productId },
+          data: { stockReserved: newReserved, stockStatus: newStockStatus },
+        });
+
+        // Create inventory transaction record
+        const transaction = await tx.inventoryTransaction.create({
+          data: {
+            productId,
+            type: InventoryTransactionType.RESERVATION,
+            quantity,
+            previousStock: product.inventory,
+            newStock: product.inventory, // Inventory doesn't change, only reserved
+            reason: 'RESERVATION',
+            notes: notes || `Reserved ${quantity} units${orderId ? ` for order ${orderId}` : ''}`,
+            orderId,
+            userId,
+          },
+        });
+
+        return {
+          product: updatedProduct,
+          transaction,
+          previousReserved: currentReserved,
+          newReserved,
+          availableStock: newAvailable,
+        };
+      },
+      {
+        isolationLevel: 'Serializable',
+      }
+    )
+  );
+}
+
+/**
+ * Helper function to reserve inventory within an existing transaction.
+ * Used by reserveMultipleProducts to enable atomic multi-product reservations.
+ */
+async function reserveInventorySingleTransaction(
+  reservation: InventoryReservation,
+  tx: Prisma.TransactionClient
+) {
+  const { productId, quantity, orderId, userId, notes } = reservation;
+
+  if (quantity <= 0) {
+    throw new Error('Reservation quantity must be positive');
+  }
+
+  // Get current product with lock
+  const product = await tx.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+      inventory: true,
+      stockReserved: true,
+      lowStockThreshold: true,
+    },
+  });
+
+  if (!product) {
+    throw new Error(`Product not found: ${productId}`);
+  }
+
+  const currentReserved = product.stockReserved;
+  const availableStock = product.inventory - currentReserved;
+
+  // Validate sufficient available stock
+  if (availableStock < quantity) {
+    throw new Error(
+      `Insufficient available inventory for ${product.name} (SKU: ${product.sku}). ` +
+      `Available: ${availableStock}, Requested: ${quantity}`
+    );
+  }
+
+  const newReserved = currentReserved + quantity;
+  const newAvailable = product.inventory - newReserved;
+  const newStockStatus = computeStockStatus(newAvailable, product.lowStockThreshold);
+
+  // Update product's reserved stock and stockStatus
+  const updatedProduct = await tx.product.update({
+    where: { id: productId },
+    data: { stockReserved: newReserved, stockStatus: newStockStatus },
+  });
+
+  // Create inventory transaction record
+  const transaction = await tx.inventoryTransaction.create({
+    data: {
+      productId,
+      type: InventoryTransactionType.RESERVATION,
+      quantity,
+      previousStock: product.inventory,
+      newStock: product.inventory, // Inventory doesn't change, only reserved
+      reason: 'RESERVATION',
+      notes: notes || `Reserved ${quantity} units${orderId ? ` for order ${orderId}` : ''}`,
+      orderId,
+      userId,
+    },
+  });
+
+  return {
+    product: updatedProduct,
+    transaction,
+    previousReserved: currentReserved,
+    newReserved,
+    availableStock: newAvailable,
+  };
+}
+
+/**
+ * Reserve inventory for multiple products (bulk operation).
+ * Uses a single Serializable transaction for atomic all-or-nothing behavior.
+ * If any product has insufficient stock, the entire reservation fails and rolls back.
+ * Retries up to 3 times on serialization conflicts (P2034).
+ */
+export async function reserveMultipleProducts(reservations: InventoryReservation[]) {
+  return withSerializableRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        const results = [];
+
+        // Step 1: Validate all products have sufficient stock BEFORE reserving anything
+        for (const reservation of reservations) {
+          const product = await tx.product.findUnique({
+            where: { id: reservation.productId },
+            select: {
+              id: true,
+              name: true,
+              sku: true,
+              inventory: true,
+              stockReserved: true,
+            },
+          });
+
+          if (!product) {
+            throw new Error(`Product not found: ${reservation.productId}`);
+          }
+
+          const available = product.inventory - product.stockReserved;
+          if (available < reservation.quantity) {
+            throw new Error(
+              `Insufficient stock for ${product.name} (SKU: ${product.sku}). ` +
+              `Available: ${available}, Requested: ${reservation.quantity}`
+            );
+          }
+        }
+
+        // Step 2: If ALL validations pass, reserve inventory for ALL products atomically
+        for (const reservation of reservations) {
+          const result = await reserveInventorySingleTransaction(reservation, tx);
+          results.push({ success: true, ...result });
+        }
+
+        return results;
+      },
+      {
+        isolationLevel: 'Serializable',
+        maxWait: 5000,
+        timeout: 10000,
+      }
+    )
+  );
+}
+
+/**
+ * Release previously reserved inventory for a product (e.g., after order cancellation).
+ * Uses Serializable transaction isolation to prevent race conditions.
+ * Retries up to 3 times on serialization conflicts (P2034).
+ */
+export async function releaseInventory(reservation: InventoryReservation) {
+  const { productId, quantity, orderId, userId, notes } = reservation;
+
+  if (quantity <= 0) {
+    throw new Error('Release quantity must be positive');
+  }
+
+  return withSerializableRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        // Get current product with lock
+        const product = await tx.product.findUnique({
+          where: { id: productId },
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            inventory: true,
+            stockReserved: true,
+            lowStockThreshold: true,
+          },
+        });
+
+        if (!product) {
+          throw new Error(`Product not found: ${productId}`);
+        }
+
+        const currentReserved = product.stockReserved;
+
+        // Validate sufficient reserved stock to release
+        if (currentReserved < quantity) {
+          throw new Error(
+            `Cannot release more than reserved for ${product.name} (SKU: ${product.sku}). ` +
+            `Reserved: ${currentReserved}, Requested: ${quantity}`
+          );
+        }
+
+        const newReserved = currentReserved - quantity;
+        const newAvailable = product.inventory - newReserved;
+        const newStockStatus = computeStockStatus(newAvailable, product.lowStockThreshold);
+
+        // Update product's reserved stock and stockStatus
+        const updatedProduct = await tx.product.update({
+          where: { id: productId },
+          data: { stockReserved: newReserved, stockStatus: newStockStatus },
+        });
+
+        // Create inventory transaction record
+        const transaction = await tx.inventoryTransaction.create({
+          data: {
+            productId,
+            type: InventoryTransactionType.RELEASE,
+            quantity: -quantity, // Negative to indicate release
+            previousStock: product.inventory,
+            newStock: product.inventory, // Inventory doesn't change, only reserved
+            reason: 'RELEASE',
+            notes: notes || `Released ${quantity} units${orderId ? ` for order ${orderId}` : ''}`,
+            orderId,
+            userId,
+          },
+        });
+
+        return {
+          product: updatedProduct,
+          transaction,
+          previousReserved: currentReserved,
+          newReserved,
+          availableStock: newAvailable,
+        };
+      },
+      {
+        isolationLevel: 'Serializable',
+      }
+    )
+  );
+}
+
+/**
+ * Deduct reserved inventory when order is completed.
+ * Decreases both stockReserved and actual inventory.
+ * Uses Serializable transaction isolation to prevent race conditions.
+ * Retries up to 3 times on serialization conflicts (P2034).
+ */
+export async function deductReservedInventory(reservation: InventoryReservation) {
+  const { productId, orderId } = reservation;
+
+  const result = await withSerializableRetry(() =>
+    prisma.$transaction(
+      async (tx) => deductReservedInventoryInTx(reservation, tx),
+      {
+        isolationLevel: 'Serializable',
+      }
+    )
+  );
+
+  // Check if we need to create alerts after deduction (non-critical — deduction already committed)
+  try {
+    await checkAndUpdateAlerts(productId, result.newInventory, result.product.lowStockThreshold);
+  } catch (alertError) {
+    console.error(
+      `[deductReservedInventory] Alert sync failed for product ${productId}` +
+      `${orderId ? ` (order ${orderId})` : ''}:`,
+      alertError
+    );
+  }
+
+  return result;
+}
+
+/**
+ * Deduct reserved inventory within an existing transaction.
+ * Used by checkout/complete to keep the order-PAID update and inventory deduction atomic.
+ * Does NOT call checkAndUpdateAlerts — the caller is responsible for firing alerts
+ * after the enclosing transaction commits.
+ */
+export async function deductReservedInventoryInTx(
+  reservation: InventoryReservation,
+  tx: Prisma.TransactionClient
+) {
+  const { productId, quantity, orderId, userId, notes } = reservation;
+
+  if (quantity <= 0) {
+    throw new Error('Deduction quantity must be positive');
+  }
+
+  // Get current product with lock
+  const product = await tx.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+      inventory: true,
+      stockReserved: true,
+      lowStockThreshold: true,
+    },
+  });
+
+  if (!product) {
+    throw new Error(`Product not found: ${productId}`);
+  }
+
+  const currentReserved = product.stockReserved;
+  const currentInventory = product.inventory;
+
+  // Validate sufficient reserved stock to deduct
+  if (currentReserved < quantity) {
+    throw new Error(
+      `Cannot deduct more than reserved for ${product.name} (SKU: ${product.sku}). ` +
+      `Reserved: ${currentReserved}, Requested: ${quantity}`
+    );
+  }
+
+  // Validate sufficient inventory to deduct
+  if (currentInventory < quantity) {
+    throw new Error(
+      `Insufficient inventory for ${product.name} (SKU: ${product.sku}). ` +
+      `Current: ${currentInventory}, Requested: ${quantity}`
+    );
+  }
+
+  const newReserved = currentReserved - quantity;
+  const newInventory = currentInventory - quantity;
+  const newAvailable = newInventory - newReserved;
+  const newStockStatus = computeStockStatus(newAvailable, product.lowStockThreshold);
+
+  // Update product's reserved stock, inventory, and stockStatus
+  const updatedProduct = await tx.product.update({
+    where: { id: productId },
+    data: {
+      stockReserved: newReserved,
+      inventory: newInventory,
+      stockStatus: newStockStatus,
+    },
+  });
+
+  // Create inventory transaction record
+  const transaction = await tx.inventoryTransaction.create({
+    data: {
+      productId,
+      type: InventoryTransactionType.SALE,
+      quantity: -quantity, // Negative to indicate deduction
+      previousStock: currentInventory,
+      newStock: newInventory,
+      reason: 'ORDER_COMPLETION',
+      notes: notes || `Deducted ${quantity} units${orderId ? ` for order ${orderId}` : ''}`,
+      orderId,
+      userId,
+    },
+  });
+
+  return {
+    product: updatedProduct,
+    transaction,
+    previousInventory: currentInventory,
+    newInventory,
+    previousReserved: currentReserved,
+    newReserved,
+    availableStock: newAvailable,
+  };
+}
+
+/**
+ * Check inventory levels and create/resolve alerts.
+ * Exported so callers can fire alerts after a committed transaction.
+ */
+export async function checkAndUpdateAlerts(
   productId: string,
   currentStock: number,
   lowStockThreshold: number
@@ -231,81 +659,7 @@ async function checkAndUpdateAlerts(
 }
 
 /**
- * Check and create alert for low stock detection
- * Prevents duplicate alerts and handles proper status management
- *
- * @param productId - Product ID to check
- * @param currentStock - Current stock level
- * @param lowStockThreshold - Low stock threshold for the product
- * @returns Created alert or null if no alert needed or duplicate exists
- */
-export async function checkAndCreateAlert(
-  productId: string,
-  currentStock: number,
-  lowStockThreshold: number
-) {
-  const isOutOfStock = currentStock === 0;
-  const isLowStock = currentStock > 0 && currentStock <= lowStockThreshold;
-
-  // No alert needed if stock is normal
-  if (!isOutOfStock && !isLowStock) {
-    return null;
-  }
-
-  // Determine alert type
-  const alertType = isOutOfStock
-    ? InventoryAlertType.OUT_OF_STOCK
-    : InventoryAlertType.LOW_STOCK;
-
-  // Check for existing active alerts of this type to prevent duplicates
-  const existingAlert = await prisma.inventoryAlert.findFirst({
-    where: {
-      productId,
-      type: alertType,
-      status: {
-        in: [InventoryAlertStatus.ACTIVE, InventoryAlertStatus.ACKNOWLEDGED],
-      },
-    },
-    include: {
-      product: {
-        select: {
-          id: true,
-          name: true,
-          sku: true,
-          inventory: true,
-        },
-      },
-    },
-  });
-
-  // Don't create duplicate alert if one already exists
-  if (existingAlert) {
-    return existingAlert;
-  }
-
-  // Create new alert
-  const alert = await createAlert(
-    productId,
-    alertType,
-    currentStock,
-    lowStockThreshold
-  );
-
-  // Send notification for new alert
-  await notifyLowStock(alert);
-
-  return alert;
-}
-
-/**
  * Create an inventory alert
- * Creates a new alert record in the database with ACTIVE status
- *
- * @param productId - Product ID to create alert for
- * @param type - Type of alert (LOW_STOCK or OUT_OF_STOCK)
- * @param stockLevel - Current stock level
- * @param threshold - Low stock threshold value
- * @returns Created alert with product details
  */
 async function createAlert(
   productId: string,
@@ -335,123 +689,7 @@ async function createAlert(
 }
 
 /**
- * Send low stock email notification
- * Sends formatted HTML email with stock level details and urgency indicators
- *
- * @param to - Recipient email address
- * @param productName - Product name
- * @param productSku - Product SKU
- * @param productId - Product ID for deep link
- * @param stockLevel - Current stock level
- * @param alertType - Type of alert (LOW_STOCK or OUT_OF_STOCK)
- * @param threshold - Optional low stock threshold value
- * @returns Email send result or skip status
- */
-export async function sendLowStockEmail(
-  to: string,
-  productName: string,
-  productSku: string,
-  productId: string,
-  stockLevel: number,
-  alertType: InventoryAlertType,
-  threshold?: number
-) {
-  const resendApiKey = process.env.RESEND_API_KEY;
-  if (!resendApiKey) {
-    console.warn('RESEND_API_KEY not set; skipping low stock email');
-    return { skipped: true };
-  }
-
-  try {
-    const subject = alertType === InventoryAlertType.OUT_OF_STOCK
-      ? `🚨 OUT OF STOCK: ${productName}`
-      : `⚠️ LOW STOCK ALERT: ${productName}`;
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#dc2626 0%, #991b1b 100%' : '#f59e0b 0%, #d97706 100%'}); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">
-              ${alertType === InventoryAlertType.OUT_OF_STOCK ? '🚨 Out of Stock Alert' : '⚠️ Low Stock Alert'}
-            </h1>
-          </div>
-
-          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-            <p style="font-size: 16px; margin-bottom: 20px;">
-              The following product needs immediate attention:
-            </p>
-
-            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#dc2626' : '#f59e0b'};">
-              <p style="margin: 8px 0; font-size: 14px;">
-                <strong style="color: #374151;">Product:</strong>
-                <span style="color: #111827;">${productName}</span>
-              </p>
-              <p style="margin: 8px 0; font-size: 14px;">
-                <strong style="color: #374151;">SKU:</strong>
-                <span style="color: #111827;">${productSku}</span>
-              </p>
-              <p style="margin: 8px 0; font-size: 14px;">
-                <strong style="color: #374151;">Current Stock:</strong>
-                <span style="color: ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#dc2626' : '#f59e0b'}; font-weight: bold; font-size: 18px;">${stockLevel}</span>
-              </p>
-              ${threshold !== undefined && alertType === InventoryAlertType.LOW_STOCK ? `
-              <p style="margin: 8px 0; font-size: 14px;">
-                <strong style="color: #374151;">Threshold:</strong>
-                <span style="color: #111827;">${threshold}</span>
-              </p>
-              ` : ''}
-            </div>
-
-            <div style="background: ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#fef2f2' : '#fef3c7'}; border-left: 4px solid ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#dc2626' : '#f59e0b'}; padding: 15px; margin: 20px 0; border-radius: 4px;">
-              <p style="margin: 0; font-size: 14px; color: ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#991b1b' : '#92400e'};">
-                <strong>${alertType === InventoryAlertType.OUT_OF_STOCK ? '🔴 This product is completely out of stock!' : '⚠️ Stock level is below threshold.'}</strong>
-              </p>
-              <p style="margin: 8px 0 0 0; font-size: 14px; color: ${alertType === InventoryAlertType.OUT_OF_STOCK ? '#991b1b' : '#92400e'};">
-                Please restock this product as soon as possible.
-              </p>
-            </div>
-
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.NEXTAUTH_URL}/admin/products/${productId}"
-                 style="background: #3b82f6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">
-                View Product Details
-              </a>
-            </div>
-
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-
-            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
-              Jose Madrid Salsa - Inventory Management<br>
-              This is an automated message, please do not reply.
-            </p>
-          </div>
-        </body>
-      </html>
-    `;
-
-    const res = await sendEmail({
-      to,
-      subject,
-      html,
-    });
-
-    return res;
-  } catch (e) {
-    console.error('Failed to send low stock email', e);
-    return { error: true };
-  }
-}
-
-/**
  * Send low stock notification email
- * Sends email to all configured admin addresses and updates alert with notification info
- *
- * @param alert - Alert object with product details and stock information
  */
 async function notifyLowStock(alert: any) {
   try {
@@ -465,17 +703,37 @@ async function notifyLowStock(alert: any) {
       return;
     }
 
+    const subject = type === InventoryAlertType.OUT_OF_STOCK
+      ? `🚨 OUT OF STOCK: ${product.name}`
+      : `⚠️ LOW STOCK ALERT: ${product.name}`;
+
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: ${type === InventoryAlertType.OUT_OF_STOCK ? '#dc2626' : '#f59e0b'};">
+          ${type === InventoryAlertType.OUT_OF_STOCK ? 'Out of Stock Alert' : 'Low Stock Alert'}
+        </h2>
+        <p>The following product needs attention:</p>
+        <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+          <p><strong>Product:</strong> ${product.name}</p>
+          <p><strong>SKU:</strong> ${product.sku}</p>
+          <p><strong>Current Stock:</strong> <span style="color: ${type === InventoryAlertType.OUT_OF_STOCK ? '#dc2626' : '#f59e0b'}; font-weight: bold;">${stockLevel}</span></p>
+          ${type === InventoryAlertType.LOW_STOCK ? `<p><strong>Threshold:</strong> ${alert.threshold}</p>` : ''}
+        </div>
+        <p>Please restock this product as soon as possible.</p>
+        <a href="${process.env.NEXTAUTH_URL}/admin/products/${product.id}"
+           style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px;">
+          View Product
+        </a>
+      </div>
+    `;
+
     // Send email to all admin addresses
     for (const email of adminEmails) {
-      await sendLowStockEmail(
-        email.trim(),
-        product.name,
-        product.sku,
-        product.id,
-        stockLevel,
-        type,
-        alert.threshold
-      );
+      await sendEmail({
+        to: email.trim(),
+        subject,
+        html: htmlContent,
+      });
     }
 
     // Update alert with notification info
@@ -494,11 +752,6 @@ async function notifyLowStock(alert: any) {
 
 /**
  * Get inventory status for a product
- * Retrieves current stock levels and calculates low stock and out of stock flags
- *
- * @param productId - Product ID to check
- * @returns Inventory status with stock levels and flags
- * @throws Error if product not found
  */
 export async function getInventoryStatus(productId: string): Promise<InventoryCheckResult> {
   const product = await prisma.product.findUnique({
@@ -525,9 +778,6 @@ export async function getInventoryStatus(productId: string): Promise<InventoryCh
 
 /**
  * Get all low stock products
- * Retrieves all active products with stock at or below their low stock threshold
- *
- * @returns Array of products with stock status flags and active alerts
  */
 export async function getLowStockProducts() {
   const products = await prisma.product.findMany({
@@ -565,11 +815,6 @@ export async function getLowStockProducts() {
 
 /**
  * Get inventory transaction history for a product
- * Retrieves the most recent inventory transactions ordered by creation date
- *
- * @param productId - Product ID to get history for
- * @param limit - Maximum number of transactions to retrieve (default: 50)
- * @returns Array of inventory transactions
  */
 export async function getInventoryHistory(productId: string, limit = 50) {
   return await prisma.inventoryTransaction.findMany({
@@ -581,11 +826,6 @@ export async function getInventoryHistory(productId: string, limit = 50) {
 
 /**
  * Acknowledge an inventory alert
- * Changes alert status to ACKNOWLEDGED to indicate it has been reviewed
- *
- * @param alertId - Alert ID to acknowledge
- * @param userId - Optional user ID performing the acknowledgment
- * @returns Updated alert record
  */
 export async function acknowledgeAlert(alertId: string, userId?: string) {
   return await prisma.inventoryAlert.update({
@@ -599,12 +839,6 @@ export async function acknowledgeAlert(alertId: string, userId?: string) {
 
 /**
  * Resolve an inventory alert
- * Marks alert as RESOLVED with timestamp and optional resolution notes
- *
- * @param alertId - Alert ID to resolve
- * @param userId - Optional user ID performing the resolution
- * @param notes - Optional resolution notes explaining how the issue was addressed
- * @returns Updated alert record
  */
 export async function resolveAlert(alertId: string, userId?: string, notes?: string) {
   return await prisma.inventoryAlert.update({
@@ -619,45 +853,7 @@ export async function resolveAlert(alertId: string, userId?: string, notes?: str
 }
 
 /**
- * Resolve multiple inventory alerts (bulk operation)
- * Processes each alert independently and returns results for all operations
- *
- * @param alertIds - Array of alert IDs to resolve
- * @param userId - Optional user ID performing the resolution
- * @param notes - Optional resolution notes applied to all alerts
- * @returns Array of results with success status and details for each alert
- */
-export async function resolveAlerts(
-  alertIds: string[],
-  userId?: string,
-  notes?: string
-) {
-  const results = [];
-
-  for (const alertId of alertIds) {
-    try {
-      const alert = await resolveAlert(alertId, userId, notes);
-      results.push({ success: true, alertId, alert });
-    } catch (error: any) {
-      results.push({
-        success: false,
-        alertId,
-        error: error.message,
-      });
-    }
-  }
-
-  return results;
-}
-
-/**
  * Dismiss an inventory alert
- * Marks alert as DISMISSED when it should be ignored without restocking
- *
- * @param alertId - Alert ID to dismiss
- * @param userId - Optional user ID performing the dismissal
- * @param notes - Optional notes explaining why the alert was dismissed
- * @returns Updated alert record
  */
 export async function dismissAlert(alertId: string, userId?: string, notes?: string) {
   return await prisma.inventoryAlert.update({
@@ -669,204 +865,4 @@ export async function dismissAlert(alertId: string, userId?: string, notes?: str
       resolutionNotes: notes,
     },
   });
-}
-
-/**
- * Create and send restock notification for critical stock levels
- * Calculates recommended restock quantity and urgency level
- *
- * @param productId - Product ID to restock
- * @param productName - Product name
- * @param productSku - Product SKU
- * @param currentStock - Current stock level
- * @param lowStockThreshold - Low stock threshold
- * @param averageDailySales - Average daily sales (optional, for calculating restock quantity)
- * @returns Email send result
- */
-export async function createRestockNotification(
-  productId: string,
-  productName: string,
-  productSku: string,
-  currentStock: number,
-  lowStockThreshold: number,
-  averageDailySales?: number
-) {
-  const resendApiKey = process.env.RESEND_API_KEY;
-  if (!resendApiKey) {
-    console.warn('RESEND_API_KEY not set; skipping restock notification');
-    return { skipped: true };
-  }
-
-  try {
-    // Calculate recommended restock quantity
-    // Base calculation: bring stock to 3x threshold or 30 days of sales (whichever is higher)
-    let recommendedRestock = lowStockThreshold * 3;
-
-    if (averageDailySales && averageDailySales > 0) {
-      const thirtyDaysStock = Math.ceil(averageDailySales * 30);
-      recommendedRestock = Math.max(recommendedRestock, thirtyDaysStock);
-    }
-
-    // Adjust for current stock - we need to add enough to reach the recommended level
-    const restockQuantity = Math.max(0, recommendedRestock - currentStock);
-
-    // Determine urgency level
-    let urgency: 'critical' | 'high' | 'medium';
-    let urgencyColor: string;
-    let urgencyIcon: string;
-    let urgencyText: string;
-
-    if (currentStock === 0) {
-      urgency = 'critical';
-      urgencyColor = '#dc2626';
-      urgencyIcon = '🔴';
-      urgencyText = 'CRITICAL - Out of Stock';
-    } else if (currentStock <= lowStockThreshold * 0.5) {
-      urgency = 'high';
-      urgencyColor = '#f59e0b';
-      urgencyIcon = '🟠';
-      urgencyText = 'HIGH - Critically Low Stock';
-    } else {
-      urgency = 'medium';
-      urgencyColor = '#eab308';
-      urgencyIcon = '🟡';
-      urgencyText = 'MEDIUM - Low Stock';
-    }
-
-    // Days of stock remaining (if we have sales data)
-    let daysRemaining = '';
-    if (averageDailySales && averageDailySales > 0 && currentStock > 0) {
-      const days = Math.floor(currentStock / averageDailySales);
-      daysRemaining = `
-        <p style="margin: 8px 0; font-size: 14px;">
-          <strong style="color: #374151;">Days of Stock Remaining:</strong>
-          <span style="color: ${days <= 7 ? '#dc2626' : '#111827'}; font-weight: ${days <= 7 ? 'bold' : 'normal'};">${days} days</span>
-        </p>
-      `;
-    }
-
-    const subject = `${urgencyIcon} RESTOCK NEEDED (${urgency.toUpperCase()}): ${productName}`;
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, ${urgencyColor} 0%, ${urgency === 'critical' ? '#991b1b' : urgency === 'high' ? '#d97706' : '#ca8a04'} 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">
-              ${urgencyIcon} Restock Required
-            </h1>
-            <p style="color: rgba(255,255,255,0.95); margin: 10px 0 0 0; font-size: 14px; font-weight: 600;">
-              Urgency Level: ${urgencyText}
-            </p>
-          </div>
-
-          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-            <p style="font-size: 16px; margin-bottom: 20px;">
-              The following product requires restocking:
-            </p>
-
-            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${urgencyColor};">
-              <p style="margin: 8px 0; font-size: 14px;">
-                <strong style="color: #374151;">Product:</strong>
-                <span style="color: #111827;">${productName}</span>
-              </p>
-              <p style="margin: 8px 0; font-size: 14px;">
-                <strong style="color: #374151;">SKU:</strong>
-                <span style="color: #111827;">${productSku}</span>
-              </p>
-              <p style="margin: 8px 0; font-size: 14px;">
-                <strong style="color: #374151;">Current Stock:</strong>
-                <span style="color: ${urgencyColor}; font-weight: bold; font-size: 18px;">${currentStock}</span>
-              </p>
-              <p style="margin: 8px 0; font-size: 14px;">
-                <strong style="color: #374151;">Low Stock Threshold:</strong>
-                <span style="color: #111827;">${lowStockThreshold}</span>
-              </p>
-              ${daysRemaining}
-            </div>
-
-            <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 4px;">
-              <p style="margin: 0 0 10px 0; font-size: 16px; color: #047857; font-weight: 600;">
-                📦 Recommended Restock Quantity
-              </p>
-              <p style="margin: 0; font-size: 28px; color: #059669; font-weight: bold;">
-                ${restockQuantity} units
-              </p>
-              <p style="margin: 10px 0 0 0; font-size: 13px; color: #065f46;">
-                This will bring stock to approximately ${recommendedRestock} units
-                ${averageDailySales && averageDailySales > 0 ? `(~${Math.ceil(recommendedRestock / averageDailySales)} days of inventory)` : '(3x threshold)'}
-              </p>
-            </div>
-
-            <div style="background: ${urgency === 'critical' ? '#fef2f2' : urgency === 'high' ? '#fef3c7' : '#fefce8'}; border-left: 4px solid ${urgencyColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
-              <p style="margin: 0; font-size: 14px; color: ${urgency === 'critical' ? '#991b1b' : urgency === 'high' ? '#92400e' : '#854d0e'};">
-                <strong>${urgencyIcon} ${urgency === 'critical' ? 'This product is out of stock and should be restocked immediately!' : urgency === 'high' ? 'Stock level is critically low. Immediate action recommended.' : 'Stock level is below threshold. Please plan for restocking soon.'}</strong>
-              </p>
-            </div>
-
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.NEXTAUTH_URL}/admin/products/${productId}"
-                 style="background: #3b82f6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">
-                View Product & Restock
-              </a>
-            </div>
-
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-
-            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
-              Jose Madrid Salsa - Inventory Management<br>
-              This is an automated message, please do not reply.
-            </p>
-          </div>
-        </body>
-      </html>
-    `;
-
-    // Get admin email addresses from environment or database
-    const adminEmails = process.env.INVENTORY_ALERT_EMAILS?.split(',') || [];
-
-    if (adminEmails.length === 0) {
-      console.warn('No admin emails configured for restock notifications');
-      return { skipped: true, reason: 'No admin emails configured' };
-    }
-
-    // Send email to all admin addresses
-    const results = [];
-    for (const email of adminEmails) {
-      const res = await sendEmail({
-        to: email.trim(),
-        subject,
-        html,
-      });
-      results.push(res);
-    }
-
-    // Create RestockNotification record in database
-    const restockNotification = await prisma.restockNotification.create({
-      data: {
-        productId,
-        stockLevel: currentStock,
-        recommendedQty: restockQuantity,
-        sentAt: new Date(),
-        sentTo: adminEmails.map(e => e.trim()),
-      },
-    });
-
-    return {
-      success: true,
-      urgency,
-      restockQuantity,
-      recommendedStock: recommendedRestock,
-      emailsSent: adminEmails.length,
-      results,
-      notification: restockNotification,
-    };
-  } catch (e) {
-    console.error('Failed to send restock notification', e);
-    return { error: true };
-  }
 }

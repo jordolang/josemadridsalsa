@@ -8,6 +8,7 @@ import { calculateTax } from '@/lib/tax-calculator'
 import { calculateShipping } from '@/lib/shipping-calculator'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
+import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manager'
 
 const CheckoutSchema = z.object({
   items: z
@@ -87,15 +88,6 @@ export async function POST(request: NextRequest) {
       const product = productMap.get(item.productId)
       if (!product) continue
 
-      if (product.inventory < item.quantity) {
-        return NextResponse.json(
-          {
-            error: `Insufficient inventory for ${product.name}. Available: ${product.inventory}`,
-          },
-          { status: 400 }
-        )
-      }
-
       const unitPrice = Number(product.price)
       const lineTotal = unitPrice * item.quantity
       subtotal += lineTotal
@@ -111,6 +103,28 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Reserve inventory for all items atomically before proceeding with checkout.
+    // reserveMultipleProducts uses a single Serializable transaction: if any item
+    // has insufficient stock the entire reservation is rolled back automatically.
+    let reservationResults: Awaited<ReturnType<typeof reserveMultipleProducts>>
+    try {
+      reservationResults = await reserveMultipleProducts(
+        items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          userId: user?.id,
+          notes: 'Checkout reservation',
+        }))
+      )
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: error.message || 'Unable to reserve inventory' },
+        { status: 400 }
+      )
+    }
+
+    // Wrap all post-reservation logic so we can release reservations on any failure
+    try {
     // Calculate tax using Stripe Tax API
     let taxAmount = 0
     try {
@@ -272,11 +286,28 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({
-      clientSecret: paymentIntent.client_secret,
-      orderId: order.id,
-      amount: total,
-    })
+      return NextResponse.json({
+        clientSecret: paymentIntent.client_secret,
+        orderId: order.id,
+        amount: total,
+      })
+    } catch (postReservationError) {
+      // Release all reservations on any downstream failure
+      console.error('[Checkout] Post-reservation error, releasing all reservations:', postReservationError)
+      for (const item of items) {
+        try {
+          await releaseInventory({
+            productId: item.productId,
+            quantity: item.quantity,
+            userId: user?.id,
+            notes: 'Checkout failed - releasing reservation',
+          })
+        } catch (releaseError) {
+          console.error('[Checkout] Failed to release reservation:', releaseError)
+        }
+      }
+      throw postReservationError
+    }
   } catch (error) {
     console.error('Checkout error:', error)
     return NextResponse.json(
