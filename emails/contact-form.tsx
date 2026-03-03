@@ -27,85 +27,87 @@ export const ContactFormEmail = ({
     <EmailLayout previewText={previewText}>
       <EmailHeader headerImage="email-header.png" headerAlt="Jose Madrid Salsa" />
 
-      {/* Heading */}
-      <Section style={section}>
-        <Text style={heading}>
-          New Contact Form Submission
-        </Text>
-        <Text style={paragraph}>
-          You&apos;ve received a new message through the contact form.
-        </Text>
-      </Section>
-
-      {/* Contact Details */}
-      <Section style={detailsSection}>
-        <Text style={sectionHeading}>
-          Contact Information
-        </Text>
-        <Row style={detailRow}>
-          <Column style={detailLabel}>
-            <Text style={labelText}>Name:</Text>
-          </Column>
-          <Column style={detailValue}>
-            <Text style={valueText}>{name}</Text>
-          </Column>
-        </Row>
-        <Row style={detailRow}>
-          <Column style={detailLabel}>
-            <Text style={labelText}>Email:</Text>
-          </Column>
-          <Column style={detailValue}>
-            <Text style={valueText}>
-              <a href={`mailto:${email}`} style={emailLink}>{email}</a>
-            </Text>
-          </Column>
-        </Row>
-        {phone && (
-          <Row style={detailRow}>
-            <Column style={detailLabel}>
-              <Text style={labelText}>Phone:</Text>
-            </Column>
-            <Column style={detailValue}>
-              <Text style={valueText}>{phone}</Text>
-            </Column>
-          </Row>
-        )}
-        {submittedAt && (
-          <Row style={detailRow}>
-            <Column style={detailLabel}>
-              <Text style={labelText}>Submitted:</Text>
-            </Column>
-            <Column style={detailValue}>
-              <Text style={valueText}>{submittedAt}</Text>
-            </Column>
-          </Row>
-        )}
-      </Section>
-
-      <Hr style={divider} />
-
-      {/* Message Content */}
-      <Section style={messageSection}>
-        <Text style={sectionHeading}>
-          Message
-        </Text>
-        <Section style={messageBox}>
-          <Text style={messageText}>
-            {message}
+      <Section style={bodyContent}>
+        {/* Heading */}
+        <Section style={section}>
+          <Text style={heading}>
+            New Contact Form Submission
+          </Text>
+          <Text style={paragraph}>
+            You&apos;ve received a new message through the contact form.
           </Text>
         </Section>
-      </Section>
 
-      <Hr style={divider} />
+        {/* Contact Details */}
+        <Section style={detailsSection}>
+          <Text style={sectionHeading}>
+            Contact Information
+          </Text>
+          <Row style={detailRow}>
+            <Column style={detailLabel}>
+              <Text style={labelText}>Name:</Text>
+            </Column>
+            <Column style={detailValue}>
+              <Text style={valueText}>{name}</Text>
+            </Column>
+          </Row>
+          <Row style={detailRow}>
+            <Column style={detailLabel}>
+              <Text style={labelText}>Email:</Text>
+            </Column>
+            <Column style={detailValue}>
+              <Text style={valueText}>
+                <a href={`mailto:${email}`} style={emailLink}>{email}</a>
+              </Text>
+            </Column>
+          </Row>
+          {phone && (
+            <Row style={detailRow}>
+              <Column style={detailLabel}>
+                <Text style={labelText}>Phone:</Text>
+              </Column>
+              <Column style={detailValue}>
+                <Text style={valueText}>{phone}</Text>
+              </Column>
+            </Row>
+          )}
+          {submittedAt && (
+            <Row style={detailRow}>
+              <Column style={detailLabel}>
+                <Text style={labelText}>Submitted:</Text>
+              </Column>
+              <Column style={detailValue}>
+                <Text style={valueText}>{submittedAt}</Text>
+              </Column>
+            </Row>
+          )}
+        </Section>
 
-      {/* Call to Action */}
-      <Section style={ctaSection}>
-        <Text style={paragraph}>
-          Reply to this message by clicking the button below:
-        </Text>
-        <Button href={`mailto:${email}`} variant="primary" size="medium">
-          Reply to {name}
-        </Button>
+        <Hr style={divider} />
+
+        {/* Message Content */}
+        <Section style={messageSection}>
+          <Text style={sectionHeading}>
+            Message
+          </Text>
+          <Section style={messageBox}>
+            <Text style={messageText}>
+              {message}
+            </Text>
+          </Section>
+        </Section>
+
+        <Hr style={divider} />
+
+        {/* Call to Action */}
+        <Section style={ctaSection}>
+          <Text style={paragraph}>
+            Reply to this message by clicking the button below:
+          </Text>
+          <Button href={`mailto:${email}`} variant="primary" size="medium">
+            Reply to {name}
+          </Button>
+        </Section>
       </Section>
 
       <EmailFooter unsubscribeUrl={unsubscribeUrl} />
@@ -114,6 +116,10 @@ export const ContactFormEmail = ({
 };
 
 export default ContactFormEmail;
+
+const bodyContent = {
+  padding: '0 48px',
+};
 
 const section = {
   padding: '0',
