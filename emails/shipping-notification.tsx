@@ -4,6 +4,7 @@ import { EmailHeader } from './components/EmailHeader';
 import { EmailFooter } from './components/EmailFooter';
 import { OrderItemsTable, OrderItem } from './components/OrderItemsTable';
 import { Button } from './components/Button';
+import { bodyContent } from './styles';
 
 interface ShippingNotificationEmailProps {
   name?: string;
@@ -123,10 +124,6 @@ export const ShippingNotificationEmail = ({
 };
 
 export default ShippingNotificationEmail;
-
-const bodyContent = {
-  padding: '0 48px',
-};
 
 const section = {
   padding: '0',
