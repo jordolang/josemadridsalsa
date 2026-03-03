@@ -32,106 +32,108 @@ export const DeliveryConfirmationEmail = ({
     <EmailLayout previewText={previewText}>
       <EmailHeader headerImage="order-delivered.png" headerAlt="Order Delivered" />
 
-      {/* Greeting */}
-      <Section style={section}>
-        <Text style={heading}>
-          Your Order Has Been Delivered! 🎉
-        </Text>
-        <Text style={paragraph}>
-          Hi {name},
-        </Text>
-        <Text style={paragraph}>
-          Great news! Your Jose Madrid Salsa order has been delivered. We hope you&apos;re ready to enjoy some delicious salsa!
-        </Text>
-      </Section>
+      <Section style={bodyContent}>
+        {/* Greeting */}
+        <Section style={section}>
+          <Text style={heading}>
+            Your Order Has Been Delivered!
+          </Text>
+          <Text style={paragraph}>
+            Hi {name},
+          </Text>
+          <Text style={paragraph}>
+            Great news! Your Jose Madrid Salsa order has been delivered. We hope you&apos;re ready to enjoy some delicious salsa!
+          </Text>
+        </Section>
 
-      {/* Delivery Details */}
-      <Section style={deliveryDetailsSection}>
-        <Text style={sectionHeading}>
-          Delivery Information
-        </Text>
-        <Row style={detailRow}>
-          <Column style={detailLabel}>
-            <Text style={labelText}>Order Number:</Text>
-          </Column>
-          <Column style={detailValue}>
-            <Text style={valueText}>#{orderNumber}</Text>
-          </Column>
-        </Row>
-        <Row style={detailRow}>
-          <Column style={detailLabel}>
-            <Text style={labelText}>Delivery Date:</Text>
-          </Column>
-          <Column style={detailValue}>
-            <Text style={valueText}>{deliveryDate}</Text>
-          </Column>
-        </Row>
-        <Row style={detailRow}>
-          <Column style={detailLabel}>
-            <Text style={labelText}>Delivered To:</Text>
-          </Column>
-          <Column style={detailValue}>
-            <Text style={valueText}>{shippingAddress}</Text>
-          </Column>
-        </Row>
-      </Section>
+        {/* Delivery Details */}
+        <Section style={deliveryDetailsSection}>
+          <Text style={sectionHeading}>
+            Delivery Information
+          </Text>
+          <Row style={detailRow}>
+            <Column style={detailLabel}>
+              <Text style={labelText}>Order Number:</Text>
+            </Column>
+            <Column style={detailValue}>
+              <Text style={valueText}>#{orderNumber}</Text>
+            </Column>
+          </Row>
+          <Row style={detailRow}>
+            <Column style={detailLabel}>
+              <Text style={labelText}>Delivery Date:</Text>
+            </Column>
+            <Column style={detailValue}>
+              <Text style={valueText}>{deliveryDate}</Text>
+            </Column>
+          </Row>
+          <Row style={detailRow}>
+            <Column style={detailLabel}>
+              <Text style={labelText}>Delivered To:</Text>
+            </Column>
+            <Column style={detailValue}>
+              <Text style={valueText}>{shippingAddress}</Text>
+            </Column>
+          </Row>
+        </Section>
 
-      <Hr style={divider} />
+        <Hr style={divider} />
 
-      {/* Delivered Items */}
-      <Section style={section}>
-        <Text style={sectionHeading}>
-          Items Delivered
-        </Text>
-        <OrderItemsTable items={items} />
-      </Section>
+        {/* Delivered Items */}
+        <Section style={section}>
+          <Text style={sectionHeading}>
+            Items Delivered
+          </Text>
+          <OrderItemsTable items={items} />
+        </Section>
 
-      <Hr style={divider} />
+        <Hr style={divider} />
 
-      {/* Feedback Request */}
-      <Section style={feedbackSection}>
-        <Text style={feedbackHeading}>
-          How Was Your Experience?
-        </Text>
-        <Text style={paragraph}>
-          We&apos;d love to hear what you think! Your feedback helps us improve and helps other salsa lovers discover our products.
-        </Text>
-        {feedbackUrl && (
-          <Section style={ctaButtonContainer}>
-            <Button href={feedbackUrl} variant="primary" size="medium">
-              Leave a Review
+        {/* Feedback Request */}
+        <Section style={feedbackSection}>
+          <Text style={feedbackHeading}>
+            How Was Your Experience?
+          </Text>
+          <Text style={paragraph}>
+            We&apos;d love to hear what you think! Your feedback helps us improve and helps other salsa lovers discover our products.
+          </Text>
+          {feedbackUrl && (
+            <Section style={ctaButtonContainer}>
+              <Button href={feedbackUrl} variant="primary" size="medium">
+                Leave a Review
+              </Button>
+            </Section>
+          )}
+          {feedbackUrl && (
+            <Text style={feedbackSubtext}>
+              Your honest opinion means the world to us and takes just a minute to share.
+            </Text>
+          )}
+        </Section>
+
+        <Hr style={divider} />
+
+        {/* Order Details Link */}
+        {orderDetailsUrl && (
+          <Section style={ctaSection}>
+            <Text style={paragraph}>
+              Want to view your order details or order history?
+            </Text>
+            <Button href={orderDetailsUrl} variant="secondary" size="medium">
+              View Order Details
             </Button>
           </Section>
         )}
-        {feedbackUrl && (
-          <Text style={feedbackSubtext}>
-            Your honest opinion means the world to us and takes just a minute to share.
-          </Text>
-        )}
-      </Section>
 
-      <Hr style={divider} />
-
-      {/* Order Details Link */}
-      {orderDetailsUrl && (
-        <Section style={ctaSection}>
-          <Text style={paragraph}>
-            Want to view your order details or order history?
+        {/* Support Message */}
+        <Section style={supportSection}>
+          <Text style={supportText}>
+            Any issues with your delivery? We&apos;re here to help! Reply to this email or contact us at{' '}
+            <a href="mailto:orders@josemadridsalsa.com" style={link}>
+              orders@josemadridsalsa.com
+            </a>
           </Text>
-          <Button href={orderDetailsUrl} variant="secondary" size="medium">
-            View Order Details
-          </Button>
         </Section>
-      )}
-
-      {/* Support Message */}
-      <Section style={supportSection}>
-        <Text style={supportText}>
-          Any issues with your delivery? We&apos;re here to help! Reply to this email or contact us at{' '}
-          <a href="mailto:orders@josemadridsalsa.com" style={link}>
-            orders@josemadridsalsa.com
-          </a>
-        </Text>
       </Section>
 
       <EmailFooter unsubscribeUrl={unsubscribeUrl} />
@@ -140,6 +142,10 @@ export const DeliveryConfirmationEmail = ({
 };
 
 export default DeliveryConfirmationEmail;
+
+const bodyContent = {
+  padding: '0 48px',
+};
 
 const section = {
   padding: '0',
