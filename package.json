@@ -86,6 +86,7 @@
     "@radix-ui/react-toast": "^1.2.15",
     "@react-email/components": "^1.0.8",
     "@react-email/render": "^1.0.3",
+    "@stripe/react-stripe-js": "^5.2.0",
     "@stripe/stripe-js": "^8.0.0",
     "@tailwindcss/postcss": "^4.1.14",
     "@types/bcryptjs": "^2.4.6",
@@ -122,8 +123,7 @@
     "tailwindcss-animate": "^1.0.7",
     "workflow": "^4.1.0-beta.60",
     "zod": "^4.1.12",
-    "zustand": "^5.0.8",
-    "@stripe/react-stripe-js": "^5.2.0"
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@axe-core/cli": "^4.11.0",
@@ -135,6 +135,7 @@
     "autoprefixer": "^10.4.21",
     "baseline-browser-mapping": "^2.8.32",
     "cheerio": "^1.1.2",
+    "chokidar": "^5.0.0",
     "cross-env": "^10.1.0",
     "eslint": "^9.37.0",
     "eslint-config-next": "^15.5.4",
@@ -146,12 +147,13 @@
     "lint-staged": "^15.2.0",
     "postcss": "^8.5.6",
     "prisma": "6.19.0",
+    "react-email": "^5.2.9",
+    "readdirp": "^5.0.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vercel": "^50.13.2",
-    "vitest": "^4.0.6",
-    "react-email": "^5.2.9"
+    "vitest": "^4.0.6"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
