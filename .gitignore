@@ -101,3 +101,9 @@ logs/security/
 
 # Claude Code local settings (do not commit)
 .claude/settings.local.json
+
+# Obsidian
+.obsidian/
+
+# Integration staging files
+.integration/
