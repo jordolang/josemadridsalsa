@@ -75,7 +75,6 @@ public/images/Jose-*.png
 .smtcmp_json_db/
 .smtcmp_vector_db.tar.gz
 .claude/
-.gemini/
 .obsidian/
 Chats/
 logs/

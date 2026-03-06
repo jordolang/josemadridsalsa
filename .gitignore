@@ -77,10 +77,6 @@ docs/backstage/
 tsconfig.tsbuildinfo
 *. tsbuildinfo
 
-# Gemini
-.gemini/
-gha-creds-*.json
-
 # Claude AI settings and symlinks
 .claude
 .claude_settings.json
