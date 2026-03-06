@@ -77,7 +77,9 @@ const divider = {
 
 const headerImageSection = {
   padding: '0',
+  margin: '0',
   textAlign: 'center' as const,
+  width: '100%',
 };
 
 const headerImg = {
@@ -85,4 +87,8 @@ const headerImg = {
   width: '100%',
   maxWidth: '600px',
   height: 'auto',
+  margin: '0',
+  padding: '0',
+  border: '0',
+  outline: 'none',
 };

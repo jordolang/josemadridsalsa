@@ -1,4 +1,4 @@
-import { Html, Head, Body, Container, Section, Preview } from '@react-email/components';
+import { Html, Head, Body, Container, Preview } from '@react-email/components';
 
 interface EmailLayoutProps {
   children?: React.ReactNode;
@@ -12,10 +12,7 @@ export const EmailLayout = ({ children, previewText }: EmailLayoutProps) => {
       {previewText && <Preview>{previewText}</Preview>}
       <Body style={main}>
         <Container style={container}>
-          {/* Main content (EmailHeader/EmailFooter rendered by each template) */}
-          <Section style={content}>
-            {children}
-          </Section>
+          {children}
         </Container>
       </Body>
     </Html>
@@ -30,11 +27,8 @@ const main = {
 const container = {
   backgroundColor: '#ffffff',
   margin: '0 auto',
-  padding: '20px 0 48px',
+  padding: '0',
   marginBottom: '64px',
   maxWidth: '600px',
-};
-
-const content = {
-  padding: '0 48px',
+  overflow: 'hidden' as const,
 };
