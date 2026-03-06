@@ -14,10 +14,12 @@ export interface EmailTemplateDefinition {
   text: string
 }
 
-const IMAGE_BASE_URL = 'https://www.josemadridsalsa.com/email-templates'
+function getImageBaseUrl() {
+  return `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.josemadridsalsa.com'}/email-templates`
+}
 
 const headerImg = (filename: string, alt: string) =>
-  `<img src="${IMAGE_BASE_URL}/${filename}" alt="${alt}" width="600" style="display:block;width:100%;max-width:600px;height:auto;" />`
+  `<img src="${getImageBaseUrl()}/${filename}" alt="${alt}" width="600" style="display:block;width:100%;max-width:600px;height:auto;" />`
 
 const baseStyles = {
   container: 'width:100%;background-color:#f4f4f7;padding:40px 0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;',
@@ -2165,4 +2167,116 @@ Thank you for your time!`,
 
               {{message}}`,
                 },
+
+  // 36. Jose Madrid Specials
+  {
+    key: 'jose_madrid_specials',
+    name: 'Jose Madrid Specials',
+    subject: '🌶️ Jose Madrid Specials Just for You!',
+    category: 'MARKETING',
+    description: 'Special deals and featured products',
+    variables: {
+      name: 'string',
+      specialTitle: 'string',
+      specialDescription: 'string',
+      discountCode: 'string',
+      shopUrl: 'string',
+    },
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Jose Madrid Specials</title></head>
+<body style="${baseStyles.container}">
+  <div style="${baseStyles.wrapper}">
+    <div style="${baseStyles.header}">
+      ${headerImg('jose-madrid-specials.png', 'Jose Madrid Specials')}
+    </div>
+    <div style="${baseStyles.content}">
+      <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+      <p style="margin-bottom:20px;">We've put together something special just for you!</p>
+      <h2 style="color:#dc2626;font-size:24px;margin:0 0 15px;">{{specialTitle}}</h2>
+      <p style="margin-bottom:20px;line-height:1.6;">{{specialDescription}}</p>
+      <div style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%);padding:30px;border-radius:12px;text-align:center;margin:30px 0;color:#ffffff;">
+        <p style="margin:0 0 15px;font-size:16px;">Use code:</p>
+        <p style="margin:0 0 20px;font-size:28px;font-weight:700;letter-spacing:2px;">{{discountCode}}</p>
+        <a href="{{shopUrl}}" style="display:inline-block;padding:14px 32px;background-color:#ffffff;color:#dc2626 !important;text-decoration:none;border-radius:6px;font-weight:600;">Shop Specials</a>
+      </div>
+      <p style="color:#6c757d;font-size:14px;margin-top:30px;">Limited time offer. While supplies last.</p>
+    </div>
+    <div style="${baseStyles.footer}">
+      <p style="margin:0 0 10px;">Jose Madrid Salsa</p>
+      <p style="margin:0;"><a href="https://www.josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">Visit Website</a> | <a href="{{unsubscribe_url}}" style="color:#dc2626;text-decoration:none;">Unsubscribe</a></p>
+    </div>
+  </div>
+</body>
+</html>`,
+    text: `Hi {{name}},
+
+{{specialTitle}}
+
+{{specialDescription}}
+
+Use code {{discountCode}} to save!
+
+Shop now: {{shopUrl}}`,
+  },
+
+  // 37. Gameday Ready
+  {
+    key: 'gameday_ready',
+    name: 'Gameday Ready',
+    subject: '🏈 Game Day is Here — Get Your Salsa Ready!',
+    category: 'MARKETING',
+    description: 'Gameday promotions and party prep',
+    variables: {
+      name: 'string',
+      gameDayDate: 'string',
+      bundleUrl: 'string',
+      discountCode: 'string',
+    },
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Gameday Ready</title></head>
+<body style="${baseStyles.container}">
+  <div style="${baseStyles.wrapper}">
+    <div style="${baseStyles.header}">
+      ${headerImg('gameday-ready.png', 'Gameday Ready')}
+    </div>
+    <div style="${baseStyles.content}">
+      <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
+      <p style="margin-bottom:20px;font-size:18px;">Game day is coming up on <strong>{{gameDayDate}}</strong> — make sure your snack table is stocked with Jose Madrid Salsa!</p>
+      <div style="background:#f8f9fa;padding:25px;border-radius:8px;margin:30px 0;">
+        <h3 style="color:#333;margin:0 0 15px;font-size:18px;">Game Day Must-Haves:</h3>
+        <ul style="padding-left:20px;margin:0;">
+          <li style="margin-bottom:10px;">Our famous Chipotle Hot for the bold fans</li>
+          <li style="margin-bottom:10px;">Crowd-pleasing Garden Cilantro Mild</li>
+          <li style="margin-bottom:10px;">Game Day Party Pack — chips & salsa bundles</li>
+        </ul>
+      </div>
+      <div style="background:linear-gradient(135deg,#1e40af 0%,#1e3a5f 100%);padding:30px;border-radius:12px;text-align:center;margin:30px 0;color:#ffffff;">
+        <p style="margin:0 0 10px;font-size:16px;">Game Day Special</p>
+        <p style="margin:0 0 20px;font-size:28px;font-weight:700;">15% OFF Party Bundles</p>
+        <p style="margin:0 0 20px;font-size:14px;">Code: <strong style="font-size:18px;letter-spacing:2px;">{{discountCode}}</strong></p>
+        <a href="{{bundleUrl}}" style="display:inline-block;padding:14px 32px;background-color:#ffffff;color:#1e40af !important;text-decoration:none;border-radius:6px;font-weight:600;">Shop Party Packs</a>
+      </div>
+      <p style="margin-top:30px;text-align:center;">Order by Thursday for guaranteed delivery before kickoff!</p>
+    </div>
+    <div style="${baseStyles.footer}">
+      <p style="margin:0 0 10px;">Jose Madrid Salsa — Your Game Day MVP</p>
+      <p style="margin:0;"><a href="https://www.josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">Visit Website</a> | <a href="{{unsubscribe_url}}" style="color:#dc2626;text-decoration:none;">Unsubscribe</a></p>
+    </div>
+  </div>
+</body>
+</html>`,
+    text: `Hi {{name}},
+
+Game day is on {{gameDayDate}} — make sure you're stocked up!
+
+Use code {{discountCode}} for 15% off party bundles.
+
+Shop now: {{bundleUrl}}
+
+Order by Thursday for guaranteed delivery!`,
+  },
 ]
