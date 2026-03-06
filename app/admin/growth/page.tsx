@@ -1,10 +1,5 @@
 import type { Metadata } from 'next'
-import dynamic from 'next/dynamic'
-
-const GrowthDashboard = dynamic(
-  () => import('@/components/dashboard/growth-dashboard'),
-  { ssr: false }
-)
+import GrowthDashboard from '@/components/dashboard/growth-dashboard'
 
 export const metadata: Metadata = {
   title: 'Growth Dashboard | Jose Madrid Salsa Admin',
