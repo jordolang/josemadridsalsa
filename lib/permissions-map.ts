@@ -107,6 +107,12 @@ export const adminNavigation: NavItem[] = [
     permission: 'analytics:read',
   },
   {
+    label: 'Growth Dashboard',
+    href: '/admin/growth',
+    icon: 'TrendingUp',
+    permission: 'analytics:read',
+  },
+  {
     label: 'Project Status',
     href: '/admin/project-status',
     icon: 'Activity',
