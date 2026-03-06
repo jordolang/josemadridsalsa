@@ -76,8 +76,6 @@ docs/backstage/
 # TypeScript Build Info File
 tsconfig.tsbuildinfo
 *. tsbuildinfo
-.gemini/
-gha-creds-*.json
 
 # Claude AI settings and symlinks
 .claude
@@ -85,14 +83,17 @@ gha-creds-*.json
 
 # Auto-Claude
 .auto-claude/
+.auto-claude-security.json
+.auto-claude-status
+.worktrees/
+.security-key
 
 # Project Analysis
 .project-analysis/
 
 # Logs
 logs/
-.auto-claude/
-.project-analysis/
-logs/
-public/location-photos.json
-.DS_Store
+logs/security/
+
+# Claude Code local settings (do not commit)
+.claude/settings.local.json
