@@ -8,7 +8,7 @@ interface EmailHeaderProps {
   headerAlt?: string;
 }
 
-const IMAGE_BASE_URL = 'https://www.josemadridsalsa.com/email-templates';
+const IMAGE_BASE_URL = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.josemadridsalsa.com'}/email-templates`;
 
 export const EmailHeader = ({
   logoUrl = 'https://josemadrid.net/images/logo.png',
