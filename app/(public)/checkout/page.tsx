@@ -282,6 +282,7 @@ function CheckoutForm() {
     }
 
     // Trigger tax and shipping calculation when address fields change
+    // Note: address1 excluded intentionally - carrier APIs use city/state/zip for rate calculation
     if (['city', 'state', 'postalCode'].includes(name)) {
       // Clear previous timeouts and errors
       if (taxCalcTimeoutRef.current) {
