@@ -40,6 +40,7 @@ model User {
   loyaltyAccount    LoyaltyAccount?
   partnerApiKeys    PartnerApiKey[]
   analyticsSettings AnalyticsSetting[]
+  shippingSettings  ShippingSettings[]
 
   // Wholesale account
   wholesaleAccount       WholesaleAccount?
@@ -969,6 +970,22 @@ model AnalyticsSetting {
   updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@map("analytics_settings")
+}
+
+model ShippingSettings {
+  id                    String   @id @default(cuid())
+  freeShippingThreshold Decimal? @db.Decimal(10, 2) // Minimum order value for free shipping
+  originAddress         Json? // Origin address for rate calculation: {street, city, state, zipCode, country}
+  defaultCarrier        String? // Default carrier: "usps", "ups", "fedex"
+  enabledCarriers       String[] @default([]) // List of enabled carriers for rate calculation
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+
+  updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("shipping_settings")
 }
 
 model Permission {

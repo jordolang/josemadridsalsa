@@ -145,7 +145,7 @@ async function handlePost(request: NextRequest) {
         }
       })
 
-      const shippingResult = calculateShipping({
+      const shippingResult = await calculateShipping({
         items: itemsWithWeights,
         shippingAddress: {
           state: shippingAddress.state,
