@@ -15,7 +15,7 @@ export interface EmailTemplateDefinition {
 }
 
 function getImageBaseUrl() {
-  return `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.josemadridsalsa.com'}/email-templates`
+  return 'https://www.josemadrid.net/email-templates'
 }
 
 const headerImg = (filename: string, alt: string) =>
@@ -49,7 +49,7 @@ const jmsFooter = `
         <tr>
           <td align="center" style="padding: 28px 0 8px 0;">
             <a href="https://www.josemadridsalsa.com" target="_blank" style="text-decoration: none;">
-              <img src="https://www.josemadridsalsa.com/product_images/jms-logo.png" alt="José Madrid Salsa" width="180" height="auto" style="display: block; border: 0; outline: none; max-width: 180px; height: auto;" />
+              <img src="https://www.josemadrid.net/email-templates/Jose-Madrid-Profile.png" alt="José Madrid Salsa" width="180" height="auto" style="display: block; border: 0; outline: none; max-width: 180px; height: auto;" />
             </a>
           </td>
         </tr>
