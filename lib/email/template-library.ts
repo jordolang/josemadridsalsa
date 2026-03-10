@@ -32,6 +32,116 @@ const baseStyles = {
   divider: 'height:1px;background-color:#e2e8f0;margin:30px 0;border:none;',
 }
 
+const jmsFooter = `
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f4f1ec; font-family: Georgia, 'Times New Roman', serif;">
+  <tr>
+    <td align="center" style="padding: 0 16px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; width: 100%;">
+        <tr>
+          <td style="padding: 32px 0 0 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td style="border-top: 2px solid #c8102e; font-size: 0; line-height: 0;" height="1">&nbsp;</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding: 28px 0 8px 0;">
+            <a href="https://www.josemadridsalsa.com" target="_blank" style="text-decoration: none;">
+              <img src="https://www.josemadridsalsa.com/product_images/jms-logo.png" alt="José Madrid Salsa" width="180" height="auto" style="display: block; border: 0; outline: none; max-width: 180px; height: auto;" />
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding: 4px 0 20px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 13px; line-height: 1.4; color: #8c7a6b; letter-spacing: 0.5px;">
+            Handcrafted Gourmet Salsas · Zanesville, Ohio · Est. 1988
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding: 0 0 20px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="padding: 0 12px;"><a href="https://www.josemadridsalsa.com" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 1.2px;">Shop</a></td>
+                <td style="color: #d4c8ba; font-size: 12px;">&#124;</td>
+                <td style="padding: 0 12px;"><a href="https://www.josemadridsalsa.com/our-story" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 1.2px;">Our Story</a></td>
+                <td style="color: #d4c8ba; font-size: 12px;">&#124;</td>
+                <td style="padding: 0 12px;"><a href="https://www.josemadridsalsa.com/our-salsas" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 1.2px;">Flavors</a></td>
+                <td style="color: #d4c8ba; font-size: 12px;">&#124;</td>
+                <td style="padding: 0 12px;"><a href="https://josemadridsalsafundraising.com" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 1.2px;">Fundraising</a></td>
+                <td style="color: #d4c8ba; font-size: 12px;">&#124;</td>
+                <td style="padding: 0 12px;"><a href="https://www.josemadridsalsa.com/contact-us" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 1.2px;">Contact</a></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding: 0 0 24px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="padding: 0 8px;"><a href="https://www.facebook.com/josemadridsalsa" target="_blank" style="text-decoration: none;"><img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="28" height="28" style="display: block; border: 0; border-radius: 50%;" /></a></td>
+                <td style="padding: 0 8px;"><a href="https://www.instagram.com/josemadrid_salsa/" target="_blank" style="text-decoration: none;"><img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" width="28" height="28" style="display: block; border: 0; border-radius: 50%;" /></a></td>
+                <td style="padding: 0 8px;"><a href="https://x.com/madridsalsa" target="_blank" style="text-decoration: none;"><img src="https://cdn-icons-png.flaticon.com/512/5968/5968830.png" alt="X (Twitter)" width="28" height="28" style="display: block; border: 0; border-radius: 50%;" /></a></td>
+                <td style="padding: 0 8px;"><a href="https://www.linkedin.com/company/jose-madrid-salsa" target="_blank" style="text-decoration: none;"><img src="https://cdn-icons-png.flaticon.com/512/3536/3536505.png" alt="LinkedIn" width="28" height="28" style="display: block; border: 0; border-radius: 50%;" /></a></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding: 0 0 20px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #ebe5db; border-radius: 6px;">
+              <tr>
+                <td align="center" style="padding: 14px 20px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="padding: 0 10px;"><a href="{{NEWSLETTER_PREFERENCES_URL}}" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #6b5d50; text-decoration: underline; letter-spacing: 0.3px;">Manage Preferences</a></td>
+                      <td style="color: #c8bfb3; font-size: 11px;">&#8226;</td>
+                      <td style="padding: 0 10px;"><a href="{{VIEW_IN_BROWSER_URL}}" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #6b5d50; text-decoration: underline; letter-spacing: 0.3px;">View in Browser</a></td>
+                      <td style="color: #c8bfb3; font-size: 11px;">&#8226;</td>
+                      <td style="padding: 0 10px;"><a href="{{FORWARD_TO_FRIEND_URL}}" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #6b5d50; text-decoration: underline; letter-spacing: 0.3px;">Forward to a Friend</a></td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding: 0 20px 12px 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; line-height: 1.6; color: #a0948a;">
+            You're receiving this email because you signed up for updates from José Madrid Salsa or made a purchase at josemadridsalsa.com.
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding: 0 20px 8px 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; line-height: 1.6; color: #a0948a;">
+            José Madrid Salsa &middot; Zanesville, OH 43701 &middot; (740) 521-4304
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding: 0 0 32px 0;">
+            <a href="{{UNSUBSCRIBE_URL}}" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; color: #c8102e; text-decoration: underline; letter-spacing: 0.3px;">Unsubscribe</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td style="border-top: 3px solid #c8102e; font-size: 0; line-height: 0;" height="1">&nbsp;</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding: 16px 0 32px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 10px; color: #c0b6ab; letter-spacing: 0.3px;">
+            &copy; 2026 José Madrid Salsa. All rights reserved.
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+`
+
+
 export const emailTemplates: EmailTemplateDefinition[] = [
   // 1. Welcome Email
   {
@@ -51,7 +161,7 @@ export const emailTemplates: EmailTemplateDefinition[] = [
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('welcome.png', 'Welcome to the Family')}
+      ${headerImg('new-welcome.png', 'Welcome to the Family')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -75,11 +185,7 @@ export const emailTemplates: EmailTemplateDefinition[] = [
       <p style="margin-top:20px;">Welcome aboard!</p>
       <p style="margin-top:10px;"><strong>The Jose Madrid Salsa Team</strong></p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Jose Madrid Salsa</p>
-      <p style="margin:0 0 10px;">59 S 6th Street, Newark, OH 43055</p>
-      <p style="margin:0;"><a href="https://www.josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">Visit Website</a> | <a href="{{unsubscribe_url}}" style="color:#dc2626;text-decoration:none;">Unsubscribe</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -146,10 +252,7 @@ Jose Madrid Salsa Team`,
       </div>
       <p style="color:#6c757d;font-size:14px;margin-top:30px;">Need help? Contact us at <a href="mailto:orders@josemadridsalsa.com" style="color:#dc2626;">orders@josemadridsalsa.com</a></p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Thank you for supporting Jose Madrid Salsa!</p>
-      <p style="margin:0;"><a href="https://www.josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">Visit Website</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -219,10 +322,7 @@ Questions? Email orders@josemadridsalsa.com`,
       </div>
       <p style="margin-top:30px;">We hope you enjoy your Jose Madrid Salsa! Share your creations with us on social media using #JoseMadridSalsa</p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Questions about your delivery?</p>
-      <p style="margin:0;">Call <a href="tel:7403493144" style="color:#dc2626;text-decoration:none;">740-349-3144</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -289,10 +389,7 @@ Questions? Call 740-349-3144`,
         <li style="margin-bottom:10px;">✓ 100% satisfaction guaranteed</li>
       </ul>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Need help deciding? We're here for you!</p>
-      <p style="margin:0;">Email <a href="mailto:hello@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">hello@josemadridsalsa.com</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -354,13 +451,7 @@ This offer expires in 24 hours!`,
       </div>
       <p style="margin-top:30px;text-align:center;font-size:16px;">Join our community of salsa lovers and never miss a new release!</p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Follow us for more updates</p>
-      <p style="margin:0;">
-        <a href="https://www.facebook.com/JoseMadridSalsa" style="color:#dc2626;text-decoration:none;margin:0 10px;">Facebook</a> |
-        <a href="https://www.instagram.com/JoseMadridSalsa" style="color:#dc2626;text-decoration:none;margin:0 10px;">Instagram</a>
-      </p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -433,15 +524,7 @@ Early bird bonus: FREE recipe cards with orders in next 48 hours!`,
       <p style="margin-top:40px;text-align:center;font-size:16px;">Thank you for being part of our community!</p>
       <p style="text-align:center;margin-top:10px;"><strong>- The Jose Madrid Salsa Family</strong></p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 15px;"><strong>Connect With Us</strong></p>
-      <p style="margin:0 0 10px;">
-        <a href="https://www.facebook.com/JoseMadridSalsa" style="color:#dc2626;text-decoration:none;margin:0 8px;">Facebook</a> |
-        <a href="https://www.instagram.com/JoseMadridSalsa" style="color:#dc2626;text-decoration:none;margin:0 8px;">Instagram</a> |
-        <a href="https://www.josemadridsalsa.com" style="color:#dc2626;text-decoration:none;margin:0 8px;">Website</a>
-      </p>
-      <p style="margin:15px 0 0;font-size:12px;"><a href="{{unsubscribe_url}}" style="color:#6c757d;text-decoration:none;">Unsubscribe</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -533,10 +616,7 @@ Shop: https://www.josemadridsalsa.com/store`,
       <p style="margin-top:30px;">Can't make it? Share this invitation with a friend who'd love to join us!</p>
       <p style="margin-top:20px;">Questions? Reply to this email or call us at <a href="tel:7403493144" style="color:#7c3aed;">740-349-3144</a>.</p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">We can't wait to see you there!</p>
-      <p style="margin:0;"><strong>Jose Madrid Salsa Team</strong></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -646,10 +726,7 @@ Questions? Call 740-349-3144`,
       <p style="margin-top:30px;">We're here to help you succeed. Don't hesitate to reach out with questions or for support.</p>
       <p style="margin-top:20px;"><strong>Welcome to the Jose Madrid Salsa family!</strong></p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Jose Madrid Salsa Wholesale Division</p>
-      <p style="margin:0;">59 S 6th Street, Newark, OH 43055</p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -758,10 +835,7 @@ Questions? Contact {{accountManager}} directly.`,
       
       <p style="margin-top:30px;font-size:18px;text-align:center;"><strong>We believe in your mission. Let's make it happen together!</strong></p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;"><strong>Jose Madrid Salsa Fundraising Team</strong></p>
-      <p style="margin:0;">Supporting communities since 1982</p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -850,10 +924,7 @@ Let\'s reach that goal together!`,
       <p style="margin-top:40px;">Thank you again for choosing Jose Madrid Salsa. We're honored to be part of your kitchen!</p>
       <p style="margin-top:20px;"><strong>With gratitude,</strong><br>The Jose Madrid Family</p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Questions or concerns?</p>
-      <p style="margin:0;">Email <a href="mailto:hello@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">hello@josemadridsalsa.com</a> or call <a href="tel:7403493144" style="color:#dc2626;text-decoration:none;">740-349-3144</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -913,10 +984,7 @@ The Jose Madrid Family`,
       <p style="font-size:14px;color:#6c757d;">If the button doesn't work, copy and paste this link into your browser:</p>
       <p style="font-size:14px;color:#dc2626;word-break:break-all;">{{resetUrl}}</p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Jose Madrid Salsa</p>
-      <p style="margin:0 0 10px;">Questions? Email <a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">support@josemadridsalsa.com</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -953,7 +1021,7 @@ Jose Madrid Salsa Support`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('account-created.png', 'Verify Your Email')}
+      ${headerImg('account-creation.png', 'Verify Your Email')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -971,10 +1039,7 @@ Jose Madrid Salsa Support`,
       <p style="font-size:14px;color:#6c757d;">If you didn't create an account, please ignore this email.</p>
       <p style="font-size:14px;color:#6c757d;word-break:break-all;margin-top:20px;">Verification link: {{verificationUrl}}</p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Jose Madrid Salsa</p>
-      <p style="margin:0;">Need help? Email <a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">support@josemadridsalsa.com</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -1044,10 +1109,7 @@ Jose Madrid Salsa Team`,
       <p style="margin-top:30px;">Enjoy your salsa!</p>
       <p style="margin-top:10px;"><strong>The Jose Madrid Salsa Team</strong></p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Questions? Contact us anytime</p>
-      <p style="margin:0;"><a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">support@josemadridsalsa.com</a> | <a href="tel:7403493144" style="color:#dc2626;text-decoration:none;">740-349-3144</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -1136,10 +1198,7 @@ The Jose Madrid Salsa Team`,
       <p style="margin-top:30px;">Thank you for giving us a try.</p>
       <p style="margin-top:10px;"><strong>The Jose Madrid Salsa Team</strong></p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Questions about your refund?</p>
-      <p style="margin:0;"><a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">support@josemadridsalsa.com</a> | <a href="tel:7403493144" style="color:#dc2626;text-decoration:none;">740-349-3144</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -1181,7 +1240,7 @@ The Jose Madrid Salsa Team`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('account-created.png', 'Welcome to Jose Madrid Salsa')}
+      ${headerImg('jose-madrid-welcome.png', 'Welcome to Jose Madrid Salsa')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1217,10 +1276,7 @@ The Jose Madrid Salsa Team`,
       <p style="margin-top:30px;">Welcome to the family!</p>
       <p style="margin-top:10px;"><strong>The Jose Madrid Salsa Team</strong></p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Jose Madrid Salsa</p>
-      <p style="margin:0;">Questions? <a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">support@josemadridsalsa.com</a> | <a href="tel:7403493144" style="color:#dc2626;text-decoration:none;">740-349-3144</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -1267,7 +1323,7 @@ The Jose Madrid Salsa Team`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('subscription-renewal.png', 'Subscription Renewal')}
+      ${headerImg('renew-subscription.png', 'Subscription Renewal')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1296,9 +1352,7 @@ The Jose Madrid Salsa Team`,
       <p style="margin-top:30px;">Thank you for being a loyal subscriber!</p>
       <p style="margin-top:10px;"><strong>The Jose Madrid Salsa Team</strong></p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Questions? Email <a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">support@josemadridsalsa.com</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -1353,9 +1407,7 @@ The Jose Madrid Salsa Team`,
         <p style="margin-top:30px;">If your payment information is not updated within 3 days, your order will be automatically canceled.</p>
         <p style="margin-top:20px;">If you have any questions, please contact us at <a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;">support@josemadridsalsa.com</a>.</p>
       </div>
-      <div style="${baseStyles.footer}">
-        <p style="margin:0;">We appreciate your business!</p>
-      </div>
+      ${jmsFooter}
     </div>
   </body>
   </html>`,
@@ -1412,9 +1464,7 @@ The Jose Madrid Salsa Team`,
         </div>
         <p style="margin-top:30px;">For any questions regarding your order, please contact your account manager.</p>
       </div>
-      <div style="${baseStyles.footer}">
-        <p style="margin:0;">Thank you for your partnership!</p>
-      </div>
+      ${jmsFooter}
     </div>
   </body>
   </html>`,
@@ -1474,9 +1524,7 @@ The Jose Madrid Salsa Team`,
         </div>
         <p style="margin-top:30px;">Keep up the great work! Share your fundraising page to reach your goal.</p>
       </div>
-      <div style="${baseStyles.footer}">
-        <p style="margin:0;">Keep up the great work!</p>
-      </div>
+      ${jmsFooter}
     </div>
   </body>
   </html>`,
@@ -1521,9 +1569,7 @@ The Jose Madrid Salsa Team`,
         </div>
         <p style="margin-top:30px;">If you have any questions, feel free to reach out. We're here to help.</p>
       </div>
-      <div style="${baseStyles.footer}">
-        <p style="margin:0;">We're sorry to see you go.</p>
-      </div>
+      ${jmsFooter}
     </div>
   </body>
   </html>`,
@@ -1564,9 +1610,7 @@ The Jose Madrid Salsa Team`,
               </div>
               <p style="font-size:14px;text-align:center;">Hurry, this sale ends on {{saleEndDate}}.</p>
             </div>
-            <div style="${baseStyles.footer}">
-              <p style="margin:0;">Don't miss out on these savings!</p>
-            </div>
+            ${jmsFooter}
           </div>
         </body>
         </html>`,
@@ -1610,9 +1654,7 @@ The Jose Madrid Salsa Team`,
                       <a href="{{recipeUrl}}" style="color:#dc2626;text-decoration:underline;">Get the Recipe</a>
                     </div>
                   </div>
-                  <div style="${baseStyles.footer}">
-                    <p style="margin:0;">Happy Grilling!</p>
-                  </div>
+                  ${jmsFooter}
                 </div>
               </body>
               </html>`,
@@ -1655,9 +1697,7 @@ The Jose Madrid Salsa Team`,
                         </div>
                         <p style="font-size:16px;text-align:center;">Use code <strong>{{discountCode}}</strong> for 15% off your next order.</p>
                     </div>
-                    <div style="${baseStyles.footer}">
-                        <p style="margin:0;">Get Ready for Kickoff!</p>
-                    </div>
+                    ${jmsFooter}
                     </div>
                 </body>
                 </html>`,
@@ -1697,9 +1737,7 @@ The Jose Madrid Salsa Team`,
                     </div>
                     <p style="font-size:14px;text-align:center;">Order by <strong>{{shippingDeadline}}</strong> to ensure delivery by Christmas!</p>
                   </div>
-                  <div style="${baseStyles.footer}">
-                    <p style="margin:0;">Spread the Holiday Cheer!</p>
-                  </div>
+                  ${jmsFooter}
                 </div>
               </body>
               </html>`,
@@ -1739,9 +1777,7 @@ Order by {{shippingDeadline}} for Christmas delivery.`,
                     </div>
                     <p style="text-align:center;">Hurry, it might sell out again!</p>
                   </div>
-                  <div style="${baseStyles.footer}">
-                    <p style="margin:0;">Happy Shopping!</p>
-                  </div>
+                  ${jmsFooter}
                 </div>
               </body>
               </html>`,
@@ -1770,7 +1806,7 @@ Order by {{shippingDeadline}} for Christmas delivery.`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    ${headerImg('miss-you.png', 'We Miss You')}
+                    ${headerImg('miss-you-letter.png', 'We Miss You')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1784,9 +1820,7 @@ Order by {{shippingDeadline}} for Christmas delivery.`,
                       <a href="{{shopUrl}}" style="${baseStyles.button}">Shop Now</a>
                     </div>
                   </div>
-                  <div style="${baseStyles.footer}">
-                    <p style="margin:0;">We hope to see you soon!</p>
-                  </div>
+                  ${jmsFooter}
                 </div>
               </body>
               </html>`,
@@ -1817,7 +1851,7 @@ Order by {{shippingDeadline}} for Christmas delivery.`,
               <body style="${baseStyles.container}">
                 <div style="${baseStyles.wrapper}">
                   <div style="${baseStyles.header}">
-                    ${headerImg('happy-birthday.png', 'Happy Birthday')}
+                    ${headerImg('birthday-header.png', 'Happy Birthday')}
                   </div>
                   <div style="${baseStyles.content}">
                     <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -1831,9 +1865,7 @@ Order by {{shippingDeadline}} for Christmas delivery.`,
                       <a href="{{shopUrl}}" style="${baseStyles.button}">Claim Your Gift</a>
                     </div>
                   </div>
-                  <div style="${baseStyles.footer}">
-                    <p style="margin:0;">Enjoy your special day!</p>
-                  </div>
+                  ${jmsFooter}
                 </div>
               </body>
               </html>`,
@@ -1876,9 +1908,7 @@ Order by {{shippingDeadline}} for Christmas delivery.`,
                       <a href="{{referralUrl}}" style="${baseStyles.button}">Start Sharing</a>
                     </div>
                   </div>
-                  <div style="${baseStyles.footer}">
-                    <p style="margin:0;">The more you share, the more you earn!</p>
-                  </div>
+                  ${jmsFooter}
                 </div>
               </body>
               </html>`,
@@ -1916,9 +1946,7 @@ Order by {{shippingDeadline}} for Christmas delivery.`,
                       <a href="{{reviewUrl}}" style="${baseStyles.button}">Leave a Review</a>
                     </div>
                   </div>
-                  <div style="${baseStyles.footer}">
-                    <p style="margin:0;">Your feedback helps us improve!</p>
-                  </div>
+                  ${jmsFooter}
                 </div>
               </body>
               </html>`,
@@ -1955,9 +1983,7 @@ Leave a review: {{reviewUrl}}`,
                       <a href="{{surveyUrl}}" style="${baseStyles.button}">Take the Survey</a>
                     </div>
                   </div>
-                  <div style="${baseStyles.footer}">
-                    <p style="margin:0;">Thank you for your time!</p>
-                  </div>
+                  ${jmsFooter}
                 </div>
               </body>
               </html>`,
@@ -2000,9 +2026,7 @@ Thank you for your time!`,
                       <a href="{{productUrl}}" style="color:#dc2626;text-decoration:underline;">Get the Salsa</a>
                     </div>
                   </div>
-                  <div style="${baseStyles.footer}">
-                    <p style="margin:0;">Happy Cooking!</p>
-                  </div>
+                  ${jmsFooter}
                 </div>
               </body>
               </html>`,
@@ -2039,9 +2063,7 @@ Thank you for your time!`,
                     <p style="margin-bottom:20px;">You've reached the <strong>{{level}}</strong> level in our loyalty program! Thank you for being such a loyal customer.</p>
                     <p style="text-align:center;">Your reward is: <strong>{{reward}}</strong></p>
                   </div>
-                  <div style="${baseStyles.footer}">
-                    <p style="margin:0;">Thank you for your loyalty!</p>
-                  </div>
+                  ${jmsFooter}
                 </div>
               </body>
               </html>`,
@@ -2080,9 +2102,7 @@ Thank you for your time!`,
                     <p><strong>Message:</strong></p>
                     <p>{{message}}</p>
                   </div>
-                  <div style="${baseStyles.footer}">
-                    <p style="margin:0;">Thank you for your patience.</p>
-                  </div>
+                  ${jmsFooter}
                 </div>
               </body>
               </html>`,
@@ -2120,9 +2140,7 @@ Thank you for your time!`,
                     <p><strong>Alert:</strong> {{alert}}</p>
                     <p>If this was you, you can safely disregard this email. If this was not you, please contact us immediately.</p>
                   </div>
-                  <div style="${baseStyles.footer}">
-                    <p style="margin:0;">Thank you for your attention to this matter.</p>
-                  </div>
+                  ${jmsFooter}
                 </div>
               </body>
               </html>`,
@@ -2157,9 +2175,7 @@ Thank you for your time!`,
                   <div style="${baseStyles.content}">
                     <p>{{message}}</p>
                   </div>
-                  <div style="${baseStyles.footer}">
-                    <p style="margin:0;">Thank you for your understanding.</p>
-                  </div>
+                  ${jmsFooter}
                 </div>
               </body>
               </html>`,
@@ -2203,10 +2219,7 @@ Thank you for your time!`,
       </div>
       <p style="color:#6c757d;font-size:14px;margin-top:30px;">Limited time offer. While supplies last.</p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Jose Madrid Salsa</p>
-      <p style="margin:0;"><a href="https://www.josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">Visit Website</a> | <a href="{{unsubscribe_url}}" style="color:#dc2626;text-decoration:none;">Unsubscribe</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
@@ -2241,7 +2254,7 @@ Shop now: {{shopUrl}}`,
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('gameday-ready.png', 'Gameday Ready')}
+      ${headerImg('gameday.png', 'Gameday Ready')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
@@ -2262,10 +2275,7 @@ Shop now: {{shopUrl}}`,
       </div>
       <p style="margin-top:30px;text-align:center;">Order by Thursday for guaranteed delivery before kickoff!</p>
     </div>
-    <div style="${baseStyles.footer}">
-      <p style="margin:0 0 10px;">Jose Madrid Salsa — Your Game Day MVP</p>
-      <p style="margin:0;"><a href="https://www.josemadridsalsa.com" style="color:#dc2626;text-decoration:none;">Visit Website</a> | <a href="{{unsubscribe_url}}" style="color:#dc2626;text-decoration:none;">Unsubscribe</a></p>
-    </div>
+    ${jmsFooter}
   </div>
 </body>
 </html>`,
