@@ -225,6 +225,12 @@ export const adminNavigation: NavItem[] = [
       },
     ],
   },
+  {
+    label: 'Credentials',
+    href: '/admin/credentials',
+    icon: 'Lock',
+    permission: 'credentials:read',
+  },
 ]
 
 /**
