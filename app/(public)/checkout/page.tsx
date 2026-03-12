@@ -939,7 +939,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <Elements stripe={stripePromise}>
+    <Elements stripe={stripePromise} options={{ mode: 'payment', amount: 999, currency: 'usd' }}>
       <CheckoutForm />
     </Elements>
   )
