@@ -64,7 +64,7 @@ export default async function ProductEditorPage({
 
       <ProductForm product={product} categories={categories} />
 
-      <VariantEditorWrapper productId={id} variants={variants} />
+      <VariantEditorWrapper productId={id} variants={variants.map(v => ({ ...v, price: v.price ? Number(v.price) : null }))} />
     </div>
   )
 }
