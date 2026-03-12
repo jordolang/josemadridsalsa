@@ -22,6 +22,7 @@ vi.mock('@/lib/audit', () => ({
 
 const mockStripeRefundsCreate = vi.fn()
 const mockStripePaymentIntentsRetrieve = vi.fn()
+const mockStripeChargesRetrieve = vi.fn()
 
 vi.mock('@/lib/stripe', () => ({
   getStripe: vi.fn(() => ({
@@ -31,6 +32,9 @@ vi.mock('@/lib/stripe', () => ({
     paymentIntents: {
       retrieve: mockStripePaymentIntentsRetrieve,
     },
+    charges: {
+      retrieve: mockStripeChargesRetrieve,
+    },
   })),
 }))
 
@@ -39,6 +43,7 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     vi.clearAllMocks()
     mockStripeRefundsCreate.mockClear()
     mockStripePaymentIntentsRetrieve.mockClear()
+    mockStripeChargesRetrieve.mockClear()
   })
 
   const mockUser = {
@@ -59,17 +64,15 @@ describe('POST /api/admin/orders/[id]/refund', () => {
 
   const mockPaymentIntent = {
     id: 'pi_test123',
-    charges: {
-      data: [
-        {
-          id: 'ch_test123',
-          amount: 10000, // $100 in cents
-          amount_refunded: 0,
-          refunds: {
-            data: [],
-          },
-        },
-      ],
+    latest_charge: 'ch_test123',
+  }
+
+  const mockCharge = {
+    id: 'ch_test123',
+    amount: 10000, // $100 in cents
+    amount_refunded: 0,
+    refunds: {
+      data: [],
     },
   }
 
@@ -92,6 +95,7 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
     mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(mockCharge)
     mockStripeRefundsCreate.mockResolvedValue(mockRefund)
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
@@ -105,15 +109,20 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     expect(response.status).toBe(200)
     expect(data.success).toBe(true)
     expect(data.refund.amount).toBe(50)
-    expect(mockStripeRefundsCreate).toHaveBeenCalledWith({
-      charge: 'ch_test123',
-      amount: 5000, // $50 in cents
-      metadata: {
-        orderId: 'order-123',
-        orderNumber: 'JMS-20260211-1234',
-        refundedBy: 'user-admin-123',
+    expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
+      {
+        charge: 'ch_test123',
+        amount: 5000, // $50 in cents
+        metadata: {
+          orderId: 'order-123',
+          orderNumber: 'JMS-20260211-1234',
+          refundedBy: 'user-admin-123',
+        },
       },
-    })
+      {
+        idempotencyKey: 'refund-order-123-5000',
+      }
+    )
     expect(logAuditWithRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'user-admin-123',
@@ -153,25 +162,18 @@ describe('POST /api/admin/orders/[id]/refund', () => {
       paymentStatus: 'PARTIALLY_REFUNDED',
     }
 
-    const paymentIntentWithRefund = {
-      ...mockPaymentIntent,
-      charges: {
-        data: [
-          {
-            id: 'ch_test123',
-            amount: 10000, // $100 in cents
-            amount_refunded: 3000, // $30 already refunded
-            refunds: {
-              data: [{ amount: 3000 }],
-            },
-          },
-        ],
+    const chargeWithRefund = {
+      ...mockCharge,
+      amount_refunded: 3000, // $30 already refunded
+      refunds: {
+        data: [{ amount: 3000 }],
       },
     }
 
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(partiallyRefundedOrder as any)
-    mockStripePaymentIntentsRetrieve.mockResolvedValue(paymentIntentWithRefund)
+    mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(chargeWithRefund)
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
       method: 'POST',
@@ -271,6 +273,7 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
     mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(mockCharge)
     mockStripeRefundsCreate.mockResolvedValue(mockRefund)
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
@@ -295,6 +298,7 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
     mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(mockCharge)
     mockStripeRefundsCreate.mockResolvedValue(mockRefund)
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
@@ -316,23 +320,16 @@ describe('POST /api/admin/orders/[id]/refund', () => {
       paymentStatus: 'PARTIALLY_REFUNDED',
     }
 
-    const paymentIntentWithRefund = {
-      ...mockPaymentIntent,
-      charges: {
-        data: [
-          {
-            id: 'ch_test123',
-            amount: 10000,
-            amount_refunded: 3000,
-            refunds: { data: [{ amount: 3000 }] },
-          },
-        ],
-      },
+    const chargeWith30Refunded = {
+      ...mockCharge,
+      amount_refunded: 3000,
+      refunds: { data: [{ amount: 3000 }] },
     }
 
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(partiallyRefundedOrder as any)
-    mockStripePaymentIntentsRetrieve.mockResolvedValue(paymentIntentWithRefund)
+    mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(chargeWith30Refunded)
     mockStripeRefundsCreate.mockResolvedValue(mockRefund)
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
@@ -438,6 +435,7 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
     mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(mockCharge)
     mockStripeRefundsCreate.mockResolvedValue({ ...mockRefund, amount: 3000 })
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
@@ -462,23 +460,16 @@ describe('POST /api/admin/orders/[id]/refund', () => {
       paymentStatus: 'PARTIALLY_REFUNDED',
     }
 
-    const paymentIntentWith30Refunded = {
-      ...mockPaymentIntent,
-      charges: {
-        data: [
-          {
-            id: 'ch_test123',
-            amount: 10000,
-            amount_refunded: 3000,
-            refunds: { data: [{ amount: 3000 }] },
-          },
-        ],
-      },
+    const chargeWith30Refunded = {
+      ...mockCharge,
+      amount_refunded: 3000,
+      refunds: { data: [{ amount: 3000 }] },
     }
 
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(partiallyRefundedOrder as any)
-    mockStripePaymentIntentsRetrieve.mockResolvedValue(paymentIntentWith30Refunded)
+    mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(chargeWith30Refunded)
     mockStripeRefundsCreate.mockResolvedValue({ ...mockRefund, amount: 4000 })
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
@@ -504,23 +495,16 @@ describe('POST /api/admin/orders/[id]/refund', () => {
       paymentStatus: 'PARTIALLY_REFUNDED',
     }
 
-    const paymentIntentWith70Refunded = {
-      ...mockPaymentIntent,
-      charges: {
-        data: [
-          {
-            id: 'ch_test123',
-            amount: 10000,
-            amount_refunded: 7000,
-            refunds: { data: [{ amount: 3000 }, { amount: 4000 }] },
-          },
-        ],
-      },
+    const chargeWith70Refunded = {
+      ...mockCharge,
+      amount_refunded: 7000,
+      refunds: { data: [{ amount: 3000 }, { amount: 4000 }] },
     }
 
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(partiallyRefundedOrder as any)
-    mockStripePaymentIntentsRetrieve.mockResolvedValue(paymentIntentWith70Refunded)
+    mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(chargeWith70Refunded)
     mockStripeRefundsCreate.mockResolvedValue({ ...mockRefund, amount: 3000 })
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
@@ -546,23 +530,16 @@ describe('POST /api/admin/orders/[id]/refund', () => {
       paymentStatus: 'PARTIALLY_REFUNDED',
     }
 
-    const paymentIntentWith70Refunded = {
-      ...mockPaymentIntent,
-      charges: {
-        data: [
-          {
-            id: 'ch_test123',
-            amount: 10000,
-            amount_refunded: 7000,
-            refunds: { data: [{ amount: 3000 }, { amount: 4000 }] },
-          },
-        ],
-      },
+    const chargeWith70Refunded = {
+      ...mockCharge,
+      amount_refunded: 7000,
+      refunds: { data: [{ amount: 3000 }, { amount: 4000 }] },
     }
 
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(partiallyRefundedOrder as any)
-    mockStripePaymentIntentsRetrieve.mockResolvedValue(paymentIntentWith70Refunded)
+    mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(chargeWith70Refunded)
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
       method: 'POST',
@@ -587,6 +564,7 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
     mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(mockCharge)
     mockStripeRefundsCreate.mockResolvedValue(mockRefund)
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
@@ -597,15 +575,21 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     await POST(request, { params: Promise.resolve({ id: 'order-123' }) })
 
     expect(mockStripePaymentIntentsRetrieve).toHaveBeenCalledWith('pi_test123')
-    expect(mockStripeRefundsCreate).toHaveBeenCalledWith({
-      charge: 'ch_test123',
-      amount: 5000,
-      metadata: expect.objectContaining({
-        orderId: 'order-123',
-        orderNumber: 'JMS-20260211-1234',
-        refundedBy: 'user-admin-123',
-      }),
-    })
+    expect(mockStripeChargesRetrieve).toHaveBeenCalledWith('ch_test123')
+    expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
+      {
+        charge: 'ch_test123',
+        amount: 5000,
+        metadata: expect.objectContaining({
+          orderId: 'order-123',
+          orderNumber: 'JMS-20260211-1234',
+          refundedBy: 'user-admin-123',
+        }),
+      },
+      {
+        idempotencyKey: 'refund-order-123-5000',
+      }
+    )
   })
 
   it('should convert refund amount to cents correctly', async () => {
@@ -615,6 +599,7 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
     mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(mockCharge)
     mockStripeRefundsCreate.mockResolvedValue(mockRefund)
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
@@ -627,7 +612,8 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         amount: 2550, // $25.50 in cents
-      })
+      }),
+      expect.any(Object)
     )
   })
 
@@ -638,6 +624,7 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
     mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(mockCharge)
     mockStripeRefundsCreate.mockResolvedValue(mockRefund)
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
@@ -647,15 +634,20 @@ describe('POST /api/admin/orders/[id]/refund', () => {
 
     await POST(request, { params: Promise.resolve({ id: 'order-123' }) })
 
-    expect(mockStripeRefundsCreate).toHaveBeenCalledWith({
-      charge: 'ch_test123',
-      amount: 5000,
-      metadata: {
-        orderId: 'order-123',
-        orderNumber: 'JMS-20260211-1234',
-        refundedBy: 'user-admin-123',
+    expect(mockStripeRefundsCreate).toHaveBeenCalledWith(
+      {
+        charge: 'ch_test123',
+        amount: 5000,
+        metadata: {
+          orderId: 'order-123',
+          orderNumber: 'JMS-20260211-1234',
+          refundedBy: 'user-admin-123',
+        },
       },
-    })
+      {
+        idempotencyKey: 'refund-order-123-5000',
+      }
+    )
   })
 
   // ========================================
@@ -670,6 +662,7 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
     mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(mockCharge)
     mockStripeRefundsCreate.mockResolvedValue(mockRefund)
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
@@ -698,6 +691,7 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
     mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(mockCharge)
     mockStripeRefundsCreate.mockResolvedValue(mockRefund)
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
@@ -731,6 +725,7 @@ describe('POST /api/admin/orders/[id]/refund', () => {
     vi.mocked(requirePermission).mockResolvedValue(mockUser)
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
     mockStripePaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent)
+    mockStripeChargesRetrieve.mockResolvedValue(mockCharge)
     mockStripeRefundsCreate.mockResolvedValue(mockRefund)
 
     const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
