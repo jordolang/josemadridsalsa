@@ -101,6 +101,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
+    "fast-check": "^4.6.0",
     "framer-motion": "^12.23.25",
     "googleapis": "^143.0.0",
     "gray-matter": "^4.0.3",
