@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import RefundDialog from '@/components/admin/RefundDialog'
+import PrintInvoiceButton from '@/components/admin/PrintInvoiceButton'
 import { getStripe } from '@/lib/stripe'
 import { Decimal } from '@prisma/client/runtime/library'
 
@@ -341,9 +342,53 @@ export default async function OrderDetailPage({
                   <Button variant="outline" className="w-full" disabled>
                     Send Email
                   </Button>
-                  <Button variant="outline" className="w-full" disabled>
-                    Print Invoice
-                  </Button>
+                  <PrintInvoiceButton
+                    order={{
+                      id: order.id,
+                      orderNumber: order.orderNumber,
+                      createdAt: order.createdAt.toISOString(),
+                      status: order.status,
+                      paymentStatus: order.paymentStatus,
+                      items: order.items.map((item) => ({
+                        id: item.id,
+                        productName: item.productName,
+                        productSku: item.productSku,
+                        quantity: item.quantity,
+                        unitPrice: Number(item.unitPrice),
+                        totalPrice: Number(item.totalPrice),
+                      })),
+                      subtotal: Number(order.subtotal),
+                      shippingCost: Number(order.shippingCost),
+                      tax: Number(order.tax),
+                      discountAmount: Number(order.discountAmount),
+                      total: Number(order.total),
+                      shippingAddress: order.shippingAddress
+                        ? {
+                            firstName: order.shippingAddress.firstName,
+                            lastName: order.shippingAddress.lastName,
+                            street: order.shippingAddress.street,
+                            city: order.shippingAddress.city,
+                            state: order.shippingAddress.state,
+                            zipCode: order.shippingAddress.zipCode,
+                            country: order.shippingAddress.country,
+                          }
+                        : null,
+                      billingAddress: order.billingAddress
+                        ? {
+                            firstName: order.billingAddress.firstName,
+                            lastName: order.billingAddress.lastName,
+                            street: order.billingAddress.street,
+                            city: order.billingAddress.city,
+                            state: order.billingAddress.state,
+                            zipCode: order.billingAddress.zipCode,
+                            country: order.billingAddress.country,
+                          }
+                        : null,
+                      user: order.user
+                        ? { name: order.user.name, email: order.user.email }
+                        : null,
+                    }}
+                  />
                 </div>
                 <p className="mt-3 text-xs text-slate-500">
                   Advanced actions coming soon
