@@ -64,7 +64,7 @@ export default function PasswordRevealDialog({
       }
 
       onOpenChange(false)
-      onReveal(result.plaintext)
+      onReveal(result.password)
     } catch (error: any) {
       setError(error.message)
     } finally {
