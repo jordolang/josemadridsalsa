@@ -689,6 +689,10 @@ model Order {
   fundraiserId String?
   fundraiser   Fundraiser? @relation(fields: [fundraiserId], references: [id])
 
+  // Participant attribution
+  participantId String?
+  participant   FundraiserParticipant? @relation(fields: [participantId], references: [id])
+
   // Gift certificates
   giftCertificates      GiftCertificate[]
   giftCertificateUsages GiftCertificateUsage[]
@@ -705,7 +709,7 @@ model Order {
   printedInvoiceAt     DateTime?
   printedPackingSlipAt DateTime?
 
-  payments  Payment[]
+  payments Payment[]
 
   @@map("orders")
 }
@@ -732,7 +736,6 @@ model OrderItem {
 
   @@map("order_items")
 }
-
 
 model Payment {
   id                      String        @id @default(cuid())
@@ -838,8 +841,9 @@ model Fundraiser {
   updatedAt DateTime @updatedAt
 
   // Relations
-  orders   Order[]
-  products FundraiserProduct[]
+  orders       Order[]
+  products     FundraiserProduct[]
+  participants FundraiserParticipant[]
 
   @@map("fundraisers")
 }
@@ -861,6 +865,32 @@ model FundraiserProduct {
 
   @@unique([fundraiserId, productId])
   @@map("fundraiser_products")
+}
+
+model FundraiserParticipant {
+  id           String  @id @default(cuid())
+  fundraiserId String
+  name         String
+  email        String
+  phone        String?
+  referralCode String  @unique
+
+  // Status
+  status FundraiserParticipantStatus @default(ACTIVE)
+
+  // Tracking
+  totalOrders     Int     @default(0)
+  totalRevenue    Decimal @default(0) @db.Decimal(10, 2)
+  totalCommission Decimal @default(0) @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+  orders     Order[]
+
+  @@map("fundraiser_participants")
 }
 
 model WholesaleAccount {
@@ -1763,7 +1793,7 @@ enum PaymentStatus {
   PENDING
   PROCESSING
   SUCCEEDED
-  PAID        // legacy alias kept for backwards compat
+  PAID // legacy alias kept for backwards compat
   FAILED
   CANCELED
   REFUNDED
@@ -1788,6 +1818,11 @@ enum FundraiserStatus {
   ACTIVE
   ENDED
   CANCELLED
+}
+
+enum FundraiserParticipantStatus {
+  ACTIVE
+  INACTIVE
 }
 
 enum BusinessType {
