@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "012-production-launch-preparation",
+  "spec": "056-i-would-like-to-add-a-page-to-the-admin-panel-and-",
   "state": "building",
   "subtasks": {
-    "completed": 14,
-    "total": 15,
+    "completed": 12,
+    "total": 16,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Build & Type Check Verification",
+    "current": "Integration & Verification",
     "id": null,
-    "total": 3
+    "total": 4
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 15,
-    "started_at": "2026-03-02T05:14:21.528106"
+    "number": 13,
+    "started_at": "2026-03-12T17:30:46.495598"
   },
-  "last_update": "2026-03-02T06:02:51.240769"
+  "last_update": "2026-03-12T17:54:17.760547"
 }

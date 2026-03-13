@@ -1688,6 +1688,7 @@ enum PermissionCategory {
   LOCATIONS
   EVENTS
   AI_TRAINING
+  CREDENTIALS
 }
 
 enum TagType {
