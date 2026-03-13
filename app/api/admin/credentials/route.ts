@@ -11,7 +11,7 @@ const credentialSchema = z.object({
   label: z.string().min(1, 'Label is required'),
   username: z.string().optional(),
   password: z.string().optional(),
-  url: z.string().optional(),
+  url: z.string().url().optional(),
   notes: z.string().optional(),
 })
 
@@ -48,6 +48,7 @@ export async function GET(req: NextRequest) {
           serviceName: true,
           label: true,
           username: true,
+          encValue: true,
           url: true,
           notes: true,
           createdById: true,
@@ -59,9 +60,10 @@ export async function GET(req: NextRequest) {
       prisma.serviceCredential.count({ where }),
     ])
 
-    const masked = credentials.map((c) => ({
+    const masked = credentials.map(({ encValue, ...c }) => ({
       ...c,
       password: '••••••••',
+      hasPassword: encValue !== '',
       accessLevel,
     }))
 

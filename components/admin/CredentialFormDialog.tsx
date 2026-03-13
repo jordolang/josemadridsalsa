@@ -40,6 +40,7 @@ interface Credential {
   username: string | null
   url: string | null
   notes: string | null
+  updatedAt: string
 }
 
 interface CredentialFormDialogProps {
@@ -97,6 +98,7 @@ export default function CredentialFormDialog({
       if (data.password) body.password = data.password
       if (data.url) body.url = data.url
       if (data.notes) body.notes = data.notes
+      if (mode === 'edit' && credential?.updatedAt) body.updatedAt = credential.updatedAt
 
       const response = await fetch(url, {
         method,

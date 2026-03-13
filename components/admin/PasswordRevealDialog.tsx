@@ -60,7 +60,13 @@ export default function PasswordRevealDialog({
         const newAttempts = attempts + 1
         setAttempts(newAttempts)
         setPassword('')
-        throw new Error('Incorrect password. Please try again.')
+        if (response.status === 429) {
+          throw new Error('Too many failed attempts. Please wait before trying again.')
+        } else if (response.status === 401) {
+          throw new Error(result.error || 'Incorrect password. Please try again.')
+        } else {
+          throw new Error('An error occurred. Please try again.')
+        }
       }
 
       onOpenChange(false)

@@ -11,12 +11,12 @@ const credentialUpdateSchema = z.object({
   label: z.string().min(1).optional(),
   username: z.string().nullable().optional(),
   password: z.string().optional(),
-  url: z.string().nullable().optional(),
+  url: z.string().url().nullable().optional(),
   notes: z.string().nullable().optional(),
   updatedAt: z.string().optional(),
 })
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const currentUser = await requirePermission('credentials:read')
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return fail('Forbidden - no credential access grant', 403)
     }
 
-    const { id } = await params
+    const { id } = params
 
     const credential = await prisma.serviceCredential.findUnique({
       where: { id },
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const currentUser = await requirePermission('credentials:write')
 
@@ -66,7 +66,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return fail('Forbidden - write access required', 403)
     }
 
-    const { id } = await params
+    const { id } = params
     const body = await req.json()
     const data = credentialUpdateSchema.parse(body)
 
@@ -139,7 +139,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const currentUser = await requirePermission('credentials:write')
 
@@ -148,7 +148,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return fail('Forbidden - write access required', 403)
     }
 
-    const { id } = await params
+    const { id } = params
 
     const existing = await prisma.serviceCredential.findUnique({ where: { id } })
     if (!existing) return fail('Credential not found', 404)

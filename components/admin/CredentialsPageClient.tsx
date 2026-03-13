@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -36,6 +36,7 @@ interface Credential {
   label: string
   username: string | null
   password: string
+  hasPassword?: boolean
   url: string | null
   notes: string | null
   createdAt: string
@@ -60,6 +61,7 @@ export default function CredentialsPageClient({
   const [credentials, setCredentials] = useState<Credential[]>(initialCredentials)
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, string>>({})
   const [searchQuery, setSearchQuery] = useState('')
+  const revealTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   // Dialog states
   const [formDialogOpen, setFormDialogOpen] = useState(false)
@@ -72,22 +74,15 @@ export default function CredentialsPageClient({
   const [deletingCredential, setDeletingCredential] = useState<Credential | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Clear revealed passwords on unmount
+  // Clear revealed passwords and timers on unmount
   useEffect(() => {
     return () => {
       setRevealedPasswords({})
+      Object.values(revealTimersRef.current).forEach(clearTimeout)
     }
   }, [])
 
-  // Debounced search
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      fetchCredentials(searchQuery)
-    }, 300)
-    return () => clearTimeout(timeout)
-  }, [searchQuery])
-
-  const fetchCredentials = async (search: string) => {
+  const fetchCredentials = useCallback(async (search: string) => {
     try {
       const params = new URLSearchParams()
       if (search) params.set('search', search)
@@ -99,7 +94,15 @@ export default function CredentialsPageClient({
     } catch {
       // silently fail, keep current data
     }
-  }
+  }, [])
+
+  // Debounced search
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      fetchCredentials(searchQuery)
+    }, 300)
+    return () => clearTimeout(timeout)
+  }, [searchQuery, fetchCredentials])
 
   const handleCopyToClipboard = useCallback(async (text: string, label: string) => {
     try {
@@ -117,7 +120,21 @@ export default function CredentialsPageClient({
   }
 
   const handleRevealSuccess = (plaintext: string) => {
-    setRevealedPasswords((prev) => ({ ...prev, [revealCredentialId]: plaintext }))
+    const credId = revealCredentialId
+    setRevealedPasswords((prev) => ({ ...prev, [credId]: plaintext }))
+    // Clear any existing timer for this credential
+    if (revealTimersRef.current[credId]) {
+      clearTimeout(revealTimersRef.current[credId])
+    }
+    // Auto-hide after 60 seconds
+    revealTimersRef.current[credId] = setTimeout(() => {
+      setRevealedPasswords((prev) => {
+        const next = { ...prev }
+        delete next[credId]
+        return next
+      })
+      delete revealTimersRef.current[credId]
+    }, 60000)
   }
 
   const handleEdit = (credential: Credential) => {
@@ -161,6 +178,15 @@ export default function CredentialsPageClient({
   const truncateUrl = (url: string, maxLength = 40) => {
     if (url.length <= maxLength) return url
     return url.substring(0, maxLength) + '...'
+  }
+
+  const isSafeUrl = (url: string): boolean => {
+    try {
+      const parsed = new URL(url)
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+    } catch {
+      return false
+    }
   }
 
   return (
@@ -235,7 +261,7 @@ export default function CredentialsPageClient({
               <tbody className="divide-y">
                 {credentials.map((credential) => {
                   const isRevealed = !!revealedPasswords[credential.id]
-                  const hasPassword = credential.password !== 'No password set'
+                  const hasPassword = credential.hasPassword ?? true
 
                   return (
                     <tr key={credential.id} className="hover:bg-slate-50">
@@ -310,15 +336,19 @@ export default function CredentialsPageClient({
                       </td>
                       <td className="px-4 py-3">
                         {credential.url ? (
-                          <a
-                            href={credential.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
-                          >
-                            {truncateUrl(credential.url)}
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
+                          isSafeUrl(credential.url) ? (
+                            <a
+                              href={credential.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                            >
+                              {truncateUrl(credential.url)}
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : (
+                            <span className="text-sm text-slate-700">{truncateUrl(credential.url)}</span>
+                          )
                         ) : (
                           <span className="text-sm text-slate-400">-</span>
                         )}

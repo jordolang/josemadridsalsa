@@ -38,7 +38,7 @@ function recordFailedAttempt(userId: string): void {
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const currentUser = await requirePermission('credentials:read')
 
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return fail('Forbidden - no credential access grant', 403)
     }
 
-    const { id } = await params
+    const { id } = params
 
     // Check rate limit before processing
     if (!checkRateLimit(currentUser.id)) {
