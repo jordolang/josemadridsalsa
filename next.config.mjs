@@ -62,6 +62,8 @@ const nextConfig = {
   },
   // React Email packages need to be external for server components
   serverExternalPackages: ['@react-email/render'],
+  // Bundle react-pdf to avoid Turbopack external module ID resolution issues
+  transpilePackages: ['@react-pdf/renderer'],
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000'],
