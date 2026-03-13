@@ -1,5 +1,6 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { withSentryConfig } from '@sentry/nextjs'
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url))
 
@@ -110,4 +111,35 @@ const nextConfig = {
   },
 }
 
-export default nextConfig;
+// Sentry configuration options
+// For all available options, see: https://github.com/getsentry/sentry-webpack-plugin#options
+const sentryWebpackPluginOptions = {
+  // Suppresses source map uploading logs during build
+  silent: true,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+}
+
+// Additional Sentry config options
+const sentryOptions = {
+  // For all available options, see:
+  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+
+  // Upload a larger set of source maps for prettier stack traces (increases build time)
+  widenClientFileUpload: true,
+
+  // Automatically tree-shake Sentry logger statements to reduce bundle size
+  disableLogger: true,
+
+  // Hides source maps from generated client bundles
+  hideSourceMaps: true,
+
+  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers
+  tunnelRoute: '/monitoring',
+
+  // Automatically instrument server components
+  automaticVercelMonitors: true,
+}
+
+export default withSentryConfig(nextConfig, sentryWebpackPluginOptions, sentryOptions);

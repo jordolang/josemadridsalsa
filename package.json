@@ -88,6 +88,7 @@
     "@radix-ui/react-toast": "^1.2.15",
     "@react-email/components": "^1.0.8",
     "@react-email/render": "^1.0.3",
+    "@sentry/nextjs": "^10.40.0",
     "@stripe/react-stripe-js": "^5.2.0",
     "@stripe/stripe-js": "^8.0.0",
     "@tailwindcss/postcss": "^4.1.14",
