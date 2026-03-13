@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Providers } from './providers'
+import { CookieConsentBanner } from '@/components/ui/cookie-consent-banner'
 import './globals.css'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.josemadridsalsa.com'
@@ -70,6 +71,7 @@ export default function RootLayout({
         <Providers>
           {children}
         </Providers>
+        <CookieConsentBanner />
       </body>
     </html>
   )
