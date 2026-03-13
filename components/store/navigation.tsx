@@ -122,18 +122,18 @@ export function Navigation() {
       <div className="container mx-auto px-2 sm:px-4">
         <div className="flex h-16 items-center justify-between gap-2">
           {/* Logo */}
-          <Link 
-            href="/" 
-            className="flex items-center space-x-2 font-serif font-bold text-base lg:text-xl flex-shrink-0"
+          <Link
+            href="/"
+            className="flex items-center space-x-2 font-serif font-bold text-base lg:text-xl flex-shrink-0 min-h-[44px]"
           >
-            <div className="relative w-10 h-10 lg:w-12 lg:h-12 flex-shrink-0" suppressHydrationWarning>
+            <div className="relative w-11 h-11 lg:w-12 lg:h-12 flex-shrink-0" suppressHydrationWarning>
               <Image
                 src="/images/logo-image.png"
                 alt="Jose Madrid Salsa Logo"
                 fill
                 className="object-contain"
                 priority
-                sizes="(max-width: 640px) 2.5rem, 3rem"
+                sizes="(max-width: 640px) 2.75rem, 3rem"
               />
             </div>
             <span className="hidden sm:inline text-gradient">Jose Madrid Salsa</span>
@@ -147,7 +147,7 @@ export function Navigation() {
                   <NavigationMenuItem key={item.title}>
                     {item.megaMenu ? (
                       <>
-                        <NavigationMenuTrigger className="h-auto px-2 py-1.5 text-xs font-medium hover:text-salsa-600 data-[state=open]:text-salsa-600">
+                        <NavigationMenuTrigger className="h-auto min-h-[44px] px-2 py-1.5 text-xs font-medium hover:text-salsa-600 data-[state=open]:text-salsa-600">
                           {item.title}
                         </NavigationMenuTrigger>
                         <NavigationMenuContent>
@@ -187,7 +187,7 @@ export function Navigation() {
                       <NavigationMenuLink asChild>
                         <Link
                           href={item.href}
-                          className="group inline-flex h-auto w-max items-center justify-center rounded-md px-2 py-1.5 text-xs font-medium transition-colors hover:text-salsa-600 focus:text-salsa-600 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+                          className="group inline-flex h-auto min-h-[44px] w-max items-center justify-center rounded-md px-2 py-1.5 text-xs font-medium transition-colors hover:text-salsa-600 focus:text-salsa-600 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
                         >
                           {item.title}
                         </Link>
@@ -209,13 +209,12 @@ export function Navigation() {
                   placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-2 h-8 text-sm rounded-l-lg rounded-r-none border-r-0 focus:ring-salsa-500 focus:border-salsa-500"
+                  className="pl-8 pr-2 h-11 text-sm rounded-l-lg rounded-r-none border-r-0 focus:ring-salsa-500 focus:border-salsa-500"
                 />
               </div>
               <Button
                 type="submit"
-                size="sm"
-                className="rounded-l-none rounded-r-lg h-8 px-3 text-xs bg-salsa-500 hover:bg-salsa-600"
+                className="rounded-l-none rounded-r-lg h-11 px-3 text-xs bg-salsa-500 hover:bg-salsa-600"
               >
                 Search
               </Button>
@@ -230,9 +229,8 @@ export function Navigation() {
               <Button
                 key={social.name}
                 variant="ghost"
-                size="sm"
                 asChild
-                className="p-1.5 text-muted-foreground hover:text-salsa-500 dark:hover:text-salsa-300"
+                className="min-h-[44px] min-w-[44px] p-0 text-muted-foreground hover:text-salsa-500 dark:hover:text-salsa-300"
               >
                 <a
                   href={social.href}
@@ -240,30 +238,30 @@ export function Navigation() {
                   target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <social.icon className="w-4 h-4" />
+                    <social.icon className="w-5 h-5" />
                   </a>
                 </Button>
               ))}
             </div>
 
-            <ThemeToggle size="sm" className="h-8 w-8 p-0" />
+            <ThemeToggle className="min-h-[44px] min-w-[44px] p-0" />
 
             {/* Search Icon (Mobile) */}
-            <Button variant="ghost" size="sm" className="md:hidden p-1.5">
-              <Search className="h-4 w-4 text-muted-foreground" />
+            <Button variant="ghost" aria-label="Search" className="md:hidden min-h-[44px] min-w-[44px] p-0">
+              <Search className="h-5 w-5 text-muted-foreground" />
             </Button>
 
             {/* Account (Mobile) */}
             {status === "authenticated" ? (
-              <Button variant="ghost" size="sm" asChild className="lg:hidden p-1.5">
+              <Button variant="ghost" asChild className="lg:hidden min-h-[44px] min-w-[44px] p-0">
                 <Link href="/account" aria-label="Go to your account">
-                  <User className="w-4 h-4" />
+                  <User className="w-5 h-5" />
                 </Link>
               </Button>
             ) : (
-              <Button variant="ghost" size="sm" asChild className="lg:hidden p-1.5">
+              <Button variant="ghost" asChild className="lg:hidden min-h-[44px] min-w-[44px] p-0">
                 <Link href="/auth/signin" aria-label="Sign in to your account">
-                  <User className="w-4 h-4" />
+                  <User className="w-5 h-5" />
                 </Link>
               </Button>
             )}
@@ -272,8 +270,8 @@ export function Navigation() {
             {session ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="hidden lg:flex p-1.5 relative">
-                    <User className="w-4 h-4" />
+                  <Button variant="ghost" aria-label="Account menu" className="hidden lg:flex min-h-[44px] min-w-[44px] p-0 relative">
+                    <User className="w-5 h-5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -323,12 +321,12 @@ export function Navigation() {
               </DropdownMenu>
             ) : (
               <div className="hidden lg:flex gap-1">
-                <Button variant="ghost" size="sm" asChild className="h-8 px-2 text-xs">
+                <Button variant="ghost" asChild className="min-h-[44px] px-3 text-xs">
                   <Link href="/auth/signin">
                     Sign In
                   </Link>
                 </Button>
-                <Button size="sm" asChild className="h-8 px-2 text-xs">
+                <Button asChild className="min-h-[44px] px-3 text-xs">
                   <Link href="/auth/signup">
                     Sign Up
                   </Link>
@@ -337,9 +335,9 @@ export function Navigation() {
             )}
 
             {/* Gift Certificates */}
-            <Button variant="ghost" size="sm" asChild className="hidden lg:flex p-1.5 relative">
+            <Button variant="ghost" asChild className="hidden lg:flex min-h-[44px] min-w-[44px] p-0 relative">
               <Link href="/gift-certificates/purchase" aria-label="Purchase Gift Certificate">
-                <Gift className="w-4 h-4" />
+                <Gift className="w-5 h-5" />
               </Link>
             </Button>
 
@@ -349,8 +347,8 @@ export function Navigation() {
             {/* Mobile Menu */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="lg:hidden p-1.5">
-                  <Menu className="w-4 h-4" />
+                <Button variant="ghost" aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"} className="lg:hidden min-h-[44px] min-w-[44px] p-0">
+                  <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-80 flex flex-col">
@@ -382,7 +380,7 @@ export function Navigation() {
                         <Link
                           href={item.href}
                           onClick={() => setIsMobileMenuOpen(false)}
-                          className="block py-1.5 px-1 text-base font-medium hover:text-salsa-600 transition-colors"
+                          className="block py-3 px-1 text-base font-medium hover:text-salsa-600 transition-colors min-h-[44px] flex items-center"
                         >
                           {item.title}
                         </Link>
@@ -393,7 +391,7 @@ export function Navigation() {
                                 key={category.name}
                                 href={category.href}
                                 onClick={() => setIsMobileMenuOpen(false)}
-                                className="block py-1 text-sm text-muted-foreground hover:text-salsa-600 transition-colors"
+                                className="block py-2.5 text-sm text-muted-foreground hover:text-salsa-600 transition-colors min-h-[44px] flex items-center"
                               >
                                 {category.name}
                               </Link>
@@ -409,7 +407,7 @@ export function Navigation() {
                       <p className="text-sm font-medium text-foreground">Appearance</p>
                       <p className="text-xs text-muted-foreground">Toggle theme</p>
                     </div>
-                    <ThemeToggle size="default" className="h-9 w-9 p-0" />
+                    <ThemeToggle className="min-h-[44px] min-w-[44px] p-0" />
                   </div>
 
                   {/* Mobile Social Links */}
@@ -422,9 +420,8 @@ export function Navigation() {
                         <Button
                           key={social.name}
                           variant="outline"
-                          size="sm"
-                          asChild
-                          className="h-8 w-8 rounded-full px-0 text-muted-foreground"
+                                    asChild
+                          className="min-h-[44px] min-w-[44px] rounded-full p-0 text-muted-foreground"
                         >
                           <a
                             href={social.href}
@@ -432,7 +429,7 @@ export function Navigation() {
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            <social.icon className="h-3.5 w-3.5" />
+                            <social.icon className="h-5 w-5" />
                           </a>
                         </Button>
                       ))}
@@ -447,61 +444,60 @@ export function Navigation() {
                           <p className="text-sm font-medium text-foreground">{session.user?.name}</p>
                           <p className="text-xs text-muted-foreground">{session.user?.email}</p>
                         </div>
-                        <Button variant="outline" size="sm" className="w-full justify-start h-9" asChild>
+                        <Button variant="outline" className="w-full justify-start min-h-[44px]" asChild>
                           <Link href="/account" onClick={() => setIsMobileMenuOpen(false)}>
-                            <User className="w-3.5 h-3.5 mr-2" />
+                            <User className="w-4 h-4 mr-2" />
                             My Account
                           </Link>
                         </Button>
-                        <Button variant="outline" size="sm" className="w-full justify-start h-9" asChild>
+                        <Button variant="outline" className="w-full justify-start min-h-[44px]" asChild>
                           <Link href="/account/orders" onClick={() => setIsMobileMenuOpen(false)}>
-                            <ShoppingCart className="w-3.5 h-3.5 mr-2" />
+                            <ShoppingCart className="w-4 h-4 mr-2" />
                             Order History
                           </Link>
                         </Button>
-                        <Button variant="outline" size="sm" className="w-full justify-start h-9" asChild>
+                        <Button variant="outline" className="w-full justify-start min-h-[44px]" asChild>
                           <Link href="/wishlist" onClick={() => setIsMobileMenuOpen(false)}>
-                            <Heart className="w-3.5 h-3.5 mr-2" />
+                            <Heart className="w-4 h-4 mr-2" />
                             Wishlist
                             {wishlistCount > 0 && (
                               <Badge className="ml-2" variant="secondary">{wishlistCount}</Badge>
                             )}
                           </Link>
                         </Button>
-                        <Button variant="outline" size="sm" className="w-full justify-start h-9" asChild>
+                        <Button variant="outline" className="w-full justify-start min-h-[44px]" asChild>
                           <Link href="/gift-certificates/purchase" onClick={() => setIsMobileMenuOpen(false)}>
-                            <Gift className="w-3.5 h-3.5 mr-2" />
+                            <Gift className="w-4 h-4 mr-2" />
                             Gift Certificates
                           </Link>
                         </Button>
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="w-full justify-start h-9 text-red-600 border-red-200 hover:bg-red-50"
+                                    className="w-full justify-start min-h-[44px] text-red-600 border-red-200 hover:bg-red-50"
                           onClick={() => {
                             setIsMobileMenuOpen(false);
                             signOut({ callbackUrl: '/' });
                           }}
                         >
-                          <LogOut className="w-3.5 h-3.5 mr-2" />
+                          <LogOut className="w-4 h-4 mr-2" />
                           Sign Out
                         </Button>
                       </div>
                     ) : (
                       <div className="space-y-1.5">
-                        <Button size="sm" className="w-full h-9" asChild>
+                        <Button className="w-full min-h-[44px]" asChild>
                           <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)}>
                             Sign Up
                           </Link>
                         </Button>
-                        <Button variant="outline" size="sm" className="w-full h-9" asChild>
+                        <Button variant="outline" className="w-full min-h-[44px]" asChild>
                           <Link href="/auth/signin" onClick={() => setIsMobileMenuOpen(false)}>
                             Sign In
                           </Link>
                         </Button>
-                        <Button variant="outline" size="sm" className="w-full justify-start h-9" asChild>
+                        <Button variant="outline" className="w-full justify-start min-h-[44px]" asChild>
                           <Link href="/gift-certificates/purchase" onClick={() => setIsMobileMenuOpen(false)}>
-                            <Gift className="w-3.5 h-3.5 mr-2" />
+                            <Gift className="w-4 h-4 mr-2" />
                             Gift Certificates
                           </Link>
                         </Button>

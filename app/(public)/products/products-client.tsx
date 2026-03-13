@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Grid3X3, List } from 'lucide-react'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { PullToRefreshIndicator } from '@/components/ui/pull-to-refresh-indicator'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ProductCard, type Product } from '@/components/store/product-card'
@@ -98,11 +100,25 @@ export function ProductsClient({
   }
 
   // Since we're using server-side filtering, we don't need client-side filtering
-  // The initialProducts already reflect the current filters
   const filteredProducts = initialProducts
 
+  const handleRefresh = useCallback(async () => {
+    router.refresh()
+    // Small delay so user sees the refresh animation
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }, [router])
+
+  const { isRefreshing, pullDistance, handlers } = usePullToRefresh({
+    onRefresh: handleRefresh,
+  })
+
   return (
-    <main className="min-h-screen bg-background">
+    <main
+      className="min-h-screen bg-background"
+      style={{ overscrollBehavior: 'none' }}
+      {...handlers}
+    >
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       {/* Header */}
       <section className="bg-card py-12 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

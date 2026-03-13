@@ -1,7 +1,31 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
+import { Montserrat, Volkhov, Roboto_Mono } from 'next/font/google'
 import { Providers } from './providers'
 import { CookieConsentBanner } from '@/components/ui/cookie-consent-banner'
 import './globals.css'
+
+// Optimize font loading with next/font/google
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  variable: '--font-montserrat',
+  display: 'swap',
+  preload: true,
+})
+
+const volkhov = Volkhov({
+  weight: ['400', '700'],
+  subsets: ['latin'],
+  variable: '--font-volkhov',
+  display: 'swap',
+  preload: true,
+})
+
+const robotoMono = Roboto_Mono({
+  subsets: ['latin'],
+  variable: '--font-roboto-mono',
+  display: 'swap',
+  preload: false, // Only preload critical fonts
+})
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.josemadridsalsa.com'
 
@@ -51,21 +75,21 @@ export const metadata: Metadata = {
   },
 }
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+}
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
       <head>
         <meta name="google-site-verification" content="E6ciztQzSgCnoZxkfE5GvfLE349LWqzal-VezMq3nRQ" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&family=Volkhov:wght@400;700&family=Roboto+Mono:wght@100..700&display=swap"
-          rel="stylesheet"
-        />
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
         <Providers>

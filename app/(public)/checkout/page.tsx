@@ -5,6 +5,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import {
   CardElement,
   Elements,
+  ExpressCheckoutElement,
   useElements,
   useStripe,
 } from '@stripe/react-stripe-js'
@@ -128,6 +129,135 @@ function getPaymentErrorMessage(error: any): string {
       // Return the original error message if available, otherwise a generic message
       return error?.message || 'Payment failed. Please check your card information and try again.'
   }
+}
+
+type ExpressCheckoutProps = {
+  items: any[]
+  formState: CheckoutFormState
+  total: number
+  onSuccess: () => void
+  onError: (message: string) => void
+}
+
+function ExpressCheckout({ items, formState, total, onSuccess, onError }: ExpressCheckoutProps) {
+  const stripe = useStripe()
+  const router = useRouter()
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  const handleExpressCheckoutConfirm = async (event: any) => {
+    if (!stripe || items.length === 0) {
+      return
+    }
+
+    setIsProcessing(true)
+
+    try {
+      // Extract shipping and billing details from the event
+      const shippingAddress = event.shippingAddress?.address
+      const billingDetails = event.billingDetails
+
+      // Create payment intent for express checkout
+      const checkoutResponse = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            productId: item.id,
+            quantity: item.quantity,
+          })),
+          customer: {
+            email: billingDetails?.email || formState.email || '',
+            firstName: billingDetails?.name?.split(' ')[0] || formState.firstName || '',
+            lastName: billingDetails?.name?.split(' ').slice(1).join(' ') || formState.lastName || '',
+            phone: billingDetails?.phone || formState.phone || undefined,
+          },
+          shipping: {
+            address1: shippingAddress?.line1 || formState.address1 || '',
+            address2: shippingAddress?.line2 || formState.address2 || undefined,
+            city: shippingAddress?.city || formState.city || '',
+            state: shippingAddress?.state || formState.state || '',
+            postalCode: shippingAddress?.postal_code || formState.postalCode || '',
+          },
+          notes: formState.notes || undefined,
+        }),
+      })
+
+      if (!checkoutResponse.ok) {
+        const error = await checkoutResponse.json()
+        throw new Error(error.error || 'Unable to create payment.')
+      }
+
+      const { clientSecret, orderId } = await checkoutResponse.json()
+
+      // Confirm the payment with the client secret
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+        elements: event.elements,
+        clientSecret,
+        confirmParams: {
+          return_url: `${window.location.origin}/order-confirmation/${orderId}`,
+        },
+        redirect: 'if_required',
+      })
+
+      if (confirmError) {
+        onError(getPaymentErrorMessage(confirmError))
+        setIsProcessing(false)
+        return
+      }
+
+      if (!paymentIntent?.id) {
+        throw new Error('Payment could not be confirmed.')
+      }
+
+      // Complete the order
+      const completionResponse = await fetch('/api/checkout/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          paymentIntentId: paymentIntent.id,
+        }),
+      })
+
+      if (!completionResponse.ok) {
+        const error = await completionResponse.json()
+        throw new Error(error.error || 'Failed to finalize order.')
+      }
+
+      onSuccess()
+      router.push(`/order-confirmation/${orderId}`)
+    } catch (error) {
+      onError(
+        error instanceof Error
+          ? error.message
+          : 'Something went wrong while processing your payment.'
+      )
+      setIsProcessing(false)
+    }
+  }
+
+  const expressCheckoutOptions = {
+    buttonType: {
+      applePay: 'buy' as const,
+      googlePay: 'buy' as const,
+    },
+  }
+
+  if (items.length === 0 || total === 0) {
+    return null
+  }
+
+  return (
+    <div className="space-y-2">
+      <ExpressCheckoutElement
+        options={expressCheckoutOptions}
+        onConfirm={handleExpressCheckoutConfirm}
+      />
+      {isProcessing && (
+        <p className="text-sm text-gray-500 text-center">Processing payment...</p>
+      )}
+    </div>
+  )
 }
 
 function CheckoutForm() {
@@ -505,6 +635,7 @@ function CheckoutForm() {
                         name="firstName"
                         value={formState.firstName}
                         onChange={handleInputChange}
+                        autoComplete="given-name"
                         required
                       />
                     </div>
@@ -515,6 +646,7 @@ function CheckoutForm() {
                         name="lastName"
                         value={formState.lastName}
                         onChange={handleInputChange}
+                        autoComplete="family-name"
                         required
                       />
                     </div>
@@ -528,6 +660,7 @@ function CheckoutForm() {
                         type="email"
                         value={formState.email}
                         onChange={handleInputChange}
+                        autoComplete="email"
                         required
                       />
                     </div>
@@ -536,8 +669,10 @@ function CheckoutForm() {
                       <Input
                         id="phone"
                         name="phone"
+                        type="tel"
                         value={formState.phone}
                         onChange={handleInputChange}
+                        autoComplete="tel"
                       />
                     </div>
                   </div>
@@ -553,6 +688,7 @@ function CheckoutForm() {
                         name="address1"
                         value={formState.address1}
                         onChange={handleInputChange}
+                        autoComplete="address-line1"
                         required
                       />
                     </div>
@@ -563,6 +699,7 @@ function CheckoutForm() {
                         name="address2"
                         value={formState.address2}
                         onChange={handleInputChange}
+                        autoComplete="address-line2"
                       />
                     </div>
                     <div className="grid gap-4 md:grid-cols-3">
@@ -573,6 +710,7 @@ function CheckoutForm() {
                           name="city"
                           value={formState.city}
                           onChange={handleInputChange}
+                          autoComplete="address-level2"
                           required
                         />
                       </div>
@@ -583,6 +721,7 @@ function CheckoutForm() {
                           name="state"
                           value={formState.state}
                           onChange={handleInputChange}
+                          autoComplete="address-level1"
                           required
                         />
                       </div>
@@ -595,6 +734,7 @@ function CheckoutForm() {
                           name="postalCode"
                           value={formState.postalCode}
                           onChange={handleInputChange}
+                          autoComplete="postal-code"
                           required
                         />
                       </div>
@@ -667,6 +807,30 @@ function CheckoutForm() {
 
                 <section className="space-y-4">
                   <h2 className="text-xl font-semibold text-gray-900">Payment details</h2>
+
+                  {/* Express Checkout (Apple Pay / Google Pay) */}
+                  <ExpressCheckout
+                    items={items}
+                    formState={formState}
+                    total={subtotal + shippingCost + taxAmount}
+                    onSuccess={() => {
+                      clearCart()
+                      setSuccessMessage('Payment successful!')
+                    }}
+                    onError={(message) => setErrorMessage(message)}
+                  />
+
+                  {/* Divider */}
+                  <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-4 bg-white text-gray-500">Or pay with card</span>
+                    </div>
+                  </div>
+
+                  {/* Regular Card Payment */}
                   <div className="rounded-md border border-gray-200 p-4">
                     <CardElement options={CardElementOptions} />
                   </div>
@@ -762,6 +926,14 @@ function CheckoutForm() {
 }
 
 export default function CheckoutPage() {
+  const items = useCartStore((state) => state.items)
+  const subtotal = useMemo(
+    () => items.reduce((total, item) => total + item.price * item.quantity, 0),
+    [items]
+  )
+  // Stripe requires amount in cents; minimum 50 cents
+  const totalAmount = Math.max(50, Math.round(subtotal * 100))
+
   if (!stripePromise) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
@@ -775,7 +947,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <Elements stripe={stripePromise}>
+    <Elements stripe={stripePromise} options={{ mode: 'payment', amount: totalAmount, currency: 'usd' }}>
       <CheckoutForm />
     </Elements>
   )

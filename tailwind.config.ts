@@ -90,16 +90,19 @@ const config: Config = {
   		},
   		fontFamily: {
   			sans: [
+  				'var(--font-montserrat)',
   				'Montserrat',
   				'system-ui',
   				'sans-serif'
   			],
   			serif: [
+  				'var(--font-volkhov)',
   				'Volkhov',
   				'Georgia',
   				'serif'
   			],
   			mono: [
+  				'var(--font-roboto-mono)',
   				'Roboto Mono',
   				'Menlo',
   				'monospace'

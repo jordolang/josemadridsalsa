@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,8 @@ import { Clock, Users, ChefHat } from 'lucide-react'
 import type { Recipe } from '@/types/recipe'
 import { recipeData } from '@/lib/data/recipes'
 import { SocialShare } from '@/components/ui/social-share'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { PullToRefreshIndicator } from '@/components/ui/pull-to-refresh-indicator'
 import { ShareContent } from '@/types/sharing'
 import { generateHashtags } from '@/lib/sharing/metadata-extractor'
 
@@ -60,6 +63,7 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 export function RecipesClient({ initialRecipes }: RecipesClientProps) {
+  const router = useRouter()
   const recipes = initialRecipes.length > 0 ? initialRecipes : fallbackRecipes
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedDifficulty, setSelectedDifficulty] = useState('all')
@@ -79,8 +83,22 @@ export function RecipesClient({ initialRecipes }: RecipesClientProps) {
 
   const baseRecipesCount = recipes.length
 
+  const handleRefresh = useCallback(async () => {
+    router.refresh()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }, [router])
+
+  const { isRefreshing, pullDistance, handlers } = usePullToRefresh({
+    onRefresh: handleRefresh,
+  })
+
   return (
-    <main className="min-h-screen bg-background">
+    <main
+      className="min-h-screen bg-background"
+      style={{ overscrollBehavior: 'none' }}
+      {...handlers}
+    >
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <section className="bg-card py-16 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">

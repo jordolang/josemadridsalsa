@@ -1,12 +1,28 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import type { Metadata } from 'next'
-import { AnimatedTestimonials } from '@/components/store/animated-testimonials'
-import { GiftBoxSelector } from '@/components/store/gift-box-selector'
-import { LocationMap } from '@/components/store/location-map'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { createMetadata } from '@/lib/metadata'
+import { LocationMapClient } from '@/components/store/location-map-client'
+
+// Lazy load heavy below-the-fold components for better performance
+const AnimatedTestimonials = dynamic(
+  () => import('@/components/store/animated-testimonials').then(mod => ({ default: mod.AnimatedTestimonials })),
+  {
+    loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" />,
+    ssr: true
+  }
+)
+
+const GiftBoxSelector = dynamic(
+  () => import('@/components/store/gift-box-selector').then(mod => ({ default: mod.GiftBoxSelector })),
+  {
+    loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" />,
+    ssr: true
+  }
+)
 
 export const metadata: Metadata = createMetadata({
   title: 'Jose Madrid Salsa - Premium Gourmet Salsa',
@@ -194,7 +210,7 @@ export default function Home() {
       <GiftBoxSelector />
 
       {/* Location Map Section */}
-      <LocationMap />
+      <LocationMapClient />
 
       {/* Reviews Section */}
       <AnimatedTestimonials />
