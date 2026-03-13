@@ -40,6 +40,12 @@ type CheckoutFormState = {
   notes: string
 }
 
+type ShippingOption = {
+  method: string
+  cost: number
+  estimatedDays: string
+}
+
 const initialFormState: CheckoutFormState = {
   firstName: '',
   lastName: '',
@@ -141,6 +147,9 @@ function CheckoutForm() {
   const [isCalculatingTax, setIsCalculatingTax] = useState(false)
   const [shippingCost, setShippingCost] = useState(0)
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false)
+  const [shippingError, setShippingError] = useState<string | null>(null)
+  const [availableShippingOptions, setAvailableShippingOptions] = useState<ShippingOption[]>([])
+  const [selectedShippingOption, setSelectedShippingOption] = useState<ShippingOption | null>(null)
   const [isRecoveringCart, setIsRecoveringCart] = useState(false)
   const taxCalcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const shippingCalcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -205,6 +214,7 @@ function CheckoutForm() {
     }
 
     setIsCalculatingShipping(true)
+    setShippingError(null)
     try {
       const response = await fetch('/api/checkout/calculate-shipping', {
         method: 'POST',
@@ -227,14 +237,31 @@ function CheckoutForm() {
 
       if (response.ok) {
         const data = await response.json()
-        setShippingCost(data.shippingCost || 0)
+        const options = data.availableOptions || []
+        setAvailableShippingOptions(options)
+
+        // Select the first option by default (usually the cheapest/standard option)
+        if (options.length > 0) {
+          const firstOption = options[0]
+          setSelectedShippingOption(firstOption)
+          setShippingCost(firstOption.cost)
+        } else {
+          setShippingCost(data.shippingCost || 0)
+          setSelectedShippingOption(null)
+        }
       } else {
-        console.error('Failed to calculate shipping')
+        const errorData = await response.json().catch(() => ({}))
+        const errorMsg = errorData.error || 'Unable to calculate shipping costs'
+        setShippingError(errorMsg)
         setShippingCost(0)
+        setAvailableShippingOptions([])
+        setSelectedShippingOption(null)
       }
     } catch (error) {
-      console.error('Error calculating shipping:', error)
+      setShippingError('Unable to calculate shipping costs. Please try again.')
       setShippingCost(0)
+      setAvailableShippingOptions([])
+      setSelectedShippingOption(null)
     } finally {
       setIsCalculatingShipping(false)
     }
@@ -255,14 +282,16 @@ function CheckoutForm() {
     }
 
     // Trigger tax and shipping calculation when address fields change
-    if (['address1', 'city', 'state', 'postalCode'].includes(name)) {
-      // Clear previous timeouts
+    // Note: address1 excluded intentionally - carrier APIs use city/state/zip for rate calculation
+    if (['city', 'state', 'postalCode'].includes(name)) {
+      // Clear previous timeouts and errors
       if (taxCalcTimeoutRef.current) {
         clearTimeout(taxCalcTimeoutRef.current)
       }
       if (shippingCalcTimeoutRef.current) {
         clearTimeout(shippingCalcTimeoutRef.current)
       }
+      setShippingError(null)
       // Debounce calculations to avoid excessive API calls
       taxCalcTimeoutRef.current = setTimeout(() => {
         calculateTaxEstimate()
@@ -271,6 +300,11 @@ function CheckoutForm() {
         calculateShippingEstimate()
       }, 800)
     }
+  }
+
+  const handleShippingOptionChange = (option: ShippingOption) => {
+    setSelectedShippingOption(option)
+    setShippingCost(option.cost)
   }
 
   // Handle cart recovery from abandoned cart email
@@ -376,6 +410,8 @@ function CheckoutForm() {
             postalCode: formState.postalCode,
           },
           notes: formState.notes || undefined,
+          shippingMethod: selectedShippingOption?.method,
+          shippingCost: selectedShippingOption?.cost,
         }),
       })
 
@@ -576,6 +612,59 @@ function CheckoutForm() {
                   </div>
                 </section>
 
+                {(availableShippingOptions.length > 0 || isCalculatingShipping || shippingError) && (
+                  <section className="space-y-4">
+                    <h2 className="text-xl font-semibold text-gray-900">Shipping method</h2>
+
+                    {isCalculatingShipping ? (
+                      <div className="flex items-center gap-3 rounded-lg border-2 border-gray-200 bg-gray-50 p-4">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-salsa-500"></div>
+                        <span className="text-sm text-gray-600">Calculating shipping options...</span>
+                      </div>
+                    ) : shippingError ? (
+                      <div className="rounded-lg border-2 border-red-200 bg-red-50 p-4">
+                        <p className="text-sm text-red-700">{shippingError}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {availableShippingOptions.map((option, index) => (
+                          <label
+                            key={index}
+                            className={`
+                              flex items-start gap-4 rounded-lg border-2 p-4 cursor-pointer transition-colors
+                              ${
+                                selectedShippingOption?.method === option.method
+                                  ? 'border-salsa-500 bg-salsa-50'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }
+                            `}
+                          >
+                            <input
+                              type="radio"
+                              name="shippingOption"
+                              value={option.method}
+                              checked={selectedShippingOption?.method === option.method}
+                              onChange={() => handleShippingOptionChange(option)}
+                              className="mt-1 h-4 w-4 text-salsa-500 focus:ring-salsa-500"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-gray-900">{option.method}</span>
+                                <span className="font-semibold text-gray-900">
+                                  {option.cost === 0 ? 'FREE' : formatPrice(option.cost)}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-sm text-gray-600">
+                                Estimated delivery: {option.estimatedDays}
+                              </p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                )}
+
                 <section className="space-y-4">
                   <h2 className="text-xl font-semibold text-gray-900">Payment details</h2>
                   <div className="rounded-md border border-gray-200 p-4">
@@ -649,9 +738,14 @@ function CheckoutForm() {
                   <span>Tax {isCalculatingTax && <span className="text-xs">(calculating...)</span>}</span>
                   <span>{formatPrice(taxAmount)}</span>
                 </div>
-                {(taxAmount === 0 || shippingCost === 0) && formState.postalCode.length >= 5 && (
+                {shippingCost === 0 && subtotal >= 50 && availableShippingOptions.length > 0 && (
+                  <p className="text-xs text-green-600 font-medium">
+                    🎉 Free shipping on orders over $50!
+                  </p>
+                )}
+                {!isCalculatingShipping && availableShippingOptions.length === 0 && formState.postalCode.length >= 5 && (
                   <p className="text-xs text-gray-500 italic">
-                    {subtotal >= 50 && shippingCost === 0 ? '🎉 Free shipping on orders over $50!' : 'Enter your full address to calculate shipping & tax'}
+                    Enter your full address to calculate shipping
                   </p>
                 )}
               </div>

@@ -62,7 +62,15 @@ export async function POST(request: Request) {
     const itemsWithWeights = items.map((item) => {
       const product = productMap.get(item.productId)
       if (!product) {
-        throw new Error(`Product ${item.productId} not found`)
+        // Log missing product but don't block checkout
+        console.warn(
+          `[Shipping Calculation API] Product ${item.productId} not found, using defaults`
+        )
+        // Use default values to allow shipping calculation to continue
+        return {
+          weight: 1.0, // Default 1 lb
+          quantity: item.quantity,
+        }
       }
 
       const price = Number(product.price)
@@ -74,10 +82,14 @@ export async function POST(request: Request) {
       }
     })
 
-    // Calculate shipping
-    const shippingResult = calculateShipping({
+    // Calculate shipping - this function has internal error handling
+    // and will fall back to estimate rates if the carrier API fails
+    const shippingResult = await calculateShipping({
       items: itemsWithWeights,
       shippingAddress: {
+        line1: shippingAddress.address1,
+        line2: shippingAddress.address2,
+        city: shippingAddress.city,
         state: shippingAddress.state,
         postalCode: shippingAddress.postalCode,
         country: shippingAddress.country,
@@ -87,21 +99,50 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      ...shippingResult,
+      shippingCost: shippingResult.shippingCost,
+      shippingMethod: shippingResult.shippingMethod,
+      estimatedDelivery: shippingResult.estimatedDelivery,
+      availableOptions: shippingResult.availableOptions || [],
       subtotal,
+      fallback: shippingResult.fallback || false,
     })
   } catch (error) {
     console.error('[Shipping Calculation API] Error:', error)
 
+    if (error instanceof Error) {
+      console.error('[Shipping Calculation API] Error details:', error.message)
+    }
+
+    // For production: log error but return fallback rates to not block checkout
+    // Critical: Shipping calculation failures should never prevent checkout
+    console.warn(
+      '[Shipping Calculation API] Returning fallback shipping estimate due to error'
+    )
+
     const errorMessage =
       error instanceof Error ? error.message : 'Failed to calculate shipping'
 
+    // Return a fallback response instead of 500 error
     return NextResponse.json(
       {
-        error: 'Unable to calculate shipping',
+        success: false,
+        error: 'Unable to calculate exact shipping cost',
         message: errorMessage,
+        // Return estimate rates as fallback
+        shippingCost: 6.99, // Standard flat rate
+        shippingMethod: 'Standard Shipping (Estimate)',
+        estimatedDelivery: '3-5 business days',
+        availableOptions: [
+          {
+            method: 'Standard Shipping (Estimate)',
+            cost: 6.99,
+            estimatedDays: '3-5 business days',
+          },
+        ],
+        subtotal: 0,
+        fallback: true, // Flag to indicate this is a fallback response
       },
-      { status: 500 }
+      { status: 200 } // Return 200 instead of 500 to not block checkout
     )
   }
 }

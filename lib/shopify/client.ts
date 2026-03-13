@@ -82,8 +82,11 @@ interface ShopifyOrderResponse {
 
 const PAYMENT_STATUS_MAP: Record<PaymentStatus, string> = {
   PENDING: 'pending',
+  PROCESSING: 'pending',
+  SUCCEEDED: 'paid',
   PAID: 'paid',
   FAILED: 'voided',
+  CANCELED: 'voided',
   REFUNDED: 'refunded',
   PARTIALLY_REFUNDED: 'partially_refunded',
 }

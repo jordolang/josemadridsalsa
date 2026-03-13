@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
-import { InventoryTransactionType, InventoryAlertType, InventoryAlertStatus } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+import { InventoryTransactionType, InventoryAlertType, InventoryAlertStatus, StockStatus } from '@prisma/client';
 import { sendEmail } from '@/lib/email';
 
 export interface InventoryAdjustment {
@@ -20,6 +21,43 @@ export interface InventoryCheckResult {
   isOutOfStock: boolean;
 }
 
+export interface InventoryReservation {
+  productId: string;
+  quantity: number;
+  orderId?: string;
+  userId?: string;
+  notes?: string;
+}
+
+/**
+ * Compute stock status from available quantity and threshold
+ */
+function computeStockStatus(available: number, lowStockThreshold: number): StockStatus {
+  if (available <= 0) return StockStatus.OUT_OF_STOCK;
+  if (available <= lowStockThreshold) return StockStatus.LOW_STOCK;
+  return StockStatus.IN_STOCK;
+}
+
+/**
+ * Retry a Prisma serializable transaction up to maxRetries times on P2034
+ * (serialization conflict / write conflict).
+ */
+async function withSerializableRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (error?.code === 'P2034' && attempt < maxRetries - 1) {
+        lastError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw lastError;
+}
+
 /**
  * Adjust inventory for a product and create transaction record
  */
@@ -34,7 +72,8 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
       name: true,
       sku: true,
       inventory: true,
-      lowStockThreshold: true
+      stockReserved: true,
+      lowStockThreshold: true,
     },
   });
 
@@ -52,11 +91,22 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
     );
   }
 
+  // Validate that new inventory doesn't drop below reserved stock
+  if (newStock < product.stockReserved) {
+    throw new Error(
+      `Cannot set inventory below reserved stock for ${product.name} (SKU: ${product.sku}). ` +
+      `New inventory: ${newStock}, Reserved: ${product.stockReserved}`
+    );
+  }
+
+  const newAvailable = newStock - product.stockReserved;
+  const newStockStatus = computeStockStatus(newAvailable, product.lowStockThreshold);
+
   // Update product inventory and create transaction in a single transaction
   const [updatedProduct, transaction] = await prisma.$transaction([
     prisma.product.update({
       where: { id: productId },
-      data: { inventory: newStock },
+      data: { inventory: newStock, stockStatus: newStockStatus },
     }),
     prisma.inventoryTransaction.create({
       data: {
@@ -74,7 +124,11 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
   ]);
 
   // Check if we need to create or resolve alerts
-  await checkAndUpdateAlerts(productId, newStock, product.lowStockThreshold);
+  try {
+    await checkAndUpdateAlerts(productId, newStock, product.lowStockThreshold);
+  } catch (alertError) {
+    console.error(`[adjustInventory] Alert sync failed for product ${productId}:`, alertError);
+  }
 
   return {
     product: updatedProduct,
@@ -107,9 +161,431 @@ export async function bulkAdjustInventory(adjustments: InventoryAdjustment[]) {
 }
 
 /**
- * Check inventory levels and create/resolve alerts
+ * Reserve inventory for a product (e.g., during checkout)
+ * Uses Serializable transaction isolation to prevent race conditions.
+ * Retries up to 3 times on serialization conflicts (P2034).
  */
-async function checkAndUpdateAlerts(
+export async function reserveInventory(reservation: InventoryReservation) {
+  const { productId, quantity, orderId, userId, notes } = reservation;
+
+  if (quantity <= 0) {
+    throw new Error('Reservation quantity must be positive');
+  }
+
+  return withSerializableRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        // Get current product with lock
+        const product = await tx.product.findUnique({
+          where: { id: productId },
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            inventory: true,
+            stockReserved: true,
+            lowStockThreshold: true,
+          },
+        });
+
+        if (!product) {
+          throw new Error(`Product not found: ${productId}`);
+        }
+
+        const currentReserved = product.stockReserved;
+        const availableStock = product.inventory - currentReserved;
+
+        // Validate sufficient available stock
+        if (availableStock < quantity) {
+          throw new Error(
+            `Insufficient available inventory for ${product.name} (SKU: ${product.sku}). ` +
+            `Available: ${availableStock}, Requested: ${quantity}`
+          );
+        }
+
+        const newReserved = currentReserved + quantity;
+        const newAvailable = product.inventory - newReserved;
+        const newStockStatus = computeStockStatus(newAvailable, product.lowStockThreshold);
+
+        // Update product's reserved stock and stockStatus
+        const updatedProduct = await tx.product.update({
+          where: { id: productId },
+          data: { stockReserved: newReserved, stockStatus: newStockStatus },
+        });
+
+        // Create inventory transaction record
+        const transaction = await tx.inventoryTransaction.create({
+          data: {
+            productId,
+            type: InventoryTransactionType.RESERVATION,
+            quantity,
+            previousStock: product.inventory,
+            newStock: product.inventory, // Inventory doesn't change, only reserved
+            reason: 'RESERVATION',
+            notes: notes || `Reserved ${quantity} units${orderId ? ` for order ${orderId}` : ''}`,
+            orderId,
+            userId,
+          },
+        });
+
+        return {
+          product: updatedProduct,
+          transaction,
+          previousReserved: currentReserved,
+          newReserved,
+          availableStock: newAvailable,
+        };
+      },
+      {
+        isolationLevel: 'Serializable',
+      }
+    )
+  );
+}
+
+/**
+ * Helper function to reserve inventory within an existing transaction.
+ * Used by reserveMultipleProducts to enable atomic multi-product reservations.
+ */
+async function reserveInventorySingleTransaction(
+  reservation: InventoryReservation,
+  tx: Prisma.TransactionClient
+) {
+  const { productId, quantity, orderId, userId, notes } = reservation;
+
+  if (quantity <= 0) {
+    throw new Error('Reservation quantity must be positive');
+  }
+
+  // Get current product with lock
+  const product = await tx.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+      inventory: true,
+      stockReserved: true,
+      lowStockThreshold: true,
+    },
+  });
+
+  if (!product) {
+    throw new Error(`Product not found: ${productId}`);
+  }
+
+  const currentReserved = product.stockReserved;
+  const availableStock = product.inventory - currentReserved;
+
+  // Validate sufficient available stock
+  if (availableStock < quantity) {
+    throw new Error(
+      `Insufficient available inventory for ${product.name} (SKU: ${product.sku}). ` +
+      `Available: ${availableStock}, Requested: ${quantity}`
+    );
+  }
+
+  const newReserved = currentReserved + quantity;
+  const newAvailable = product.inventory - newReserved;
+  const newStockStatus = computeStockStatus(newAvailable, product.lowStockThreshold);
+
+  // Update product's reserved stock and stockStatus
+  const updatedProduct = await tx.product.update({
+    where: { id: productId },
+    data: { stockReserved: newReserved, stockStatus: newStockStatus },
+  });
+
+  // Create inventory transaction record
+  const transaction = await tx.inventoryTransaction.create({
+    data: {
+      productId,
+      type: InventoryTransactionType.RESERVATION,
+      quantity,
+      previousStock: product.inventory,
+      newStock: product.inventory, // Inventory doesn't change, only reserved
+      reason: 'RESERVATION',
+      notes: notes || `Reserved ${quantity} units${orderId ? ` for order ${orderId}` : ''}`,
+      orderId,
+      userId,
+    },
+  });
+
+  return {
+    product: updatedProduct,
+    transaction,
+    previousReserved: currentReserved,
+    newReserved,
+    availableStock: newAvailable,
+  };
+}
+
+/**
+ * Reserve inventory for multiple products (bulk operation).
+ * Uses a single Serializable transaction for atomic all-or-nothing behavior.
+ * If any product has insufficient stock, the entire reservation fails and rolls back.
+ * Retries up to 3 times on serialization conflicts (P2034).
+ */
+export async function reserveMultipleProducts(reservations: InventoryReservation[]) {
+  return withSerializableRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        const results = [];
+
+        // Step 1: Validate all products have sufficient stock BEFORE reserving anything
+        for (const reservation of reservations) {
+          const product = await tx.product.findUnique({
+            where: { id: reservation.productId },
+            select: {
+              id: true,
+              name: true,
+              sku: true,
+              inventory: true,
+              stockReserved: true,
+            },
+          });
+
+          if (!product) {
+            throw new Error(`Product not found: ${reservation.productId}`);
+          }
+
+          const available = product.inventory - product.stockReserved;
+          if (available < reservation.quantity) {
+            throw new Error(
+              `Insufficient stock for ${product.name} (SKU: ${product.sku}). ` +
+              `Available: ${available}, Requested: ${reservation.quantity}`
+            );
+          }
+        }
+
+        // Step 2: If ALL validations pass, reserve inventory for ALL products atomically
+        for (const reservation of reservations) {
+          const result = await reserveInventorySingleTransaction(reservation, tx);
+          results.push({ success: true, ...result });
+        }
+
+        return results;
+      },
+      {
+        isolationLevel: 'Serializable',
+        maxWait: 5000,
+        timeout: 10000,
+      }
+    )
+  );
+}
+
+/**
+ * Release previously reserved inventory for a product (e.g., after order cancellation).
+ * Uses Serializable transaction isolation to prevent race conditions.
+ * Retries up to 3 times on serialization conflicts (P2034).
+ */
+export async function releaseInventory(reservation: InventoryReservation) {
+  const { productId, quantity, orderId, userId, notes } = reservation;
+
+  if (quantity <= 0) {
+    throw new Error('Release quantity must be positive');
+  }
+
+  return withSerializableRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        // Get current product with lock
+        const product = await tx.product.findUnique({
+          where: { id: productId },
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            inventory: true,
+            stockReserved: true,
+            lowStockThreshold: true,
+          },
+        });
+
+        if (!product) {
+          throw new Error(`Product not found: ${productId}`);
+        }
+
+        const currentReserved = product.stockReserved;
+
+        // Validate sufficient reserved stock to release
+        if (currentReserved < quantity) {
+          throw new Error(
+            `Cannot release more than reserved for ${product.name} (SKU: ${product.sku}). ` +
+            `Reserved: ${currentReserved}, Requested: ${quantity}`
+          );
+        }
+
+        const newReserved = currentReserved - quantity;
+        const newAvailable = product.inventory - newReserved;
+        const newStockStatus = computeStockStatus(newAvailable, product.lowStockThreshold);
+
+        // Update product's reserved stock and stockStatus
+        const updatedProduct = await tx.product.update({
+          where: { id: productId },
+          data: { stockReserved: newReserved, stockStatus: newStockStatus },
+        });
+
+        // Create inventory transaction record
+        const transaction = await tx.inventoryTransaction.create({
+          data: {
+            productId,
+            type: InventoryTransactionType.RELEASE,
+            quantity: -quantity, // Negative to indicate release
+            previousStock: product.inventory,
+            newStock: product.inventory, // Inventory doesn't change, only reserved
+            reason: 'RELEASE',
+            notes: notes || `Released ${quantity} units${orderId ? ` for order ${orderId}` : ''}`,
+            orderId,
+            userId,
+          },
+        });
+
+        return {
+          product: updatedProduct,
+          transaction,
+          previousReserved: currentReserved,
+          newReserved,
+          availableStock: newAvailable,
+        };
+      },
+      {
+        isolationLevel: 'Serializable',
+      }
+    )
+  );
+}
+
+/**
+ * Deduct reserved inventory when order is completed.
+ * Decreases both stockReserved and actual inventory.
+ * Uses Serializable transaction isolation to prevent race conditions.
+ * Retries up to 3 times on serialization conflicts (P2034).
+ */
+export async function deductReservedInventory(reservation: InventoryReservation) {
+  const { productId, orderId } = reservation;
+
+  const result = await withSerializableRetry(() =>
+    prisma.$transaction(
+      async (tx) => deductReservedInventoryInTx(reservation, tx),
+      {
+        isolationLevel: 'Serializable',
+      }
+    )
+  );
+
+  // Check if we need to create alerts after deduction (non-critical — deduction already committed)
+  try {
+    await checkAndUpdateAlerts(productId, result.newInventory, result.product.lowStockThreshold);
+  } catch (alertError) {
+    console.error(
+      `[deductReservedInventory] Alert sync failed for product ${productId}` +
+      `${orderId ? ` (order ${orderId})` : ''}:`,
+      alertError
+    );
+  }
+
+  return result;
+}
+
+/**
+ * Deduct reserved inventory within an existing transaction.
+ * Used by checkout/complete to keep the order-PAID update and inventory deduction atomic.
+ * Does NOT call checkAndUpdateAlerts — the caller is responsible for firing alerts
+ * after the enclosing transaction commits.
+ */
+export async function deductReservedInventoryInTx(
+  reservation: InventoryReservation,
+  tx: Prisma.TransactionClient
+) {
+  const { productId, quantity, orderId, userId, notes } = reservation;
+
+  if (quantity <= 0) {
+    throw new Error('Deduction quantity must be positive');
+  }
+
+  // Get current product with lock
+  const product = await tx.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+      inventory: true,
+      stockReserved: true,
+      lowStockThreshold: true,
+    },
+  });
+
+  if (!product) {
+    throw new Error(`Product not found: ${productId}`);
+  }
+
+  const currentReserved = product.stockReserved;
+  const currentInventory = product.inventory;
+
+  // Validate sufficient reserved stock to deduct
+  if (currentReserved < quantity) {
+    throw new Error(
+      `Cannot deduct more than reserved for ${product.name} (SKU: ${product.sku}). ` +
+      `Reserved: ${currentReserved}, Requested: ${quantity}`
+    );
+  }
+
+  // Validate sufficient inventory to deduct
+  if (currentInventory < quantity) {
+    throw new Error(
+      `Insufficient inventory for ${product.name} (SKU: ${product.sku}). ` +
+      `Current: ${currentInventory}, Requested: ${quantity}`
+    );
+  }
+
+  const newReserved = currentReserved - quantity;
+  const newInventory = currentInventory - quantity;
+  const newAvailable = newInventory - newReserved;
+  const newStockStatus = computeStockStatus(newAvailable, product.lowStockThreshold);
+
+  // Update product's reserved stock, inventory, and stockStatus
+  const updatedProduct = await tx.product.update({
+    where: { id: productId },
+    data: {
+      stockReserved: newReserved,
+      inventory: newInventory,
+      stockStatus: newStockStatus,
+    },
+  });
+
+  // Create inventory transaction record
+  const transaction = await tx.inventoryTransaction.create({
+    data: {
+      productId,
+      type: InventoryTransactionType.SALE,
+      quantity: -quantity, // Negative to indicate deduction
+      previousStock: currentInventory,
+      newStock: newInventory,
+      reason: 'ORDER_COMPLETION',
+      notes: notes || `Deducted ${quantity} units${orderId ? ` for order ${orderId}` : ''}`,
+      orderId,
+      userId,
+    },
+  });
+
+  return {
+    product: updatedProduct,
+    transaction,
+    previousInventory: currentInventory,
+    newInventory,
+    previousReserved: currentReserved,
+    newReserved,
+    availableStock: newAvailable,
+  };
+}
+
+/**
+ * Check inventory levels and create/resolve alerts.
+ * Exported so callers can fire alerts after a committed transaction.
+ */
+export async function checkAndUpdateAlerts(
   productId: string,
   currentStock: number,
   lowStockThreshold: number

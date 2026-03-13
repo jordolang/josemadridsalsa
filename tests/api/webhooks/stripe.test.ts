@@ -12,6 +12,11 @@ vi.mock('@/lib/prisma', () => ({
     product: {
       update: vi.fn(),
     },
+    webhookEvent: {
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+      update: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }))
@@ -81,7 +86,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -124,7 +129,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -166,7 +171,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'custom-order-id-456',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -202,7 +207,7 @@ describe('POST /api/webhooks/stripe', () => {
           amount: 10000,
           amount_refunded: 10000,
           metadata: {}, // No orderId
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -246,7 +251,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -329,7 +334,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -389,7 +394,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.PaymentIntent,
+        } as unknown as Stripe.PaymentIntent,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -429,7 +434,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-456',
           },
-        } as Stripe.PaymentIntent,
+        } as unknown as Stripe.PaymentIntent,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -467,7 +472,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-789',
           },
-        } as Stripe.PaymentIntent,
+        } as unknown as Stripe.PaymentIntent,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -512,7 +517,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -538,6 +543,52 @@ describe('POST /api/webhooks/stripe', () => {
     expect(prisma.order.update).toHaveBeenCalledTimes(2)
   })
 
+  it('should be a no-op when same event is delivered a second time (already processed)', async () => {
+    const { default: prisma } = await import('@/lib/prisma')
+
+    const alreadyProcessedEvent: Stripe.Event = {
+      id: 'evt_already_processed',
+      object: 'event',
+      type: 'charge.refunded',
+      data: {
+        object: {
+          id: 'ch_test_already',
+          object: 'charge',
+          amount: 10000,
+          amount_refunded: 10000,
+          metadata: { orderId: 'order-123' },
+        } as Stripe.Charge,
+      },
+      api_version: '2023-10-16',
+      created: 1707657600,
+      livemode: false,
+      pending_webhooks: 0,
+      request: null,
+    }
+
+    mockHeaders('valid_signature')
+    mockWebhooksConstructEvent.mockReturnValue(alreadyProcessedEvent)
+
+    // Simulate the event already being recorded as processed
+    vi.mocked(prisma.webhookEvent.findUnique).mockResolvedValue({
+      id: 'whe_123',
+      stripeEventId: 'evt_already_processed',
+      type: 'charge.refunded',
+      processed: true,
+      createdAt: new Date(),
+    })
+
+    const request = createRequest(JSON.stringify(alreadyProcessedEvent))
+    const response = await POST(request)
+    const data = await response.json()
+
+    // Should return 200 but perform no business logic
+    expect(response.status).toBe(200)
+    expect(data.received).toBe(true)
+    expect(prisma.order.update).not.toHaveBeenCalled()
+    expect(prisma.$transaction).not.toHaveBeenCalled()
+  })
+
   it('should handle invalid order ID in metadata gracefully', async () => {
     const { default: prisma } = await import('@/lib/prisma')
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -555,7 +606,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'invalid-order-id',
           },
-        } as Stripe.PaymentIntent,
+        } as unknown as Stripe.PaymentIntent,
       },
       api_version: '2023-10-16',
       created: 1707657600,
@@ -651,7 +702,7 @@ describe('POST /api/webhooks/stripe', () => {
           metadata: {
             orderId: 'order-123',
           },
-        } as Stripe.Charge,
+        } as unknown as Stripe.Charge,
       },
       api_version: '2023-10-16',
       created: 1707657600,
