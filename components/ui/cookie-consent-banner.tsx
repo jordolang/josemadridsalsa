@@ -43,6 +43,7 @@ export function CookieConsentBanner({ onConsentChange }: CookieConsentBannerProp
     if (typeof window !== 'undefined') {
       try {
         window.localStorage.setItem(COOKIE_CONSENT_KEY, 'accepted')
+        window.dispatchEvent(new CustomEvent('cookie-consent-change', { detail: 'accepted' }))
         setIsVisible(false)
         onConsentChange?.('accepted')
       } catch (error) {
@@ -55,6 +56,7 @@ export function CookieConsentBanner({ onConsentChange }: CookieConsentBannerProp
     if (typeof window !== 'undefined') {
       try {
         window.localStorage.setItem(COOKIE_CONSENT_KEY, 'rejected')
+        window.dispatchEvent(new CustomEvent('cookie-consent-change', { detail: 'rejected' }))
         setIsVisible(false)
         onConsentChange?.('rejected')
       } catch (error) {

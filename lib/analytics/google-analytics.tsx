@@ -49,15 +49,23 @@ export function GoogleAnalytics() {
           setIsEnabled(true)
         }
 
-        // Listen for consent changes
+        // Listen for consent changes in other tabs (storage event) and same tab (custom event)
         const handleStorageChange = (e: StorageEvent) => {
           if (e.key === 'cookie-consent') {
             setIsEnabled(e.newValue === 'accepted')
           }
         }
 
+        const handleConsentChange = (e: Event) => {
+          setIsEnabled((e as CustomEvent<string>).detail === 'accepted')
+        }
+
         window.addEventListener('storage', handleStorageChange)
-        return () => window.removeEventListener('storage', handleStorageChange)
+        window.addEventListener('cookie-consent-change', handleConsentChange)
+        return () => {
+          window.removeEventListener('storage', handleStorageChange)
+          window.removeEventListener('cookie-consent-change', handleConsentChange)
+        }
       } catch (error) {
         console.error('Failed to check cookie consent for Google Analytics:', error)
       }
