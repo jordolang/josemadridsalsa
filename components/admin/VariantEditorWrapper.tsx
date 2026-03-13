@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import VariantEditor from './VariantEditor'
+import { VariantEditor } from './VariantEditor'
 
 interface ProductVariant {
   id: string
@@ -17,7 +17,7 @@ interface VariantEditorWrapperProps {
   variants: ProductVariant[]
 }
 
-export default function VariantEditorWrapper({
+export function VariantEditorWrapper({
   productId,
   variants,
 }: VariantEditorWrapperProps) {
@@ -35,3 +35,5 @@ export default function VariantEditorWrapper({
     />
   )
 }
+
+export default VariantEditorWrapper

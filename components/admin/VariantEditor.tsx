@@ -54,7 +54,7 @@ interface VariantFormData {
   inStock: boolean
 }
 
-export default function VariantEditor({
+export function VariantEditor({
   productId,
   variants,
   onUpdate,
@@ -96,7 +96,7 @@ export default function VariantEditor({
     setFormData({
       name: variant.name,
       type: variant.type,
-      price: variant.price ? variant.price.toString() : '',
+      price: variant.price != null ? variant.price.toString() : '',
       sku: variant.sku || '',
       inStock: variant.inStock,
     })
@@ -394,7 +394,7 @@ export default function VariantEditor({
                   <TableCell className="font-medium">{variant.name}</TableCell>
                   <TableCell className="capitalize">{variant.type}</TableCell>
                   <TableCell>
-                    {variant.price ? (
+                    {variant.price != null ? (
                       <span className="flex items-center gap-1">
                         <DollarSign className="h-3 w-3 text-slate-500" />
                         {variant.price.toFixed(2)}
@@ -616,3 +616,5 @@ export default function VariantEditor({
     </div>
   )
 }
+
+export default VariantEditor

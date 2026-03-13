@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ImageUploader } from './ImageUploader'
 import { Card } from '@/components/ui/card'
@@ -15,7 +15,7 @@ interface ImageUploaderWrapperProps {
   initialImages: string[]
 }
 
-export default function ImageUploaderWrapper({
+export function ImageUploaderWrapper({
   productId,
   initialImages,
 }: ImageUploaderWrapperProps) {
@@ -24,32 +24,42 @@ export default function ImageUploaderWrapper({
     initialImages.map((url) => ({ url, alt: null }))
   )
   const [isSaving, setIsSaving] = useState(false)
+  const prevImagesRef = useRef<ImageFile[]>(images)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleImagesChange = async (newImages: ImageFile[]) => {
+  const handleImagesChange = (newImages: ImageFile[]) => {
+    const prevImages = images
     setImages(newImages)
 
-    // Auto-save images to database
-    setIsSaving(true)
-    try {
-      const imageUrls = newImages.map((img) => img.url)
-
-      const response = await fetch(`/api/admin/products/${productId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: imageUrls }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update images')
-      }
-
-      router.refresh()
-    } catch (error) {
-      console.error('Error saving images:', error)
-      // TODO: Show error toast
-    } finally {
-      setIsSaving(false)
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
     }
+
+    debounceRef.current = setTimeout(async () => {
+      setIsSaving(true)
+      try {
+        const imagesPayload = newImages.map((img) => ({ url: img.url, alt: img.alt }))
+
+        const response = await fetch(`/api/admin/products/${productId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ images: imagesPayload }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to update images')
+        }
+
+        prevImagesRef.current = newImages
+        router.refresh()
+      } catch (error) {
+        console.error('Error saving images:', error)
+        setImages(prevImages)
+        // TODO: Show error toast
+      } finally {
+        setIsSaving(false)
+      }
+    }, 500)
   }
 
   return (
@@ -70,3 +80,5 @@ export default function ImageUploaderWrapper({
     </Card>
   )
 }
+
+export default ImageUploaderWrapper

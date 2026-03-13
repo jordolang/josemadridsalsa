@@ -288,7 +288,7 @@ describe('RBAC Permissions Verification', () => {
     it('shows only unpermissioned items for user with no permissions', () => {
       const filtered = filterNavByPermissions(adminNavigation, [])
       // Only items without permission field
-      const unpermissioned = adminNavigation.filter((n) => !n.permission)
+      const unpermissioned = adminNavigation.filter((n) => !n.permissions)
       expect(filtered.length).toBe(unpermissioned.length)
     })
   })

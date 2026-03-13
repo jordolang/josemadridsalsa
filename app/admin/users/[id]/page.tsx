@@ -1,6 +1,6 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Mail, Phone, Calendar, Shield, Edit, Package, Truck, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, Calendar, Shield, Edit } from 'lucide-react'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'

@@ -112,7 +112,7 @@ export async function GET(
 ) {
   try {
     // Verify permissions
-    const user = await requirePermission('products:read');
+    await requirePermission('products:read');
 
     const { id } = await params;
 
@@ -130,20 +130,6 @@ export async function GET(
       where: { productId: id },
       orderBy: { createdAt: 'asc' },
     });
-
-    // Log audit
-    await logAuditWithRequest(
-      {
-        userId: user.id,
-        action: 'product_variants.list',
-        entityType: 'product',
-        entityId: id,
-        changes: {
-          variantCount: variants.length,
-        },
-      },
-      req
-    );
 
     return ok({ variants });
   } catch (error: any) {
