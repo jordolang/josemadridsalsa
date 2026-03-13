@@ -926,6 +926,14 @@ function CheckoutForm() {
 }
 
 export default function CheckoutPage() {
+  const items = useCartStore((state) => state.items)
+  const subtotal = useMemo(
+    () => items.reduce((total, item) => total + item.price * item.quantity, 0),
+    [items]
+  )
+  // Stripe requires amount in cents; minimum 50 cents
+  const totalAmount = Math.max(50, Math.round(subtotal * 100))
+
   if (!stripePromise) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
@@ -939,7 +947,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <Elements stripe={stripePromise} options={{ mode: 'payment', amount: 999, currency: 'usd' }}>
+    <Elements stripe={stripePromise} options={{ mode: 'payment', amount: totalAmount, currency: 'usd' }}>
       <CheckoutForm />
     </Elements>
   )

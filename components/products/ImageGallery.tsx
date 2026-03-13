@@ -37,7 +37,7 @@ export function ImageGallery({ images, productName, featuredImage }: ImageGaller
   }
 
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return
+    if (touchStart == null || touchEnd == null) return
 
     const distance = touchStart - touchEnd
     const isLeftSwipe = distance > minSwipeDistance

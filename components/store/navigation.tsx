@@ -247,7 +247,7 @@ export function Navigation() {
             <ThemeToggle className="min-h-[44px] min-w-[44px] p-0" />
 
             {/* Search Icon (Mobile) */}
-            <Button variant="ghost" className="md:hidden min-h-[44px] min-w-[44px] p-0">
+            <Button variant="ghost" aria-label="Search" className="md:hidden min-h-[44px] min-w-[44px] p-0">
               <Search className="h-5 w-5 text-muted-foreground" />
             </Button>
 
@@ -270,7 +270,7 @@ export function Navigation() {
             {session ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="hidden lg:flex min-h-[44px] min-w-[44px] p-0 relative">
+                  <Button variant="ghost" aria-label="Account menu" className="hidden lg:flex min-h-[44px] min-w-[44px] p-0 relative">
                     <User className="w-5 h-5" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -347,7 +347,7 @@ export function Navigation() {
             {/* Mobile Menu */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" className="lg:hidden min-h-[44px] min-w-[44px] p-0">
+                <Button variant="ghost" aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"} className="lg:hidden min-h-[44px] min-w-[44px] p-0">
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>

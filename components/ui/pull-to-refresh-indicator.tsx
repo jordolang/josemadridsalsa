@@ -23,6 +23,13 @@ export function PullToRefreshIndicator({
       className="flex items-center justify-center overflow-hidden transition-[height] duration-200 ease-out"
       style={{ height: isRefreshing ? 48 : pullDistance }}
     >
+      <span
+        aria-live="polite"
+        role="status"
+        className="sr-only"
+      >
+        {isRefreshing ? 'Refreshing...' : progress >= 1 ? 'Release to refresh' : 'Pull to refresh'}
+      </span>
       {isRefreshing ? (
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       ) : (

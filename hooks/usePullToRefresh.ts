@@ -26,11 +26,13 @@ export function usePullToRefresh({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [pullDistance, setPullDistance] = useState(0)
   const startY = useRef(0)
+  const startX = useRef(0)
   const pulling = useRef(false)
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     if (window.scrollY === 0 && !isRefreshing) {
       startY.current = e.touches[0].clientY
+      startX.current = e.touches[0].clientX
       pulling.current = true
     }
   }, [isRefreshing])
@@ -39,10 +41,15 @@ export function usePullToRefresh({
     if (!pulling.current || isRefreshing) return
 
     const currentY = e.touches[0].clientY
-    const diff = currentY - startY.current
+    const currentX = e.touches[0].clientX
+    const dy = currentY - startY.current
+    const dx = currentX - startX.current
 
-    if (diff > 0 && window.scrollY === 0) {
-      const distance = Math.min(diff * 0.5, maxPull)
+    // If horizontal gesture, skip vertical pull
+    if (Math.abs(dx) > Math.abs(dy)) return
+
+    if (dy > 0 && window.scrollY === 0) {
+      const distance = Math.min(dy * 0.5, maxPull)
       setPullDistance(distance)
     } else {
       pulling.current = false
