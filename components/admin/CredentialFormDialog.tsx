@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Wand2, RefreshCw } from 'lucide-react'
 
 const credentialSchema = (mode: 'create' | 'edit') =>
   z.object({
@@ -61,11 +61,14 @@ export default function CredentialFormDialog({
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [passwordSuggestions, setPasswordSuggestions] = useState<string[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<CredentialFormData>({
     resolver: zodResolver(credentialSchema(mode)),
@@ -79,6 +82,51 @@ export default function CredentialFormDialog({
     },
   })
 
+  // Reset form when credential changes
+  useEffect(() => {
+    if (open) {
+      reset({
+        serviceName: credential?.serviceName || '',
+        label: credential?.label || '',
+        username: credential?.username || '',
+        password: '',
+        url: credential?.url || '',
+        notes: credential?.notes || '',
+      })
+      setError(null)
+      setShowSuggestions(false)
+      setPasswordSuggestions([])
+    }
+  }, [open, credential, reset])
+
+  const generatePasswords = async () => {
+    try {
+      const response = await fetch('/api/admin/credentials/generate-password')
+      const result = await response.json()
+      if (response.ok) {
+        setPasswordSuggestions(result.suggestions)
+        setShowSuggestions(true)
+      }
+    } catch {
+      // Generate client-side fallback
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+      const generate = () => {
+        let result = ''
+        for (let i = 0; i < 14; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length))
+        }
+        return result
+      }
+      setPasswordSuggestions([generate(), generate(), generate()])
+      setShowSuggestions(true)
+    }
+  }
+
+  const selectSuggestion = (pw: string) => {
+    setValue('password', pw, { shouldValidate: true })
+    setShowSuggestions(false)
+  }
+
   const onSubmit = async (data: CredentialFormData) => {
     setIsSubmitting(true)
     setError(null)
@@ -89,7 +137,6 @@ export default function CredentialFormDialog({
         : '/api/admin/credentials'
       const method = mode === 'edit' ? 'PUT' : 'POST'
 
-      // Remove empty optional fields
       const body: Record<string, string> = {
         serviceName: data.serviceName,
         label: data.label,
@@ -125,7 +172,7 @@ export default function CredentialFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
             <DialogTitle>
@@ -140,11 +187,11 @@ export default function CredentialFormDialog({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="serviceName">
-                Service Name <span className="text-red-500">*</span>
+                Provider / Service Name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="serviceName"
-                placeholder="e.g. AWS, Stripe, GitHub"
+                placeholder="e.g. AT&T, Shopify, Public Works"
                 {...register('serviceName')}
               />
               {errors.serviceName && (
@@ -158,7 +205,7 @@ export default function CredentialFormDialog({
               </Label>
               <Input
                 id="label"
-                placeholder="e.g. Production API Key"
+                placeholder="e.g. Main Account, Admin Login"
                 {...register('label')}
               />
               {errors.label && (
@@ -167,7 +214,7 @@ export default function CredentialFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">Username / Email</Label>
               <Input
                 id="username"
                 placeholder="e.g. admin@example.com"
@@ -179,17 +226,57 @@ export default function CredentialFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">
-                Password {mode === 'create' && <span className="text-red-500">*</span>}
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">
+                  Password {mode === 'create' && <span className="text-red-500">*</span>}
+                </Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-xs"
+                  onClick={generatePasswords}
+                >
+                  <Wand2 className="h-3 w-3" />
+                  Generate
+                </Button>
+              </div>
               <Input
                 id="password"
-                type="password"
+                type="text"
                 placeholder={mode === 'edit' ? 'Leave blank to keep current' : 'Enter password'}
                 {...register('password')}
               />
               {errors.password && (
                 <p className="text-sm text-red-600">{errors.password.message}</p>
+              )}
+              {showSuggestions && passwordSuggestions.length > 0 && (
+                <div className="mt-2 space-y-1 rounded-lg border bg-slate-50 p-3">
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <p className="text-xs font-medium text-slate-600">
+                      Suggested Passwords (12-15 chars, alphanumeric)
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={generatePasswords}
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  {passwordSuggestions.map((pw, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className="block w-full rounded px-2 py-1.5 text-left font-mono text-sm hover:bg-blue-50 hover:text-blue-700"
+                      onClick={() => selectSuggestion(pw)}
+                    >
+                      {pw}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 

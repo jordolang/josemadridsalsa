@@ -38,6 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         notes: true,
         createdById: true,
         updatedById: true,
+        passwordChangedAt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return ok({
       credential: {
         ...credential,
-        password: '••••••••',
+        password: '********',
         accessLevel,
       },
     })
@@ -73,7 +74,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const existing = await prisma.serviceCredential.findUnique({ where: { id } })
     if (!existing) return fail('Credential not found', 404)
 
-    // Optimistic locking: check updatedAt matches
+    // Optimistic locking
     if (data.updatedAt) {
       const clientUpdatedAt = new Date(data.updatedAt).getTime()
       const serverUpdatedAt = existing.updatedAt.getTime()
@@ -92,12 +93,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (data.url !== undefined) updateData.url = data.url
     if (data.notes !== undefined) updateData.notes = data.notes
 
-    // Re-encrypt password only if provided
+    // Re-encrypt password and track password change date
     if (data.password) {
       const encFields = encryptCredentialPassword(data.password)
       updateData.encValue = encFields.encValue
       updateData.encIv = encFields.encIv
       updateData.encTag = encFields.encTag
+      updateData.passwordChangedAt = new Date()
     }
 
     const credential = await prisma.serviceCredential.update({
@@ -125,9 +127,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         serviceName: credential.serviceName,
         label: credential.label,
         username: credential.username,
-        password: '••••••••',
+        password: '********',
         url: credential.url,
         notes: credential.notes,
+        passwordChangedAt: credential.passwordChangedAt,
         createdById: credential.createdById,
         updatedById: credential.updatedById,
         createdAt: credential.createdAt,

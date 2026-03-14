@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 
 import { prisma } from '@/lib/prisma'
 import { encryptSecret, decryptSecret } from '@/lib/crypto'
@@ -7,19 +7,24 @@ import { UserRole } from '@prisma/client'
 
 const SUPER_ADMIN_EMAIL = 'jordolang@gmail.com'
 
+export interface CredentialGrantPermissions {
+  canView: boolean
+  canAdd: boolean
+  canEdit: boolean
+  canDelete: boolean
+  canUpload: boolean
+}
+
 /**
  * Check if a user has credential access via CredentialAccessGrant table
  * AND the RBAC permission system.
  *
- * Returns 'write' if user has credentials:write + active grant,
- * 'read' if user has credentials:read + active grant,
- * or null if no access.
+ * Returns the grant permissions or null if no access.
  */
 export async function checkCredentialAccess(
   email: string,
   role: UserRole
 ): Promise<'read' | 'write' | null> {
-  // Check for a non-revoked grant
   const grant = await prisma.credentialAccessGrant.findUnique({
     where: { email },
   })
@@ -28,7 +33,6 @@ export async function checkCredentialAccess(
     return null
   }
 
-  // Check RBAC permissions
   const user = { role }
 
   if (await hasPermission(user, 'credentials:write')) {
@@ -43,7 +47,30 @@ export async function checkCredentialAccess(
 }
 
 /**
- * Check if an email belongs to the super admin
+ * Get the granular permissions for a user's credential access grant.
+ */
+export async function getGrantPermissions(
+  email: string
+): Promise<CredentialGrantPermissions | null> {
+  const grant = await prisma.credentialAccessGrant.findUnique({
+    where: { email },
+  })
+
+  if (!grant || grant.revokedAt !== null) {
+    return null
+  }
+
+  return {
+    canView: grant.canView,
+    canAdd: grant.canAdd,
+    canEdit: grant.canEdit,
+    canDelete: grant.canDelete,
+    canUpload: grant.canUpload,
+  }
+}
+
+/**
+ * Check if an email belongs to the super admin.
  */
 export function isSuperAdmin(email: string): boolean {
   return email.toLowerCase().trim() === SUPER_ADMIN_EMAIL
@@ -51,8 +78,6 @@ export function isSuperAdmin(email: string): boolean {
 
 /**
  * Encrypt a credential password using AES-256-GCM via the master key.
- * Returns fields matching the ServiceCredential schema.
- * Note: encTag is empty because lib/crypto.ts embeds the auth tag in encValue.
  */
 export function encryptCredentialPassword(plaintext: string): {
   encValue: string
@@ -75,21 +100,43 @@ export function decryptCredentialPassword(encValue: string, encIv: string): stri
 }
 
 /**
- * Verify a user's password against their stored bcrypt hash.
- * Used for secondary authentication (e.g., password reveal).
+ * Generate a random alphanumeric password of specified length (12-15 characters).
  */
-export async function verifyUserPassword(
-  email: string,
-  password: string
-): Promise<boolean> {
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { password: true },
+export function generatePassword(length: number = 14): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  const clampedLength = Math.max(12, Math.min(15, length))
+  const bytes = crypto.randomBytes(clampedLength)
+  return Array.from(bytes)
+    .map((b) => chars[b % chars.length])
+    .join('')
+}
+
+/**
+ * Check a password against the HaveIBeenPwned Passwords API using k-anonymity.
+ * Returns the number of times the password has been seen in breaches (0 = safe).
+ */
+export async function checkPasswordBreach(plaintext: string): Promise<number> {
+  const sha1 = crypto.createHash('sha1').update(plaintext).digest('hex').toUpperCase()
+  const prefix = sha1.substring(0, 5)
+  const suffix = sha1.substring(5)
+
+  const response = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+    headers: { 'User-Agent': 'JoseMadridSalsa-CredentialVault' },
   })
 
-  if (!user?.password) {
-    return false
+  if (!response.ok) {
+    throw new Error(`HIBP API returned ${response.status}`)
   }
 
-  return bcrypt.compare(password, user.password)
+  const text = await response.text()
+  const lines = text.split('\n')
+
+  for (const line of lines) {
+    const [hashSuffix, count] = line.trim().split(':')
+    if (hashSuffix === suffix) {
+      return parseInt(count, 10)
+    }
+  }
+
+  return 0
 }

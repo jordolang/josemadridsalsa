@@ -3,8 +3,9 @@ import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
-import { Lock, KeyRound, Clock } from 'lucide-react'
+import { Lock, KeyRound, Clock, AlertTriangle } from 'lucide-react'
 import { createMetadata } from '@/lib/metadata'
+import { isSuperAdmin, getGrantPermissions } from '@/lib/credentials'
 import CredentialsPageClient from '@/components/admin/CredentialsPageClient'
 
 export const metadata: Metadata = createMetadata({
@@ -12,6 +13,8 @@ export const metadata: Metadata = createMetadata({
   description: 'Secure credential vault',
   pathname: '/admin/credentials',
 })
+
+const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000
 
 export default async function CredentialsPage() {
   const user = await getCurrentUser()
@@ -29,8 +32,10 @@ export default async function CredentialsPage() {
   })
 
   const canWrite = await hasPermission(user, 'credentials:write')
+  const superAdmin = isSuperAdmin(user.email)
+  const grantPermissions = await getGrantPermissions(user.email)
 
-  if (!accessGrant) {
+  if (!accessGrant && !superAdmin) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Card className="max-w-md p-12 text-center">
@@ -45,10 +50,10 @@ export default async function CredentialsPage() {
     )
   }
 
-  // Fetch credentials (masked passwords)
+  // Fetch credentials sorted by provider alphabetically
   const [credentials, totalCount] = await Promise.all([
     prisma.serviceCredential.findMany({
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { serviceName: 'asc' },
       select: {
         id: true,
         serviceName: true,
@@ -56,6 +61,7 @@ export default async function CredentialsPage() {
         username: true,
         url: true,
         notes: true,
+        passwordChangedAt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -63,14 +69,30 @@ export default async function CredentialsPage() {
     prisma.serviceCredential.count(),
   ])
 
+  // Get unique providers for filter dropdown
+  const providersList = await prisma.serviceCredential.findMany({
+    select: { serviceName: true },
+    distinct: ['serviceName'],
+    orderBy: { serviceName: 'asc' },
+  })
+
   const maskedCredentials = credentials.map((c) => ({
     ...c,
-    password: '••••••••',
+    password: '********',
+    passwordChangedAt: c.passwordChangedAt?.toISOString() ?? null,
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
   }))
 
-  const lastUpdated = credentials[0]?.updatedAt
+  const lastUpdated = credentials.length > 0
+    ? credentials.reduce((latest, c) => c.updatedAt > latest ? c.updatedAt : latest, credentials[0].updatedAt)
+    : null
+
+  const now = Date.now()
+  const expiredCount = credentials.filter((c) => {
+    const changedAt = c.passwordChangedAt ?? c.createdAt
+    return now - changedAt.getTime() > NINETY_DAYS_MS
+  }).length
 
   return (
     <div className="space-y-6">
@@ -80,7 +102,7 @@ export default async function CredentialsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <KeyRound className="h-8 w-8 text-blue-600" />
@@ -103,6 +125,17 @@ export default async function CredentialsPage() {
             </div>
           </div>
         </Card>
+        <Card className={`p-4 ${expiredCount > 0 ? 'border-red-200 bg-red-50' : ''}`}>
+          <div className="flex items-center gap-3">
+            <AlertTriangle className={`h-8 w-8 ${expiredCount > 0 ? 'text-red-500' : 'text-green-600'}`} />
+            <div>
+              <p className="text-sm text-slate-600">Passwords 90+ Days</p>
+              <p className={`text-2xl font-bold ${expiredCount > 0 ? 'text-red-600' : ''}`}>
+                {expiredCount}
+              </p>
+            </div>
+          </div>
+        </Card>
       </div>
 
       <CredentialsPageClient
@@ -110,6 +143,9 @@ export default async function CredentialsPage() {
         totalCount={totalCount}
         accessLevel={canWrite ? 'write' : 'read'}
         canWrite={canWrite}
+        isSuperAdmin={superAdmin}
+        grantPermissions={superAdmin ? { canView: true, canAdd: true, canEdit: true, canDelete: true, canUpload: true } : grantPermissions}
+        providers={providersList.map((p) => p.serviceName)}
       />
     </div>
   )
