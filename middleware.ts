@@ -14,12 +14,7 @@ function buildCallbackUrl(request: NextRequest) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-
-  // Skip middleware for SEO files
-  if (pathname === '/sitemap.xml' || pathname === '/robots.txt') {
-    return NextResponse.next()
-  }
-
+  
   console.log('[Middleware] Request to:', pathname)
 
   // Block common WordPress probe paths (bots/scanners)
