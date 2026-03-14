@@ -346,6 +346,47 @@ describe('Checkout API Integration Tests', () => {
       )
     })
 
+    it('should handle abandoned cart recovery failure gracefully', async () => {
+      const { default: prisma } = await import('@/lib/prisma')
+      const { getCurrentUser } = await import('@/lib/rbac')
+
+      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
+      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
+
+      // Mock abandonedCart.updateMany to throw an error
+      vi.mocked(prisma.abandonedCart.updateMany).mockRejectedValue(
+        new Error('Database error updating cart')
+      )
+
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      const checkoutDataWithRecovery = {
+        ...validCheckoutData,
+        recoveryToken: 'recovery-token-fail',
+      }
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify(checkoutDataWithRecovery),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      // Should still succeed despite cart recovery failure
+      expect(response.status).toBe(200)
+      expect(data.orderId).toBeDefined()
+
+      // Verify error was logged
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[Checkout] Failed to mark cart as recovered:',
+        expect.any(Error)
+      )
+
+      consoleErrorSpy.mockRestore()
+    })
+
     it('should handle tax calculation failure gracefully', async () => {
       const { default: prisma } = await import('@/lib/prisma')
       const { getCurrentUser } = await import('@/lib/rbac')
