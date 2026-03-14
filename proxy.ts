@@ -12,10 +12,10 @@ function buildCallbackUrl(request: NextRequest) {
   return signInUrl
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  
-  console.log('[Middleware] Request to:', pathname)
+
+  console.log('[Proxy] Request to:', pathname)
 
   // Block common WordPress probe paths (bots/scanners)
   const wordpressPaths = [
@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // If the auth secret is not available (e.g. misconfigured environment),
-  // skip middleware-based enforcement and allow server components / API
+  // skip proxy-based enforcement and allow server components / API
   // handlers to perform the authorization checks to avoid redirect loops.
   if (!authSecret) {
     return NextResponse.next()
@@ -46,32 +46,32 @@ export async function middleware(request: NextRequest) {
 
   // Protect /admin routes
   if (pathname.startsWith('/admin')) {
-    console.log('[Middleware] Checking admin access for:', pathname)
-    console.log('[Middleware] Cookies:', request.cookies.getAll().map(c => c.name))
-    
+    console.log('[Proxy] Checking admin access for:', pathname)
+    console.log('[Proxy] Cookies:', request.cookies.getAll().map(c => c.name))
+
     const token = await getToken({
       req: request,
       secret: authSecret,
     })
 
-    console.log('[Middleware] Token found:', !!token)
+    console.log('[Proxy] Token found:', !!token)
     if (token) {
-      console.log('[Middleware] Token role:', token.role)
-      console.log('[Middleware] Token email:', token.email)
+      console.log('[Proxy] Token role:', token.role)
+      console.log('[Proxy] Token email:', token.email)
     }
 
     if (!token) {
-      console.log('[Middleware] No token - redirecting to login')
+      console.log('[Proxy] No token - redirecting to login')
       return NextResponse.redirect(buildCallbackUrl(request))
     }
 
     const role = token.role as string | undefined
     if (!role || !STAFF_ROLES.includes(role)) {
-      console.log('[Middleware] Invalid role - redirecting to home')
+      console.log('[Proxy] Invalid role - redirecting to home')
       return NextResponse.redirect(new URL('/', request.url))
     }
-    
-    console.log('[Middleware] Access granted to:', pathname)
+
+    console.log('[Proxy] Access granted to:', pathname)
   }
 
   // Protect /account routes
