@@ -2512,6 +2512,8 @@ model ServiceCredential {
   createdById String  @map("created_by_id")
   updatedById String? @map("updated_by_id")
 
+  passwordChangedAt DateTime? @map("password_changed_at")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -2523,6 +2525,12 @@ model CredentialAccessGrant {
   id             String @id @default(cuid())
   email          String // email of the user granted access
   grantedByEmail String @map("granted_by_email") // must be jordolang@gmail.com
+
+  canView   Boolean @default(true) @map("can_view")
+  canAdd    Boolean @default(false) @map("can_add")
+  canEdit   Boolean @default(false) @map("can_edit")
+  canDelete Boolean @default(false) @map("can_delete")
+  canUpload Boolean @default(false) @map("can_upload")
 
   createdAt DateTime  @default(now()) @map("created_at")
   revokedAt DateTime? @map("revoked_at")

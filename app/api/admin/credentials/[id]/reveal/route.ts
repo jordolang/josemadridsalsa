@@ -3,40 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
 import { ok, fail } from '@/lib/api'
 import { logAuditWithRequest } from '@/lib/audit'
-import { checkCredentialAccess, decryptCredentialPassword, verifyUserPassword } from '@/lib/credentials'
-import { z } from 'zod'
-
-const revealSchema = z.object({
-  password: z.string().min(1, 'Password is required'),
-})
-
-// In-memory rate limiting: max 5 failed attempts per user per minute
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-
-const MAX_FAILED_ATTEMPTS = 5
-const RATE_LIMIT_WINDOW_MS = 60_000 // 1 minute
-
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now()
-  const entry = rateLimitMap.get(userId)
-
-  if (!entry || now >= entry.resetAt) {
-    return true
-  }
-
-  return entry.count < MAX_FAILED_ATTEMPTS
-}
-
-function recordFailedAttempt(userId: string): void {
-  const now = Date.now()
-  const entry = rateLimitMap.get(userId)
-
-  if (!entry || now >= entry.resetAt) {
-    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
-  } else {
-    entry.count += 1
-  }
-}
+import { checkCredentialAccess, decryptCredentialPassword } from '@/lib/credentials'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -49,25 +16,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { id } = await params
 
-    // Check rate limit before processing
-    if (!checkRateLimit(currentUser.id)) {
-      await logAuditWithRequest(
-        {
-          userId: currentUser.id,
-          action: 'CREDENTIAL_REVEAL_RATE_LIMITED',
-          entityType: 'ServiceCredential',
-          entityId: id,
-        },
-        req
-      )
-      return fail('Too many failed attempts. Please try again later.', 429)
-    }
-
-    // Parse and validate request body
-    const body = await req.json()
-    const data = revealSchema.parse(body)
-
-    // Find the credential
     const credential = await prisma.serviceCredential.findUnique({
       where: { id },
       select: {
@@ -81,27 +29,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return fail('Credential not found', 404)
     }
 
-    // Verify user's password
-    const passwordValid = await verifyUserPassword(currentUser.email, data.password)
-
-    if (!passwordValid) {
-      recordFailedAttempt(currentUser.id)
-
-      await logAuditWithRequest(
-        {
-          userId: currentUser.id,
-          action: 'CREDENTIAL_REVEAL_FAILED',
-          entityType: 'ServiceCredential',
-          entityId: id,
-          changes: { reason: 'invalid_password' },
-        },
-        req
-      )
-
-      return fail('Invalid password', 401)
+    if (!credential.encValue) {
+      return fail('No password set for this credential', 400)
     }
 
-    // Decrypt the credential
     let plaintext: string
     try {
       plaintext = decryptCredentialPassword(credential.encValue, credential.encIv)
