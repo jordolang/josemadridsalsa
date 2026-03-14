@@ -3,6 +3,7 @@ import React from 'react'
 import { sendEmail } from '@/lib/email/client'
 import { prisma } from '@/lib/prisma'
 import { OrderConfirmationEmail } from '@/emails/order-confirmation'
+import { CampaignLaunchEmail } from '@/lib/email/templates/campaign-launch'
 import { Text, Section } from '@react-email/components'
 import { EmailLayout } from '@/emails/components/EmailLayout'
 import { EmailHeader } from '@/emails/components/EmailHeader'
@@ -265,6 +266,41 @@ export async function sendFundraiserFollowupEmail(options: {
     react: emailContent,
     replyTo: supportEmail,
     type: 'fundraiser-followup',
+  })
+}
+
+export async function sendCampaignLaunchEmail(options: {
+  email: string
+  coordinatorName: string
+  campaignName: string
+  organizationName: string
+  campaignUrl: string
+  startDate: string
+  endDate: string
+  goalAmount?: string
+  supportEmail?: string
+}) {
+  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const supportEmail = options.supportEmail || 'fundraising@josemadridsalsa.com'
+
+  const emailContent = React.createElement(CampaignLaunchEmail, {
+    coordinatorName: options.coordinatorName,
+    campaignName: options.campaignName,
+    organizationName: options.organizationName,
+    campaignUrl: options.campaignUrl,
+    startDate: options.startDate,
+    endDate: options.endDate,
+    goalAmount: options.goalAmount,
+    supportEmail,
+    unsubscribeUrl,
+  })
+
+  return sendEmail({
+    to: options.email,
+    subject: `Your ${options.campaignName} fundraiser is ready to launch!`,
+    react: emailContent,
+    replyTo: supportEmail,
+    type: 'campaign-launch',
   })
 }
 
