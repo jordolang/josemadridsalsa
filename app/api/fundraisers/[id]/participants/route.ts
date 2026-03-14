@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAudit } from '@/lib/audit'
+import { sendParticipantWelcomeEmail } from '@/lib/email/automation'
 
 const ParticipantSchema = z.object({
   name: z.string().min(2, 'Participant name is required'),
@@ -167,6 +168,20 @@ export async function POST(
         isAuthenticated: !!user,
       },
     })
+
+    // Send welcome email to participant
+    try {
+      await sendParticipantWelcomeEmail({
+        email: normalizedEmail,
+        participantName: data.name,
+        fundraiserName: fundraiser.name,
+        referralCode,
+        fundraiserId,
+      })
+    } catch (emailError) {
+      // Log email error but don't fail the participant creation
+      console.error('[ParticipantAPI] Failed to send welcome email:', emailError)
+    }
 
     return NextResponse.json({ participant }, { status: 201 })
   } catch (error) {

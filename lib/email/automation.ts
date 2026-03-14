@@ -4,6 +4,7 @@ import { sendEmail } from '@/lib/email/client'
 import { prisma } from '@/lib/prisma'
 import { OrderConfirmationEmail } from '@/emails/order-confirmation'
 import { CampaignLaunchEmail } from '@/lib/email/templates/campaign-launch'
+import { ParticipantWelcomeEmail } from '@/lib/email/templates/participant-welcome'
 import { Text, Section } from '@react-email/components'
 import { EmailLayout } from '@/emails/components/EmailLayout'
 import { EmailHeader } from '@/emails/components/EmailHeader'
@@ -377,5 +378,35 @@ export async function sendAbandonedCartEmail(options: {
     react: emailContent,
     replyTo: 'support@josemadridsalsa.com',
     type: 'abandoned-cart',
+  })
+}
+
+export async function sendParticipantWelcomeEmail(options: {
+  email: string
+  participantName: string
+  fundraiserName: string
+  referralCode: string
+  fundraiserId: string
+  supportEmail?: string
+}) {
+  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const fundraiserUrl = `${defaultAppUrl}/fundraisers/${options.fundraiserId}`
+  const supportEmail = options.supportEmail || 'fundraising@josemadridsalsa.com'
+
+  const emailContent = React.createElement(ParticipantWelcomeEmail, {
+    participantName: options.participantName,
+    fundraiserName: options.fundraiserName,
+    referralCode: options.referralCode,
+    fundraiserUrl,
+    supportEmail,
+    unsubscribeUrl,
+  })
+
+  return sendEmail({
+    to: options.email,
+    subject: `Welcome to the ${options.fundraiserName} fundraiser!`,
+    react: emailContent,
+    replyTo: supportEmail,
+    type: 'participant-welcome',
   })
 }
