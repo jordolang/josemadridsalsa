@@ -1,6 +1,7 @@
 name: CI
 permissions:
   contents: read
+  pull-requests: write
 
 on:
   push:
@@ -44,6 +45,16 @@ jobs:
           name: coverage-reports
           path: coverage/
           retention-days: 30
+
+      - name: Post coverage report to PR
+        if: github.event_name == 'pull_request'
+        uses: ArtiomTr/jest-coverage-report-action@v2
+        with:
+          coverage-file: ./coverage/coverage-summary.json
+          base-coverage-file: ./coverage/coverage-summary.json
+          annotations: none
+          package-manager: npm
+          test-script: npm run test -- --coverage
 
       - name: Generate Prisma Client
         run: npm run db:generate
