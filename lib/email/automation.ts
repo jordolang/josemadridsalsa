@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { OrderConfirmationEmail } from '@/emails/order-confirmation'
 import { CampaignLaunchEmail } from '@/lib/email/templates/campaign-launch'
 import { ParticipantWelcomeEmail } from '@/lib/email/templates/participant-welcome'
+import { ParticipantMilestoneEmail } from '@/lib/email/templates/participant-milestone'
 import { Text, Section } from '@react-email/components'
 import { EmailLayout } from '@/emails/components/EmailLayout'
 import { EmailHeader } from '@/emails/components/EmailHeader'
@@ -408,5 +409,40 @@ export async function sendParticipantWelcomeEmail(options: {
     react: emailContent,
     replyTo: supportEmail,
     type: 'participant-welcome',
+  })
+}
+
+export async function sendParticipantMilestoneEmail(options: {
+  email: string
+  participantName: string
+  fundraiserName: string
+  milestone: number
+  totalSales: number
+  totalRaised: number
+  fundraiserId: string
+  supportEmail?: string
+}) {
+  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const dashboardUrl = `${defaultAppUrl}/fundraisers/${options.fundraiserId}/dashboard`
+  const supportEmail = options.supportEmail || 'fundraising@josemadridsalsa.com'
+  const totalRaised = `$${options.totalRaised.toFixed(2)}`
+
+  const emailContent = React.createElement(ParticipantMilestoneEmail, {
+    participantName: options.participantName,
+    fundraiserName: options.fundraiserName,
+    milestone: options.milestone,
+    totalSales: options.totalSales,
+    totalRaised,
+    dashboardUrl,
+    supportEmail,
+    unsubscribeUrl,
+  })
+
+  return sendEmail({
+    to: options.email,
+    subject: `Congratulations! You've reached ${options.milestone} sales for ${options.fundraiserName}!`,
+    react: emailContent,
+    replyTo: supportEmail,
+    type: 'participant-milestone',
   })
 }
