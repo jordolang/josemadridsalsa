@@ -8,7 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import RefundDialog from '@/components/admin/RefundDialog'
+import UpdateStatusDialog from '@/components/admin/UpdateStatusDialog'
+import TrackingDialog from '@/components/admin/TrackingDialog'
+import SendEmailDialog from '@/components/admin/SendEmailDialog'
 import PrintInvoiceButton from '@/components/admin/PrintInvoiceButton'
+import PackingSlipButton from '@/components/admin/PackingSlipButton'
 import { getStripe } from '@/lib/stripe'
 import { Decimal } from '@prisma/client/runtime/library'
 
@@ -243,6 +247,16 @@ export default async function OrderDetailPage({
                   <div className="mt-4 rounded-lg bg-slate-50 p-3">
                     <p className="text-sm font-medium text-slate-600">Tracking Number</p>
                     <p className="font-mono text-sm">{order.trackingNumber}</p>
+                    {order.shippingLabelUrl && (
+                      <a
+                        href={order.shippingLabelUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 inline-block text-xs text-blue-600 hover:underline"
+                      >
+                        Track Package →
+                      </a>
+                    )}
                   </div>
                 )}
               </div>
@@ -326,6 +340,17 @@ export default async function OrderDetailPage({
               <div className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Actions</h2>
                 <div className="space-y-2">
+                  <UpdateStatusDialog
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                    currentStatus={order.status}
+                  />
+                  <TrackingDialog
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                    currentTrackingNumber={order.trackingNumber}
+                    currentStatus={order.status}
+                  />
                   <RefundDialog
                     orderId={order.id}
                     orderNumber={order.orderNumber}
@@ -333,15 +358,12 @@ export default async function OrderDetailPage({
                     refundableAmount={refundableAmount}
                     paymentStatus={order.paymentStatus}
                   />
-                  <Button variant="outline" className="w-full" disabled>
-                    Update Status
-                  </Button>
-                  <Button variant="outline" className="w-full" disabled>
-                    Add Tracking
-                  </Button>
-                  <Button variant="outline" className="w-full" disabled>
-                    Send Email
-                  </Button>
+                  <SendEmailDialog
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                    customerEmail={order.user?.email ?? order.guestEmail ?? ''}
+                    trackingNumber={order.trackingNumber}
+                  />
                   <PrintInvoiceButton
                     order={{
                       id: order.id,
@@ -389,10 +411,8 @@ export default async function OrderDetailPage({
                         : null,
                     }}
                   />
+                  <PackingSlipButton orderId={order.id} />
                 </div>
-                <p className="mt-3 text-xs text-slate-500">
-                  Advanced actions coming soon
-                </p>
               </div>
             </Card>
           )}
