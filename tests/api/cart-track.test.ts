@@ -2,7 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/cart/track/route'
 
-// Mock dependencies
+/**
+ * Cart Tracking API Tests
+ *
+ * Testing approach:
+ * - Uses Vitest vi.mock for internal dependencies (Prisma, RBAC)
+ * - MSW is available via vitest-setup.ts for external HTTP mocking if needed
+ * - Tests verify cart tracking logic for both authenticated users and guests
+ *
+ * Note: MSW server is configured globally and resets between tests.
+ * Use server.use() from 'msw/node' to add test-specific HTTP handlers.
+ */
+
+// Mock internal dependencies
 vi.mock('@/lib/rbac', () => ({
   getCurrentUser: vi.fn(),
 }))
@@ -59,8 +71,10 @@ describe('Cart Track API', () => {
       expect(data.error).toBe('Invalid cart data')
     })
 
-    it('should require either user or guest email', async () => {
+    it('should skip tracking when no user or guest email provided', async () => {
       const { getCurrentUser } = await import('@/lib/rbac')
+      const { prisma } = await import('@/lib/prisma')
+
       vi.mocked(getCurrentUser).mockResolvedValue(null)
 
       const request = new NextRequest('http://localhost/api/cart/track', {
@@ -71,8 +85,9 @@ describe('Cart Track API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
-      expect(data.error).toBe('Email required for cart tracking')
+      expect(response.status).toBe(200)
+      expect(data.message).toBe('Cart not tracked yet, waiting for email')
+      expect(prisma.abandonedCart.create).not.toHaveBeenCalled()
     })
 
     it('should track cart for authenticated user', async () => {

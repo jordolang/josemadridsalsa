@@ -2,7 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { GET } from '@/app/api/cart/recover/route'
 
-// Mock dependencies
+/**
+ * Cart Recovery API Tests
+ *
+ * Testing approach:
+ * - Uses Vitest vi.mock for internal dependencies (Prisma)
+ * - MSW is available via vitest-setup.ts for external HTTP mocking if needed
+ * - Tests verify cart recovery via token, expiration handling, and state validation
+ *
+ * Note: MSW server is configured globally and resets between tests.
+ * Use server.use() from 'msw/node' to add test-specific HTTP handlers.
+ */
+
+// Mock internal dependencies
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     abandonedCart: {
