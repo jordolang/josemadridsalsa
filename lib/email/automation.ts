@@ -6,6 +6,7 @@ import { OrderConfirmationEmail } from '@/emails/order-confirmation'
 import { CampaignLaunchEmail } from '@/lib/email/templates/campaign-launch'
 import { ParticipantWelcomeEmail } from '@/lib/email/templates/participant-welcome'
 import { ParticipantMilestoneEmail } from '@/lib/email/templates/participant-milestone'
+import { CampaignSummaryEmail } from '@/lib/email/templates/campaign-summary'
 import { Text, Section } from '@react-email/components'
 import { EmailLayout } from '@/emails/components/EmailLayout'
 import { EmailHeader } from '@/emails/components/EmailHeader'
@@ -444,5 +445,85 @@ export async function sendParticipantMilestoneEmail(options: {
     react: emailContent,
     replyTo: supportEmail,
     type: 'participant-milestone',
+  })
+}
+
+export async function sendCampaignSummaryEmail(fundraiserId: string) {
+  const fundraiser = await prisma.fundraiser.findUnique({
+    where: { id: fundraiserId },
+    include: {
+      coordinator: { select: { name: true, email: true } },
+      participants: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      orders: {
+        select: {
+          id: true,
+          total: true,
+          participantId: true,
+        },
+      },
+    },
+  })
+
+  if (!fundraiser) {
+    return { success: false, error: 'Fundraiser not found' }
+  }
+
+  if (!fundraiser.coordinator?.email) {
+    return { success: false, error: 'Coordinator email missing' }
+  }
+
+  const totalOrders = fundraiser.orders.length
+  const totalRevenue = fundraiser.orders.reduce(
+    (sum, order) => sum + Number(order.total),
+    0
+  )
+  const totalRaised = totalRevenue * (Number(fundraiser.profitMargin) / 100)
+
+  const participantSales = new Map<string, { name: string; sales: number }>()
+  fundraiser.participants.forEach((participant) => {
+    participantSales.set(participant.id, { name: participant.name, sales: 0 })
+  })
+
+  fundraiser.orders.forEach((order) => {
+    if (order.participantId && participantSales.has(order.participantId)) {
+      const participant = participantSales.get(order.participantId)!
+      participant.sales += 1
+    }
+  })
+
+  const topParticipants = Array.from(participantSales.values())
+    .filter((p) => p.sales > 0)
+    .sort((a, b) => b.sales - a.sales)
+    .slice(0, 5)
+
+  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const campaignUrl = `${defaultAppUrl}/fundraisers/${fundraiser.id}/dashboard`
+  const supportEmail = 'fundraising@josemadridsalsa.com'
+
+  const emailContent = React.createElement(CampaignSummaryEmail, {
+    coordinatorName: fundraiser.coordinator.name || 'Coordinator',
+    campaignName: fundraiser.name,
+    organizationName: fundraiser.organizationName,
+    totalOrders,
+    totalRevenue: `$${totalRevenue.toFixed(2)}`,
+    totalRaised: `$${totalRaised.toFixed(2)}`,
+    participantCount: fundraiser.participants.length,
+    topParticipants,
+    campaignUrl,
+    supportEmail,
+    unsubscribeUrl,
+  })
+
+  return sendEmail({
+    to: fundraiser.coordinator.email,
+    subject: `${fundraiser.name} Campaign Summary`,
+    react: emailContent,
+    replyTo: supportEmail,
+    type: 'campaign-summary',
   })
 }
