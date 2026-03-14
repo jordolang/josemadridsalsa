@@ -14,7 +14,7 @@ import {
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { FundraiserParticipantStatus } from '@prisma/client'
-import { CopyButton } from '@/components/fundraising/copy-button'
+import { ReferralLinkDisplay } from '@/components/fundraising/referral-link-display'
 
 export const metadata: Metadata = createMetadata({
   title: 'Participant Details - Jose Madrid Salsa Admin',
@@ -228,43 +228,11 @@ export default async function ParticipantDetailPage({
             {/* Referral Info */}
             <Card className="p-6">
               <h3 className="mb-4 text-lg font-semibold">Referral Information</h3>
-              <div className="space-y-4">
-                <div>
-                  <p className="mb-2 text-sm text-slate-600">Referral Code</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 rounded bg-slate-100 px-3 py-2 font-mono text-sm">
-                      {participant.referralCode}
-                    </code>
-                    <CopyButton text={participant.referralCode} label="Referral code" />
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-2 text-sm text-slate-600">Referral URL</p>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={referralUrl}
-                      className="flex-1 rounded border bg-slate-50 px-3 py-2 text-sm"
-                    />
-                    <CopyButton text={referralUrl} label="Referral URL" />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      asChild
-                      title="Open URL"
-                    >
-                      <a
-                        href={referralUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <ReferralLinkDisplay
+                url={referralUrl}
+                code={participant.referralCode}
+                participantName={participant.name}
+              />
             </Card>
           </div>
         </TabsContent>
