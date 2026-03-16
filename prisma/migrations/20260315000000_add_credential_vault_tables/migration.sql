@@ -38,7 +38,5 @@ CREATE TABLE "credential_access_grants" (
 CREATE INDEX "service_credentials_service_name_idx" ON "service_credentials"("service_name");
 
 -- CreateIndex
+-- The unique index on email also serves as a lookup index; no separate non-unique index needed.
 CREATE UNIQUE INDEX "credential_access_grants_email_key" ON "credential_access_grants"("email");
-
--- CreateIndex
-CREATE INDEX "credential_access_grants_email_idx" ON "credential_access_grants"("email");

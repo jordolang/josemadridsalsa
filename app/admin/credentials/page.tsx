@@ -2,11 +2,10 @@ import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
 import { Card } from '@/components/ui/card'
 import { Lock, KeyRound, Clock, AlertTriangle, AlertCircle } from 'lucide-react'
 import { createMetadata } from '@/lib/metadata'
-import { isSuperAdmin, getGrantPermissions } from '@/lib/credentials'
+import { isSuperAdmin, getGrantPermissions, isMissingTableError } from '@/lib/credentials'
 import CredentialsPageClient from '@/components/admin/CredentialsPageClient'
 
 export const metadata: Metadata = createMetadata({
@@ -16,13 +15,6 @@ export const metadata: Metadata = createMetadata({
 })
 
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000
-
-function isMissingTableError(error: unknown): boolean {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === 'P2021'
-  )
-}
 
 export default async function CredentialsPage() {
   const user = await getCurrentUser()
@@ -128,6 +120,20 @@ export default async function CredentialsPage() {
   } catch (error) {
     if (isMissingTableError(error)) {
       console.warn('[Credentials] service_credentials table does not exist. Run prisma migrate deploy.')
+      if (!superAdmin) {
+        return (
+          <div className="flex min-h-[60vh] items-center justify-center">
+            <Card className="max-w-md p-12 text-center">
+              <AlertCircle className="mx-auto mb-4 h-16 w-16 text-amber-500" />
+              <h2 className="text-2xl font-bold">Setup Required</h2>
+              <p className="mt-2 text-slate-600">
+                The credentials vault tables have not been created yet.
+                Please run database migrations.
+              </p>
+            </Card>
+          </div>
+        )
+      }
     } else {
       throw error
     }

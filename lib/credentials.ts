@@ -7,7 +7,7 @@ import { hasPermission } from '@/lib/rbac'
 
 const SUPER_ADMIN_EMAIL = 'jordolang@gmail.com'
 
-function isMissingTableError(error: unknown): boolean {
+export function isMissingTableError(error: unknown): boolean {
   return (
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === 'P2021'
