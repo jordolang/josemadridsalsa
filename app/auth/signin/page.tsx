@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/card'
 
 const signInSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Must be a valid email address'),
+  email: z.string().min(1, 'Email is required').email('Must be a valid email address').trim(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 })
 
@@ -77,7 +77,7 @@ function SignInFormInner() {
         setError('Unable to sign in. Please try again.')
         setIsLoading(false)
       }
-    } catch (error) {
+    } catch (_error) {
       setError('Unable to sign in. Please check your connection and try again.')
       setIsLoading(false)
     }
@@ -102,10 +102,13 @@ function SignInFormInner() {
                 id="email"
                 type="email"
                 placeholder="you@example.com"
+                required
+                aria-invalid={!!errors.email}
+                aria-describedby="email-error"
                 {...register('email')}
               />
               {errors.email && (
-                <p className="text-sm text-red-600">{errors.email.message}</p>
+                <p id="email-error" role="alert" className="text-sm text-red-600">{errors.email.message}</p>
               )}
             </div>
 
@@ -123,10 +126,13 @@ function SignInFormInner() {
                 id="password"
                 type="password"
                 placeholder="••••••••"
+                required
+                aria-invalid={!!errors.password}
+                aria-describedby="password-error"
                 {...register('password')}
               />
               {errors.password && (
-                <p className="text-sm text-red-600">{errors.password.message}</p>
+                <p id="password-error" role="alert" className="text-sm text-red-600">{errors.password.message}</p>
               )}
             </div>
 
