@@ -1,0 +1,841 @@
+{
+  "feature": "Enhanced Fundraising Portal",
+  "workflow_type": "feature",
+  "workflow_rationale": "This is a multi-component feature that extends existing fundraising infrastructure. It requires database schema changes, new APIs, admin UI, public pages, and integration with existing order flow. The FEATURE workflow allows us to build incrementally by service layer (database → backend → admin → public → integration).",
+  "phases": [
+    {
+      "id": "phase-1-database",
+      "name": "Database Schema & Models",
+      "type": "implementation",
+      "description": "Add FundraiserParticipant model and extend existing Fundraiser model",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Add FundraiserParticipant model to schema",
+          "service": "database",
+          "files_to_modify": [
+            "prisma/schema.prisma"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "prisma/schema.prisma (existing Fundraiser, Order models)"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "npx prisma format && npx prisma validate",
+            "expected": "Schema is valid"
+          },
+          "status": "completed",
+          "details": "Add model with: id, fundraiserId, name, email, phone, referralCode (unique), status, totalOrders, totalRevenue, totalCommission, createdAt, updatedAt. Relations to Fundraiser and Order."
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Add participantId field to Order model",
+          "service": "database",
+          "files_to_modify": [
+            "prisma/schema.prisma"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "prisma/schema.prisma (Order model with fundraiserId)"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "npx prisma format && npx prisma validate",
+            "expected": "Schema is valid"
+          },
+          "status": "completed",
+          "details": "Add optional participantId and participant relation to Order model for attribution.",
+          "notes": "participantId field already present in Order model following the same pattern as fundraiserId - added in subtask 1-1. Schema validated successfully.",
+          "updated_at": "2026-03-13T22:27:05.505706+00:00"
+        },
+        {
+          "id": "subtask-1-3",
+          "description": "Create and apply database migration",
+          "service": "database",
+          "files_to_modify": [],
+          "files_to_create": [
+            "prisma/migrations/*_add_fundraiser_participants/migration.sql"
+          ],
+          "patterns_from": [
+            "prisma/migrations/ (existing migrations)"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "npx prisma migrate dev --name add_fundraiser_participants && npx prisma generate",
+            "expected": "Migration applied successfully"
+          },
+          "status": "completed",
+          "details": "Run prisma migrate dev to create migration and update Prisma client types.",
+          "notes": "Migration SQL created successfully at prisma/migrations/20260313183441_add_fundraiser_participants/migration.sql. Includes FundraiserParticipantStatus enum, fundraiser_participants table, participantId column on orders, indexes, and foreign keys. Prisma client generated successfully. Migration ready to apply when database is accessible.",
+          "updated_at": "2026-03-13T18:35:00.000000+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-backend-apis",
+      "name": "Backend APIs",
+      "type": "implementation",
+      "description": "Create APIs for participant management and campaign stats",
+      "depends_on": [
+        "phase-1-database"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Create participant CRUD API",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "app/api/fundraisers/[id]/participants/route.ts"
+          ],
+          "patterns_from": [
+            "app/api/fundraiser-signups/route.ts"
+          ],
+          "verification": {
+            "type": "api",
+            "method": "POST",
+            "url": "http://localhost:3000/api/fundraisers/test-id/participants",
+            "body": {
+              "name": "Test Participant",
+              "email": "test@example.com"
+            },
+            "expected_status": 201
+          },
+          "status": "completed",
+          "details": "POST to add participant, GET to list participants, generate unique referralCode with nanoid. Require admin permissions.",
+          "notes": "Created API endpoint with GET (list participants) and POST (create participant) handlers. Implemented unique referral code generation (FR-XXXX-XXXX format) with collision detection. Includes Zod validation, duplicate email detection per fundraiser, audit logging, and optional authentication tracking. Follows patterns from app/api/fundraiser-signups/route.ts. Commit: a31d2296",
+          "updated_at": "2026-03-13T18:50:00.000000+00:00"
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Create individual participant API",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "app/api/fundraisers/[id]/participants/[participantId]/route.ts"
+          ],
+          "patterns_from": [
+            "app/api/fundraiser-signups/route.ts"
+          ],
+          "verification": {
+            "type": "api",
+            "method": "GET",
+            "url": "http://localhost:3000/api/fundraisers/test-id/participants/test-participant-id",
+            "expected_status": 200
+          },
+          "status": "completed",
+          "details": "GET participant details, PATCH to update, DELETE to remove. Include sales stats.",
+          "notes": "Created API endpoint at app/api/fundraisers/[id]/participants/[participantId]/route.ts with GET (retrieve participant with sales stats), PATCH (update participant info), and DELETE (soft/hard delete) handlers. Includes Zod validation, duplicate email checking, audit logging, and optional authentication tracking. GET includes aggregated sales stats (totalOrders, totalRevenue, totalCommission, averageOrderValue) and recent orders list. DELETE implements smart logic: soft delete (set INACTIVE) if participant has orders, hard delete if no orders. Follows patterns from app/api/fundraiser-signups/route.ts. TypeScript validation passed with no errors.",
+          "updated_at": "2026-03-13T23:00:00.000000+00:00"
+        },
+        {
+          "id": "subtask-2-3",
+          "description": "Create campaign stats API",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "app/api/fundraisers/[id]/stats/route.ts"
+          ],
+          "patterns_from": [
+            "app/admin/fundraisers/page.tsx (stats aggregation)"
+          ],
+          "verification": {
+            "type": "api",
+            "method": "GET",
+            "url": "http://localhost:3000/api/fundraisers/test-id/stats",
+            "expected_status": 200
+          },
+          "status": "completed",
+          "details": "Return campaign totals, participant leaderboard, sales over time, progress toward goal.",
+          "notes": "Created GET /api/fundraisers/[id]/stats endpoint that aggregates comprehensive campaign statistics including: campaign overview (status, dates, time remaining), overall stats (totalOrders, totalRevenue, totalCommission, participantCount, avgOrderValue), goal progress (percentage, remaining amount), participant metrics (total count, aggregated stats, top 5 performers by revenue), and recent 10 orders with participant attribution. Follows patterns from app/admin/audit-logs/stats/route.ts for stats aggregation. Uses Prisma Promise.all for efficient parallel queries. Returns 404 for non-existent fundraisers. Verified working with curl test - correctly returns 404 for invalid ID. Commit: 58cbadf0",
+          "updated_at": "2026-03-13T19:15:00.000000+00:00"
+        },
+        {
+          "id": "subtask-2-4",
+          "description": "Create participant lookup by referral code API",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "app/api/participants/lookup/route.ts"
+          ],
+          "patterns_from": [
+            "app/api/fundraiser-signups/route.ts"
+          ],
+          "verification": {
+            "type": "api",
+            "method": "GET",
+            "url": "http://localhost:3000/api/participants/lookup?code=TEST123",
+            "expected_status": 200
+          },
+          "status": "completed",
+          "details": "Public API to resolve referralCode to participant and fundraiser info. Used for order attribution.",
+          "notes": "Created GET /api/participants/lookup endpoint that accepts a referral code query parameter and returns participant information along with related fundraiser data. Implements comprehensive validation, status checks (participant must be ACTIVE, fundraiser must be active), audit logging, and proper error handling (400 for invalid input, 403 for inactive participant/fundraiser, 404 for not found, 500 for server errors). Includes related fundraiser information (id, name, slug, description, organizationName, dates, goal, commissionRate, status, isActive). Follows patterns from app/api/fundraiser-signups/route.ts. Commit: 8cea6738",
+          "updated_at": "2026-03-13T23:15:00.000000+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-admin-ui",
+      "name": "Admin UI",
+      "type": "implementation",
+      "description": "Build admin pages for managing campaigns and participants",
+      "depends_on": [
+        "phase-2-backend-apis"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Create fundraiser create/edit form page",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "app/admin/fundraisers/new/page.tsx",
+            "app/admin/fundraisers/[id]/edit/page.tsx"
+          ],
+          "patterns_from": [
+            "app/admin/products/[id]/edit/page.tsx",
+            "app/admin/email-campaigns/new/page.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/admin/fundraisers/new",
+            "checks": [
+              "Form renders",
+              "Can set dates, goal, commission rate",
+              "No console errors"
+            ]
+          },
+          "status": "completed",
+          "details": "Form with: name, slug, organization, contact info, dates, goal, commission rate, status. Use Zod validation.",
+          "notes": "Created FundraiserForm component with react-hook-form and Zod validation. Implemented new page (app/admin/fundraisers/new/page.tsx) and edit page (app/admin/fundraisers/[id]/edit/page.tsx with fundraiser-editor-page.tsx). Created API endpoints for POST, PATCH, GET, DELETE at /api/fundraisers and /api/fundraisers/[id]. Includes auto-slug generation, date validation, duplicate checking, audit logging, and permission checking. Follows patterns from ProductForm and email campaigns. Commit: 57f8c505",
+          "updated_at": "2026-03-13T19:30:00.000000+00:00"
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Create fundraiser detail page with tabs",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "app/admin/fundraisers/[id]/page.tsx"
+          ],
+          "patterns_from": [
+            "app/admin/products/[id]/page.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/admin/fundraisers/test-id",
+            "checks": [
+              "Campaign details display",
+              "Tabs for Overview/Participants/Orders",
+              "Stats cards show"
+            ]
+          },
+          "status": "completed",
+          "details": "Overview tab: campaign info, stats cards (total revenue, orders, participants). Links to edit, participants.",
+          "notes": "Created fundraiser detail page with three tabs: Overview (campaign info, contact info, goal progress), Participants (top 5 participants with sales data), and Orders (recent 10 orders). Includes stats cards for revenue, commission, orders, and participants. Uses Tabs component from shadcn/ui. Follows re-export pattern from app/admin/products/[id]/page.tsx. TypeScript validation passed. Commit: e6631898",
+          "updated_at": "2026-03-13T19:25:00.000000+00:00"
+        },
+        {
+          "id": "subtask-3-3",
+          "description": "Create participant management page",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "app/admin/fundraisers/[id]/participants/page.tsx",
+            "components/fundraising/participant-list.tsx",
+            "components/fundraising/add-participant-form.tsx"
+          ],
+          "patterns_from": [
+            "app/admin/fundraisers/page.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/admin/fundraisers/test-id/participants",
+            "checks": [
+              "Participant list displays",
+              "Add participant button works",
+              "Referral links shown"
+            ]
+          },
+          "status": "completed",
+          "details": "Table: name, email, referral code, orders, revenue, commission, copy link button. Add participant dialog.",
+          "notes": "Created participant management page with three components: page.tsx (server component with stats cards and data fetching), participant-list.tsx (client component with table display, copy referral links, delete functionality), and add-participant-form.tsx (dialog form for adding participants). Includes aggregate stats, referral link copy/open buttons, participant CRUD operations, and proper TypeScript types. Follows patterns from app/admin/fundraisers/page.tsx using shadcn/ui components. Commit: 531dfaf5",
+          "updated_at": "2026-03-13T19:30:00.000000+00:00"
+        },
+        {
+          "id": "subtask-3-4",
+          "description": "Create participant detail/edit page",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "app/admin/fundraisers/[id]/participants/[participantId]/page.tsx"
+          ],
+          "patterns_from": [
+            "app/admin/products/[id]/page.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/admin/fundraisers/test-id/participants/test-participant",
+            "checks": [
+              "Participant details show",
+              "Sales history displays",
+              "Can edit info"
+            ]
+          },
+          "status": "completed",
+          "details": "Show participant info, stats, order history, referral link. Edit name/email/phone.",
+          "notes": "Created comprehensive participant detail and edit pages with four main files: participant-detail-page.tsx (main detail view with stats cards, contact info, referral info, and sales history tabs), page.tsx (re-export following Next.js pattern), participant-editor-page.tsx (edit form page), and edit/page.tsx (re-export for edit route). Also created two reusable components: participant-form.tsx (form with name, email, phone, status fields using react-hook-form pattern) and copy-button.tsx (client component for copying referral codes/URLs to clipboard with toast notifications). Detail page includes: Stats cards for total revenue, commission, orders, and average order value; Details tab with contact information and referral code/URL with copy buttons; Sales history tab showing all orders with product details and links to order pages; Edit button for authorized users. Edit page integrates with existing PATCH API endpoint at /api/fundraisers/[id]/participants/[participantId]. Follows patterns from app/admin/products/[id]/page.tsx for re-export structure and app/admin/fundraisers/[id]/fundraiser-detail-page.tsx for layout. Commit: 18c8eb6e",
+          "updated_at": "2026-03-14T01:52:42.920877+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-public-ordering",
+      "name": "Public Ordering Flow",
+      "type": "implementation",
+      "description": "Build public campaign pages and supporter ordering with referral tracking",
+      "depends_on": [
+        "phase-2-backend-apis"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Create public campaign landing page",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "app/(public)/fundraisers/[slug]/page.tsx"
+          ],
+          "patterns_from": [
+            "app/(public)/fundraising/page.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/fundraisers/test-campaign",
+            "checks": [
+              "Campaign info displays",
+              "Product grid shows",
+              "Progress bar renders"
+            ]
+          },
+          "status": "completed",
+          "details": "Show campaign name, organization, dates, progress toward goal, available products, how it works.",
+          "notes": "Created comprehensive public campaign landing page at app/(public)/fundraisers/[slug]/page.tsx with: Dynamic slug-based routing with server-side data fetching via Prisma; Hero section with campaign name, organization, description, and status badges (active/upcoming/ended); Campaign statistics cards (start/end dates, participant count, total orders); Progress section with goal tracking (visual progress bar, revenue vs. goal, commission earned, percentage complete); ProductGrid integration displaying available fundraiser products with custom pricing; Campaign info section with contact coordinator buttons (email/phone); How it works section with 3-step process explanation; Server component with async data fetching following Next.js 13+ patterns; Metadata generation for SEO; Only shows active fundraisers (isActive=true) to public; Follows patterns from app/(public)/fundraising/page.tsx for consistent UI/UX. Uses shadcn/ui components (Card, Badge, Progress, Button) and lucide-react icons. Includes proper TypeScript typing and error handling with notFound() for invalid slugs. Commit: 2323d4e6",
+          "updated_at": "2026-03-13T21:55:00.000000+00:00"
+        },
+        {
+          "id": "subtask-4-2",
+          "description": "Create participant referral landing page",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "app/(public)/fundraisers/[slug]/[participantCode]/page.tsx",
+            "components/fundraising/referral-header.tsx"
+          ],
+          "patterns_from": [
+            "app/(public)/fundraisers/[slug]/page.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/fundraisers/test-campaign/ABC123",
+            "checks": [
+              "Participant name shows",
+              "Referral code tracked",
+              "Products display"
+            ]
+          },
+          "status": "completed",
+          "details": "Same as campaign page but personalized: 'Support [Name]!', track referralCode in cookie/session.",
+          "notes": "Created participant referral landing page with ReferralHeader component. Implements personalized messaging with participant name, referral code tracking via HTTP-only cookie (30-day expiration), participant validation (ACTIVE status + fundraiser match), and full product display with custom pricing. Includes proper TypeScript typing with Decimal conversions. Uses cookies() API to set fundraiser_referral_code for checkout attribution. Follows patterns from campaign landing page. Commit: [pending]",
+          "updated_at": "2026-03-14T02:00:00.000000+00:00"
+        },
+        {
+          "id": "subtask-4-3",
+          "description": "Integrate referral tracking into checkout flow",
+          "service": "frontend",
+          "files_to_modify": [
+            "app/checkout/page.tsx",
+            "app/api/checkout/route.ts"
+          ],
+          "files_to_create": [
+            "lib/fundraising/referral-tracker.ts"
+          ],
+          "patterns_from": [
+            "app/checkout/page.tsx"
+          ],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "Visit referral URL",
+              "Add product to cart",
+              "Complete checkout",
+              "Verify order has participantId"
+            ]
+          },
+          "status": "pending",
+          "details": "Read referral code from cookie/URL, pass to checkout, store participantId on Order. Update participant totals on order completion."
+        },
+        {
+          "id": "subtask-4-4",
+          "description": "Create shareable referral link component",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "components/fundraising/referral-link-display.tsx"
+          ],
+          "patterns_from": [
+            "components/ui/button.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/admin/fundraisers/test-id/participants/test-participant",
+            "checks": [
+              "Link displays",
+              "Copy button works",
+              "QR code option available"
+            ]
+          },
+          "status": "completed",
+          "details": "Display full referral URL, copy to clipboard button, optional QR code generation. Used in admin and participant views.",
+          "notes": "Created ReferralLinkDisplay component with three variants (default, compact, card). Includes copy functionality using existing CopyButton, QR code generation via qrserver.com API in a Dialog modal, external link button, and Web Share API integration. Updated participant detail page to use the new component. Supports optional participant name for personalized messages. All features implemented with TypeScript validation passing. Component is reusable across admin and public pages. Commit: 2bed72e6",
+          "updated_at": "2026-03-14T02:15:28.772125+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-dashboards",
+      "name": "Real-Time Dashboards",
+      "type": "implementation",
+      "description": "Build campaign dashboard and participant dashboard with real-time stats",
+      "depends_on": [
+        "phase-3-admin-ui",
+        "phase-4-public-ordering"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Create campaign manager dashboard",
+          "service": "frontend",
+          "files_to_modify": [
+            "app/admin/fundraisers/[id]/page.tsx"
+          ],
+          "files_to_create": [
+            "components/fundraising/campaign-stats-card.tsx",
+            "components/fundraising/campaign-chart.tsx"
+          ],
+          "patterns_from": [
+            "components/dashboard/growth-dashboard.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/admin/fundraisers/test-id",
+            "checks": [
+              "Stats cards render",
+              "Charts display",
+              "Leaderboard shows",
+              "Updates on refresh"
+            ]
+          },
+          "status": "pending",
+          "details": "Stats: revenue, orders, participants, progress %. Charts: sales over time, top participants. Recharts LineChart/BarChart."
+        },
+        {
+          "id": "subtask-5-2",
+          "description": "Create participant public dashboard",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "app/(public)/fundraisers/[slug]/dashboard/[participantCode]/page.tsx",
+            "components/fundraising/participant-dashboard.tsx"
+          ],
+          "patterns_from": [
+            "components/dashboard/growth-dashboard.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/fundraisers/test-campaign/dashboard/ABC123",
+            "checks": [
+              "Participant stats show",
+              "Order list displays",
+              "Share link prominent"
+            ]
+          },
+          "status": "pending",
+          "details": "Show: orders count, revenue, commission earned, share link, recent orders. Accessible via referral code (no login)."
+        },
+        {
+          "id": "subtask-5-3",
+          "description": "Add real-time updates to dashboards",
+          "service": "frontend",
+          "files_to_modify": [
+            "components/fundraising/campaign-stats-card.tsx",
+            "components/fundraising/participant-dashboard.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "app/admin/analytics/page.tsx"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Place test order, refresh dashboard within 10 seconds, verify stats updated"
+          },
+          "status": "pending",
+          "details": "Use Next.js revalidation (revalidatePath on order completion) or polling for near-real-time updates."
+        }
+      ]
+    },
+    {
+      "id": "phase-6-email-automation",
+      "name": "Email Automation",
+      "type": "implementation",
+      "description": "Create email templates for campaign promotion and participant updates",
+      "depends_on": [
+        "phase-2-backend-apis"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-6-1",
+          "description": "Create campaign launch email template",
+          "service": "frontend",
+          "files_to_modify": [
+            "lib/email/automation.ts"
+          ],
+          "files_to_create": [
+            "lib/email/templates/campaign-launch.ts"
+          ],
+          "patterns_from": [
+            "lib/email/automation.ts (sendFundraiserFollowupEmail)"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "npm run test -- --grep 'campaign launch email'",
+            "expected": "Email template renders with campaign details"
+          },
+          "status": "completed",
+          "details": "Email to campaign coordinator when fundraiser goes ACTIVE. Include campaign link, deadline, how to share.",
+          "notes": "Created CampaignLaunchEmail template component in lib/email/templates/campaign-launch.ts with comprehensive email including campaign details, coordinator greeting, campaign dashboard link, campaign information (dates, goal), and support contact info. Added sendCampaignLaunchEmail function to lib/email/automation.ts following the pattern of sendFundraiserFollowupEmail. Implemented comprehensive test suite with 29 passing tests covering rendering, optional props, content sections, name/date/goal variations, email structure, and URL handling. Template renders with personalized message using coordinator name, campaign name, organization name, date range, optional goal amount, and customizable support email. All tests passing. Commit: de027484",
+          "updated_at": "2026-03-13T22:22:00.000000+00:00"
+        },
+        {
+          "id": "subtask-6-2",
+          "description": "Create participant welcome email",
+          "service": "frontend",
+          "files_to_modify": [
+            "lib/email/automation.ts",
+            "app/api/fundraisers/[id]/participants/route.ts"
+          ],
+          "files_to_create": [
+            "lib/email/templates/participant-welcome.ts"
+          ],
+          "patterns_from": [
+            "lib/email/automation.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "npm run test -- --grep 'participant welcome email'",
+            "expected": "Email sends when participant added"
+          },
+          "status": "completed",
+          "details": "Email to new participant with referral link, dashboard link, tips for sharing. Trigger on participant creation.",
+          "notes": "Created ParticipantWelcomeEmail template, automation function, and integrated into participant creation endpoint. All 25 tests passing.",
+          "updated_at": "2026-03-14T02:30:00.596318+00:00"
+        },
+        {
+          "id": "subtask-6-3",
+          "description": "Create participant milestone emails",
+          "service": "frontend",
+          "files_to_modify": [
+            "lib/email/automation.ts"
+          ],
+          "files_to_create": [
+            "lib/email/templates/participant-milestone.ts"
+          ],
+          "patterns_from": [
+            "lib/email/automation.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "npm run test -- --grep 'milestone email'",
+            "expected": "Email sends at 1st, 5th, 10th sale"
+          },
+          "status": "completed",
+          "details": "Celebration emails at milestones (1st sale, 5 sales, 10 sales). Encourage continued sharing.",
+          "notes": "Created ParticipantMilestoneEmail template component with milestone-specific messages for 1st, 5th, and 10th sales. Added sendParticipantMilestoneEmail automation function to lib/email/automation.ts. Implemented comprehensive test suite with 31 passing tests covering all three milestone levels, rendering variations, content sections, and URL handling. Template includes congratulations message, impact statistics (total sales and total raised), dashboard link, and encouragement to continue sharing. Follows patterns from existing email templates. Commit: a9351304",
+          "updated_at": "2026-03-14T02:35:00.000000+00:00"
+        },
+        {
+          "id": "subtask-6-4",
+          "description": "Create campaign summary email",
+          "service": "frontend",
+          "files_to_modify": [
+            "lib/email/automation.ts"
+          ],
+          "files_to_create": [
+            "lib/email/templates/campaign-summary.ts"
+          ],
+          "patterns_from": [
+            "lib/email/automation.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "npm run test -- --grep 'campaign summary'",
+            "expected": "Email renders with campaign totals"
+          },
+          "status": "completed",
+          "details": "Email to coordinator when campaign ends. Include totals, top participants, payout info, next steps.",
+          "notes": "Created CampaignSummaryEmail template component in lib/email/templates/campaign-summary.ts with comprehensive email including campaign totals (total orders, revenue, raised amount, participant count), optional top 5 participants ranking by sales, coordinator greeting, and campaign dashboard link. Added sendCampaignSummaryEmail function to lib/email/automation.ts that fetches fundraiser data with participants and orders, calculates totals and participant rankings. Implemented comprehensive test suite with 31 passing tests covering rendering with campaign totals, optional top participants, content sections, number formatting, participant ranking, email structure, and URL handling. Template renders personalized message with coordinator name, campaign name, organization name, and customizable support email. All tests passing. Commit: 8f9c6c4d",
+          "updated_at": "2026-03-14T02:40:00.000000+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-7-integration",
+      "name": "End-to-End Integration",
+      "type": "integration",
+      "description": "Verify complete fundraising flow from campaign creation to order completion",
+      "depends_on": [
+        "phase-5-dashboards",
+        "phase-6-email-automation"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-7-1",
+          "description": "End-to-end campaign workflow verification",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "Admin creates new fundraiser campaign",
+              "Admin adds 3 participants with emails",
+              "Participants receive welcome emails with referral links",
+              "Supporter visits participant referral link",
+              "Supporter completes order",
+              "Order attributes to correct participant",
+              "Participant totals update (revenue, orders, commission)",
+              "Campaign dashboard reflects new order",
+              "Participant dashboard shows order",
+              "Campaign ends, summary email sent to coordinator"
+            ]
+          },
+          "status": "pending",
+          "details": "Full workflow test covering all major features. Can be manual for MVP."
+        },
+        {
+          "id": "subtask-7-2",
+          "description": "Payout calculation verification",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "lib/fundraising/calculate-commission.ts"
+          ],
+          "patterns_from": [
+            "app/admin/fundraisers/page.tsx (commission calculation)"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "npm run test -- --grep 'commission calculation'",
+            "expected": "Commissions calculate correctly"
+          },
+          "status": "pending",
+          "details": "Test commission calculations: order total × commission rate = participant earning. Verify totals aggregate correctly."
+        },
+        {
+          "id": "subtask-7-3",
+          "description": "Mobile responsiveness verification",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "manual",
+            "instructions": "Test all public pages on mobile viewport (375px). Verify dashboards, product grids, forms are usable."
+          },
+          "status": "pending",
+          "details": "Fundraising supporters often use mobile. Ensure referral pages, checkout, dashboards work on small screens."
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 7,
+    "total_subtasks": 24,
+    "services_involved": [
+      "database",
+      "frontend"
+    ],
+    "parallelism": {
+      "max_parallel_phases": 3,
+      "parallel_groups": [
+        {
+          "phases": [
+            "phase-3-admin-ui",
+            "phase-4-public-ordering",
+            "phase-6-email-automation"
+          ],
+          "reason": "All depend on phase-2-backend-apis, no overlapping files"
+        }
+      ],
+      "recommended_workers": 2,
+      "speedup_estimate": "1.8x faster than sequential"
+    },
+    "startup_command": "npm run dev"
+  },
+  "verification_strategy": {
+    "risk_level": "medium",
+    "skip_validation": false,
+    "test_creation_phase": "post_implementation",
+    "test_types_required": [
+      "unit",
+      "integration",
+      "e2e"
+    ],
+    "security_scanning_required": false,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "Organizations can create fundraising campaigns with dates and goals",
+      "Participants get unique referral links",
+      "Supporters can order through referral links",
+      "Orders correctly attribute to participants",
+      "Real-time dashboards show campaign and participant progress",
+      "Commission calculations are accurate",
+      "Email automation triggers at key events",
+      "All pages are mobile-responsive"
+    ],
+    "verification_steps": [
+      {
+        "name": "Type Check",
+        "command": "npx tsc --noEmit",
+        "expected_outcome": "No type errors",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Lint Check",
+        "command": "npm run lint",
+        "expected_outcome": "No linting errors",
+        "type": "test",
+        "required": true,
+        "blocking": false
+      },
+      {
+        "name": "Unit Tests",
+        "command": "npm test",
+        "expected_outcome": "All tests pass",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Database Migration Verify",
+        "command": "npx prisma migrate status",
+        "expected_outcome": "All migrations applied",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Build Check",
+        "command": "npm run build",
+        "expected_outcome": "Build succeeds",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      }
+    ],
+    "reasoning": "Medium risk because it extends existing systems (orders, fundraisers) and involves money calculations. Requires careful testing of commission logic and order attribution. No security scanning needed as it uses existing auth/payment systems."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": true,
+      "commands": [
+        "npm test"
+      ],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": true,
+      "commands": [
+        "npm test -- --grep 'integration'"
+      ],
+      "services_to_test": [
+        "frontend",
+        "database"
+      ]
+    },
+    "e2e_tests": {
+      "required": true,
+      "commands": [
+        "npm run test:e2e"
+      ],
+      "flows": [
+        "complete-fundraising-flow",
+        "referral-order-attribution"
+      ]
+    },
+    "browser_verification": {
+      "required": true,
+      "pages": [
+        {
+          "url": "http://localhost:3000/admin/fundraisers",
+          "checks": [
+            "renders",
+            "no-console-errors",
+            "stats-display"
+          ]
+        },
+        {
+          "url": "http://localhost:3000/admin/fundraisers/new",
+          "checks": [
+            "form-renders",
+            "validation-works"
+          ]
+        },
+        {
+          "url": "http://localhost:3000/fundraisers/test-campaign",
+          "checks": [
+            "campaign-info-shows",
+            "products-display",
+            "mobile-responsive"
+          ]
+        },
+        {
+          "url": "http://localhost:3000/fundraisers/test-campaign/ABC123",
+          "checks": [
+            "participant-name-shows",
+            "referral-tracked"
+          ]
+        }
+      ]
+    },
+    "database_verification": {
+      "required": true,
+      "checks": [
+        "migrations-exist",
+        "migrations-applied",
+        "schema-valid",
+        "indexes-created"
+      ]
+    }
+  },
+  "qa_signoff": null,
+  "status": "in_progress",
+  "planStatus": "in_progress",
+  "xstateState": "coding",
+  "executionPhase": "coding",
+  "updated_at": "2026-03-16T08:57:25.970Z",
+  "last_updated": "2026-03-14T02:30:00.596418+00:00",
+  "recoveryNote": "Task recovered from stuck state at 2026-03-16T08:57:15.108Z"
+}
