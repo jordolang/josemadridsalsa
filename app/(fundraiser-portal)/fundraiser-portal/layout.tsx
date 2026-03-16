@@ -8,7 +8,7 @@ export default async function FundraiserPortalLayout({
 }: {
   children: React.ReactNode
 }) {
-  const headersList = headers()
+  const headersList = await headers()
   const pathname = headersList.get('x-invoke-path') || ''
 
   const account = await getCurrentFundraiserAccount()

@@ -21,17 +21,17 @@ type FundraiserData = {
   coverPhotoUrl: string | null
   contactEmail: string
   contactPhone: string | null
-  goal: Prisma.Decimal | number | string
-  totalRevenue: Prisma.Decimal | number | string
+  goal: Prisma.Decimal | number | string | null
+  totalRevenue: Prisma.Decimal | number | string | null
   slug: string
   products: Array<{
-    price: Prisma.Decimal | number | string
+    price: Prisma.Decimal | number | string | null
     product: {
       id: string
       name: string
       slug: string
       description: string | null
-      price: Prisma.Decimal | number | string
+      price: Prisma.Decimal | number | string | null
       images: string[]
     }
   }>
