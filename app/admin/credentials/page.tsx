@@ -3,9 +3,9 @@ import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
-import { Lock, KeyRound, Clock, AlertTriangle } from 'lucide-react'
+import { Lock, KeyRound, Clock, AlertTriangle, AlertCircle } from 'lucide-react'
 import { createMetadata } from '@/lib/metadata'
-import { isSuperAdmin, getGrantPermissions } from '@/lib/credentials'
+import { isSuperAdmin, getGrantPermissions, isMissingTableError } from '@/lib/credentials'
 import CredentialsPageClient from '@/components/admin/CredentialsPageClient'
 
 export const metadata: Metadata = createMetadata({
@@ -23,17 +23,44 @@ export default async function CredentialsPage() {
     redirect('/admin')
   }
 
+  const superAdmin = isSuperAdmin(user.email)
+
   // Check for a non-revoked access grant
-  const accessGrant = await prisma.credentialAccessGrant.findFirst({
-    where: {
-      email: user.email,
-      revokedAt: null,
-    },
-  })
+  let accessGrant: { id: string } | null = null
+  let grantPermissions: Awaited<ReturnType<typeof getGrantPermissions>> = null
+
+  try {
+    accessGrant = await prisma.credentialAccessGrant.findFirst({
+      where: {
+        email: user.email,
+        revokedAt: null,
+      },
+      select: { id: true },
+    })
+    grantPermissions = await getGrantPermissions(user.email)
+  } catch (error) {
+    if (isMissingTableError(error)) {
+      console.warn('[Credentials] credential_access_grants table does not exist. Run prisma migrate deploy.')
+      if (!superAdmin) {
+        return (
+          <div className="flex min-h-[60vh] items-center justify-center">
+            <Card className="max-w-md p-12 text-center">
+              <AlertCircle className="mx-auto mb-4 h-16 w-16 text-amber-500" />
+              <h2 className="text-2xl font-bold">Setup Required</h2>
+              <p className="mt-2 text-slate-600">
+                The credentials vault tables have not been created yet.
+                Please run database migrations.
+              </p>
+            </Card>
+          </div>
+        )
+      }
+    } else {
+      throw error
+    }
+  }
 
   const canWrite = await hasPermission(user, 'credentials:write')
-  const superAdmin = isSuperAdmin(user.email)
-  const grantPermissions = await getGrantPermissions(user.email)
 
   if (!accessGrant && !superAdmin) {
     return (
@@ -51,30 +78,66 @@ export default async function CredentialsPage() {
   }
 
   // Fetch credentials sorted by provider alphabetically
-  const [credentials, totalCount] = await Promise.all([
-    prisma.serviceCredential.findMany({
-      orderBy: { serviceName: 'asc' },
-      select: {
-        id: true,
-        serviceName: true,
-        label: true,
-        username: true,
-        url: true,
-        notes: true,
-        passwordChangedAt: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    }),
-    prisma.serviceCredential.count(),
-  ])
+  let credentials: {
+    id: string
+    serviceName: string
+    label: string
+    username: string | null
+    url: string | null
+    notes: string | null
+    passwordChangedAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+  }[] = []
+  let totalCount = 0
+  let providersList: { serviceName: string }[] = []
 
-  // Get unique providers for filter dropdown
-  const providersList = await prisma.serviceCredential.findMany({
-    select: { serviceName: true },
-    distinct: ['serviceName'],
-    orderBy: { serviceName: 'asc' },
-  })
+  try {
+    ;[credentials, totalCount] = await Promise.all([
+      prisma.serviceCredential.findMany({
+        orderBy: { serviceName: 'asc' },
+        select: {
+          id: true,
+          serviceName: true,
+          label: true,
+          username: true,
+          url: true,
+          notes: true,
+          passwordChangedAt: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.serviceCredential.count(),
+    ])
+
+    // Get unique providers for filter dropdown
+    providersList = await prisma.serviceCredential.findMany({
+      select: { serviceName: true },
+      distinct: ['serviceName'],
+      orderBy: { serviceName: 'asc' },
+    })
+  } catch (error) {
+    if (isMissingTableError(error)) {
+      console.warn('[Credentials] service_credentials table does not exist. Run prisma migrate deploy.')
+      if (!superAdmin) {
+        return (
+          <div className="flex min-h-[60vh] items-center justify-center">
+            <Card className="max-w-md p-12 text-center">
+              <AlertCircle className="mx-auto mb-4 h-16 w-16 text-amber-500" />
+              <h2 className="text-2xl font-bold">Setup Required</h2>
+              <p className="mt-2 text-slate-600">
+                The credentials vault tables have not been created yet.
+                Please run database migrations.
+              </p>
+            </Card>
+          </div>
+        )
+      }
+    } else {
+      throw error
+    }
+  }
 
   const maskedCredentials = credentials.map((c) => ({
     ...c,
