@@ -7,11 +7,25 @@ import { hasPermission } from '@/lib/rbac'
 
 const SUPER_ADMIN_EMAIL = 'jordolang@gmail.com'
 
+/**
+ * Detect Prisma P2021 "missing table" errors.
+ * Also handles Prisma Accelerate-wrapped errors which may not expose the code
+ * directly but still reference P2021 in the message.
+ */
 export function isMissingTableError(error: unknown): boolean {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === 'P2021'
-  )
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+    return true
+  }
+  // Accelerate wraps errors — check message string as fallback
+  if (error instanceof Error) {
+    return (
+      error.message.includes('P2021') ||
+      error.message.includes('does not exist in the current database') ||
+      error.message.toLowerCase().includes('missing table') ||
+      error.message.toLowerCase().includes('relation') && error.message.toLowerCase().includes('does not exist')
+    )
+  }
+  return false
 }
 
 export interface CredentialGrantPermissions {
@@ -57,7 +71,9 @@ export async function checkCredentialAccess(
       console.warn('[Credentials] credential_access_grants table missing. Run prisma migrate deploy.')
       return null
     }
-    throw error
+    // Unexpected error — fail closed (no access) to avoid leaking data
+    console.error('[Credentials] checkCredentialAccess error:', error)
+    return null
   }
 }
 
@@ -88,7 +104,8 @@ export async function getGrantPermissions(
       console.warn('[Credentials] credential_access_grants table missing. Run prisma migrate deploy.')
       return null
     }
-    throw error
+    console.error('[Credentials] getGrantPermissions error:', error)
+    return null
   }
 }
 
