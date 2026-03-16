@@ -69,7 +69,7 @@ export function ProductShowcaseBlock({ block, fundraiser }: Props) {
               return (
                 <a
                   key={fp.product.id}
-                  href={`https://josemadridsalsa.com/products/${fp.product.slug}`}
+                  href={`/products/${fp.product.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md"
