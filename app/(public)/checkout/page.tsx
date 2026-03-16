@@ -24,7 +24,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import Link from 'next/link'
-import { getReferralCodeFromCookie } from '@/lib/fundraising/referral-tracker'
+import { getReferralCodeFromCookie } from '@/lib/fundraising/referral-tracker.client'
 
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null

@@ -176,7 +176,9 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
               <Card key={fundraiser.id} className="p-6">
                 <div className="mb-4 flex items-start justify-between">
                   <div>
-                    <h3 className="font-semibold">{fundraiser.name}</h3>
+                    <Link href={`/admin/fundraisers/${fundraiser.id}`} className="hover:underline">
+                      <h3 className="font-semibold">{fundraiser.name}</h3>
+                    </Link>
                     <p className="text-sm text-slate-600">{fundraiser.organizationName}</p>
                   </div>
                   <Badge className={statusColors[fundraiser.status]}>{fundraiser.status}</Badge>
@@ -208,7 +210,10 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
                 </div>
 
                 <div className="mt-4 flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1" asChild>
+                  <Button size="sm" variant="default" className="flex-1" asChild>
+                    <Link href={`/admin/fundraisers/${fundraiser.id}`}>Manage</Link>
+                  </Button>
+                  <Button size="sm" variant="outline" asChild>
                     <Link href={`/admin/fundraisers/${fundraiser.id}/edit`}>Edit</Link>
                   </Button>
                   <Button size="sm" variant="ghost" asChild>
