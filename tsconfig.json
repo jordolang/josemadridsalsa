@@ -40,6 +40,9 @@
     "node_modules",
     "backstage",
     "tests",
-    "scripts"
+    "scripts",
+    "vitest-setup.ts",
+    "vitest.config.ts",
+    "playwright.config.ts"
   ]
 }
