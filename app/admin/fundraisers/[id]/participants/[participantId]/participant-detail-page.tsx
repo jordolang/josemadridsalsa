@@ -56,7 +56,7 @@ async function getParticipantWithDetails(participantId: string, fundraiserId: st
         items: {
           select: {
             quantity: true,
-            price: true,
+            totalPrice: true,
             product: {
               select: {
                 name: true,
@@ -275,9 +275,9 @@ export default async function ParticipantDetailPage({
                         {format(new Date(order.createdAt), 'MMM d, yyyy h:mm a')}
                       </p>
                       <div className="mt-2 space-y-1">
-                        {order.items.map((item, idx) => (
+                        {order.items.map((item: { quantity: number; totalPrice: import('@prisma/client').Prisma.Decimal; product: { name: string } }, idx: number) => (
                           <p key={idx} className="text-sm text-slate-600">
-                            {item.quantity}x {item.product.name} @ ${Number(item.price).toFixed(2)}
+                            {item.quantity}x {item.product.name} @ ${Number(item.totalPrice).toFixed(2)}
                           </p>
                         ))}
                       </div>

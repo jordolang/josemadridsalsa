@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Invalid referral code.', details: parsed.error.errors },
+        { error: 'Invalid referral code.', details: parsed.error.issues },
         { status: 400 }
       )
     }

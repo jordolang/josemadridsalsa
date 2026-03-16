@@ -57,10 +57,10 @@ async function generateUniqueReferralCode(): Promise<string> {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const fundraiserId = params.id
+    const { id: fundraiserId } = await context.params
 
     // Verify fundraiser exists
     const fundraiser = await prisma.fundraiser.findUnique({
@@ -93,13 +93,13 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Optional authentication - track user if logged in
     const user = await getCurrentUser()
 
-    const fundraiserId = params.id
+    const { id: fundraiserId } = await context.params
 
     // Verify fundraiser exists
     const fundraiser = await prisma.fundraiser.findUnique({
@@ -115,7 +115,7 @@ export async function POST(
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Invalid participant data.', details: parsed.error.errors },
+        { error: 'Invalid participant data.', details: parsed.error.issues },
         { status: 400 }
       )
     }

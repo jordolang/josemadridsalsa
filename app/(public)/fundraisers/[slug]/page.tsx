@@ -111,9 +111,30 @@ export default async function FundraiserPage({ params }: PageProps) {
 
   // Convert products to ProductGrid format
   const products = fundraiser.products.map((fp) => ({
-    ...fp.product,
-    price: fp.price ? Number(fp.price) : fp.product.price,
-    compareAtPrice: fp.product.compareAtPrice || null,
+    id: fp.product.id,
+    name: fp.product.name,
+    slug: fp.product.slug,
+    description: fp.product.description,
+    price: fp.price ? Number(fp.price) : Number(fp.product.price),
+    compareAtPrice: fp.product.compareAtPrice ? Number(fp.product.compareAtPrice) : null,
+    featuredImage: fp.product.featuredImage,
+    heatLevel: fp.product.heatLevel as string,
+    sku: fp.product.sku,
+    inventory: fp.product.inventory,
+    isFeatured: fp.product.isFeatured,
+    ingredients: fp.product.ingredients,
+    weight: fp.product.weight ? fp.product.weight.toString() : null,
+    dimensions: typeof fp.product.dimensions === 'string' ? fp.product.dimensions : null,
+    nutritionalInfo: fp.product.nutritionalInfo as {
+      calories: number;
+      sodiumMg: number;
+      totalFatG: number;
+      totalCarbG: number;
+      sugarsG: number;
+      dietaryFiberG: number;
+      proteinG: number;
+      servingSize: string;
+    } | null,
   }));
 
   return (
@@ -225,7 +246,7 @@ export default async function FundraiserPage({ params }: PageProps) {
                         {formatPrice(Number(fundraiser.totalCommission))}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {fundraiser.commissionRate}% of all sales
+                        {Number(fundraiser.commissionRate)}% of all sales
                       </p>
                     </div>
                   )}

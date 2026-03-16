@@ -452,18 +452,18 @@ export async function sendCampaignSummaryEmail(fundraiserId: string) {
   const fundraiser = await prisma.fundraiser.findUnique({
     where: { id: fundraiserId },
     include: {
-      coordinator: { select: { name: true, email: true } },
-      participants: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
       orders: {
         select: {
           id: true,
           total: true,
           participantId: true,
+        },
+      },
+      participants: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
         },
       },
     },
@@ -473,23 +473,27 @@ export async function sendCampaignSummaryEmail(fundraiserId: string) {
     return { success: false, error: 'Fundraiser not found' }
   }
 
-  if (!fundraiser.coordinator?.email) {
+  // Use organizationName as the coordinator contact point
+  const coordinatorEmail = fundraiser.contactEmail
+  if (!coordinatorEmail) {
     return { success: false, error: 'Coordinator email missing' }
   }
 
   const totalOrders = fundraiser.orders.length
   const totalRevenue = fundraiser.orders.reduce(
-    (sum, order) => sum + Number(order.total),
+    (sum: number, order: { total: import('@prisma/client').Prisma.Decimal }) => sum + Number(order.total),
     0
   )
-  const totalRaised = totalRevenue * (Number(fundraiser.profitMargin) / 100)
+  // Use commissionRate as profit margin proxy
+  const commissionRate = Number(fundraiser.commissionRate ?? 0)
+  const totalRaised = totalRevenue * (commissionRate / 100)
 
   const participantSales = new Map<string, { name: string; sales: number }>()
-  fundraiser.participants.forEach((participant) => {
+  fundraiser.participants.forEach((participant: { id: string; name: string }) => {
     participantSales.set(participant.id, { name: participant.name, sales: 0 })
   })
 
-  fundraiser.orders.forEach((order) => {
+  fundraiser.orders.forEach((order: { participantId: string | null }) => {
     if (order.participantId && participantSales.has(order.participantId)) {
       const participant = participantSales.get(order.participantId)!
       participant.sales += 1
@@ -506,7 +510,7 @@ export async function sendCampaignSummaryEmail(fundraiserId: string) {
   const supportEmail = 'fundraising@josemadridsalsa.com'
 
   const emailContent = React.createElement(CampaignSummaryEmail, {
-    coordinatorName: fundraiser.coordinator.name || 'Coordinator',
+    coordinatorName: fundraiser.organizationName,
     campaignName: fundraiser.name,
     organizationName: fundraiser.organizationName,
     totalOrders,
@@ -520,7 +524,7 @@ export async function sendCampaignSummaryEmail(fundraiserId: string) {
   })
 
   return sendEmail({
-    to: fundraiser.coordinator.email,
+    to: coordinatorEmail,
     subject: `${fundraiser.name} Campaign Summary`,
     react: emailContent,
     replyTo: supportEmail,

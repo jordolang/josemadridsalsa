@@ -7,10 +7,10 @@ import { prisma } from '@/lib/prisma'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const fundraiserId = params.id
+    const { id: fundraiserId } = await context.params
 
     // Verify fundraiser exists
     const fundraiser = await prisma.fundraiser.findUnique({

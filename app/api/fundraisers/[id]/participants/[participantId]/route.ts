@@ -17,10 +17,10 @@ const UpdateParticipantSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; participantId: string } }
+  context: { params: Promise<{ id: string; participantId: string }> }
 ) {
   try {
-    const { id: fundraiserId, participantId } = params
+    const { id: fundraiserId, participantId } = await context.params
 
     // Verify fundraiser exists
     const fundraiser = await prisma.fundraiser.findUnique({
@@ -97,13 +97,13 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; participantId: string } }
+  context: { params: Promise<{ id: string; participantId: string }> }
 ) {
   try {
     // Optional authentication - track user if logged in
     const user = await getCurrentUser()
 
-    const { id: fundraiserId, participantId } = params
+    const { id: fundraiserId, participantId } = await context.params
 
     // Verify fundraiser exists
     const fundraiser = await prisma.fundraiser.findUnique({
@@ -131,7 +131,7 @@ export async function PATCH(
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Invalid participant data.', details: parsed.error.errors },
+        { error: 'Invalid participant data.', details: parsed.error.issues },
         { status: 400 }
       )
     }
@@ -195,13 +195,13 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; participantId: string } }
+  context: { params: Promise<{ id: string; participantId: string }> }
 ) {
   try {
     // Optional authentication - track user if logged in
     const user = await getCurrentUser()
 
-    const { id: fundraiserId, participantId } = params
+    const { id: fundraiserId, participantId } = await context.params
 
     // Verify fundraiser exists
     const fundraiser = await prisma.fundraiser.findUnique({
