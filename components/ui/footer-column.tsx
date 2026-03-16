@@ -18,7 +18,7 @@ const company = {
   name: 'Jose Madrid Salsa',
   description:
     'Handcrafted, small-batch salsas made in Ohio since 1989. We partner with families, fundraisers, and retail shops across the Midwest.',
-  logo: '/images/Hero-image.png',
+  logo: '/images/jose-madrid-salsa-logo.png',
 }
 
 const socialLinks = [
