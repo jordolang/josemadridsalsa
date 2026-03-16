@@ -34,6 +34,9 @@ const fundraiserSchema = z.object({
   commissionRate: z.string().min(1, 'Commission rate is required'),
   status: z.enum(['DRAFT', 'ACTIVE', 'ENDED', 'CANCELLED']),
   isActive: z.boolean(),
+  subdomain: z.string().optional(),
+  missionStatement: z.string().optional(),
+  bio: z.string().optional(),
 })
 
 type FundraiserFormData = z.infer<typeof fundraiserSchema>
@@ -70,6 +73,9 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
       commissionRate: fundraiser?.commissionRate.toString() || '20',
       status: fundraiser?.status || 'DRAFT',
       isActive: fundraiser?.isActive ?? false,
+      subdomain: (fundraiser as any)?.subdomain || '',
+      missionStatement: (fundraiser as any)?.missionStatement || '',
+      bio: (fundraiser as any)?.bio || '',
     },
   })
 
@@ -115,6 +121,9 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
           commissionRate: parseFloat(data.commissionRate),
           status: data.status,
           isActive: data.isActive,
+          subdomain: data.subdomain || null,
+          missionStatement: data.missionStatement || null,
+          bio: data.bio || null,
         }),
       })
 
@@ -229,6 +238,50 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
               {...register('contactPhone')}
               className="mt-1.5"
               placeholder="(555) 123-4567"
+            />
+          </div>
+        </div>
+      </Card>
+
+      {/* Portal & Profile */}
+      <Card className="p-6">
+        <h2 className="text-lg font-semibold mb-4">Portal & Profile</h2>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="subdomain">Page URL Subdomain</Label>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className="text-sm text-slate-500">josemadridsalsa.com/f/</span>
+              <Input
+                id="subdomain"
+                {...register('subdomain')}
+                placeholder="your-fundraiser"
+                className="max-w-xs"
+              />
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Lowercase letters, numbers, and hyphens only. This is the public-facing link.
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="missionStatement">Mission Statement</Label>
+            <Textarea
+              id="missionStatement"
+              {...register('missionStatement')}
+              rows={3}
+              className="mt-1.5"
+              placeholder="Describe the organization's mission and what they're raising funds for"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="bio">Bio / About</Label>
+            <Textarea
+              id="bio"
+              {...register('bio')}
+              rows={3}
+              className="mt-1.5"
+              placeholder="Additional information about the organization"
             />
           </div>
         </div>

@@ -238,6 +238,43 @@ export async function requireAnyPermission(permissionNames: string[]) {
 }
 
 /**
+ * Check if user has the FUNDRAISER role
+ */
+export function isFundraiser(user: { role: UserRole } | null): boolean {
+  return hasRole(user, [UserRole.FUNDRAISER])
+}
+
+/**
+ * Require fundraiser access - throws if not a fundraiser
+ */
+export async function requireFundraiserAccess() {
+  const user = await getCurrentUser()
+
+  if (!user) {
+    throw new Error('Unauthorized - not authenticated')
+  }
+
+  if (!isFundraiser(user)) {
+    throw new Error('Forbidden - fundraiser account required')
+  }
+
+  return user
+}
+
+/**
+ * Get the current user's FundraiserAccount with linked Fundraiser
+ */
+export async function getCurrentFundraiserAccount() {
+  const user = await getCurrentUser()
+  if (!user || !isFundraiser(user)) return null
+
+  return prisma.fundraiserAccount.findUnique({
+    where: { userId: user.id },
+    include: { fundraiser: true },
+  })
+}
+
+/**
  * Check if user can access admin panel
  */
 export async function canAccessAdmin(): Promise<boolean> {

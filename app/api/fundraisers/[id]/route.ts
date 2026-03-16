@@ -17,6 +17,11 @@ const FundraiserUpdateSchema = z.object({
   commissionRate: z.number().min(0).max(100, 'Commission rate must be between 0 and 100').optional(),
   status: z.enum(['DRAFT', 'ACTIVE', 'ENDED', 'CANCELLED']).optional(),
   isActive: z.boolean().optional(),
+  subdomain: z.string().min(3).max(50).regex(/^[a-z0-9-]+$/).nullable().optional(),
+  missionStatement: z.string().nullable().optional(),
+  bio: z.string().nullable().optional(),
+  logoUrl: z.string().url().nullable().optional(),
+  coverPhotoUrl: z.string().url().nullable().optional(),
 })
 
 export async function GET(
@@ -127,6 +132,24 @@ export async function PATCH(
     if (data.commissionRate !== undefined) updateData.commissionRate = data.commissionRate
     if (data.status !== undefined) updateData.status = data.status
     if (data.isActive !== undefined) updateData.isActive = data.isActive
+    if (data.subdomain !== undefined) updateData.subdomain = data.subdomain
+    if (data.missionStatement !== undefined) updateData.missionStatement = data.missionStatement
+    if (data.bio !== undefined) updateData.bio = data.bio
+    if (data.logoUrl !== undefined) updateData.logoUrl = data.logoUrl
+    if (data.coverPhotoUrl !== undefined) updateData.coverPhotoUrl = data.coverPhotoUrl
+
+    // Check subdomain uniqueness if changed
+    if (data.subdomain && data.subdomain !== existing.subdomain) {
+      const subdomainExists = await prisma.fundraiser.findUnique({
+        where: { subdomain: data.subdomain },
+      })
+      if (subdomainExists) {
+        return NextResponse.json(
+          { error: 'A fundraiser with this subdomain already exists' },
+          { status: 400 }
+        )
+      }
+    }
 
     // Update fundraiser
     const fundraiser = await prisma.fundraiser.update({

@@ -44,6 +44,10 @@ model User {
 
   // Wholesale account
   wholesaleAccount       WholesaleAccount?
+
+  // Fundraiser account
+  fundraiserAccount      FundraiserAccount?
+
   conversations          Conversation[]
   passwordResetTokens    PasswordResetToken[]
   emailLogs              EmailLog[]
@@ -837,6 +841,14 @@ model Fundraiser {
   totalRevenue    Decimal @default(0) @db.Decimal(10, 2)
   totalCommission Decimal @default(0) @db.Decimal(10, 2)
 
+  // Subdomain portal
+  subdomain        String?  @unique
+  pageConfig       Json?
+  logoUrl          String?
+  coverPhotoUrl    String?
+  missionStatement String?
+  bio              String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -844,6 +856,7 @@ model Fundraiser {
   orders       Order[]
   products     FundraiserProduct[]
   participants FundraiserParticipant[]
+  account      FundraiserAccount?
 
   @@map("fundraisers")
 }
@@ -891,6 +904,26 @@ model FundraiserParticipant {
   orders     Order[]
 
   @@map("fundraiser_participants")
+}
+
+model FundraiserAccount {
+  id           String @id @default(cuid())
+  userId       String @unique
+  fundraiserId String @unique
+
+  // Status
+  status     FundraiserAccountStatus @default(PENDING)
+  approvedAt DateTime?
+  approvedBy String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+
+  @@map("fundraiser_accounts")
 }
 
 model WholesaleAccount {
@@ -1700,6 +1733,7 @@ enum UserRole {
   DEVELOPER
   STAFF
   WHOLESALE
+  FUNDRAISER
 }
 
 enum PermissionCategory {
@@ -1719,6 +1753,7 @@ enum PermissionCategory {
   EVENTS
   AI_TRAINING
   CREDENTIALS
+  FUNDRAISER_PORTAL
 }
 
 enum TagType {
@@ -1823,6 +1858,12 @@ enum FundraiserStatus {
 enum FundraiserParticipantStatus {
   ACTIVE
   INACTIVE
+}
+
+enum FundraiserAccountStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
 }
 
 enum BusinessType {

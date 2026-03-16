@@ -85,6 +85,7 @@ const roleColors: Record<UserRole, string> = {
   ADMIN: 'bg-purple-100 text-purple-800',
   DEVELOPER: 'bg-orange-100 text-orange-800',
   WHOLESALE: 'bg-yellow-100 text-yellow-800',
+  FUNDRAISER: 'bg-pink-100 text-pink-800',
 }
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {

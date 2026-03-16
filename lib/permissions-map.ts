@@ -99,6 +99,18 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/fundraisers',
     icon: 'Heart',
     permission: 'content:read',
+    children: [
+      {
+        label: 'All Fundraisers',
+        href: '/admin/fundraisers',
+        permission: 'content:read',
+      },
+      {
+        label: 'Fundraiser Accounts',
+        href: '/admin/fundraisers/accounts',
+        permission: 'orders:write',
+      },
+    ],
   },
   {
     label: 'Analytics',
