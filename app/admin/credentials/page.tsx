@@ -16,6 +16,22 @@ export const metadata: Metadata = createMetadata({
 
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000
 
+/** Render the "tables not set up yet" message */
+function SetupRequired() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <Card className="max-w-md p-12 text-center">
+        <AlertCircle className="mx-auto mb-4 h-16 w-16 text-amber-500" />
+        <h2 className="text-2xl font-bold">Setup Required</h2>
+        <p className="mt-2 text-slate-600">
+          The credentials vault tables have not been created yet.
+          Please run database migrations: <code>prisma migrate deploy</code>
+        </p>
+      </Card>
+    </div>
+  )
+}
+
 export default async function CredentialsPage() {
   const user = await getCurrentUser()
 
@@ -25,39 +41,31 @@ export default async function CredentialsPage() {
 
   const superAdmin = isSuperAdmin(user.email)
 
-  // Check for a non-revoked access grant
+  // ── Access grant check ────────────────────────────────────────────────────
   let accessGrant: { id: string } | null = null
   let grantPermissions: Awaited<ReturnType<typeof getGrantPermissions>> = null
+  let grantsTableMissing = false
 
   try {
     accessGrant = await prisma.credentialAccessGrant.findFirst({
-      where: {
-        email: user.email,
-        revokedAt: null,
-      },
+      where: { email: user.email, revokedAt: null },
       select: { id: true },
     })
     grantPermissions = await getGrantPermissions(user.email)
   } catch (error) {
     if (isMissingTableError(error)) {
-      console.warn('[Credentials] credential_access_grants table does not exist. Run prisma migrate deploy.')
-      if (!superAdmin) {
-        return (
-          <div className="flex min-h-[60vh] items-center justify-center">
-            <Card className="max-w-md p-12 text-center">
-              <AlertCircle className="mx-auto mb-4 h-16 w-16 text-amber-500" />
-              <h2 className="text-2xl font-bold">Setup Required</h2>
-              <p className="mt-2 text-slate-600">
-                The credentials vault tables have not been created yet.
-                Please run database migrations.
-              </p>
-            </Card>
-          </div>
-        )
-      }
+      console.warn('[Credentials] credential_access_grants table missing. Run prisma migrate deploy.')
+      grantsTableMissing = true
     } else {
-      throw error
+      // Unexpected error — log it, surface setup message to protect the page
+      console.error('[Credentials] Error querying access grants:', error)
+      grantsTableMissing = true
     }
+  }
+
+  // Non-super-admins need the grants table to exist
+  if (grantsTableMissing && !superAdmin) {
+    return <SetupRequired />
   }
 
   const canWrite = await hasPermission(user, 'credentials:write')
@@ -77,7 +85,7 @@ export default async function CredentialsPage() {
     )
   }
 
-  // Fetch credentials sorted by provider alphabetically
+  // ── Credential data fetch ─────────────────────────────────────────────────
   let credentials: {
     id: string
     serviceName: string
@@ -111,7 +119,6 @@ export default async function CredentialsPage() {
       prisma.serviceCredential.count(),
     ])
 
-    // Get unique providers for filter dropdown
     providersList = await prisma.serviceCredential.findMany({
       select: { serviceName: true },
       distinct: ['serviceName'],
@@ -119,26 +126,17 @@ export default async function CredentialsPage() {
     })
   } catch (error) {
     if (isMissingTableError(error)) {
-      console.warn('[Credentials] service_credentials table does not exist. Run prisma migrate deploy.')
-      if (!superAdmin) {
-        return (
-          <div className="flex min-h-[60vh] items-center justify-center">
-            <Card className="max-w-md p-12 text-center">
-              <AlertCircle className="mx-auto mb-4 h-16 w-16 text-amber-500" />
-              <h2 className="text-2xl font-bold">Setup Required</h2>
-              <p className="mt-2 text-slate-600">
-                The credentials vault tables have not been created yet.
-                Please run database migrations.
-              </p>
-            </Card>
-          </div>
-        )
-      }
+      console.warn('[Credentials] service_credentials table missing. Run prisma migrate deploy.')
+      if (!superAdmin) return <SetupRequired />
+      // Super admin: continue with empty state so they can at least see the page
     } else {
-      throw error
+      // Unexpected error — log and fall through with empty data rather than crashing
+      console.error('[Credentials] Error fetching credentials:', error)
     }
+    // credentials / totalCount / providersList stay as their empty defaults
   }
 
+  // ── Build display data ────────────────────────────────────────────────────
   const maskedCredentials = credentials.map((c) => ({
     ...c,
     password: '********',
@@ -147,9 +145,13 @@ export default async function CredentialsPage() {
     updatedAt: c.updatedAt.toISOString(),
   }))
 
-  const lastUpdated = credentials.length > 0
-    ? credentials.reduce((latest, c) => c.updatedAt > latest ? c.updatedAt : latest, credentials[0].updatedAt)
-    : null
+  const lastUpdated =
+    credentials.length > 0
+      ? credentials.reduce(
+          (latest, c) => (c.updatedAt > latest ? c.updatedAt : latest),
+          credentials[0].updatedAt
+        )
+      : null
 
   const now = Date.now()
   const expiredCount = credentials.filter((c) => {
@@ -181,16 +183,16 @@ export default async function CredentialsPage() {
             <div>
               <p className="text-sm text-slate-600">Last Updated</p>
               <p className="text-2xl font-bold">
-                {lastUpdated
-                  ? new Date(lastUpdated).toLocaleDateString()
-                  : 'Never'}
+                {lastUpdated ? new Date(lastUpdated).toLocaleDateString() : 'Never'}
               </p>
             </div>
           </div>
         </Card>
         <Card className={`p-4 ${expiredCount > 0 ? 'border-red-200 bg-red-50' : ''}`}>
           <div className="flex items-center gap-3">
-            <AlertTriangle className={`h-8 w-8 ${expiredCount > 0 ? 'text-red-500' : 'text-green-600'}`} />
+            <AlertTriangle
+              className={`h-8 w-8 ${expiredCount > 0 ? 'text-red-500' : 'text-green-600'}`}
+            />
             <div>
               <p className="text-sm text-slate-600">Passwords 90+ Days</p>
               <p className={`text-2xl font-bold ${expiredCount > 0 ? 'text-red-600' : ''}`}>
@@ -207,7 +209,11 @@ export default async function CredentialsPage() {
         accessLevel={canWrite ? 'write' : 'read'}
         canWrite={canWrite}
         isSuperAdmin={superAdmin}
-        grantPermissions={superAdmin ? { canView: true, canAdd: true, canEdit: true, canDelete: true, canUpload: true } : grantPermissions}
+        grantPermissions={
+          superAdmin
+            ? { canView: true, canAdd: true, canEdit: true, canDelete: true, canUpload: true }
+            : grantPermissions
+        }
         providers={providersList.map((p) => p.serviceName)}
       />
     </div>
