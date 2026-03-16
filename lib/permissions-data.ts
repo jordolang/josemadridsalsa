@@ -90,6 +90,12 @@ export const permissionDefinitions: PermissionDefinition[] = [
   { name: 'ai:view-training', description: 'View AI training data', category: 'AI_TRAINING' },
   { name: 'ai:manage-training', description: 'Manage AI training data', category: 'AI_TRAINING' },
   { name: 'ai:view-analytics', description: 'View AI chat analytics', category: 'AI_TRAINING' },
+
+  // Fundraiser Portal
+  { name: 'fundraiser:view-dashboard', description: 'View own fundraiser dashboard', category: 'FUNDRAISER_PORTAL' },
+  { name: 'fundraiser:edit-page', description: 'Edit fundraiser profile page', category: 'FUNDRAISER_PORTAL' },
+  { name: 'fundraiser:upload-assets', description: 'Upload logo, cover photo, gallery', category: 'FUNDRAISER_PORTAL' },
+  { name: 'fundraiser:view-analytics', description: 'View own fundraiser analytics', category: 'FUNDRAISER_PORTAL' },
 ] as const
 
 export const defaultRolePermissions: Record<UserRole, string[]> = {
@@ -122,6 +128,12 @@ export const defaultRolePermissions: Record<UserRole, string[]> = {
   ],
   CUSTOMER: [],
   WHOLESALE: [],
+  FUNDRAISER: [
+    'fundraiser:view-dashboard',
+    'fundraiser:edit-page',
+    'fundraiser:upload-assets',
+    'fundraiser:view-analytics',
+  ],
 }
 
 export function fallbackPermissionsFor(role: UserRole): string[] {

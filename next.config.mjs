@@ -58,6 +58,12 @@ const nextConfig = {
         port: '',
         pathname: '/s2/favicons/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'utfs.io',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   // React Email packages need to be external for server components

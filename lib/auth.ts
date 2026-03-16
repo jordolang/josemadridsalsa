@@ -130,12 +130,28 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger }) {
       try {
         console.log('[JWT Callback] Trigger:', trigger || 'initial')
-        
+
         // On sign in, add user data to token
         if (user) {
           console.log('[JWT Callback] Sign in - User:', user.email, 'Role:', (user as any).role)
           token.id = (user as any).id
           token.role = (user as any).role
+
+          // For fundraiser users, store their fundraiserId in the token
+          if ((user as any).role === 'FUNDRAISER') {
+            try {
+              const prisma = await getPrisma()
+              const fundraiserAccount = await prisma.fundraiserAccount.findUnique({
+                where: { userId: (user as any).id },
+                select: { fundraiserId: true },
+              })
+              if (fundraiserAccount) {
+                token.fundraiserId = fundraiserAccount.fundraiserId
+              }
+            } catch (faError) {
+              console.error('[JWT Callback] Error fetching fundraiser account:', faError)
+            }
+          }
         }
 
         // Only fetch from DB if token is missing critical data and we have an email
@@ -172,6 +188,9 @@ export const authOptions: NextAuthOptions = {
         if (session.user) {
           ;(session.user as any).id = token.id as string
           ;(session.user as any).role = token.role as string
+          if (token.fundraiserId) {
+            ;(session.user as any).fundraiserId = token.fundraiserId as string
+          }
           console.log('[Session Callback] Session user role:', (session.user as any).role)
         }
         return session
