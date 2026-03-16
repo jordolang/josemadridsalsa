@@ -1,5 +1,5 @@
-import { google, analyticsdata_v1beta } from 'googleapis'
-import type { JWT } from 'google-auth-library'
+import { BetaAnalyticsDataClient } from '@google-analytics/data'
+import type { protos } from '@google-analytics/data'
 import type { AnalyticsRangeKey } from '@/lib/analytics/date-range'
 import { getDateRange, formatDateForAnalytics } from '@/lib/analytics/date-range'
 import { getGoogleAnalyticsSettings } from '@/lib/google-analytics-config'
@@ -10,8 +10,6 @@ import type {
   GoogleAnalyticsDashboardData,
   GoogleAnalyticsSummaryCard,
 } from '@/types/analytics'
-
-const SCOPES = ['https://www.googleapis.com/auth/analytics.readonly']
 
 type GaServiceAccountSecret = {
   client_email?: string
@@ -33,9 +31,7 @@ const SUMMARY_METRICS: Array<{
   { metric: 'averageSessionDuration', label: 'Avg. session duration', format: 'duration', description: 'Average length of a visitor session.' },
 ]
 
-const analyticsDataClient = google.analyticsdata('v1beta')
-
-async function getAnalyticsAuth(): Promise<JWT | null> {
+async function getAnalyticsClient(): Promise<BetaAnalyticsDataClient | null> {
   const secret = await getDecryptedServiceKeyValue('google_analytics', 'service_account')
 
   if (!secret) {
@@ -58,11 +54,13 @@ async function getAnalyticsAuth(): Promise<JWT | null> {
     return null
   }
 
-  return new google.auth.JWT({
-    email: clientEmail,
-    key: privateKey,
-    scopes: SCOPES,
-    subject: parsed.impersonated_user || undefined,
+  // Impersonation and custom scopes are not needed for the current use case;
+  // service account credentials with GA4 Data API access are sufficient.
+  return new BetaAnalyticsDataClient({
+    credentials: {
+      client_email: clientEmail,
+      private_key: privateKey,
+    },
   })
 }
 
@@ -110,30 +108,29 @@ function formatDateDimension(value: string) {
 
 async function runReport({
   propertyId,
-  auth,
-  requestBody,
+  client,
+  request,
 }: {
   propertyId: string
-  auth: JWT
-  requestBody: analyticsdata_v1beta.Schema$RunReportRequest
+  client: BetaAnalyticsDataClient
+  request: protos.google.analytics.data.v1beta.IRunReportRequest
 }) {
   const property = normalizePropertyId(propertyId)
   if (!property) {
     throw new Error('Google Analytics property ID is missing')
   }
 
-  const response = await analyticsDataClient.properties.runReport({
+  const [response] = await client.runReport({
+    ...request,
     property,
-    auth,
-    requestBody,
   })
 
-  return response.data
+  return response
 }
 
-async function fetchSummaryCards(propertyId: string, range: AnalyticsRangeKey, auth: JWT): Promise<GoogleAnalyticsSummaryCard[]> {
+async function fetchSummaryCards(propertyId: string, range: AnalyticsRangeKey, client: BetaAnalyticsDataClient): Promise<GoogleAnalyticsSummaryCard[]> {
   const { start, end } = getDateRange(range)
-  const requestBody: analyticsdata_v1beta.Schema$RunReportRequest = {
+  const request: protos.google.analytics.data.v1beta.IRunReportRequest = {
     dateRanges: [
       {
         startDate: formatDateForAnalytics(start),
@@ -143,7 +140,7 @@ async function fetchSummaryCards(propertyId: string, range: AnalyticsRangeKey, a
     metrics: SUMMARY_METRICS.map((item) => ({ name: item.metric })),
   }
 
-  const report = await runReport({ propertyId, auth, requestBody })
+  const report = await runReport({ propertyId, client, request })
   const row = report.rows?.[0]
 
   return SUMMARY_METRICS.map((metricConfig, index) => {
@@ -162,7 +159,7 @@ async function fetchSummaryCards(propertyId: string, range: AnalyticsRangeKey, a
   })
 }
 
-function buildOrderBys(definition: GoogleAnalyticsChartDefinition): analyticsdata_v1beta.Schema$OrderBy[] | undefined {
+function buildOrderBys(definition: GoogleAnalyticsChartDefinition): protos.google.analytics.data.v1beta.IOrderBy[] | undefined {
   if (definition.dimension === 'date') {
     return [
       {
@@ -184,7 +181,7 @@ function buildOrderBys(definition: GoogleAnalyticsChartDefinition): analyticsdat
   ]
 }
 
-function toChartPoints(definition: GoogleAnalyticsChartDefinition, rows: analyticsdata_v1beta.Schema$Row[] | undefined) {
+function toChartPoints(definition: GoogleAnalyticsChartDefinition, rows: protos.google.analytics.data.v1beta.IRow[] | null | undefined) {
   if (!rows) {
     return { points: [], total: 0 }
   }
@@ -205,7 +202,7 @@ async function fetchCustomCharts(
   definitions: GoogleAnalyticsChartDefinition[],
   propertyId: string,
   range: AnalyticsRangeKey,
-  auth: JWT
+  client: BetaAnalyticsDataClient
 ): Promise<GoogleAnalyticsChartResult[]> {
   if (definitions.length === 0) {
     return []
@@ -226,7 +223,7 @@ async function fetchCustomCharts(
             ? definition.limit
             : 10
 
-      const requestBody: analyticsdata_v1beta.Schema$RunReportRequest = {
+      const request: protos.google.analytics.data.v1beta.IRunReportRequest = {
         dateRanges: [dateRange],
         metrics: [{ name: definition.metric }],
         dimensions: [{ name: definition.dimension }],
@@ -235,7 +232,7 @@ async function fetchCustomCharts(
         limit: String(limit),
       }
 
-      const report = await runReport({ propertyId, auth, requestBody })
+      const report = await runReport({ propertyId, client, request })
       const { points, total } = toChartPoints(definition, report.rows)
 
       return {
@@ -279,8 +276,8 @@ export async function getGoogleAnalyticsDashboard(range: AnalyticsRangeKey): Pro
     }
   }
 
-  const auth = await getAnalyticsAuth()
-  if (!auth) {
+  const client = await getAnalyticsClient()
+  if (!client) {
     return {
       isConfigured: false,
       status: 'missing-credentials',
@@ -293,8 +290,8 @@ export async function getGoogleAnalyticsDashboard(range: AnalyticsRangeKey): Pro
 
   try {
     const [summaryCards, charts] = await Promise.all([
-      fetchSummaryCards(settings.propertyId, range, auth),
-      fetchCustomCharts(settings.chartDefinitions, settings.propertyId, range, auth),
+      fetchSummaryCards(settings.propertyId, range, client),
+      fetchCustomCharts(settings.chartDefinitions, settings.propertyId, range, client),
     ])
 
     return {

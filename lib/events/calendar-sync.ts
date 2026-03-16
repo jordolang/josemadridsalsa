@@ -1,4 +1,5 @@
-import { google } from 'googleapis'
+import { calendar_v3 } from '@googleapis/calendar'
+import { OAuth2Client } from 'google-auth-library'
 import { prisma } from '@/lib/prisma'
 import { getDecryptedServiceKeyValue } from '@/lib/service-keys'
 
@@ -23,13 +24,13 @@ export async function syncGoogleCalendar(): Promise<{
       throw new Error('Google Calendar not connected')
     }
 
-    const auth = new google.auth.OAuth2()
-    auth.setCredentials({
+    const oauth2Client = new OAuth2Client()
+    oauth2Client.setCredentials({
       access_token: accessToken,
       refresh_token: refreshToken,
     })
 
-    const calendar = google.calendar({ version: 'v3', auth })
+    const calendar = new calendar_v3.Calendar({ auth: oauth2Client })
 
     const now = new Date()
     const oneYearFromNow = new Date()
