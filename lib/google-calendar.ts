@@ -1,5 +1,6 @@
-import { google } from 'googleapis';
-import type { calendar_v3 } from 'googleapis';
+import { calendar } from '@googleapis/calendar';
+import { JWT } from 'google-auth-library';
+import type { calendar_v3 } from '@googleapis/calendar';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
 const CACHE_TTL_MS = 1000 * 60 * 5;
@@ -36,7 +37,7 @@ function createServiceAccountClient() {
     );
   }
 
-  return new google.auth.JWT({
+  return new JWT({
     email: clientEmail,
     key: privateKey,
     scopes: SCOPES,
@@ -96,8 +97,8 @@ export async function getUpcomingScheduleEvents(
 
   const authClient = getCachedClient();
 
-  const calendar = google.calendar({ version: 'v3', auth: authClient });
-  const response = await calendar.events.list({
+  const calendarClient = calendar({ version: 'v3', auth: authClient });
+  const response = await calendarClient.events.list({
     calendarId,
     maxResults: limit,
     singleEvents: true,

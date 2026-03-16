@@ -1,10 +1,40 @@
 {
-  "name": "Development Container",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "name": "josemadrid-salsa",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
   "features": {
-    "ghcr.io/wandb/catnip/feature:1": {}
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-  "forwardPorts": [
-    6369
-  ]
+  "forwardPorts": [3000, 5555],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js Dev Server",
+      "onAutoForward": "notify"
+    },
+    "5555": {
+      "label": "Prisma Studio",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "npm install && npx prisma generate",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "Prisma.prisma",
+        "ms-vscode.vscode-typescript-next",
+        "GitHub.copilot"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "typescript.preferences.importModuleSpecifier": "non-relative"
+      }
+    }
+  },
+  "remoteUser": "node"
 }

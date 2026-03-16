@@ -107,6 +107,12 @@ export const adminNavigation: NavItem[] = [
     permission: 'analytics:read',
   },
   {
+    label: 'Growth Dashboard',
+    href: '/admin/growth',
+    icon: 'TrendingUp',
+    permission: 'analytics:read',
+  },
+  {
     label: 'Project Status',
     href: '/admin/project-status',
     icon: 'Activity',
@@ -192,12 +198,6 @@ export const adminNavigation: NavItem[] = [
     permission: 'users:read',
   },
   {
-    label: 'Credentials',
-    href: '/admin/credentials',
-    icon: 'KeyRound',
-    permission: 'settings:read',
-  },
-  {
     label: 'Settings',
     href: '/admin/settings',
     icon: 'Settings',
@@ -224,6 +224,12 @@ export const adminNavigation: NavItem[] = [
         permission: 'settings:read',
       },
     ],
+  },
+  {
+    label: 'Credentials',
+    href: '/admin/credentials',
+    icon: 'Lock',
+    permission: 'credentials:read',
   },
 ]
 

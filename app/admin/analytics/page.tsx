@@ -25,6 +25,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { RevenueChart } from '@/components/admin/RevenueChart'
+import { PopularProducts } from '@/components/admin/PopularProducts'
 import { formatPrice } from '@/lib/utils'
 import {
   addGoogleAnalyticsChartDefinition,
@@ -57,6 +59,9 @@ type TopProduct = {
   orders: number
   quantity: number
   revenue: number
+  sku: string
+  imageUrl: string | null
+  heatLevel: string | null
 }
 
 type CountRecord = {
@@ -271,7 +276,7 @@ async function getAnalyticsData(range: AnalyticsRangeKey): Promise<AnalyticsOver
       orderBy: {
         _sum: { totalPrice: 'desc' },
       },
-      take: 5,
+      take: 10,
     }),
     prisma.analytics.groupBy({
       by: ['page'],
@@ -357,13 +362,29 @@ async function getAnalyticsData(range: AnalyticsRangeKey): Promise<AnalyticsOver
 
   const chart = Array.from(dayBuckets.values()).sort((a, b) => (a.date < b.date ? -1 : 1))
 
-  const topProducts: TopProduct[] = topProductsRaw.map((item) => ({
-    productId: item.productId,
-    name: item.productName,
-    orders: extractCount(item._count),
-    quantity: extractSum(item._sum, 'quantity'),
-    revenue: extractSum(item._sum, 'totalPrice'),
-  }))
+  // Fetch product details for images, SKU, and heat level
+  const productIds = topProductsRaw.map((item) => item.productId)
+  const productDetails = productIds.length > 0
+    ? await prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, sku: true, heatLevel: true, featuredImage: true },
+      })
+    : []
+  const productDetailsMap = new Map(productDetails.map((p) => [p.id, p]))
+
+  const topProducts: TopProduct[] = topProductsRaw.map((item) => {
+    const details = productDetailsMap.get(item.productId)
+    return {
+      productId: item.productId,
+      name: item.productName,
+      orders: extractCount(item._count),
+      quantity: extractSum(item._sum, 'quantity'),
+      revenue: extractSum(item._sum, 'totalPrice'),
+      sku: details?.sku ?? '',
+      imageUrl: details?.featuredImage ?? null,
+      heatLevel: details?.heatLevel ?? null,
+    }
+  })
 
   const topPages: CountRecord[] = topPagesRaw
     .sort((a, b) => extractCount(b._count) - extractCount(a._count))
@@ -934,6 +955,15 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         />
       </div>
 
+      {/* Revenue Chart */}
+      <RevenueChart
+        data={data.chart.map((point) => ({
+          month: point.label,
+          revenue: point.revenue,
+          expenses: 0,
+        }))}
+      />
+
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <Card className="p-6">
           <div className="mb-4 flex items-center justify-between">
@@ -1029,11 +1059,24 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         </Card>
       </div>
 
+      {/* Popular Products Component */}
+      <PopularProducts
+        products={data.topProducts.map((product) => ({
+          id: product.productId,
+          name: product.name,
+          sku: product.sku,
+          imageUrl: product.imageUrl,
+          totalSold: product.quantity,
+          revenue: product.revenue,
+          heatLevel: product.heatLevel,
+        }))}
+      />
+
       <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Top Products</h2>
+              <h2 className="text-xl font-semibold">Top Products Detail</h2>
               <p className="text-sm text-slate-600">Based on revenue for this range</p>
             </div>
             {data.topProducts.length > 0 && (

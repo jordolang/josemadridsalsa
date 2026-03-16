@@ -82,6 +82,10 @@ export const permissionDefinitions: PermissionDefinition[] = [
   { name: 'seo:manage', description: 'Manage SEO configuration', category: 'SEO' },
   { name: 'seo:analyze', description: 'Run SEO analysis', category: 'SEO' },
 
+  // Credentials
+  { name: 'credentials:read', description: 'View credentials', category: 'CREDENTIALS' },
+  { name: 'credentials:write', description: 'Create and update credentials', category: 'CREDENTIALS' },
+
   // AI Training
   { name: 'ai:view-training', description: 'View AI training data', category: 'AI_TRAINING' },
   { name: 'ai:manage-training', description: 'Manage AI training data', category: 'AI_TRAINING' },

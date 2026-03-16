@@ -1,94 +1,171 @@
 import { NextRequest } from 'next/server'
-import prisma from '@/lib/prisma'
-import { requireCredentialAccess } from '@/lib/credentials-access'
-import { encryptValue, decryptValue } from '@/lib/credentials-crypto'
-import { ok, fail, forbidden, unauthorized, serverError } from '@/lib/api'
+import { prisma } from '@/lib/prisma'
+import { requirePermission } from '@/lib/rbac'
+import { ok, fail, parseSearch } from '@/lib/api'
 import { logAudit } from '@/lib/audit'
+import { checkCredentialAccess, encryptCredentialPassword } from '@/lib/credentials'
 import { z } from 'zod'
 
 const credentialSchema = z.object({
-  serviceName: z.string().min(1).max(200),
-  label: z.string().min(1).max(200),
-  username: z.string().max(500).nullable().optional(),
-  value: z.string().min(1), // plaintext — will be encrypted before storage
-  url: z.string().url().max(2000).nullable().optional().or(z.literal('')),
-  notes: z.string().max(5000).nullable().optional(),
+  serviceName: z.string().min(1, 'Service name is required'),
+  label: z.string().min(1, 'Label is required'),
+  username: z.string().optional(),
+  password: z.string().optional(),
+  url: z.string().url().optional(),
+  notes: z.string().optional(),
 })
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const user = await requireCredentialAccess()
-    if (!user) return forbidden('Not Permitted')
+    const currentUser = await requirePermission('credentials:read')
 
-    const credentials = await prisma.serviceCredential.findMany({
-      orderBy: [{ serviceName: 'asc' }, { label: 'asc' }],
-    })
+    const accessLevel = await checkCredentialAccess(currentUser.email, currentUser.role)
+    if (!accessLevel) {
+      return fail('Forbidden - no credential access grant', 403)
+    }
 
-    const decrypted = credentials.map((c) => {
-      try {
-        return {
-          id: c.id,
-          serviceName: c.serviceName,
-          label: c.label,
-          username: c.username,
-          value: decryptValue(c.encValue, c.encIv, c.encTag),
-          url: c.url,
-          notes: c.notes,
-          createdAt: c.createdAt,
-          updatedAt: c.updatedAt,
-        }
-      } catch {
-        return {
-          id: c.id,
-          serviceName: c.serviceName,
-          label: c.label,
-          username: c.username,
-          value: '[DECRYPTION ERROR]',
-          url: c.url,
-          notes: c.notes,
-          createdAt: c.createdAt,
-          updatedAt: c.updatedAt,
-        }
+    const search = parseSearch(req)
+    const url = new URL(req.url)
+    const sortBy = url.searchParams.get('sortBy') || 'serviceName'
+    const sortOrder = (url.searchParams.get('sortOrder') || 'asc') as 'asc' | 'desc'
+    const providerFilter = url.searchParams.get('provider') || ''
+    const passwordAgeMin = url.searchParams.get('passwordAgeMin')
+    const passwordAgeMax = url.searchParams.get('passwordAgeMax')
+
+    const where: any = {}
+
+    if (search) {
+      where.OR = [
+        { serviceName: { contains: search, mode: 'insensitive' } },
+        { label: { contains: search, mode: 'insensitive' } },
+        { username: { contains: search, mode: 'insensitive' } },
+      ]
+    }
+
+    if (providerFilter) {
+      where.serviceName = { equals: providerFilter, mode: 'insensitive' }
+    }
+
+    // Password age filtering
+    if (passwordAgeMin || passwordAgeMax) {
+      where.AND = where.AND || []
+      const now = new Date()
+      if (passwordAgeMin) {
+        const minDate = new Date(now.getTime() - parseInt(passwordAgeMin) * 86400000)
+        where.AND.push({
+          OR: [
+            { passwordChangedAt: { lte: minDate } },
+            { passwordChangedAt: null, createdAt: { lte: minDate } },
+          ],
+        })
       }
+      if (passwordAgeMax) {
+        const maxDate = new Date(now.getTime() - parseInt(passwordAgeMax) * 86400000)
+        where.AND.push({
+          OR: [
+            { passwordChangedAt: { gte: maxDate } },
+            { passwordChangedAt: null, createdAt: { gte: maxDate } },
+          ],
+        })
+      }
+    }
+
+    // Map frontend sort field to Prisma field
+    const orderByField = sortBy === 'provider' ? 'serviceName' : sortBy
+    const validSortFields = ['serviceName', 'label', 'username', 'createdAt', 'updatedAt', 'passwordChangedAt']
+    const orderField = validSortFields.includes(orderByField) ? orderByField : 'serviceName'
+
+    const [credentials, total] = await Promise.all([
+      prisma.serviceCredential.findMany({
+        where,
+        orderBy: { [orderField]: sortOrder },
+        select: {
+          id: true,
+          serviceName: true,
+          label: true,
+          username: true,
+          encValue: true,
+          url: true,
+          notes: true,
+          createdById: true,
+          updatedById: true,
+          passwordChangedAt: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.serviceCredential.count({ where }),
+    ])
+
+    const masked = credentials.map(({ encValue, ...c }) => ({
+      ...c,
+      password: '********',
+      hasPassword: encValue !== '',
+      accessLevel,
+    }))
+
+    // Get unique providers for filter dropdown
+    const providers = await prisma.serviceCredential.findMany({
+      select: { serviceName: true },
+      distinct: ['serviceName'],
+      orderBy: { serviceName: 'asc' },
     })
 
-    return ok({ credentials: decrypted })
+    return ok({
+      credentials: masked,
+      total,
+      providers: providers.map((p) => p.serviceName),
+    })
   } catch (error: any) {
-    console.error('[Credentials API] GET error:', error)
-    return serverError('Failed to load credentials')
+    return fail(error.message, error.status)
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireCredentialAccess()
-    if (!user) return forbidden('Not Permitted')
+    const currentUser = await requirePermission('credentials:write')
+
+    const accessLevel = await checkCredentialAccess(currentUser.email, currentUser.role)
+    if (accessLevel !== 'write') {
+      return fail('Forbidden - write access required', 403)
+    }
 
     const body = await req.json()
     const data = credentialSchema.parse(body)
 
-    const { encValue, encIv, encTag } = encryptValue(data.value)
+    const encFields = data.password
+      ? encryptCredentialPassword(data.password)
+      : { encValue: '', encIv: '', encTag: '' }
+
+    const now = new Date()
 
     const credential = await prisma.serviceCredential.create({
       data: {
         serviceName: data.serviceName,
         label: data.label,
-        username: data.username ?? null,
-        encValue,
-        encIv,
-        encTag,
+        username: data.username || null,
+        encValue: encFields.encValue,
+        encIv: encFields.encIv,
+        encTag: encFields.encTag,
         url: data.url || null,
-        notes: data.notes ?? null,
-        createdById: user.id,
+        notes: data.notes || null,
+        createdById: currentUser.id,
+        passwordChangedAt: data.password ? now : null,
       },
     })
 
     await logAudit({
-      userId: user.id,
+      userId: currentUser.id,
       action: 'CREATE',
       entityType: 'ServiceCredential',
       entityId: credential.id,
-      changes: { serviceName: data.serviceName, label: data.label },
+      changes: {
+        serviceName: data.serviceName,
+        label: data.label,
+        username: data.username || null,
+        url: data.url || null,
+        hasPassword: !!data.password,
+      },
     })
 
     return ok(
@@ -98,9 +175,10 @@ export async function POST(req: NextRequest) {
           serviceName: credential.serviceName,
           label: credential.label,
           username: credential.username,
-          value: data.value,
+          password: '********',
           url: credential.url,
           notes: credential.notes,
+          passwordChangedAt: credential.passwordChangedAt,
           createdAt: credential.createdAt,
           updatedAt: credential.updatedAt,
         },
@@ -108,10 +186,6 @@ export async function POST(req: NextRequest) {
       201
     )
   } catch (error: any) {
-    if (error.name === 'ZodError') {
-      return fail('Validation error: ' + error.errors.map((e: any) => e.message).join(', '), 400)
-    }
-    console.error('[Credentials API] POST error:', error)
-    return serverError('Failed to create credential')
+    return fail(error.message, 400)
   }
 }

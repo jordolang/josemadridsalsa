@@ -3,14 +3,31 @@
  * José Madrid Salsa E-commerce Platform
  */
 
+import {
+  getShippingRates,
+  type ShipmentRequest,
+  type ShippingAddress,
+  type Parcel,
+} from './shipping-api'
+import { prisma } from './prisma'
+
 export interface ShippingCalculationInput {
   /** Items in the order */
   items: Array<{
     weight?: number // Weight in pounds
+    dimensions?: {
+      // Dimensions in inches
+      length?: number
+      width?: number
+      height?: number
+    }
     quantity: number
   }>
   /** Shipping address */
   shippingAddress: {
+    line1?: string
+    line2?: string
+    city?: string
     state: string
     postalCode: string
     country: string
@@ -32,6 +49,8 @@ export interface ShippingCalculationResult {
     cost: number
     estimatedDays: string
   }>
+  /** Flag indicating if fallback estimate rates were used */
+  fallback?: boolean
 }
 
 /**
@@ -76,25 +95,170 @@ const SHIPPING_RATES = {
 }
 
 /**
- * Calculate shipping cost for an order
- *
- * Strategy:
- * 1. Free shipping over threshold
- * 2. International shipping for non-US
- * 3. Flat rate for domestic orders
- * 4. Apply state multipliers for remote locations
+ * Default origin address for shipping calculations
+ * TODO: Make this configurable in admin settings
  */
-export function calculateShipping(
-  input: ShippingCalculationInput
+const DEFAULT_ORIGIN_ADDRESS: ShippingAddress = {
+  street1: process.env.SHIPPING_ORIGIN_ADDRESS || '123 Main St',
+  city: process.env.SHIPPING_ORIGIN_CITY || 'San Francisco',
+  state: process.env.SHIPPING_ORIGIN_STATE || 'CA',
+  zip: process.env.SHIPPING_ORIGIN_ZIP || '94111',
+  country: 'US',
+}
+
+/**
+ * Detect if an address is a PO Box
+ *
+ * PO Boxes have delivery restrictions - only USPS can deliver to them.
+ * UPS, FedEx, and other carriers cannot deliver to PO Boxes.
+ *
+ * @param address Address line to check
+ * @returns True if address appears to be a PO Box
+ */
+function isPOBox(address: string | undefined): boolean {
+  if (!address) return false
+
+  const normalizedAddress = address.toUpperCase().replace(/\./g, '')
+
+  // Common PO Box patterns
+  const poBoxPatterns = [
+    /\bP\s*O\s+BOX\b/,           // PO BOX, P.O. BOX, P O BOX
+    /\bPO\s+BOX\b/,              // PO BOX
+    /\bPOST\s+OFFICE\s+BOX\b/,  // POST OFFICE BOX
+    /\bP\s*O\s*B\b/,             // POB, P.O.B
+    /\bBOX\s+\d+/,               // BOX 123 (when at start of address)
+  ]
+
+  return poBoxPatterns.some(pattern => pattern.test(normalizedAddress))
+}
+
+/**
+ * Detect if an address is likely residential vs commercial
+ *
+ * This is a heuristic check - real carrier APIs do more sophisticated detection.
+ * Residential addresses may have different rates than commercial addresses.
+ *
+ * @param address Shipping address to check
+ * @returns 'residential' | 'commercial' | 'unknown'
+ */
+function detectAddressType(address: {
+  line1?: string
+  line2?: string
+  company?: string
+}): 'residential' | 'commercial' | 'unknown' {
+  // If company name provided, likely commercial
+  if (address.company) {
+    return 'commercial'
+  }
+
+  // Check for common commercial indicators
+  const fullAddress = `${address.line1 || ''} ${address.line2 || ''}`.toUpperCase()
+
+  const commercialIndicators = [
+    /\bSUITE\b/,
+    /\bSTE\b/,
+    /\b#\s*\d+/,     // Suite numbers
+    /\bFLOOR\b/,
+    /\bBLDG\b/,
+    /\bUNIT\b/,
+  ]
+
+  const hasCommercialIndicator = commercialIndicators.some(pattern =>
+    pattern.test(fullAddress)
+  )
+
+  if (hasCommercialIndicator) {
+    return 'commercial'
+  }
+
+  // Default to residential for safety (residential rates typically higher)
+  return 'residential'
+}
+
+/**
+ * Get free shipping threshold from database settings
+ *
+ * Fetches the configurable free shipping threshold from ShippingSettings
+ * Falls back to default value if settings don't exist
+ *
+ * Following error handling pattern from lib/tax-calculator.ts
+ */
+async function getFreeShippingThreshold(): Promise<number> {
+  try {
+    const settings = await prisma.shippingSettings.findFirst({
+      orderBy: { createdAt: 'desc' },
+      select: { freeShippingThreshold: true },
+    })
+
+    if (settings?.freeShippingThreshold) {
+      return parseFloat(settings.freeShippingThreshold.toString())
+    }
+
+    // Return default if no settings found
+    return SHIPPING_RATES.FREE_SHIPPING_THRESHOLD
+  } catch (error) {
+    console.error('[Shipping Calculator] Error fetching free shipping threshold:', error)
+
+    // Return default threshold to not block checkout
+    return SHIPPING_RATES.FREE_SHIPPING_THRESHOLD
+  }
+}
+
+/**
+ * Calculate parcel dimensions from order items
+ *
+ * Simple aggregation strategy for MVP - sums dimensions
+ * Future: Implement bin packing algorithm for optimal box selection
+ */
+function calculateParcelDimensions(
+  items: ShippingCalculationInput['items']
+): Parcel {
+  let totalWeight = 0
+  let maxLength = 0
+  let maxWidth = 0
+  let totalHeight = 0
+
+  for (const item of items) {
+    // Weight in pounds -> convert to ounces
+    const itemWeight = (item.weight || 1.0) * 16 // Default 1 lb = 16 oz
+    totalWeight += itemWeight * item.quantity
+
+    // Dimensions - use defaults if not provided
+    const dims = item.dimensions || { length: 10, width: 8, height: 2 }
+
+    // Simple box aggregation: max length/width, sum heights
+    maxLength = Math.max(maxLength, dims.length || 10)
+    maxWidth = Math.max(maxWidth, dims.width || 8)
+    totalHeight += (dims.height || 2) * item.quantity
+  }
+
+  return {
+    length: maxLength,
+    width: maxWidth,
+    height: Math.min(totalHeight, 24), // Cap at 24 inches
+    weight: totalWeight,
+  }
+}
+
+/**
+ * Fallback shipping calculation using estimate-based rates
+ *
+ * Used when API is unavailable to ensure checkout is never blocked
+ */
+function calculateEstimateRates(
+  input: ShippingCalculationInput,
+  freeShippingThreshold: number,
+  markAsFallback = false
 ): ShippingCalculationResult {
   const { items, shippingAddress, subtotal } = input
 
   // Free shipping for orders over threshold
-  if (subtotal >= SHIPPING_RATES.FREE_SHIPPING_THRESHOLD) {
+  if (subtotal >= freeShippingThreshold) {
     return {
       shippingCost: 0,
       shippingMethod: 'Free Shipping',
       estimatedDelivery: SHIPPING_RATES.FLAT_RATE.estimatedDays,
+      fallback: markAsFallback,
     }
   }
 
@@ -104,8 +268,12 @@ export function calculateShipping(
       shippingCost: SHIPPING_RATES.INTERNATIONAL.cost,
       shippingMethod: 'International Shipping',
       estimatedDelivery: SHIPPING_RATES.INTERNATIONAL.estimatedDays,
+      fallback: markAsFallback,
     }
   }
+
+  // Check if destination is a PO Box
+  const isPoBox = isPOBox(shippingAddress.line1) || isPOBox(shippingAddress.line2)
 
   // Calculate total weight
   const totalWeight = items.reduce((sum, item) => {
@@ -131,11 +299,34 @@ export function calculateShipping(
 
   const finalCost = baseCost * stateMultiplier
 
-  return {
-    shippingCost: parseFloat(finalCost.toFixed(2)),
-    shippingMethod: 'Standard Shipping',
-    estimatedDelivery: SHIPPING_RATES.FLAT_RATE.estimatedDays,
-    availableOptions: [
+  // Build available options based on address type
+  const availableOptions = []
+
+  if (isPoBox) {
+    // PO Box - only USPS options
+    availableOptions.push(
+      {
+        method: 'USPS Ground Advantage',
+        cost: parseFloat(finalCost.toFixed(2)),
+        estimatedDays: SHIPPING_RATES.FLAT_RATE.estimatedDays,
+      },
+      {
+        method: 'USPS Priority Mail',
+        cost: parseFloat((finalCost * 1.5).toFixed(2)),
+        estimatedDays: '1-3 business days',
+      },
+      {
+        method: 'USPS Priority Mail Express',
+        cost:
+          SHIPPING_RATES.EXPRESS.cost * stateMultiplier > subtotal
+            ? 0
+            : parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2)),
+        estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
+      }
+    )
+  } else {
+    // Regular address - all carriers available
+    availableOptions.push(
       {
         method: 'Standard Shipping',
         cost: parseFloat(finalCost.toFixed(2)),
@@ -148,21 +339,161 @@ export function calculateShipping(
             ? 0
             : SHIPPING_RATES.EXPRESS.cost * stateMultiplier,
         estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
+      }
+    )
+  }
+
+  return {
+    shippingCost: availableOptions[0].cost,
+    shippingMethod: availableOptions[0].method,
+    estimatedDelivery: availableOptions[0].estimatedDays,
+    availableOptions,
+    fallback: markAsFallback,
+  }
+}
+
+/**
+ * Calculate shipping cost for an order using real carrier API
+ *
+ * Strategy:
+ * 1. Check free shipping threshold first
+ * 2. Call real carrier API for accurate rates
+ * 3. Return multiple shipping options (standard, expedited, express)
+ * 4. Fall back to estimate-based rates if API fails (never block checkout)
+ *
+ * Follows error handling pattern from lib/tax-calculator.ts
+ */
+export async function calculateShipping(
+  input: ShippingCalculationInput
+): Promise<ShippingCalculationResult> {
+  const { items, shippingAddress, subtotal } = input
+
+  // Get configurable free shipping threshold from database
+  const freeShippingThreshold = await getFreeShippingThreshold()
+
+  // Free shipping for orders over threshold (check first to avoid API call)
+  if (subtotal >= freeShippingThreshold) {
+    return {
+      shippingCost: 0,
+      shippingMethod: 'Free Shipping',
+      estimatedDelivery: SHIPPING_RATES.FLAT_RATE.estimatedDays,
+    }
+  }
+
+  // For international shipping, fall back to estimate rates for now
+  // TODO: Add international shipping API support
+  if (shippingAddress.country !== 'US') {
+    return calculateEstimateRates(input, freeShippingThreshold, false)
+  }
+
+  try {
+    // Calculate parcel dimensions from items
+    const parcel = calculateParcelDimensions(items)
+
+    // Build shipping API request
+    const shipmentRequest: ShipmentRequest = {
+      fromAddress: DEFAULT_ORIGIN_ADDRESS,
+      toAddress: {
+        street1: shippingAddress.line1 || '123 Main St', // Placeholder if not provided
+        street2: shippingAddress.line2,
+        city: shippingAddress.city || 'City',
+        state: shippingAddress.state,
+        zip: shippingAddress.postalCode,
+        country: shippingAddress.country,
       },
-    ],
+      parcel,
+    }
+
+    // Get real carrier rates from API
+    const ratesResponse = await getShippingRates(shipmentRequest)
+
+    // If API returned rates, use them
+    if (ratesResponse.rates.length > 0) {
+      // Check if destination is a PO Box
+      const isPoBox = isPOBox(shippingAddress.line1) || isPOBox(shippingAddress.line2)
+
+      // Filter rates based on address type
+      let filteredRates = ratesResponse.rates
+
+      if (isPoBox) {
+        // Only USPS can deliver to PO Boxes
+        filteredRates = ratesResponse.rates.filter((rate) =>
+          rate.carrier.toUpperCase().includes('USPS')
+        )
+
+        console.log('[Shipping Calculator] PO Box detected - filtering to USPS only')
+
+        // If no USPS rates available, fall back to estimates
+        if (filteredRates.length === 0) {
+          console.warn('[Shipping Calculator] No USPS rates available for PO Box, using estimates')
+          return calculateEstimateRates(input, freeShippingThreshold, true)
+        }
+      }
+
+      // Sort rates by cost (cheapest first)
+      const sortedRates = [...filteredRates].sort((a, b) => a.rate - b.rate)
+
+      // Map API rates to our format
+      const availableOptions = sortedRates.map((rate) => ({
+        method: `${rate.carrier} ${rate.service}`,
+        cost: rate.rate,
+        estimatedDays: rate.deliveryDays
+          ? `${rate.deliveryDays} business days`
+          : '3-5 business days',
+      }))
+
+      // Use cheapest rate as default
+      const cheapestRate = sortedRates[0]
+
+      return {
+        shippingCost: cheapestRate.rate,
+        shippingMethod: `${cheapestRate.carrier} ${cheapestRate.service}`,
+        estimatedDelivery: cheapestRate.deliveryDays
+          ? `${cheapestRate.deliveryDays} business days`
+          : '3-5 business days',
+        availableOptions,
+      }
+    } else {
+      // No rates returned - fall back to estimates
+      console.warn('[Shipping Calculator] No rates returned from API, using estimates')
+      return calculateEstimateRates(input, freeShippingThreshold, true)
+    }
+  } catch (error) {
+    console.error('[Shipping Calculator] Error calculating shipping:', error)
+
+    // For production: log error but return estimate rates to not block checkout
+    // You may want to enable monitoring alerts or notify admins
+    if (error instanceof Error) {
+      console.error('[Shipping Calculator] Error details:', error.message)
+
+      // Log specific error types for debugging
+      if (error.message.includes('API key') || error.message.includes('authentication')) {
+        console.error('[Shipping Calculator] Authentication error - check SHIPPING_API_KEY configuration')
+      } else if (error.message.includes('network') || error.message.includes('timeout')) {
+        console.error('[Shipping Calculator] Network error - carrier API may be unavailable')
+      }
+    }
+
+    console.warn('[Shipping Calculator] Falling back to estimate-based rates')
+
+    // Return estimate rates rather than failing checkout
+    return calculateEstimateRates(input, freeShippingThreshold, true)
   }
 }
 
 /**
  * Get shipping estimate for frontend preview
  */
-export function getShippingEstimate(params: {
+export async function getShippingEstimate(params: {
   subtotal: number
   state: string
   country?: string
-}): number {
+}): Promise<number> {
+  // Get configurable free shipping threshold from database
+  const freeShippingThreshold = await getFreeShippingThreshold()
+
   // Quick estimate without detailed item info
-  if (params.subtotal >= SHIPPING_RATES.FREE_SHIPPING_THRESHOLD) {
+  if (params.subtotal >= freeShippingThreshold) {
     return 0
   }
 

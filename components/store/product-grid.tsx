@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useMemo } from "react";
 import { ProductCard, type Product } from "./product-card";
 import { Button } from "@/components/ui/button";

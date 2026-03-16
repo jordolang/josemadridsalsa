@@ -4,6 +4,7 @@ import { EmailHeader } from './components/EmailHeader';
 import { EmailFooter } from './components/EmailFooter';
 import { OrderItemsTable, OrderItem } from './components/OrderItemsTable';
 import { Button } from './components/Button';
+import { bodyContent } from './styles';
 
 interface OrderConfirmationEmailProps {
   name?: string;
@@ -30,98 +31,100 @@ export const OrderConfirmationEmail = ({
 
   return (
     <EmailLayout previewText={previewText}>
-      <EmailHeader />
+      <EmailHeader headerImage="order-confirmed.png" headerAlt="Order Confirmed" />
 
-      {/* Greeting */}
-      <Section style={section}>
-        <Text style={heading}>
-          Order Confirmed!
-        </Text>
-        <Text style={paragraph}>
-          Hi {name},
-        </Text>
-        <Text style={paragraph}>
-          Thanks for your order! We&apos;re excited to get your delicious Jose Madrid Salsa on its way to you.
-        </Text>
-      </Section>
-
-      {/* Order Details */}
-      <Section style={orderDetailsSection}>
-        <Text style={sectionHeading}>
-          Order Details
-        </Text>
-        <Row style={detailRow}>
-          <Column style={detailLabel}>
-            <Text style={labelText}>Order Number:</Text>
-          </Column>
-          <Column style={detailValue}>
-            <Text style={valueText}>#{orderNumber}</Text>
-          </Column>
-        </Row>
-        <Row style={detailRow}>
-          <Column style={detailLabel}>
-            <Text style={labelText}>Order Date:</Text>
-          </Column>
-          <Column style={detailValue}>
-            <Text style={valueText}>{orderDate}</Text>
-          </Column>
-        </Row>
-        <Row style={detailRow}>
-          <Column style={detailLabel}>
-            <Text style={labelText}>Shipping:</Text>
-          </Column>
-          <Column style={detailValue}>
-            <Text style={valueText}>{shippingAddress}</Text>
-          </Column>
-        </Row>
-      </Section>
-
-      <Hr style={divider} />
-
-      {/* Order Items */}
-      <Section style={section}>
-        <Text style={sectionHeading}>
-          Order Items
-        </Text>
-        <OrderItemsTable items={items} />
-      </Section>
-
-      <Hr style={divider} />
-
-      {/* Order Total */}
-      <Section style={totalSection}>
-        <Row>
-          <Column style={totalLabel}>
-            <Text style={totalLabelText}>Total:</Text>
-          </Column>
-          <Column style={totalValue}>
-            <Text style={totalValueText}>{orderTotal}</Text>
-          </Column>
-        </Row>
-      </Section>
-
-      <Hr style={divider} />
-
-      {/* Tracking Link / Call to Action */}
-      {trackingLink && (
-        <Section style={ctaSection}>
-          <Text style={paragraph}>
-            Track your order or view your order history in your account.
+      <Section style={bodyContent}>
+        {/* Greeting */}
+        <Section style={section}>
+          <Text style={heading}>
+            Order Confirmed!
           </Text>
-          <Button href={trackingLink} variant="primary" size="medium">
-            Track Order
-          </Button>
+          <Text style={paragraph}>
+            Hi {name},
+          </Text>
+          <Text style={paragraph}>
+            Thanks for your order! We&apos;re excited to get your delicious Jose Madrid Salsa on its way to you.
+          </Text>
         </Section>
-      )}
 
-      {/* Support Message */}
-      <Section style={supportSection}>
-        <Text style={supportText}>
-          Questions about your order? We&apos;re here to help! Reply to this email or contact us at{' '}
-          <a href="mailto:orders@josemadridsalsa.com" style={link}>
-            orders@josemadridsalsa.com
-          </a>
-        </Text>
+        {/* Order Details */}
+        <Section style={orderDetailsSection}>
+          <Text style={sectionHeading}>
+            Order Details
+          </Text>
+          <Row style={detailRow}>
+            <Column style={detailLabel}>
+              <Text style={labelText}>Order Number:</Text>
+            </Column>
+            <Column style={detailValue}>
+              <Text style={valueText}>#{orderNumber}</Text>
+            </Column>
+          </Row>
+          <Row style={detailRow}>
+            <Column style={detailLabel}>
+              <Text style={labelText}>Order Date:</Text>
+            </Column>
+            <Column style={detailValue}>
+              <Text style={valueText}>{orderDate}</Text>
+            </Column>
+          </Row>
+          <Row style={detailRow}>
+            <Column style={detailLabel}>
+              <Text style={labelText}>Shipping:</Text>
+            </Column>
+            <Column style={detailValue}>
+              <Text style={valueText}>{shippingAddress}</Text>
+            </Column>
+          </Row>
+        </Section>
+
+        <Hr style={divider} />
+
+        {/* Order Items */}
+        <Section style={section}>
+          <Text style={sectionHeading}>
+            Order Items
+          </Text>
+          <OrderItemsTable items={items} />
+        </Section>
+
+        <Hr style={divider} />
+
+        {/* Order Total */}
+        <Section style={totalSection}>
+          <Row>
+            <Column style={totalLabel}>
+              <Text style={totalLabelText}>Total:</Text>
+            </Column>
+            <Column style={totalValue}>
+              <Text style={totalValueText}>{orderTotal}</Text>
+            </Column>
+          </Row>
+        </Section>
+
+        <Hr style={divider} />
+
+        {/* Tracking Link / Call to Action */}
+        {trackingLink && (
+          <Section style={ctaSection}>
+            <Text style={paragraph}>
+              Track your order or view your order history in your account.
+            </Text>
+            <Button href={trackingLink} variant="primary" size="medium">
+              Track Order
+            </Button>
+          </Section>
+        )}
+
+        {/* Support Message */}
+        <Section style={supportSection}>
+          <Text style={supportText}>
+            Questions about your order? We&apos;re here to help! Reply to this email or contact us at{' '}
+            <a href="mailto:orders@josemadridsalsa.com" style={link}>
+              orders@josemadridsalsa.com
+            </a>
+          </Text>
+        </Section>
       </Section>
 
       <EmailFooter unsubscribeUrl={unsubscribeUrl} />

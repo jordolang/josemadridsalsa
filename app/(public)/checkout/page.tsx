@@ -5,6 +5,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import {
   CardElement,
   Elements,
+  ExpressCheckoutElement,
   useElements,
   useStripe,
 } from '@stripe/react-stripe-js'
@@ -23,6 +24,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import Link from 'next/link'
+import { getReferralCodeFromCookie } from '@/lib/fundraising/referral-tracker.client'
 
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null
@@ -38,6 +40,12 @@ type CheckoutFormState = {
   state: string
   postalCode: string
   notes: string
+}
+
+type ShippingOption = {
+  method: string
+  cost: number
+  estimatedDays: string
 }
 
 const initialFormState: CheckoutFormState = {
@@ -124,6 +132,135 @@ function getPaymentErrorMessage(error: any): string {
   }
 }
 
+type ExpressCheckoutProps = {
+  items: any[]
+  formState: CheckoutFormState
+  total: number
+  onSuccess: () => void
+  onError: (message: string) => void
+}
+
+function ExpressCheckout({ items, formState, total, onSuccess, onError }: ExpressCheckoutProps) {
+  const stripe = useStripe()
+  const router = useRouter()
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  const handleExpressCheckoutConfirm = async (event: any) => {
+    if (!stripe || items.length === 0) {
+      return
+    }
+
+    setIsProcessing(true)
+
+    try {
+      // Extract shipping and billing details from the event
+      const shippingAddress = event.shippingAddress?.address
+      const billingDetails = event.billingDetails
+
+      // Create payment intent for express checkout
+      const checkoutResponse = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            productId: item.id,
+            quantity: item.quantity,
+          })),
+          customer: {
+            email: billingDetails?.email || formState.email || '',
+            firstName: billingDetails?.name?.split(' ')[0] || formState.firstName || '',
+            lastName: billingDetails?.name?.split(' ').slice(1).join(' ') || formState.lastName || '',
+            phone: billingDetails?.phone || formState.phone || undefined,
+          },
+          shipping: {
+            address1: shippingAddress?.line1 || formState.address1 || '',
+            address2: shippingAddress?.line2 || formState.address2 || undefined,
+            city: shippingAddress?.city || formState.city || '',
+            state: shippingAddress?.state || formState.state || '',
+            postalCode: shippingAddress?.postal_code || formState.postalCode || '',
+          },
+          notes: formState.notes || undefined,
+        }),
+      })
+
+      if (!checkoutResponse.ok) {
+        const error = await checkoutResponse.json()
+        throw new Error(error.error || 'Unable to create payment.')
+      }
+
+      const { clientSecret, orderId } = await checkoutResponse.json()
+
+      // Confirm the payment with the client secret
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+        elements: event.elements,
+        clientSecret,
+        confirmParams: {
+          return_url: `${window.location.origin}/order-confirmation/${orderId}`,
+        },
+        redirect: 'if_required',
+      })
+
+      if (confirmError) {
+        onError(getPaymentErrorMessage(confirmError))
+        setIsProcessing(false)
+        return
+      }
+
+      if (!paymentIntent?.id) {
+        throw new Error('Payment could not be confirmed.')
+      }
+
+      // Complete the order
+      const completionResponse = await fetch('/api/checkout/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          paymentIntentId: paymentIntent.id,
+        }),
+      })
+
+      if (!completionResponse.ok) {
+        const error = await completionResponse.json()
+        throw new Error(error.error || 'Failed to finalize order.')
+      }
+
+      onSuccess()
+      router.push(`/order-confirmation/${orderId}`)
+    } catch (error) {
+      onError(
+        error instanceof Error
+          ? error.message
+          : 'Something went wrong while processing your payment.'
+      )
+      setIsProcessing(false)
+    }
+  }
+
+  const expressCheckoutOptions = {
+    buttonType: {
+      applePay: 'buy' as const,
+      googlePay: 'buy' as const,
+    },
+  }
+
+  if (items.length === 0 || total === 0) {
+    return null
+  }
+
+  return (
+    <div className="space-y-2">
+      <ExpressCheckoutElement
+        options={expressCheckoutOptions}
+        onConfirm={handleExpressCheckoutConfirm}
+      />
+      {isProcessing && (
+        <p className="text-sm text-gray-500 text-center">Processing payment...</p>
+      )}
+    </div>
+  )
+}
+
 function CheckoutForm() {
   const stripe = useStripe()
   const elements = useElements()
@@ -141,6 +278,9 @@ function CheckoutForm() {
   const [isCalculatingTax, setIsCalculatingTax] = useState(false)
   const [shippingCost, setShippingCost] = useState(0)
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false)
+  const [shippingError, setShippingError] = useState<string | null>(null)
+  const [availableShippingOptions, setAvailableShippingOptions] = useState<ShippingOption[]>([])
+  const [selectedShippingOption, setSelectedShippingOption] = useState<ShippingOption | null>(null)
   const [isRecoveringCart, setIsRecoveringCart] = useState(false)
   const taxCalcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const shippingCalcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -205,6 +345,7 @@ function CheckoutForm() {
     }
 
     setIsCalculatingShipping(true)
+    setShippingError(null)
     try {
       const response = await fetch('/api/checkout/calculate-shipping', {
         method: 'POST',
@@ -227,14 +368,31 @@ function CheckoutForm() {
 
       if (response.ok) {
         const data = await response.json()
-        setShippingCost(data.shippingCost || 0)
+        const options = data.availableOptions || []
+        setAvailableShippingOptions(options)
+
+        // Select the first option by default (usually the cheapest/standard option)
+        if (options.length > 0) {
+          const firstOption = options[0]
+          setSelectedShippingOption(firstOption)
+          setShippingCost(firstOption.cost)
+        } else {
+          setShippingCost(data.shippingCost || 0)
+          setSelectedShippingOption(null)
+        }
       } else {
-        console.error('Failed to calculate shipping')
+        const errorData = await response.json().catch(() => ({}))
+        const errorMsg = errorData.error || 'Unable to calculate shipping costs'
+        setShippingError(errorMsg)
         setShippingCost(0)
+        setAvailableShippingOptions([])
+        setSelectedShippingOption(null)
       }
     } catch (error) {
-      console.error('Error calculating shipping:', error)
+      setShippingError('Unable to calculate shipping costs. Please try again.')
       setShippingCost(0)
+      setAvailableShippingOptions([])
+      setSelectedShippingOption(null)
     } finally {
       setIsCalculatingShipping(false)
     }
@@ -255,14 +413,16 @@ function CheckoutForm() {
     }
 
     // Trigger tax and shipping calculation when address fields change
-    if (['address1', 'city', 'state', 'postalCode'].includes(name)) {
-      // Clear previous timeouts
+    // Note: address1 excluded intentionally - carrier APIs use city/state/zip for rate calculation
+    if (['city', 'state', 'postalCode'].includes(name)) {
+      // Clear previous timeouts and errors
       if (taxCalcTimeoutRef.current) {
         clearTimeout(taxCalcTimeoutRef.current)
       }
       if (shippingCalcTimeoutRef.current) {
         clearTimeout(shippingCalcTimeoutRef.current)
       }
+      setShippingError(null)
       // Debounce calculations to avoid excessive API calls
       taxCalcTimeoutRef.current = setTimeout(() => {
         calculateTaxEstimate()
@@ -271,6 +431,11 @@ function CheckoutForm() {
         calculateShippingEstimate()
       }, 800)
     }
+  }
+
+  const handleShippingOptionChange = (option: ShippingOption) => {
+    setSelectedShippingOption(option)
+    setShippingCost(option.cost)
   }
 
   // Handle cart recovery from abandoned cart email
@@ -354,6 +519,9 @@ function CheckoutForm() {
     setIsProcessing(true)
 
     try {
+      // Get referral code from cookie if available
+      const referralCode = getReferralCodeFromCookie()
+
       const checkoutResponse = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -376,6 +544,9 @@ function CheckoutForm() {
             postalCode: formState.postalCode,
           },
           notes: formState.notes || undefined,
+          shippingMethod: selectedShippingOption?.method,
+          shippingCost: selectedShippingOption?.cost,
+          referralCode: referralCode || undefined,
         }),
       })
 
@@ -469,6 +640,7 @@ function CheckoutForm() {
                         name="firstName"
                         value={formState.firstName}
                         onChange={handleInputChange}
+                        autoComplete="given-name"
                         required
                       />
                     </div>
@@ -479,6 +651,7 @@ function CheckoutForm() {
                         name="lastName"
                         value={formState.lastName}
                         onChange={handleInputChange}
+                        autoComplete="family-name"
                         required
                       />
                     </div>
@@ -492,6 +665,7 @@ function CheckoutForm() {
                         type="email"
                         value={formState.email}
                         onChange={handleInputChange}
+                        autoComplete="email"
                         required
                       />
                     </div>
@@ -500,8 +674,10 @@ function CheckoutForm() {
                       <Input
                         id="phone"
                         name="phone"
+                        type="tel"
                         value={formState.phone}
                         onChange={handleInputChange}
+                        autoComplete="tel"
                       />
                     </div>
                   </div>
@@ -517,6 +693,7 @@ function CheckoutForm() {
                         name="address1"
                         value={formState.address1}
                         onChange={handleInputChange}
+                        autoComplete="address-line1"
                         required
                       />
                     </div>
@@ -527,6 +704,7 @@ function CheckoutForm() {
                         name="address2"
                         value={formState.address2}
                         onChange={handleInputChange}
+                        autoComplete="address-line2"
                       />
                     </div>
                     <div className="grid gap-4 md:grid-cols-3">
@@ -537,6 +715,7 @@ function CheckoutForm() {
                           name="city"
                           value={formState.city}
                           onChange={handleInputChange}
+                          autoComplete="address-level2"
                           required
                         />
                       </div>
@@ -547,6 +726,7 @@ function CheckoutForm() {
                           name="state"
                           value={formState.state}
                           onChange={handleInputChange}
+                          autoComplete="address-level1"
                           required
                         />
                       </div>
@@ -559,6 +739,7 @@ function CheckoutForm() {
                           name="postalCode"
                           value={formState.postalCode}
                           onChange={handleInputChange}
+                          autoComplete="postal-code"
                           required
                         />
                       </div>
@@ -576,8 +757,85 @@ function CheckoutForm() {
                   </div>
                 </section>
 
+                {(availableShippingOptions.length > 0 || isCalculatingShipping || shippingError) && (
+                  <section className="space-y-4">
+                    <h2 className="text-xl font-semibold text-gray-900">Shipping method</h2>
+
+                    {isCalculatingShipping ? (
+                      <div className="flex items-center gap-3 rounded-lg border-2 border-gray-200 bg-gray-50 p-4">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-salsa-500"></div>
+                        <span className="text-sm text-gray-600">Calculating shipping options...</span>
+                      </div>
+                    ) : shippingError ? (
+                      <div className="rounded-lg border-2 border-red-200 bg-red-50 p-4">
+                        <p className="text-sm text-red-700">{shippingError}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {availableShippingOptions.map((option, index) => (
+                          <label
+                            key={index}
+                            className={`
+                              flex items-start gap-4 rounded-lg border-2 p-4 cursor-pointer transition-colors
+                              ${
+                                selectedShippingOption?.method === option.method
+                                  ? 'border-salsa-500 bg-salsa-50'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }
+                            `}
+                          >
+                            <input
+                              type="radio"
+                              name="shippingOption"
+                              value={option.method}
+                              checked={selectedShippingOption?.method === option.method}
+                              onChange={() => handleShippingOptionChange(option)}
+                              className="mt-1 h-4 w-4 text-salsa-500 focus:ring-salsa-500"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-gray-900">{option.method}</span>
+                                <span className="font-semibold text-gray-900">
+                                  {option.cost === 0 ? 'FREE' : formatPrice(option.cost)}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-sm text-gray-600">
+                                Estimated delivery: {option.estimatedDays}
+                              </p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                )}
+
                 <section className="space-y-4">
                   <h2 className="text-xl font-semibold text-gray-900">Payment details</h2>
+
+                  {/* Express Checkout (Apple Pay / Google Pay) */}
+                  <ExpressCheckout
+                    items={items}
+                    formState={formState}
+                    total={subtotal + shippingCost + taxAmount}
+                    onSuccess={() => {
+                      clearCart()
+                      setSuccessMessage('Payment successful!')
+                    }}
+                    onError={(message) => setErrorMessage(message)}
+                  />
+
+                  {/* Divider */}
+                  <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-4 bg-white text-gray-500">Or pay with card</span>
+                    </div>
+                  </div>
+
+                  {/* Regular Card Payment */}
                   <div className="rounded-md border border-gray-200 p-4">
                     <CardElement options={CardElementOptions} />
                   </div>
@@ -649,9 +907,14 @@ function CheckoutForm() {
                   <span>Tax {isCalculatingTax && <span className="text-xs">(calculating...)</span>}</span>
                   <span>{formatPrice(taxAmount)}</span>
                 </div>
-                {(taxAmount === 0 || shippingCost === 0) && formState.postalCode.length >= 5 && (
+                {shippingCost === 0 && subtotal >= 50 && availableShippingOptions.length > 0 && (
+                  <p className="text-xs text-green-600 font-medium">
+                    🎉 Free shipping on orders over $50!
+                  </p>
+                )}
+                {!isCalculatingShipping && availableShippingOptions.length === 0 && formState.postalCode.length >= 5 && (
                   <p className="text-xs text-gray-500 italic">
-                    {subtotal >= 50 && shippingCost === 0 ? '🎉 Free shipping on orders over $50!' : 'Enter your full address to calculate shipping & tax'}
+                    Enter your full address to calculate shipping
                   </p>
                 )}
               </div>
@@ -668,6 +931,14 @@ function CheckoutForm() {
 }
 
 export default function CheckoutPage() {
+  const items = useCartStore((state) => state.items)
+  const subtotal = useMemo(
+    () => items.reduce((total, item) => total + item.price * item.quantity, 0),
+    [items]
+  )
+  // Stripe requires amount in cents; minimum 50 cents
+  const totalAmount = Math.max(50, Math.round(subtotal * 100))
+
   if (!stripePromise) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
@@ -681,7 +952,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <Elements stripe={stripePromise}>
+    <Elements stripe={stripePromise} options={{ mode: 'payment', amount: totalAmount, currency: 'usd' }}>
       <CheckoutForm />
     </Elements>
   )

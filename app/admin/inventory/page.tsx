@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { InventoryAdjustmentDialog } from '@/components/admin/inventory/InventoryAdjustmentDialog';
 import { InventoryAlertsTable } from '@/components/admin/inventory/InventoryAlertsTable';
 import { InventoryAlertStatus, InventoryAlertType } from '@prisma/client';
+import { InventoryClientActions } from '@/app/admin/inventory/client-page';
 
 async function getInventoryData() {
   // Get low stock products
@@ -113,8 +114,12 @@ export default async function InventoryPage() {
     redirect('/auth/signin');
   }
 
-  const canRead = await hasPermission(user, 'products:read');
-  const canWrite = await hasPermission(user, 'products:write');
+  const [canRead, canWrite, canImport, canExport] = await Promise.all([
+    hasPermission(user, 'products:read'),
+    hasPermission(user, 'products:write'),
+    hasPermission(user, 'products:write'),
+    hasPermission(user, 'products:export'),
+  ]);
 
   if (!canRead) {
     redirect('/admin');
@@ -134,6 +139,7 @@ export default async function InventoryPage() {
             Real-time inventory tracking and alerts
           </p>
         </div>
+        <InventoryClientActions canImport={canImport} canExport={canExport} />
       </div>
 
       {/* Stats Cards */}

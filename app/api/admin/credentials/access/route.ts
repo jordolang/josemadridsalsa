@@ -1,22 +1,31 @@
 import { NextRequest } from 'next/server'
-import prisma from '@/lib/prisma'
-import { requireGrantAdmin } from '@/lib/credentials-access'
-import { ok, fail, forbidden, serverError } from '@/lib/api'
+import { prisma } from '@/lib/prisma'
+import { requirePermission } from '@/lib/rbac'
+import { ok, fail } from '@/lib/api'
 import { logAudit } from '@/lib/audit'
+import { isSuperAdmin } from '@/lib/credentials'
 import { z } from 'zod'
 
 const grantSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email('Valid email required'),
+  canView: z.boolean().default(true),
+  canAdd: z.boolean().default(false),
+  canEdit: z.boolean().default(false),
+  canDelete: z.boolean().default(false),
+  canUpload: z.boolean().default(false),
 })
 
-/**
- * List all credential access grants.
- * Only jordolang@gmail.com can call this.
- */
-export async function GET() {
+const revokeSchema = z.object({
+  email: z.string().email('Valid email required'),
+})
+
+export async function GET(req: NextRequest) {
   try {
-    const user = await requireGrantAdmin()
-    if (!user) return forbidden('Not Permitted')
+    const currentUser = await requirePermission('credentials:read')
+
+    if (!isSuperAdmin(currentUser.email)) {
+      return fail('Forbidden - super admin only', 403)
+    }
 
     const grants = await prisma.credentialAccessGrant.findMany({
       orderBy: { createdAt: 'desc' },
@@ -24,112 +33,110 @@ export async function GET() {
 
     return ok({ grants })
   } catch (error: any) {
-    console.error('[Credentials Access API] GET error:', error)
-    return serverError('Failed to load access grants')
+    return fail(error.message, error.status)
   }
 }
 
-/**
- * Grant access to a user email.
- * Only jordolang@gmail.com can call this.
- */
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireGrantAdmin()
-    if (!user) return forbidden('Not Permitted')
+    const currentUser = await requirePermission('credentials:write')
+
+    if (!isSuperAdmin(currentUser.email)) {
+      return fail('Forbidden - super admin only', 403)
+    }
 
     const body = await req.json()
-    const { email } = grantSchema.parse(body)
-    const normalizedEmail = email.toLowerCase().trim()
+    const data = grantSchema.parse(body)
 
     // Check if grant already exists
     const existing = await prisma.credentialAccessGrant.findUnique({
-      where: { email: normalizedEmail },
+      where: { email: data.email },
     })
 
-    if (existing && !existing.revokedAt) {
-      return fail('Access already granted to this email', 409)
+    let grant
+    if (existing) {
+      // Update existing grant (reactivate if revoked)
+      grant = await prisma.credentialAccessGrant.update({
+        where: { email: data.email },
+        data: {
+          canView: data.canView,
+          canAdd: data.canAdd,
+          canEdit: data.canEdit,
+          canDelete: data.canDelete,
+          canUpload: data.canUpload,
+          revokedAt: null,
+          grantedByEmail: currentUser.email,
+        },
+      })
+    } else {
+      grant = await prisma.credentialAccessGrant.create({
+        data: {
+          email: data.email,
+          grantedByEmail: currentUser.email,
+          canView: data.canView,
+          canAdd: data.canAdd,
+          canEdit: data.canEdit,
+          canDelete: data.canDelete,
+          canUpload: data.canUpload,
+        },
+      })
     }
 
-    if (existing && existing.revokedAt) {
-      // Re-activate the revoked grant
-      const grant = await prisma.credentialAccessGrant.update({
-        where: { email: normalizedEmail },
-        data: { revokedAt: null },
-      })
-
-      await logAudit({
-        userId: user.id,
-        action: 'REACTIVATE',
-        entityType: 'CredentialAccessGrant',
-        entityId: grant.id,
-        changes: { email: normalizedEmail },
-      })
-
-      return ok({ grant }, 200)
-    }
-
-    const grant = await prisma.credentialAccessGrant.create({
-      data: {
-        email: normalizedEmail,
-        grantedByEmail: user.email,
+    await logAudit({
+      userId: currentUser.id,
+      action: existing ? 'UPDATE' : 'CREATE',
+      entityType: 'CredentialAccessGrant',
+      entityId: grant.id,
+      changes: {
+        email: data.email,
+        canView: data.canView,
+        canAdd: data.canAdd,
+        canEdit: data.canEdit,
+        canDelete: data.canDelete,
+        canUpload: data.canUpload,
       },
     })
 
-    await logAudit({
-      userId: user.id,
-      action: 'CREATE',
-      entityType: 'CredentialAccessGrant',
-      entityId: grant.id,
-      changes: { email: normalizedEmail },
-    })
-
-    return ok({ grant }, 201)
+    return ok({ grant }, existing ? 200 : 201)
   } catch (error: any) {
-    if (error.name === 'ZodError') {
-      return fail('Invalid email address', 400)
-    }
-    console.error('[Credentials Access API] POST error:', error)
-    return serverError('Failed to grant access')
+    return fail(error.message, 400)
   }
 }
 
-/**
- * Revoke access for a user email.
- * Only jordolang@gmail.com can call this.
- */
 export async function DELETE(req: NextRequest) {
   try {
-    const user = await requireGrantAdmin()
-    if (!user) return forbidden('Not Permitted')
+    const currentUser = await requirePermission('credentials:write')
 
-    const { searchParams } = new URL(req.url)
-    const email = searchParams.get('email')?.toLowerCase().trim()
+    if (!isSuperAdmin(currentUser.email)) {
+      return fail('Forbidden - super admin only', 403)
+    }
 
-    if (!email) return fail('Email parameter is required', 400)
+    const body = await req.json()
+    const data = revokeSchema.parse(body)
 
-    const grant = await prisma.credentialAccessGrant.findUnique({
-      where: { email },
+    const existing = await prisma.credentialAccessGrant.findUnique({
+      where: { email: data.email },
     })
 
-    if (!grant) return fail('No access grant found for this email', 404)
+    if (!existing) {
+      return fail('Grant not found', 404)
+    }
 
-    await prisma.credentialAccessGrant.update({
-      where: { email },
+    const grant = await prisma.credentialAccessGrant.update({
+      where: { email: data.email },
       data: { revokedAt: new Date() },
     })
 
     await logAudit({
-      userId: user.id,
+      userId: currentUser.id,
       action: 'REVOKE',
       entityType: 'CredentialAccessGrant',
       entityId: grant.id,
-      changes: { email },
+      changes: { email: data.email },
     })
 
-    return ok({ success: true })
+    return ok({ grant })
   } catch (error: any) {
-    console.error('[Credentials Access API] DELETE error:', error)
-    return serverError('Failed to revoke access')
+    return fail(error.message, 400)
   }
 }
