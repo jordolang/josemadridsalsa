@@ -17,6 +17,7 @@ interface CampaignStatsCardProps {
     value: number
     label: string
   }
+  isRefreshing?: boolean
 }
 
 export function CampaignStatsCard({
@@ -28,17 +29,24 @@ export function CampaignStatsCard({
   progress,
   progressLabel,
   trend,
+  isRefreshing = false,
 }: CampaignStatsCardProps) {
   return (
-    <Card className={cn('border-l-4', borderColor)}>
+    <Card className={cn('border-l-4 transition-all duration-300', borderColor, {
+      'opacity-70': isRefreshing,
+    })}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-          <Icon className={cn('h-4 w-4', iconColor)} />
+          <Icon className={cn('h-4 w-4', iconColor, {
+            'animate-pulse': isRefreshing,
+          })} />
           {title}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-bold">{value}</div>
+        <div className={cn('text-3xl font-bold transition-all duration-300', {
+          'animate-pulse': isRefreshing,
+        })}>{value}</div>
 
         {progress !== undefined && (
           <>

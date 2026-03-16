@@ -1,11 +1,13 @@
 "use client"
 
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DollarSign, ShoppingBag, TrendingUp, Calendar,
-  Package, User, CheckCircle2, Clock, ExternalLink
+  Package, User, CheckCircle2, Clock, ExternalLink, RefreshCw
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { ReferralLinkDisplay } from '@/components/fundraising/referral-link-display'
@@ -55,6 +57,10 @@ export function ParticipantDashboard({
   orders,
   referralUrl,
 }: ParticipantDashboardProps) {
+  const router = useRouter()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState(new Date())
+
   // Calculate commission rate display
   const commissionPercentage = fundraiser.commissionRate
 
@@ -73,6 +79,47 @@ export function ParticipantDashboard({
     b.createdAt.getTime() - a.createdAt.getTime()
   )
 
+  // Auto-refresh functionality
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    router.refresh()
+    setLastUpdated(new Date())
+
+    // Keep refreshing indicator visible for a brief moment
+    setTimeout(() => {
+      setIsRefreshing(false)
+    }, 500)
+  }
+
+  // Set up auto-refresh interval - refresh every 10 seconds when campaign is active
+  useEffect(() => {
+    if (!isActive) return
+
+    const interval = setInterval(() => {
+      handleRefresh()
+    }, 10000) // 10 seconds
+
+    return () => clearInterval(interval)
+  }, [isActive])
+
+  // Format last updated time
+  const formatLastUpdated = () => {
+    const now = new Date()
+    const diffInSeconds = Math.floor((now.getTime() - lastUpdated.getTime()) / 1000)
+
+    if (diffInSeconds < 60) {
+      return 'Just now'
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60)
+      return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
+    } else {
+      return lastUpdated.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -88,12 +135,24 @@ export function ParticipantDashboard({
                   {fundraiser.name} • {fundraiser.organizationName}
                 </p>
               </div>
-              <Badge
-                variant={isActive ? 'default' : 'secondary'}
-                className={isActive ? 'bg-white text-verde-700 hover:bg-white/90' : ''}
-              >
-                {isActive ? `${daysRemaining} days left` : 'Campaign Ended'}
-              </Badge>
+              <div className="flex items-center gap-3">
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs text-verde-100">
+                    Last updated: {formatLastUpdated()}
+                  </p>
+                  {isActive && (
+                    <p className="text-xs text-verde-200">
+                      Auto-refreshing every 10s
+                    </p>
+                  )}
+                </div>
+                <Badge
+                  variant={isActive ? 'default' : 'secondary'}
+                  className={isActive ? 'bg-white text-verde-700 hover:bg-white/90' : ''}
+                >
+                  {isActive ? `${daysRemaining} days left` : 'Campaign Ended'}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
@@ -125,28 +184,46 @@ export function ParticipantDashboard({
           </Card>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <CampaignStatsCard
-              title="Total Orders"
-              value={participant.totalOrders}
-              icon={ShoppingBag}
-              iconColor="text-blue-600"
-              borderColor="border-l-blue-500"
-            />
-            <CampaignStatsCard
-              title="Total Revenue"
-              value={formatPrice(participant.totalRevenue)}
-              icon={DollarSign}
-              iconColor="text-green-600"
-              borderColor="border-l-green-500"
-            />
-            <CampaignStatsCard
-              title="Commission Earned"
-              value={formatPrice(participant.totalCommission)}
-              icon={TrendingUp}
-              iconColor="text-salsa-600"
-              borderColor="border-l-salsa-500"
-            />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Your Stats</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <CampaignStatsCard
+                title="Total Orders"
+                value={participant.totalOrders}
+                icon={ShoppingBag}
+                iconColor="text-blue-600"
+                borderColor="border-l-blue-500"
+                isRefreshing={isRefreshing}
+              />
+              <CampaignStatsCard
+                title="Total Revenue"
+                value={formatPrice(participant.totalRevenue)}
+                icon={DollarSign}
+                iconColor="text-green-600"
+                borderColor="border-l-green-500"
+                isRefreshing={isRefreshing}
+              />
+              <CampaignStatsCard
+                title="Commission Earned"
+                value={formatPrice(participant.totalCommission)}
+                icon={TrendingUp}
+                iconColor="text-salsa-600"
+                borderColor="border-l-salsa-500"
+                isRefreshing={isRefreshing}
+              />
+            </div>
           </div>
 
           {/* Campaign Info */}
