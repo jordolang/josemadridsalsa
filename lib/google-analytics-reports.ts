@@ -54,6 +54,8 @@ async function getAnalyticsClient(): Promise<BetaAnalyticsDataClient | null> {
     return null
   }
 
+  // Impersonation and custom scopes are not needed for the current use case;
+  // service account credentials with GA4 Data API access are sufficient.
   return new BetaAnalyticsDataClient({
     credentials: {
       client_email: clientEmail,
@@ -119,8 +121,8 @@ async function runReport({
   }
 
   const [response] = await client.runReport({
-    property,
     ...request,
+    property,
   })
 
   return response
