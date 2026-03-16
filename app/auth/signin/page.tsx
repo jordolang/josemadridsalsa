@@ -31,20 +31,29 @@ function SignInFormInner() {
   const searchParams = useSearchParams()
   const callbackUrl = searchParams?.get('callbackUrl') || '/'
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignInFormData>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  })
+
+  const onSubmit = async (data: SignInFormData) => {
     setError(null)
     setIsLoading(true)
 
     try {
       const result = await signIn('credentials', {
-        email,
-        password,
+        email: data.email,
+        password: data.password,
         redirect: false,
         callbackUrl,
       })
@@ -68,7 +77,6 @@ function SignInFormInner() {
         setIsLoading(false)
       }
     } catch (error) {
-      console.error('Sign in error:', error)
       setError('Unable to sign in. Please check your connection and try again.')
       setIsLoading(false)
     }
@@ -86,17 +94,18 @@ function SignInFormInner() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
-                required
+                {...register('email')}
               />
+              {errors.email && (
+                <p className="text-sm text-red-600">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -112,11 +121,12 @@ function SignInFormInner() {
               <Input
                 id="password"
                 type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
                 placeholder="••••••••"
-                required
+                {...register('password')}
               />
+              {errors.password && (
+                <p className="text-sm text-red-600">{errors.password.message}</p>
+              )}
             </div>
 
             {error && (
