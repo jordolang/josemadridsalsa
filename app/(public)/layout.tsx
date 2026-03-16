@@ -12,6 +12,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { WishlistSyncProvider } from '@/components/providers/wishlist-sync-provider'
 import { CompareFloatingButton, ProductComparison } from '@/components/store/product-comparison'
 import { ComparisonURLHandler } from '@/components/store/comparison-url-handler'
+import { NewsletterPopup } from '@/components/store/newsletter-popup'
 
 export default async function PublicLayout({
   children,
@@ -63,6 +64,7 @@ export default async function PublicLayout({
       <ProductComparison />
       <Toaster />
       <AiChatWidget />
+      <NewsletterPopup />
       <Analytics />
     </>
   )
