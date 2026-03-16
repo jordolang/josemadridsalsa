@@ -1,8 +1,6 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import {
   type FundraiserPageConfig,
   type PageBlock,
@@ -66,8 +64,6 @@ function createDefaultBlock(type: BlockType): PageBlock {
 }
 
 export default function PageEditorPage() {
-  const { data: session } = useSession()
-  const router = useRouter()
   const [blocks, setBlocks] = useState<BlockState[]>([])
   const [theme, setTheme] = useState<FundraiserPageConfig['theme']>('default')
   const [isLoading, setIsLoading] = useState(true)
