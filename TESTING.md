@@ -1,0 +1,908 @@
+# Testing Guide
+
+[![Testing](https://img.shields.io/badge/Vitest-4.0-yellow.svg)](https://vitest.dev/)
+[![E2E](https://img.shields.io/badge/Playwright-1.58-green.svg)](https://playwright.dev/)
+[![MSW](https://img.shields.io/badge/MSW-2.12-orange.svg)](https://mswjs.io/)
+
+This guide covers the comprehensive testing infrastructure for the Jose Madrid Salsa e-commerce platform. Our testing strategy includes unit tests, component tests, integration tests, and end-to-end tests with a focus on quality and maintainability.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+- [Setup Instructions](#setup-instructions)
+- [Running Tests](#running-tests)
+- [Writing Tests](#writing-tests)
+  - [Unit Tests](#unit-tests)
+  - [Component Tests](#component-tests)
+  - [API Tests](#api-tests)
+  - [E2E Tests](#e2e-tests)
+- [Testing Conventions](#testing-conventions)
+- [Debugging Tests](#debugging-tests)
+- [Coverage Requirements](#coverage-requirements)
+- [CI/CD Integration](#ci-cd-integration)
+- [Troubleshooting](#troubleshooting)
+
+## Overview
+
+Our testing infrastructure consists of:
+
+- **Vitest** - Fast unit and integration testing framework
+- **React Testing Library** - Component testing with user-centric queries
+- **Playwright** - End-to-end browser testing
+- **MSW (Mock Service Worker)** - API mocking for consistent test data
+- **Coverage Reporting** - V8 coverage provider with configurable thresholds
+
+### Test Organization
+
+```
+tests/
+├── api/                    # API route tests
+│   ├── admin/             # Admin API endpoint tests
+│   └── webhooks/          # Webhook handler tests
+├── component/             # React component tests
+├── e2e/                   # End-to-end Playwright tests
+├── email/                 # Email template tests
+├── integration/           # Integration tests
+│   └── api/              # API integration tests
+├── lib/                   # Library function tests
+├── unit/                  # Unit tests
+│   └── lib/              # Utility function tests
+├── manual/                # Manual test data and scripts
+└── mocks/                 # MSW handlers and server setup
+    ├── handlers.ts        # API mock handlers
+    └── server.ts          # MSW server configuration
+```
+
+## Quick Start
+
+```bash
+# Run all unit and integration tests
+npm run test
+
+# Run tests in watch mode
+npm run test -- --watch
+
+# Run tests with coverage
+npm run test -- --coverage
+
+# Run E2E tests
+npx playwright test
+
+# Run E2E tests in UI mode (interactive)
+npx playwright test --ui
+
+# Run E2E tests in headed mode (visible browser)
+npx playwright test --headed
+
+# Run specific E2E test file
+npx playwright test tests/e2e/checkout.spec.ts
+```
+
+## Setup Instructions
+
+### Prerequisites
+
+The testing dependencies are already included in `package.json`. If you need to install them separately:
+
+```bash
+npm install -D @testing-library/react \
+               @testing-library/dom \
+               @testing-library/jest-dom \
+               @testing-library/user-event \
+               @vitejs/plugin-react \
+               vite-tsconfig-paths \
+               jsdom \
+               @playwright/test \
+               msw \
+               @vitest/coverage-v8 \
+               vitest
+```
+
+### Playwright Browser Installation
+
+Playwright requires browser binaries to be installed:
+
+```bash
+# Install all browsers (Chromium, Firefox, WebKit)
+npx playwright install
+
+# Or install specific browsers
+npx playwright install chromium
+npx playwright install --with-deps chromium  # Includes system dependencies
+```
+
+### Environment Setup
+
+Create a `.env.test` file for test-specific environment variables:
+
+```bash
+# Test database (use separate database or in-memory)
+DATABASE_URL="postgresql://user:password@localhost:5432/testdb"
+
+# Test mode API keys
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_test_..."
+NEXTAUTH_SECRET="test-secret-key"
+
+# Disable external services in tests
+SKIP_EMAIL_SENDING=true
+```
+
+⚠️ **Important**: Never commit real API keys. Always use test mode keys and add `.env.test` to `.gitignore`.
+
+## Running Tests
+
+### Vitest (Unit/Integration/Component Tests)
+
+```bash
+# Run all tests once
+npm run test
+
+# Watch mode (re-run on file changes)
+npm run test -- --watch
+
+# Run tests with coverage
+npm run test -- --coverage
+
+# Run tests with UI (visual test runner)
+npm run test -- --ui
+
+# Run specific test file
+npm run test tests/lib/discounts.test.ts
+
+# Run tests matching pattern
+npm run test -- --grep "discount"
+
+# Run tests for changed files only
+npm run test -- --changed
+```
+
+### Playwright (E2E Tests)
+
+```bash
+# Run all E2E tests
+npx playwright test
+
+# Run in headed mode (visible browser)
+npx playwright test --headed
+
+# Run in UI mode (interactive)
+npx playwright test --ui
+
+# Run specific test file
+npx playwright test tests/e2e/checkout.spec.ts
+
+# Run specific browser
+npx playwright test --project=chromium
+npx playwright test --project=firefox
+npx playwright test --project=webkit
+
+# Run tests matching pattern
+npx playwright test -g "checkout flow"
+
+# Debug mode (pause on failure)
+npx playwright test --debug
+
+# Generate HTML report
+npx playwright show-report
+```
+
+### Coverage Reports
+
+After running tests with coverage, reports are generated in the `coverage/` directory:
+
+```bash
+# Run tests with coverage
+npm run test -- --coverage
+
+# Open HTML coverage report in browser
+open coverage/index.html  # macOS
+xdg-open coverage/index.html  # Linux
+start coverage/index.html  # Windows
+```
+
+Coverage formats generated:
+- **HTML** - Interactive visual report (`coverage/index.html`)
+- **JSON** - Machine-readable data (`coverage/coverage-final.json`)
+- **Text** - Terminal summary (displayed after test run)
+- **JSON Summary** - Summary data for CI (`coverage/coverage-summary.json`)
+
+## Writing Tests
+
+### Unit Tests
+
+Unit tests verify individual functions in isolation.
+
+**Location**: `tests/unit/lib/` or `tests/lib/`
+
+**Example** - Testing a discount calculation function:
+
+```typescript
+import { describe, it, expect } from 'vitest'
+import { calculateDiscount } from '@/lib/discounts'
+
+describe('calculateDiscount', () => {
+  it('should calculate percentage discount correctly', () => {
+    const result = calculateDiscount({
+      originalPrice: 100,
+      discountPercent: 20
+    })
+
+    expect(result.finalPrice).toBe(80)
+    expect(result.saved).toBe(20)
+  })
+
+  it('should handle zero discount', () => {
+    const result = calculateDiscount({
+      originalPrice: 100,
+      discountPercent: 0
+    })
+
+    expect(result.finalPrice).toBe(100)
+    expect(result.saved).toBe(0)
+  })
+
+  it('should throw error for negative discount', () => {
+    expect(() => {
+      calculateDiscount({
+        originalPrice: 100,
+        discountPercent: -10
+      })
+    }).toThrow('Discount percent must be positive')
+  })
+})
+```
+
+### Component Tests
+
+Component tests verify React components using React Testing Library.
+
+**Location**: `tests/component/`
+
+**Example** - Testing a ProductCard component:
+
+```typescript
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, it, expect, vi } from 'vitest'
+import { ProductCard } from '@/components/ProductCard'
+
+describe('ProductCard', () => {
+  const mockProduct = {
+    id: '1',
+    name: 'Salsa Verde',
+    price: 9.99,
+    featuredImage: '/images/salsa-verde.jpg',
+    inventory: 10
+  }
+
+  it('renders product name and price', () => {
+    render(<ProductCard product={mockProduct} />)
+
+    expect(screen.getByText('Salsa Verde')).toBeInTheDocument()
+    expect(screen.getByText('$9.99')).toBeInTheDocument()
+  })
+
+  it('handles add to cart click', async () => {
+    const onAddToCart = vi.fn()
+    const user = userEvent.setup()
+
+    render(<ProductCard product={mockProduct} onAddToCart={onAddToCart} />)
+
+    const addButton = screen.getByRole('button', { name: /add to cart/i })
+    await user.click(addButton)
+
+    expect(onAddToCart).toHaveBeenCalledWith(mockProduct)
+  })
+
+  it('shows out of stock when inventory is zero', () => {
+    const outOfStockProduct = { ...mockProduct, inventory: 0 }
+
+    render(<ProductCard product={outOfStockProduct} />)
+
+    expect(screen.getByText(/out of stock/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled()
+  })
+
+  it('displays discount badge when on sale', () => {
+    const saleProduct = {
+      ...mockProduct,
+      price: 7.99,
+      compareAtPrice: 9.99
+    }
+
+    render(<ProductCard product={saleProduct} />)
+
+    expect(screen.getByText(/save 20%/i)).toBeInTheDocument()
+  })
+})
+```
+
+**Best Practices for Component Tests:**
+- Use `screen.*` queries instead of destructuring from `render()`
+- Prefer `userEvent` over `fireEvent` for realistic interactions
+- Use accessible queries: `getByRole`, `getByLabelText`, `getByText`
+- Test user behavior, not implementation details
+- Mock external dependencies (APIs, context providers)
+
+### API Tests
+
+API tests verify Next.js API routes with MSW for external API mocking.
+
+**Location**: `tests/api/` or `tests/integration/api/`
+
+**Example** - Testing a checkout API endpoint:
+
+```typescript
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
+import { server } from '../mocks/server'
+import { POST } from '@/app/api/checkout/route'
+
+// MSW server is started in vitest-setup.ts
+
+describe('POST /api/checkout', () => {
+  it('creates payment intent successfully', async () => {
+    const request = new Request('http://localhost/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: [
+          { productId: '1', quantity: 2, price: 9.99 }
+        ],
+        email: 'test@example.com'
+      })
+    })
+
+    const response = await POST(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data).toHaveProperty('clientSecret')
+    expect(data).toHaveProperty('paymentIntentId')
+  })
+
+  it('validates required fields', async () => {
+    const request = new Request('http://localhost/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: []  // Empty cart
+      })
+    })
+
+    const response = await POST(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toContain('Cart cannot be empty')
+  })
+
+  it('handles Stripe API errors gracefully', async () => {
+    // Override MSW handler for this specific test
+    server.use(
+      http.post('https://api.stripe.com/v1/payment_intents', () => {
+        return new HttpResponse(null, { status: 500 })
+      })
+    )
+
+    const request = new Request('http://localhost/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: [{ productId: '1', quantity: 1, price: 9.99 }],
+        email: 'test@example.com'
+      })
+    })
+
+    const response = await POST(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(data.error).toBeTruthy()
+  })
+})
+```
+
+### E2E Tests
+
+End-to-end tests verify complete user flows using Playwright.
+
+**Location**: `tests/e2e/`
+
+**Example** - Testing checkout flow:
+
+```typescript
+import { test, expect } from '@playwright/test'
+
+test.describe('Checkout flow', () => {
+  test('completes full checkout with payment', async ({ page }) => {
+    // Navigate to products page
+    await page.goto('/products')
+
+    // Add product to cart
+    const firstProduct = page.locator('[data-testid="product-card"]').first()
+    await firstProduct.getByRole('button', { name: /add to cart/i }).click()
+
+    // Verify cart updated
+    await expect(page.getByTestId('cart-count')).toHaveText('1')
+
+    // Go to cart
+    await page.getByRole('link', { name: /cart/i }).click()
+    await expect(page).toHaveURL(/\/cart/)
+
+    // Proceed to checkout
+    await page.getByRole('button', { name: /checkout/i }).click()
+    await expect(page).toHaveURL(/\/checkout/)
+
+    // Fill shipping information
+    await page.getByLabel(/email/i).fill('test@example.com')
+    await page.getByLabel(/first name/i).fill('John')
+    await page.getByLabel(/last name/i).fill('Doe')
+    await page.getByLabel(/address/i).fill('123 Test St')
+    await page.getByLabel(/city/i).fill('Portland')
+    await page.getByLabel(/state/i).selectOption('OR')
+    await page.getByLabel(/zip code/i).fill('97201')
+
+    // Fill payment information (Stripe test card)
+    const cardNumber = page.frameLocator('iframe[name*="cardNumber"]')
+      .getByPlaceholder(/card number/i)
+    await cardNumber.fill('4242424242424242')
+
+    const cardExpiry = page.frameLocator('iframe[name*="cardExpiry"]')
+      .getByPlaceholder(/mm \/ yy/i)
+    await cardExpiry.fill('12/25')
+
+    const cardCvc = page.frameLocator('iframe[name*="cardCvc"]')
+      .getByPlaceholder(/cvc/i)
+    await cardCvc.fill('123')
+
+    // Submit payment
+    await page.getByRole('button', { name: /pay/i }).click()
+
+    // Wait for success page
+    await expect(page).toHaveURL(/\/order\/success/, { timeout: 10000 })
+    await expect(page.getByText(/order confirmed/i)).toBeVisible()
+    await expect(page.getByText(/order #/i)).toBeVisible()
+  })
+
+  test('validates shipping information', async ({ page }) => {
+    await page.goto('/checkout')
+
+    // Try to submit without filling required fields
+    await page.getByRole('button', { name: /continue to payment/i }).click()
+
+    // Should show validation errors
+    await expect(page.getByText(/email is required/i)).toBeVisible()
+    await expect(page.getByText(/first name is required/i)).toBeVisible()
+  })
+
+  test('handles payment failure gracefully', async ({ page }) => {
+    await page.goto('/checkout')
+
+    // Fill form...
+    await page.getByLabel(/email/i).fill('test@example.com')
+    // ... other fields ...
+
+    // Use Stripe test card that will be declined
+    const cardNumber = page.frameLocator('iframe[name*="cardNumber"]')
+      .getByPlaceholder(/card number/i)
+    await cardNumber.fill('4000000000000002')  // Declined card
+
+    await page.getByRole('button', { name: /pay/i }).click()
+
+    // Should show error message
+    await expect(page.getByText(/payment failed/i)).toBeVisible()
+    await expect(page).toHaveURL(/\/checkout/)  // Stay on checkout page
+  })
+})
+```
+
+**Playwright Best Practices:**
+- Use `page.goto()` for navigation
+- Prefer accessible selectors: `getByRole`, `getByLabel`, `getByText`
+- Use `await expect(...).toBeVisible()` for async assertions
+- Set appropriate timeouts for slow operations
+- Use `test.beforeEach` for common setup
+- Use `test.describe` to group related tests
+
+## Testing Conventions
+
+### File Naming
+
+- **Unit tests**: `*.test.ts` (Vitest)
+- **Component tests**: `*.test.tsx` (Vitest)
+- **E2E tests**: `*.spec.ts` (Playwright)
+
+### Test Structure
+
+Follow the **Arrange-Act-Assert** (AAA) pattern:
+
+```typescript
+it('should do something', () => {
+  // Arrange - Set up test data and dependencies
+  const input = { value: 10 }
+  const expected = 20
+
+  // Act - Execute the function/behavior
+  const result = doubleValue(input.value)
+
+  // Assert - Verify the outcome
+  expect(result).toBe(expected)
+})
+```
+
+### Describe Blocks
+
+Organize tests with descriptive `describe` blocks:
+
+```typescript
+describe('ProductCard', () => {
+  describe('Stock status', () => {
+    it('shows in stock when inventory > 0', () => { })
+    it('shows out of stock when inventory = 0', () => { })
+  })
+
+  describe('Discount display', () => {
+    it('shows discount badge when on sale', () => { })
+    it('hides discount badge when not on sale', () => { })
+  })
+})
+```
+
+### Async/Await
+
+Always use `async/await` for asynchronous operations:
+
+```typescript
+// ✅ Good
+it('loads user data', async () => {
+  const user = await fetchUser('123')
+  expect(user.name).toBe('John')
+})
+
+// ❌ Bad - Missing await
+it('loads user data', () => {
+  const user = fetchUser('123')  // Returns Promise, not user!
+  expect(user.name).toBe('John')  // Will fail
+})
+```
+
+### Mock Functions
+
+Use `vi.fn()` to create mock functions:
+
+```typescript
+import { vi } from 'vitest'
+
+it('calls onClick handler', async () => {
+  const onClick = vi.fn()
+  const user = userEvent.setup()
+
+  render(<Button onClick={onClick}>Click me</Button>)
+
+  await user.click(screen.getByRole('button'))
+
+  expect(onClick).toHaveBeenCalledTimes(1)
+})
+```
+
+### Test Data
+
+Keep test data close to tests or in shared fixtures:
+
+```typescript
+// Good - Test data in the test file
+const mockProduct = {
+  id: '1',
+  name: 'Test Product',
+  price: 9.99
+}
+
+// Better - Shared factory function
+function createMockProduct(overrides = {}) {
+  return {
+    id: '1',
+    name: 'Test Product',
+    price: 9.99,
+    inventory: 10,
+    ...overrides
+  }
+}
+```
+
+## Debugging Tests
+
+### Vitest Debugging
+
+**Using UI Mode:**
+```bash
+npm run test -- --ui
+```
+Opens an interactive browser UI to run and debug tests.
+
+**Using Console Logs:**
+```typescript
+it('debugs values', () => {
+  const result = someFunction()
+  console.log('Result:', result)  // Will appear in test output
+  expect(result).toBe(expected)
+})
+```
+
+**Using VS Code Debugger:**
+
+Add to `.vscode/launch.json`:
+```json
+{
+  "type": "node",
+  "request": "launch",
+  "name": "Debug Vitest Tests",
+  "runtimeExecutable": "npm",
+  "runtimeArgs": ["run", "test", "--", "--run"],
+  "console": "integratedTerminal",
+  "internalConsoleOptions": "neverOpen"
+}
+```
+
+### Playwright Debugging
+
+**Debug Mode** (pause and step through):
+```bash
+npx playwright test --debug
+```
+
+**Headed Mode** (watch browser):
+```bash
+npx playwright test --headed
+```
+
+**Slow Motion** (slow down actions):
+```bash
+npx playwright test --headed --slow-mo=1000
+```
+
+**Screenshots on Failure:**
+Automatically captured and saved to `test-results/`
+
+**Traces:**
+```bash
+npx playwright test --trace on
+npx playwright show-trace trace.zip
+```
+
+**Using `page.pause()`:**
+```typescript
+test('debug test', async ({ page }) => {
+  await page.goto('/products')
+  await page.pause()  // Pauses execution here
+  // ...rest of test
+})
+```
+
+**Playwright Inspector:**
+```typescript
+test('inspect elements', async ({ page }) => {
+  await page.goto('/products')
+
+  // Print selector to console
+  const button = page.getByRole('button', { name: /add to cart/i })
+  console.log('Button:', await button.textContent())
+})
+```
+
+## Coverage Requirements
+
+### Global Thresholds
+
+Minimum coverage requirements (configured in `vitest.config.ts`):
+
+- **Lines**: 60%
+- **Functions**: 60%
+- **Branches**: 60%
+- **Statements**: 60%
+
+### Critical Code
+
+Payment processing code requires higher coverage:
+- All payment-related code should aim for 100% coverage
+- Includes: Stripe integration, checkout logic, refund handling, webhooks
+
+### Viewing Coverage
+
+```bash
+# Generate coverage report
+npm run test -- --coverage
+
+# Open HTML report
+open coverage/index.html
+```
+
+The HTML report shows:
+- ✅ **Green** - Well-covered files
+- ⚠️ **Yellow** - Partially covered files
+- ❌ **Red** - Poorly covered files
+
+Click on any file to see line-by-line coverage highlighting.
+
+### Improving Coverage
+
+Focus on:
+1. **Critical paths** - Payment, checkout, user authentication
+2. **Error handling** - Test failure scenarios
+3. **Edge cases** - Boundary conditions, null values
+4. **Complex logic** - Business rules, calculations
+
+Don't obsess over 100% coverage for:
+- Type definitions
+- Simple getters/setters
+- Configuration files
+- Mock data
+
+## CI/CD Integration
+
+### GitHub Actions Workflow
+
+Tests run automatically on every pull request via `.github/workflows/ci.yml`:
+
+```yaml
+- Run linter
+- Run type check
+- Run unit/integration tests with coverage
+- Generate Prisma client
+- Build application
+- Install Playwright browsers
+- Run E2E tests
+- Upload coverage reports
+- Post coverage to PR comments
+```
+
+### Viewing Results
+
+1. **PR Checks Tab** - Shows pass/fail status
+2. **Coverage Comment** - Automatic coverage report posted to PR
+3. **Artifacts** - Download full coverage and Playwright reports
+
+### Local CI Simulation
+
+Run the same checks locally before pushing:
+
+```bash
+# Lint
+npm run lint
+
+# Type check
+npm run type-check
+
+# Tests with coverage
+npm run test -- --coverage
+
+# Build
+npm run build
+
+# E2E tests
+npx playwright test
+```
+
+### Merge Requirements
+
+Pull requests must pass all checks to be merged:
+- ✅ Linting passes
+- ✅ Type checking passes
+- ✅ All tests pass
+- ✅ Coverage thresholds met
+- ✅ E2E tests pass
+- ✅ Build succeeds
+
+## Troubleshooting
+
+### Common Issues
+
+#### "Module not found" errors
+
+**Problem**: Import paths not resolving
+
+**Solution**: Check `vitest.config.ts` has path alias configured:
+```typescript
+resolve: {
+  alias: {
+    '@': path.resolve(__dirname, './')
+  }
+}
+```
+
+#### MSW handlers not working
+
+**Problem**: API calls not being intercepted
+
+**Solution**: Verify MSW server is started in `vitest-setup.ts`:
+```typescript
+import { server } from './tests/mocks/server'
+
+beforeAll(() => server.listen())
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())
+```
+
+#### Playwright timeout errors
+
+**Problem**: `Test timeout of 30000ms exceeded`
+
+**Solution**:
+1. Increase timeout: `test.setTimeout(60000)`
+2. Wait for specific elements: `await page.waitForSelector('.loaded')`
+3. Check dev server is running: `npm run dev`
+
+#### Tests fail in CI but pass locally
+
+**Problem**: Environment differences
+
+**Solutions**:
+- Check environment variables in GitHub Actions
+- Use `CI=true` locally: `CI=true npm run test`
+- Review uploaded artifacts in GitHub Actions
+
+#### React Testing Library "not wrapped in act()" warnings
+
+**Problem**: State updates outside `act()`
+
+**Solution**: Use `userEvent` instead of `fireEvent`:
+```typescript
+// ❌ Bad
+fireEvent.click(button)
+
+// ✅ Good
+const user = userEvent.setup()
+await user.click(button)
+```
+
+#### Coverage not updating
+
+**Problem**: Coverage report shows old data
+
+**Solution**:
+```bash
+# Delete coverage directory
+rm -rf coverage/
+
+# Re-run tests
+npm run test -- --coverage
+```
+
+### Getting Help
+
+1. **Check test output** - Error messages usually indicate the issue
+2. **Review test logs** - Look for console errors or warnings
+3. **Run in debug mode** - Use `--debug` flag for interactive debugging
+4. **Check documentation**:
+   - [Vitest Docs](https://vitest.dev)
+   - [React Testing Library](https://testing-library.com/react)
+   - [Playwright Docs](https://playwright.dev)
+   - [MSW Docs](https://mswjs.io)
+
+### Performance Tips
+
+**Speed up Vitest:**
+- Use `--changed` to only test modified files
+- Use `--coverage=false` to skip coverage generation
+- Use `--no-threads` if tests are failing due to parallelization
+
+**Speed up Playwright:**
+- Run single browser: `--project=chromium`
+- Run specific test: `npx playwright test checkout.spec.ts`
+- Use `--workers=1` for sequential execution
+- Reuse existing server: `reuseExistingServer: true` in config
+
+---
+
+## Additional Resources
+
+- **Vitest**: https://vitest.dev/guide/
+- **React Testing Library**: https://testing-library.com/docs/react-testing-library/intro
+- **Playwright**: https://playwright.dev/docs/intro
+- **MSW**: https://mswjs.io/docs/
+- **Testing Best Practices**: https://kentcdodds.com/blog/common-mistakes-with-react-testing-library
+
+---
+
+**Need help?** Check the troubleshooting section above or review existing tests in the `tests/` directory for examples.
