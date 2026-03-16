@@ -108,7 +108,6 @@
     "exceljs": "^4.4.0",
     "framer-motion": "^12.23.25",
     "google-auth-library": "^10.6.1",
-    "googleapis": "^143.0.0",
     "gray-matter": "^4.0.3",
     "jszip": "^3.10.1",
     "lucide-react": "^0.555.0",
