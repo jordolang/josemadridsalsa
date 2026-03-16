@@ -4,6 +4,9 @@ import { Suspense, useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import * as z from 'zod'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -16,25 +19,42 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 
+const signInSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Must be a valid email address').trim(),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+})
+
+type SignInFormData = z.infer<typeof signInSchema>
+
 function SignInFormInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams?.get('callbackUrl') || '/'
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignInFormData>({
+    resolver: zodResolver(signInSchema),
+    mode: 'onChange',
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  })
+
+  const onSubmit = async (data: SignInFormData) => {
     setError(null)
     setIsLoading(true)
 
     try {
       const result = await signIn('credentials', {
-        email,
-        password,
+        email: data.email,
+        password: data.password,
         redirect: false,
         callbackUrl,
       })
@@ -57,8 +77,7 @@ function SignInFormInner() {
         setError('Unable to sign in. Please try again.')
         setIsLoading(false)
       }
-    } catch (error) {
-      console.error('Sign in error:', error)
+    } catch (_error) {
       setError('Unable to sign in. Please check your connection and try again.')
       setIsLoading(false)
     }
@@ -76,17 +95,21 @@ function SignInFormInner() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
                 required
+                aria-invalid={!!errors.email}
+                aria-describedby="email-error"
+                {...register('email')}
               />
+              {errors.email && (
+                <p id="email-error" role="alert" className="text-sm text-red-600">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -102,11 +125,15 @@ function SignInFormInner() {
               <Input
                 id="password"
                 type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
                 placeholder="••••••••"
                 required
+                aria-invalid={!!errors.password}
+                aria-describedby="password-error"
+                {...register('password')}
               />
+              {errors.password && (
+                <p id="password-error" role="alert" className="text-sm text-red-600">{errors.password.message}</p>
+              )}
             </div>
 
             {error && (
