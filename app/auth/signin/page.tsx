@@ -40,6 +40,7 @@ function SignInFormInner() {
     formState: { errors },
   } = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
+    mode: 'onChange',
     defaultValues: {
       email: '',
       password: '',
