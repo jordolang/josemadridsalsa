@@ -1,6 +1,7 @@
 import { createUploadthing, type FileRouter } from 'uploadthing/next'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import prisma from '@/lib/prisma'
 
 const f = createUploadthing()
 
@@ -21,6 +22,13 @@ export const ourFileRouter = {
       if (!session?.user || (session.user as any).role !== 'FUNDRAISER') {
         throw new Error('Unauthorized - fundraiser account required')
       }
+      const account = await prisma.fundraiserAccount.findUnique({
+        where: { userId: (session.user as any).id as string },
+        select: { status: true },
+      })
+      if (!account || account.status !== 'APPROVED') {
+        throw new Error('Unauthorized: account not approved')
+      }
       return { userId: (session.user as any).id as string }
     })
     .onUploadComplete(async ({ metadata, file }) => {
@@ -33,6 +41,13 @@ export const ourFileRouter = {
       if (!session?.user || (session.user as any).role !== 'FUNDRAISER') {
         throw new Error('Unauthorized - fundraiser account required')
       }
+      const account = await prisma.fundraiserAccount.findUnique({
+        where: { userId: (session.user as any).id as string },
+        select: { status: true },
+      })
+      if (!account || account.status !== 'APPROVED') {
+        throw new Error('Unauthorized: account not approved')
+      }
       return { userId: (session.user as any).id as string }
     })
     .onUploadComplete(async ({ metadata, file }) => {
@@ -44,6 +59,13 @@ export const ourFileRouter = {
       const session = await getServerSession(authOptions)
       if (!session?.user || (session.user as any).role !== 'FUNDRAISER') {
         throw new Error('Unauthorized - fundraiser account required')
+      }
+      const account = await prisma.fundraiserAccount.findUnique({
+        where: { userId: (session.user as any).id as string },
+        select: { status: true },
+      })
+      if (!account || account.status !== 'APPROVED') {
+        throw new Error('Unauthorized: account not approved')
       }
       return { userId: (session.user as any).id as string }
     })

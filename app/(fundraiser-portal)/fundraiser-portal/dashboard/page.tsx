@@ -100,7 +100,7 @@ export default async function FundraiserDashboardPage() {
                   rel="noopener noreferrer"
                   className="text-salsa-600 hover:text-salsa-700"
                 >
-                  josemadridsalsa.com/f/{fundraiser.subdomain}
+                  josemadrid.net/f/{fundraiser.subdomain}
                 </a>
               </dd>
             </div>

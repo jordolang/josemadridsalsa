@@ -12,7 +12,7 @@ export default function FundraiserNotFound() {
           moved or is no longer active.
         </p>
         <Link
-          href="https://josemadridsalsa.com/fundraising"
+          href="https://josemadrid.net/fundraising"
           className="inline-block rounded-md bg-salsa-500 px-6 py-3 text-white hover:bg-salsa-600"
         >
           Learn About Fundraising

@@ -121,7 +121,7 @@ export default function FundraiserSettingsPage() {
           <div className="space-y-2">
             <Label htmlFor="subdomain">Subdomain</Label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">josemadridsalsa.com/f/</span>
+              <span className="text-sm text-gray-500">josemadrid.net/f/</span>
               <Input
                 id="subdomain"
                 name="subdomain"

@@ -61,7 +61,7 @@ export function PortalNav({ fundraiserName, subdomain }: PortalNavProps) {
           </h2>
           {subdomain && (
             <p className="mt-1 truncate text-xs text-gray-500">
-              josemadridsalsa.com/f/{subdomain}
+              josemadrid.net/f/{subdomain}
             </p>
           )}
         </div>

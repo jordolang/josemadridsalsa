@@ -42,7 +42,11 @@ const fundraiserSchema = z.object({
 type FundraiserFormData = z.infer<typeof fundraiserSchema>
 
 interface FundraiserFormProps {
-  fundraiser?: Fundraiser
+  fundraiser?: Fundraiser & {
+    subdomain?: string | null
+    missionStatement?: string | null
+    bio?: string | null
+  }
 }
 
 export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
@@ -73,9 +77,9 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
       commissionRate: fundraiser?.commissionRate.toString() || '20',
       status: fundraiser?.status || 'DRAFT',
       isActive: fundraiser?.isActive ?? false,
-      subdomain: (fundraiser as any)?.subdomain || '',
-      missionStatement: (fundraiser as any)?.missionStatement || '',
-      bio: (fundraiser as any)?.bio || '',
+      subdomain: fundraiser?.subdomain || '',
+      missionStatement: fundraiser?.missionStatement || '',
+      bio: fundraiser?.bio || '',
     },
   })
 
@@ -250,7 +254,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
           <div>
             <Label htmlFor="subdomain">Page URL Subdomain</Label>
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-sm text-slate-500">josemadridsalsa.com/f/</span>
+              <span className="text-sm text-slate-500">josemadrid.net/f/</span>
               <Input
                 id="subdomain"
                 {...register('subdomain')}

@@ -1,7 +1,7 @@
+import { cache } from 'react'
 import { notFound } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import {
-  type FundraiserPageConfig,
   defaultPageConfig,
   validatePageConfig,
 } from '@/lib/fundraiser-page-config'
@@ -12,7 +12,7 @@ type Props = {
   params: Promise<{ subdomain: string }>
 }
 
-async function getFundraiserBySubdomain(subdomain: string) {
+const getFundraiserBySubdomain = cache(async function getFundraiserBySubdomain(subdomain: string) {
   const fundraiser = await prisma.fundraiser.findUnique({
     where: { subdomain },
     include: {
@@ -47,7 +47,7 @@ async function getFundraiserBySubdomain(subdomain: string) {
   })
 
   return fundraiser
-}
+})
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subdomain } = await params
@@ -109,18 +109,8 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
   }
 
   // Parse page config or use default
-  let pageConfig: FundraiserPageConfig = defaultPageConfig
-
-  if (fundraiser.pageConfig) {
-    try {
-      const validated = validatePageConfig(fundraiser.pageConfig)
-      if (validated) {
-        pageConfig = validated
-      }
-    } catch {
-      pageConfig = defaultPageConfig
-    }
-  }
+  const configValidation = validatePageConfig(fundraiser.pageConfig)
+  const pageConfig = configValidation.success ? configValidation.data : defaultPageConfig
 
   return (
     <div className="min-h-screen">
@@ -137,7 +127,7 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
         <p>
           Powered by{' '}
           <a
-            href="https://josemadridsalsa.com"
+            href="https://josemadrid.net"
             className="text-salsa-600 hover:text-salsa-700"
             target="_blank"
             rel="noopener noreferrer"

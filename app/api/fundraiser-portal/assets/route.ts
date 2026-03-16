@@ -69,7 +69,7 @@ export async function PATCH(request: Request) {
         blocks: [],
       }
 
-      const updatedBlocks = currentConfig.blocks.map((block) => {
+      const updatedBlocks = (currentConfig.blocks ?? []).map((block) => {
         if (block.type === 'gallery') {
           return { ...block, imageUrls: parsed.data.galleryUrls! }
         }

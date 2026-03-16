@@ -19,8 +19,8 @@ export default function FundraiserPendingPage() {
         </p>
         <p className="mb-8 text-sm text-gray-500">
           This usually takes 1-2 business days. If you have questions, reach out to{' '}
-          <a href="mailto:fundraising@josemadridsalsa.com" className="text-salsa-600 hover:text-salsa-700">
-            fundraising@josemadridsalsa.com
+          <a href="mailto:fundraising@josemadrid.net" className="text-salsa-600 hover:text-salsa-700">
+            fundraising@josemadrid.net
           </a>
         </p>
         <Link

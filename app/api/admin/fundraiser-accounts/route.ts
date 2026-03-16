@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { FundraiserAccountStatus } from '@prisma/client'
-import { requirePermission, getCurrentUser } from '@/lib/rbac'
+import { requirePermission } from '@/lib/rbac'
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,18 +12,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const status = searchParams.get('status')
 
-    let where: { status?: FundraiserAccountStatus } = {}
-
-    if (status !== null) {
-      const validStatuses = Object.values(FundraiserAccountStatus)
-      if (!validStatuses.includes(status as FundraiserAccountStatus)) {
-        return NextResponse.json(
-          { error: 'Invalid status parameter' },
-          { status: 400 }
-        )
-      }
-      where.status = status as FundraiserAccountStatus
-    }
+    const validStatus = z.enum(['PENDING', 'APPROVED', 'SUSPENDED']).safeParse(status)
+    const where = validStatus.success ? { status: validStatus.data as FundraiserAccountStatus } : {}
 
     const accounts = await prisma.fundraiserAccount.findMany({
       where,
