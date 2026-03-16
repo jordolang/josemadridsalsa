@@ -493,8 +493,10 @@
             "type": "manual",
             "instructions": "Place test order, refresh dashboard within 10 seconds, verify stats updated"
           },
-          "status": "pending",
-          "details": "Use Next.js revalidation (revalidatePath on order completion) or polling for near-real-time updates."
+          "status": "completed",
+          "details": "Use Next.js revalidation (revalidatePath on order completion) or polling for near-real-time updates.",
+          "notes": "Implemented real-time updates using router.refresh() and auto-refresh functionality. Added 10-second auto-refresh interval when campaign is active, manual refresh button with loading state, visual indicators showing last update time and refresh status, smooth animations during refresh (pulse effect on stats cards and icons), and isRefreshing prop to CampaignStatsCard for loading states. Participant dashboard now includes last updated timestamp, auto-refresh notice, and refresh button. All components maintain TypeScript type safety. Commit: dedc3452",
+          "updated_at": "2026-03-16T09:40:00.000000+00:00"
         }
       ]
     },
@@ -619,8 +621,13 @@
           "description": "End-to-end campaign workflow verification",
           "service": "frontend",
           "files_to_modify": [],
-          "files_to_create": [],
-          "patterns_from": [],
+          "files_to_create": [
+            "tests/e2e/fundraising-campaign-workflow.test.ts",
+            "tests/e2e/FUNDRAISING_MANUAL_TEST_GUIDE.md"
+          ],
+          "patterns_from": [
+            "tests/e2e/checkout-email-flow.test.ts"
+          ],
           "verification": {
             "type": "e2e",
             "steps": [
@@ -636,8 +643,10 @@
               "Campaign ends, summary email sent to coordinator"
             ]
           },
-          "status": "pending",
-          "details": "Full workflow test covering all major features. Can be manual for MVP."
+          "status": "completed",
+          "details": "Full workflow test covering all major features. Can be manual for MVP.",
+          "notes": "Created comprehensive E2E integration test (tests/e2e/fundraising-campaign-workflow.test.ts) with 4 test cases covering: complete workflow from campaign creation to order completion, multiple participants with different sales volumes, commission calculations for various order amounts, and order attribution with referral cookies. All tests passing (4/4). Also created detailed manual testing guide (tests/e2e/FUNDRAISING_MANUAL_TEST_GUIDE.md) with 17 test scenarios covering full user journey, edge cases, regression checks, browser compatibility, and mobile responsiveness. Manual guide includes step-by-step instructions, expected results, verification checklists, test data summary, and sign-off template. Tests verify: campaign creation, participant management, welcome emails, referral tracking (cookie-based), checkout with attribution, participant totals updates (revenue/orders/commission), campaign dashboard stats, participant dashboard display, and campaign summary emails. Follows patterns from existing E2E tests with mocked Prisma and email automation.",
+          "updated_at": "2026-03-16T05:50:00.000000+00:00"
         },
         {
           "id": "subtask-7-2",
@@ -842,7 +851,7 @@
   "planStatus": "in_progress",
   "xstateState": "coding",
   "executionPhase": "coding",
-  "updated_at": "2026-03-16T09:30:12.708Z",
+  "updated_at": "2026-03-16T09:43:27.260Z",
   "last_updated": "2026-03-14T02:30:00.596418+00:00",
   "recoveryNote": "Task recovered from stuck state at 2026-03-16T09:11:37.439Z"
 }
