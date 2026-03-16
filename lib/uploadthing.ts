@@ -1,8 +1,19 @@
 import { createUploadthing, type FileRouter } from 'uploadthing/next'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 const f = createUploadthing()
+
+async function requireApprovedFundraiser(userId: string): Promise<void> {
+  const account = await prisma.fundraiserAccount.findUnique({
+    where: { userId },
+    select: { status: true },
+  })
+  if (!account || account.status !== 'APPROVED') {
+    throw new Error('Unauthorized - approved fundraiser account required')
+  }
+}
 
 export const ourFileRouter = {
   emailTemplateImage: f({ image: { maxFileSize: '8MB', maxFileCount: 1 } })
@@ -21,7 +32,9 @@ export const ourFileRouter = {
       if (!session?.user || (session.user as any).role !== 'FUNDRAISER') {
         throw new Error('Unauthorized - fundraiser account required')
       }
-      return { userId: (session.user as any).id as string }
+      const userId = (session.user as any).id as string
+      await requireApprovedFundraiser(userId)
+      return { userId }
     })
     .onUploadComplete(async ({ metadata, file }) => {
       return { url: file.url, uploadedBy: metadata.userId }
@@ -33,7 +46,9 @@ export const ourFileRouter = {
       if (!session?.user || (session.user as any).role !== 'FUNDRAISER') {
         throw new Error('Unauthorized - fundraiser account required')
       }
-      return { userId: (session.user as any).id as string }
+      const userId = (session.user as any).id as string
+      await requireApprovedFundraiser(userId)
+      return { userId }
     })
     .onUploadComplete(async ({ metadata, file }) => {
       return { url: file.url, uploadedBy: metadata.userId }
@@ -45,7 +60,9 @@ export const ourFileRouter = {
       if (!session?.user || (session.user as any).role !== 'FUNDRAISER') {
         throw new Error('Unauthorized - fundraiser account required')
       }
-      return { userId: (session.user as any).id as string }
+      const userId = (session.user as any).id as string
+      await requireApprovedFundraiser(userId)
+      return { userId }
     })
     .onUploadComplete(async ({ metadata, file }) => {
       return { url: file.url, uploadedBy: metadata.userId }
