@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { getCurrentFundraiserAccount } from '@/lib/rbac'
 import { PortalNav } from '@/components/fundraiser-portal/portal-nav'
 
@@ -7,6 +8,9 @@ export default async function FundraiserPortalLayout({
 }: {
   children: React.ReactNode
 }) {
+  const headersList = headers()
+  const pathname = headersList.get('x-invoke-path') || ''
+
   const account = await getCurrentFundraiserAccount()
 
   if (!account) {
@@ -15,6 +19,12 @@ export default async function FundraiserPortalLayout({
 
   if (account.status === 'PENDING') {
     // Allow the pending page to render but nothing else
+    const isPendingPage = pathname === '/fundraiser-portal/pending'
+
+    if (!isPendingPage) {
+      redirect('/fundraiser-portal/pending')
+    }
+
     return (
       <div className="min-h-screen bg-gray-50">
         {children}
