@@ -379,9 +379,10 @@
               "Verify order has participantId"
             ]
           },
-          "status": "pending",
+          "status": "completed",
           "details": "Read referral code from cookie/URL, pass to checkout, store participantId on Order. Update participant totals on order completion.",
-          "notes": "Path corrected: checkout page is at app/(public)/checkout/page.tsx (Next.js route group), not app/checkout/page.tsx. Also update complete/route.ts to store participantId on order completion."
+          "notes": "Created referral tracking integration with lib/fundraising/referral-tracker.ts (getReferralFromCookie, getReferralFromCode, getReferralCodeFromCookie, clearReferralCookie). Updated checkout API to accept referralCode parameter, look up participant, and store participantId/fundraiserId on order. Updated checkout page to read referral code from cookie and pass to API. Updated checkout complete route to update participant totals (totalOrders, totalRevenue, totalCommission) atomically in transaction when payment succeeds. Commission calculated as order total × fundraiser commission rate. TypeScript validation passed. Commit: a7bf7607",
+          "updated_at": "2026-03-16T09:30:00.000000+00:00"
         },
         {
           "id": "subtask-4-4",
