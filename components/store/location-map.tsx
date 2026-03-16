@@ -29,24 +29,30 @@ export function LocationMap() {
   // Prefer place_id if provided
   const placeId = process.env.NEXT_PUBLIC_GOOGLE_PLACE_ID || process.env.GOOGLE_PLACE_ID
 
-  // Google Maps Embed URL
+  // Google Maps Embed URL — uses the keyless embed endpoint which works without
+  // the Maps Embed API being enabled. The Embed API v1 requires a separate billing
+  // activation; maps.google.com/maps?output=embed works for any public location.
   const mapEmbedUrl = useMemo(() => {
-    if (!apiKey) return null
     if (placeId) {
-      return `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=place_id:${placeId}&zoom=17`
+      return `https://maps.google.com/maps?q=place_id:${placeId}&output=embed&z=17`
     }
-    return `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${encodedAddress}&zoom=17`
-  }, [apiKey, placeId, encodedAddress])
+    return `https://maps.google.com/maps?q=${encodedAddress}&output=embed&z=17`
+  }, [placeId, encodedAddress])
 
-  // Google Street View Embed URL - prefer panoId; include source=outdoor
+  // Google Street View Embed URL
+  // Prefer the Embed API v1 with key if available (needs Maps Embed API enabled),
+  // otherwise fall back to the keyless streetview URL format.
   const streetViewUrl = useMemo(() => {
-    if (!apiKey) return null
-    const base = `https://www.google.com/maps/embed/v1/streetview?key=${apiKey}`
-    const common = `&heading=${streetHeading}&pitch=${streetPitch}&fov=${streetFov}&source=outdoor`
-    if (panoId) {
-      return `${base}&pano=${encodeURIComponent(panoId)}${common}`
+    if (apiKey) {
+      const base = `https://www.google.com/maps/embed/v1/streetview?key=${apiKey}`
+      const common = `&heading=${streetHeading}&pitch=${streetPitch}&fov=${streetFov}&source=outdoor`
+      if (panoId) {
+        return `${base}&pano=${encodeURIComponent(panoId)}${common}`
+      }
+      return `${base}&location=${LATITUDE},${LONGITUDE}${common}`
     }
-    return `${base}&location=${LATITUDE},${LONGITUDE}${common}`
+    // Keyless fallback: standard maps URL centred on coordinates
+    return `https://maps.google.com/maps?q=${LATITUDE},${LONGITUDE}&output=embed&z=18`
   }, [apiKey, panoId, streetHeading, streetPitch, streetFov])
 
   // Directions URL
