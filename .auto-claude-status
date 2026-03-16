@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "019-admin-dashboard-content-management",
+  "spec": "052-replace-googleapis-with-googleapis-calendar-for-95",
   "state": "building",
   "subtasks": {
-    "completed": 23,
-    "total": 25,
+    "completed": 4,
+    "total": 11,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Integration Verification & Testing",
+    "current": "Migrate Calendar API Usage",
     "id": null,
-    "total": 4
+    "total": 3
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 12,
-    "started_at": "2026-03-12T16:44:10.549934"
+    "number": 6,
+    "started_at": "2026-03-16T05:23:47.301322"
   },
-  "last_update": "2026-03-12T17:10:50.387946"
+  "last_update": "2026-03-16T05:47:41.529521"
 }
