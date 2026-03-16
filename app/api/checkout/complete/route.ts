@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
+import { Prisma, PaymentStatus, OrderStatus } from '@prisma/client'
 import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 
 const CompleteSchema = z.object({
@@ -10,8 +10,27 @@ const CompleteSchema = z.object({
   paymentIntentId: z.string().min(1),
 })
 
+type OrderWithItems = {
+  id: string
+  orderNumber: string
+  userId: string | null
+  guestEmail: string | null
+  paymentStatus: PaymentStatus
+  status: OrderStatus
+  total: Prisma.Decimal
+  participantId: string | null
+  fundraiserId: string | null
+  items: {
+    id: string
+    productId: string
+    quantity: number
+    unitPrice: Prisma.Decimal
+    totalPrice: Prisma.Decimal
+  }[]
+}
+
 export async function POST(request: Request) {
-  let order: Awaited<ReturnType<typeof prisma.order.findUnique<{ where: { id: string }; include: { items: true } }>>> | null = null
+  let order: OrderWithItems | null = null
 
   try {
     const json = await request.json()
@@ -31,7 +50,26 @@ export async function POST(request: Request) {
     const [fetchedOrder, paymentIntent] = await Promise.all([
       prisma.order.findUnique({
         where: { id: orderId },
-        include: { items: true },
+        select: {
+          id: true,
+          orderNumber: true,
+          userId: true,
+          guestEmail: true,
+          paymentStatus: true,
+          status: true,
+          total: true,
+          participantId: true,
+          fundraiserId: true,
+          items: {
+            select: {
+              id: true,
+              productId: true,
+              quantity: true,
+              unitPrice: true,
+              totalPrice: true,
+            },
+          },
+        },
       }),
       stripe.paymentIntents.retrieve(paymentIntentId),
     ])
@@ -112,6 +150,37 @@ export async function POST(request: Request) {
               recoveredAt: new Date(),
             },
           })
+        }
+
+        // Update participant totals if order is attributed to a participant
+        if (order!.participantId) {
+          const orderTotal = Number(order!.total)
+
+          // Get the fundraiser to calculate commission
+          const fundraiser = await tx.fundraiser.findUnique({
+            where: { id: order!.fundraiserId! },
+            select: { commissionRate: true },
+          })
+
+          if (fundraiser) {
+            const commissionAmount = orderTotal * (Number(fundraiser.commissionRate) / 100)
+
+            // Increment participant totals
+            await tx.fundraiserParticipant.update({
+              where: { id: order!.participantId },
+              data: {
+                totalOrders: { increment: 1 },
+                totalRevenue: { increment: new Prisma.Decimal(orderTotal.toFixed(2)) },
+                totalCommission: { increment: new Prisma.Decimal(commissionAmount.toFixed(2)) },
+              },
+            })
+
+            console.log('[Checkout Complete] Updated participant totals:', {
+              participantId: order!.participantId,
+              orderTotal,
+              commissionAmount,
+            })
+          }
         }
 
         // Deduct reserved inventory for each item inside the same transaction

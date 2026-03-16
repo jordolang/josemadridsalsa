@@ -85,7 +85,7 @@ export async function syncGoogleCalendar(): Promise<{
       }
     }
 
-    const eventIds = events.map((e) => e.id).filter(Boolean) as string[]
+    const eventIds = events.map((e: { id?: string | null }) => e.id).filter(Boolean) as string[]
     const deletedCount = await prisma.featuredEvent.deleteMany({
       where: {
         googleEventId: {

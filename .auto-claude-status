@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "052-replace-googleapis-with-googleapis-calendar-for-95",
+  "spec": "058-enhanced-fundraising-portal",
   "state": "building",
   "subtasks": {
-    "completed": 6,
-    "total": 11,
+    "completed": 18,
+    "total": 25,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Verification and Testing",
+    "current": "Public Ordering Flow",
     "id": null,
-    "total": 5
+    "total": 4
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 8,
-    "started_at": "2026-03-16T05:23:47.301322"
+    "number": 1,
+    "started_at": "2026-03-16T05:11:49.914262"
   },
-  "last_update": "2026-03-16T05:53:28.557015"
+  "last_update": "2026-03-16T05:11:50.052726"
 }
