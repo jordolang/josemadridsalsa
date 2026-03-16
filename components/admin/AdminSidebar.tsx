@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronRight,
   Gift,
+  TrendingUp,
 } from 'lucide-react'
 import { useState } from 'react'
 import type { NavItem } from '@/lib/permissions-map'
@@ -38,6 +39,7 @@ const iconMap = {
   Building2,
   Settings,
   Gift,
+  TrendingUp,
 }
 
 interface AdminSidebarProps {
