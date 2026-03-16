@@ -1,11 +1,18 @@
 import crypto from 'crypto'
 
 import { prisma } from '@/lib/prisma'
+import { Prisma, UserRole } from '@prisma/client'
 import { encryptSecret, decryptSecret } from '@/lib/crypto'
 import { hasPermission } from '@/lib/rbac'
-import { UserRole } from '@prisma/client'
 
 const SUPER_ADMIN_EMAIL = 'jordolang@gmail.com'
+
+function isMissingTableError(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2021'
+  )
+}
 
 export interface CredentialGrantPermissions {
   canView: boolean
@@ -25,25 +32,33 @@ export async function checkCredentialAccess(
   email: string,
   role: UserRole
 ): Promise<'read' | 'write' | null> {
-  const grant = await prisma.credentialAccessGrant.findUnique({
-    where: { email },
-  })
+  try {
+    const grant = await prisma.credentialAccessGrant.findUnique({
+      where: { email },
+    })
 
-  if (!grant || grant.revokedAt !== null) {
+    if (!grant || grant.revokedAt !== null) {
+      return null
+    }
+
+    const user = { role }
+
+    if (await hasPermission(user, 'credentials:write')) {
+      return 'write'
+    }
+
+    if (await hasPermission(user, 'credentials:read')) {
+      return 'read'
+    }
+
     return null
+  } catch (error) {
+    if (isMissingTableError(error)) {
+      console.warn('[Credentials] credential_access_grants table missing. Run prisma migrate deploy.')
+      return null
+    }
+    throw error
   }
-
-  const user = { role }
-
-  if (await hasPermission(user, 'credentials:write')) {
-    return 'write'
-  }
-
-  if (await hasPermission(user, 'credentials:read')) {
-    return 'read'
-  }
-
-  return null
 }
 
 /**
@@ -52,20 +67,28 @@ export async function checkCredentialAccess(
 export async function getGrantPermissions(
   email: string
 ): Promise<CredentialGrantPermissions | null> {
-  const grant = await prisma.credentialAccessGrant.findUnique({
-    where: { email },
-  })
+  try {
+    const grant = await prisma.credentialAccessGrant.findUnique({
+      where: { email },
+    })
 
-  if (!grant || grant.revokedAt !== null) {
-    return null
-  }
+    if (!grant || grant.revokedAt !== null) {
+      return null
+    }
 
-  return {
-    canView: grant.canView,
-    canAdd: grant.canAdd,
-    canEdit: grant.canEdit,
-    canDelete: grant.canDelete,
-    canUpload: grant.canUpload,
+    return {
+      canView: grant.canView,
+      canAdd: grant.canAdd,
+      canEdit: grant.canEdit,
+      canDelete: grant.canDelete,
+      canUpload: grant.canUpload,
+    }
+  } catch (error) {
+    if (isMissingTableError(error)) {
+      console.warn('[Credentials] credential_access_grants table missing. Run prisma migrate deploy.')
+      return null
+    }
+    throw error
   }
 }
 
