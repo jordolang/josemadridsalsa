@@ -13,13 +13,21 @@ const FundraiserRegisterSchema = z.object({
 })
 
 function generateSubdomain(orgName: string): string {
-  return orgName
+  const base = orgName
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 50)
+
+  if (base) {
+    return base
+  }
+
+  // Fallback if sanitization removes all characters (e.g., only emoji/punctuation)
+  const randomSuffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+  return `fundraiser-${randomSuffix}`.slice(0, 50)
 }
 
 export async function POST(request: Request) {
@@ -52,24 +60,32 @@ export async function POST(request: Request) {
       )
     }
 
-    // Generate a unique subdomain from the org name
-    let subdomain = generateSubdomain(organizationName)
-    const existingSubdomain = await prisma.fundraiser.findUnique({
-      where: { subdomain },
-      select: { id: true },
-    })
-    if (existingSubdomain) {
-      subdomain = `${subdomain}-${Date.now().toString(36).slice(-4)}`
-    }
+    // Generate a unique subdomain and slug from the org name
+    const baseSubdomain = generateSubdomain(organizationName)
+    let subdomain = baseSubdomain
+    let slug = baseSubdomain
+    let attempt = 0
 
-    // Generate a unique slug
-    let slug = subdomain
-    const existingSlug = await prisma.fundraiser.findUnique({
-      where: { slug },
-      select: { id: true },
-    })
-    if (existingSlug) {
-      slug = `${slug}-${Date.now().toString(36).slice(-4)}`
+    // Ensure both subdomain and slug are unique; retry with random suffix if needed
+    while (true) {
+      const existingFundraiser = await prisma.fundraiser.findFirst({
+        where: {
+          OR: [{ subdomain }, { slug }],
+        },
+        select: { id: true },
+      })
+
+      if (!existingFundraiser) {
+        break
+      }
+
+      attempt += 1
+      const randomSuffix = `${Date.now().toString(36).slice(-4)}${Math.random()
+        .toString(36)
+        .slice(2, 6)}`
+      const withSuffix = `${baseSubdomain}-${randomSuffix}`
+      subdomain = withSuffix.slice(0, 50)
+      slug = subdomain
     }
 
     const hashedPassword = await bcrypt.hash(password, 12)
