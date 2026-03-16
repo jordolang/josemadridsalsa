@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import {
   type FundraiserPageConfig,
   defaultPageConfig,
+  validatePageConfig,
 } from '@/lib/fundraiser-page-config'
 import { BlockRenderer } from '@/components/fundraiser-portal/block-renderer'
 import type { Metadata } from 'next'
@@ -108,10 +109,18 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
   }
 
   // Parse page config or use default
-  const pageConfig: FundraiserPageConfig =
-    fundraiser.pageConfig
-      ? (fundraiser.pageConfig as unknown as FundraiserPageConfig)
-      : defaultPageConfig
+  let pageConfig: FundraiserPageConfig = defaultPageConfig
+
+  if (fundraiser.pageConfig) {
+    try {
+      const validated = validatePageConfig(fundraiser.pageConfig)
+      if (validated) {
+        pageConfig = validated
+      }
+    } catch {
+      pageConfig = defaultPageConfig
+    }
+  }
 
   return (
     <div className="min-h-screen">
