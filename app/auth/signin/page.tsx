@@ -4,6 +4,9 @@ import { Suspense, useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import * as z from 'zod'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -15,6 +18,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+
+const signInSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Must be a valid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+})
+
+type SignInFormData = z.infer<typeof signInSchema>
 
 function SignInFormInner() {
   const router = useRouter()
