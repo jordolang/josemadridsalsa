@@ -664,8 +664,10 @@
             "command": "npm run test -- --grep 'commission calculation'",
             "expected": "Commissions calculate correctly"
           },
-          "status": "pending",
-          "details": "Test commission calculations: order total × commission rate = participant earning. Verify totals aggregate correctly."
+          "status": "completed",
+          "details": "Test commission calculations: order total × commission rate = participant earning. Verify totals aggregate correctly.",
+          "notes": "Created lib/fundraising/calculate-commission.ts with three utility functions: calculateCommission (Decimal inputs), calculateCommissionFromNumber (number inputs), and calculateTotalCommission (multiple orders). All functions use Decimal type from Prisma for precision. Commission calculation: orderTotal × commissionRate. Tests passing in tests/e2e/fundraising-campaign-workflow.test.ts including edge cases with various order amounts and commission rates (e.g., $125.50 × 0.35 = $43.925). All 4 tests passing.",
+          "updated_at": "2026-03-16T05:53:00.000000+00:00"
         },
         {
           "id": "subtask-7-3",
@@ -851,7 +853,7 @@
   "planStatus": "in_progress",
   "xstateState": "coding",
   "executionPhase": "coding",
-  "updated_at": "2026-03-16T09:43:27.260Z",
+  "updated_at": "2026-03-16T09:51:33.022Z",
   "last_updated": "2026-03-14T02:30:00.596418+00:00",
   "recoveryNote": "Task recovered from stuck state at 2026-03-16T09:11:37.439Z"
 }
