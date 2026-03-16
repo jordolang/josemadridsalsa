@@ -360,14 +360,15 @@
           "description": "Integrate referral tracking into checkout flow",
           "service": "frontend",
           "files_to_modify": [
-            "app/checkout/page.tsx",
-            "app/api/checkout/route.ts"
+            "app/(public)/checkout/page.tsx",
+            "app/api/checkout/route.ts",
+            "app/api/checkout/complete/route.ts"
           ],
           "files_to_create": [
             "lib/fundraising/referral-tracker.ts"
           ],
           "patterns_from": [
-            "app/checkout/page.tsx"
+            "app/(public)/checkout/page.tsx"
           ],
           "verification": {
             "type": "e2e",
@@ -379,7 +380,8 @@
             ]
           },
           "status": "pending",
-          "details": "Read referral code from cookie/URL, pass to checkout, store participantId on Order. Update participant totals on order completion."
+          "details": "Read referral code from cookie/URL, pass to checkout, store participantId on Order. Update participant totals on order completion.",
+          "notes": "Path corrected: checkout page is at app/(public)/checkout/page.tsx (Next.js route group), not app/checkout/page.tsx. Also update complete/route.ts to store participantId on order completion."
         },
         {
           "id": "subtask-4-4",
@@ -835,7 +837,7 @@
   "planStatus": "in_progress",
   "xstateState": "coding",
   "executionPhase": "coding",
-  "updated_at": "2026-03-16T08:57:25.970Z",
+  "updated_at": "2026-03-16T09:11:50.061Z",
   "last_updated": "2026-03-14T02:30:00.596418+00:00",
-  "recoveryNote": "Task recovered from stuck state at 2026-03-16T08:57:15.108Z"
+  "recoveryNote": "Task recovered from stuck state at 2026-03-16T09:11:37.439Z"
 }

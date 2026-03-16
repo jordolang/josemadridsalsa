@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import Link from 'next/link'
+import { getReferralCodeFromCookie } from '@/lib/fundraising/referral-tracker'
 
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null
@@ -518,6 +519,9 @@ function CheckoutForm() {
     setIsProcessing(true)
 
     try {
+      // Get referral code from cookie if available
+      const referralCode = getReferralCodeFromCookie()
+
       const checkoutResponse = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -542,6 +546,7 @@ function CheckoutForm() {
           notes: formState.notes || undefined,
           shippingMethod: selectedShippingOption?.method,
           shippingCost: selectedShippingOption?.cost,
+          referralCode: referralCode || undefined,
         }),
       })
 

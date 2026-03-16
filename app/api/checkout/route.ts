@@ -9,6 +9,7 @@ import { calculateShipping } from '@/lib/shipping-calculator'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
 import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manager'
+import { getReferralFromCode } from '@/lib/fundraising/referral-tracker'
 
 const CheckoutSchema = z.object({
   items: z
@@ -37,6 +38,7 @@ const CheckoutSchema = z.object({
   recoveryToken: z.string().optional(),
   shippingMethod: z.string().optional(),
   shippingCost: z.number().optional(),
+  referralCode: z.string().optional(),
 })
 
 const toDecimal = (value: number) =>
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, customer, shipping, notes, discountCode, recoveryToken, shippingMethod, shippingCost } = parsed.data
+    const { items, customer, shipping, notes, discountCode, recoveryToken, shippingMethod, shippingCost, referralCode } = parsed.data
 
     const productIds = items.map((item) => item.productId)
     const products = await prisma.product.findMany({
@@ -236,6 +238,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Look up participant from referral code if provided
+    let participantId: string | undefined
+    let fundraiserId: string | undefined
+    if (referralCode) {
+      try {
+        const referralInfo = await getReferralFromCode(referralCode)
+        if (referralInfo) {
+          participantId = referralInfo.participantId
+          fundraiserId = referralInfo.fundraiserId
+          console.log('[Checkout] Order attributed to participant:', {
+            participantId,
+            participantName: referralInfo.participantName,
+            fundraiserId,
+            fundraiserName: referralInfo.fundraiserName,
+          })
+        } else {
+          console.warn('[Checkout] Invalid or inactive referral code:', referralCode)
+        }
+      } catch (error) {
+        console.error('[Checkout] Failed to look up referral code:', error)
+        // Don't block checkout if referral lookup fails
+      }
+    }
+
     const order = await prisma.order.create({
       data: {
         orderNumber: generateOrderNumber(),
@@ -251,6 +277,8 @@ export async function POST(request: NextRequest) {
         total: toDecimal(total),
         paymentStatus: 'PENDING',
         status: 'PENDING',
+        participantId,
+        fundraiserId,
         items: {
           create: orderItems,
         },
