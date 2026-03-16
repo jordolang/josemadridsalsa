@@ -9,6 +9,7 @@ import { GalleryBlock } from './blocks/gallery-block'
 import { CustomTextBlock } from './blocks/custom-text-block'
 import { ContactInfoBlock } from './blocks/contact-info-block'
 import { HowItWorksBlock } from './blocks/how-it-works-block'
+import type { Prisma } from '@prisma/client'
 
 type FundraiserData = {
   name: string
@@ -20,17 +21,17 @@ type FundraiserData = {
   coverPhotoUrl: string | null
   contactEmail: string
   contactPhone: string | null
-  goal: any
-  totalRevenue: any
+  goal: Prisma.Decimal | number | string
+  totalRevenue: Prisma.Decimal | number | string
   slug: string
   products: Array<{
-    price: any
+    price: Prisma.Decimal | number | string
     product: {
       id: string
       name: string
       slug: string
       description: string | null
-      price: any
+      price: Prisma.Decimal | number | string
       images: string[]
     }
   }>
@@ -38,7 +39,7 @@ type FundraiserData = {
     id: string
     name: string
     totalOrders: number
-    totalRevenue: any
+    totalRevenue: Prisma.Decimal | number | string
     referralCode: string
   }>
 }
