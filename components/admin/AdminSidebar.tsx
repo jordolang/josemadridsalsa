@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Gift,
   TrendingUp,
+  Lock,
 } from 'lucide-react'
 import { useState } from 'react'
 import type { NavItem } from '@/lib/permissions-map'
@@ -40,6 +41,7 @@ const iconMap = {
   Settings,
   Gift,
   TrendingUp,
+  Lock,
 }
 
 interface AdminSidebarProps {
