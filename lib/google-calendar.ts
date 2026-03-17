@@ -1,9 +1,15 @@
-import { calendar } from '@googleapis/calendar';
-import { JWT } from 'google-auth-library';
-import type { calendar_v3 } from '@googleapis/calendar';
+/**
+ * Google Calendar v3 — public calendar access via API key.
+ *
+ * No service account or OAuth required. The target calendar must be
+ * set to "Make available to public" in Google Calendar settings.
+ *
+ * Required env vars:
+ *   GOOGLE_CALENDAR_API_KEY  — Google Cloud API key with Calendar API enabled
+ *   GOOGLE_CALENDAR_ID       — Calendar ID (e.g. mike@josemadridsalsa.com)
+ */
 
-const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
-const CACHE_TTL_MS = 1000 * 60 * 5;
+const CACHE_TTL_MS = 1000 * 60 * 5; // 5-minute cache
 
 export type ScheduleEvent = {
   id: string;
@@ -24,53 +30,22 @@ export class GoogleCalendarNotConfiguredError extends Error {
 }
 
 let cachedEvents: { events: ScheduleEvent[]; expiresAt: number } | null = null;
-let cachedClient: ReturnType<typeof createServiceAccountClient> | null = null;
 
-function createServiceAccountClient() {
-  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  const impersonatedUser = process.env.GOOGLE_CALENDAR_IMPERSONATED_USER;
+function toScheduleEvent(item: Record<string, any>): ScheduleEvent | null {
+  if (!item) return null;
 
-  if (!clientEmail || !privateKey) {
-    throw new GoogleCalendarNotConfiguredError(
-      'Google service account credentials are not fully configured.'
-    );
-  }
-
-  return new JWT({
-    email: clientEmail,
-    key: privateKey,
-    scopes: SCOPES,
-    subject: impersonatedUser || undefined,
-  });
-}
-
-function getCachedClient() {
-  if (!cachedClient) {
-    cachedClient = createServiceAccountClient();
-  }
-  return cachedClient;
-}
-
-function toScheduleEvent(event: calendar_v3.Schema$Event | null): ScheduleEvent | null {
-  if (!event) return null;
-
-  const id =
-    event.id ||
-    `${event.start?.dateTime || event.start?.date || 'unknown'}-${event.summary || 'untitled'}`;
-
-  const startRaw = event.start?.dateTime || event.start?.date || null;
-  const endRaw = event.end?.dateTime || event.end?.date || null;
-  const isAllDay = Boolean(event.start?.date && !event.start?.dateTime);
+  const startRaw: string | null = item.start?.dateTime ?? item.start?.date ?? null;
+  const endRaw: string | null   = item.end?.dateTime   ?? item.end?.date   ?? null;
+  const isAllDay = Boolean(item.start?.date && !item.start?.dateTime);
 
   return {
-    id,
-    title: event.summary || 'Untitled Event',
-    start: startRaw,
-    end: endRaw,
-    location: event.location || null,
-    description: event.description || null,
-    link: event.htmlLink || null,
+    id:          item.id ?? `${startRaw}-${item.summary}`,
+    title:       item.summary ?? 'Untitled Event',
+    start:       startRaw,
+    end:         endRaw,
+    location:    item.location   ?? null,
+    description: item.description ?? null,
+    link:        item.htmlLink    ?? null,
     isAllDay,
   };
 }
@@ -84,10 +59,14 @@ export async function getUpcomingScheduleEvents(
   options: UpcomingEventOptions = {}
 ): Promise<ScheduleEvent[]> {
   const { limit = 25, skipCache = false } = options;
+
+  const apiKey     = process.env.GOOGLE_CALENDAR_API_KEY;
   const calendarId = process.env.GOOGLE_CALENDAR_ID;
 
-  if (!calendarId) {
-    throw new GoogleCalendarNotConfiguredError('GOOGLE_CALENDAR_ID is not set.');
+  if (!apiKey || !calendarId) {
+    throw new GoogleCalendarNotConfiguredError(
+      'GOOGLE_CALENDAR_API_KEY and GOOGLE_CALENDAR_ID must both be set.'
+    );
   }
 
   const now = Date.now();
@@ -95,26 +74,30 @@ export async function getUpcomingScheduleEvents(
     return cachedEvents.events;
   }
 
-  const authClient = getCachedClient();
-
-  const calendarClient = calendar({ version: 'v3', auth: authClient });
-  const response = await calendarClient.events.list({
-    calendarId,
-    maxResults: limit,
-    singleEvents: true,
-    orderBy: 'startTime',
-    timeMin: new Date().toISOString(),
+  const params = new URLSearchParams({
+    key:          apiKey,
+    timeMin:      new Date().toISOString(),
+    maxResults:   String(limit),
+    singleEvents: 'true',
+    orderBy:      'startTime',
   });
 
-  const events = (response.data.items || [])
-    .map((item) => toScheduleEvent(item))
-    .filter((item): item is ScheduleEvent => Boolean(item));
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`;
 
-  cachedEvents = {
-    events,
-    expiresAt: now + CACHE_TTL_MS,
-  };
+  const response = await fetch(url, { next: { revalidate: 300 } });
 
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    const message = body?.error?.message ?? `Calendar API error: ${response.status}`;
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+  const events = ((data.items ?? []) as Record<string, any>[])
+    .map(toScheduleEvent)
+    .filter((e): e is ScheduleEvent => Boolean(e));
+
+  cachedEvents = { events, expiresAt: now + CACHE_TTL_MS };
   return events;
 }
 
