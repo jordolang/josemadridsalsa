@@ -674,7 +674,7 @@ CREATE TABLE "fundraiser_participants" (
     "totalRevenue" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "totalCommission" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "fundraiser_participants_pkey" PRIMARY KEY ("id")
 );
@@ -1761,6 +1761,9 @@ CREATE UNIQUE INDEX "orders_orderNumber_key" ON "orders"("orderNumber");
 CREATE UNIQUE INDEX "orders_shopifyOrderId_key" ON "orders"("shopifyOrderId");
 
 -- CreateIndex
+CREATE INDEX "orders_participantId_idx" ON "orders"("participantId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "payments_stripePaymentIntentId_key" ON "payments"("stripePaymentIntentId");
 
 -- CreateIndex
@@ -1798,6 +1801,9 @@ CREATE UNIQUE INDEX "fundraiser_products_fundraiserId_productId_key" ON "fundrai
 
 -- CreateIndex
 CREATE UNIQUE INDEX "fundraiser_participants_referralCode_key" ON "fundraiser_participants"("referralCode");
+
+-- CreateIndex
+CREATE INDEX "fundraiser_participants_fundraiserId_idx" ON "fundraiser_participants"("fundraiserId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "fundraiser_accounts_userId_key" ON "fundraiser_accounts"("userId");

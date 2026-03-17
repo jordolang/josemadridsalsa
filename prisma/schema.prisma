@@ -716,6 +716,7 @@ model Order {
 
   payments Payment[]
 
+  @@index([participantId])
   @@map("orders")
 }
 
@@ -898,12 +899,13 @@ model FundraiserParticipant {
   totalCommission Decimal @default(0) @db.Decimal(10, 2)
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   // Relations
   fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
   orders     Order[]
 
+  @@index([fundraiserId])
   @@map("fundraiser_participants")
 }
 
