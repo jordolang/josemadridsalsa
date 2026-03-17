@@ -213,13 +213,13 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               {/* Image */}
               <div className="flex justify-center lg:justify-start">
-                <div className="relative w-64 h-64 lg:w-80 lg:h-80">
+                <div className="relative w-72 lg:w-96" style={{ aspectRatio: '1000 / 733' }}>
                   <Image
                     src="/images/fundraising-icon.png"
                     alt="Jose Madrid Salsa Fundraising"
                     fill
                     className="object-contain drop-shadow-xl"
-                    sizes="(max-width: 768px) 256px, 320px"
+                    sizes="(max-width: 768px) 288px, 384px"
                   />
                 </div>
               </div>
