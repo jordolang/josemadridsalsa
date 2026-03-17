@@ -206,6 +206,71 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Fundraising Section */}
+      <section className="py-20 bg-gradient-to-br from-verde-50 to-salsa-50 dark:from-verde-950/20 dark:to-salsa-950/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollReveal>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              {/* Image */}
+              <div className="flex justify-center lg:justify-start">
+                <div className="relative w-64 h-64 lg:w-80 lg:h-80">
+                  <Image
+                    src="/images/fundraising-icon.png"
+                    alt="Jose Madrid Salsa Fundraising"
+                    fill
+                    className="object-contain drop-shadow-xl"
+                    sizes="(max-width: 768px) 256px, 320px"
+                  />
+                </div>
+              </div>
+              {/* Content */}
+              <div>
+                <span className="inline-block text-sm font-semibold uppercase tracking-widest text-salsa-600 mb-3">
+                  Earn 50% Profit
+                </span>
+                <h2 className="text-4xl font-bold font-serif text-foreground mb-6">
+                  Fundraise With <span className="text-gradient">Jose!</span>
+                </h2>
+                <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
+                  Looking for a fundraiser people actually want to buy? Our premium handcrafted salsas sell themselves — over 25 unique flavors, free shipping on bulk orders, and a <strong className="text-foreground">50% profit margin</strong> for your school, team, or organization.
+                </p>
+                <ul className="space-y-3 mb-8">
+                  {[
+                    '50% profit on every jar sold',
+                    'Pre-sell & online fundraising options',
+                    'Free shipping on 96+ jar orders',
+                    'Ships within 10 days of order',
+                  ].map((item) => (
+                    <li key={item} className="flex items-center gap-3 text-foreground">
+                      <span className="w-5 h-5 rounded-full bg-verde-500 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Link
+                    href="/fundraising"
+                    className="btn-primary text-base px-8 py-3 text-center"
+                  >
+                    Learn More
+                  </Link>
+                  <Link
+                    href="/auth/fundraiser-signup"
+                    className="btn-secondary text-base px-8 py-3 text-center"
+                  >
+                    Start Your Fundraiser
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
       {/* Gift Box Selector Section */}
       <GiftBoxSelector />
 

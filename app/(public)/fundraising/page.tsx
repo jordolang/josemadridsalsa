@@ -93,8 +93,8 @@ export default function FundraisingPage() {
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button size="lg" className="bg-gradient-to-r from-salsa-600 to-chile-600 hover:from-salsa-700 hover:to-chile-700" asChild>
-                <Link href="https://josemadridsalsafundraising.com/start-your-fundraiser/" target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-5 h-5 mr-2" />
+                <Link href="/auth/fundraiser-signup">
+                  
                   Start Your Fundraiser
                 </Link>
               </Button>
@@ -337,8 +337,8 @@ export default function FundraisingPage() {
             </p>
             <div className="flex flex-wrap justify-center gap-6">
               <Button size="lg" className="bg-gradient-to-r from-salsa-600 to-chile-600 hover:from-salsa-700 hover:to-chile-700" asChild>
-                <Link href="https://josemadridsalsafundraising.com/start-your-fundraiser/" target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-5 h-5 mr-2" />
+                <Link href="/auth/fundraiser-signup">
+                  
                   Start Your Fundraiser Today
                 </Link>
               </Button>
