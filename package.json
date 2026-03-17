@@ -51,7 +51,7 @@
     "analyze:report": "tsx scripts/analyze-project.ts --export markdown",
     "auto-execute": "tsx scripts/auto-execute-session.ts",
     "db:deploy": "prisma migrate deploy",
-    "vercel-build": "prisma migrate deploy && prisma generate && next build",
+    "vercel-build": "prisma migrate deploy && prisma generate && tsx prisma/seed.permissions.ts && next build",
     "db:sync": "prisma db push --skip-generate --accept-data-loss"
   },
   "keywords": [
