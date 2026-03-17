@@ -3,6 +3,7 @@ import {
   getUpcomingScheduleEvents,
   GoogleCalendarNotConfiguredError,
 } from '@/lib/google-calendar'
+import { parseICSFile, getICSFilePath } from '@/lib/ics-parser'
 import { z } from 'zod'
 
 // Validation schema for query parameters
@@ -34,15 +35,28 @@ export async function GET(request: NextRequest) {
 
     const { skipCache, limit } = params.data
 
-    // Fetch calendar events
-    const events = await getUpcomingScheduleEvents({
-      skipCache: skipCache === 'true',
-      limit,
-    })
+    // Fetch calendar events — try Google Calendar API first, then fall back to
+    // the local .ics file when service account credentials are not configured.
+    let events
+    try {
+      events = await getUpcomingScheduleEvents({
+        skipCache: skipCache === 'true',
+        limit,
+      })
+    } catch (gcalError) {
+      if (gcalError instanceof GoogleCalendarNotConfiguredError) {
+        // Graceful fallback: parse the bundled ICS file
+        const icsPath = getICSFilePath()
+        const allICSEvents = parseICSFile(icsPath)
+        events = allICSEvents.slice(0, limit)
+      } else {
+        throw gcalError
+      }
+    }
 
     return NextResponse.json({ events }, { status: 200 })
   } catch (error) {
-    // Handle specific Google Calendar errors
+    // Google Calendar is not configured and ICS fallback also failed
     if (error instanceof GoogleCalendarNotConfiguredError) {
       return NextResponse.json(
         {
