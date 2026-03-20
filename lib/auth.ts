@@ -3,8 +3,18 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import type { NextAuthOptions } from 'next-auth'
 import bcrypt from 'bcryptjs'
 
-// Lazy load Prisma to handle initialization errors gracefully
+/** Cached Prisma client instance for lazy loading */
 let prismaClient: any = null
+
+/**
+ * Lazily load and cache the Prisma client for authentication operations.
+ *
+ * Defers Prisma import to runtime to handle initialization errors gracefully
+ * and avoid module-load-time crashes when the database is unavailable.
+ *
+ * @returns The Prisma client instance
+ * @throws {Error} If the database connection fails
+ */
 async function getPrisma() {
   if (!prismaClient) {
     try {
@@ -35,8 +45,14 @@ if (process.env.NEXTAUTH_URL) {
   console.log('[Auth] NEXTAUTH_URL not set - will be auto-detected')
 }
 
-// Don't initialize adapter at module load time - it will cause crashes
-// NextAuth will work fine with JWT strategy without an adapter
+/**
+ * NextAuth.js configuration options.
+ *
+ * Uses JWT-based sessions (no database adapter at module load time to prevent
+ * crashes). Provides credentials-based authentication with bcrypt password
+ * verification. JWT callbacks enrich tokens with user role and fundraiser
+ * account data for authorization checks throughout the application.
+ */
 export const authOptions: NextAuthOptions = {
   adapter: undefined,
   session: {
