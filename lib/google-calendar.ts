@@ -60,8 +60,8 @@ export async function getUpcomingScheduleEvents(
 ): Promise<ScheduleEvent[]> {
   const { limit = 25, skipCache = false } = options;
 
-  const apiKey     = process.env.GOOGLE_CALENDAR_API_KEY;
-  const calendarId = process.env.GOOGLE_CALENDAR_ID;
+  const apiKey     = process.env.GOOGLE_CALENDAR_API_KEY?.trim();
+  const calendarId = process.env.GOOGLE_CALENDAR_ID?.trim();
 
   if (!apiKey || !calendarId) {
     throw new GoogleCalendarNotConfiguredError(
