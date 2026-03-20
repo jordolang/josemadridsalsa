@@ -162,24 +162,34 @@ export async function getMonthlyChampionship(month: number, year: number) {
   }
 }
 
-export async function postSupportMessage(fundraiserId: string, content: string, orderId?: string) {
+export async function postSupportMessage(fundraiserSlugOrId: string, content: string, orderId?: string) {
   const session = await getServerSession(authOptions)
-  
+
   if (!session?.user) {
-    throw new Error('Not authenticated - Please log in with Facebook or Google to leave a message')
+    throw new Error('Not authenticated - Please log in to leave a message')
   }
+
+  // Resolve slug or id to a fundraiser
+  const fundraiser = await prisma.fundraiser.findFirst({
+    where: { OR: [{ id: fundraiserSlugOrId }, { slug: fundraiserSlugOrId }] },
+    select: { id: true },
+  })
+  if (!fundraiser) throw new Error('Fundraiser not found')
+
+  const userId = (session.user as any).id as string | null
+  const userImage = (session.user as any).image as string | null
 
   const newMsg = await prisma.fundraiserMessage.create({
     data: {
-      fundraiserId,
+      fundraiserId: fundraiser.id,
       content,
-      authorId: session.user.id,
+      authorId: userId,
       authorName: session.user.name || 'Anonymous',
-      authorAvatar: session.user.image,
-      orderId: orderId || null
-    }
+      authorAvatar: userImage,
+      orderId: orderId || null,
+    },
   })
 
-  revalidatePath('/[fundraiser-subdomain]/[slug]', 'page')
+  revalidatePath(`/fundraisers/${fundraiserSlugOrId}`)
   return newMsg
 }

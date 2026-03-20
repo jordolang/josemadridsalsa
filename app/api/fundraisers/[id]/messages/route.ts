@@ -22,6 +22,13 @@ interface RouteParams {
   params: Promise<{ id: string }>
 }
 
+async function resolveFundraiser(idOrSlug: string) {
+  return prisma.fundraiser.findFirst({
+    where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+    select: { id: true },
+  })
+}
+
 export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
@@ -29,22 +36,14 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
     const pageSize = 20
 
-    const fundraiser = await prisma.fundraiser.findUnique({
-      where: { slug: id },
-      select: { id: true },
-    })
-
+    const fundraiser = await resolveFundraiser(id)
     if (!fundraiser) {
       return NextResponse.json({ error: 'Fundraiser not found' }, { status: 404 })
     }
 
     const [messages, total] = await Promise.all([
       prisma.fundraiserMessage.findMany({
-        where: {
-          fundraiserId: fundraiser.id,
-          isApproved: true,
-          isHidden: false,
-        },
+        where: { fundraiserId: fundraiser.id, isApproved: true, isHidden: false },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -57,23 +56,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         },
       }),
       prisma.fundraiserMessage.count({
-        where: {
-          fundraiserId: fundraiser.id,
-          isApproved: true,
-          isHidden: false,
-        },
+        where: { fundraiserId: fundraiser.id, isApproved: true, isHidden: false },
       }),
     ])
 
-    return NextResponse.json({
-      messages,
-      total,
-      page,
-      pageSize,
-      hasMore: total > page * pageSize,
-    })
-  } catch (error) {
-    console.error('[Fundraiser Messages GET]', error)
+    return NextResponse.json({ messages, total, page, pageSize })
+  } catch (err) {
+    console.error('[Messages GET]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -81,78 +70,42 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-
-    // Rate limit by IP
-    const ip =
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-      req.headers.get('x-real-ip') ??
-      'unknown'
+    const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'unknown'
 
     if (!checkRateLimit(ip)) {
-      return NextResponse.json(
-        { error: 'Too many messages. Please try again later.' },
-        { status: 429 }
-      )
+      return NextResponse.json({ error: 'Rate limit exceeded. Please wait before posting again.' }, { status: 429 })
     }
 
-    const body = await req.json()
-    const { content, authorName: bodyAuthorName } = body as {
-      content?: string
-      authorName?: string
-    }
-
-    // Validate content
-    if (!content || typeof content !== 'string' || content.trim().length === 0) {
-      return NextResponse.json({ error: 'Message content is required.' }, { status: 400 })
-    }
-    if (content.trim().length > 1000) {
-      return NextResponse.json(
-        { error: 'Message must be 1000 characters or less.' },
-        { status: 400 }
-      )
-    }
-
-    // Get session to see if logged-in user
-    const session = await getServerSession(authOptions)
-
-    let authorName: string
-    let authorId: string | null = null
-    let authorEmail: string | null = null
-    let authorAvatar: string | null = null
-
-    if (session?.user) {
-      authorName = session.user.name ?? bodyAuthorName ?? 'Anonymous'
-      authorId = (session.user as any).id ?? null
-      authorEmail = session.user.email ?? null
-      authorAvatar = (session.user as any).image ?? null
-    } else {
-      // Anonymous — require a name
-      if (!bodyAuthorName || typeof bodyAuthorName !== 'string' || bodyAuthorName.trim().length < 2) {
-        return NextResponse.json(
-          { error: 'Name must be at least 2 characters.' },
-          { status: 400 }
-        )
-      }
-      authorName = bodyAuthorName.trim()
-    }
-
-    const fundraiser = await prisma.fundraiser.findUnique({
-      where: { slug: id },
-      select: { id: true },
-    })
-
+    const fundraiser = await resolveFundraiser(id)
     if (!fundraiser) {
       return NextResponse.json({ error: 'Fundraiser not found' }, { status: 404 })
     }
+
+    const body = await req.json()
+    const { content, authorName } = body
+
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+      return NextResponse.json({ error: 'Message content is required' }, { status: 400 })
+    }
+    if (content.length > 1000) {
+      return NextResponse.json({ error: 'Message must be 1000 characters or less' }, { status: 400 })
+    }
+    if (!authorName || typeof authorName !== 'string' || authorName.trim().length < 2) {
+      return NextResponse.json({ error: 'Author name must be at least 2 characters' }, { status: 400 })
+    }
+
+    const session = await getServerSession(authOptions)
+    const userId = (session?.user as any)?.id ?? null
+    const avatar = (session?.user as any)?.image ?? null
 
     const message = await prisma.fundraiserMessage.create({
       data: {
         fundraiserId: fundraiser.id,
         content: content.trim(),
-        authorName,
-        authorEmail,
-        authorAvatar,
-        authorId,
+        authorName: authorName.trim(),
+        authorEmail: session?.user?.email ?? null,
+        authorAvatar: avatar,
+        authorId: userId,
         isApproved: true,
         isHidden: false,
       },
@@ -166,8 +119,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     })
 
     return NextResponse.json({ message }, { status: 201 })
-  } catch (error) {
-    console.error('[Fundraiser Messages POST]', error)
+  } catch (err) {
+    console.error('[Messages POST]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
