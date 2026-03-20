@@ -1,10 +1,9 @@
 import Stripe from 'stripe'
 
-/** Stripe secret key resolved from available environment variables */
+/** Stripe secret key resolved from server-only environment variables */
 const secretKey =
   process.env.STRIPE_SECRET_KEY ||
-  process.env.STRIPE_SECRET ||
-  process.env.NEXT_PUBLIC_STRIPE_SECRET_KEY
+  process.env.STRIPE_SECRET
 
 /** Cached singleton Stripe client instance */
 let stripeClient: Stripe | null = null

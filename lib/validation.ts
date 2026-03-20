@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-/** Allowed user roles for access control */
+/** Allowed user roles for admin-created accounts */
 export const RoleEnum = z.enum(['ADMIN', 'CUSTOMER', 'WHOLESALE'])
 
 /** Salsa heat level classification options */
