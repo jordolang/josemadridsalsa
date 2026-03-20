@@ -6,7 +6,7 @@
  *
  * Required env vars:
  *   GOOGLE_CALENDAR_API_KEY  — Google Cloud API key with Calendar API enabled
- *   GOOGLE_CALENDAR_ID       — Calendar ID (e.g. mike@josemadridsalsa.com)
+ *   GOOGLE_CALENDAR_ID       — Calendar ID (set to mike@josemadridsalsa.com)
  */
 
 const CACHE_TTL_MS = 1000 * 60 * 5; // 5-minute cache
