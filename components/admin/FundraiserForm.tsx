@@ -37,6 +37,7 @@ const fundraiserSchema = z.object({
   subdomain: z.string().optional(),
   missionStatement: z.string().optional(),
   bio: z.string().optional(),
+  enableSocialFeatures: z.boolean().optional(),
 })
 
 type FundraiserFormData = z.infer<typeof fundraiserSchema>
@@ -46,6 +47,7 @@ interface FundraiserFormProps {
     subdomain?: string | null
     missionStatement?: string | null
     bio?: string | null
+    enableSocialFeatures?: boolean
   }
 }
 
@@ -63,7 +65,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
     setValue,
     formState: { errors },
   } = useForm<FundraiserFormData>({
-    resolver: zodResolver(fundraiserSchema),
+    resolver: zodResolver(fundraiserSchema) as any,
     defaultValues: {
       name: fundraiser?.name || '',
       slug: fundraiser?.slug || '',
@@ -80,12 +82,14 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
       subdomain: fundraiser?.subdomain || '',
       missionStatement: fundraiser?.missionStatement || '',
       bio: fundraiser?.bio || '',
+      enableSocialFeatures: fundraiser?.enableSocialFeatures ?? true,
     },
   })
 
   const watchName = watch('name')
   const watchStatus = watch('status')
   const watchIsActive = watch('isActive')
+  const watchEnableSocialFeatures = watch('enableSocialFeatures' as any)
 
   // Auto-generate slug from name
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,6 +132,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
           subdomain: data.subdomain || null,
           missionStatement: data.missionStatement || null,
           bio: data.bio || null,
+          enableSocialFeatures: (data as any).enableSocialFeatures,
         }),
       })
 
@@ -147,7 +152,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-6">
       {error && (
         <Card className="p-4 bg-red-50 border-red-200">
           <p className="text-red-900">{error}</p>
@@ -394,6 +399,20 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
               id="isActive"
               checked={watchIsActive}
               onCheckedChange={(checked) => setValue('isActive', checked)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-100">
+            <div>
+              <Label htmlFor="enableSocialFeatures">Interactive Social Board</Label>
+              <p className="text-sm text-slate-600">
+                Allow Facebook login, live message board, and leaderboard Timeline
+              </p>
+            </div>
+            <Switch
+              id="enableSocialFeatures"
+              checked={Boolean(watchEnableSocialFeatures)}
+              onCheckedChange={(checked) => setValue('enableSocialFeatures' as any, checked)}
             />
           </div>
         </div>

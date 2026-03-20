@@ -266,12 +266,15 @@ export async function requireFundraiserAccess() {
  */
 export async function getCurrentFundraiserAccount() {
   const user = await getCurrentUser()
-  if (!user || !isFundraiser(user)) return null
+  if (!user) return null
 
-  return prisma.fundraiserAccount.findUnique({
+  // Check by role OR by having a FundraiserAccount record (role may not have been updated)
+  const account = await prisma.fundraiserAccount.findUnique({
     where: { userId: user.id },
     include: { fundraiser: true },
   })
+
+  return account ?? null
 }
 
 /**

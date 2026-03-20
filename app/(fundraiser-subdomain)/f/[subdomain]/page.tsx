@@ -6,7 +6,9 @@ import {
   validatePageConfig,
 } from '@/lib/fundraiser-page-config'
 import { BlockRenderer } from '@/components/fundraiser-portal/block-renderer'
+import { FundraiserSocialBoard } from '@/components/social/fundraiser-board'
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 
 type Props = {
   params: Promise<{ subdomain: string }>
@@ -112,6 +114,12 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
   const configValidation = validatePageConfig(fundraiser.pageConfig)
   const pageConfig = configValidation.success ? configValidation.data : defaultPageConfig
 
+  // Determine URL for sharing
+  const headersList = await headers()
+  const host = headersList.get('host') || 'www.josemadridsalsa.com'
+  const protocol = headersList.get('x-forwarded-proto') || 'https'
+  const currentUrl = `${protocol}://${host}/f/${subdomain}`
+
   return (
     <div className="min-h-screen">
       {pageConfig.blocks.map((block, index) => (
@@ -122,13 +130,18 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
         />
       ))}
 
+      {/* Render the interactive social progress board if enabled */}
+      <div className="max-w-7xl mx-auto px-4">
+        <FundraiserSocialBoard fundraiserSlug={fundraiser.slug} currentUrl={currentUrl} />
+      </div>
+
       {/* Footer */}
-      <footer className="border-t border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+      <footer className="border-t border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500 mt-12">
         <p>
           Powered by{' '}
           <a
             href="https://josemadrid.net"
-            className="text-salsa-600 hover:text-salsa-700"
+            className="text-salsa-600 hover:text-salsa-700 font-medium"
             target="_blank"
             rel="noopener noreferrer"
           >

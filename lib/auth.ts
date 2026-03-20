@@ -1,10 +1,11 @@
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
+// TODO: Add Facebook OAuth when ready:
+// import FacebookProvider from 'next-auth/providers/facebook'
+// Requires FACEBOOK_CLIENT_ID and FACEBOOK_CLIENT_SECRET env vars
 import type { NextAuthOptions } from 'next-auth'
 import bcrypt from 'bcryptjs'
-// TODO: Facebook OAuth can be added via `next-auth/providers/facebook` with
-//       FACEBOOK_APP_ID and FACEBOOK_APP_SECRET env vars when ready.
 
 /** Cached Prisma client instance for lazy loading */
 let prismaClient: any = null
@@ -87,6 +88,11 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
+    // TODO: Uncomment when FACEBOOK_CLIENT_ID + FACEBOOK_CLIENT_SECRET are set in Vercel env:
+    // FacebookProvider({
+    //   clientId: process.env.FACEBOOK_CLIENT_ID!,
+    //   clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+    // }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -180,11 +186,18 @@ export const authOptions: NextAuthOptions = {
             token.role = dbUser.role
             // Store Google profile picture from token
             if (token.picture) {
-              token.avatar = token.picture
+              token.avatar = typeof token.picture === 'string' 
+                ? token.picture 
+                : (token.picture as any)?.data?.url ?? null
             }
           } catch (googleError) {
             console.error('[JWT Callback] Google OAuth DB error:', googleError)
           }
+        }
+
+        // TODO: Handle Facebook OAuth sign-in when provider is enabled
+        if (false && account?.provider === 'facebook' && token.email) {
+          // Placeholder — enable when FacebookProvider is uncommented above
         }
 
         // On sign in via credentials, add user data to token

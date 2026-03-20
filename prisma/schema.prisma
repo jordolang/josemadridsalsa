@@ -716,6 +716,7 @@ model Order {
   printedPackingSlipAt DateTime?
 
   payments Payment[]
+  supportMessages FundraiserMessage[]
 
   @@index([participantId])
   @@map("orders")
@@ -862,6 +863,9 @@ model Fundraiser {
   account      FundraiserAccount?
   messages     FundraiserMessage[]
 
+  // Platform features
+  enableSocialFeatures Boolean @default(true)
+
   @@map("fundraisers")
 }
 
@@ -873,15 +877,33 @@ model FundraiserMessage {
   authorEmail  String?
   authorAvatar String?
   authorId     String?  // linked User if logged in
+  orderId      String?  // optionally tied to an order
+
   isApproved   Boolean  @default(true) // auto-approve, admin can hide
   isHidden     Boolean  @default(false)
   createdAt    DateTime @default(now())
 
   fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
   author     User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  order      Order?     @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
   @@index([fundraiserId, isHidden])
+  @@index([orderId])
   @@map("fundraiser_messages")
+}
+
+model FundraiserChampionship {
+  id                   String   @id @default(cuid())
+  month                Int
+  year                 Int
+  winningFundraiserId  String
+  winningParticipantId String?
+  prizeAmount          Decimal  @db.Decimal(10, 2)
+  scholarshipAmount    Decimal  @db.Decimal(10, 2)
+  createdAt            DateTime @default(now())
+
+  @@unique([month, year])
+  @@map("fundraiser_championships")
 }
 
 model FundraiserProduct {

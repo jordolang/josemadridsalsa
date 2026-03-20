@@ -22,6 +22,7 @@ const FundraiserUpdateSchema = z.object({
   bio: z.string().nullable().optional(),
   logoUrl: z.string().url().nullable().optional(),
   coverPhotoUrl: z.string().url().nullable().optional(),
+  enableSocialFeatures: z.boolean().optional(),
 })
 
 export async function GET(
@@ -137,6 +138,7 @@ export async function PATCH(
     if (data.bio !== undefined) updateData.bio = data.bio
     if (data.logoUrl !== undefined) updateData.logoUrl = data.logoUrl
     if (data.coverPhotoUrl !== undefined) updateData.coverPhotoUrl = data.coverPhotoUrl
+    if (data.enableSocialFeatures !== undefined) updateData.enableSocialFeatures = data.enableSocialFeatures
 
     // Check subdomain uniqueness if changed
     if (data.subdomain && data.subdomain !== existing.subdomain) {
