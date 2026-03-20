@@ -24,6 +24,14 @@ const GiftBoxSelector = dynamic(
   }
 )
 
+const GoogleScheduleMap = dynamic(
+  () => import('@/app/(public)/where-is-jose/_components/GoogleScheduleMap').then(mod => ({ default: mod.GoogleScheduleMap })),
+  {
+    loading: () => <div className="h-[520px] animate-pulse bg-muted rounded-3xl" />,
+    ssr: false
+  }
+)
+
 export const metadata: Metadata = createMetadata({
   title: 'Jose Madrid Salsa - Premium Gourmet Salsa',
   description:
@@ -203,6 +211,31 @@ export default function Home() {
               </div>
             </ScrollReveal>
           </div>
+        </div>
+      </section>
+
+      {/* Where Is Jose — Live Schedule Map */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollReveal>
+            <div className="mx-auto max-w-3xl text-center mb-10">
+              <span className="inline-block text-sm font-semibold uppercase tracking-widest text-salsa-600 mb-3">
+                On the Move
+              </span>
+              <h2 className="text-4xl font-bold font-serif text-foreground mb-4">
+                Where Is <span className="text-gradient">Jose?</span>
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Follow Jose Madrid Salsa to farmers markets, retail demos, and special events — updated live from our calendar.
+              </p>
+            </div>
+            <GoogleScheduleMap />
+            <div className="mt-6 text-center">
+              <Link href="/where-is-jose" className="btn-secondary text-sm px-6 py-2">
+                View Full Schedule →
+              </Link>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 
