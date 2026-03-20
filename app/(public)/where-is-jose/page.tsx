@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { MapPin, Truck, Calendar, Store, Users, Compass, Mountain, Building, Utensils } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { GoogleScheduleMap } from './_components/GoogleScheduleMap';
+import { GoogleScheduleMap } from '@/components/store/google-schedule-map';
 import { createMetadata } from '@/lib/metadata';
 
 export const metadata: Metadata = createMetadata({

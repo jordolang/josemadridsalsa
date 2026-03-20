@@ -24,12 +24,9 @@ const GiftBoxSelector = dynamic(
   }
 )
 
-const GoogleScheduleMap = dynamic(
-  () => import('@/app/(public)/where-is-jose/_components/GoogleScheduleMap').then(mod => ({ default: mod.GoogleScheduleMap })),
-  {
-    loading: () => <div className="h-[520px] animate-pulse bg-muted rounded-3xl" />,
-    ssr: false
-  }
+const ScheduleMapWrapper = dynamic(
+  () => import('@/components/store/schedule-map-wrapper').then(mod => ({ default: mod.ScheduleMapWrapper })),
+  { loading: () => <div className="h-[520px] animate-pulse bg-muted rounded-3xl" />, ssr: true }
 )
 
 export const metadata: Metadata = createMetadata({
@@ -229,7 +226,7 @@ export default function Home() {
                 Follow Jose Madrid Salsa to farmers markets, retail demos, and special events — updated live from our calendar.
               </p>
             </div>
-            <GoogleScheduleMap />
+            <ScheduleMapWrapper />
             <div className="mt-6 text-center">
               <Link href="/where-is-jose" className="btn-secondary text-sm px-6 py-2">
                 View Full Schedule →
