@@ -1,3 +1,28 @@
+## [1.0.0] - 2026-03-16
+
+### Added
+- Online fundraising campaign management with participant tracking and real-time sales dashboards
+- Admin dashboard for content and order management
+- Real-time inventory tracking with automatic low-stock notifications
+- Secure credential management in admin panel with password protection
+- Complete shopping cart and checkout experience
+- Payment processing via Stripe (cards, Apple Pay, Google Pay)
+- Detailed product pages with images, variants, and nutritional information
+- Side-by-side product comparison tool
+- Automated order confirmation and shipping notification emails
+- Mobile-responsive design across the entire platform
+- Professional UI component library for consistent design
+
+### Changed
+- Sign-in form now provides real-time validation feedback as you type
+- Enhanced product catalog with improved filtering and organization
+- Production-ready infrastructure and deployment configuration
+
+### Fixed
+- Updated documentation with project overview and getting started guide
+- Improved data import system for products and orders
+- Performance optimizations and infrastructure improvements
+
 ## 1.0.0 - Polished UI & Product Tools
 
 ### ✨ New Features

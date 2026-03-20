@@ -680,8 +680,9 @@
             "type": "manual",
             "instructions": "Test all public pages on mobile viewport (375px). Verify dashboards, product grids, forms are usable."
           },
-          "status": "pending",
-          "details": "Fundraising supporters often use mobile. Ensure referral pages, checkout, dashboards work on small screens."
+          "status": "completed",
+          "details": "Fundraising supporters often use mobile. Ensure referral pages, checkout, dashboards work on small screens.",
+          "completed_at": "2026-03-20T11:15:00.000Z"
         }
       ]
     }
@@ -849,11 +850,18 @@
     }
   },
   "qa_signoff": null,
-  "status": "in_progress",
-  "planStatus": "in_progress",
-  "xstateState": "coding",
-  "executionPhase": "coding",
-  "updated_at": "2026-03-16T09:51:33.022Z",
+  "status": "human_review",
+  "planStatus": "review",
+  "xstateState": "human_review",
+  "executionPhase": "complete",
+  "updated_at": "2026-03-20T11:51:30.599Z",
   "last_updated": "2026-03-14T02:30:00.596418+00:00",
-  "recoveryNote": "Task recovered from stuck state at 2026-03-16T09:11:37.439Z"
+  "recoveryNote": "Task recovered from stuck state at 2026-03-16T09:11:37.439Z",
+  "lastEvent": {
+    "eventId": "058-enhanced-fundraising-portal-CODING_STARTED-1774001771106",
+    "sequence": 1774001771106,
+    "type": "CODING_STARTED",
+    "timestamp": "2026-03-20T11:15:00.000Z"
+  },
+  "reviewReason": "completed"
 }

@@ -182,12 +182,19 @@ export default async function FundraiserDetailPage({
             </Badge>
           )}
           {canWrite && (
-            <Button asChild>
-              <Link href={`/admin/fundraisers/${fundraiser.id}/edit`}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Campaign
-              </Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" asChild>
+                <Link href={`/admin/fundraisers/${fundraiser.id}/edit`}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Campaign
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link href={`/admin/fundraisers/${fundraiser.id}/manage`}>
+                  Manage Campaign
+                </Link>
+              </Button>
+            </div>
           )}
         </div>
       </div>
