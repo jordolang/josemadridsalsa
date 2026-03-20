@@ -14,6 +14,18 @@ export interface DiscountValidationResult {
   }
 }
 
+/**
+ * Validate a discount code against the current cart.
+ *
+ * Checks the code exists and is active, within its validity window,
+ * above any minimum purchase requirement, and within global and
+ * per-user usage limits.
+ *
+ * @param {string} code - The discount code string (case-insensitive).
+ * @param {number} cartTotal - The pre-discount cart total in dollars.
+ * @param {string} [userId] - The authenticated user's ID for per-user limit checks.
+ * @returns {Promise<DiscountValidationResult>} Validation outcome, discount amount, and code metadata.
+ */
 export async function validateDiscountCode(
   code: string,
   cartTotal: number,
@@ -111,6 +123,19 @@ export async function validateDiscountCode(
   }
 }
 
+/**
+ * Record that a discount code was used on a completed order.
+ *
+ * Atomically creates a {@link DiscountUsage} record and increments
+ * the code's {@code usedCount} counter in a single database transaction.
+ *
+ * @param {string} discountCodeId - The ID of the discount code applied.
+ * @param {string} orderId - The ID of the order the code was applied to.
+ * @param {number} discountAmount - The dollar amount discounted.
+ * @param {number} orderTotal - The final order total after discount.
+ * @param {string} [userId] - The user ID who used the code, if authenticated.
+ * @returns {Promise<{ success: boolean; error?: string }>} Result of the operation.
+ */
 export async function recordDiscountUsage(
   discountCodeId: string,
   orderId: string,
@@ -149,6 +174,17 @@ export async function recordDiscountUsage(
   }
 }
 
+/**
+ * Seed the database with default discount codes.
+ *
+ * Creates (or no-ops if already present) the following codes:
+ * - **COMEBACK10** — 10% off, for abandoned cart recovery (max 3 uses/user).
+ * - **WELCOME15** — 15% off, for new customers with a $25 minimum order (max 1 use/user).
+ *
+ * Safe to call repeatedly; uses upsert so existing codes are not overwritten.
+ *
+ * @returns {Promise<{ success: boolean; codes?: object[]; error?: string }>} Result and created code records.
+ */
 export async function createDefaultDiscountCodes() {
   try {
     // Create COMEBACK10 code for abandoned cart recovery

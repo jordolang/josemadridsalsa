@@ -44,11 +44,14 @@ export interface TaxCalculationResult {
 }
 
 /**
- * Check if a customer is tax exempt based on their wholesale account
- * 
- * Tax exemptions typically apply to:
- * - Wholesale accounts with valid resale certificates
- * - Non-profit organizations with valid tax-exempt status
+ * Check if a customer is tax exempt based on their wholesale account.
+ *
+ * Tax exemptions apply to:
+ * - Wholesale accounts with approved status and a valid resale number.
+ * - Non-profit organizations with valid tax-exempt status.
+ *
+ * @param {string} [customerEmail] - The customer's email address to look up.
+ * @returns {Promise<boolean>} True if the customer is tax exempt, false otherwise.
  */
 async function checkTaxExemption(customerEmail?: string): Promise<boolean> {
   if (!customerEmail) {
@@ -82,13 +85,17 @@ async function checkTaxExemption(customerEmail?: string): Promise<boolean> {
 }
 
 /**
- * Calculate tax using Stripe Tax API
+ * Calculate tax for an order using the Stripe Tax API.
  *
- * Stripe Tax automatically:
- * - Determines applicable tax rates based on location
- * - Handles product taxability rules
- * - Applies correct jurisdiction rates (state, county, city)
- * - Updates rates automatically when laws change
+ * Stripe Tax automatically determines applicable rates based on location,
+ * handles product taxability rules, and applies the correct jurisdiction
+ * rates (state, county, city), keeping up with law changes automatically.
+ *
+ * Falls back to zero tax (rather than blocking checkout) if Stripe Tax
+ * returns an error.
+ *
+ * @param {TaxCalculationInput} input - Line items, shipping address, and optional customer email.
+ * @returns {Promise<TaxCalculationResult>} Tax amount, effective rate, per-jurisdiction breakdown, and exemption flag.
  */
 export async function calculateTax(
   input: TaxCalculationInput
@@ -193,9 +200,18 @@ export async function calculateTax(
 }
 
 /**
- * Get simplified tax estimate for frontend preview
+ * Get a simplified tax estimate for frontend preview.
  *
- * Use this for real-time tax updates as user types address
+ * Use this for real-time tax updates as the user types their address.
+ * Internally calls {@link calculateTax} with a placeholder street address;
+ * tax is computed from city/state/postalCode only.
+ *
+ * @param params - Estimation parameters.
+ * @param {number} params.subtotal - Order subtotal in dollars.
+ * @param {string} params.city - City name.
+ * @param {string} params.state - Two-letter US state code.
+ * @param {string} params.postalCode - ZIP code.
+ * @returns {Promise<number>} Estimated tax amount in dollars (0 on error).
  */
 export async function getTaxEstimate(params: {
   subtotal: number // Subtotal in dollars
@@ -229,9 +245,12 @@ export async function getTaxEstimate(params: {
 }
 
 /**
- * Validate tax calculation configuration
+ * Validate that the Stripe Tax integration is properly configured.
  *
- * Call this during app startup to ensure Stripe Tax is properly configured
+ * Performs a test calculation against a known US address. Call during
+ * app startup or health-check to surface misconfiguration early.
+ *
+ * @returns {Promise<{ configured: boolean; error?: string }>} Configuration status and optional error message.
  */
 export async function validateTaxConfiguration(): Promise<{
   configured: boolean
