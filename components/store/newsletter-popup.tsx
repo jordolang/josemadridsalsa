@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { X, Mail, Tag, Gift, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,15 +9,14 @@ import { Input } from '@/components/ui/input'
 const STORAGE_KEY = 'jms_newsletter_popup'
 const DISMISS_DURATION_DAYS = 30
 const SIGNED_UP_KEY = 'jms_newsletter_signed_up'
+const VISIT_COUNT_KEY = 'jms_visit_count'
 
-// Show popup after 12–20 seconds on page, randomly
+// Show popup after 12–20 seconds on page
 const MIN_DELAY_MS = 12000
 const MAX_DELAY_MS = 20000
 
-// Show to ~60% of visitors (skip if random > 0.6)
-const SHOW_PROBABILITY = 0.6
-
 export function NewsletterPopup() {
+  const { data: session, status } = useSession()
   const [visible, setVisible] = useState(false)
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
@@ -25,11 +25,17 @@ export function NewsletterPopup() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    // Don't show if already signed up
+    // Wait until auth state is resolved
+    if (status === 'loading') return
     if (typeof window === 'undefined') return
+
+    // Never show to logged-in users
+    if (session) return
+
+    // Never show if already subscribed
     if (localStorage.getItem(SIGNED_UP_KEY)) return
 
-    // Check dismiss cooldown
+    // Check dismiss cooldown — dismissed users wait 30 days before seeing it again
     const dismissed = localStorage.getItem(STORAGE_KEY)
     if (dismissed) {
       const dismissedAt = parseInt(dismissed, 10)
@@ -37,14 +43,17 @@ export function NewsletterPopup() {
       if (daysSince < DISMISS_DURATION_DAYS) return
     }
 
-    // Random probability gate
-    if (Math.random() > SHOW_PROBABILITY) return
+    // Increment visit counter and only show on every other visit (2, 4, 6…)
+    const currentCount = parseInt(localStorage.getItem(VISIT_COUNT_KEY) || '0', 10)
+    const newCount = currentCount + 1
+    localStorage.setItem(VISIT_COUNT_KEY, newCount.toString())
+    if (newCount % 2 !== 0) return  // odd visit → skip
 
-    // Random delay between min/max
+    // Show after a random delay between min/max
     const delay = MIN_DELAY_MS + Math.random() * (MAX_DELAY_MS - MIN_DELAY_MS)
     const timer = setTimeout(() => setVisible(true), delay)
     return () => clearTimeout(timer)
-  }, [])
+  }, [session, status])
 
   function dismiss() {
     localStorage.setItem(STORAGE_KEY, Date.now().toString())
