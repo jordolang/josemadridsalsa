@@ -6,8 +6,6 @@ import { X, Mail, Tag, Gift, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
-const STORAGE_KEY = 'jms_newsletter_popup'
-const DISMISS_DURATION_DAYS = 30
 const SIGNED_UP_KEY = 'jms_newsletter_signed_up'
 const VISIT_COUNT_KEY = 'jms_visit_count'
 
@@ -35,14 +33,6 @@ export function NewsletterPopup() {
     // Never show if already subscribed
     if (localStorage.getItem(SIGNED_UP_KEY)) return
 
-    // Check dismiss cooldown — dismissed users wait 30 days before seeing it again
-    const dismissed = localStorage.getItem(STORAGE_KEY)
-    if (dismissed) {
-      const dismissedAt = parseInt(dismissed, 10)
-      const daysSince = (Date.now() - dismissedAt) / (1000 * 60 * 60 * 24)
-      if (daysSince < DISMISS_DURATION_DAYS) return
-    }
-
     // Increment visit counter and only show on every other visit (2, 4, 6…)
     const currentCount = parseInt(localStorage.getItem(VISIT_COUNT_KEY) || '0', 10)
     const newCount = currentCount + 1
@@ -56,7 +46,6 @@ export function NewsletterPopup() {
   }, [session, status])
 
   function dismiss() {
-    localStorage.setItem(STORAGE_KEY, Date.now().toString())
     setVisible(false)
   }
 
