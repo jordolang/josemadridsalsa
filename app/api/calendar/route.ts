@@ -69,11 +69,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Handle generic errors
-    console.error('[Calendar API] Failed to fetch Google Calendar events:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('[Calendar API] Failed to fetch Google Calendar events:', errorMessage)
     return NextResponse.json(
       {
         error: 'Failed to fetch calendar events',
         message: 'Unable to load schedule events at this time.',
+        detail: errorMessage,
       },
       { status: 500 }
     )

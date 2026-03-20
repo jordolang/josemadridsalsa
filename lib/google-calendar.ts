@@ -84,7 +84,7 @@ export async function getUpcomingScheduleEvents(
 
   const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`;
 
-  const response = await fetch(url, { next: { revalidate: 300 } });
+  const response = await fetch(url, { cache: 'no-store' });
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
