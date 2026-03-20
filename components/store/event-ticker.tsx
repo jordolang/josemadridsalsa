@@ -11,40 +11,39 @@ type TickerEvent = {
   isAllDay: boolean
 }
 
-function formatEventLabel(event: TickerEvent): string {
-  if (!event.location) return event.title
+type GroupedEvents = {
+  today: TickerEvent[]
+  tomorrow: TickerEvent[]
+}
 
-  const start = event.start ? new Date(event.start) : null
-  if (!start || isNaN(start.getTime())) return `${event.title}  ·  ${event.location}`
+function buildTickerContent(grouped: GroupedEvents): string[] {
+  const segments: string[] = []
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const tomorrow = new Date(today)
-  tomorrow.setDate(today.getDate() + 1)
-  const dayAfter = new Date(today)
-  dayAfter.setDate(today.getDate() + 2)
-
-  const eventDay = new Date(start)
-  eventDay.setHours(0, 0, 0, 0)
-
-  // Only include today and tomorrow
-  if (eventDay.getTime() > tomorrow.getTime()) return ''
-
-  let dayLabel: string
-  if (eventDay.getTime() === today.getTime()) {
-    dayLabel = 'TODAY'
-  } else {
-    dayLabel = 'TOMORROW'
+  if (grouped.today.length > 0) {
+    grouped.today.forEach(e => {
+      if (e.location) {
+        segments.push(`📍 TODAY  ·  ${e.title.toUpperCase()}  ·  ${e.location.toUpperCase()}`)
+      }
+    })
   }
 
-  return `${dayLabel}  ·  ${event.title}  ·  ${event.location}`
+  if (grouped.tomorrow.length > 0) {
+    // Separator
+    segments.push(`━━━━━━  COMING UP  ━━━━━━`)
+    grouped.tomorrow.forEach(e => {
+      if (e.location) {
+        segments.push(`📍 TOMORROW  ·  ${e.title.toUpperCase()}  ·  ${e.location.toUpperCase()}`)
+      }
+    })
+  }
+
+  return segments
 }
 
 export function EventTicker() {
-  const [labels, setLabels] = useState<string[]>([])
+  const [segments, setSegments] = useState<string[]>([])
 
   useEffect(() => {
-    // Inject keyframes
     if (typeof document !== 'undefined' && !document.getElementById('jms-ticker-style')) {
       const style = document.createElement('style')
       style.id = 'jms-ticker-style'
@@ -57,26 +56,38 @@ export function EventTicker() {
       document.head.appendChild(style)
     }
 
-    fetch('/api/calendar?limit=15')
+    fetch('/api/calendar?limit=20')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        const items: string[] = (data?.events ?? [])
-          .map(formatEventLabel)
-          .filter(Boolean)
-        setLabels(items)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const tomorrow = new Date(today)
+        tomorrow.setDate(today.getDate() + 1)
+
+        const grouped: GroupedEvents = { today: [], tomorrow: [] }
+
+        ;(data?.events ?? []).forEach((e: TickerEvent) => {
+          if (!e.location || !e.start) return
+          const d = new Date(e.start)
+          d.setHours(0, 0, 0, 0)
+          if (d.getTime() === today.getTime()) grouped.today.push(e)
+          else if (d.getTime() === tomorrow.getTime()) grouped.tomorrow.push(e)
+        })
+
+        setSegments(buildTickerContent(grouped))
       })
       .catch(() => {})
   }, [])
 
-  if (labels.length === 0) return null
+  if (segments.length === 0) return null
 
-  // Each item repeated many times so the strip is ALWAYS wider than the screen
-  const repeat = Math.max(8, Math.ceil(20 / labels.length))
-  const base = Array.from({ length: repeat }, () => labels).flat()
-  // Duplicate the whole set — animation goes from 0 to -50%
-  const items = [...base, ...base]
+  // Repeat enough times to fill screen, then duplicate for seamless loop
+  const repeat = Math.max(4, Math.ceil(12 / segments.length))
+  const base = Array.from({ length: repeat }, () => segments).flat()
+  const items = [...base, ...base] // duplicate for the -50% animation
 
-  const duration = labels.length * 12
+  // Slow: 30 seconds per segment
+  const duration = segments.length * repeat * 30
 
   return (
     <div style={{
@@ -100,7 +111,6 @@ export function EventTicker() {
         height: '100%',
         borderRight: '2px solid #991b1b',
         zIndex: 2,
-        position: 'relative',
       }}>
         <MapPin style={{ width: '15px', height: '15px', color: '#fde047', flexShrink: 0 }} />
         <span style={{
@@ -130,22 +140,22 @@ export function EventTicker() {
           onMouseEnter={e => (e.currentTarget.style.animationPlayState = 'paused')}
           onMouseLeave={e => (e.currentTarget.style.animationPlayState = 'running')}
         >
-          {items.map((label, i) => (
+          {items.map((seg, i) => (
             <span key={i} style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '10px',
-              padding: '0 40px',
-              color: '#fef9c3',
+              padding: '0 48px',
+              color: seg.includes('COMING UP') ? '#fde047' : '#fef9c3',
               fontWeight: 900,
-              fontSize: '13px',
-              letterSpacing: '0.12em',
+              fontSize: seg.includes('COMING UP') ? '12px' : '13px',
+              letterSpacing: seg.includes('COMING UP') ? '0.2em' : '0.1em',
               textTransform: 'uppercase',
               whiteSpace: 'nowrap',
               fontFamily: 'system-ui, -apple-system, sans-serif',
+              opacity: seg.includes('COMING UP') ? 0.8 : 1,
             }}>
-              <span style={{ color: '#fde047', fontSize: '15px', flexShrink: 0 }}>🌶️</span>
-              {label}
+              {seg}
             </span>
           ))}
         </div>
