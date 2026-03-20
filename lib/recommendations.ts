@@ -13,8 +13,15 @@ export interface RecommendedProduct {
 }
 
 /**
- * Get "Frequently Bought Together" recommendations
- * Based on orders that contain the target product
+ * Get "Frequently Bought Together" recommendations for a product.
+ *
+ * Analyses the last 100 orders containing the target product and ranks
+ * co-purchased products by occurrence frequency. Out-of-stock and inactive
+ * products are excluded from results.
+ *
+ * @param {string} productId - The ID of the product to find companions for.
+ * @param {number} [limit=4] - Maximum number of recommendations to return.
+ * @returns {Promise<RecommendedProduct[]>} Ranked array of recommended products with normalised scores (0–1).
  */
 export async function getFrequentlyBoughtTogether(
   productId: string,
@@ -94,8 +101,16 @@ export async function getFrequentlyBoughtTogether(
 }
 
 /**
- * Get "You May Also Like" recommendations
- * Based on similar products (same category, similar heat level)
+ * Get "You May Also Like" recommendations based on product similarity.
+ *
+ * Scores candidates by:
+ * - Same category (+0.5)
+ * - Same heat level (+0.3)
+ * - Price within 30% of the source product (+0.2)
+ *
+ * @param {string} productId - The ID of the source product.
+ * @param {number} [limit=8] - Maximum number of recommendations to return.
+ * @returns {Promise<RecommendedProduct[]>} Similarity-scored recommendations, sorted descending.
  */
 export async function getYouMayAlsoLike(
   productId: string,
@@ -177,8 +192,15 @@ export async function getYouMayAlsoLike(
 }
 
 /**
- * Get personalized recommendations for a user
- * Based on their order history and browsing patterns
+ * Get personalised product recommendations for an authenticated user.
+ *
+ * Derives the user's top category and heat-level preferences from their
+ * last 10 paid orders, then surfaces in-stock products matching those
+ * preferences that the user has not yet purchased.
+ *
+ * @param {string} userId - The authenticated user's ID.
+ * @param {number} [limit=8] - Maximum number of recommendations to return.
+ * @returns {Promise<RecommendedProduct[]>} Personalised recommendations with a fixed confidence score of 0.8.
  */
 export async function getPersonalizedRecommendations(
   userId: string,
