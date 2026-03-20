@@ -37,10 +37,6 @@ const navigationItems = [
     href: "/recipes",
   },
   {
-    title: "About Jose",
-    href: "/about",
-  },
-  {
     title: "Our Story",
     href: "/our-story",
   },
@@ -57,7 +53,7 @@ const navigationItems = [
     href: "/wholesale",
   },
   {
-    title: "Where is Jose?",
+    title: "Where Is Jose?",
     href: "/where-is-jose",
   },
 ];
@@ -119,8 +115,8 @@ export function Navigation() {
           "border-border bg-background/90 shadow-[0_12px_32px_rgba(15,23,42,0.08)] dark:shadow-[0_0_30px_rgba(229,62,62,0.35)]"
       )}
     >
-      <div className="container mx-auto px-2 sm:px-4">
-        <div className="flex h-16 items-center justify-between gap-2">
+      <div className="container mx-auto px-2 sm:px-4 max-w-[1400px]">
+        <div className="flex h-16 items-center justify-between gap-1">
           {/* Logo */}
           <Link
             href="/"
@@ -140,14 +136,14 @@ export function Navigation() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex lg:items-center lg:gap-1">
+          <div className="hidden lg:flex lg:items-center lg:gap-0 flex-shrink-0">
             <NavigationMenu>
               <NavigationMenuList className="gap-0">
                 {navigationItems.map((item) => (
                   <NavigationMenuItem key={item.title}>
                     {item.megaMenu ? (
                       <>
-                        <NavigationMenuTrigger className="h-auto min-h-[44px] px-2 py-1.5 text-xs font-medium hover:text-salsa-600 data-[state=open]:text-salsa-600">
+                        <NavigationMenuTrigger className="h-auto min-h-[44px] px-1.5 py-1.5 text-[11px] font-medium hover:text-salsa-600 data-[state=open]:text-salsa-600">
                           {item.title}
                         </NavigationMenuTrigger>
                         <NavigationMenuContent>
@@ -187,7 +183,7 @@ export function Navigation() {
                       <NavigationMenuLink asChild>
                         <Link
                           href={item.href}
-                          className="group inline-flex h-auto min-h-[44px] w-max items-center justify-center rounded-md px-2 py-1.5 text-xs font-medium transition-colors hover:text-salsa-600 focus:text-salsa-600 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+                          className="group inline-flex h-auto min-h-[44px] w-max items-center justify-center rounded-md px-1.5 py-1.5 text-[11px] font-medium transition-colors hover:text-salsa-600 focus:text-salsa-600 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
                         >
                           {item.title}
                         </Link>
@@ -200,7 +196,7 @@ export function Navigation() {
           </div>
 
           {/* Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-xs lg:max-w-sm mx-2 lg:mx-4">
+          <div className="hidden md:flex flex-1 max-w-[160px] lg:max-w-[200px] mx-1 lg:mx-2">
             <form onSubmit={handleSearch} className="flex w-full">
               <div className="relative flex-1">
                 <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground opacity-70" />
@@ -222,9 +218,9 @@ export function Navigation() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-1 lg:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-0.5 lg:gap-1 flex-shrink-0">
           {/* Social Links */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden xl:flex items-center gap-0.5">
             {socialLinks.map((social) => (
               <Button
                 key={social.name}
