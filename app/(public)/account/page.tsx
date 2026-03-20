@@ -31,6 +31,9 @@ export default async function AccountPage() {
       name: true,
       email: true,
       role: true,
+      fundraiserAccount: {
+        select: { id: true, status: true },
+      },
     },
   });
 
@@ -71,7 +74,7 @@ export default async function AccountPage() {
             <Link href="/account/settings">
               <Button variant="secondary">Account Settings</Button>
             </Link>
-            {user?.role === UserRole.FUNDRAISER && (
+            {(user?.role === UserRole.FUNDRAISER || user?.fundraiserAccount) && (
               <Link href="/fundraiser-portal/dashboard">
                 <Button variant="default" className="bg-verde-600 hover:bg-verde-700 text-white">
                   Fundraising Portal →
@@ -116,6 +119,16 @@ export default async function AccountPage() {
             <Link href="/account/settings" className="text-sm hover:underline">Update profile</Link>
             <Link href="/account/settings" className="text-sm hover:underline">Manage addresses</Link>
             <Link href="/account/orders" className="text-sm hover:underline">Track an order</Link>
+            {(user?.role === UserRole.FUNDRAISER || user?.fundraiserAccount) && (
+              <Link href="/fundraiser-portal/dashboard" className="text-sm font-semibold text-verde-600 hover:underline">
+                → Go to Fundraising Portal
+              </Link>
+            )}
+            {!user?.fundraiserAccount && user?.role !== UserRole.FUNDRAISER && (
+              <Link href="/auth/fundraiser-signup" className="text-sm text-muted-foreground hover:underline">
+                Start a fundraiser
+              </Link>
+            )}
           </div>
         </Card>
       </div>
