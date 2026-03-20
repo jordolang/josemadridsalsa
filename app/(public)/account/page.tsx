@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { OrderCard } from "@/components/account/OrderCard";
 import { createMetadata } from "@/lib/metadata";
+import { UserRole } from "@prisma/client";
 
 export const metadata: Metadata = createMetadata({
   title: "Account Dashboard - Jose Madrid Salsa",
@@ -63,13 +64,27 @@ export default async function AccountPage() {
             <p className="text-sm text-muted-foreground">{user?.email}</p>
             {user?.role ? <p className="text-xs text-muted-foreground mt-1">Role: {user.role}</p> : null}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link href="/account/orders">
               <Button variant="default">View Orders</Button>
             </Link>
             <Link href="/account/settings">
               <Button variant="secondary">Account Settings</Button>
             </Link>
+            {user?.role === UserRole.FUNDRAISER && (
+              <Link href="/fundraiser-portal/dashboard">
+                <Button variant="default" className="bg-verde-600 hover:bg-verde-700 text-white">
+                  Fundraising Portal →
+                </Button>
+              </Link>
+            )}
+            {(user?.role === UserRole.ADMIN || user?.role === UserRole.DEVELOPER || user?.role === UserRole.STAFF) && (
+              <Link href="/admin">
+                <Button variant="outline" className="border-salsa-500 text-salsa-600 hover:bg-salsa-50">
+                  Admin Panel →
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </Card>
