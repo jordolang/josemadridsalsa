@@ -232,19 +232,19 @@ export function Navigation() {
 
           {/* Actions — 25% right */}
           <div className="flex items-center justify-end gap-0.5 lg:gap-1 w-[25%]">
-          {/* Social Links */}
-          <div className="hidden xl:flex items-center gap-0.5">
-            {socialLinks.map((social) => (
-              <Button
-                key={social.name}
-                variant="ghost"
-                asChild
-                className="min-h-[44px] min-w-[44px] p-0 text-muted-foreground hover:text-salsa-500 dark:hover:text-salsa-300"
-              >
-                <a
-                  href={social.href}
-                  aria-label={`Visit our ${social.name} profile`}
-                  target="_blank"
+            {/* Social Links — desktop only */}
+            <div className="hidden xl:flex items-center gap-0.5">
+              {socialLinks.map((social) => (
+                <Button
+                  key={social.name}
+                  variant="ghost"
+                  asChild
+                  className="min-h-[44px] min-w-[44px] p-0 text-muted-foreground hover:text-salsa-500 dark:hover:text-salsa-300"
+                >
+                  <a
+                    href={social.href}
+                    aria-label={`Visit our ${social.name} profile`}
+                    target="_blank"
                     rel="noopener noreferrer"
                   >
                     <social.icon className="w-5 h-5" />

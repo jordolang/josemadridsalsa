@@ -58,7 +58,7 @@ export function FundraiserSocialBoard({ fundraiserSlug, currentUrl }: { fundrais
     
     setIsSubmitting(true)
     try {
-      await postSupportMessage({ fundraiserSlug, content: newMessage })
+      await postSupportMessage(fundraiserSlug, newMessage)
       setNewMessage('')
       toast.success('Message posted successfully!')
       fetchData() // refresh immediately

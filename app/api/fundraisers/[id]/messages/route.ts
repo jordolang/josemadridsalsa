@@ -19,18 +19,18 @@ function checkRateLimit(ip: string): boolean {
 }
 
 interface RouteParams {
-  params: Promise<{ slug: string }>
+  params: Promise<{ id: string }>
 }
 
 export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
-    const { slug } = await params
+    const { id } = await params
     const { searchParams } = new URL(req.url)
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
     const pageSize = 20
 
     const fundraiser = await prisma.fundraiser.findUnique({
-      where: { slug },
+      where: { slug: id },
       select: { id: true },
     })
 
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
-    const { slug } = await params
+    const { id } = await params
 
     // Rate limit by IP
     const ip =
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     const fundraiser = await prisma.fundraiser.findUnique({
-      where: { slug },
+      where: { slug: id },
       select: { id: true },
     })
 

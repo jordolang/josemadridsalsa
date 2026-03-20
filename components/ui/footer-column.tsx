@@ -75,9 +75,9 @@ export function Footer() {
               <Image
                 src={company.logo}
                 alt={`${company.name} logo`}
-                width={48}
-                height={48}
-                className="rounded-lg object-contain"
+                width={56}
+                height={56}
+                className="object-contain"
                 priority
               />
               <span className="text-2xl font-semibold">{company.name}</span>
