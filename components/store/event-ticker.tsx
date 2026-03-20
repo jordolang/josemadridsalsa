@@ -59,19 +59,23 @@ export function EventTicker() {
     fetch('/api/calendar?limit=20')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const tomorrow = new Date(today)
-        tomorrow.setDate(today.getDate() + 1)
+        // Get today/tomorrow as YYYY-MM-DD strings in LOCAL time (avoids UTC timezone shift)
+        const now = new Date()
+        const pad = (n: number) => String(n).padStart(2, '0')
+        const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+        const todayStr = toDateStr(now)
+        const tomorrowDate = new Date(now)
+        tomorrowDate.setDate(now.getDate() + 1)
+        const tomorrowStr = toDateStr(tomorrowDate)
 
         const grouped: GroupedEvents = { today: [], tomorrow: [] }
 
         ;(data?.events ?? []).forEach((e: TickerEvent) => {
           if (!e.location || !e.start) return
-          const d = new Date(e.start)
-          d.setHours(0, 0, 0, 0)
-          if (d.getTime() === today.getTime()) grouped.today.push(e)
-          else if (d.getTime() === tomorrow.getTime()) grouped.tomorrow.push(e)
+          // Compare just the date portion (first 10 chars) — avoids any TZ issues
+          const eventDate = e.start.slice(0, 10)
+          if (eventDate === todayStr) grouped.today.push(e)
+          else if (eventDate === tomorrowStr) grouped.tomorrow.push(e)
         })
 
         setSegments(buildTickerContent(grouped))
@@ -86,8 +90,8 @@ export function EventTicker() {
   const base = Array.from({ length: repeat }, () => segments).flat()
   const items = [...base, ...base] // duplicate for the -50% animation
 
-  // Slow: 30 seconds per segment
-  const duration = segments.length * repeat * 30
+  // 18 seconds per segment — readable but moving
+  const duration = segments.length * repeat * 18
 
   return (
     <div style={{
@@ -137,8 +141,7 @@ export function EventTicker() {
             animation: `jms-ticker ${duration}s linear infinite`,
             willChange: 'transform',
           }}
-          onMouseEnter={e => (e.currentTarget.style.animationPlayState = 'paused')}
-          onMouseLeave={e => (e.currentTarget.style.animationPlayState = 'running')}
+
         >
           {items.map((seg, i) => (
             <span key={i} style={{
