@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { createMetadata } from '@/lib/metadata';
 import { ProductGrid } from '@/components/store/product-grid';
+import { MessageBoard } from '@/components/fundraiser/MessageBoard';
 import prisma from '@/lib/prisma';
 import { formatPrice } from '@/lib/utils';
 
@@ -310,6 +311,13 @@ export default async function FundraiserPage({ params }: PageProps) {
               )}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Supporter Message Board */}
+      <section className="py-12">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <MessageBoard slug={slug} />
         </div>
       </section>
 

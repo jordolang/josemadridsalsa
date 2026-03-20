@@ -53,6 +53,7 @@ model User {
   passwordResetTokens    PasswordResetToken[]
   emailLogs              EmailLog[]
   unsubscribePreferences UnsubscribePreference[]
+  fundraiserMessages     FundraiserMessage[]
 
   @@map("users")
 }
@@ -859,8 +860,28 @@ model Fundraiser {
   products     FundraiserProduct[]
   participants FundraiserParticipant[]
   account      FundraiserAccount?
+  messages     FundraiserMessage[]
 
   @@map("fundraisers")
+}
+
+model FundraiserMessage {
+  id           String   @id @default(cuid())
+  fundraiserId String
+  content      String   @db.Text
+  authorName   String
+  authorEmail  String?
+  authorAvatar String?
+  authorId     String?  // linked User if logged in
+  isApproved   Boolean  @default(true) // auto-approve, admin can hide
+  isHidden     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+  author     User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([fundraiserId, isHidden])
+  @@map("fundraiser_messages")
 }
 
 model FundraiserProduct {
