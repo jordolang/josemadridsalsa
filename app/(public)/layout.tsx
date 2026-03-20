@@ -13,6 +13,7 @@ import { WishlistSyncProvider } from '@/components/providers/wishlist-sync-provi
 import { CompareFloatingButton, ProductComparison } from '@/components/store/product-comparison'
 import { ComparisonURLHandler } from '@/components/store/comparison-url-handler'
 import { NewsletterPopup } from '@/components/store/newsletter-popup'
+import { EventTicker } from '@/components/store/event-ticker'
 
 export default async function PublicLayout({
   children,
@@ -54,6 +55,7 @@ export default async function PublicLayout({
       </Suspense>
       <div className="flex min-h-screen flex-col">
         <Navigation />
+        <EventTicker />
         <div className="flex-1">
           {children}
         </div>
