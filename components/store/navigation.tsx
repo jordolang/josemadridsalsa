@@ -116,11 +116,11 @@ export function Navigation() {
       )}
     >
       <div className="container mx-auto px-2 sm:px-4 max-w-[1400px]">
-        <div className="flex h-16 items-center justify-between gap-1">
-          {/* Logo */}
+        <div className="flex h-16 items-center gap-1">
+          {/* Logo — 25% */}
           <Link
             href="/"
-            className="flex items-center space-x-2 font-serif font-bold text-base lg:text-xl flex-shrink-0 min-h-[44px]"
+            className="flex items-center space-x-2 font-serif font-bold text-base lg:text-xl flex-shrink-0 min-h-[44px] w-[25%]"
           >
             <div className="relative w-11 h-11 lg:w-12 lg:h-12 flex-shrink-0" suppressHydrationWarning>
               <Image
@@ -135,8 +135,21 @@ export function Navigation() {
             <span className="hidden sm:inline text-gradient">Jose Madrid Salsa</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex lg:items-center lg:gap-0 flex-shrink-0">
+          {/* Desktop Navigation + Search — 50% centered */}
+          <div className="hidden lg:flex lg:items-center lg:justify-center lg:gap-2 w-[50%]">
+            {/* Search inline with nav */}
+            <form onSubmit={handleSearch} className="flex">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground opacity-70" />
+                <input
+                  type="search"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-7 pr-2 h-8 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-salsa-500 w-[120px]"
+                />
+              </div>
+            </form>
             <NavigationMenu>
               <NavigationMenuList className="gap-0">
                 {navigationItems.map((item) => (
@@ -195,8 +208,8 @@ export function Navigation() {
             </NavigationMenu>
           </div>
 
-          {/* Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-[160px] lg:max-w-[200px] mx-1 lg:mx-2">
+          {/* Search Bar — part of the 50% center block, hidden on lg since it's inside nav block */}
+          <div className="hidden md:flex lg:hidden flex-1 max-w-[160px] mx-1">
             <form onSubmit={handleSearch} className="flex w-full">
               <div className="relative flex-1">
                 <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground opacity-70" />
@@ -217,8 +230,8 @@ export function Navigation() {
             </form>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-0.5 lg:gap-1 flex-shrink-0">
+          {/* Actions — 25% right */}
+          <div className="flex items-center justify-end gap-0.5 lg:gap-1 w-[25%]">
           {/* Social Links */}
           <div className="hidden xl:flex items-center gap-0.5">
             {socialLinks.map((social) => (

@@ -39,8 +39,8 @@ function formatEventLabel(event: TickerEvent): string {
 
 const TICKER_KEYFRAMES = `
 @keyframes jms-ticker {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0%   { transform: translateX(0%); }
+  100% { transform: translateX(-33.333%); }
 }
 `
 
@@ -138,11 +138,11 @@ export function EventTicker() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '10px',
-                padding: '0 40px',
-                color: 'white',
-                fontWeight: 800,
+                padding: '0 48px',
+                color: '#fef9c3',
+                fontWeight: 900,
                 fontSize: '13px',
-                letterSpacing: '0.04em',
+                letterSpacing: '0.12em',
                 textTransform: 'uppercase',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
               }}
