@@ -85,13 +85,12 @@ export function EventTicker() {
 
   if (segments.length === 0) return null
 
-  // Repeat enough times to fill screen, then duplicate for seamless loop
-  const repeat = Math.max(4, Math.ceil(12 / segments.length))
-  const base = Array.from({ length: repeat }, () => segments).flat()
-  const items = [...base, ...base] // duplicate for the -50% animation
+  // Each unique segment appears ONCE per pass. Duplicate the full pass for the
+  // seamless -50% loop trick — that's all we need.
+  const items = [...segments, ...segments]
 
-  // 18 seconds per segment — readable but moving
-  const duration = segments.length * repeat * 18
+  // ~6 seconds per segment so the ticker moves at a comfortable reading pace.
+  const duration = Math.max(20, segments.length * 6)
 
   return (
     <div style={{
