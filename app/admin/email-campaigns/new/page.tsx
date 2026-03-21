@@ -3,6 +3,19 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
 import { CampaignForm } from '../_components/campaign-form'
 
+async function getMailingLists() {
+  return prisma.mailingList.findMany({
+    orderBy: { name: 'asc' },
+    select: {
+      id: true,
+      name: true,
+      _count: {
+        select: { subscribers: { where: { status: 'SUBSCRIBED' } } }
+      }
+    }
+  })
+}
+
 async function getTemplates() {
   const templates = await prisma.emailTemplate.findMany({
     where: { isActive: true },
@@ -27,7 +40,10 @@ export default async function NewCampaignPage() {
     redirect('/admin')
   }
 
-  const templates = await getTemplates()
+  const [templates, mailingLists] = await Promise.all([
+    getTemplates(),
+    getMailingLists(),
+  ])
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -38,7 +54,7 @@ export default async function NewCampaignPage() {
         </p>
       </div>
 
-      <CampaignForm templates={templates} />
+      <CampaignForm templates={templates} mailingLists={mailingLists} />
     </div>
   )
 }

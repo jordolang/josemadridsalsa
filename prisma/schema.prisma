@@ -1598,6 +1598,10 @@ model EmailCampaign {
   startedAt   DateTime?
   completedAt DateTime?
 
+  // Mailing List
+  listId String?
+  list   MailingList? @relation(fields: [listId], references: [id], onDelete: SetNull)
+
   // Tracking
   totalRecipients Int @default(0)
   sentCount       Int @default(0)
@@ -1621,6 +1625,7 @@ model EmailCampaign {
   @@index([status])
   @@index([scheduledAt])
   @@index([createdById])
+  @@index([listId])
   @@map("email_campaigns")
 }
 
@@ -1718,6 +1723,45 @@ model UnsubscribePreference {
   @@unique([email])
   @@index([userId])
   @@map("unsubscribe_preferences")
+}
+
+model MailingList {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isDefault   Boolean  @default(false)
+  
+  createdById String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subscribers MailingListSubscriber[]
+  campaigns   EmailCampaign[]
+
+  @@index([isDefault])
+  @@map("mailing_lists")
+}
+
+model MailingListSubscriber {
+  id            String      @id @default(cuid())
+  listId        String
+  email         String
+  firstName     String?
+  lastName      String?
+  source        String?     // e.g. "checkout", "newsletter_form", "manual"
+  status        SubscriberStatus @default(SUBSCRIBED)
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  unsubscribedAt DateTime?
+
+  list          MailingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, email])
+  @@index([email])
+  @@index([status])
+  @@map("mailing_list_subscribers")
 }
 
 model AuditLog {
@@ -1985,6 +2029,13 @@ enum EmailRecipientStatus {
   BOUNCED // Email bounced
   OPENED // Recipient opened email
   CLICKED // Recipient clicked link
+}
+
+enum SubscriberStatus {
+  SUBSCRIBED
+  UNSUBSCRIBED
+  BOUNCED
+  COMPLAINED
 }
 
 enum EmailLogStatus {
@@ -2744,4 +2795,103 @@ model GamificationAction {
 
   @@index([fundraiserId])
   @@map("gamification_actions")
+}
+
+// =========================================================================
+// Lead Generation & Google Scraper Models
+// =========================================================================
+
+enum LeadCampaignStatus {
+  DRAFT
+  SCRAPING
+  SCRAPE_COMPLETED
+  PARSING_CONTACTS
+  PARSING_COMPLETED
+  SENDING_EMAILS
+  COMPLETED
+  FAILED
+}
+
+model LeadCampaign {
+  id               String   @id @default(cuid())
+  name             String
+  city             String
+  state            String
+  district         String?
+  schoolType       String   @default("high school")
+  
+  // Settings
+  limit            Int?
+  skipNoEmail      Boolean  @default(true)
+  autoSend         Boolean  @default(false)
+  
+  status           LeadCampaignStatus @default(DRAFT)
+  
+  // Stats
+  totalFound       Int      @default(0)
+  totalEmailsFound Int      @default(0)
+  totalSent        Int      @default(0)
+  totalFailed      Int      @default(0)
+  
+  // Relations
+  templateId       String?
+  template         LeadEmailTemplate? @relation(fields: [templateId], references: [id])
+  leads            Lead[]
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("lead_campaigns")
+}
+
+enum LeadStatus {
+  SCRAPED
+  CONTACT_FOUND
+  EMAIL_SENT
+  EMAIL_FAILED
+}
+
+model Lead {
+  id             String     @id @default(cuid())
+  campaignId     String
+  campaign       LeadCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  // School Info
+  schoolName     String
+  schoolUrl      String?
+  district       String?
+  city           String?
+  state          String?
+  
+  // Contact Info
+  contactName    String?
+  title          String?
+  sport          String?
+  email          String?
+  phone          String?
+  
+  status         LeadStatus @default(SCRAPED)
+  sentAt         DateTime?
+  errorMessage   String?   @db.Text
+  
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([campaignId])
+  @@index([status])
+  @@map("leads")
+}
+
+model LeadEmailTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  subject     String
+  htmlContent String   @db.Text
+  
+  campaigns   LeadCampaign[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("lead_email_templates")
 }

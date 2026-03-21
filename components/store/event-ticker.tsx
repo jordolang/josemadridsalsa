@@ -11,31 +11,35 @@ type TickerEvent = {
   isAllDay: boolean
 }
 
-type GroupedEvents = {
-  today: TickerEvent[]
-  tomorrow: TickerEvent[]
-}
-
-function buildTickerContent(grouped: GroupedEvents): string[] {
+function buildTickerContent(events: TickerEvent[], todayStr: string, tomorrowStr: string): string[] {
   const segments: string[] = []
 
-  if (grouped.today.length > 0) {
-    grouped.today.forEach(e => {
-      if (e.location) {
-        segments.push(`📍 TODAY  ·  ${e.title.toUpperCase()}  ·  ${e.location.toUpperCase()}`)
+  events.forEach(e => {
+    if (!e.location || !e.start) return
+    const eventDate = e.start.slice(0, 10)
+    
+    let dateLabel = ''
+    if (eventDate === todayStr) {
+      dateLabel = 'TODAY'
+    } else if (eventDate === tomorrowStr) {
+      dateLabel = 'TOMORROW'
+    } else {
+      // Parse the date (treating it as UTC so we get the exact day)
+      const parts = eventDate.split('-')
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10)
+        const month = parseInt(parts[1], 10) - 1
+        const day = parseInt(parts[2], 10)
+        const d = new Date(Date.UTC(year, month, day))
+        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+        dateLabel = `${months[d.getUTCMonth()]} ${d.getUTCDate()}`
+      } else {
+        dateLabel = eventDate
       }
-    })
-  }
+    }
 
-  if (grouped.tomorrow.length > 0) {
-    // Separator
-    segments.push(`━━━━━━  COMING UP  ━━━━━━`)
-    grouped.tomorrow.forEach(e => {
-      if (e.location) {
-        segments.push(`📍 TOMORROW  ·  ${e.title.toUpperCase()}  ·  ${e.location.toUpperCase()}`)
-      }
-    })
-  }
+    segments.push(`📍 ${dateLabel}  ·  ${e.title.toUpperCase()}  ·  ${e.location.toUpperCase()}`)
+  })
 
   return segments
 }
@@ -59,7 +63,6 @@ export function EventTicker() {
     fetch('/api/calendar?limit=20')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        // Get today/tomorrow as YYYY-MM-DD strings in LOCAL time (avoids UTC timezone shift)
         const now = new Date()
         const pad = (n: number) => String(n).padStart(2, '0')
         const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
@@ -68,26 +71,26 @@ export function EventTicker() {
         tomorrowDate.setDate(now.getDate() + 1)
         const tomorrowStr = toDateStr(tomorrowDate)
 
-        const grouped: GroupedEvents = { today: [], tomorrow: [] }
+        // Find the first 3 valid upcoming events
+        const validEvents = (data?.events ?? [])
+          .filter((e: TickerEvent) => e.location && e.start)
+          .slice(0, 3)
 
-        ;(data?.events ?? []).forEach((e: TickerEvent) => {
-          if (!e.location || !e.start) return
-          // Compare just the date portion (first 10 chars) — avoids any TZ issues
-          const eventDate = e.start.slice(0, 10)
-          if (eventDate === todayStr) grouped.today.push(e)
-          else if (eventDate === tomorrowStr) grouped.tomorrow.push(e)
-        })
-
-        setSegments(buildTickerContent(grouped))
+        setSegments(buildTickerContent(validEvents, todayStr, tomorrowStr))
       })
       .catch(() => {})
   }, [])
 
   if (segments.length === 0) return null
 
+  // Ensure there's a separator if there are multiple segments
+  const formattedSegments = segments.length > 1 
+    ? segments.flatMap((seg, i) => i < segments.length - 1 ? [seg, `━━━━━━  UPCOMING  ━━━━━━`] : [seg])
+    : segments
+
   // Each unique segment appears ONCE per pass. Duplicate the full pass for the
   // seamless -50% loop trick — that's all we need.
-  const items = [...segments, ...segments]
+  const items = [...formattedSegments, ...formattedSegments]
 
   // ~6 seconds per segment so the ticker moves at a comfortable reading pace.
   const duration = Math.max(20, segments.length * 6)

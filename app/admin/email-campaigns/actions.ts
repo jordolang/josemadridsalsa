@@ -16,8 +16,9 @@ export async function createCampaign(formData: FormData) {
     const name = formData.get('name') as string
     const templateId = formData.get('templateId') as string
     const subject = formData.get('subject') as string
-    const recipientsSource = formData.get('recipientsSource') as string // 'csv' | 'text' | 'paste'
+    const recipientsSource = formData.get('recipientsSource') as string // 'csv' | 'text' | 'paste' | 'list'
     const recipientsData = formData.get('recipientsData') as string
+    const listId = formData.get('listId') as string | null
     
     if (!name || !templateId || !subject) {
       return { error: 'Missing required fields' }
@@ -36,7 +37,27 @@ export async function createCampaign(formData: FormData) {
     let recipientsList: Array<{ email: string; name?: string; variables?: Record<string, any> }> = []
     let parseErrors: string[] = []
     
-    if (recipientsSource === 'csv') {
+    if (recipientsSource === 'list') {
+      if (!listId) {
+        return { error: 'Mailing list required' }
+      }
+      const list = await prisma.mailingList.findUnique({
+        where: { id: listId },
+        include: {
+          subscribers: {
+            where: { status: 'SUBSCRIBED' },
+          },
+        },
+      })
+      if (!list) {
+        return { error: 'Mailing list not found' }
+      }
+      recipientsList = list.subscribers.map((s) => ({
+        email: s.email,
+        name: [s.firstName, s.lastName].filter(Boolean).join(' ') || undefined,
+        variables: {},
+      }))
+    } else if (recipientsSource === 'csv') {
       const parsed = parseCSV(recipientsData)
       recipientsList = parsed.recipients
       parseErrors = parsed.errors
@@ -57,6 +78,7 @@ export async function createCampaign(formData: FormData) {
         templateId,
         subject,
         status: 'DRAFT',
+        listId: recipientsSource === 'list' && listId ? listId : null,
         totalRecipients: recipientsList.length,
         createdById: user.id,
         recipients: {

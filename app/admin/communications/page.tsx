@@ -26,6 +26,7 @@ async function getCommunicationOverview() {
     unreadMessages,
     emailTemplates,
     pendingReviews,
+    mailingLists,
     recentConversations,
   ] = await Promise.all([
     prisma.conversation.count({ where: { status: 'OPEN' } }),
@@ -33,6 +34,7 @@ async function getCommunicationOverview() {
     prisma.message.count({ where: { readAt: null, senderType: 'USER' } }),
     prisma.emailTemplate.count(),
     prisma.review.count({ where: { status: 'PENDING' } }),
+    prisma.mailingList.count(),
     prisma.conversation.findMany({
       orderBy: { updatedAt: 'desc' },
       take: 5,
@@ -57,6 +59,7 @@ async function getCommunicationOverview() {
     unreadMessages,
     emailTemplates,
     pendingReviews,
+    mailingLists,
     recentConversations,
   }
 }
@@ -86,7 +89,7 @@ export default async function CommunicationsPage() {
         <div>
           <h1 className="text-3xl font-bold">Communications</h1>
           <p className="text-slate-600">
-            Manage customer conversations, email templates, and feedback
+            Manage customer conversations, email campaigns, mailing lists, and feedback
           </p>
         </div>
       </div>
@@ -248,6 +251,22 @@ export default async function CommunicationsPage() {
                 className="block rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:border-blue-300 hover:text-blue-600"
               >
                 Moderate product reviews
+              </Link>
+            )}
+            {canManageEmails && (
+              <Link
+                href="/admin/communications/lists"
+                className="block rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:border-blue-300 hover:text-blue-600"
+              >
+                Manage mailing lists & subscribers
+              </Link>
+            )}
+            {canManageEmails && (
+              <Link
+                href="/admin/email-campaigns"
+                className="block rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:border-blue-300 hover:text-blue-600"
+              >
+                View email campaigns
               </Link>
             )}
             {canReply ? (

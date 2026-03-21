@@ -2,12 +2,20 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload, FileText, Mail, AlertCircle } from 'lucide-react'
+import { Upload, FileText, Mail, AlertCircle, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createCampaign } from '../actions'
+
+interface MailingList {
+  id: string
+  name: string
+  _count: {
+    subscribers: number
+  }
+}
 
 interface Template {
   id: string
@@ -19,15 +27,17 @@ interface Template {
 
 interface CampaignFormProps {
   templates: Template[]
+  mailingLists: MailingList[]
 }
 
-export function CampaignForm({ templates }: CampaignFormProps) {
+export function CampaignForm({ templates, mailingLists }: CampaignFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [parseErrors, setParseErrors] = useState<string[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
-  const [recipientsSource, setRecipientsSource] = useState<'csv' | 'text' | 'paste'>('csv')
+  const [recipientsSource, setRecipientsSource] = useState<'list' | 'csv' | 'text' | 'paste'>(mailingLists.length > 0 ? 'list' : 'csv')
+  const [selectedListId, setSelectedListId] = useState<string>('')
   const [fileContent, setFileContent] = useState('')
   const [fileName, setFileName] = useState('')
 
@@ -47,7 +57,15 @@ export function CampaignForm({ templates }: CampaignFormProps) {
 
     const formData = new FormData(e.currentTarget)
     formData.append('recipientsSource', recipientsSource)
-    formData.append('recipientsData', fileContent || formData.get('pasteRecipients') as string)
+    if (recipientsSource === 'list') {
+      if (!selectedListId) {
+        setError('Please select a mailing list')
+        return
+      }
+      formData.append('listId', selectedListId)
+    } else {
+      formData.append('recipientsData', fileContent || formData.get('pasteRecipients') as string)
+    }
 
     startTransition(async () => {
       const result = await createCampaign(formData)
@@ -146,8 +164,24 @@ export function CampaignForm({ templates }: CampaignFormProps) {
 
         <div className="space-y-4">
           <div>
-            <Label>Upload Method</Label>
-            <div className="mt-2 grid grid-cols-3 gap-3">
+            <Label>Recipients Source</Label>
+            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setRecipientsSource('list')
+                  setFileContent('')
+                  setFileName('')
+                }}
+                className={`p-4 border-2 rounded-lg text-sm font-medium transition-colors ${
+                  recipientsSource === 'list'
+                    ? 'border-blue-500 bg-blue-50 text-blue-900'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <Users className="h-6 w-6 mx-auto mb-2" />
+                Mailing List
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -200,6 +234,25 @@ export function CampaignForm({ templates }: CampaignFormProps) {
               </button>
             </div>
           </div>
+
+          {recipientsSource === 'list' && (
+            <div>
+              <Label htmlFor="listId">Select Mailing List *</Label>
+              <select
+                id="listId"
+                className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={selectedListId}
+                onChange={(e) => setSelectedListId(e.target.value)}
+              >
+                <option value="">Select a list...</option>
+                {mailingLists.map((list) => (
+                  <option key={list.id} value={list.id}>
+                    {list.name} ({list._count.subscribers} active)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {recipientsSource === 'csv' && (
             <div>

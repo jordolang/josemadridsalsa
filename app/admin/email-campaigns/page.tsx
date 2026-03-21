@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Mail, Plus, Send, Clock, CheckCircle2, XCircle, Pause } from 'lucide-react'
+import { Mail, Plus, Send, Clock, CheckCircle2, XCircle, Pause, Users } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,11 @@ async function getCampaigns() {
   const campaigns = await prisma.emailCampaign.findMany({
     include: {
       template: {
+        select: {
+          name: true,
+        },
+      },
+      list: {
         select: {
           name: true,
         },
@@ -147,6 +152,12 @@ export default async function EmailCampaignsPage() {
                         <Mail className="h-4 w-4" />
                         <span>Template: {campaign.template.name}</span>
                       </div>
+                      {campaign.list && (
+                        <div className="flex items-center gap-1">
+                          <Users className="h-4 w-4" />
+                          <span>List: {campaign.list.name}</span>
+                        </div>
+                      )}
                       <div>
                         Recipients: {campaign.totalRecipients.toLocaleString()}
                       </div>

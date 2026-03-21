@@ -4,12 +4,13 @@ import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, User, Users, ShieldAlert } from 'lucide-react'
+import { Plus, User, Users, ShieldAlert } from 'lucide-react'
 import Link from 'next/link'
 import { UserRole } from '@prisma/client'
 import { createMetadata } from '@/lib/metadata'
+
+import { UsersFilter } from '@/components/admin/users/UsersFilter'
 
 export const metadata: Metadata = createMetadata({
   title: 'Users - Jose Madrid Salsa Admin',
@@ -146,28 +147,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              type="search"
-              placeholder="Search users..."
-              defaultValue={params.search}
-              className="pl-9"
-            />
-          </div>
-          <select
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-            defaultValue={params.role || 'all'}
-          >
-            <option value="all">All Roles</option>
-            <option value="CUSTOMER">Customer</option>
-            <option value="WHOLESALE">Wholesale</option>
-            <option value="STAFF">Staff</option>
-            <option value="ADMIN">Admin</option>
-            <option value="DEVELOPER">Developer</option>
-          </select>
-        </div>
+        <UsersFilter initialSearch={params.search} initialRole={params.role} />
       </Card>
 
       {/* Users Table */}
@@ -240,19 +220,29 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           </Card>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <Button variant="outline" disabled={page === 1} asChild={page > 1}>
-                {page > 1 ? <Link href={`/admin/users?page=${page - 1}`}>Previous</Link> : <span>Previous</span>}
-              </Button>
-              <span className="text-sm text-slate-600">
-                Page {page} of {totalPages}
-              </span>
-              <Button variant="outline" disabled={page === totalPages} asChild={page < totalPages}>
-                {page < totalPages ? <Link href={`/admin/users?page=${page + 1}`}>Next</Link> : <span>Next</span>}
-              </Button>
-            </div>
-          )}
+          {totalPages > 1 && (() => {
+            const createPageUrl = (targetPage: number) => {
+              const urlParams = new URLSearchParams()
+              if (params.search) urlParams.set('search', params.search)
+              if (params.role) urlParams.set('role', params.role)
+              urlParams.set('page', targetPage.toString())
+              return `/admin/users?${urlParams.toString()}`
+            }
+
+            return (
+              <div className="flex items-center justify-center gap-2">
+                <Button variant="outline" disabled={page === 1} asChild={page > 1}>
+                  {page > 1 ? <Link href={createPageUrl(page - 1)}>Previous</Link> : <span>Previous</span>}
+                </Button>
+                <span className="text-sm text-slate-600">
+                  Page {page} of {totalPages}
+                </span>
+                <Button variant="outline" disabled={page === totalPages} asChild={page < totalPages}>
+                  {page < totalPages ? <Link href={createPageUrl(page + 1)}>Next</Link> : <span>Next</span>}
+                </Button>
+              </div>
+            )
+          })()}
         </>
       )}
     </div>
