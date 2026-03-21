@@ -142,6 +142,11 @@ export const adminNavigation: NavItem[] = [
         permission: 'messaging:read',
       },
       {
+        label: 'Mailing Lists',
+        href: '/admin/communications/lists',
+        permission: 'messaging:read',
+      },
+      {
         label: 'Email Templates',
         href: '/admin/emails',
         permission: 'content:read',
@@ -150,6 +155,11 @@ export const adminNavigation: NavItem[] = [
         label: 'Email Campaigns',
         href: '/admin/email-campaigns',
         permission: 'content:write',
+      },
+      {
+        label: 'Lead Generation',
+        href: '/admin/lead-generation',
+        permission: 'messaging:read',
       },
       {
         label: 'Reviews',
@@ -219,6 +229,10 @@ export const adminNavigation: NavItem[] = [
         label: 'General',
         href: '/admin/settings',
         permission: 'settings:read',
+      },
+      {
+        label: 'My Profile',
+        href: '/admin/settings/profile',
       },
       {
         label: 'Integrations',
