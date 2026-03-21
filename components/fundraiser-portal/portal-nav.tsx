@@ -9,6 +9,9 @@ const navItems = [
   { href: '/fundraiser-portal/page-editor', label: 'Page Editor', icon: 'layout' },
   { href: '/fundraiser-portal/assets', label: 'Media & Uploads', icon: 'image' },
   { href: '/fundraiser-portal/settings', label: 'Settings', icon: 'settings' },
+  { href: '/fundraiser-portal/advanced-profile', label: 'Advanced Profile', icon: 'layout' },
+  { href: '/fundraiser-portal/team', label: 'Team Access', icon: 'settings' },
+  { href: '/fundraiser-portal/analytics', label: 'Analytics & SEO', icon: 'chart' },
 ] as const
 
 type IconName = 'chart' | 'layout' | 'image' | 'settings'

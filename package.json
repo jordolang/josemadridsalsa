@@ -167,6 +167,7 @@
     "jsdom": "^28.1.0",
     "lighthouse": "^13.0.1",
     "lint-staged": "^15.2.0",
+    "min-indent": "^1.0.1",
     "msw": "^2.12.10",
     "postcss": "^8.5.6",
     "prisma": "6.19.0",

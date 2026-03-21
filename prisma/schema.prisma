@@ -44,10 +44,10 @@ model User {
   shippingSettings  ShippingSettings[]
 
   // Wholesale account
-  wholesaleAccount       WholesaleAccount?
+  wholesaleAccount WholesaleAccount?
 
   // Fundraiser account
-  fundraiserAccount      FundraiserAccount?
+  fundraiserAccount FundraiserAccount?
 
   conversations          Conversation[]
   passwordResetTokens    PasswordResetToken[]
@@ -85,6 +85,7 @@ model Address {
   shippingOrders Order[] @relation("ShippingAddress")
   billingOrders  Order[] @relation("BillingAddress")
 
+  @@index([userId])
   @@map("addresses")
 }
 
@@ -715,9 +716,10 @@ model Order {
   printedInvoiceAt     DateTime?
   printedPackingSlipAt DateTime?
 
-  payments Payment[]
+  payments        Payment[]
   supportMessages FundraiserMessage[]
 
+  @@index([userId])
   @@index([participantId])
   @@map("orders")
 }
@@ -742,6 +744,8 @@ model OrderItem {
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
 
+  @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }
 
@@ -846,7 +850,7 @@ model Fundraiser {
   totalCommission Decimal @default(0) @db.Decimal(10, 2)
 
   // Subdomain portal
-  subdomain        String?  @unique
+  subdomain        String? @unique
   pageConfig       Json?
   logoUrl          String?
   coverPhotoUrl    String?
@@ -857,11 +861,16 @@ model Fundraiser {
   updatedAt DateTime @updatedAt
 
   // Relations
-  orders       Order[]
-  products     FundraiserProduct[]
-  participants FundraiserParticipant[]
-  account      FundraiserAccount?
-  messages     FundraiserMessage[]
+  orders              Order[]
+  products            FundraiserProduct[]
+  participants        FundraiserParticipant[]
+  account             FundraiserAccount?
+  messages            FundraiserMessage[]
+  profile             FundraiserProfile?
+  accessUsers         FundraiserAccess[]
+  analytics           FundraiserAnalytics?
+  gamification        FundraiserGamification?
+  gamificationActions GamificationAction[]
 
   // Platform features
   enableSocialFeatures Boolean @default(true)
@@ -870,18 +879,18 @@ model Fundraiser {
 }
 
 model FundraiserMessage {
-  id           String   @id @default(cuid())
+  id           String  @id @default(cuid())
   fundraiserId String
-  content      String   @db.Text
+  content      String  @db.Text
   authorName   String
   authorEmail  String?
   authorAvatar String?
-  authorId     String?  // linked User if logged in
-  orderId      String?  // optionally tied to an order
+  authorId     String? // linked User if logged in
+  orderId      String? // optionally tied to an order
 
-  isApproved   Boolean  @default(true) // auto-approve, admin can hide
-  isHidden     Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  isApproved Boolean  @default(true) // auto-approve, admin can hide
+  isHidden   Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
   fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
   author     User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
@@ -2660,4 +2669,79 @@ model CredentialAccessGrant {
   @@unique([email])
   @@index([email])
   @@map("credential_access_grants")
+}
+
+// ========================================
+// ADVANCED FUNDRAISER PROFILES
+// ========================================
+
+model FundraiserProfile {
+  id              String   @id @default(cuid())
+  fundraiserId    String   @unique
+  customCss       String?  @db.Text
+  liveStreamUrl   String?
+  youtubeVideoUrl String?
+  tiktokFeedUrl   String?
+  isAdvancedMode  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+
+  @@map("fundraiser_profiles")
+}
+
+model FundraiserAccess {
+  id           String   @id @default(cuid())
+  fundraiserId String
+  email        String
+  addedBy      String? // user id
+  createdAt    DateTime @default(now())
+
+  fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+
+  @@unique([fundraiserId, email])
+  @@map("fundraiser_access")
+}
+
+model FundraiserAnalytics {
+  id                  String   @id @default(cuid())
+  fundraiserId        String   @unique
+  googleMeasurementId String?
+  googleMyBusinessId  String?
+  seoKeywords         String[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+
+  @@map("fundraiser_analytics")
+}
+
+model FundraiserGamification {
+  id                        String   @id @default(cuid())
+  fundraiserId              String   @unique
+  pointsBalance             Int      @default(0)
+  currentStreak             Int      @default(0)
+  longestStreak             Int      @default(0)
+  tiktokChallengesCompleted Int      @default(0)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+
+  @@map("fundraiser_gamification")
+}
+
+model GamificationAction {
+  id            String   @id @default(cuid())
+  fundraiserId  String
+  actionType    String // e.g. DAILY_LOGIN, SHARED_ON_FB
+  pointsAwarded Int
+  createdAt     DateTime @default(now())
+
+  fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+
+  @@index([fundraiserId])
+  @@map("gamification_actions")
 }
