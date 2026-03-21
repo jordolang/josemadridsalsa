@@ -9,7 +9,26 @@ import { GalleryBlock } from './blocks/gallery-block'
 import { CustomTextBlock } from './blocks/custom-text-block'
 import { ContactInfoBlock } from './blocks/contact-info-block'
 import { HowItWorksBlock } from './blocks/how-it-works-block'
+import { StatCardsBlock } from './blocks/stat-cards-block'
+import { InfoCardBlock } from './blocks/info-card-block'
+import { CtaButtonBlock } from './blocks/cta-button-block'
+import { VideoEmbedBlock } from './blocks/video-embed-block'
+import { TestimonialBlock } from './blocks/testimonial-block'
+import { ContactFormBlock } from './blocks/contact-form-block'
+import { DividerBlock } from './blocks/divider-block'
+import { ImageTextBlock } from './blocks/image-text-block'
+import { CountdownBlock } from './blocks/countdown-block'
+import { AnnouncementBannerBlock } from './blocks/announcement-banner-block'
 import type { Prisma } from '@prisma/client'
+
+type FallbackProduct = {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  price: any
+  images: string[]
+}
 
 type FundraiserData = {
   name: string
@@ -42,6 +61,8 @@ type FundraiserData = {
     totalRevenue: Prisma.Decimal | number | string
     referralCode: string
   }>
+  fallbackProducts?: FallbackProduct[]
+  isFallback?: boolean
 }
 
 type BlockRendererProps = {
@@ -60,7 +81,14 @@ export function BlockRenderer({ block, fundraiser }: BlockRendererProps) {
     case 'progress_bar':
       return <ProgressBarBlock block={block} fundraiser={fundraiser} />
     case 'product_showcase':
-      return <ProductShowcaseBlock block={block} fundraiser={fundraiser} />
+      return (
+        <ProductShowcaseBlock
+          block={block}
+          fundraiser={fundraiser}
+          fallbackProducts={fundraiser.fallbackProducts}
+          isFallback={fundraiser.isFallback}
+        />
+      )
     case 'participant_leaderboard':
       return <LeaderboardBlock block={block} fundraiser={fundraiser} />
     case 'gallery':
@@ -71,6 +99,26 @@ export function BlockRenderer({ block, fundraiser }: BlockRendererProps) {
       return <ContactInfoBlock block={block} fundraiser={fundraiser} />
     case 'how_it_works':
       return <HowItWorksBlock block={block} />
+    case 'stat_cards':
+      return <StatCardsBlock block={block} />
+    case 'info_card':
+      return <InfoCardBlock block={block} />
+    case 'cta_button':
+      return <CtaButtonBlock block={block} />
+    case 'video_embed':
+      return <VideoEmbedBlock block={block} />
+    case 'testimonial':
+      return <TestimonialBlock block={block} />
+    case 'contact_form':
+      return <ContactFormBlock block={block} />
+    case 'divider':
+      return <DividerBlock block={block} />
+    case 'image_text':
+      return <ImageTextBlock block={block} />
+    case 'countdown':
+      return <CountdownBlock block={block} />
+    case 'announcement_banner':
+      return <AnnouncementBannerBlock block={block} />
     default:
       return null
   }

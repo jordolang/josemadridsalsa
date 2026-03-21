@@ -114,11 +114,37 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
   const configValidation = validatePageConfig(fundraiser.pageConfig)
   const pageConfig = configValidation.success ? configValidation.data : defaultPageConfig
 
+  // If fundraiser has no products, load fallback store products
+  let fallbackProducts: Array<{
+    id: string
+    name: string
+    slug: string
+    description: string | null
+    price: any
+    images: string[]
+  }> = []
+  let isFallback = false
+
+  if (fundraiser.products.length === 0) {
+    const storeProducts = await prisma.product.findMany({
+      where: { isActive: true, inventory: { gt: 0 } },
+      take: 12,
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, name: true, slug: true, description: true, price: true, images: true },
+    })
+    if (storeProducts.length > 0) {
+      fallbackProducts = storeProducts
+      isFallback = true
+    }
+  }
+
   // Determine URL for sharing
   const headersList = await headers()
   const host = headersList.get('host') || 'www.josemadridsalsa.com'
   const protocol = headersList.get('x-forwarded-proto') || 'https'
   const currentUrl = `${protocol}://${host}/f/${subdomain}`
+
+  const fundraiserWithFallback = { ...fundraiser, fallbackProducts, isFallback }
 
   return (
     <div className="min-h-screen">
@@ -126,7 +152,7 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
         <BlockRenderer
           key={`${block.type}-${index}`}
           block={block}
-          fundraiser={fundraiser}
+          fundraiser={fundraiserWithFallback}
         />
       ))}
 

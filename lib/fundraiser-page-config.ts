@@ -13,6 +13,16 @@ export type BlockType =
   | 'custom_text'
   | 'contact_info'
   | 'how_it_works'
+  | 'stat_cards'
+  | 'info_card'
+  | 'cta_button'
+  | 'video_embed'
+  | 'testimonial'
+  | 'contact_form'
+  | 'divider'
+  | 'image_text'
+  | 'countdown'
+  | 'announcement_banner'
 
 export interface HeroBlock {
   type: 'hero'
@@ -80,6 +90,84 @@ export interface HowItWorksBlock {
   steps?: Array<{ title: string; description: string }>
 }
 
+export interface StatCardsBlock {
+  type: 'stat_cards'
+  title?: string
+  cards: Array<{ label: string; value: string; icon?: 'heart' | 'star' | 'fire' | 'trophy' | 'dollar' | 'people' }>
+  columns: 2 | 3 | 4
+}
+
+export interface InfoCardBlock {
+  type: 'info_card'
+  title?: string
+  content: string
+  style: 'default' | 'highlight' | 'warning' | 'success'
+  icon?: string
+  backgroundColor?: string
+}
+
+export interface CtaButtonBlock {
+  type: 'cta_button'
+  label: string
+  url: string
+  style: 'primary' | 'secondary' | 'outline'
+  size: 'sm' | 'md' | 'lg'
+  alignment: 'left' | 'center' | 'right'
+}
+
+export interface VideoEmbedBlock {
+  type: 'video_embed'
+  youtubeUrl?: string
+  title?: string
+  aspectRatio: '16:9' | '4:3'
+}
+
+export interface TestimonialBlock {
+  type: 'testimonial'
+  quote: string
+  author?: string
+  role?: string
+  avatarUrl?: string
+}
+
+export interface ContactFormBlock {
+  type: 'contact_form'
+  title?: string
+  recipientEmail?: string
+  fields: Array<'name' | 'email' | 'phone' | 'message' | 'organization'>
+  submitLabel?: string
+}
+
+export interface DividerBlock {
+  type: 'divider'
+  style: 'line' | 'dots' | 'wave' | 'salsa'
+  color?: string
+  spacing: 'sm' | 'md' | 'lg'
+}
+
+export interface ImageTextBlock {
+  type: 'image_text'
+  imageUrl?: string
+  imagePosition: 'left' | 'right'
+  title?: string
+  content: string
+  imageAlt?: string
+}
+
+export interface CountdownBlock {
+  type: 'countdown'
+  targetDate: string
+  title?: string
+  expiredMessage?: string
+}
+
+export interface AnnouncementBannerBlock {
+  type: 'announcement_banner'
+  message: string
+  style: 'info' | 'success' | 'warning' | 'urgent'
+  dismissible: boolean
+}
+
 export type PageBlock =
   | HeroBlock
   | LogoBannerBlock
@@ -91,6 +179,16 @@ export type PageBlock =
   | CustomTextBlock
   | ContactInfoBlock
   | HowItWorksBlock
+  | StatCardsBlock
+  | InfoCardBlock
+  | CtaButtonBlock
+  | VideoEmbedBlock
+  | TestimonialBlock
+  | ContactFormBlock
+  | DividerBlock
+  | ImageTextBlock
+  | CountdownBlock
+  | AnnouncementBannerBlock
 
 export interface FundraiserPageConfig {
   version: 1
@@ -132,6 +230,16 @@ export const blockTypeLabels: Record<BlockType, string> = {
   custom_text: 'Custom Text',
   contact_info: 'Contact Info',
   how_it_works: 'How It Works',
+  stat_cards: 'Stat Cards',
+  info_card: 'Info Card',
+  cta_button: 'CTA Button',
+  video_embed: 'Video Embed',
+  testimonial: 'Testimonial',
+  contact_form: 'Contact Form',
+  divider: 'Section Divider',
+  image_text: 'Image + Text',
+  countdown: 'Countdown Timer',
+  announcement_banner: 'Announcement Banner',
 }
 
 export const blockTypeDescriptions: Record<BlockType, string> = {
@@ -145,6 +253,16 @@ export const blockTypeDescriptions: Record<BlockType, string> = {
   custom_text: 'Add any custom text content to your page',
   contact_info: 'Display contact information for your organization',
   how_it_works: 'Step-by-step guide explaining how the fundraiser works',
+  stat_cards: 'Highlight key metrics in a grid of visually distinct stat cards',
+  info_card: 'A callout card for important information, tips, or announcements',
+  cta_button: 'A prominent call-to-action button that links to any URL',
+  video_embed: 'Embed a YouTube video to showcase your fundraiser story',
+  testimonial: 'Display a quote or testimonial from a supporter or community member',
+  contact_form: 'A contact form visitors can fill out to reach the fundraiser organizer',
+  divider: 'A visual separator to break up sections of your page',
+  image_text: 'Side-by-side image and text layout for storytelling and photos',
+  countdown: 'A live countdown timer showing time remaining until a key date',
+  announcement_banner: 'A full-width banner to broadcast urgent updates or announcements',
 }
 
 // ── Zod validation ──
@@ -223,6 +341,90 @@ const howItWorksBlockSchema = z.object({
     .optional(),
 })
 
+const statCardsBlockSchema = z.object({
+  type: z.literal('stat_cards'),
+  title: z.string().max(200).optional(),
+  cards: z.array(
+    z.object({
+      label: z.string().max(100),
+      value: z.string().max(100),
+      icon: z.enum(['heart', 'star', 'fire', 'trophy', 'dollar', 'people']).optional(),
+    })
+  ).max(8),
+  columns: z.union([z.literal(2), z.literal(3), z.literal(4)]),
+})
+
+const infoCardBlockSchema = z.object({
+  type: z.literal('info_card'),
+  title: z.string().max(200).optional(),
+  content: z.string().max(2000),
+  style: z.enum(['default', 'highlight', 'warning', 'success']),
+  icon: z.string().max(10).optional(),
+  backgroundColor: z.string().max(20).optional(),
+})
+
+const ctaButtonBlockSchema = z.object({
+  type: z.literal('cta_button'),
+  label: z.string().max(100),
+  url: z.string().max(500),
+  style: z.enum(['primary', 'secondary', 'outline']),
+  size: z.enum(['sm', 'md', 'lg']),
+  alignment: z.enum(['left', 'center', 'right']),
+})
+
+const videoEmbedBlockSchema = z.object({
+  type: z.literal('video_embed'),
+  youtubeUrl: z.string().max(500).optional(),
+  title: z.string().max(200).optional(),
+  aspectRatio: z.enum(['16:9', '4:3']),
+})
+
+const testimonialBlockSchema = z.object({
+  type: z.literal('testimonial'),
+  quote: z.string().max(2000),
+  author: z.string().max(100).optional(),
+  role: z.string().max(100).optional(),
+  avatarUrl: z.string().url().optional(),
+})
+
+const contactFormBlockSchema = z.object({
+  type: z.literal('contact_form'),
+  title: z.string().max(200).optional(),
+  recipientEmail: z.string().email().optional(),
+  fields: z.array(z.enum(['name', 'email', 'phone', 'message', 'organization'])).min(1).max(5),
+  submitLabel: z.string().max(50).optional(),
+})
+
+const dividerBlockSchema = z.object({
+  type: z.literal('divider'),
+  style: z.enum(['line', 'dots', 'wave', 'salsa']),
+  color: z.string().max(20).optional(),
+  spacing: z.enum(['sm', 'md', 'lg']),
+})
+
+const imageTextBlockSchema = z.object({
+  type: z.literal('image_text'),
+  imageUrl: z.string().url().optional(),
+  imagePosition: z.enum(['left', 'right']),
+  title: z.string().max(200).optional(),
+  content: z.string().max(3000),
+  imageAlt: z.string().max(200).optional(),
+})
+
+const countdownBlockSchema = z.object({
+  type: z.literal('countdown'),
+  targetDate: z.string().max(30),
+  title: z.string().max(200).optional(),
+  expiredMessage: z.string().max(200).optional(),
+})
+
+const announcementBannerBlockSchema = z.object({
+  type: z.literal('announcement_banner'),
+  message: z.string().max(500),
+  style: z.enum(['info', 'success', 'warning', 'urgent']),
+  dismissible: z.boolean(),
+})
+
 const pageBlockSchema = z.discriminatedUnion('type', [
   heroBlockSchema,
   logoBannerBlockSchema,
@@ -234,12 +436,22 @@ const pageBlockSchema = z.discriminatedUnion('type', [
   customTextBlockSchema,
   contactInfoBlockSchema,
   howItWorksBlockSchema,
+  statCardsBlockSchema,
+  infoCardBlockSchema,
+  ctaButtonBlockSchema,
+  videoEmbedBlockSchema,
+  testimonialBlockSchema,
+  contactFormBlockSchema,
+  dividerBlockSchema,
+  imageTextBlockSchema,
+  countdownBlockSchema,
+  announcementBannerBlockSchema,
 ])
 
 export const fundraiserPageConfigSchema = z.object({
   version: z.literal(1),
   theme: z.enum(['default', 'minimal', 'bold']),
-  blocks: z.array(pageBlockSchema).max(20),
+  blocks: z.array(pageBlockSchema).max(30),
 })
 
 export function validatePageConfig(
