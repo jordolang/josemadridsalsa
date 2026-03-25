@@ -16,7 +16,9 @@ import prisma from '@/lib/prisma'
  * - Next.js development server running on http://localhost:3000
  */
 
-describe('Performance Test: Shipping Calculation Under Load', () => {
+const describeIfE2E = process.env.E2E_BASE_URL ? describe : describe.skip
+
+describeIfE2E('Performance Test: Shipping Calculation Under Load', () => {
   let testProductId: string | null = null
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
   const PERFORMANCE_THRESHOLD_MS = 2000 // 2 seconds

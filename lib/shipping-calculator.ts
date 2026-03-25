@@ -157,7 +157,11 @@ async function getFreeShippingThreshold(): Promise<number> {
     })
 
     if (settings?.freeShippingThreshold) {
-      return parseFloat(settings.freeShippingThreshold.toString())
+      const parsed = parseFloat(settings.freeShippingThreshold.toString())
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed
+      }
+      console.warn('[Shipping Calculator] Invalid freeShippingThreshold in DB, using default')
     }
 
     // Return default if no settings found

@@ -21,7 +21,9 @@ import prisma from '@/lib/prisma'
  * - Country-specific regulations
  */
 
-describe('E2E: International Shipping', () => {
+const describeIfE2E = process.env.E2E_BASE_URL ? describe : describe.skip
+
+describeIfE2E('E2E: International Shipping', () => {
   let testProductId: string | null = null
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
 

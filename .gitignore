@@ -103,3 +103,7 @@ logs/security/
 
 # Integration staging files
 .integration/
+
+# Shipping API debug/verification logs
+shipping-api-error-handling-summary.md
+shipping-api-error-handling-verification.md

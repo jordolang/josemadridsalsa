@@ -37,7 +37,8 @@ const CheckoutSchema = z.object({
   discountCode: z.string().optional(),
   recoveryToken: z.string().optional(),
   shippingMethod: z.string().optional(),
-  shippingCost: z.number().optional(),
+  // NOTE: shippingCost is intentionally NOT accepted from the client.
+  // Shipping cost is always recalculated server-side to prevent tampering.
   referralCode: z.string().optional(),
 })
 
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, customer, shipping, notes, discountCode, recoveryToken, shippingMethod, shippingCost, referralCode } = parsed.data
+    const { items, customer, shipping, notes, discountCode, recoveryToken, shippingMethod, referralCode } = parsed.data
 
     const productIds = items.map((item) => item.productId)
     const products = await prisma.product.findMany({
@@ -161,56 +162,67 @@ export async function POST(request: NextRequest) {
       // Continue with 0 tax rather than blocking checkout
     }
 
-    // Use shipping cost and method from frontend if provided, otherwise calculate
+    // ALWAYS recalculate shipping server-side to prevent client-side tampering.
+    // The client sends shippingMethod as a preference; we validate it against
+    // the server-computed options rather than trusting the client-provided cost.
     let finalShippingCost = 0
     let finalShippingMethod = 'Standard Shipping'
 
-    if (shippingMethod && shippingCost !== undefined) {
-      // Use the shipping option selected by the customer
-      finalShippingCost = shippingCost
-      finalShippingMethod = shippingMethod
-
-      console.log('[Checkout] Using selected shipping:', {
-        shippingCost: finalShippingCost,
-        shippingMethod: finalShippingMethod,
+    try {
+      const itemsWithWeights = orderItems.map((item) => {
+        const product = productMap.get(item.productId)
+        return {
+          weight: product?.weight ? Number(product.weight) : 1.0,
+          quantity: item.quantity,
+        }
       })
-    } else {
-      // Fallback: calculate shipping if not provided
-      try {
-        const itemsWithWeights = orderItems.map((item) => {
-          const product = productMap.get(item.productId)
-          return {
-            weight: product?.weight ? Number(product.weight) : 1.0,
-            quantity: item.quantity,
-          }
-        })
 
-        const shippingResult = await calculateShipping({
-          items: itemsWithWeights,
-          shippingAddress: {
-            line1: shipping.address1,
-            line2: shipping.address2,
-            city: shipping.city,
-            state: shipping.state,
-            postalCode: shipping.postalCode,
-            country: 'US',
-          },
-          subtotal,
-        })
+      const shippingResult = await calculateShipping({
+        items: itemsWithWeights,
+        shippingAddress: {
+          line1: shipping.address1,
+          line2: shipping.address2,
+          city: shipping.city,
+          state: shipping.state,
+          postalCode: shipping.postalCode,
+          country: 'US',
+        },
+        subtotal,
+      })
 
+      // If the client selected a specific shipping method, try to match it
+      // against server-computed options to use the correct cost
+      if (shippingMethod && shippingResult.availableOptions?.length) {
+        const matchedOption = shippingResult.availableOptions.find(
+          (opt) => opt.method === shippingMethod
+        )
+        if (matchedOption) {
+          finalShippingCost = matchedOption.cost
+          finalShippingMethod = matchedOption.method
+        } else {
+          // Client sent an unknown method — use the server default
+          finalShippingCost = shippingResult.shippingCost
+          finalShippingMethod = shippingResult.shippingMethod
+          console.warn('[Checkout] Client shipping method not found in options, using default:', {
+            clientMethod: shippingMethod,
+            serverMethod: finalShippingMethod,
+          })
+        }
+      } else {
+        // No client preference or no options — use server default
         finalShippingCost = shippingResult.shippingCost
         finalShippingMethod = shippingResult.shippingMethod
-
-        console.log('[Checkout] Shipping calculated:', {
-          subtotal,
-          shippingCost: finalShippingCost,
-          shippingMethod: finalShippingMethod,
-          estimatedDelivery: shippingResult.estimatedDelivery,
-        })
-      } catch (error) {
-        console.error('[Checkout] Shipping calculation failed, using $0:', error)
-        // Continue with 0 shipping rather than blocking checkout
       }
+
+      console.log('[Checkout] Shipping calculated server-side:', {
+        subtotal,
+        shippingCost: finalShippingCost,
+        shippingMethod: finalShippingMethod,
+        estimatedDelivery: shippingResult.estimatedDelivery,
+      })
+    } catch (error) {
+      console.error('[Checkout] Shipping calculation failed, using $0:', error)
+      // Continue with 0 shipping rather than blocking checkout
     }
 
     const total = subtotal + taxAmount + finalShippingCost
