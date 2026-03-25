@@ -283,10 +283,7 @@ function calculateEstimateRates(
       },
       {
         method: 'USPS Priority Mail Express',
-        cost:
-          SHIPPING_RATES.EXPRESS.cost * stateMultiplier > subtotal
-            ? 0
-            : parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2)),
+        cost: parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2)),
         estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
       }
     )
