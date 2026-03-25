@@ -35,7 +35,6 @@ const CheckoutSchema = z.object({
   discountCode: z.string().optional(),
   recoveryToken: z.string().optional(),
   shippingMethod: z.string().optional(),
-  shippingCost: z.number().optional(),
 })
 
 const toDecimal = (value: number) =>
@@ -66,7 +65,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, customer, shipping, notes, discountCode, recoveryToken, shippingMethod, shippingCost } = parsed.data
+    const { items, customer, shipping, notes, discountCode, recoveryToken, shippingMethod } = parsed.data
 
     const productIds = items.map((item) => item.productId)
     const products = await prisma.product.findMany({
@@ -145,56 +144,60 @@ export async function POST(request: NextRequest) {
       // Continue with 0 tax rather than blocking checkout
     }
 
-    // Use shipping cost and method from frontend if provided, otherwise calculate
+    // Always calculate shipping server-side to prevent client manipulation
     let finalShippingCost = 0
     let finalShippingMethod = 'Standard Shipping'
 
-    if (shippingMethod && shippingCost !== undefined) {
-      // Use the shipping option selected by the customer
-      finalShippingCost = shippingCost
-      finalShippingMethod = shippingMethod
-
-      console.log('[Checkout] Using selected shipping:', {
-        shippingCost: finalShippingCost,
-        shippingMethod: finalShippingMethod,
+    try {
+      const itemsWithWeights = orderItems.map((item) => {
+        const product = productMap.get(item.productId)
+        return {
+          weight: product?.weight ? Number(product.weight) : 1.0,
+          quantity: item.quantity,
+        }
       })
-    } else {
-      // Fallback: calculate shipping if not provided
-      try {
-        const itemsWithWeights = orderItems.map((item) => {
-          const product = productMap.get(item.productId)
-          return {
-            weight: product?.weight ? Number(product.weight) : 1.0,
-            quantity: item.quantity,
-          }
-        })
 
-        const shippingResult = await calculateShipping({
-          items: itemsWithWeights,
-          shippingAddress: {
-            line1: shipping.address1,
-            line2: shipping.address2,
-            city: shipping.city,
-            state: shipping.state,
-            postalCode: shipping.postalCode,
-            country: 'US',
-          },
-          subtotal,
-        })
+      const shippingResult = await calculateShipping({
+        items: itemsWithWeights,
+        shippingAddress: {
+          line1: shipping.address1,
+          line2: shipping.address2,
+          city: shipping.city,
+          state: shipping.state,
+          postalCode: shipping.postalCode,
+          country: 'US',
+        },
+        subtotal,
+      })
 
+      // If client selected a specific shipping method, validate it against available options
+      if (shippingMethod && shippingResult.availableOptions?.length) {
+        const selectedOption = shippingResult.availableOptions.find(
+          (opt) => opt.method === shippingMethod
+        )
+
+        if (selectedOption) {
+          finalShippingCost = selectedOption.cost
+          finalShippingMethod = selectedOption.method
+        } else {
+          // Client selected an invalid method - use server-calculated default
+          finalShippingCost = shippingResult.shippingCost
+          finalShippingMethod = shippingResult.shippingMethod
+        }
+      } else {
         finalShippingCost = shippingResult.shippingCost
         finalShippingMethod = shippingResult.shippingMethod
-
-        console.log('[Checkout] Shipping calculated:', {
-          subtotal,
-          shippingCost: finalShippingCost,
-          shippingMethod: finalShippingMethod,
-          estimatedDelivery: shippingResult.estimatedDelivery,
-        })
-      } catch (error) {
-        console.error('[Checkout] Shipping calculation failed, using $0:', error)
-        // Continue with 0 shipping rather than blocking checkout
       }
+
+      console.log('[Checkout] Shipping calculated:', {
+        subtotal,
+        shippingCost: finalShippingCost,
+        shippingMethod: finalShippingMethod,
+        estimatedDelivery: shippingResult.estimatedDelivery,
+      })
+    } catch (error) {
+      console.error('[Checkout] Shipping calculation failed, using $0:', error)
+      // Continue with 0 shipping rather than blocking checkout
     }
 
     const total = subtotal + taxAmount + finalShippingCost

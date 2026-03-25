@@ -18,8 +18,11 @@ async function saveShippingSettings(formData: FormData) {
   }
 
   const freeShippingThreshold = formData.get('freeShippingThreshold')
-  const threshold = freeShippingThreshold && String(freeShippingThreshold).trim().length > 0
+  const parsedThreshold = freeShippingThreshold && String(freeShippingThreshold).trim().length > 0
     ? parseFloat(String(freeShippingThreshold))
+    : null
+  const threshold = parsedThreshold !== null && !isNaN(parsedThreshold) && parsedThreshold > 0
+    ? parsedThreshold
     : null
 
   const street = String(formData.get('street') || '').trim()

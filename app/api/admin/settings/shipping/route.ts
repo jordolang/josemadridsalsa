@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getCurrentUser, requirePermission } from '@/lib/rbac'
+import { requirePermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { logAuditWithRequest } from '@/lib/audit'
 import { Prisma } from '@prisma/client'
@@ -22,12 +22,12 @@ const ShippingSettingsSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const hasPermission = await requirePermission('settings:read')
+    await requirePermission('settings:read')
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  }
 
-    if (!hasPermission) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
+  try {
     const settings = await prisma.shippingSettings.findFirst({
       orderBy: { createdAt: 'desc' },
     })
@@ -57,19 +57,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let user
   try {
-    const hasPermission = await requirePermission('settings:write')
+    user = await requirePermission('settings:write')
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  }
 
-    if (!hasPermission) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
-    const user = await getCurrentUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 })
-    }
-
+  try {
     const payload = await request.json()
     const parsed = ShippingSettingsSchema.safeParse(payload)
 

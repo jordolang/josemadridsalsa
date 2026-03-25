@@ -126,53 +126,10 @@ function isPOBox(address: string | undefined): boolean {
     /\bPO\s+BOX\b/,              // PO BOX
     /\bPOST\s+OFFICE\s+BOX\b/,  // POST OFFICE BOX
     /\bP\s*O\s*B\b/,             // POB, P.O.B
-    /\bBOX\s+\d+/,               // BOX 123 (when at start of address)
+    /^\s*BOX\s+\d+/,              // BOX 123 (only at start of address)
   ]
 
   return poBoxPatterns.some(pattern => pattern.test(normalizedAddress))
-}
-
-/**
- * Detect if an address is likely residential vs commercial
- *
- * This is a heuristic check - real carrier APIs do more sophisticated detection.
- * Residential addresses may have different rates than commercial addresses.
- *
- * @param address Shipping address to check
- * @returns 'residential' | 'commercial' | 'unknown'
- */
-function detectAddressType(address: {
-  line1?: string
-  line2?: string
-  company?: string
-}): 'residential' | 'commercial' | 'unknown' {
-  // If company name provided, likely commercial
-  if (address.company) {
-    return 'commercial'
-  }
-
-  // Check for common commercial indicators
-  const fullAddress = `${address.line1 || ''} ${address.line2 || ''}`.toUpperCase()
-
-  const commercialIndicators = [
-    /\bSUITE\b/,
-    /\bSTE\b/,
-    /\b#\s*\d+/,     // Suite numbers
-    /\bFLOOR\b/,
-    /\bBLDG\b/,
-    /\bUNIT\b/,
-  ]
-
-  const hasCommercialIndicator = commercialIndicators.some(pattern =>
-    pattern.test(fullAddress)
-  )
-
-  if (hasCommercialIndicator) {
-    return 'commercial'
-  }
-
-  // Default to residential for safety (residential rates typically higher)
-  return 'residential'
 }
 
 /**
@@ -317,10 +274,7 @@ function calculateEstimateRates(
       },
       {
         method: 'USPS Priority Mail Express',
-        cost:
-          SHIPPING_RATES.EXPRESS.cost * stateMultiplier > subtotal
-            ? 0
-            : parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2)),
+        cost: parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2)),
         estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
       }
     )
@@ -334,10 +288,7 @@ function calculateEstimateRates(
       },
       {
         method: 'Express Shipping',
-        cost:
-          SHIPPING_RATES.EXPRESS.cost * stateMultiplier > subtotal
-            ? 0
-            : SHIPPING_RATES.EXPRESS.cost * stateMultiplier,
+        cost: parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2)),
         estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
       }
     )
