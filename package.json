@@ -68,6 +68,7 @@
     "@amplitude/plugin-session-replay-browser": "^1.25.5",
     "@anthropic-ai/sdk": "^0.71.2",
     "@auth/prisma-adapter": "^2.11.0",
+    "@clerk/nextjs": "^7.0.6",
     "@google-analytics/data": "^5.2.1",
     "@googleapis/calendar": "^14.2.0",
     "@hookform/resolvers": "^5.2.2",

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Montserrat, Volkhov, Roboto_Mono } from 'next/font/google'
+import { ClerkProvider, Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
 import { Providers } from './providers'
 import { CookieConsentBanner } from '@/components/ui/cookie-consent-banner'
 import './globals.css'
@@ -87,16 +88,27 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
-      <head>
-        <meta name="google-site-verification" content="E6ciztQzSgCnoZxkfE5GvfLE349LWqzal-VezMq3nRQ" />
-      </head>
-      <body className="font-sans antialiased bg-background text-foreground">
-        <Providers>
-          {children}
-        </Providers>
-        <CookieConsentBanner />
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
+        <head>
+          <meta name="google-site-verification" content="E6ciztQzSgCnoZxkfE5GvfLE349LWqzal-VezMq3nRQ" />
+        </head>
+        <body className="font-sans antialiased bg-background text-foreground">
+          <header>
+            <Show when="signed-out">
+              <SignInButton />
+              <SignUpButton />
+            </Show>
+            <Show when="signed-in">
+              <UserButton />
+            </Show>
+          </header>
+          <Providers>
+            {children}
+          </Providers>
+          <CookieConsentBanner />
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }
