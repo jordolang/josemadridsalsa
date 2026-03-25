@@ -267,14 +267,14 @@ export default async function ShippingSettingsPage() {
               </select>
             </div>
 
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-slate-700">
+            <fieldset className="mt-4">
+              <legend className="block text-sm font-medium text-slate-700">
                 Enabled carriers
-              </label>
-              <p className="text-xs text-slate-500">
+              </legend>
+              <p id="enabled-carriers-desc" className="text-xs text-slate-500">
                 Select which carriers to include in rate calculations.
               </p>
-              <div className="mt-2 space-y-2">
+              <div className="mt-2 space-y-2" role="group" aria-describedby="enabled-carriers-desc">
                 {availableCarriers.map((carrier) => (
                   <div key={carrier.value} className="flex items-center">
                     <input
@@ -295,7 +295,7 @@ export default async function ShippingSettingsPage() {
                   </div>
                 ))}
               </div>
-            </div>
+            </fieldset>
           </div>
 
           {canManage && (

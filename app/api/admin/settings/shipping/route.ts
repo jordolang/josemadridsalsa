@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     let settings
 
     if (existing) {
-      const updateData: any = {
+      const updateData: Prisma.ShippingSettingsUncheckedUpdateInput = {
         updatedById: user.id,
       }
 
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (data.enabledCarriers !== undefined) {
-        updateData.enabledCarriers = { set: data.enabledCarriers }
+        updateData.enabledCarriers = data.enabledCarriers
       }
 
       settings = await prisma.shippingSettings.update({

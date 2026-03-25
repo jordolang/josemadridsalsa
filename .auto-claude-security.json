@@ -285,8 +285,8 @@
     "cargo_aliases": [],
     "shell_scripts": []
   },
-  "project_dir": "C:\\Users\\mindy\\Repos\\josemadridsalsa",
+  "project_dir": "./",
   "created_at": "2026-01-24T06:59:09.951754",
   "project_hash": "1b37a3dcda30c59fe8d39f35f3df292d",
-  "inherited_from": "C:\\Users\\mindy\\Repos\\josemadridsalsa"
+  "inherited_from": null
 }
