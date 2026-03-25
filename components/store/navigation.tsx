@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useUser, useClerk, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { Search, ShoppingCart, Menu, X, User, Gift, LogOut, Settings, Facebook, Twitter, Store, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,7 +85,8 @@ export function Navigation() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, isLoaded, isSignedIn } = useUser();
+  const { signOut } = useClerk();
   const { totalItems } = useWishlistStore();
 
   const wishlistCount = totalItems();
@@ -261,22 +262,20 @@ export function Navigation() {
             </Button>
 
             {/* Account (Mobile) */}
-            {status === "authenticated" ? (
-              <Button variant="ghost" asChild className="lg:hidden min-h-[44px] min-w-[44px] p-0">
-                <Link href="/account" aria-label="Go to your account">
-                  <User className="w-5 h-5" />
-                </Link>
-              </Button>
+            {isSignedIn ? (
+              <div className="lg:hidden">
+                <UserButton />
+              </div>
             ) : (
               <Button variant="ghost" asChild className="lg:hidden min-h-[44px] min-w-[44px] p-0">
-                <Link href="/auth/signin" aria-label="Sign in to your account">
-                  <User className="w-5 h-5" />
-                </Link>
+                <SignInButton mode="modal">
+                  <span aria-label="Sign in to your account"><User className="w-5 h-5" /></span>
+                </SignInButton>
               </Button>
             )}
 
             {/* Account */}
-            {session ? (
+            {isSignedIn ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" aria-label="Account menu" className="hidden lg:flex min-h-[44px] min-w-[44px] p-0 relative">
@@ -286,8 +285,8 @@ export function Navigation() {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium">{session.user?.name}</p>
-                      <p className="text-xs text-muted-foreground">{session.user?.email}</p>
+                      <p className="text-sm font-medium">{user?.fullName}</p>
+                      <p className="text-xs text-muted-foreground">{user?.primaryEmailAddress?.emailAddress}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -320,7 +319,7 @@ export function Navigation() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => signOut({ callbackUrl: '/' })}
+                    onClick={() => signOut({ redirectUrl: '/' })}
                     className="text-red-600 focus:text-red-600"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
@@ -330,16 +329,16 @@ export function Navigation() {
               </DropdownMenu>
             ) : (
               <div className="hidden lg:flex gap-1">
-                <Button variant="ghost" asChild className="min-h-[44px] px-3 text-xs">
-                  <Link href="/auth/signin">
+                <SignInButton mode="modal">
+                  <Button variant="ghost" className="min-h-[44px] px-3 text-xs">
                     Sign In
-                  </Link>
-                </Button>
-                <Button asChild className="min-h-[44px] px-3 text-xs">
-                  <Link href="/auth/signup">
+                  </Button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <Button className="min-h-[44px] px-3 text-xs">
                     Sign Up
-                  </Link>
-                </Button>
+                  </Button>
+                </SignUpButton>
               </div>
             )}
 
@@ -447,11 +446,11 @@ export function Navigation() {
 
                   {/* Mobile Account Actions */}
                   <div className="pt-3 border-t border-border space-y-1.5">
-                    {session ? (
+                    {isSignedIn ? (
                       <div className="space-y-1.5">
                         <div className="rounded-lg bg-muted p-2">
-                          <p className="text-sm font-medium text-foreground">{session.user?.name}</p>
-                          <p className="text-xs text-muted-foreground">{session.user?.email}</p>
+                          <p className="text-sm font-medium text-foreground">{user?.fullName}</p>
+                          <p className="text-xs text-muted-foreground">{user?.primaryEmailAddress?.emailAddress}</p>
                         </div>
                         <Button variant="outline" className="w-full justify-start min-h-[44px]" asChild>
                           <Link href="/account" onClick={() => setIsMobileMenuOpen(false)}>
@@ -482,10 +481,10 @@ export function Navigation() {
                         </Button>
                         <Button
                           variant="outline"
-                                    className="w-full justify-start min-h-[44px] text-red-600 border-red-200 hover:bg-red-50"
+                          className="w-full justify-start min-h-[44px] text-red-600 border-red-200 hover:bg-red-50"
                           onClick={() => {
                             setIsMobileMenuOpen(false);
-                            signOut({ callbackUrl: '/' });
+                            signOut({ redirectUrl: '/' });
                           }}
                         >
                           <LogOut className="w-4 h-4 mr-2" />
@@ -494,16 +493,16 @@ export function Navigation() {
                       </div>
                     ) : (
                       <div className="space-y-1.5">
-                        <Button className="w-full min-h-[44px]" asChild>
-                          <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)}>
+                        <SignUpButton mode="modal">
+                          <Button className="w-full min-h-[44px]" onClick={() => setIsMobileMenuOpen(false)}>
                             Sign Up
-                          </Link>
-                        </Button>
-                        <Button variant="outline" className="w-full min-h-[44px]" asChild>
-                          <Link href="/auth/signin" onClick={() => setIsMobileMenuOpen(false)}>
+                          </Button>
+                        </SignUpButton>
+                        <SignInButton mode="modal">
+                          <Button variant="outline" className="w-full min-h-[44px]" onClick={() => setIsMobileMenuOpen(false)}>
                             Sign In
-                          </Link>
-                        </Button>
+                          </Button>
+                        </SignInButton>
                         <Button variant="outline" className="w-full justify-start min-h-[44px]" asChild>
                           <Link href="/gift-certificates/purchase" onClick={() => setIsMobileMenuOpen(false)}>
                             <Gift className="w-4 h-4 mr-2" />

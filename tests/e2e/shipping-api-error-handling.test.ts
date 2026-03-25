@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { it, expect, beforeAll, afterAll } from 'vitest'
+import { describeIfE2E, e2eBaseUrl } from '../helpers/e2e'
 import prisma from '@/lib/prisma'
 
 /**
@@ -21,11 +22,10 @@ import prisma from '@/lib/prisma'
  * 5. Checkout completion with fallback rates
  */
 
-const describeIfE2E = process.env.E2E_BASE_URL ? describe : describe.skip
 
 describeIfE2E('E2E: Shipping API Error Handling', () => {
   let testProductId: string | null = null
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const baseUrl = e2eBaseUrl
 
   // Store original env vars to restore later
   const originalApiKey = process.env.SHIPPING_API_KEY

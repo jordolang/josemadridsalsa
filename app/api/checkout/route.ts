@@ -221,8 +221,11 @@ export async function POST(request: NextRequest) {
         estimatedDelivery: shippingResult.estimatedDelivery,
       })
     } catch (error) {
-      console.error('[Checkout] Shipping calculation failed, using $0:', error)
-      // Continue with 0 shipping rather than blocking checkout
+      console.error('[Checkout] Shipping calculation failed:', error)
+      return NextResponse.json(
+        { error: 'Unable to calculate shipping cost. Please try again.' },
+        { status: 500 }
+      )
     }
 
     const total = subtotal + taxAmount + finalShippingCost
