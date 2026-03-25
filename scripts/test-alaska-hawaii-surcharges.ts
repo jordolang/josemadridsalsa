@@ -28,19 +28,42 @@ interface ShippingTestResult {
   }>
 }
 
+let cachedProductId: string | null = null
+
+async function getTestProductId(): Promise<string> {
+  if (cachedProductId) return cachedProductId
+
+  // Fetch products from the storefront API to find a valid product ID
+  const response = await fetch(`${BASE_URL}/api/products?limit=1`)
+  if (response.ok) {
+    const data = await response.json()
+    const products = data.products || data.data || data
+    if (Array.isArray(products) && products.length > 0 && products[0].id) {
+      cachedProductId = products[0].id as string
+      return cachedProductId!
+    }
+  }
+
+  throw new Error(
+    'No products found. Ensure the database is seeded and the dev server is running.'
+  )
+}
+
 async function calculateShipping(address: {
   state: string
   city: string
   zip: string
   street?: string
 }): Promise<ShippingTestResult> {
+  const productId = await getTestProductId()
+
   const response = await fetch(`${BASE_URL}/api/checkout/calculate-shipping`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       items: [
         {
-          productId: 'test-product-id', // Will use fallback rates if product not found
+          productId,
           quantity: 1,
         },
       ],

@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ALLOWED_CARRIERS, CARRIER_LABELS } from '@/lib/shipping-carriers'
 
 async function saveShippingSettings(formData: FormData) {
   'use server'
@@ -31,54 +32,43 @@ async function saveShippingSettings(formData: FormData) {
   const zipCode = String(formData.get('zipCode') || '').trim()
   const country = String(formData.get('country') || '').trim()
 
-  const originAddress = street || city || state || zipCode || country
-    ? { street, city, state, zipCode, country }
+  const hasAddressFields = street || city || state || zipCode
+  const originAddress = hasAddressFields
+    ? { street, city, state, zipCode, country: country || 'US' }
     : null
 
   const defaultCarrier = String(formData.get('defaultCarrier') || '').trim() || null
 
   const enabledCarriers = formData.getAll('enabledCarriers').map((c: FormDataEntryValue) => String(c))
 
-  const existing = await prisma.shippingSettings.findFirst({
-    orderBy: { createdAt: 'desc' },
-  })
-
-  if (existing) {
-    await prisma.shippingSettings.update({
-      where: { id: existing.id },
-      data: {
-        freeShippingThreshold: threshold,
-        originAddress: originAddress ? originAddress : Prisma.JsonNull,
-        defaultCarrier,
-        enabledCarriers: { set: enabledCarriers },
-        updatedById: user.id,
-      },
-    })
-  } else {
-    await prisma.shippingSettings.create({
-      data: {
-        freeShippingThreshold: threshold,
-        originAddress: originAddress ? originAddress : Prisma.JsonNull,
-        defaultCarrier,
-        enabledCarriers,
-        updatedById: user.id,
-      },
-    })
-  }
-
-  const data = {
+  const settingsData = {
     freeShippingThreshold: threshold,
-    originAddress,
+    originAddress: originAddress ? originAddress : Prisma.JsonNull,
     defaultCarrier,
     enabledCarriers,
+    updatedById: user.id,
   }
+
+  const settings = await prisma.shippingSettings.upsert({
+    where: { singleton: 'singleton' },
+    create: settingsData,
+    update: {
+      ...settingsData,
+      enabledCarriers: { set: enabledCarriers },
+    },
+  })
 
   await logAudit({
     userId: user.id,
-    action: existing ? 'shipping_settings.update' : 'shipping_settings.create',
+    action: 'shipping_settings.upsert',
     entityType: 'ShippingSettings',
-    entityId: existing?.id || 'new',
-    changes: data,
+    entityId: settings.id,
+    changes: {
+      freeShippingThreshold: threshold,
+      originAddress,
+      defaultCarrier,
+      enabledCarriers,
+    },
   })
 
   revalidatePath('/admin/settings/shipping')
@@ -93,8 +83,8 @@ export default async function ShippingSettingsPage() {
 
   const canManage = await hasPermission(user, 'settings:write')
 
-  const settings = await prisma.shippingSettings.findFirst({
-    orderBy: { createdAt: 'desc' },
+  const settings = await prisma.shippingSettings.findUnique({
+    where: { singleton: 'singleton' },
   })
 
   const originAddress = settings?.originAddress as {
@@ -105,11 +95,10 @@ export default async function ShippingSettingsPage() {
     country?: string
   } | null
 
-  const availableCarriers = [
-    { value: 'usps', label: 'USPS' },
-    { value: 'ups', label: 'UPS' },
-    { value: 'fedex', label: 'FedEx' },
-  ]
+  const availableCarriers = ALLOWED_CARRIERS.map((c) => ({
+    value: c,
+    label: CARRIER_LABELS[c],
+  }))
 
   return (
     <div className="space-y-6">

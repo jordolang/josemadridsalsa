@@ -82,7 +82,9 @@ gha-creds-*.json
 # Auto-Claude
 .auto-claude/
 .auto-claude-security.json
+.auto-claude-status
 .claude_settings.json
+.dev-server.log
 
 # Project Analysis
 .project-analysis/

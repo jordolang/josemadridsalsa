@@ -142,8 +142,8 @@ function isPOBox(address: string | undefined): boolean {
  */
 async function getFreeShippingThreshold(): Promise<number> {
   try {
-    const settings = await prisma.shippingSettings.findFirst({
-      orderBy: { createdAt: 'desc' },
+    const settings = await prisma.shippingSettings.findUnique({
+      where: { singleton: 'singleton' },
       select: { freeShippingThreshold: true },
     })
 
@@ -167,6 +167,14 @@ async function getFreeShippingThreshold(): Promise<number> {
  * Simple aggregation strategy for MVP - sums dimensions
  * Future: Implement bin packing algorithm for optimal box selection
  */
+// Carrier limits (USPS domestic maximums)
+const PARCEL_LIMITS = {
+  MIN_DIMENSION: 1,    // inches
+  MAX_DIMENSION: 108,  // inches (longest side)
+  MAX_HEIGHT: 24,      // inches (stacked height cap)
+  MAX_WEIGHT_OZ: 1120, // 70 lbs in ounces
+}
+
 function calculateParcelDimensions(
   items: ShippingCalculationInput['items']
 ): Parcel {
@@ -176,24 +184,24 @@ function calculateParcelDimensions(
   let totalHeight = 0
 
   for (const item of items) {
-    // Weight in pounds -> convert to ounces
-    const itemWeight = (item.weight || 1.0) * 16 // Default 1 lb = 16 oz
+    // Weight in pounds -> convert to ounces; treat negative/zero as default
+    const itemWeight = Math.max(item.weight || 1.0, 0.1) * 16
     totalWeight += itemWeight * item.quantity
 
-    // Dimensions - use defaults if not provided
+    // Dimensions - use defaults if not provided; clamp negatives
     const dims = item.dimensions || { length: 10, width: 8, height: 2 }
 
     // Simple box aggregation: max length/width, sum heights
-    maxLength = Math.max(maxLength, dims.length || 10)
-    maxWidth = Math.max(maxWidth, dims.width || 8)
-    totalHeight += (dims.height || 2) * item.quantity
+    maxLength = Math.max(maxLength, Math.max(dims.length || 10, PARCEL_LIMITS.MIN_DIMENSION))
+    maxWidth = Math.max(maxWidth, Math.max(dims.width || 8, PARCEL_LIMITS.MIN_DIMENSION))
+    totalHeight += Math.max(dims.height || 2, PARCEL_LIMITS.MIN_DIMENSION) * item.quantity
   }
 
   return {
-    length: maxLength,
-    width: maxWidth,
-    height: Math.min(totalHeight, 24), // Cap at 24 inches
-    weight: totalWeight,
+    length: Math.min(maxLength, PARCEL_LIMITS.MAX_DIMENSION),
+    width: Math.min(maxWidth, PARCEL_LIMITS.MAX_DIMENSION),
+    height: Math.min(totalHeight, PARCEL_LIMITS.MAX_HEIGHT),
+    weight: Math.min(Math.max(totalWeight, 1), PARCEL_LIMITS.MAX_WEIGHT_OZ),
   }
 }
 

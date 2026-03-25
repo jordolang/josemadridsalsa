@@ -226,7 +226,7 @@ function CheckoutForm() {
     }
 
     // Trigger tax and shipping calculation when address fields change
-    if (['city', 'state', 'postalCode'].includes(name)) {
+    if (['address1', 'address2', 'city', 'state', 'postalCode'].includes(name)) {
       // Clear previous timeouts and errors
       if (taxCalcTimeoutRef.current) {
         clearTimeout(taxCalcTimeoutRef.current)
@@ -675,15 +675,15 @@ function CheckoutForm() {
                 </div>
                 <div className="flex items-center justify-between text-gray-600">
                   <span>Shipping {isCalculatingShipping && <span className="text-xs">(calculating...)</span>}</span>
-                  <span>{shippingCost === 0 && subtotal >= 50 ? 'FREE' : formatPrice(shippingCost)}</span>
+                  <span>{shippingCost === 0 && availableShippingOptions.length > 0 ? 'FREE' : formatPrice(shippingCost)}</span>
                 </div>
                 <div className="flex items-center justify-between text-gray-600">
                   <span>Tax {isCalculatingTax && <span className="text-xs">(calculating...)</span>}</span>
                   <span>{formatPrice(taxAmount)}</span>
                 </div>
-                {shippingCost === 0 && subtotal >= 50 && availableShippingOptions.length > 0 && (
+                {shippingCost === 0 && availableShippingOptions.length > 0 && (
                   <p className="text-xs text-green-600 font-medium">
-                    🎉 Free shipping on orders over $50!
+                    Free shipping applied!
                   </p>
                 )}
                 {!isCalculatingShipping && availableShippingOptions.length === 0 && formState.postalCode.length >= 5 && (

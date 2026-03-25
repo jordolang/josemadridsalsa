@@ -6,11 +6,6 @@
   "permissions": {
     "defaultMode": "acceptEdits",
     "allow": [
-      "Read(./**)",
-      "Write(./**)",
-      "Edit(./**)",
-      "Glob(./**)",
-      "Grep(./**)",
       "Read(.auto-claude/worktrees/tasks/004-implement-real-shipping-cost-calculation/**)",
       "Write(.auto-claude/worktrees/tasks/004-implement-real-shipping-cost-calculation/**)",
       "Edit(.auto-claude/worktrees/tasks/004-implement-real-shipping-cost-calculation/**)",

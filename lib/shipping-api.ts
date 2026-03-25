@@ -230,6 +230,11 @@ export const getShippingClient = (): ShippingClient => {
   }
 
   if (!shippingClient) {
+    console.warn(
+      '[Shipping API] Using mock shipping client — real carrier SDK not yet integrated. ' +
+        'Rates returned are placeholders. Install @easypost/api or shippo SDK to enable real rates.'
+    )
+
     // Create client based on provider
     switch (shippingProvider.toLowerCase()) {
       case 'easypost':
