@@ -126,7 +126,7 @@ function isPOBox(address: string | undefined): boolean {
     /\bPO\s+BOX\b/,              // PO BOX
     /\bPOST\s+OFFICE\s+BOX\b/,  // POST OFFICE BOX
     /\bP\s*O\s*B\b/,             // POB, P.O.B
-    /\bBOX\s+\d+/,               // BOX 123 (when at start of address)
+    /^\s*BOX\s+\d+/,              // BOX 123 (only at start of address)
   ]
 
   return poBoxPatterns.some(pattern => pattern.test(normalizedAddress))
@@ -141,40 +141,6 @@ function isPOBox(address: string | undefined): boolean {
  * @param address Shipping address to check
  * @returns 'residential' | 'commercial' | 'unknown'
  */
-function detectAddressType(address: {
-  line1?: string
-  line2?: string
-  company?: string
-}): 'residential' | 'commercial' | 'unknown' {
-  // If company name provided, likely commercial
-  if (address.company) {
-    return 'commercial'
-  }
-
-  // Check for common commercial indicators
-  const fullAddress = `${address.line1 || ''} ${address.line2 || ''}`.toUpperCase()
-
-  const commercialIndicators = [
-    /\bSUITE\b/,
-    /\bSTE\b/,
-    /\b#\s*\d+/,     // Suite numbers
-    /\bFLOOR\b/,
-    /\bBLDG\b/,
-    /\bUNIT\b/,
-  ]
-
-  const hasCommercialIndicator = commercialIndicators.some(pattern =>
-    pattern.test(fullAddress)
-  )
-
-  if (hasCommercialIndicator) {
-    return 'commercial'
-  }
-
-  // Default to residential for safety (residential rates typically higher)
-  return 'residential'
-}
-
 /**
  * Get free shipping threshold from database settings
  *
@@ -185,8 +151,8 @@ function detectAddressType(address: {
  */
 async function getFreeShippingThreshold(): Promise<number> {
   try {
-    const settings = await prisma.shippingSettings.findFirst({
-      orderBy: { createdAt: 'desc' },
+    const settings = await prisma.shippingSettings.findUnique({
+      where: { singleton: 'singleton' },
       select: { freeShippingThreshold: true },
     })
 
