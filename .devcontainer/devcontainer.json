@@ -5,9 +5,14 @@
     "ghcr.io/devcontainers/features/node:1": {
       "version": "22"
     },
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/wandb/catnip/feature@sha256:ffeb0d586c5441f0dbbfa023ab897d39ef7b07cda173fae6bbb5aae2f525c20f": {}
   },
-  "forwardPorts": [3000, 5555],
+  "forwardPorts": [
+    3000,
+    5555,
+    6369
+  ],
   "portsAttributes": {
     "3000": {
       "label": "Next.js Dev Server",
@@ -15,6 +20,10 @@
     },
     "5555": {
       "label": "Prisma Studio",
+      "onAutoForward": "silent"
+    },
+    "6369": {
+      "label": "Catnip",
       "onAutoForward": "silent"
     }
   },
