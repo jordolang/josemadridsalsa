@@ -297,10 +297,7 @@ function calculateEstimateRates(
       },
       {
         method: 'Express Shipping',
-        cost:
-          SHIPPING_RATES.EXPRESS.cost * stateMultiplier > subtotal
-            ? 0
-            : SHIPPING_RATES.EXPRESS.cost * stateMultiplier,
+        cost: parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2)),
         estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
       }
     )
