@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getCurrentUser, requirePermission } from '@/lib/rbac'
+import { requirePermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { logAuditWithRequest } from '@/lib/audit'
 import { Prisma } from '@prisma/client'
+import { ALLOWED_CARRIERS } from '@/lib/shipping-carriers'
+
+const carrierEnum = z.enum(ALLOWED_CARRIERS)
 
 const OriginAddressSchema = z.object({
   street: z.string().optional(),
@@ -13,23 +16,33 @@ const OriginAddressSchema = z.object({
   country: z.string().optional(),
 })
 
-const ShippingSettingsSchema = z.object({
-  freeShippingThreshold: z.number().positive().nullable().optional(),
-  originAddress: OriginAddressSchema.nullable().optional(),
-  defaultCarrier: z.string().nullable().optional(),
-  enabledCarriers: z.array(z.string()).optional(),
-})
+const ShippingSettingsSchema = z
+  .object({
+    freeShippingThreshold: z.number().positive().nullable().optional(),
+    originAddress: OriginAddressSchema.nullable().optional(),
+    defaultCarrier: carrierEnum.nullable().optional(),
+    enabledCarriers: z.array(carrierEnum).optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.defaultCarrier && data.enabledCarriers) {
+        return data.enabledCarriers.includes(data.defaultCarrier)
+      }
+      return true
+    },
+    { message: 'Default carrier must be one of the enabled carriers' }
+  )
 
 export async function GET(request: NextRequest) {
   try {
-    const hasPermission = await requirePermission('settings:read')
+    await requirePermission('settings:read')
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  }
 
-    if (!hasPermission) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
-    const settings = await prisma.shippingSettings.findFirst({
-      orderBy: { createdAt: 'desc' },
+  try {
+    const settings = await prisma.shippingSettings.findUnique({
+      where: { singleton: 'singleton' },
     })
 
     if (!settings) {
@@ -57,19 +70,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let user
   try {
-    const hasPermission = await requirePermission('settings:write')
+    user = await requirePermission('settings:write')
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  }
 
-    if (!hasPermission) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
-    const user = await getCurrentUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 })
-    }
-
+  try {
     const payload = await request.json()
     const parsed = ShippingSettingsSchema.safeParse(payload)
 
@@ -82,80 +90,35 @@ export async function POST(request: NextRequest) {
 
     const data = parsed.data
 
-    const existing = await prisma.shippingSettings.findFirst({
-      orderBy: { createdAt: 'desc' },
+    const upsertData = {
+      freeShippingThreshold: data.freeShippingThreshold ?? null,
+      originAddress: data.originAddress ? data.originAddress : Prisma.JsonNull,
+      defaultCarrier: data.defaultCarrier ?? null,
+      enabledCarriers: data.enabledCarriers ?? [],
+      updatedById: user.id,
+    }
+
+    const settings = await prisma.shippingSettings.upsert({
+      where: { singleton: 'singleton' },
+      create: upsertData,
+      update: upsertData,
     })
 
-    let settings
-
-    if (existing) {
-      const updateData: any = {
-        updatedById: user.id,
-      }
-
-      if (data.freeShippingThreshold !== undefined) {
-        updateData.freeShippingThreshold = data.freeShippingThreshold
-      }
-
-      if (data.originAddress !== undefined) {
-        updateData.originAddress = data.originAddress ? data.originAddress : Prisma.JsonNull
-      }
-
-      if (data.defaultCarrier !== undefined) {
-        updateData.defaultCarrier = data.defaultCarrier
-      }
-
-      if (data.enabledCarriers !== undefined) {
-        updateData.enabledCarriers = { set: data.enabledCarriers }
-      }
-
-      settings = await prisma.shippingSettings.update({
-        where: { id: existing.id },
-        data: updateData,
-      })
-
-      await logAuditWithRequest(
-        {
-          userId: user.id,
-          action: 'shipping_settings.update',
-          entityType: 'ShippingSettings',
-          entityId: settings.id,
-          changes: {
-            freeShippingThreshold: data.freeShippingThreshold,
-            originAddress: data.originAddress,
-            defaultCarrier: data.defaultCarrier,
-            enabledCarriers: data.enabledCarriers,
-          },
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'shipping_settings.upsert',
+        entityType: 'ShippingSettings',
+        entityId: settings.id,
+        changes: {
+          freeShippingThreshold: data.freeShippingThreshold,
+          originAddress: data.originAddress,
+          defaultCarrier: data.defaultCarrier,
+          enabledCarriers: data.enabledCarriers,
         },
-        request
-      )
-    } else {
-      settings = await prisma.shippingSettings.create({
-        data: {
-          freeShippingThreshold: data.freeShippingThreshold ?? null,
-          originAddress: data.originAddress ? data.originAddress : Prisma.JsonNull,
-          defaultCarrier: data.defaultCarrier ?? null,
-          enabledCarriers: data.enabledCarriers ?? [],
-          updatedById: user.id,
-        },
-      })
-
-      await logAuditWithRequest(
-        {
-          userId: user.id,
-          action: 'shipping_settings.create',
-          entityType: 'ShippingSettings',
-          entityId: settings.id,
-          changes: {
-            freeShippingThreshold: data.freeShippingThreshold,
-            originAddress: data.originAddress,
-            defaultCarrier: data.defaultCarrier,
-            enabledCarriers: data.enabledCarriers,
-          },
-        },
-        request
-      )
-    }
+      },
+      request
+    )
 
     return NextResponse.json({
       data: {

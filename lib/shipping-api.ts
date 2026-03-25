@@ -5,10 +5,16 @@
 
 /**
  * Shipping provider configuration
+ *
+ * Lazy-evaluated to support hot reloading and testing.
  */
-const shippingProvider = process.env.SHIPPING_PROVIDER || 'easypost'
-const shippingApiKey = process.env.SHIPPING_API_KEY
-const shippingTestMode = process.env.SHIPPING_TEST_MODE === 'true'
+function getShippingConfig() {
+  return {
+    provider: process.env.SHIPPING_PROVIDER || 'easypost',
+    apiKey: process.env.SHIPPING_API_KEY,
+    testMode: process.env.SHIPPING_TEST_MODE === 'true',
+  }
+}
 
 /**
  * Address interface for shipping calculations
@@ -223,24 +229,31 @@ let shippingClient: ShippingClient | null = null
  * @throws Error if API key is not configured
  */
 export const getShippingClient = (): ShippingClient => {
-  if (!shippingApiKey) {
+  const config = getShippingConfig()
+
+  if (!config.apiKey) {
     throw new Error(
       'Shipping API key is not configured. Please set SHIPPING_API_KEY in your environment.'
     )
   }
 
   if (!shippingClient) {
+    console.warn(
+      '[Shipping API] Using mock shipping client — real carrier SDK not yet integrated. ' +
+        'Rates returned are placeholders. Install @easypost/api or shippo SDK to enable real rates.'
+    )
+
     // Create client based on provider
-    switch (shippingProvider.toLowerCase()) {
+    switch (config.provider.toLowerCase()) {
       case 'easypost':
-        shippingClient = new EasyPostClient(shippingApiKey, shippingTestMode)
+        shippingClient = new EasyPostClient(config.apiKey, config.testMode)
         break
       case 'shippo':
-        shippingClient = new ShippoClient(shippingApiKey, shippingTestMode)
+        shippingClient = new ShippoClient(config.apiKey, config.testMode)
         break
       default:
         throw new Error(
-          `Unsupported shipping provider: ${shippingProvider}. Supported providers: easypost, shippo`
+          `Unsupported shipping provider: ${config.provider}. Supported providers: easypost, shippo`
         )
     }
   }
@@ -295,7 +308,8 @@ export async function validateShippingConfiguration(): Promise<{
   error?: string
 }> {
   try {
-    if (!shippingApiKey) {
+    const config = getShippingConfig()
+    if (!config.apiKey) {
       return {
         configured: false,
         error: 'SHIPPING_API_KEY is not set',

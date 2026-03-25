@@ -28,6 +28,8 @@ const ShippingCalculationSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  let subtotal = 0
+
   try {
     const json = await request.json()
     const parsed = ShippingCalculationSchema.safeParse(json)
@@ -58,7 +60,6 @@ export async function POST(request: Request) {
     const productMap = new Map(products.map((p) => [p.id, p]))
 
     // Calculate subtotal and prepare items with weights
-    let subtotal = 0
     const itemsWithWeights = items.map((item) => {
       const product = productMap.get(item.productId)
       if (!product) {
@@ -139,7 +140,7 @@ export async function POST(request: Request) {
             estimatedDays: '3-5 business days',
           },
         ],
-        subtotal: 0,
+        subtotal,
         fallback: true, // Flag to indicate this is a fallback response
       },
       { status: 200 } // Return 200 instead of 500 to not block checkout

@@ -1092,6 +1092,7 @@ model AnalyticsSetting {
 
 model ShippingSettings {
   id                    String   @id @default(cuid())
+  singleton             String   @unique @default("singleton") // Ensures only one row exists
   freeShippingThreshold Decimal? @db.Decimal(10, 2) // Minimum order value for free shipping
   originAddress         Json? // Origin address for rate calculation: {street, city, state, zipCode, country}
   defaultCarrier        String? // Default carrier: "usps", "ups", "fedex"
