@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { it, expect, beforeAll } from 'vitest'
+import { describeIfE2E, e2eBaseUrl } from '../helpers/e2e'
 import prisma from '@/lib/prisma'
 
 /**
@@ -16,9 +17,11 @@ import prisma from '@/lib/prisma'
  * - Next.js development server running on http://localhost:3000
  */
 
-describe('Performance Test: Shipping Calculation Under Load', () => {
+
+
+describeIfE2E('Performance Test: Shipping Calculation Under Load', () => {
   let testProductId: string | null = null
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const baseUrl = e2eBaseUrl
   const PERFORMANCE_THRESHOLD_MS = 2000 // 2 seconds
 
   beforeAll(async () => {
