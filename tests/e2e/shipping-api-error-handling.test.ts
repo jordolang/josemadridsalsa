@@ -21,7 +21,9 @@ import prisma from '@/lib/prisma'
  * 5. Checkout completion with fallback rates
  */
 
-describe('E2E: Shipping API Error Handling', () => {
+const runE2E = process.env.RUN_E2E_TESTS === 'true'
+
+describe.skipIf(!runE2E)('E2E: Shipping API Error Handling', () => {
   let testProductId: string | null = null
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
 

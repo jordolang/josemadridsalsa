@@ -16,7 +16,9 @@ import prisma from '@/lib/prisma'
  * - Next.js development server running on http://localhost:3000
  */
 
-describe('E2E: Checkout Flow with Real Shipping Rates', () => {
+const runE2E = process.env.RUN_E2E_TESTS === 'true'
+
+describe.skipIf(!runE2E)('E2E: Checkout Flow with Real Shipping Rates', () => {
   let testProductId: string | null = null
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
 
@@ -771,7 +773,7 @@ describe('E2E: Checkout Flow with Real Shipping Rates', () => {
   })
 })
 
-describe('E2E: Manual Testing Checklist', () => {
+describe.skipIf(!runE2E)('E2E: Manual Testing Checklist', () => {
   it('should provide manual testing instructions', () => {
     console.log(`
 ╔════════════════════════════════════════════════════════════════════════════╗
