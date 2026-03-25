@@ -5,9 +5,14 @@
     "ghcr.io/devcontainers/features/node:1": {
       "version": "22"
     },
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/wandb/catnip/feature:1": {}
   },
-  "forwardPorts": [3000, 5555],
+  "forwardPorts": [
+    3000,
+    5555,
+    6369
+  ],
   "portsAttributes": {
     "3000": {
       "label": "Next.js Dev Server",
