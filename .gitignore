@@ -16,12 +16,25 @@ node_modules/
 
 # Misc
 .DS_Store
+DS_Store
 *.pem
 
 # Debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
+dev-server.log
+analyzer.log
+
+# Backup files
+*.bak
+
+# Temp / one-off scripts
+verify-*.js
+verify-*.ts
+test-count.ts
+dashboard-integration.js
 
 # Local env files
 .env
@@ -29,13 +42,6 @@ yarn-error.log*
 .env.local
 .env.production
 .env.vercel.production
-
-
-# EverShop
-evershop/.env
-evershop/.env.local
-evershop/node_modules
-evershop/.evershop
 
 # Vercel
 .vercel
@@ -70,9 +76,6 @@ docs/backstage/
 !.yarn/versions
 .pnp.*
 
-# Vercel production env
-.env.vercel.production
-
 # TypeScript Build Info File
 tsconfig.tsbuildinfo
 *. tsbuildinfo
@@ -91,6 +94,17 @@ tsconfig.tsbuildinfo
 # Project Analysis
 .project-analysis/
 
+# Smart Env / Vector DBs
+.smart-env/
+.smtcmp_json_db/
+.smtcmp_vector_db.tar.gz
+
+# ZenFlow
+.zenflow/
+
+# Pieces DB
+piecesdb.json
+
 # Logs
 logs/
 logs/security/
@@ -107,3 +121,10 @@ logs/security/
 # Shipping API debug/verification logs
 shipping-api-error-handling-summary.md
 shipping-api-error-handling-verification.md
+
+# Verification / one-off reports (should not be committed)
+*-verification.md
+*-verification-report.md
+*-verification-results.txt
+*-report.md
+*.log
