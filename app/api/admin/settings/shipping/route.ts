@@ -90,19 +90,26 @@ export async function POST(request: NextRequest) {
 
     const data = parsed.data
 
-    const upsertData = {
-      freeShippingThreshold: data.freeShippingThreshold ?? null,
-      originAddress: data.originAddress ? data.originAddress : Prisma.JsonNull,
-      defaultCarrier: data.defaultCarrier ?? null,
-      enabledCarriers: data.enabledCarriers ?? [],
-      updatedById: user.id,
-    }
+const createData = {
+        freeShippingThreshold: data.freeShippingThreshold ?? null,
+        originAddress: data.originAddress ? data.originAddress : Prisma.JsonNull,
+        defaultCarrier: data.defaultCarrier ?? null,
+        enabledCarriers: data.enabledCarriers ?? [],
+        updatedById: user.id,
+}
+        const updateData = {
+                freeShippingThreshold: data.freeShippingThreshold ?? null,
+                originAddress: data.originAddress ? data.originAddress : Prisma.JsonNull,
+                defaultCarrier: data.defaultCarrier ?? null,
+                enabledCarriers: { set: data.enabledCarriers ?? [] },
+                updatedById: user.id,
+        }
 
-    const settings = await prisma.shippingSettings.upsert({
-      where: { singleton: 'singleton' },
-      create: upsertData,
-      update: upsertData,
-    })
+        const settings = await prisma.shippingSettings.upsert({
+                where: { singleton: 'singleton' },
+                create: createData,
+                update: updateData,
+        })
 
     await logAuditWithRequest(
       {
