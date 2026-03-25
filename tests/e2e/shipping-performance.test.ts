@@ -168,14 +168,11 @@ describe.skipIf(!runE2E)('Performance Test: Shipping Calculation Under Load', ()
     })
 
     // Calculate and display statistics
-    const responseTimes = results.map((_, index) => elapsedTimeMs / 10) // Approximate individual response time
-    const avgResponseTime = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
     const shippingCosts = results.map((r) => r.shippingCost)
     const avgCost = shippingCosts.reduce((a, b) => a + b, 0) / shippingCosts.length
 
     console.log('Performance Statistics:')
     console.log(`  Total time: ${elapsedTimeMs.toFixed(0)}ms`)
-    console.log(`  Avg response time: ${avgResponseTime.toFixed(0)}ms`)
     console.log(`  Avg shipping cost: $${avgCost.toFixed(2)}`)
     console.log(`  All requests: ${responses.length} succeeded`)
     console.log(`  Performance threshold: ${PERFORMANCE_THRESHOLD_MS}ms`)
@@ -290,21 +287,26 @@ describe.skipIf(!runE2E)('Performance Test: Shipping Calculation Under Load', ()
     // Parse all responses
     const results = await Promise.all(responses.map((r) => r.json()))
 
-    // Verify Alaska and Hawaii have higher costs
+    // Verify Alaska and Hawaii have higher costs via state multipliers.
+    // State multipliers are applied in the estimate/fallback path. The mock
+    // carrier API returns identical rates for all states, so surcharge
+    // comparisons are only meaningful when using fallback estimates.
     const caResult = results[0] // California
     const akResult = results[2] // Alaska
     const hiResult = results[3] // Hawaii
 
-    if (!caResult.fallback && !akResult.fallback && !hiResult.fallback) {
-      // Only compare if not using fallback estimates
-      console.log(`  CA shipping cost: $${caResult.shippingCost}`)
-      console.log(`  AK shipping cost: $${akResult.shippingCost}`)
-      console.log(`  HI shipping cost: $${hiResult.shippingCost}`)
+    console.log(`  CA shipping cost: $${caResult.shippingCost}`)
+    console.log(`  AK shipping cost: $${akResult.shippingCost}`)
+    console.log(`  HI shipping cost: $${hiResult.shippingCost}`)
 
-      // Alaska and Hawaii should be more expensive (unless free shipping applies)
-      if (caResult.shippingCost > 0) {
+    if (caResult.shippingCost > 0) {
+      if (caResult.fallback || akResult.fallback || hiResult.fallback) {
+        // Fallback estimates apply state multipliers — assert surcharges
         expect(akResult.shippingCost).toBeGreaterThanOrEqual(caResult.shippingCost)
         expect(hiResult.shippingCost).toBeGreaterThanOrEqual(caResult.shippingCost)
+      } else {
+        // Real carrier API — rates are provider-determined; just log
+        console.log('  (using real carrier rates — skipping surcharge assertions)')
       }
     }
 

@@ -60,6 +60,7 @@ export async function POST(request: Request) {
     const productMap = new Map(products.map((p) => [p.id, p]))
 
     // Calculate subtotal and prepare items with weights
+    const missingProducts: string[] = []
     const itemsWithWeights = items.map((item) => {
       const product = productMap.get(item.productId)
       if (!product) {
@@ -67,6 +68,7 @@ export async function POST(request: Request) {
         console.warn(
           `[Shipping Calculation API] Product ${item.productId} not found, using defaults`
         )
+        missingProducts.push(item.productId)
         // Use default values to allow shipping calculation to continue
         return {
           weight: 1.0, // Default 1 lb
@@ -105,6 +107,8 @@ export async function POST(request: Request) {
       estimatedDelivery: shippingResult.estimatedDelivery,
       availableOptions: shippingResult.availableOptions || [],
       subtotal,
+      subtotalIncomplete: missingProducts.length > 0,
+      missingProducts: missingProducts.length > 0 ? missingProducts : undefined,
       fallback: shippingResult.fallback || false,
     })
   } catch (error) {
@@ -123,27 +127,22 @@ export async function POST(request: Request) {
     const errorMessage =
       error instanceof Error ? error.message : 'Failed to calculate shipping'
 
-    // Return a fallback response instead of 500 error
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Unable to calculate exact shipping cost',
-        message: errorMessage,
-        // Return estimate rates as fallback
-        shippingCost: 6.99, // Standard flat rate
-        shippingMethod: 'Standard Shipping (Estimate)',
-        estimatedDelivery: '3-5 business days',
-        availableOptions: [
-          {
-            method: 'Standard Shipping (Estimate)',
-            cost: 6.99,
-            estimatedDays: '3-5 business days',
-          },
-        ],
-        subtotal,
-        fallback: true, // Flag to indicate this is a fallback response
-      },
-      { status: 200 } // Return 200 instead of 500 to not block checkout
-    )
+    // Return fallback rates as a successful response so the client can use them.
+    // The fallback: true flag signals that these are estimates, not exact rates.
+    return NextResponse.json({
+      success: true,
+      shippingCost: 6.99,
+      shippingMethod: 'Standard Shipping (Estimate)',
+      estimatedDelivery: '3-5 business days',
+      availableOptions: [
+        {
+          method: 'Standard Shipping (Estimate)',
+          cost: 6.99,
+          estimatedDays: '3-5 business days',
+        },
+      ],
+      subtotal,
+      fallback: true,
+    })
   }
 }

@@ -196,8 +196,10 @@ export async function POST(request: NextRequest) {
         estimatedDelivery: shippingResult.estimatedDelivery,
       })
     } catch (error) {
-      console.error('[Checkout] Shipping calculation failed, using $0:', error)
-      // Continue with 0 shipping rather than blocking checkout
+      // Use the same fallback rate as the calculate-shipping API
+      finalShippingCost = 6.99
+      finalShippingMethod = 'Standard Shipping (Estimate)'
+      console.error('[Checkout] Shipping calculation failed, using fallback $6.99:', error)
     }
 
     const total = subtotal + taxAmount + finalShippingCost
