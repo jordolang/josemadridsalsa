@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { prisma as db } from "@/lib/prisma";
 import { randomBytes, createHmac } from "crypto";
 
 export function generateFundraiserApiKey(): { raw: string; hash: string } {

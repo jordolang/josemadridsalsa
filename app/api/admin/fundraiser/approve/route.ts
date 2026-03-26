@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { prisma as db } from "@/lib/prisma";
 import { generateFundraiserApiKey } from "@/lib/fundraiser-auth";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { z } from "zod";

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { db } from "@/lib/db";
+import { prisma as db } from "@/lib/prisma";
 import BattleArena from "@/components/fundraiser/BattleArena";
 import type { Metadata } from "next";
 
