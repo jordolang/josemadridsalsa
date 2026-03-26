@@ -2896,3 +2896,140 @@ model LeadEmailTemplate {
 
   @@map("lead_email_templates")
 }
+
+// ─── Battle Arena: Fundraiser Teams ──────────────────────────────────
+
+model FundraiserTeam {
+  id           String @id @default(cuid())
+  slug         String @unique
+  name         String
+  school       String
+  activePeriod String // e.g. "2026-04"
+
+  // Status
+  status FundraiserTeamStatus @default(PENDING)
+
+  // Appearance
+  teamColor     String @default("#9B7FFF")
+  teamColorDark String @default("#452E7F")
+
+  // Goals & tracking
+  goalAmount   Int @default(1000)
+  salesCount   Int @default(0)
+  pricePerUnit Int @default(10)
+
+  // Contact
+  contactName  String
+  contactEmail String
+  contactPhone String?
+
+  // API key (HMAC-hashed)
+  apiKeyHash      String?  @unique
+  apiKeyIssuedAt  DateTime?
+  apiKeyRotatedAt DateTime?
+
+  // Admin review
+  approvedBy String?
+  approvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  characters FundraiserCharacter[]
+  saleEvents FundraiserSaleEvent[]
+  shields    FundraiserShield[]
+
+  @@index([activePeriod])
+  @@index([status])
+  @@map("fundraiser_teams")
+}
+
+model FundraiserCharacter {
+  id     String @id @default(cuid())
+  teamId String
+
+  characterName  String
+  characterClass String // warrior, mage, rogue, archer, paladin, berserker
+  gender         String @default("m")
+  skinColor      String @default("#8B5E3C")
+  hairColor      String @default("#1A0A00")
+  position       Int    @default(0)
+  quips          Json   @default("[]") // JSON array of strings
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  team FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@map("fundraiser_characters")
+}
+
+model FundraiserSignupRequest {
+  id String @id @default(cuid())
+
+  schoolName   String
+  teamName     String
+  contactName  String
+  contactEmail String
+  contactPhone String?
+  goalAmount   Int     @default(1000)
+  message      String?
+
+  // Review
+  status       FundraiserSignupStatus @default(PENDING)
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  reviewNotes  String?
+  apiKeyShownAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([contactEmail])
+  @@map("fundraiser_signup_requests")
+}
+
+model FundraiserSaleEvent {
+  id      String @id @default(cuid())
+  teamId  String
+  orderId String? @unique
+  amount  Decimal @default(0) @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  team FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@map("fundraiser_sale_events")
+}
+
+model FundraiserShield {
+  id          String   @id @default(cuid())
+  teamId      String
+  activatedAt DateTime @default(now())
+  expiresAt   DateTime
+
+  // Relations
+  team FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([expiresAt])
+  @@map("fundraiser_shields")
+}
+
+enum FundraiserTeamStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  ENDED
+}
+
+enum FundraiserSignupStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}

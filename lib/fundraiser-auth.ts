@@ -1,11 +1,5 @@
+import { db } from "@/lib/db";
 import { randomBytes, createHmac } from "crypto";
-
-/**
- * Fundraiser Battle Arena API key utilities.
- *
- * NOTE: FundraiserTeam model is not yet in the Prisma schema.
- * These functions are stubs until the DB migration is run.
- */
 
 export function generateFundraiserApiKey(): { raw: string; hash: string } {
   const raw = `jms_live_${randomBytes(32).toString("hex")}`;
@@ -14,21 +8,29 @@ export function generateFundraiserApiKey(): { raw: string; hash: string } {
 }
 
 function hashApiKey(raw: string): string {
-  return createHmac("sha256", process.env.FUNDRAISER_API_SECRET ?? "placeholder")
+  return createHmac("sha256", process.env.FUNDRAISER_API_SECRET!)
     .update(raw)
     .digest("hex");
 }
 
-/**
- * Stub: always returns null until FundraiserTeam model exists in schema.
- */
-export async function verifyFundraiserApiKey(_rawKey: string) {
-  return null;
+export async function verifyFundraiserApiKey(rawKey: string) {
+  if (!rawKey.startsWith("jms_live_") || rawKey.length < 73) return null;
+  const hash = hashApiKey(rawKey);
+  const team = await db.fundraiserTeam.findFirst({
+    where: { apiKeyHash: hash, status: "ACTIVE" },
+    select: {
+      id: true, name: true, slug: true, school: true,
+      teamColor: true, teamColorDark: true, goalAmount: true, salesCount: true,
+    },
+  });
+  return team ?? null;
 }
 
-/**
- * Stub: always throws until FundraiserTeam model exists in schema.
- */
-export async function rotateFundraiserApiKey(_teamId: string): Promise<string> {
-  throw new Error("FundraiserTeam model not yet available in schema");
+export async function rotateFundraiserApiKey(teamId: string) {
+  const { raw, hash } = generateFundraiserApiKey();
+  await db.fundraiserTeam.update({
+    where: { id: teamId },
+    data: { apiKeyHash: hash, apiKeyRotatedAt: new Date() },
+  });
+  return raw;
 }
