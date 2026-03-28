@@ -58,39 +58,10 @@ export function LocationMap() {
   // Directions URL
   const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`
 
-  // Try to find a better Street View pano near the storefront
-  useEffect(() => {
-    if (!apiKey || panoId) return
-
-    const radii = [30, 60, 120] // meters
-    let isCancelled = false
-
-    ;(async () => {
-      for (const radius of radii) {
-        try {
-          const url = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${LATITUDE},${LONGITUDE}&radius=${radius}&source=outdoor&key=${apiKey}`
-          const res = await fetch(url)
-          if (!res.ok) continue
-          const data = await res.json()
-          if (isCancelled) return
-          if (data && data.status === 'OK' && data.pano_id) {
-            setPanoId(data.pano_id)
-            // If Google returns 'pano_yaw_deg', use it as heading
-            if (typeof data.pano_yaw_deg === 'number') {
-              setStreetHeading(Math.round(data.pano_yaw_deg))
-            }
-            break
-          }
-        } catch (_e) {
-          // ignore and try next radius
-        }
-      }
-    })()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [apiKey, panoId])
+  // NOTE: Street View pano lookup has been removed. Each lookup fired 1-3 Street View
+  // Static API calls per homepage load, which is a billable API at $0.007/call.
+  // Set NEXT_PUBLIC_GOOGLE_STREETVIEW_PANO in your environment variables to a
+  // hardcoded pano ID (look it up once manually via Maps) to re-enable Street View.
 
   if (!apiKey) {
     return (
