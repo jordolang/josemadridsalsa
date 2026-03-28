@@ -2,50 +2,49 @@
 
 import { useEffect, useState } from 'react'
 import { MapPin } from 'lucide-react'
+import type { ScheduleEvent } from '@/lib/server/google-data'
 
-type TickerEvent = {
-  id: string
-  title: string
-  location: string | null
-  start: string | null
-  isAllDay: boolean
-}
+type TickerEvent = Pick<ScheduleEvent, 'id' | 'title' | 'location' | 'start' | 'isAllDay'>
 
 function buildTickerContent(events: TickerEvent[], todayStr: string, tomorrowStr: string): string[] {
-  const segments: string[] = []
-
-  events.forEach(e => {
-    if (!e.location || !e.start) return
-    const eventDate = e.start.slice(0, 10)
-    
-    let dateLabel = ''
-    if (eventDate === todayStr) {
-      dateLabel = 'TODAY'
-    } else if (eventDate === tomorrowStr) {
-      dateLabel = 'TOMORROW'
-    } else {
-      // Parse the date (treating it as UTC so we get the exact day)
-      const parts = eventDate.split('-')
-      if (parts.length === 3) {
-        const year = parseInt(parts[0], 10)
-        const month = parseInt(parts[1], 10) - 1
-        const day = parseInt(parts[2], 10)
-        const d = new Date(Date.UTC(year, month, day))
-        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
-        dateLabel = `${months[d.getUTCMonth()]} ${d.getUTCDate()}`
+  return events
+    .filter(e => e.location && e.start)
+    .slice(0, 3)
+    .map(e => {
+      const eventDate = e.start!.slice(0, 10)
+      let dateLabel: string
+      if (eventDate === todayStr) {
+        dateLabel = 'TODAY'
+      } else if (eventDate === tomorrowStr) {
+        dateLabel = 'TOMORROW'
       } else {
-        dateLabel = eventDate
+        const parts = eventDate.split('-')
+        if (parts.length === 3) {
+          const d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]))
+          const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+          dateLabel = `${months[d.getUTCMonth()]} ${d.getUTCDate()}`
+        } else {
+          dateLabel = eventDate
+        }
       }
-    }
-
-    segments.push(`📍 ${dateLabel}  ·  ${e.title.toUpperCase()}  ·  ${e.location.toUpperCase()}`)
-  })
-
-  return segments
+      return `📍 ${dateLabel}  ·  ${e.title.toUpperCase()}  ·  ${e.location!.toUpperCase()}`
+    })
 }
 
-export function EventTicker() {
-  const [segments, setSegments] = useState<string[]>([])
+type EventTickerProps = {
+  /** Pre-fetched events from the server layout — zero client fetch needed */
+  initialEvents: TickerEvent[]
+}
+
+export function EventTicker({ initialEvents }: EventTickerProps) {
+  const [segments, setSegments] = useState<string[]>(() => {
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+    const todayStr = toDateStr(now)
+    const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1)
+    return buildTickerContent(initialEvents, todayStr, toDateStr(tomorrow))
+  })
 
   useEffect(() => {
     if (typeof document !== 'undefined' && !document.getElementById('jms-ticker-style')) {
@@ -59,40 +58,15 @@ export function EventTicker() {
       `
       document.head.appendChild(style)
     }
-
-    fetch('/api/calendar?limit=20')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        const now = new Date()
-        const pad = (n: number) => String(n).padStart(2, '0')
-        const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
-        const todayStr = toDateStr(now)
-        const tomorrowDate = new Date(now)
-        tomorrowDate.setDate(now.getDate() + 1)
-        const tomorrowStr = toDateStr(tomorrowDate)
-
-        // Find the first 3 valid upcoming events
-        const validEvents = (data?.events ?? [])
-          .filter((e: TickerEvent) => e.location && e.start)
-          .slice(0, 3)
-
-        setSegments(buildTickerContent(validEvents, todayStr, tomorrowStr))
-      })
-      .catch(() => {})
   }, [])
 
   if (segments.length === 0) return null
 
-  // Ensure there's a separator if there are multiple segments
-  const formattedSegments = segments.length > 1 
+  const formattedSegments = segments.length > 1
     ? segments.flatMap((seg, i) => i < segments.length - 1 ? [seg, `━━━━━━  UPCOMING  ━━━━━━`] : [seg])
     : segments
 
-  // Each unique segment appears ONCE per pass. Duplicate the full pass for the
-  // seamless -50% loop trick — that's all we need.
   const items = [...formattedSegments, ...formattedSegments]
-
-  // ~6 seconds per segment so the ticker moves at a comfortable reading pace.
   const duration = Math.max(20, segments.length * 6)
 
   return (
@@ -106,7 +80,6 @@ export function EventTicker() {
       borderBottom: '2px solid #7f1d1d',
       position: 'relative',
     }}>
-      {/* FIND US badge */}
       <div style={{
         flexShrink: 0,
         display: 'flex',
@@ -132,19 +105,15 @@ export function EventTicker() {
         </span>
       </div>
 
-      {/* Scrolling strip */}
       <div style={{ flex: 1, overflow: 'hidden', height: '100%', position: 'relative' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            height: '100%',
-            width: 'max-content',
-            animation: `jms-ticker ${duration}s linear infinite`,
-            willChange: 'transform',
-          }}
-
-        >
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          height: '100%',
+          width: 'max-content',
+          animation: `jms-ticker ${duration}s linear infinite`,
+          willChange: 'transform',
+        }}>
           {items.map((seg, i) => (
             <span key={i} style={{
               display: 'inline-flex',
