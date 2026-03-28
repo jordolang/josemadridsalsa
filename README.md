@@ -1,1159 +1,397 @@
-# Jose Madrid Salsa E-Commerce Platform
+<div align="center">
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-15.5-black.svg)](https://nextjs.org/)
-[![Prisma](https://img.shields.io/badge/Prisma-6.19-2D3748.svg)](https://www.prisma.io/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC.svg)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+  <img src="public/images/jose-madrid-salsa-logo.png" alt="Jose Madrid Salsa Logo" width="300" />
+
+  <h1>Jose Madrid Salsa</h1>
+  <p><strong>Artisan Hot Sauce &amp; E-Commerce Platform</strong></p>
+
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](https://nextjs.org/)
+  [![Prisma](https://img.shields.io/badge/Prisma-6.x-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.x-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+  [![Stripe](https://img.shields.io/badge/Stripe-Payments-635BFF?logo=stripe&logoColor=white)](https://stripe.com/)
+  [![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel&logoColor=white)](https://vercel.com/)
+  [![License](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
+
+  <p>
+    <a href="https://www.josemadrid.net">🌐 Live Site</a> ·
+    <a href="docs/index.md">📚 Documentation</a> ·
+    <a href="CONTRIBUTING.md">🤝 Contributing</a> ·
+    <a href="CHANGELOG.md">📋 Changelog</a> ·
+    <a href="SECURITY.md">🔒 Security</a>
+  </p>
+
+</div>
+
+---
 
 ## Overview
 
-**Jose Madrid Salsa** is a modern, full-featured e-commerce platform built for selling artisan hot sauces and food products. The platform provides a complete solution for product management, order processing, customer engagement, and retail location tracking.
+**Jose Madrid Salsa** is a modern, full-featured e-commerce platform purpose-built for selling artisan hot sauces and specialty food products. It powers the complete business lifecycle — from product catalog and online sales to fundraising campaigns and retail distribution through physical partner locations.
 
-### About the Platform
+Built on **Next.js 15** with the App Router, it delivers a production-ready storefront with an enterprise-grade admin dashboard, seamless Stripe payment processing, and a powerful data management layer backed by PostgreSQL.
 
-This e-commerce system is designed to handle the complete lifecycle of an online food business, from product catalog management to order fulfillment and customer support. Built with enterprise-grade security and scalability in mind, it supports both direct-to-consumer sales and wholesale distribution through retail partner networks.
+> **Version 1.0 (Production)** is live at [josemadrid.net](https://www.josemadrid.net)
 
-**Key Capabilities:**
-- 🛒 **Product Catalog** - Comprehensive product management with SKU tracking, inventory control, and heat level categorization for hot sauces
-- 📦 **Order Management** - Complete order processing with shipping integration, payment handling via Stripe, and automated fulfillment workflows
-- 🎁 **Gift Certificates** - Digital gift certificate system with custom themes, scheduling, and automated delivery
-- 📍 **Retail Locations** - Interactive store locator with Google Places integration for finding retail partners
-- 📊 **Data Import/Export** - Bulk import capabilities for products, orders, gift certificates, and locations (CSV, Excel, JSON)
-- 🔐 **Authentication & Authorization** - Secure user authentication with NextAuth.js, role-based access control, and admin dashboard
-- 🌍 **Internationalization** - Multi-language support with next-intl for global markets
-- 📧 **Email Marketing** - Transactional emails and marketing campaigns with Nodemailer and Resend integration
-- 📈 **Analytics** - Amplitude integration for user behavior tracking and session replay
-- 🔒 **Security** - CodeQL scanning, secret detection, pre-commit hooks, and comprehensive security monitoring
+---
+
+## ✨ Features
+
+### 🛒 Customer Storefront
+- Full product catalog with heat-level filtering, search, and side-by-side comparison
+- Seamless shopping cart and multi-step checkout with Stripe (cards, Apple Pay, Google Pay)
+- Digital gift certificates with custom themes and scheduled delivery
+- User account management — order history, saved addresses, and profile settings
+- Interactive retail store locator powered by Google Maps & Places
+- Mobile-first, fully responsive design
+
+### 📈 Fundraising Portal
+- Dedicated fundraising subdomain for school and organization campaigns
+- Participant tracking with real-time sales dashboards
+- Automated participant onboarding and order attribution
+
+### 🗂️ Admin Dashboard
+- Comprehensive order management with search, filtering, and CSV export
+- Full product CRUD with SKU tracking, inventory control, and image management
+- Customer management with role-based visibility
+- Tag and category system for flexible product organization
+- Media library for image uploads and management
+- Role-based access control (RBAC): 5 user roles, 28 granular permissions
+- Audit logging for all sensitive operations
+
+### 🔧 Platform & Infrastructure
+- **Authentication** — Secure sign-in/sign-up with NextAuth.js, password reset, and email verification
+- **Payments** — Stripe PaymentIntents, webhooks, 3D Secure, real-time tax calculation
+- **Email** — Transactional emails via Resend with branded templates
+- **Analytics** — Amplitude for behavior tracking and session replay; Vercel Analytics for performance
+- **Monitoring** — Sentry error tracking in production
+- **Internationalization** — English and Spanish via next-intl
+- **Security** — AES-256-GCM encryption, CodeQL scanning, secret detection, pre-commit hooks
+
+---
+
+## 🏗️ Architecture
 
 ### Tech Stack
 
-**Frontend:**
-- Next.js 15 with App Router and React Server Components
-- TypeScript for type safety
-- Tailwind CSS + Radix UI for responsive design
-- Framer Motion for animations
-- React Hook Form + Zod for form validation
-
-**Backend:**
-- Next.js API Routes with serverless functions
-- Prisma ORM with PostgreSQL database
-- NextAuth.js for authentication
-- Stripe for payment processing
-- Google APIs for location services
-
-**Infrastructure:**
-- Vercel deployment and hosting
-- Prisma Accelerate for database connection pooling
-- Vercel Analytics for performance monitoring
-- Resend for transactional emails
-
-**Developer Tools:**
-- Husky for git hooks
-- ESLint + Prettier for code quality
-- Vitest for testing
-- Gitleaks for secret scanning
-- TypeScript for compile-time safety
-
-## Architecture
-
-The platform follows a modern, modular architecture built on Next.js 15's App Router with a clear separation of concerns and a feature-based organization pattern.
+| Layer | Technology |
+|-------|-----------|
+| **Framework** | Next.js 15 (App Router + RSC) |
+| **Language** | TypeScript |
+| **Styling** | Tailwind CSS + Shadcn UI (Radix UI) |
+| **Animations** | Framer Motion |
+| **Database** | PostgreSQL via Prisma ORM |
+| **Auth** | NextAuth.js |
+| **Payments** | Stripe |
+| **Email** | Resend + Nodemailer |
+| **State** | Zustand |
+| **Forms** | React Hook Form + Zod |
+| **Testing** | Vitest + Testing Library + MSW |
+| **Deployment** | Vercel + Prisma Accelerate |
 
 ### Project Structure
 
 ```
 josemadridsalsa/
-├── app/                          # Next.js App Router (frontend routes)
-│   ├── (auth)/                   # Authentication routes (signin, signup, reset)
-│   ├── (marketing)/              # Public marketing pages (home, about)
-│   ├── (shop)/                   # E-commerce pages (products, cart, checkout)
-│   ├── admin/                    # Admin dashboard and management tools
-│   ├── api/                      # API routes (serverless functions)
-│   │   ├── auth/                 # NextAuth.js authentication endpoints
-│   │   ├── stripe/               # Stripe webhooks and payment processing
-│   │   ├── locations/            # Retail location API endpoints
-│   │   ├── products/             # Product management endpoints
-│   │   ├── orders/               # Order processing endpoints
-│   │   └── import/               # Data import endpoints
-│   └── layout.tsx                # Root layout with providers
+├── app/                          # Next.js App Router
+│   ├── (public)/                 # Public storefront (home, products, cart, checkout)
+│   ├── (fundraiser-portal)/      # Fundraising management portal
+│   ├── (fundraiser-subdomain)/   # Fundraiser participant storefront
+│   ├── (auth)/                   # Authentication pages
+│   ├── admin/                    # Admin dashboard (RBAC-protected)
+│   ├── account/                  # User account pages
+│   └── api/                      # Serverless API routes
 │
-├── components/                   # React components (organized by feature)
-│   ├── ui/                       # Reusable UI components (Radix UI + custom)
-│   ├── forms/                    # Form components with validation
-│   ├── products/                 # Product display and management
-│   ├── cart/                     # Shopping cart components
-│   ├── admin/                    # Admin-specific components
-│   └── layouts/                  # Layout components (header, footer, nav)
+├── components/                   # Shared React components
+│   ├── ui/                      # Primitive UI (Radix UI + custom)
+│   ├── store/                   # Storefront components
+│   └── admin/                   # Admin-specific components
 │
-├── lib/                          # Core business logic and utilities
-│   ├── auth/                     # Authentication utilities and NextAuth config
-│   ├── db/                       # Database utilities and Prisma client
-│   ├── stripe/                   # Stripe integration and payment processing
-│   ├── email/                    # Email services (Resend, Nodemailer)
-│   ├── validation/               # Zod schemas and validation logic
-│   ├── import/                   # Data import/export processors
-│   └── utils/                    # Shared utility functions
+├── lib/                          # Business logic and utilities
+│   ├── auth.ts                  # NextAuth configuration
+│   ├── prisma.ts                # Prisma client (lazy init + Accelerate)
+│   ├── crypto.ts                # AES-256-GCM encryption
+│   ├── rbac.ts                  # Permission system
+│   ├── stripe/                  # Stripe integration
+│   └── email/                   # Email service clients
 │
 ├── prisma/                       # Database schema and migrations
-│   ├── schema.prisma             # Prisma schema definition
-│   ├── migrations/               # Database migration history
-│   └── seed.ts                   # Database seeding scripts
-│
-├── scripts/                      # Utility scripts and automation
-│   ├── seed-*.ts                 # Various data seeding scripts
-│   ├── import-*.ts               # Data import utilities
-│   ├── backfill-*.ts             # Data migration scripts
-│   └── create-admin.ts           # Admin user creation
-│
-├── public/                       # Static assets (images, fonts, icons)
-│   ├── images/                   # Product images and media
-│   └── uploads/                  # User-uploaded content
-│
+├── public/                       # Static assets (images, icons)
+├── scripts/                      # Data and maintenance scripts
+├── tests/                        # Automated test suite
 ├── docs/                         # Project documentation
-│   ├── IMPORT_GUIDE.md           # Data import documentation
-│   ├── DEPLOYMENT.md             # Deployment instructions
-│   └── STRIPE_SETUP.md           # Stripe configuration guide
-│
-└── messages/                     # Internationalization translations
-    ├── en.json                   # English translations
-    └── es.json                   # Spanish translations
+└── messages/                     # i18n translations (en.json, es.json)
 ```
 
-### Key Components
+---
 
-#### 1. **Application Layer** (`app/`)
-- **Route Groups:** Organized by feature with layout isolation (`(auth)`, `(shop)`, etc.)
-- **Server Components:** Default rendering strategy for optimal performance
-- **API Routes:** Serverless functions for backend operations
-- **Middleware:** Authentication, localization, and request processing
-
-#### 2. **Data Layer** (`prisma/`)
-- **PostgreSQL Database:** Primary data store with Prisma ORM
-- **Schema-First Design:** Type-safe database access with auto-generated client
-- **Migrations:** Version-controlled schema changes
-- **Connection Pooling:** Prisma Accelerate for optimized database connections
-
-#### 3. **Business Logic Layer** (`lib/`)
-- **Service Modules:** Encapsulated business logic for each feature domain
-- **Validation:** Centralized Zod schemas for type-safe validation
-- **Integration Services:** Third-party API integrations (Stripe, Google, etc.)
-- **Utilities:** Shared helper functions and common operations
-
-#### 4. **Presentation Layer** (`components/`)
-- **UI Components:** Radix UI primitives with custom styling
-- **Feature Components:** Domain-specific components (products, cart, admin)
-- **Form Components:** React Hook Form with Zod validation
-- **Layout Components:** Consistent page structure and navigation
-
-### Data Flow Architecture
-
-```
-User Request
-    ↓
-Next.js Middleware (Auth, i18n)
-    ↓
-App Router / API Route
-    ↓
-Business Logic Layer (lib/)
-    ↓
-Prisma Client
-    ↓
-PostgreSQL Database
-    ↓
-Response (Server Component / JSON API)
-```
-
-### Key Integration Points
-
-#### **Payment Processing**
-- **Stripe Checkout:** Hosted checkout pages for PCI compliance
-- **Webhooks:** Automated order updates from Stripe events
-- **Tax Calculation:** Stripe Tax API for accurate sales tax
-
-#### **Authentication**
-- **NextAuth.js:** Session management and OAuth providers
-- **Role-Based Access:** Multi-tier authorization (Customer, Admin, Partner)
-- **Secure Sessions:** JWT tokens with database session storage
-
-#### **Email Delivery**
-- **Transactional Emails:** Order confirmations, shipping notifications (Resend)
-- **Marketing Emails:** Newsletter campaigns (Resend)
-- **Template System:** Reusable email templates with variable substitution
-
-#### **Location Services**
-- **Google Maps API:** Interactive store locator map
-- **Google Places API:** Location autocomplete and geocoding
-- **Google Calendar API:** "Where is Jose" event schedule integration
-
-#### **Analytics & Monitoring**
-- **Amplitude:** User behavior tracking and product analytics
-- **Session Replay:** Debug user interactions and issues
-- **Vercel Analytics:** Performance monitoring and web vitals
-
-### Module Organization
-
-The codebase follows a **feature-based architecture** where related functionality is grouped together:
-
-- **`/products`** - Product catalog, variants, inventory, search
-- **`/orders`** - Order processing, fulfillment, history
-- **`/cart`** - Shopping cart, wishlist, checkout
-- **`/auth`** - Authentication, authorization, user management
-- **`/locations`** - Retail store finder, Google Maps integration
-- **`/admin`** - Admin dashboard, data management, imports
-- **`/fundraising`** - Fundraising campaigns, tracking, reporting
-- **`/loyalty`** - Loyalty program, points, rewards
-- **`/subscriptions`** - Recurring orders, subscription management
-- **`/gift-certificates`** - Digital gift certificates, themes, delivery
-
-### Database Schema
-
-The platform uses a normalized PostgreSQL schema with the following core entities:
-
-- **Users** - Customer accounts, authentication, roles
-- **Products** - Catalog items, variants, SKUs, inventory
-- **Orders** - Purchases, line items, fulfillment status
-- **Payments** - Stripe payment records, transactions
-- **Locations** - Retail partners, store information, geocoding
-- **GiftCertificates** - Digital certificates, balances, redemptions
-- **Fundraisers** - Campaign data, goals, progress
-- **LoyaltyTransactions** - Points accrual, redemptions
-- **Subscriptions** - Recurring order schedules
-
-See `prisma/schema.prisma` for the complete schema definition.
-
-### Development Workflow
-
-1. **Local Development** - Next.js dev server with hot reload and Turbopack
-2. **Type Safety** - TypeScript across the entire stack
-3. **Database Changes** - Prisma migrations with schema versioning
-4. **Code Quality** - ESLint, Prettier, pre-commit hooks
-5. **Testing** - Vitest for unit and integration tests
-6. **Security Checks** - Gitleaks scanning, dependency audits
-7. **Deployment** - Vercel with preview deployments for PRs
-
-## Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 
-Before you begin, ensure you have the following installed:
+| Requirement | Version |
+|-------------|---------|
+| Node.js | 20 or 22 (see `.nvmrc`) |
+| PostgreSQL | 14+ |
+| Stripe account | — |
+| Resend account | — |
 
-- **Node.js** 18.x or later ([Download](https://nodejs.org/))
-- **npm** 9.x or later (comes with Node.js)
-- **PostgreSQL** 14.x or later ([Download](https://www.postgresql.org/download/))
-- **Git** ([Download](https://git-scm.com/downloads))
-
-### Step 1: Clone the Repository
+### Installation
 
 ```bash
-git clone https://github.com/yourusername/josemadridsalsa.git
+# 1. Clone the repository
+git clone https://github.com/jordolang/josemadridsalsa.git
 cd josemadridsalsa
-```
 
-### Step 2: Install Dependencies
+# 2. Use the correct Node version
+nvm use
 
-```bash
+# 3. Install dependencies
 npm install
-```
 
-This will install all required packages and automatically run `prisma generate` via the postinstall script.
-
-### Step 3: Configure Environment Variables
-
-Create a `.env.local` file in the root directory:
-
-```bash
+# 4. Configure environment variables
 cp .env.example .env.local
-```
+# Open .env.local and fill in the required values
+# See docs/ENVIRONMENT_VARIABLES.md for full reference
 
-**Required Environment Variables (Minimum Setup):**
+# 5. Apply database migrations
+npm run db:migrate
 
-```bash
-# Database - Required
-DATABASE_URL="postgresql://postgres:password@localhost:5432/josemadridsalsa"
-
-# NextAuth.js - Required
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-key-here"  # Generate with: openssl rand -base64 32
-
-# Encryption - Required
-MASTER_KEY="your-master-key-here"  # Generate with: openssl rand -base64 32
-ENCRYPTION_KEY="your-encryption-key-here"  # Generate with: node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"
-
-# Stripe (Test Mode) - Required for checkout
-STRIPE_PUBLISHABLE_KEY="pk_test_..."
-STRIPE_SECRET_KEY="sk_test_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
-
-# Email - Required for order confirmations
-RESEND_API_KEY="re_..."
-FROM_EMAIL="orders@yourdomain.com"
-```
-
-**Optional Environment Variables (Enhanced Features):**
-
-```bash
-# Google Maps & Places - For location features
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your-maps-api-key"
-GOOGLE_PLACES_API_KEY="your-places-api-key"
-
-# Google Calendar - For "Where is Jose" schedule
-GOOGLE_SERVICE_ACCOUNT_EMAIL="your-service-account@project.iam.gserviceaccount.com"
-GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-GOOGLE_CALENDAR_ID="your-calendar-id@group.calendar.google.com"
-
-# Analytics - For user behavior tracking
-GOOGLE_ANALYTICS_ID="G-XXXXXXXXXX"
-NEXT_PUBLIC_AMPLITUDE_API_KEY="your-amplitude-api-key"
-
-# OAuth - For social login
-GOOGLE_CLIENT_ID="your-google-oauth-client-id"
-GOOGLE_CLIENT_SECRET="your-google-oauth-client-secret"
-
-# File Upload - For product images and documents
-UPLOADTHING_SECRET="your-uploadthing-secret"
-UPLOADTHING_APP_ID="your-uploadthing-app-id"
-```
-
-> **Note:** See `.env.example` for complete list of all available environment variables.
-
-### Step 4: Setup Database
-
-**Create the database:**
-
-```bash
-# Using PostgreSQL command line
-createdb josemadridsalsa
-
-# Or connect to PostgreSQL and run:
-# CREATE DATABASE josemadridsalsa;
-```
-
-**Run database migrations:**
-
-```bash
-npm run db:push
-```
-
-This creates all required tables and schema in your database.
-
-**Seed initial data (optional but recommended):**
-
-```bash
-# Seed products, categories, and sample data
+# 6. Seed initial data (permissions, roles, sample products)
 npm run db:seed
 
-# Seed recipe data
-npm run db:seed:recipes
-
-# Seed email templates
-npm run db:seed:email-templates
-```
-
-### Step 5: Create an Admin Account
-
-```bash
-npm run create-admin
-```
-
-Follow the prompts to create your first admin user. You'll need:
-- Email address
-- Password
-- Name
-
-This account will have full admin access to the platform.
-
-### Step 6: Start Development Server
-
-```bash
+# 7. Start the development server
 npm run dev
 ```
 
-The application will start at **http://localhost:3000**
+Open [http://localhost:3000](http://localhost:3000) — the storefront should be running.
 
-**Alternative development commands:**
+> **Admin access:** Run `npx tsx scripts/create-admin.ts` to create the first admin user.
+
+### Environment Variables
+
+Copy `.env.example` to `.env.local` and configure the required variables. See [`docs/ENVIRONMENT_VARIABLES.md`](docs/ENVIRONMENT_VARIABLES.md) for the complete reference.
+
+**Required to start:**
 
 ```bash
-npm run dev:fast     # Fast refresh with Turbopack on port 3000
-npm run dev:debug    # Start with Node.js debugger enabled
+DATABASE_URL="postgresql://..."    # PostgreSQL connection string
+NEXTAUTH_SECRET="..."              # Strong random secret (32+ chars)
+NEXTAUTH_URL="http://localhost:3000"
+MASTER_KEY="..."                   # AES-256 key (64 hex chars)
+STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+RESEND_API_KEY="re_..."
 ```
 
-### Step 7: Access the Application
+> ⚠️ **Never commit `.env` files.** Always set production secrets through the Vercel dashboard.
 
-Once the server is running, you can access:
+---
 
-- **🏠 Homepage:** http://localhost:3000
-- **🛒 Shop:** http://localhost:3000/shop
-- **🔐 Admin Dashboard:** http://localhost:3000/admin
-- **📊 Data Import:** http://localhost:3000/admin/import
-- **📍 Locations:** http://localhost:3000/locations
-- **📝 Admin Login:** http://localhost:3000/auth/signin
+## 🛠️ Development
 
-**First-Time Admin Tasks:**
-
-1. **Login to Admin Dashboard** - Use the credentials you created in Step 5
-2. **Configure Site Settings** - Navigate to Admin > Settings
-3. **Add Products** - Go to Admin > Products or use Data Import
-4. **Setup Stripe Webhooks** - Configure in Stripe Dashboard (see [Stripe Setup Guide](./docs/STRIPE_SETUP.md))
-5. **Test Checkout Flow** - Use Stripe test cards to verify payment processing
-
-### Step 8: Setup Security (Recommended)
-
-For production deployments, it's highly recommended to configure security features. See the **[Security](#security)** section for detailed setup instructions including:
-
-- Installing Gitleaks for secret scanning
-- Configuring pre-commit hooks
-- Enabling GitHub security features
-- Setting up CodeQL analysis
-
-**Quick setup:**
+### Available Commands
 
 ```bash
-# Install pre-commit hooks
-npm run prepare
-
-# Scan for secrets before committing
-npm run security:scan
-```
-
-See the full **[Security](#security)** section below for comprehensive security configuration.
-
-### Common Development Commands
-
-```bash
-# Database
-npm run db:studio          # Open Prisma Studio (database GUI)
-npm run db:migrate         # Create and run new migration
-npm run db:push            # Push schema changes to database
-npm run db:reset           # Reset database (destructive!)
-npm run db:seed            # Seed database with sample data
-
 # Development
-npm run dev                # Start development server
-npm run build              # Build for production
-npm run start              # Start production server
-npm run lint               # Run ESLint
-npm run type-check         # Run TypeScript compiler
+npm run dev             # Start development server (Turbo)
+npm run dev:fast        # Start on fixed port 3000
+npm run build           # Build for production
+npm run start           # Serve production build
 
-# Data Import
-npm run locations:import   # Import locations from markdown
-npm run products:import    # Import products from CSV
+# Quality Checks
+npm run lint            # ESLint (Next.js + Tailwind rules)
+npm run type-check      # TypeScript compiler check
+npx vitest run          # Run full test suite
+npx vitest run --watch  # TDD watch mode
 
-# Testing
-npm run test               # Run test suite
-
-# Security
-npm run security:scan      # Scan for secrets in codebase
-npm run security:protect   # Check staged files before commit
+# Database
+npm run db:migrate      # Apply pending migrations
+npm run db:generate     # Regenerate Prisma client
+npm run db:seed         # Seed database
+npm run db:reset        # Drop and recreate database (⚠️ destructive)
 ```
 
-### Troubleshooting
-
-**Port already in use:**
-```bash
-# Kill the process using port 3000
-lsof -ti:3000 | xargs kill -9
-```
-
-**Database connection issues:**
-```bash
-# Test database connection
-npm run db:diagnose
-
-# Verify PostgreSQL is running
-pg_isready
-```
-
-**Prisma Client errors:**
-```bash
-# Regenerate Prisma Client
-npm run db:generate
-```
-
-**Module not found errors:**
-```bash
-# Clean install
-npm run clean
-npm install
-```
-
-**Build errors:**
-```bash
-# Clear Next.js cache and rebuild
-npm run clean
-npm run build
-```
-
-### Next Steps
-
-- 📖 **Read the Documentation** - Check out [docs/](./docs/) for detailed guides
-- 🎨 **Customize Branding** - Update colors, logos, and content
-- 📦 **Import Data** - See [Data Import Guide](./docs/IMPORT_GUIDE.md)
-- 🚀 **Deploy to Production** - See [Deployment Guide](./docs/DEPLOYMENT.md)
-- 🤖 **Setup AI Chatbot** - See [AI Chatbot Quick Start](./docs/AI_CHATBOT_QUICK_START.md)
-
-## Development
-
-This section covers the available npm scripts and development workflows for working with the codebase.
-
-### Development Server
-
-**Start the development server:**
+### Before Every Commit
 
 ```bash
-npm run dev                # Start Next.js dev server with Turbopack
-npm run dev:fast          # Fast refresh on port 3000 (optimized)
-npm run dev:debug         # Start with Node.js debugger enabled
+npx vitest run && npm run lint && npm run type-check
 ```
 
-The development server includes:
-- ⚡ **Turbopack** - Ultra-fast bundling and hot module replacement
-- 🔄 **Hot Reload** - Instant updates without losing component state
-- 🐛 **Error Overlay** - Detailed error messages in browser
-- 📊 **Build Analysis** - Webpack bundle analyzer integration
+### Running Tests
 
-### Build & Production
-
-**Build and run production builds:**
+The test suite uses **Vitest** with jsdom, jest-dom, Testing Library, and MSW for API mocking:
 
 ```bash
-npm run build             # Build optimized production bundle
-npm run start             # Start production server (requires build first)
-npm run clean             # Clear Next.js cache and node_modules cache
-npm run fresh             # Clean install and start dev server
+npx vitest run           # Run all tests
+npx vitest run --coverage  # With coverage report
 ```
 
-The build process:
-- Generates optimized production bundles with code splitting
-- Runs Prisma client generation automatically (via prebuild)
-- Syncs FindUs location data from external sources
-- Creates static and server-side rendered pages
-
-### Code Quality & Testing
-
-**Lint, type-check, and test your code:**
-
-```bash
-npm run lint              # Run ESLint on all JS/TS files
-npm run type-check        # Run TypeScript compiler (no emit)
-npm run test              # Run Vitest test suite
-npm run pre-commit        # Run lint-staged and security checks
+Tests live in `tests/` and mirror the source structure:
 ```
-
-- **ESLint** - Enforces code style and catches common errors
-- **TypeScript** - Compile-time type checking across the entire codebase
-- **Vitest** - Fast unit and integration testing with Vite
-- **Pre-commit Hooks** - Automated checks before each commit
-
-### Database Management
-
-**Manage your PostgreSQL database with Prisma:**
-
-```bash
-# Schema & Migrations
-npm run db:generate       # Generate Prisma Client from schema
-npm run db:push           # Push schema changes to database (no migration)
-npm run db:migrate        # Create and apply new migration
-npm run db:reset          # Reset database and run all migrations (destructive!)
-
-# Data Seeding
-npm run db:seed           # Seed products, categories, and base data
-npm run db:seed:recipes   # Seed recipe content
-npm run db:seed:email-templates  # Seed email template library
-
-# Database Tools
-npm run db:studio         # Open Prisma Studio (visual database editor)
-npm run db:diagnose       # Test database connection and diagnose issues
+tests/
+├── lib/           # Unit tests for lib/ modules
+├── components/    # Component tests
+└── api/           # API route tests
 ```
-
-**Production Database:**
-
-```bash
-npm run db:production:sync        # Sync production schema
-npm run db:production:seed        # Seed production database
-npm run db:production:pull-env    # Pull production env vars from Vercel
-```
-
-### Data Import & Export
-
-**Import data from CSV, Excel, and JSON files:**
-
-```bash
-# Location Management
-npm run locations:import          # Import retail locations from markdown
-npm run locations:verify          # Verify location data integrity
-npm run locations:photos          # Generate location photos
-npm run locations:update-photos   # Update existing location photos
-npm run locations:geocode         # Backfill geocoding coordinates
-
-# Product Management
-npm run products:transform        # Transform product CSV data
-npm run products:ensure-category  # Ensure salsa category exists
-npm run products:test-import      # Test CSV import without committing
-```
-
-See the **[Data Import Guide](./docs/IMPORT_GUIDE.md)** for detailed documentation on import formats and options.
-
-### Admin & Utilities
-
-**Administrative scripts and tools:**
-
-```bash
-npm run create-admin              # Create admin user interactively
-npm run api-keys:create           # Create partner API key
-npm run templates:backfill-owners # Backfill form template owners
-npm run shopify:test-webhook      # Test Shopify webhook integration
-```
-
-### Security & Compliance
-
-**Scan for secrets and vulnerabilities:**
-
-```bash
-npm run security:scan             # Scan entire codebase for secrets
-npm run security:protect          # Check staged files before commit
-npm run security:baseline         # Generate security baseline report
-```
-
-For complete security setup, configuration, and best practices, see the **[Security](#security)** section.
-
-### Project Analysis
-
-**Analyze project structure and dependencies:**
-
-```bash
-npm run analyze                   # Analyze project structure
-npm run analyze:watch             # Watch mode for continuous analysis
-npm run analyze:report            # Export analysis as markdown report
-```
-
-### Vercel Deployment
-
-**Vercel-specific utilities:**
-
-```bash
-npm run vercel:setup-env          # Setup Vercel environment variables
-npm run db:production:pull-env    # Pull production environment variables
-```
-
-### Workflow Summary
-
-**Typical development workflow:**
-
-1. **Start Development**
-   ```bash
-   npm run dev
-   ```
-
-2. **Make Changes** - Edit files with hot reload enabled
-
-3. **Check Code Quality**
-   ```bash
-   npm run lint
-   npm run type-check
-   npm run test
-   ```
-
-4. **Database Changes**
-   ```bash
-   # Edit prisma/schema.prisma
-   npm run db:migrate        # Create migration
-   npm run db:generate       # Update Prisma Client
-   ```
-
-5. **Commit Changes** - Pre-commit hooks run automatically
-   ```bash
-   git add .
-   git commit -m "Your message"
-   ```
-
-6. **Build & Test Production**
-   ```bash
-   npm run build
-   npm run start
-   ```
-
-7. **Deploy** - Push to main branch for automatic Vercel deployment
-
-### Package Scripts Reference
-
-For a complete list of available scripts, see `package.json`. Key script categories:
-
-- **`dev:*`** - Development server variants
-- **`db:*`** - Database operations (Prisma)
-- **`locations:*`** - Retail location management
-- **`products:*`** - Product data utilities
-- **`security:*`** - Security scanning and protection
-- **`analyze:*`** - Project analysis and reporting
-
-### Development Tips
-
-**Performance:**
-- Use `npm run dev:fast` for the fastest development experience
-- Run `npm run clean` if you encounter caching issues
-- Use `npm run build` locally to catch production-only errors
-
-**Database:**
-- Run `npm run db:studio` for a visual database editor
-- Use `npm run db:push` for quick schema changes during development
-- Create migrations with `npm run db:migrate` before committing schema changes
-
-**Debugging:**
-- Use `npm run dev:debug` to attach a debugger
-- Check `npm run db:diagnose` for database connection issues
-- Run `npm run security:scan` before pushing code
-
-**Testing:**
-- Run `npm run test` to verify changes don't break existing functionality
-- Use `npm run type-check` to catch type errors before runtime
-
-## Features
-
-### E-Commerce Core
-
-- **🛒 Product Catalog Management**
-  - Multi-variant products with SKU tracking and barcode support
-  - Heat level categorization system for hot sauces (Mild, Medium, Hot, Extra Hot, Fruit)
-  - Rich product descriptions with Markdown support
-  - Nutritional information and ingredient tracking
-  - Product tags and search keywords for discoverability
-  - Featured products and customizable sort ordering
-  - Product images with featured image selection
-
-- **📦 Order Processing & Fulfillment**
-  - Complete order lifecycle management with status tracking
-  - Multi-item orders with line item details
-  - Shipping address validation and storage
-  - Billing address management (separate from shipping)
-  - Order notes and customer communication
-  - Tax calculation integration with Stripe Tax
-  - Order history and tracking for customers
-
-- **💳 Payment Processing**
-  - Stripe payment integration for secure transactions
-  - Support for credit cards, debit cards, and digital wallets
-  - Test and live mode support
-  - Automatic tax calculation by location
-  - Refund and partial refund capabilities
-  - Payment failure handling and retry logic
-
-- **📊 Inventory Management**
-  - Real-time inventory tracking with SKU-level accuracy
-  - Low stock threshold alerts and notifications
-  - Inventory transaction history and audit trail
-  - Multi-location inventory support
-  - Automated inventory adjustments on orders
-  - Cost price tracking for margin analysis
-
-### Customer Experience
-
-- **🛍️ Shopping Cart & Wishlist**
-  - Persistent shopping cart across sessions
-  - Guest and authenticated user carts
-  - Wishlist functionality for saved products
-  - Abandoned cart tracking and recovery
-  - Cart item quantity management
-  - Real-time price and availability updates
-
-- **🎁 Gift Certificate System**
-  - Digital gift certificates with custom amounts
-  - Customizable themes and personalized messages
-  - Scheduled delivery for future dates
-  - Recipient email delivery with professional templates
-  - Gift certificate balance tracking
-  - Redemption code generation and validation
-
-- **⭐ Product Reviews & Ratings**
-  - Customer product reviews with star ratings
-  - Verified purchase badges
-  - Review moderation and approval workflow
-  - Helpful vote system for reviews
-  - Image uploads in reviews
-  - Review filtering and sorting
-
-- **🔐 User Authentication & Profiles**
-  - Secure user registration and login with NextAuth.js
-  - Role-based access control (Customer, Admin, Wholesale Partner)
-  - Email verification system
-  - Password reset functionality with secure tokens
-  - Customer profile management
-  - Address book with multiple saved addresses
-  - Order history and tracking
-
-### Business Features
-
-- **🏪 Wholesale & Partner Management**
-  - Wholesale account system with volume pricing
-  - Partner-specific pricing tiers
-  - Wholesale order minimum requirements
-  - Partner API keys for integrations
-  - Retail partner dashboard
-  - Wholesale catalog management
-
-- **📍 Retail Location Directory**
-  - Interactive store locator with Google Maps integration
-  - Google Places API integration for location data
-  - Store hours and contact information
-  - Product availability by location
-  - Distance-based search and filtering
-  - Location verification and management
-
-- **🎯 Fundraising Platform**
-  - Customizable fundraising campaigns
-  - Fundraiser-specific product selection
-  - Revenue sharing and tracking
-  - Campaign goals and progress tracking
-  - Fundraiser dashboard for organizers
-  - Participant management
-
-- **💰 Loyalty & Rewards Program**
-  - Points-based loyalty system
-  - Earn points on purchases
-  - Redeem points for discounts
-  - Loyalty tier management
-  - Transaction history and balance tracking
-  - Automated point accrual on orders
-
-### Marketing & Promotions
-
-- **🎫 Discount & Coupon System**
-  - Percentage and fixed-amount discounts
-  - Single-use and multi-use coupon codes
-  - Minimum purchase requirements
-  - Expiration date management
-  - Usage tracking and analytics
-  - Customer-specific discount codes
-
-- **📧 Email Marketing & Campaigns**
-  - Newsletter subscription management
-  - Transactional email system (order confirmations, shipping notifications)
-  - Marketing campaign builder
-  - Email template customization
-  - Subscriber segmentation
-  - Integration with Resend and Nodemailer
-
-- **📱 Subscription Management**
-  - Recurring product subscriptions
-  - Flexible delivery schedules (weekly, monthly, quarterly)
-  - Subscription pause and resume
-  - Automatic billing and order creation
-  - Subscription modification and cancellation
-  - Subscriber dashboard
-
-### Analytics & Insights
-
-- **📈 Business Analytics**
-  - Amplitude integration for event tracking
-  - User behavior analysis and session replay
-  - Conversion funnel tracking
-  - Product performance metrics
-  - Sales reporting and trends
-  - Customer lifetime value analysis
-
-- **🔍 Search & Discovery**
-  - Product search with keyword matching
-  - Category-based navigation
-  - Heat level filtering for hot sauces
-  - Price range filtering
-  - Sort by price, popularity, newest
-  - Search keyword optimization
-
-### Administrative Tools
-
-- **🛠️ Data Import & Export**
-  - Bulk product import (CSV, Excel, JSON)
-  - Order history import for migrations
-  - Gift certificate batch creation
-  - Retail location bulk upload
-  - Comprehensive validation and error reporting
-  - Template downloads for each import type
-  - See [Data Import Guide](./docs/IMPORT_GUIDE.md) for details
-
-- **👥 Customer Service**
-  - Customer conversation tracking
-  - Support ticket system
-  - Order issue resolution
-  - Customer communication history
-  - Admin notes on customer accounts
-
-- **🌍 Internationalization**
-  - Multi-language support with next-intl
-  - Localized content and translations
-  - Currency formatting by locale
-  - Date and time localization
-  - RTL language support
-
-- **🔒 Security & Compliance**
-  - CodeQL security scanning for vulnerabilities
-  - Secret detection and prevention (Gitleaks)
-  - Pre-commit hooks for code quality and security
-  - GDPR compliance features
-  - Secure password hashing with bcrypt
-  - API rate limiting and abuse prevention
-  - Role-based access control (RBAC)
-  - Encrypted sensitive data at rest
-  - See **[Security](#security)** section for detailed configuration
-
-## Security
-
-The Jose Madrid Salsa platform is built with enterprise-grade security in mind, implementing multiple layers of protection to safeguard customer data, payment information, and business operations.
-
-### Security Architecture
-
-- **Authentication:** NextAuth.js with secure session management
-- **Authorization:** Role-based access control (RBAC) throughout the application
-- **Data Encryption:** Sensitive data encrypted at rest (gift certificates, API keys)
-- **Secret Management:** Environment variables, never committed to version control
-- **Pre-commit Hooks:** Automated secret scanning before commits (Gitleaks)
-- **Code Scanning:** GitHub CodeQL for vulnerability detection
-- **Input Validation:** Zod schemas on all user inputs and API requests
-- **CSRF Protection:** Built-in Next.js CSRF protection
-- **Rate Limiting:** API endpoint throttling to prevent abuse
-
-### Security Features
-
-✅ **CodeQL Security Scanning** - Automated code analysis for vulnerabilities
-✅ **Secret Detection** - Multiple layers of API key and credential protection
-✅ **Pre-commit Hooks** - Local prevention of secret commits
-✅ **GitHub Actions Integration** - Automated CI/CD security checks
-✅ **Dependency Monitoring** - Track vulnerable packages
-
-### Quick Setup
-
-#### 1. Install Dependencies
-
-```bash
-npm install
-```
-
-#### 2. Setup Pre-commit Hooks
-
-```bash
-npm run prepare
-```
-
-#### 3. Install Gitleaks (for local scanning)
-
-**macOS:**
-```bash
-brew install gitleaks
-```
-
-**Linux:**
-```bash
-# Download latest release
-wget https://github.com/gitleaks/gitleaks/releases/download/v8.18.0/gitleaks_8.18.0_linux_x64.tar.gz
-tar -xzf gitleaks_8.18.0_linux_x64.tar.gz
-sudo mv gitleaks /usr/local/bin/
-```
-
-**Windows:**
-```bash
-# Using Chocolatey
-choco install gitleaks
-
-# Or download from GitHub releases
-```
-
-#### 4. Copy Workflows to Your Repository
-
-```bash
-# Copy the .github folder to your repository root
-cp -r .github /path/to/your/repository/
-
-# Copy security configs
-cp .gitleaks.toml /path/to/your/repository/
-cp .pre-commit-config.yaml /path/to/your/repository/
-cp SECURITY.md /path/to/your/repository/
-cp .gitignore /path/to/your/repository/
-```
-
-#### 5. Enable GitHub Security Features
-
-1. Go to your repository **Settings**
-2. Navigate to **Security & analysis**
-3. Enable:
-   - ✅ Dependency graph
-   - ✅ Dependabot alerts
-   - ✅ Dependabot security updates
-   - ✅ Secret scanning
-   - ✅ Push protection
-
-### Usage
-
-#### Local Secret Scanning
-
-Before committing:
-```bash
-npm run security:scan
-```
-
-#### Protect Staged Changes
-
-Check staged files for secrets:
-```bash
-npm run security:protect
-```
-
-#### Generate Security Baseline
-
-Create a baseline report:
-```bash
-npm run security:baseline
-```
-
-### Security Commands
-
-**Scan for secrets and vulnerabilities:**
-
-```bash
-npm run security:scan             # Scan entire codebase for secrets
-npm run security:protect          # Check staged files before commit
-npm run security:baseline         # Generate security baseline report
-```
-
-**Security Tools:**
-- **Gitleaks** - Detects hardcoded secrets, API keys, and tokens
-- **Pre-commit Hooks** - Prevents accidental secret commits
-- **GitHub CodeQL** - Automated vulnerability scanning in CI/CD
-
-### GitHub Actions Workflows
-
-#### CodeQL Analysis
-- Runs on: Push, Pull Request, Weekly schedule
-- Languages: JavaScript, TypeScript
-- Queries: Security-extended and quality checks
-
-#### Secret Scanning
-- Runs on: Every push and PR
-- Tools: TruffleHog + Gitleaks
-- Detects: API keys, tokens, credentials
-
-### Detected Secret Types
-
-- Vercel API tokens
-- Google API keys (Maps, Places)
-- Stripe keys (test & live)
-- GitHub tokens (PAT, OAuth, App)
-- NPM tokens
-- Generic API keys
-- Environment variable exposures
-
-### Environment Variables Best Practices
-
-#### Local Development
-
-Create a `.env.local` file (never commit):
-```bash
-NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=your_key_here
-VERCEL_TOKEN=your_token_here
-```
-
-#### Vercel Deployment
-
-Add environment variables in Vercel dashboard:
-1. Go to Project Settings
-2. Navigate to Environment Variables
-3. Add variables for each environment
-
-#### Example `.env.example`
-
-Create this file to document required variables:
-```bash
-# Google Places API
-NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=
-
-# Vercel
-VERCEL_TOKEN=
-
-# Add other required variables
-```
-
-### Troubleshooting
-
-#### Pre-commit Hook Fails
-
-If the hook prevents your commit:
-1. Review the flagged files
-2. Remove any secrets
-3. Use environment variables instead
-4. Try committing again
-
-#### False Positives
-
-Edit `.gitleaks.toml` to add to allowlist:
-```toml
-[allowlist]
-regexes = [
-  '''YOUR_EXAMPLE_STRING'''
-]
-```
-
-#### Skip Hooks (Emergency Only)
-
-```bash
-git commit --no-verify -m "your message"
-```
-
-**⚠️ Use sparingly and scan manually afterward!**
-
-### Additional Security
-
-#### Vercel-Specific
-
-- Use environment variables for all secrets
-- Enable "Deployment Protection" in Vercel
-- Restrict API to specific domains
-- Use different keys per environment
-
-#### GitHub-Specific
-
-- Enable branch protection rules
-- Require status checks to pass
-- Require pull request reviews
-- Enable "Require signed commits"
-
-### Payment Security
-
-- **PCI Compliance:** Stripe handles all payment card processing
-- **Stripe Checkout:** Hosted checkout pages for secure transactions
-- **Webhooks:** Signed webhook verification for order updates
-- **Tax Calculation:** Stripe Tax API integration
-
-### Reporting Security Issues
-
-For security issues, see [SECURITY.md](./SECURITY.md)
 
 ---
 
-## Data Import
+## 💳 Payment Integration
 
-The platform includes comprehensive data import capabilities for migrating existing data or bulk uploading new content. Import functionality supports:
+Payments are processed through **Stripe** with full webhook support.
 
-- **Products** - Hot sauce catalog with SKUs, pricing, inventory, and metadata
-- **Orders** - Historical orders with line items, shipping, and payment information
-- **Gift Certificates** - Digital gift certificates with custom themes and messages
-- **Retail Locations** - Physical store locations that carry Jose Madrid Salsa products
+### Supported Payment Methods
+- 💳 Credit / debit cards (Visa, Mastercard, Amex, Discover)
+- 🍎 Apple Pay
+- 🔵 Google Pay
+- 🎁 Gift certificates
 
-### Supported Formats
-- CSV (.csv) - Universal support for all data types
-- Excel (.xlsx, .xls) - Products, Orders
-- JSON (.json) - Products with complex nested data
+### Architecture
 
-### Key Features
-- ✨ **Validation** - Comprehensive data validation before import
-- 📊 **Batch Processing** - Efficient handling of large datasets
-- 🔄 **Flexible Options** - Auto-create missing relationships, skip duplicates
-- 📝 **Error Reporting** - Detailed error messages with row and field identification
-- 📥 **Template Downloads** - Pre-formatted templates for each import type
+```
+Checkout Page
+  └─► POST /api/payment (Create PaymentIntent)
+        └─► Stripe API
+              └─► Stripe Webhook → /api/stripe/webhook
+                    └─► Order creation + fulfillment
+```
 
-For detailed documentation, field specifications, and troubleshooting, see the **[Data Import Guide](./docs/IMPORT_GUIDE.md)**.
+### Test Cards
 
-## Support
+```
+4242 4242 4242 4242  → Success
+4000 0025 0000 3155  → 3D Secure required
+4000 0000 0000 9995  → Card declined
+```
 
-For support issues or questions, please open an issue on the GitHub repository.
-
-For security vulnerabilities, see [SECURITY.md](./SECURITY.md) and follow responsible disclosure guidelines.
+**Reference:** [`docs/stripe/README.md`](docs/stripe/README.md) · [`docs/STRIPE_WEBHOOK_SETUP.md`](docs/STRIPE_WEBHOOK_SETUP.md)
 
 ---
 
-**Built for Jlang.dev** | Enterprise-grade e-commerce platform
+## 📦 Deployment
+
+The platform deploys automatically to **Vercel** on push to `main`.
+
+```
+main branch push
+  └─► Vercel CI/CD
+        ├─► lint + type-check
+        ├─► Next.js build
+        └─► Deploy to https://www.josemadrid.net
+```
+
+### Production Requirements
+
+| Service | Purpose |
+|---------|---------|
+| Vercel | Hosting + serverless functions |
+| Vercel Postgres (Neon) | Primary database |
+| Prisma Accelerate | Database connection pooling |
+| Resend | Transactional email delivery |
+| Stripe | Payment processing |
+| Sentry | Error monitoring |
+| Amplitude | Analytics |
+
+---
+
+## 🔐 Security
+
+Security is a first-class concern in this platform.
+
+### Measures in Place
+
+| Layer | Implementation |
+|-------|---------------|
+| Secrets management | AES-256-GCM encryption for stored credentials |
+| Authentication | NextAuth.js with secure session handling |
+| Authorization | RBAC with middleware-enforced route protection |
+| Input validation | Zod schemas on all API routes |
+| Code scanning | GitHub CodeQL on every push |
+| Secret scanning | Gitleaks + TruffleHog |
+| Dependency monitoring | Dependabot alerts |
+| Payment security | Stripe-hosted Elements (PCI DSS compliant) |
+| Webhook verification | Signed Stripe webhook signatures |
+
+### Reporting Vulnerabilities
+
+Please **do not** open public issues for security vulnerabilities. Follow the responsible disclosure process in [`SECURITY.md`](SECURITY.md).
+
+---
+
+## 📊 Data Import
+
+The platform includes a bulk import system for migrating existing data:
+
+| Data Type | Formats Supported |
+|-----------|------------------|
+| Products | CSV, Excel (.xlsx), JSON |
+| Orders | CSV, Excel |
+| Gift Certificates | CSV |
+| Retail Locations | CSV, JSON |
+
+**Features:** Validation before import · batch processing · detailed error reporting · template downloads
+
+**Reference:** [`docs/PRODUCT_IMPORT.md`](docs/PRODUCT_IMPORT.md) · [`docs/import-infrastructure/`](docs/import-infrastructure/)
+
+---
+
+## 📚 Documentation
+
+Full documentation is available in the [`docs/`](docs/) directory.
+
+| Document | Description |
+|----------|-------------|
+| [`docs/index.md`](docs/index.md) | Documentation hub and index |
+| [`docs/ENVIRONMENT_SETUP.md`](docs/ENVIRONMENT_SETUP.md) | Local dev setup |
+| [`docs/ENVIRONMENT_VARIABLES.md`](docs/ENVIRONMENT_VARIABLES.md) | All env var definitions |
+| [`docs/DATABASE.md`](docs/DATABASE.md) | Database config & troubleshooting |
+| [`docs/stripe/README.md`](docs/stripe/README.md) | Stripe payment integration |
+| [`docs/API.md`](docs/API.md) | REST API reference |
+| [`docs/ADMIN_LOGIN_GUIDE.md`](docs/ADMIN_LOGIN_GUIDE.md) | Admin dashboard guide |
+| [`docs/ENCRYPTION_SETUP.md`](docs/ENCRYPTION_SETUP.md) | Encryption configuration |
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full guidelines.
+
+### Quick Contribution Checklist
+
+- [ ] Branch from `main` with a descriptive name
+- [ ] Follow TypeScript + Tailwind coding conventions
+- [ ] Use the `@/` module alias — no relative imports across directories
+- [ ] Write or update tests for behavior changes
+- [ ] Pass `npx vitest run && npm run lint && npm run type-check`
+- [ ] Open a PR with a clear description and screenshots for UI changes
+
+> For AI agents and automated tools operating in this repository, see [`AGENTS.md`](AGENTS.md) for mandatory operating guidelines.
+
+---
+
+## 📋 Changelog
+
+See [`CHANGELOG.md`](CHANGELOG.md) for a full history of changes.
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
+
+---
+
+<div align="center">
+
+  <img src="public/images/jose_madrid_logo_profile.png" alt="Jose Madrid" width="80" />
+
+  <p>
+    <strong>Jose Madrid Salsa</strong><br/>
+    Zanesville, Ohio · <a href="https://www.josemadrid.net">josemadrid.net</a>
+  </p>
+
+  <sub>Built with ❤️ using Next.js, TypeScript, and Tailwind CSS</sub>
+
+</div>
