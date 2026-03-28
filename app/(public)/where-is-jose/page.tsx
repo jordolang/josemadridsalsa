@@ -4,6 +4,7 @@ import { MapPin, Truck, Calendar, Store, Users, Compass, Mountain, Building, Ute
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { GoogleScheduleMap } from '@/components/store/google-schedule-map';
+import { getCalendarEvents } from '@/lib/server/google-data';
 import { createMetadata } from '@/lib/metadata';
 
 export const metadata: Metadata = createMetadata({
@@ -57,7 +58,8 @@ const regions = [
   }
 ];
 
-export default function WhereIsJosePage() {
+export default async function WhereIsJosePage() {
+  const calendarEvents = await getCalendarEvents()
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -92,7 +94,7 @@ export default function WhereIsJosePage() {
                 every new booking will appear automatically.
               </p>
             </div>
-            <GoogleScheduleMap />
+            <GoogleScheduleMap initialEvents={calendarEvents} />
           </div>
         </div>
       </section>
