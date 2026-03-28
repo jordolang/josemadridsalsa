@@ -14,13 +14,21 @@ import { CompareFloatingButton, ProductComparison } from '@/components/store/pro
 import { ComparisonURLHandler } from '@/components/store/comparison-url-handler'
 import { NewsletterPopup } from '@/components/store/newsletter-popup'
 import { EventTicker } from '@/components/store/event-ticker'
+import { getCalendarEvents } from '@/lib/server/google-data'
 
 export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const measurementId = await getPublicGoogleAnalyticsMeasurementId()
+  // Fetch calendar events once for the entire layout — shared across EventTicker,
+  // ScheduleMap, and any other component that needs it on this page tree.
+  // Next.js deduplicates identical fetch() calls within the same render, so
+  // even if child pages also call getCalendarEvents(), only one HTTP request fires.
+  const [measurementId, calendarEvents] = await Promise.all([
+    getPublicGoogleAnalyticsMeasurementId(),
+    getCalendarEvents(20),
+  ])
 
   return (
     <>
@@ -55,7 +63,7 @@ export default async function PublicLayout({
       </Suspense>
       <div className="flex min-h-screen flex-col">
         <Navigation />
-        <EventTicker />
+        <EventTicker initialEvents={calendarEvents} />
         <div className="flex-1">
           {children}
         </div>
