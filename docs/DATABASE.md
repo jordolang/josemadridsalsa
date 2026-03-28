@@ -34,11 +34,15 @@ The platform uses **PostgreSQL** as the primary database, accessed through **Pri
 
 ### Environment Variables
 
-```bash
-# Direct PostgreSQL connection (local development)
-DATABASE_URL="postgresql://user:password@localhost:5432/josemadrid"
+Set **one** of the following in your `.env` or `.env.local` file — they are mutually exclusive:
 
-# Prisma Accelerate (production — recommended)
+```bash
+# Option A: Direct PostgreSQL connection (local development only)
+DATABASE_URL="postgresql://user:password@localhost:5432/josemadrid"
+```
+
+```bash
+# Option B: Prisma Accelerate (production / Vercel — recommended)
 DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=..."
 ```
 
@@ -117,7 +121,8 @@ npx tsx scripts/create-admin.ts
 
 **Fix:**
 ```bash
-# Sync schema to database (non-destructive — only adds missing tables)
+# Sync schema to database (adds missing tables; may be destructive
+# if the schema has breaking changes — use with caution in production)
 npx prisma db push
 
 # Full reset (destructive — drops and recreates all tables)
