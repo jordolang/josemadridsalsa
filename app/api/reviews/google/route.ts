@@ -6,7 +6,8 @@ const PLACES_API_BASE = 'https://places.googleapis.com/v1'
 // Google Place ID for Jose Madrid Salsa
 // This can be found from your Google My Business profile URL
 // You can also use the place name/address to search if Place ID is not available
-const PLACE_ID = process.env.GOOGLE_PLACE_ID || ''
+// Accept both the server-only and public variants of the place ID env var
+const PLACE_ID = process.env.GOOGLE_PLACE_ID || process.env.NEXT_PUBLIC_GOOGLE_PLACE_ID || ''
 const PLACE_NAME = process.env.GOOGLE_PLACE_NAME || 'Jose Madrid Salsa'
 
 // Cache reviews for 2 hours (reviews don't change frequently)

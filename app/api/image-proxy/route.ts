@@ -26,9 +26,11 @@ const ImageProxyQuerySchema = z.object({
 const LEGACY_PLACES_HOST = 'maps.googleapis.com'
 const NEW_PLACES_HOST = 'places.googleapis.com'
 
-// Cache for Place ID -> Photo URL mappings (in-memory, 30 minutes TTL)
+// Cache for Place ID -> Photo URL mappings (in-memory, 24 hours TTL)
+// Place photo names from Google expire after ~2 days, so 24h is safe and avoids
+// hammering the Places API on every page load for 150+ locations.
 const placePhotoCache = new Map<string, { url: string; timestamp: number }>()
-const PHOTO_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
+const PHOTO_CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
 
 /**
  * Validates if URL is from Google Places (legacy or new API)
@@ -323,8 +325,9 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        // Cache for 1 hour (photos can change and names can expire)
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+        // Cache for 24 hours at CDN/browser level — reduces repeat Places API calls
+        // across page loads. Photo names rarely change within a day.
+        'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=3600',
         // Security headers
         'X-Content-Type-Options': 'nosniff',
         'X-Frame-Options': 'DENY',
