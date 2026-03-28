@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import type { ScheduleEvent } from '@/lib/server/google-data'
 
 const GoogleScheduleMap = dynamic(
   () => import('./google-schedule-map').then(mod => ({ default: mod.GoogleScheduleMap })),
@@ -10,6 +11,10 @@ const GoogleScheduleMap = dynamic(
   }
 )
 
-export function ScheduleMapWrapper() {
-  return <GoogleScheduleMap />
+type ScheduleMapWrapperProps = {
+  initialEvents: ScheduleEvent[]
+}
+
+export function ScheduleMapWrapper({ initialEvents }: ScheduleMapWrapperProps) {
+  return <GoogleScheduleMap initialEvents={initialEvents} />
 }

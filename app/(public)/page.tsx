@@ -6,27 +6,22 @@ import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { createMetadata } from '@/lib/metadata'
 import { LocationMapClient } from '@/components/store/location-map-client'
+import { getReviewsData, getCalendarEvents } from '@/lib/server/google-data'
 
-// Lazy load heavy below-the-fold components for better performance
+// Lazy load heavy below-the-fold components (client-side only)
 const AnimatedTestimonials = dynamic(
   () => import('@/components/store/animated-testimonials').then(mod => ({ default: mod.AnimatedTestimonials })),
-  {
-    loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" />,
-    ssr: true
-  }
+  { loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" />, ssr: false }
 )
 
 const GiftBoxSelector = dynamic(
   () => import('@/components/store/gift-box-selector').then(mod => ({ default: mod.GiftBoxSelector })),
-  {
-    loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" />,
-    ssr: true
-  }
+  { loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" />, ssr: false }
 )
 
 const ScheduleMapWrapper = dynamic(
   () => import('@/components/store/schedule-map-wrapper').then(mod => ({ default: mod.ScheduleMapWrapper })),
-  { loading: () => <div className="h-[520px] animate-pulse bg-muted rounded-3xl" />, ssr: true }
+  { loading: () => <div className="h-[520px] animate-pulse bg-muted rounded-3xl" />, ssr: false }
 )
 
 export const metadata: Metadata = createMetadata({
@@ -36,7 +31,17 @@ export const metadata: Metadata = createMetadata({
   pathname: '/',
 })
 
-export default function Home() {
+// This is an async server component — it fetches ONCE on the server at render time.
+// Next.js ISR caches the result (reviews: 2h, calendar: 5min).
+// Zero Google API calls happen in the browser on load. The Refresh button
+// on the schedule map is the only path that ever triggers a client fetch.
+export default async function Home() {
+  // Both fetches run in parallel — total overhead is max(t_reviews, t_calendar)
+  const [reviewsData, calendarEvents] = await Promise.all([
+    getReviewsData(),
+    getCalendarEvents(),
+  ])
+
   return (
     <ErrorBoundary>
       <main className="min-h-screen">
@@ -226,7 +231,7 @@ export default function Home() {
                 Follow Jose Madrid Salsa to farmers markets, retail demos, and special events — updated live from our calendar.
               </p>
             </div>
-            <ScheduleMapWrapper />
+            <ScheduleMapWrapper initialEvents={calendarEvents} />
             <div className="mt-6 text-center">
               <Link href="/where-is-jose" className="btn-secondary text-sm px-6 py-2">
                 View Full Schedule →
@@ -307,8 +312,8 @@ export default function Home() {
       {/* Location Map Section */}
       <LocationMapClient />
 
-      {/* Reviews Section */}
-      <AnimatedTestimonials />
+      {/* Reviews Section — data pre-fetched server-side, zero client API calls */}
+      <AnimatedTestimonials reviewsData={reviewsData} />
 
       {/* CTA Section */}
       <section className="py-20 bg-salsa-600">
