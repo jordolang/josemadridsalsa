@@ -8,20 +8,20 @@ import { createMetadata } from '@/lib/metadata'
 import { LocationMapClient } from '@/components/store/location-map-client'
 import { getReviewsData, getCalendarEvents } from '@/lib/server/google-data'
 
-// Lazy load heavy below-the-fold components (client-side only)
+// Lazy load heavy below-the-fold components
 const AnimatedTestimonials = dynamic(
   () => import('@/components/store/animated-testimonials').then(mod => ({ default: mod.AnimatedTestimonials })),
-  { loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" />, ssr: false }
+  { loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" /> }
 )
 
 const GiftBoxSelector = dynamic(
   () => import('@/components/store/gift-box-selector').then(mod => ({ default: mod.GiftBoxSelector })),
-  { loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" />, ssr: false }
+  { loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" /> }
 )
 
 const ScheduleMapWrapper = dynamic(
   () => import('@/components/store/schedule-map-wrapper').then(mod => ({ default: mod.ScheduleMapWrapper })),
-  { loading: () => <div className="h-[520px] animate-pulse bg-muted rounded-3xl" />, ssr: false }
+  { loading: () => <div className="h-[520px] animate-pulse bg-muted rounded-3xl" /> }
 )
 
 export const metadata: Metadata = createMetadata({
