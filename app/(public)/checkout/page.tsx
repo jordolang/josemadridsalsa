@@ -6,6 +6,7 @@ import {
   CardElement,
   Elements,
   ExpressCheckoutElement,
+  LinkAuthenticationElement,
   useElements,
   useStripe,
 } from '@stripe/react-stripe-js'
@@ -24,7 +25,32 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { getReferralCodeFromCookie } from '@/lib/fundraising/referral-tracker.client'
+import {
+  PaymentMethodSelector,
+  DEFAULT_METHODS,
+  type PaymentMethodId,
+} from '@/components/checkout/PaymentMethodSelector'
+
+// Lazy-load payment provider components to avoid bundling PayPal (~100KB+)
+// and Square (~50KB+) SDKs when the user pays with card (the default).
+const PayPalProvider = dynamic(
+  () => import('@/components/checkout/PayPalProvider').then((m) => ({ default: m.PayPalProvider })),
+  { ssr: false }
+)
+const PayPalButton = dynamic(
+  () => import('@/components/checkout/PayPalButton').then((m) => ({ default: m.PayPalButton })),
+  { ssr: false }
+)
+const VenmoButton = dynamic(
+  () => import('@/components/checkout/VenmoButton').then((m) => ({ default: m.VenmoButton })),
+  { ssr: false }
+)
+const CashAppButton = dynamic(
+  () => import('@/components/checkout/CashAppButton').then((m) => ({ default: m.CashAppButton })),
+  { ssr: false }
+)
 
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null
@@ -46,6 +72,7 @@ type ShippingOption = {
   method: string
   cost: number
   estimatedDays: string
+  estimatedDeliveryDate?: string
 }
 
 const initialFormState: CheckoutFormState = {
@@ -281,9 +308,14 @@ function CheckoutForm() {
   const [shippingError, setShippingError] = useState<string | null>(null)
   const [availableShippingOptions, setAvailableShippingOptions] = useState<ShippingOption[]>([])
   const [selectedShippingOption, setSelectedShippingOption] = useState<ShippingOption | null>(null)
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodId>('card')
+  const [linkEmail, setLinkEmail] = useState('')
+  const [linkComplete, setLinkComplete] = useState(false)
   const [isRecoveringCart, setIsRecoveringCart] = useState(false)
   const taxCalcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const shippingCalcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const taxAbortRef = useRef<AbortController | null>(null)
+  const shippingAbortRef = useRef<AbortController | null>(null)
   const hasRecoveredRef = useRef(false)
 
   const subtotal = useMemo(
@@ -300,11 +332,17 @@ function CheckoutForm() {
       return
     }
 
+    // Abort any in-flight tax calculation to prevent stale responses
+    taxAbortRef.current?.abort()
+    const controller = new AbortController()
+    taxAbortRef.current = controller
+
     setIsCalculatingTax(true)
     try {
       const response = await fetch('/api/checkout/calculate-tax', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           items: items.map((item) => ({
             productId: item.id,
@@ -330,6 +368,7 @@ function CheckoutForm() {
         setTaxAmount(0)
       }
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
       console.error('Error calculating tax:', error)
       setTaxAmount(0)
     } finally {
@@ -344,12 +383,18 @@ function CheckoutForm() {
       return
     }
 
+    // Abort any in-flight shipping calculation to prevent stale responses
+    shippingAbortRef.current?.abort()
+    const controller = new AbortController()
+    shippingAbortRef.current = controller
+
     setIsCalculatingShipping(true)
     setShippingError(null)
     try {
       const response = await fetch('/api/checkout/calculate-shipping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           items: items.map((item) => ({
             productId: item.id,
@@ -389,6 +434,7 @@ function CheckoutForm() {
         setSelectedShippingOption(null)
       }
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
       setShippingError('Unable to calculate shipping costs. Please try again.')
       setShippingCost(0)
       setAvailableShippingOptions([])
@@ -482,7 +528,7 @@ function CheckoutForm() {
     recoverCart()
   }, [addItem, clearCart])
 
-  // Cleanup timeouts on unmount
+  // Cleanup timeouts and abort in-flight requests on unmount
   useEffect(() => {
     return () => {
       if (taxCalcTimeoutRef.current) {
@@ -491,6 +537,8 @@ function CheckoutForm() {
       if (shippingCalcTimeoutRef.current) {
         clearTimeout(shippingCalcTimeoutRef.current)
       }
+      taxAbortRef.current?.abort()
+      shippingAbortRef.current?.abort()
     }
   }, [])
 
@@ -509,11 +557,13 @@ function CheckoutForm() {
       return
     }
 
-    const cardElement = elements.getElement(CardElement)
-
-    if (!cardElement) {
-      setErrorMessage('Unable to access payment field. Please refresh and try again.')
-      return
+    // For card payments, verify the card element is mounted
+    if (selectedPaymentMethod === 'card') {
+      const cardElement = elements.getElement(CardElement)
+      if (!cardElement) {
+        setErrorMessage('Unable to access payment field. Please refresh and try again.')
+        return
+      }
     }
 
     setIsProcessing(true)
@@ -531,7 +581,7 @@ function CheckoutForm() {
             quantity: item.quantity,
           })),
           customer: {
-            email: formState.email,
+            email: selectedPaymentMethod === 'link' ? (linkEmail || formState.email) : formState.email,
             firstName: formState.firstName,
             lastName: formState.lastName,
             phone: formState.phone || undefined,
@@ -547,6 +597,7 @@ function CheckoutForm() {
           shippingMethod: selectedShippingOption?.method,
           shippingCost: selectedShippingOption?.cost,
           referralCode: referralCode || undefined,
+          paymentMethod: selectedPaymentMethod === 'link' ? 'link' : undefined,
         }),
       })
 
@@ -557,16 +608,38 @@ function CheckoutForm() {
 
       const { clientSecret, orderId } = await checkoutResponse.json()
 
-      const paymentResult = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: cardElement,
-          billing_details: {
-            name: `${formState.firstName} ${formState.lastName}`.trim(),
-            email: formState.email,
-            phone: formState.phone || undefined,
+      let paymentResult
+
+      if (selectedPaymentMethod === 'link') {
+        // Link payment: confirm with elements (LinkAuthenticationElement handles the flow)
+        paymentResult = await stripe.confirmPayment({
+          clientSecret,
+          confirmParams: {
+            return_url: `${window.location.origin}/order-confirmation/${orderId}`,
+            payment_method_data: {
+              billing_details: {
+                name: `${formState.firstName} ${formState.lastName}`.trim(),
+                email: linkEmail || formState.email,
+                phone: formState.phone || undefined,
+              },
+            },
           },
-        },
-      })
+          redirect: 'if_required',
+        })
+      } else {
+        // Card payment
+        const cardElement = elements.getElement(CardElement)!
+        paymentResult = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              name: `${formState.firstName} ${formState.lastName}`.trim(),
+              email: formState.email,
+              phone: formState.phone || undefined,
+            },
+          },
+        })
+      }
 
       if (paymentResult.error) {
         throw new Error(getPaymentErrorMessage(paymentResult.error))
@@ -800,7 +873,9 @@ function CheckoutForm() {
                                 </span>
                               </div>
                               <p className="mt-1 text-sm text-gray-600">
-                                Estimated delivery: {option.estimatedDays}
+                                {option.estimatedDeliveryDate
+                                  ? `Est. delivery: ${new Date(option.estimatedDeliveryDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`
+                                  : `Estimated delivery: ${option.estimatedDays}`}
                               </p>
                             </div>
                           </label>
@@ -831,14 +906,133 @@ function CheckoutForm() {
                       <div className="w-full border-t border-gray-300"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                      <span className="px-4 bg-white text-gray-500">Or pay with card</span>
+                      <span className="px-4 bg-white text-gray-500">Or pay with</span>
                     </div>
                   </div>
 
-                  {/* Regular Card Payment */}
-                  <div className="rounded-md border border-gray-200 p-4">
-                    <CardElement options={CardElementOptions} />
-                  </div>
+                  {/* Payment Method Selector */}
+                  <PaymentMethodSelector
+                    methods={DEFAULT_METHODS}
+                    selectedMethod={selectedPaymentMethod}
+                    onSelect={setSelectedPaymentMethod}
+                  />
+
+                  {/* Card Payment Form - shown when card is selected */}
+                  {selectedPaymentMethod === 'card' && (
+                    <div className="rounded-md border border-gray-200 p-4">
+                      <CardElement options={CardElementOptions} />
+                    </div>
+                  )}
+
+                  {/* Link by Stripe - one-click checkout */}
+                  {selectedPaymentMethod === 'link' && (
+                    <div className="space-y-3">
+                      <div className="rounded-md border border-gray-200 p-4">
+                        <LinkAuthenticationElement
+                          onChange={(event) => {
+                            setLinkEmail(event.value?.email || '')
+                            setLinkComplete(event.complete)
+                          }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Link securely saves your payment info for faster checkout across Stripe-powered stores.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* PayPal/Venmo - provider only mounts when selected */}
+                  {(selectedPaymentMethod === 'paypal' || selectedPaymentMethod === 'venmo') && (
+                    <PayPalProvider>
+                      {selectedPaymentMethod === 'paypal' && (
+                        <PayPalButton
+                          items={items}
+                          customer={{
+                            email: formState.email,
+                            firstName: formState.firstName,
+                            lastName: formState.lastName,
+                            phone: formState.phone || undefined,
+                          }}
+                          shipping={{
+                            address1: formState.address1,
+                            address2: formState.address2 || undefined,
+                            city: formState.city,
+                            state: formState.state,
+                            postalCode: formState.postalCode,
+                          }}
+                          notes={formState.notes || undefined}
+                          shippingMethod={selectedShippingOption?.method}
+                          referralCode={getReferralCodeFromCookie() || undefined}
+                          disabled={isProcessing}
+                          onSuccess={(orderId) => {
+                            clearCart()
+                            setSuccessMessage('Payment successful!')
+                            router.push(`/order-confirmation/${orderId}`)
+                          }}
+                          onError={(message) => setErrorMessage(message)}
+                        />
+                      )}
+                      {selectedPaymentMethod === 'venmo' && (
+                        <VenmoButton
+                          items={items}
+                          customer={{
+                            email: formState.email,
+                            firstName: formState.firstName,
+                            lastName: formState.lastName,
+                            phone: formState.phone || undefined,
+                          }}
+                          shipping={{
+                            address1: formState.address1,
+                            address2: formState.address2 || undefined,
+                            city: formState.city,
+                            state: formState.state,
+                            postalCode: formState.postalCode,
+                          }}
+                          notes={formState.notes || undefined}
+                          shippingMethod={selectedShippingOption?.method}
+                          referralCode={getReferralCodeFromCookie() || undefined}
+                          disabled={isProcessing}
+                          onSuccess={(orderId) => {
+                            clearCart()
+                            setSuccessMessage('Payment successful!')
+                            router.push(`/order-confirmation/${orderId}`)
+                          }}
+                          onError={(message) => setErrorMessage(message)}
+                        />
+                      )}
+                    </PayPalProvider>
+                  )}
+
+                  {/* Cash App Pay Button - shown when Cash App is selected */}
+                  {selectedPaymentMethod === 'cashapp' && (
+                    <CashAppButton
+                      items={items}
+                      customer={{
+                        email: formState.email,
+                        firstName: formState.firstName,
+                        lastName: formState.lastName,
+                        phone: formState.phone || undefined,
+                      }}
+                      shipping={{
+                        address1: formState.address1,
+                        address2: formState.address2 || undefined,
+                        city: formState.city,
+                        state: formState.state,
+                        postalCode: formState.postalCode,
+                      }}
+                      total={subtotal + shippingCost + taxAmount}
+                      notes={formState.notes || undefined}
+                      shippingMethod={selectedShippingOption?.method}
+                      referralCode={getReferralCodeFromCookie() || undefined}
+                      disabled={isProcessing}
+                      onSuccess={(orderId) => {
+                        clearCart()
+                        setSuccessMessage('Payment successful!')
+                        router.push(`/order-confirmation/${orderId}`)
+                      }}
+                      onError={(message) => setErrorMessage(message)}
+                    />
+                  )}
                 </section>
 
                 {errorMessage && (
@@ -853,13 +1047,19 @@ function CheckoutForm() {
                 )}
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  {(selectedPaymentMethod === 'card' || selectedPaymentMethod === 'link') && (
                   <Button
                     type="submit"
                     className="bg-salsa-500 hover:bg-salsa-600"
-                    disabled={isProcessing || !stripe}
+                    disabled={isProcessing || !stripe || (selectedPaymentMethod === 'link' && !linkComplete)}
                   >
-                    {isProcessing ? 'Processing...' : 'Pay now'}
+                    {isProcessing
+                      ? 'Processing...'
+                      : selectedPaymentMethod === 'link'
+                        ? 'Pay with Link'
+                        : 'Pay now'}
                   </Button>
+                  )}
                   <p className="text-sm text-gray-500">
                     Your payment is secure and encrypted. You&apos;ll receive a confirmation email
                     after checkout.

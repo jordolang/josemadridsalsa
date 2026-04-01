@@ -117,6 +117,18 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/analytics',
     icon: 'BarChart3',
     permission: 'analytics:read',
+    children: [
+      {
+        label: 'Overview',
+        href: '/admin/analytics',
+        permission: 'analytics:read',
+      },
+      {
+        label: 'Order Analytics',
+        href: '/admin/analytics/orders',
+        permission: 'analytics:read',
+      },
+    ],
   },
   {
     label: 'Growth Dashboard',
@@ -243,6 +255,11 @@ export const adminNavigation: NavItem[] = [
         label: 'Email Settings',
         href: '/admin/settings/email',
         permission: 'settings:write',
+      },
+      {
+        label: 'Payments',
+        href: '/admin/settings/payments',
+        permission: 'settings:read',
       },
       {
         label: 'Audit Logs',

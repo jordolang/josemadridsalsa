@@ -48,6 +48,7 @@ export interface ShippingCalculationResult {
     method: string
     cost: number
     estimatedDays: string
+    estimatedDeliveryDate?: string
   }>
   /** Flag indicating if fallback estimate rates were used */
   fallback?: boolean
@@ -404,6 +405,7 @@ export async function calculateShipping(
         estimatedDays: rate.deliveryDays
           ? `${rate.deliveryDays} business days`
           : '3-5 business days',
+        estimatedDeliveryDate: rate.deliveryDate || undefined,
       }))
 
       // Use cheapest rate as default

@@ -13,6 +13,7 @@ import TrackingDialog from '@/components/admin/TrackingDialog'
 import SendEmailDialog from '@/components/admin/SendEmailDialog'
 import PrintInvoiceButton from '@/components/admin/PrintInvoiceButton'
 import PackingSlipButton from '@/components/admin/PackingSlipButton'
+import BuyShippingLabelDialog from '@/components/admin/BuyShippingLabelDialog'
 import { getStripe } from '@/lib/stripe'
 import { Decimal } from '@prisma/client/runtime/library'
 
@@ -350,6 +351,11 @@ export default async function OrderDetailPage({
                     orderNumber={order.orderNumber}
                     currentTrackingNumber={order.trackingNumber}
                     currentStatus={order.status}
+                  />
+                  <BuyShippingLabelDialog
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                    hasShippingAddress={!!order.shippingAddress}
                   />
                   <RefundDialog
                     orderId={order.id}

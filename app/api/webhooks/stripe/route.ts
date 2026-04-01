@@ -4,6 +4,7 @@ import Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
+import { deductReservedInventoryInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
         }
 
         // Update order status and payment record
-        await prisma.$transaction(async (tx) => {
+        const deductionResults = await prisma.$transaction(async (tx) => {
           await tx.order.update({
             where: { id: order.id },
             data: {
@@ -129,22 +130,61 @@ export async function POST(request: Request) {
             },
           })
 
-          // Update inventory for product orders (not gift certificates)
+          // Deduct reserved inventory for product orders (not gift certificates).
+          // Uses deductReservedInventoryInTx to atomically decrement both
+          // `inventory` and `stockReserved`, preventing double-counting.
+          // Item-level idempotency: skip items that already have an
+          // ORDER_COMPLETION transaction for this order to guard against
+          // the race between transaction commit and the `processed` marker.
+          const deductionResults: Array<{
+            productId: string
+            newInventory: number
+            lowStockThreshold: number
+          }> = []
+
           if (order.items.length > 0) {
-            await Promise.all(
-              order.items.map((item) =>
-                tx.product.update({
-                  where: { id: item.productId },
-                  data: {
-                    inventory: { decrement: item.quantity },
-                  },
-                })
+            for (const item of order.items) {
+              const existingDeduction = await tx.inventoryTransaction.findFirst({
+                where: {
+                  productId: item.productId,
+                  orderId: order.id,
+                  reason: 'ORDER_COMPLETION',
+                },
+              })
+
+              if (existingDeduction) {
+                continue
+              }
+
+              const result = await deductReservedInventoryInTx(
+                {
+                  productId: item.productId,
+                  quantity: item.quantity,
+                  orderId: order.id,
+                  notes: `Webhook deduction for order ${order.orderNumber}`,
+                },
+                tx
               )
-            )
+
+              deductionResults.push({
+                productId: item.productId,
+                newInventory: result.newInventory,
+                lowStockThreshold: result.product.lowStockThreshold,
+              })
+            }
           }
 
           // Gift certificates are already created, no additional action needed
+
+          return deductionResults
         })
+
+        // Fire inventory alerts after the transaction commits
+        for (const d of deductionResults) {
+          checkAndUpdateAlerts(d.productId, d.newInventory, d.lowStockThreshold).catch(
+            (err) => console.error(`Alert sync failed for product ${d.productId}:`, err)
+          )
+        }
 
         console.log('Order payment confirmed via webhook:', orderId)
 

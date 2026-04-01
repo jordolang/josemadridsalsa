@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
+import { requirePermission } from '@/lib/rbac'
+import { getProvider } from '@/lib/payments/registry'
+import type { PaymentProvider } from '@/lib/payments/types'
 
 const RefundRequestSchema = z.object({
   paymentId: z.string().min(1, 'Payment ID is required'),
@@ -11,6 +13,8 @@ const RefundRequestSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    await requirePermission('orders:write')
+
     const json = await request.json()
     const parsed = RefundRequestSchema.safeParse(json)
 
@@ -22,9 +26,8 @@ export async function POST(request: Request) {
     }
 
     const { paymentId, amount, reason } = parsed.data
-    const stripe = getStripe()
 
-    // Wrap refund amount computation, Stripe call, and payment update in a single
+    // Wrap refund amount computation, provider call, and payment update in a single
     // transaction to prevent double-refund race conditions.
     const result = await prisma.$transaction(async (tx) => {
       // Re-fetch payment with refunds inside transaction for consistent state
@@ -37,6 +40,18 @@ export async function POST(request: Request) {
 
       if (payment.status !== 'SUCCEEDED') {
         throw Object.assign(new Error('Can only refund successful payments'), { code: 'NOT_SUCCEEDED' })
+      }
+
+      // Resolve the provider payment ID based on which provider processed the payment
+      const provider = (payment.provider || 'STRIPE') as PaymentProvider
+      const providerPaymentId =
+        payment.providerPaymentId ||
+        payment.stripePaymentIntentId ||
+        payment.squarePaymentId ||
+        payment.paypalCaptureId
+
+      if (!providerPaymentId) {
+        throw Object.assign(new Error('No provider payment ID found for this payment'), { code: 'NO_PROVIDER_ID' })
       }
 
       // Calculate refundable amount within the transaction
@@ -61,27 +76,35 @@ export async function POST(request: Request) {
         throw Object.assign(new Error('Refund amount must be greater than 0'), { code: 'INVALID_AMOUNT' })
       }
 
-      // Process refund through Stripe
-      const stripeRefund = await stripe.refunds.create({
-        payment_intent: payment.stripePaymentIntentId!,
+      // Process refund through the appropriate provider adapter
+      const adapter = getProvider(provider)
+      const refundResult = await adapter.refund({
+        providerPaymentId,
         amount: refundAmount,
-        reason: reason as 'duplicate' | 'fraudulent' | 'requested_by_customer' | undefined,
+        reason,
       })
+
+      if (!refundResult.success) {
+        throw Object.assign(
+          new Error(refundResult.error || 'Refund failed at payment provider'),
+          { code: 'PROVIDER_ERROR' }
+        )
+      }
 
       // Create refund record in database
       const refund = await tx.refund.create({
         data: {
-          stripeRefundId: stripeRefund.id,
+          stripeRefundId: provider === 'STRIPE' ? (refundResult.providerRefundId ?? '') : '',
           amount: refundAmount,
           reason: reason || undefined,
-          status: stripeRefund.status === 'succeeded' ? 'SUCCEEDED' : 'PENDING',
+          status: refundResult.status,
           paymentId: payment.id,
-          processedAt: stripeRefund.status === 'succeeded' ? new Date() : null,
+          processedAt: refundResult.status === 'SUCCEEDED' ? new Date() : null,
         },
       })
 
-      // Fix: only update paymentStatus when the Stripe refund status is 'succeeded'
-      if (stripeRefund.status === 'succeeded') {
+      // Update payment status when refund succeeds
+      if (refundResult.status === 'SUCCEEDED') {
         const newTotalRefunded = totalRefunded + refundAmount
         const newPaymentStatus =
           newTotalRefunded >= payment.amount ? 'REFUNDED' : 'PARTIALLY_REFUNDED'
@@ -109,6 +132,12 @@ export async function POST(request: Request) {
     }
     if (err.code === 'EXCEEDS_REFUNDABLE' || err.code === 'INVALID_AMOUNT') {
       return NextResponse.json({ error: err.message }, { status: 400 })
+    }
+    if (err.code === 'NO_PROVIDER_ID') {
+      return NextResponse.json({ error: 'Payment has no provider reference' }, { status: 400 })
+    }
+    if (err.code === 'PROVIDER_ERROR') {
+      return NextResponse.json({ error: 'Refund failed at payment provider' }, { status: 502 })
     }
     console.error('Refund processing error:', error)
     return NextResponse.json(

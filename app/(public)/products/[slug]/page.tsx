@@ -6,6 +6,7 @@ import { ImageGallery } from '@/components/products/ImageGallery'
 import { VariantSelector } from '@/components/products/VariantSelector'
 import { NutritionalInfo } from '@/components/products/NutritionalInfo'
 import { buildProductSchema } from '@/lib/seo/schema-generator'
+import { prisma } from '@/lib/prisma'
 import { Metadata } from 'next'
 
 type Props = {
@@ -48,6 +49,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: metaDescription,
       images: product.featuredImage ? [product.featuredImage] : undefined,
     },
+    other: {
+      'product:price:amount': product.price.toFixed(2),
+      'product:price:currency': 'USD',
+      'product:availability': product.inventory > 0 ? 'in stock' : 'out of stock',
+      'product:condition': 'new',
+    },
   }
 }
 
@@ -61,6 +68,13 @@ export default async function ProductDetailPage({ params }: Props) {
   if (!product) {
     notFound()
   }
+
+  // Fetch review stats for structured data (AggregateRating)
+  const reviewStats = await prisma.review.aggregate({
+    where: { productId: product.id, status: 'APPROVED' },
+    _avg: { rating: true },
+    _count: { rating: true },
+  })
 
   const isOutOfStock = product.inventory <= 0
   const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price
@@ -85,6 +99,12 @@ export default async function ProductDetailPage({ params }: Props) {
     ingredients: product.ingredients,
     nutritionalInfo: product.nutritionalInfo,
     productIngredients: product.productIngredients,
+    reviewStats: reviewStats._count.rating > 0
+      ? {
+          averageRating: reviewStats._avg.rating ?? 0,
+          reviewCount: reviewStats._count.rating,
+        }
+      : null,
   })
 
   return (

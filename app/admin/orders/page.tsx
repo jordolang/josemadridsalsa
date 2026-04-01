@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Download, Eye, Search } from 'lucide-react'
+import { Download, Search } from 'lucide-react'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { OrdersTableClient } from '@/components/admin/OrdersTableClient'
 
 interface SearchParams {
   search?: string
@@ -62,10 +63,8 @@ async function getOrders(searchParams: SearchParams) {
               email: true,
             },
           },
-          items: {
-            select: {
-              id: true,
-            },
+          _count: {
+            select: { items: true },
           },
         },
       }),
@@ -84,16 +83,6 @@ async function getOrders(searchParams: SearchParams) {
   }
 }
 
-const statusColors = {
-  PENDING: 'bg-yellow-100 text-yellow-800',
-  CONFIRMED: 'bg-blue-100 text-blue-800',
-  PROCESSING: 'bg-purple-100 text-purple-800',
-  SHIPPED: 'bg-indigo-100 text-indigo-800',
-  DELIVERED: 'bg-green-100 text-green-800',
-  CANCELLED: 'bg-red-100 text-red-800',
-  REFUNDED: 'bg-gray-100 text-gray-800',
-}
-
 export default async function OrdersPage({
   searchParams,
 }: {
@@ -107,8 +96,22 @@ export default async function OrdersPage({
       redirect('/admin')
     }
 
-    const canExport = await hasPermission(user, 'orders:export')
+    const [canExport, canWrite] = await Promise.all([
+      hasPermission(user, 'orders:export'),
+      hasPermission(user, 'orders:write'),
+    ])
     const { orders, total, page, totalPages } = await getOrders(params)
+
+    // Serialize orders for client component
+    const orderRows = orders.map((order) => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      total: order.total.toString(),
+      createdAt: order.createdAt.toISOString(),
+      customerName: order.user?.name || order.guestEmail || 'Guest',
+      itemCount: order._count.items,
+    }))
 
     return (
     <div className="space-y-6">
@@ -161,87 +164,9 @@ export default async function OrdersPage({
         </div>
       </Card>
 
-      {/* Orders Table */}
+      {/* Orders Table with Bulk Actions */}
       <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-medium text-slate-600">
-                  Order
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-slate-600">
-                  Customer
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-slate-600">
-                  Items
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-slate-600">
-                  Total
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-slate-600">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-slate-600">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-right text-sm font-medium text-slate-600">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {orders.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
-                    No orders found
-                  </td>
-                </tr>
-              ) : (
-                orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/admin/orders/${order.id}`}
-                        className="font-medium text-blue-600 hover:underline"
-                      >
-                        {order.orderNumber}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      {order.user?.name || order.guestEmail || 'Guest'}
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium">
-                      ${Number(order.total).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                          statusColors[order.status as keyof typeof statusColors]
-                        }`}
-                      >
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {new Date(order.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/admin/orders/${order.id}`}>
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <OrdersTableClient orders={orderRows} canWrite={canWrite} />
 
         {/* Pagination */}
         {totalPages > 1 && (
