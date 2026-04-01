@@ -33,6 +33,13 @@ export interface ProductSchema {
     availability: string
     url?: string
   }
+  aggregateRating?: {
+    '@type': 'AggregateRating'
+    ratingValue: string
+    reviewCount: string
+    bestRating: string
+    worstRating: string
+  }
   weight?: string
   nutrition?: {
     '@type': 'NutritionInformation'
@@ -87,6 +94,10 @@ export interface ProductSchemaInput {
     qualifier: string | null
     sortOrder: number
   }>
+  reviewStats?: {
+    averageRating: number
+    reviewCount: number
+  } | null
 }
 
 export async function generateOrganizationSchema(): Promise<OrganizationSchema> {
@@ -111,16 +122,23 @@ export async function generateOrganizationSchema(): Promise<OrganizationSchema> 
 }
 
 export async function generateProductSchema(productId: string): Promise<ProductSchema | null> {
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    include: {
-      nutritionalInfo: true,
-      productIngredients: {
-        include: { ingredient: true },
-        orderBy: { sortOrder: 'asc' as const },
+  const [product, reviewStats] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        nutritionalInfo: true,
+        productIngredients: {
+          include: { ingredient: true },
+          orderBy: { sortOrder: 'asc' as const },
+        },
       },
-    },
-  })
+    }),
+    prisma.review.aggregate({
+      where: { productId, status: 'APPROVED' },
+      _avg: { rating: true },
+      _count: { rating: true },
+    }),
+  ])
 
   if (!product) return null
 
@@ -139,6 +157,12 @@ export async function generateProductSchema(productId: string): Promise<ProductS
     ingredients: product.ingredients,
     nutritionalInfo: product.nutritionalInfo ?? null,
     productIngredients: product.productIngredients,
+    reviewStats: reviewStats._count.rating > 0
+      ? {
+          averageRating: reviewStats._avg.rating ?? 0,
+          reviewCount: reviewStats._count.rating,
+        }
+      : null,
   })
 }
 
@@ -173,6 +197,17 @@ export function buildProductSchema(product: ProductSchemaInput): ProductSchema {
         : 'https://schema.org/OutOfStock',
       url: `${siteUrl}/products/${product.slug}`,
     },
+  }
+
+  // Add aggregate rating from reviews
+  if (product.reviewStats && product.reviewStats.reviewCount > 0) {
+    schema.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: product.reviewStats.averageRating.toFixed(1),
+      reviewCount: String(product.reviewStats.reviewCount),
+      bestRating: '5',
+      worstRating: '1',
+    }
   }
 
   // Add weight

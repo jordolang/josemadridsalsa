@@ -8,6 +8,51 @@ import prisma from '@/lib/prisma'
  * José Madrid Salsa E-commerce Platform
  */
 
+/**
+ * In-memory cache for shipping rate calculations.
+ * Avoids redundant carrier API + DB calls for same address/cart combos
+ * during a single checkout session (user typing, switching tabs, etc.).
+ */
+type ShippingCacheEntry = {
+  data: Record<string, unknown>
+  timestamp: number
+}
+
+const SHIPPING_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+const SHIPPING_CACHE_MAX_ENTRIES = 100
+const shippingCache = new Map<string, ShippingCacheEntry>()
+
+function getShippingCacheKey(
+  items: Array<{ productId: string; quantity: number }>,
+  address: { city: string; state: string; postalCode: string }
+): string {
+  const itemsKey = items
+    .map((i) => `${i.productId}:${i.quantity}`)
+    .sort()
+    .join(',')
+  return `${itemsKey}|${address.city}|${address.state}|${address.postalCode}`
+}
+
+function pruneShippingCache(): void {
+  if (shippingCache.size <= SHIPPING_CACHE_MAX_ENTRIES) return
+  const now = Date.now()
+  for (const [key, entry] of shippingCache) {
+    if (now - entry.timestamp > SHIPPING_CACHE_TTL_MS) {
+      shippingCache.delete(key)
+    }
+  }
+  // If still over limit, remove oldest entries
+  if (shippingCache.size > SHIPPING_CACHE_MAX_ENTRIES) {
+    const entries = [...shippingCache.entries()].sort(
+      (a, b) => a[1].timestamp - b[1].timestamp
+    )
+    const toRemove = entries.slice(0, entries.length - SHIPPING_CACHE_MAX_ENTRIES)
+    for (const [key] of toRemove) {
+      shippingCache.delete(key)
+    }
+  }
+}
+
 const ShippingCalculationSchema = z.object({
   items: z
     .array(
@@ -45,6 +90,13 @@ export async function POST(request: Request) {
     }
 
     const { items, shippingAddress } = parsed.data
+
+    // Check cache for identical address/cart combo
+    const cacheKey = getShippingCacheKey(items, shippingAddress)
+    const cached = shippingCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < SHIPPING_CACHE_TTL_MS) {
+      return NextResponse.json(cached.data)
+    }
 
     // Fetch product details to get weights and prices
     const productIds = items.map((item) => item.productId)
@@ -98,7 +150,7 @@ export async function POST(request: Request) {
       subtotal,
     })
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       shippingCost: shippingResult.shippingCost,
       shippingMethod: shippingResult.shippingMethod,
@@ -106,7 +158,13 @@ export async function POST(request: Request) {
       availableOptions: shippingResult.availableOptions || [],
       subtotal,
       fallback: shippingResult.fallback || false,
-    })
+    }
+
+    // Cache the result for identical future requests
+    shippingCache.set(cacheKey, { data: responseData, timestamp: Date.now() })
+    pruneShippingCache()
+
+    return NextResponse.json(responseData)
   } catch (error) {
     console.error('[Shipping Calculation API] Error:', error)
 

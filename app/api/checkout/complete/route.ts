@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
+import { getProvider } from '@/lib/payments'
 import { Prisma, PaymentStatus, OrderStatus } from '@prisma/client'
 import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 
@@ -45,9 +45,9 @@ export async function POST(request: Request) {
 
     const { orderId, paymentIntentId } = parsed.data
 
-    const stripe = getStripe()
+    const paymentAdapter = getProvider('STRIPE')
 
-    const [fetchedOrder, paymentIntent] = await Promise.all([
+    const [fetchedOrder, paymentConfirmation] = await Promise.all([
       prisma.order.findUnique({
         where: { id: orderId },
         select: {
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
           },
         },
       }),
-      stripe.paymentIntents.retrieve(paymentIntentId),
+      paymentAdapter.confirmPayment(paymentIntentId),
     ])
 
     order = fetchedOrder
@@ -87,19 +87,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true })
     }
 
-    if (!paymentIntent || paymentIntent.status !== 'succeeded') {
-      // Release reserved inventory for each item since payment failed
-      for (const item of order.items) {
-        try {
-          await releaseInventory({
+    if (!paymentConfirmation || paymentConfirmation.status !== 'SUCCEEDED') {
+      // Release reserved inventory for all items in parallel since payment failed
+      const releaseResults = await Promise.allSettled(
+        order.items.map((item) =>
+          releaseInventory({
             productId: item.productId,
             quantity: item.quantity,
-            orderId: order.id,
-            userId: order.userId || undefined,
-            notes: `Payment failed for order ${order.id}`,
+            orderId: order!.id,
+            userId: order!.userId || undefined,
+            notes: `Payment failed for order ${order!.id}`,
           })
-        } catch (releaseError) {
-          console.error('Failed to release inventory:', releaseError)
+        )
+      )
+      for (const result of releaseResults) {
+        if (result.status === 'rejected') {
+          console.error('Failed to release inventory:', result.reason)
         }
       }
 
@@ -221,19 +224,22 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Checkout completion error:', error)
 
-    // Release reserved inventory if order exists and hasn't been paid
+    // Release reserved inventory in parallel if order exists and hasn't been paid
     if (order && order.items && order.paymentStatus !== 'PAID') {
-      for (const item of order.items) {
-        try {
-          await releaseInventory({
+      const releaseResults = await Promise.allSettled(
+        order.items.map((item) =>
+          releaseInventory({
             productId: item.productId,
             quantity: item.quantity,
-            orderId: order.id,
-            userId: order.userId || undefined,
-            notes: `Error during checkout completion for order ${order.id}`,
+            orderId: order!.id,
+            userId: order!.userId || undefined,
+            notes: `Error during checkout completion for order ${order!.id}`,
           })
-        } catch (releaseError) {
-          console.error('Failed to release inventory:', releaseError)
+        )
+      )
+      for (const result of releaseResults) {
+        if (result.status === 'rejected') {
+          console.error('Failed to release inventory:', result.reason)
         }
       }
     }

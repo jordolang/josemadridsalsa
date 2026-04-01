@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
+import { getProvider } from '@/lib/payments'
 import { Prisma } from '@prisma/client'
 import { queueShopifySync } from '@/lib/shopify/sync'
 import { calculateTax } from '@/lib/tax-calculator'
@@ -322,49 +322,79 @@ export async function POST(request: NextRequest) {
 
     queueShopifySync(order.id)
 
-    const stripe = getStripe()
+    const paymentAdapter = getProvider('STRIPE')
 
-    const paymentIntent = await stripe.paymentIntents.create({
+    // Create or retrieve provider customer for authenticated users
+    // to enable saved payment methods
+    let providerCustomerId: string | undefined
+    if (user) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { stripeCustomerId: true },
+      })
+
+      if (dbUser?.stripeCustomerId) {
+        providerCustomerId = dbUser.stripeCustomerId
+      } else {
+        const customerResult = await paymentAdapter.createCustomer(
+          customer.email,
+          `${customer.firstName} ${customer.lastName}`,
+          { userId: user.id }
+        )
+        providerCustomerId = customerResult.providerId
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { stripeCustomerId: customerResult.providerId },
+        })
+      }
+    }
+
+    const paymentResult = await paymentAdapter.createPayment({
       amount: Math.round(total * 100),
       currency: 'usd',
-      receipt_email: customer.email,
-      metadata: {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        customerName: `${customer.firstName} ${customer.lastName}`,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerEmail: customer.email,
+      customerName: `${customer.firstName} ${customer.lastName}`,
+      customerPhone: customer.phone,
+      shippingAddress: {
+        line1: shipping.address1,
+        line2: shipping.address2,
+        city: shipping.city,
+        state: shipping.state,
+        postalCode: shipping.postalCode,
+        country: 'US',
       },
-      shipping: {
-        name: `${customer.firstName} ${customer.lastName}`,
-        address: {
-          line1: shipping.address1,
-          line2: shipping.address2 ?? undefined,
-          city: shipping.city,
-          state: shipping.state,
-          postal_code: shipping.postalCode,
-          country: 'US',
-        },
-        phone: customer.phone ?? undefined,
-      },
+      customerId: providerCustomerId,
+      setupFutureUsage: !!providerCustomerId,
     })
 
+    if (!paymentResult.success) {
+      throw new Error(paymentResult.error || 'Payment creation failed')
+    }
+
       return NextResponse.json({
-        clientSecret: paymentIntent.client_secret,
+        clientSecret: paymentResult.clientSecret,
         orderId: order.id,
         amount: total,
       })
     } catch (postReservationError) {
-      // Release all reservations on any downstream failure
+      // Release all reservations in parallel on any downstream failure
       console.error('[Checkout] Post-reservation error, releasing all reservations:', postReservationError)
-      for (const item of items) {
-        try {
-          await releaseInventory({
+      const releaseResults = await Promise.allSettled(
+        items.map((item) =>
+          releaseInventory({
             productId: item.productId,
             quantity: item.quantity,
             userId: user?.id,
             notes: 'Checkout failed - releasing reservation',
           })
-        } catch (releaseError) {
-          console.error('[Checkout] Failed to release reservation:', releaseError)
+        )
+      )
+      for (const result of releaseResults) {
+        if (result.status === 'rejected') {
+          console.error('[Checkout] Failed to release reservation:', result.reason)
         }
       }
       throw postReservationError
