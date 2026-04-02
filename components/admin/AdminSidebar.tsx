@@ -21,6 +21,7 @@ import {
   Gift,
   TrendingUp,
   Lock,
+  Mail,
 } from 'lucide-react'
 import { useState } from 'react'
 import type { NavItem } from '@/lib/permissions-map'
@@ -42,6 +43,7 @@ const iconMap = {
   Gift,
   TrendingUp,
   Lock,
+  Mail,
 }
 
 interface AdminSidebarProps {

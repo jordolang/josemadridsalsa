@@ -191,7 +191,7 @@ export function CsvImportModal({ listId, listName, open, onClose, onSuccess }: C
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              Tip: Export your Constant Contact list as CSV and upload it here. Duplicate emails will
+              Tip: Export your mailing list as CSV and upload it here. Duplicate emails will
               be updated, not duplicated.
             </p>
           </div>
