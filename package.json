@@ -75,7 +75,7 @@
     "@openai/codex-sdk": "^0.57.0",
     "@paypal/checkout-server-sdk": "^1.0.3",
     "@paypal/react-paypal-js": "^9.1.0",
-    "@prisma/client": "^6.19.2",
+    "@prisma/client": "^6.19.3",
     "@prisma/extension-accelerate": "^2.0.2",
     "@prisma/extension-optimize": "^2.0.0",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -103,7 +103,7 @@
     "@types/nodemailer": "^7.0.4",
     "@uploadthing/react": "^7.3.3",
     "@vercel/analytics": "^1.5.0",
-    "@vercel/blob": "^0.24.1",
+    "@vercel/blob": "^2.3.2",
     "axios": "^1.13.5",
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
@@ -141,7 +141,6 @@
     "tailwindcss": "^3.4.18",
     "tailwindcss-animate": "^1.0.7",
     "uploadthing": "^7.7.4",
-    "workflow": "^4.2.0-beta.65",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },
@@ -177,7 +176,7 @@
     "min-indent": "^1.0.1",
     "msw": "^2.12.10",
     "postcss": "^8.5.6",
-    "prisma": "6.19.0",
+    "prisma": "6.19.3",
     "react-email": "^5.2.9",
     "readdirp": "^5.0.0",
     "ts-node": "^10.9.2",
@@ -198,7 +197,32 @@
   "overrides": {
     "tar": ">=7.5.10",
     "@tootallnate/once": ">=3.0.1",
-    "minimatch": ">=10.2.3"
+    "minimatch": ">=10.2.3",
+    "effect": "3.21.0",
+    "smol-toml": "1.6.1",
+    "srvx": "0.11.13",
+    "@vercel/node": {
+      "undici": "6.24.1",
+      "path-to-regexp": "6.3.0"
+    },
+    "@vercel/remix-builder": {
+      "path-to-regexp": "6.3.0"
+    },
+    "@vercel/backends": {
+      "path-to-regexp": "8.4.0"
+    },
+    "@vercel/express": {
+      "path-to-regexp": "8.4.0"
+    },
+    "@vercel/fun": {
+      "path-to-regexp": "8.4.0"
+    },
+    "@vercel/hono": {
+      "path-to-regexp": "8.4.0"
+    },
+    "@vercel/static-config": {
+      "ajv": "8.18.0"
+    }
   },
   "resolutions": {
     "next": "16.2.1",
