@@ -15,10 +15,15 @@ export default async function EmailMarketingPage() {
 
   const since = subDays(new Date(), 30)
 
+  // Wrap each query individually so a missing table or DB error doesn't crash the entire page
+  const safeCount = async (fn: () => Promise<number>): Promise<number> => {
+    try { return await fn() } catch { return 0 }
+  }
+
   const [campaignCount, totalSubscribers, recentCampaigns, automationCount, suppressionCount] =
     await Promise.all([
-      prisma.emailCampaign.count({ where: { status: 'SENT', createdAt: { gte: since } } }),
-      prisma.mailingListSubscriber.count({ where: { status: 'SUBSCRIBED' } }),
+      safeCount(() => prisma.emailCampaign.count({ where: { status: 'SENT', createdAt: { gte: since } } })),
+      safeCount(() => prisma.mailingListSubscriber.count({ where: { status: 'SUBSCRIBED' } })),
       prisma.emailCampaign.findMany({
         where: { createdAt: { gte: since } },
         orderBy: { createdAt: 'desc' },
@@ -32,9 +37,9 @@ export default async function EmailMarketingPage() {
           createdAt: true,
           recipients: { select: { status: true } },
         },
-      }),
-      prisma.emailAutomation.count({ where: { isActive: true } }),
-      prisma.emailSuppression.count(),
+      }).catch(() => []),
+      safeCount(() => prisma.emailAutomation.count({ where: { isActive: true } })),
+      safeCount(() => prisma.emailSuppression.count()),
     ])
 
   const campaignData = recentCampaigns.map((c) => ({
