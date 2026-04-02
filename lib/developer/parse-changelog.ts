@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 export interface ChangelogSection {
-  readonly type: 'Added' | 'Changed' | 'Fixed'
+  readonly type: 'Added' | 'Changed' | 'Fixed' | 'Security'
   readonly items: readonly string[]
 }
 
@@ -56,7 +56,7 @@ export function parseChangelogContent(content: string): readonly ChangelogVersio
     }
 
     // Match section headers: ### Added, ### Changed, ### Fixed
-    const sectionMatch = line.match(/^### (Added|Changed|Fixed)$/)
+    const sectionMatch = line.match(/^### (Added|Changed|Fixed|Security)$/)
     if (sectionMatch && currentVersion) {
       if (currentSection) {
         currentVersion = {

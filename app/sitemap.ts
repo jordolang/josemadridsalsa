@@ -44,6 +44,120 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.6,
     },
+    {
+      url: `${baseUrl}/about`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/salsas`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: priorities.products || 0.9,
+    },
+    {
+      url: `${baseUrl}/products`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: priorities.products || 0.9,
+    },
+    {
+      url: `${baseUrl}/products/search`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/fundraising`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/gift-certificates/purchase`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/gift-certificates/balance`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
+    {
+      url: `${baseUrl}/forms`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/battles`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/bundles`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/wholesale`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/where-is-jose`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/shipping`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
+    {
+      url: `${baseUrl}/developer`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/developer/blog`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.4,
+    },
+    {
+      url: `${baseUrl}/privacy`,
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 0.2,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 0.2,
+    },
+    {
+      url: `${baseUrl}/cookies`,
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 0.2,
+    },
+    {
+      url: `${baseUrl}/accessibility`,
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 0.2,
+    },
   ]
 
   try {
@@ -79,6 +193,60 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   } catch (error) {
     console.error('Failed to fetch recipes for sitemap:', error)
+  }
+
+  try {
+    const blogPosts = await prisma.developerBlogPost.findMany({
+      where: { published: true },
+      select: { slug: true, updatedAt: true },
+    })
+
+    blogPosts.forEach((post) => {
+      urls.push({
+        url: `${baseUrl}/developer/blog/${post.slug}`,
+        lastModified: post.updatedAt,
+        changeFrequency: 'monthly',
+        priority: 0.4,
+      })
+    })
+  } catch (error) {
+    console.error('Failed to fetch developer blog posts for sitemap:', error)
+  }
+
+  try {
+    const salsas = await prisma.product.findMany({
+      where: { isActive: true },
+      select: { slug: true, updatedAt: true },
+    })
+
+    salsas.forEach((salsa) => {
+      urls.push({
+        url: `${baseUrl}/salsas/${salsa.slug}`,
+        lastModified: salsa.updatedAt,
+        changeFrequency: 'weekly',
+        priority: priorities.product || 0.8,
+      })
+    })
+  } catch (error) {
+    console.error('Failed to fetch salsas for sitemap:', error)
+  }
+
+  try {
+    const fundraisers = await prisma.fundraiser.findMany({
+      where: { isActive: true },
+      select: { slug: true, updatedAt: true },
+    })
+
+    fundraisers.forEach((fundraiser) => {
+      urls.push({
+        url: `${baseUrl}/fundraisers/${fundraiser.slug}`,
+        lastModified: fundraiser.updatedAt,
+        changeFrequency: 'weekly',
+        priority: 0.6,
+      })
+    })
+  } catch (error) {
+    console.error('Failed to fetch fundraisers for sitemap:', error)
   }
 
   try {
