@@ -47,6 +47,11 @@ This document lists all required and optional environment variables for the Jose
 ### Resend
 - `RESEND_API_KEY` - Resend API key for email delivery
 - `FROM_EMAIL` - Default sender email address
+- `RESEND_WEBHOOK_SECRET` - Webhook signing secret for verifying Resend webhook payloads (svix-based)
+
+### Email System
+- `CRON_SECRET` - Bearer token for authenticating Vercel cron job requests to `/api/cron/*`
+- `UNSUBSCRIBE_SECRET` - Secret for signing unsubscribe preference tokens
 
 ## Shipping Integrations
 

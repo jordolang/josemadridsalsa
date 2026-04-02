@@ -143,41 +143,30 @@ export const adminNavigation: NavItem[] = [
     permission: 'analytics:read',
   },
   {
+    label: 'Email Marketing',
+    href: '/admin/email-marketing',
+    icon: 'Mail',
+    permission: 'messaging:read',
+    children: [
+      { label: 'Dashboard', href: '/admin/email-marketing', permission: 'messaging:read' },
+      { label: 'Campaigns', href: '/admin/email-campaigns', permission: 'content:write' },
+      { label: 'Automations', href: '/admin/email-marketing/automations', permission: 'content:write' },
+      { label: 'Templates', href: '/admin/emails', permission: 'content:read' },
+      { label: 'Mailing Lists', href: '/admin/communications/lists', permission: 'messaging:read' },
+      { label: 'Suppression List', href: '/admin/communications/suppressions', permission: 'content:write' },
+      { label: 'Email Logs', href: '/admin/email-marketing/logs', permission: 'content:read' },
+      { label: 'Settings', href: '/admin/settings/email', permission: 'settings:write' },
+    ],
+  },
+  {
     label: 'Communications',
     href: '/admin/communications',
     icon: 'MessageSquare',
     permission: 'messaging:read',
     children: [
-      {
-        label: 'Messages',
-        href: '/admin/messages',
-        permission: 'messaging:read',
-      },
-      {
-        label: 'Mailing Lists',
-        href: '/admin/communications/lists',
-        permission: 'messaging:read',
-      },
-      {
-        label: 'Email Templates',
-        href: '/admin/emails',
-        permission: 'content:read',
-      },
-      {
-        label: 'Email Campaigns',
-        href: '/admin/email-campaigns',
-        permission: 'content:write',
-      },
-      {
-        label: 'Lead Generation',
-        href: '/admin/lead-generation',
-        permission: 'messaging:read',
-      },
-      {
-        label: 'Reviews',
-        href: '/admin/reviews',
-        permission: 'content:read',
-      },
+      { label: 'Messages', href: '/admin/messages', permission: 'messaging:read' },
+      { label: 'Lead Generation', href: '/admin/lead-generation', permission: 'messaging:read' },
+      { label: 'Reviews', href: '/admin/reviews', permission: 'content:read' },
     ],
   },
   {

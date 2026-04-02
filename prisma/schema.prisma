@@ -1565,6 +1565,8 @@ model EmailTemplate {
   isActive   Boolean               @default(true)
   sentCount  Int                   @default(0)
   lastSentAt DateTime?
+  tags       String[]              @default([])
+  thumbnail  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1572,6 +1574,7 @@ model EmailTemplate {
   // Relations
   campaigns    EmailCampaign[]
   compositions EmailTemplateComposition[]
+  versions     EmailTemplateVersion[]
 
   @@map("email_templates")
 }
@@ -1618,6 +1621,9 @@ model EmailConfiguration {
   maxPerHour Int @default(1000)
   maxPerDay  Int @default(10000)
 
+  // Plugin configuration registry
+  pluginConfig Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1655,6 +1661,25 @@ model EmailCampaign {
   trackOpens  Boolean @default(false)
   trackClicks Boolean @default(false)
 
+  // Retry policy
+  maxRetries           Int     @default(3)
+  retryIntervalMinutes Int     @default(5)
+
+  // Preview text
+  previewText String?
+
+  // Sender override
+  fromName  String?
+  fromEmail String?
+
+  // A/B test
+  isAbTest      Boolean @default(false)
+  abTestVariant String? // "A" or "B"
+  abTestWinnerId String?
+
+  // Config link
+  configId String?
+
   // Metadata
   notes       String? @db.Text
   createdById String?
@@ -1664,6 +1689,7 @@ model EmailCampaign {
 
   // Relations
   recipients EmailRecipient[]
+  stats      EmailCampaignStats?
 
   @@index([status])
   @@index([scheduledAt])
@@ -1781,6 +1807,7 @@ model MailingList {
 
   subscribers MailingListSubscriber[]
   campaigns   EmailCampaign[]
+  segments    EmailSegment[]
 
   @@index([isDefault])
   @@map("mailing_lists")
@@ -1792,8 +1819,13 @@ model MailingListSubscriber {
   email         String
   firstName     String?
   lastName      String?
+  phone         String?
   source        String?     // e.g. "checkout", "newsletter_form", "manual"
   status        SubscriberStatus @default(SUBSCRIBED)
+  tags          String[]    @default([])
+  customFields  Json?
+  engagementScore Int       @default(0)
+  lastEngagedAt DateTime?
   
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -1805,6 +1837,205 @@ model MailingListSubscriber {
   @@index([email])
   @@index([status])
   @@map("mailing_list_subscribers")
+}
+
+model EmailCampaignStats {
+  id              String        @id @default(cuid())
+  campaignId      String        @unique
+  campaign        EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  openRate        Float         @default(0)
+  clickRate       Float         @default(0)
+  unsubscribeRate Float         @default(0)
+  bounceRate      Float         @default(0)
+  spamRate        Float         @default(0)
+  lastCalculatedAt DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("email_campaign_stats")
+}
+
+model EmailAutomation {
+  id           String            @id @default(cuid())
+  name         String
+  description  String?
+  trigger      AutomationTrigger
+  conditions   Json?
+  isActive     Boolean           @default(false)
+  stopConditions Json?
+  createdById  String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  steps        AutomationStep[]
+  enrollments  AutomationEnrollment[]
+  logs         AutomationLog[]
+
+  @@index([trigger])
+  @@index([isActive])
+  @@map("email_automations")
+}
+
+model AutomationStep {
+  id           String          @id @default(cuid())
+  automationId String
+  automation   EmailAutomation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  order        Int
+  templateId   String?
+  delayHours   Int             @default(0)
+  subject      String?
+  previewText  String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([automationId])
+  @@map("automation_steps")
+}
+
+model AutomationEnrollment {
+  id             String           @id @default(cuid())
+  automationId   String
+  automation     EmailAutomation  @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  email          String
+  currentStep    Int              @default(0)
+  status         EnrollmentStatus @default(ACTIVE)
+  triggerData    Json?
+  enrolledAt     DateTime         @default(now())
+  completedAt    DateTime?
+  nextStepAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  logs           AutomationLog[]
+
+  @@unique([automationId, email])
+  @@index([status])
+  @@index([nextStepAt])
+  @@map("automation_enrollments")
+}
+
+model AutomationLog {
+  id             String                @id @default(cuid())
+  automationId   String
+  automation     EmailAutomation       @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  enrollmentId   String?
+  enrollment     AutomationEnrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  recipientEmail String
+  stepIndex      Int
+  status         AutomationLogStatus
+  triggeredAt    DateTime              @default(now())
+  sentAt         DateTime?
+  errorMessage   String?
+  createdAt      DateTime              @default(now())
+
+  @@index([automationId])
+  @@index([recipientEmail])
+  @@map("automation_logs")
+}
+
+model EmailSchedule {
+  id             String    @id @default(cuid())
+  name           String
+  campaignId     String?
+  automationId   String?
+  cronExpression String
+  timezone       String    @default("America/Los_Angeles")
+  isActive       Boolean   @default(true)
+  nextRunAt      DateTime?
+  lastRunAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([isActive])
+  @@index([nextRunAt])
+  @@map("email_schedules")
+}
+
+model EmailBounce {
+  id         String     @id @default(cuid())
+  email      String
+  bounceType BounceType
+  reason     String?
+  campaignId String?
+  recordedAt DateTime   @default(now())
+
+  @@index([email])
+  @@index([bounceType])
+  @@map("email_bounces")
+}
+
+model EmailSuppression {
+  id         String            @id @default(cuid())
+  email      String            @unique
+  reason     SuppressionReason
+  source     String?
+  campaignId String?
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@index([reason])
+  @@map("email_suppressions")
+}
+
+model EmailSegment {
+  id               String       @id @default(cuid())
+  name             String
+  description      String?
+  listId           String?
+  list             MailingList? @relation(fields: [listId], references: [id], onDelete: SetNull)
+  conditions       Json
+  subscriberCount  Int          @default(0)
+  lastCalculatedAt DateTime?
+  createdById      String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@map("email_segments")
+}
+
+model EmailWebhook {
+  id        String   @id @default(cuid())
+  name      String
+  url       String
+  events    String[]
+  secret    String?  @db.Text
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("email_webhooks")
+}
+
+model BrandKit {
+  id              String   @id @default(cuid())
+  logoUrl         String?
+  primaryColor    String?  @default("#000000")
+  secondaryColor  String?  @default("#ffffff")
+  accentColor     String?
+  fontFamily      String?  @default("Arial, sans-serif")
+  socialLinks     Json?
+  physicalAddress String?  @db.Text
+  websiteUrl      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("brand_kit")
+}
+
+model EmailTemplateVersion {
+  id         String        @id @default(cuid())
+  templateId String
+  template   EmailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  version    Int
+  name       String
+  subject    String
+  html       String        @db.Text
+  text       String?       @db.Text
+  blocks     Json?
+  savedById  String?
+  createdAt  DateTime      @default(now())
+
+  @@index([templateId])
+  @@map("email_template_versions")
 }
 
 model AuditLog {
@@ -2100,6 +2331,54 @@ enum EmailLogStatus {
   BOUNCED // Email bounced
   OPENED // Recipient opened email
   CLICKED // Recipient clicked link
+}
+
+enum AutomationTrigger {
+  USER_REGISTERED
+  ORDER_PLACED
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  ORDER_REFUNDED
+  ABANDONED_CART
+  LOYALTY_POINTS_EARNED
+  LOYALTY_TIER_UPGRADE
+  SUBSCRIPTION_CREATED
+  SUBSCRIPTION_RENEWED
+  SUBSCRIPTION_EXPIRING
+  SUBSCRIPTION_CANCELLED
+  BIRTHDAY
+  ANNIVERSARY
+  REENGAGEMENT
+  LOW_STOCK
+  CUSTOM
+}
+
+enum AutomationLogStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  UNSUBSCRIBED
+}
+
+enum BounceType {
+  HARD
+  SOFT
+}
+
+enum SuppressionReason {
+  HARD_BOUNCE
+  SOFT_BOUNCE
+  SPAM_COMPLAINT
+  MANUAL
+  UNSUBSCRIBE
+  ADMIN
 }
 
 enum EngagementType {

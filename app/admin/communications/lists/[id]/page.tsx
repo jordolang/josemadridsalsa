@@ -51,7 +51,7 @@ export default async function ListSubscribersPage({ params }: PageProps) {
         </div>
       </div>
 
-      <SubscribersTable listId={list.id} subscribers={list.subscribers} />
+      <SubscribersTable listId={list.id} listName={list.name} subscribers={list.subscribers} />
     </div>
   )
 }
