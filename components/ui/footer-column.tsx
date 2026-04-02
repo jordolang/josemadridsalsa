@@ -34,6 +34,7 @@ const aboutLinks = [
   { text: 'Find Us Locally', href: '/find-us' },
   { text: 'Where is Jose?', href: '/where-is-jose' },
   { text: 'Recipes', href: '/recipes' },
+  { text: 'Developer', href: '/developer' },
 ]
 
 const serviceLinks = [
