@@ -6,12 +6,37 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
-## [Unreleased]
+## [1.9.0] — 2026-04-02 — Developer Page & Blog Platform
 
 ### Added
-- Developer Page with animated feature timeline, bio section, and project stats
-- Blog system for developer's personal content
-- Contact form with backend API integration
+- **Developer Page** (`/developer`) — Comprehensive developer hub honoring God's role in the project with Soli Deo Gloria faith statement and jlang.dev link
+- **Parallax hero section** with developer bio, animated background effects, and scroll-driven interactions
+- **Feature timeline** — 8 development phases rendered as scroll-driven timeline with cursor parallax, glow effects, and expand/zoom interactions
+- **Tech stack grid** — 18 technologies across 4 categories with hover animations
+- **Blog publishing system** (`/developer/blog`) — Full CRUD with Prisma model, admin-authenticated API, and markdown rendering via rehype-sanitize
+- **Blog detail pages** (`/developer/blog/[slug]`) with sanitized markdown content
+- **Contact form** — React Hook Form + Zod validation with rate limiting (3 requests per 5 minutes) and email notification via backend API
+- **Changelog module** — Renders CHANGELOG.md on the developer page with collapsible version sections and changelog parser (`lib/developer/parse-changelog.ts`)
+- **Developer link** added to global site footer across all pages
+- **JSON-LD structured data** for developer page SEO
+- **Full SEO metadata** with OpenGraph and Twitter card support (`lib/developer/metadata.ts`)
+- **Loading skeleton** for developer page with animated placeholders
+- **Dynamic imports** for code-split developer components (`lib/developer/dynamic-imports.tsx`)
+- **Developer schemas** for input validation (`lib/developer/schemas.ts`)
+- **Timeline data module** with 8 project phases (`lib/developer/timeline-data.ts`)
+- Prisma schema extended with DeveloperBlogPost model (title, slug, content, excerpt, published, coverImage, tags)
+
+### Security
+- All 11 mandatory security audit items passed
+- XSS sanitization via rehype-sanitize on blog markdown content
+- Authentication required for blog CRUD API endpoints
+- Rate limiting on contact form submissions
+- Input validation with Zod schemas on all API endpoints
+
+### Changed
+- CHANGELOG.md expanded from stub to full 12-version history (v0.1.0 through v1.8.0)
+- Footer updated with Developer link in About Us column
+- `lib/metadata.ts` updated with developer page reference
 
 ---
 

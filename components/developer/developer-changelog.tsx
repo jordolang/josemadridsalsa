@@ -7,6 +7,7 @@ import {
   Plus,
   RefreshCw,
   Bug,
+  Shield,
   Tag,
   Sparkles,
 } from 'lucide-react'
@@ -44,6 +45,13 @@ const sectionConfig: Record<
     color: 'text-salsa-600 dark:text-salsa-400',
     badgeColor:
       'bg-salsa-100 text-salsa-700 dark:bg-salsa-950/50 dark:text-salsa-300',
+  },
+  Security: {
+    icon: Shield,
+    label: 'Security',
+    color: 'text-amber-600 dark:text-amber-400',
+    badgeColor:
+      'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
   },
 }
 
@@ -196,7 +204,9 @@ export function DeveloperChangelog({ versions }: DeveloperChangelogProps) {
                                         ? 'bg-verde-500'
                                         : section.type === 'Changed'
                                           ? 'bg-chile-500'
-                                          : 'bg-salsa-500'
+                                          : section.type === 'Security'
+                                            ? 'bg-amber-500'
+                                            : 'bg-salsa-500'
                                     }`}
                                   />
                                   <span>{item}</span>
