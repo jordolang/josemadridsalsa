@@ -1,9 +1,5 @@
 {
   "buildCommand": "npm run vercel-build",
   "installCommand": "npm install --legacy-peer-deps",
-  "framework": "nextjs",
-  "crons": [
-    { "path": "/api/cron/email-automation", "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/email-campaigns", "schedule": "*/5 * * * *" }
-  ]
+  "framework": "nextjs"
 }
