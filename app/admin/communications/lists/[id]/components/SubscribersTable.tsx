@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { MailingListSubscriber, SubscriberStatus } from '@prisma/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,6 +43,7 @@ export function SubscribersTable({ listId, listName, subscribers }: SubscribersT
   const [bulkStatus, setBulkStatus] = useState<SubscriberStatus>('UNSUBSCRIBED')
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
+  const router = useRouter()
 
   const allSelected = subscribers.length > 0 && selected.size === subscribers.length
   const someSelected = selected.size > 0
@@ -114,7 +116,7 @@ export function SubscribersTable({ listId, listName, subscribers }: SubscribersT
         setBulkError(data.error || 'Action failed')
       } else {
         setSelected(new Set())
-        window.location.reload()
+        router.refresh()
       }
     } catch {
       setBulkError('Action failed')
@@ -318,7 +320,7 @@ export function SubscribersTable({ listId, listName, subscribers }: SubscribersT
         listName={listName}
         open={isImportOpen}
         onClose={() => setIsImportOpen(false)}
-        onSuccess={() => window.location.reload()}
+        onSuccess={() => router.refresh()}
       />
     </div>
   )

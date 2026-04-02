@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { EmailSuppression, SuppressionReason } from '@prisma/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +18,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import Papa from 'papaparse'
 
 interface SuppressionsClientProps {
   initialData: EmailSuppression[]
@@ -126,12 +128,14 @@ export function SuppressionsClient({ initialData, initialTotal }: SuppressionsCl
     params.set('limit', '10000')
     const res = await fetch(`/api/admin/suppressions?${params.toString()}`)
     const data = await res.json() as { items: EmailSuppression[] }
-    const csv = [
-      'Email,Reason,Source,Notes,Created At',
-      ...data.items.map((s) =>
-        `"${s.email}","${s.reason}","${s.source || ''}","${s.notes || ''}","${s.createdAt}"`
-      ),
-    ].join('\n')
+    const rows = data.items.map((s) => ({
+      Email: s.email,
+      Reason: s.reason,
+      Source: s.source || '',
+      Notes: s.notes || '',
+      'Created At': s.createdAt,
+    }))
+    const csv = Papa.unparse(rows)
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')

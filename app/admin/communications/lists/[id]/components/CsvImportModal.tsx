@@ -159,7 +159,7 @@ export function CsvImportModal({ listId, listName, open, onClose, onSuccess }: C
         <DialogHeader>
           <DialogTitle>Import Subscribers from CSV</DialogTitle>
           <DialogDescription>
-            Upload a CSV file to import subscribers into &quot;{listName}&quot;
+            Upload a CSV file to import subscribers into "{listName}"
           </DialogDescription>
         </DialogHeader>
 

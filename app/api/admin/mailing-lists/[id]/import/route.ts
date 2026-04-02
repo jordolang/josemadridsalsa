@@ -77,7 +77,7 @@ export async function POST(
         lastName: string | null
         phone: string | null
         source: string
-        customFields: Record<string, string>
+        customFields: Record<string, string> | null
         tags: string[]
       }[] = []
 
@@ -104,7 +104,7 @@ export async function POST(
           lastName: mapping.lastName ? (row[mapping.lastName]?.trim() || null) : null,
           phone: mapping.phone ? (row[mapping.phone]?.trim() || null) : null,
           source: 'csv_import',
-          customFields: Object.keys(customFields).length > 0 ? customFields : {},
+          customFields: Object.keys(customFields).length > 0 ? customFields : null,
           tags: [],
         })
       }
@@ -120,7 +120,7 @@ export async function POST(
               lastName: sub.lastName,
               phone: sub.phone,
               source: sub.source,
-              customFields: sub.customFields,
+              customFields: sub.customFields ?? undefined,
               tags: sub.tags,
               status: 'SUBSCRIBED',
             },
@@ -128,7 +128,7 @@ export async function POST(
               firstName: sub.firstName ?? undefined,
               lastName: sub.lastName ?? undefined,
               phone: sub.phone ?? undefined,
-              customFields: sub.customFields,
+              customFields: sub.customFields ?? undefined,
             },
           })
           result.imported++
