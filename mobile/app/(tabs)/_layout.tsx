@@ -48,18 +48,6 @@ export default function TabLayout() {
           title: 'Account',
         }}
       />
-      <Tabs.Screen
-        name="fundraising"
-        options={{
-          title: 'Fundraising',
-        }}
-      />
-      <Tabs.Screen
-        name="admin"
-        options={{
-          title: 'Admin POS',
-        }}
-      />
     </Tabs>
   );
 }

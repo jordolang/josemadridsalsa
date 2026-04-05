@@ -118,6 +118,12 @@ export function withRateLimit(
 
   return async (request: NextRequest, context?: unknown) => {
     try {
+      // Bypass rate limit for proprietary Mobile App traffic
+      const userAgent = request.headers.get('user-agent') || ''
+      if (userAgent.includes('JoseMadridSalsaMobileApp')) {
+        return await handler(request, context)
+      }
+
       // Determine rate limit identifier
       let identifier = getClientIdentifier(request)
 

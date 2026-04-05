@@ -16,11 +16,7 @@ import type { ApiErrorResponse } from './types';
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
-export const API_BASE_URL = __DEV__
-  ? Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000'
-    : 'http://localhost:3000'
-  : 'https://josemadridsalsa.com';
+export const API_BASE_URL = 'https://josemadrid.net';
 
 const CSRF_STORE_KEY = 'nextauth_csrf_token';
 const SESSION_STORE_KEY = 'nextauth_session_token';
@@ -248,6 +244,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   const headers: Record<string, string> = {
     Accept: 'application/json',
+    'User-Agent': 'JoseMadridSalsaMobileApp/1.0',
     ...customHeaders,
   };
 
