@@ -58,6 +58,7 @@ gcloud/
 # Backstage
 backstage/
 josemadridsalsa/
+!mobile/ios-native/JoseMadridSalsa/
 
 # Data files
 data/
