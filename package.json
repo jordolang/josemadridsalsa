@@ -171,7 +171,7 @@
     "fast-glob": "^3.3.2",
     "glob": "^13.0.0",
     "global-agent": "^3.0.0",
-    "husky": "^8.0.3",
+    "husky": "^9.1.7",
     "jsdom": "^28.1.0",
     "lighthouse": "^13.0.1",
     "lint-staged": "^15.2.0",
