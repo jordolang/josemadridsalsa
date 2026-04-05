@@ -108,6 +108,8 @@ piecesdb.json
 # Logs
 logs/
 logs/security/
+# Exception: admin email logs page is not a log directory
+!app/admin/email-marketing/logs/
 
 # Claude Code local settings (do not commit)
 .claude/settings.local.json

@@ -7,6 +7,7 @@ import {
   useMotionValue,
   useTransform,
   useSpring,
+  type MotionValue,
   type Variants,
 } from 'framer-motion'
 import {
@@ -237,8 +238,8 @@ interface TimelineCardProps {
   onToggleExpand: () => void
   Icon: LucideIcon
   cardRef: React.RefObject<HTMLDivElement | null>
-  rotateX: ReturnType<typeof useTransform>
-  rotateY: ReturnType<typeof useTransform>
+  rotateX: MotionValue<number>
+  rotateY: MotionValue<number>
   onMouseMove: (event: React.MouseEvent<HTMLDivElement>) => void
   onMouseLeave: () => void
 }

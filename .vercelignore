@@ -16,6 +16,7 @@ docs/
 !docs/PRODUCTION_DATABASE.md
 !DEPLOYMENT_COMPLETE.md
 *.md
+!CHANGELOG.md
 !public/find-us-locally/find-us-locally.md
 
 # Backstage
