@@ -7,14 +7,21 @@
  */
 
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 /**
- * Stripe publishable key. In production, this should come from
- * app config / environment variables via expo-constants.
+ * Stripe publishable key loaded from app.config.ts extra fields.
+ *
+ * Set via the STRIPE_PUBLISHABLE_KEY environment variable before
+ * starting the dev server or building the app. See .env.example.
+ *
+ * Falls back to an empty string if the key is not set.
  */
-export const STRIPE_PUBLISHABLE_KEY = __DEV__
-  ? 'pk_test_placeholder' // Replace with actual test key
-  : 'pk_live_placeholder'; // Replace with actual live key
+const configKey = Constants.expoConfig?.extra?.stripePublishableKey as
+  | string
+  | undefined;
+
+export const STRIPE_PUBLISHABLE_KEY = configKey || '';
 
 /**
  * Apple Pay merchant identifier.

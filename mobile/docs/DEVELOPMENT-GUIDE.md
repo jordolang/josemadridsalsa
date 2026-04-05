@@ -43,6 +43,25 @@ cd mobile
 npm install
 ```
 
+### 4. Configure Stripe Keys
+
+The mobile app loads Stripe keys from environment variables at build time
+via `app.config.ts` and `expo-constants`.
+
+```bash
+# Copy the example env file
+cp .env.example .env
+
+# Edit .env and add your Stripe publishable key
+# Get your key from https://dashboard.stripe.com/apikeys
+# Use pk_test_... for development, pk_live_... for production
+STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_KEY_HERE
+```
+
+The key is read at runtime in `lib/payments/stripe-config.ts` via
+`Constants.expoConfig.extra.stripePublishableKey`. Never commit real
+Stripe keys -- only the `.env.example` placeholder is checked in.
+
 ---
 
 ## Running the App
