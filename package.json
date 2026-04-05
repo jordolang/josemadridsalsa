@@ -174,7 +174,7 @@
     "husky": "^8.0.3",
     "jsdom": "^28.1.0",
     "lighthouse": "^13.0.1",
-    "lint-staged": "^15.2.0",
+    "lint-staged": "^16.4.0",
     "min-indent": "^1.0.1",
     "msw": "^2.12.10",
     "postcss": "^8.5.6",
