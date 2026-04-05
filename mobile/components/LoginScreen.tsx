@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { api } from '@/lib/api';
+import { useRouter } from 'expo-router';
 
 /** Props accepted by {@link LoginScreen}. */
 export interface LoginScreenProps {
@@ -42,6 +43,7 @@ export function LoginScreen({ onLoginSuccess, title }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogin = async () => {
     try {
@@ -80,6 +82,10 @@ export function LoginScreen({ onLoginSuccess, title }: LoginScreenProps) {
 
       <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign In</Text>}
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push('/register')} style={{ marginTop: 20 }}>
+        <Text style={{ textAlign: 'center', color: '#d32f2f', fontSize: 16 }}>Don't have an account? Sign Up</Text>
       </TouchableOpacity>
     </View>
   );

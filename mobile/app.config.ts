@@ -2,8 +2,8 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'mobile',
-  slug: 'mobile',
+  name: 'Jose Madrid Salsa',
+  slug: 'jose-madrid-salsa',
   version: '1.0.0',
   scheme: 'josemadridsalsa',
   orientation: 'portrait',
