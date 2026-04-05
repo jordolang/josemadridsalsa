@@ -11,10 +11,10 @@
  * @module mobile/app/(tabs)/fundraising
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { LoginScreen } from '../../components/LoginScreen';
-import { getMobileSession } from '../../lib/auth';
+import { LoginScreen } from '@/components/LoginScreen';
+import { api } from '@/lib/api';
 
 /**
  * Fundraising dashboard screen component.
@@ -29,9 +29,9 @@ export default function FundraisingScreen() {
     checkAuth();
   }, []);
 
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
-      const session = await getMobileSession();
+      const session = await api.auth.getSession();
       if (session?.user) {
         setIsAuthenticated(true);
       }
@@ -40,7 +40,7 @@ export default function FundraisingScreen() {
     } finally {
       setChecking(false);
     }
-  };
+  }, []);
 
   if (checking) return <ActivityIndicator style={{ flex: 1 }} size="large" />;
   if (!isAuthenticated) return <LoginScreen title="Fundraiser Hub Sign In" onLoginSuccess={() => setIsAuthenticated(true)} />;

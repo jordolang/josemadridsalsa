@@ -256,10 +256,14 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   // Attach session token as cookie header
+  // In production with useSecureCookies, NextAuth uses __Secure- prefix
   if (auth) {
     const token = await getSessionToken();
     if (token) {
-      headers['Cookie'] = `next-auth.session-token=${token}`;
+      const cookieName = __DEV__
+        ? 'next-auth.session-token'
+        : '__Secure-next-auth.session-token';
+      headers['Cookie'] = `${cookieName}=${token}`;
     }
   }
 
@@ -278,7 +282,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     body: finalBody !== undefined ? JSON.stringify(finalBody) : undefined,
   };
 
-  const maxAttempts = noRetry ? 1 : MAX_RETRIES;
+  // Only retry idempotent methods by default to avoid duplicate mutations
+  const isIdempotent = method === 'GET' || method === 'PUT' || method === 'DELETE';
+  const maxAttempts = noRetry || !isIdempotent ? 1 : MAX_RETRIES;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const controller = new AbortController();
@@ -293,9 +299,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       clearTimeout(timeoutId);
 
       // Extract session token from Set-Cookie if present (login response)
+      // Match both dev (next-auth.session-token) and prod (__Secure-next-auth.session-token)
       const setCookie = response.headers.get('set-cookie');
       if (setCookie) {
-        const match = setCookie.match(/next-auth\.session-token=([^;]+)/);
+        const match = setCookie.match(/(?:__Secure-)?next-auth\.session-token=([^;]+)/);
         if (match?.[1]) {
           await setSessionToken(match[1]);
         }

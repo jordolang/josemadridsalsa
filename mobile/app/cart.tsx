@@ -4,17 +4,15 @@
  * Reads cart state from the local Zustand store and renders a list of items
  * with remove buttons, a running total, and checkout / clear-cart actions.
  *
- * The "Proceed to Checkout" button will trigger the Stripe Mobile payment
- * sheet once the checkout flow is fully integrated.
+ * The "Proceed to Checkout" button navigates to the dedicated checkout screen
+ * which handles the full Stripe PaymentSheet flow.
  *
  * @module mobile/app/cart
  */
 
-import { useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { useCartStore } from '../store/cartStore';
-import { useStripe } from '@stripe/stripe-react-native';
-import { fetchPaymentSheetParams } from '../lib/checkout';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useCartStore } from '@/store/cartStore';
 
 /**
  * Cart screen component.
@@ -23,37 +21,7 @@ import { fetchPaymentSheetParams } from '../lib/checkout';
  */
 export default function CartScreen() {
   const { items, removeItem, totalPrice, clearCart } = useCartStore();
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
-  const [loading, setLoading] = useState(false);
-
-  const handleCheckout = async () => {
-    try {
-      setLoading(true);
-      // Fetch Payment Intent
-      const { clientSecret } = await fetchPaymentSheetParams(items);
-      
-      const { error: initError } = await initPaymentSheet({
-        merchantDisplayName: 'Jose Madrid Salsa',
-        paymentIntentClientSecret: clientSecret,
-        allowsDelayedPaymentMethods: true,
-      });
-
-      if (initError) throw new Error(initError.message);
-
-      const { error: presentError } = await presentPaymentSheet();
-
-      if (presentError) {
-        throw new Error(presentError.message);
-      } else {
-        Alert.alert('Success', 'Your order is confirmed!');
-        clearCart();
-      }
-    } catch (err: any) {
-      Alert.alert('Checkout Error', err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const router = useRouter();
 
   return (
     <View style={styles.container}>
@@ -75,10 +43,10 @@ export default function CartScreen() {
       />
       <View style={styles.footer}>
         <Text style={styles.total}>Total: ${totalPrice().toFixed(2)}</Text>
-        <TouchableOpacity 
-          style={[styles.checkoutBtn, items.length === 0 && { opacity: 0.5 }]} 
+        <TouchableOpacity
+          style={[styles.checkoutBtn, items.length === 0 && { opacity: 0.5 }]}
           disabled={items.length === 0}
-          onPress={handleCheckout}
+          onPress={() => router.push('/checkout')}
         >
           <Text style={styles.checkoutBtnText}>Proceed to Checkout</Text>
         </TouchableOpacity>

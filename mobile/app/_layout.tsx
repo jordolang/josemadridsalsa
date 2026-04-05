@@ -12,7 +12,7 @@
  */
 
 import { Stack } from 'expo-router';
-import { StripeProvider } from '../lib/payments';
+import { StripeProvider } from '@/lib/payments';
 
 /**
  * Application root layout component.
@@ -26,6 +26,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="cart" options={{ presentation: 'modal', title: 'Shopping Cart' }} />
         <Stack.Screen name="checkout" options={{ title: 'Checkout' }} />
+        <Stack.Screen name="order/[id]" options={{ title: 'Order Details' }} />
       </Stack>
     </StripeProvider>
   );

@@ -20,10 +20,19 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useCheckout } from '../hooks/useCheckout';
-import { useCartStore } from '../store/cartStore';
-import type { CheckoutRequest } from '../lib/api/types';
+import { useCheckout } from '@/hooks/useCheckout';
+import { useCartStore } from '@/store/cartStore';
+import type { CheckoutRequest } from '@/lib/api/types';
 
+/**
+ * Checkout screen component that collects shipping details, displays an
+ * order summary, and presents Stripe or Apple Pay payment options.
+ *
+ * After successful payment the cart is cleared and a confirmation view
+ * with the order ID is shown.
+ *
+ * @returns The checkout form, loading indicator, or order confirmation view
+ */
 export default function CheckoutScreen() {
   const router = useRouter();
   const {
@@ -37,8 +46,7 @@ export default function CheckoutScreen() {
   } = useCheckout();
 
   const cartItems = useCartStore((s) => s.items);
-  const items = useCartStore((s) => s.items);
-  const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const clearCart = useCartStore((s) => s.clearCart);
 
   // Form state

@@ -11,11 +11,11 @@
  * @module mobile/app/(tabs)/admin
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useStripeTerminal } from '@stripe/stripe-terminal-react-native';
-import { LoginScreen } from '../../components/LoginScreen';
-import { getMobileSession } from '../../lib/auth';
+import { LoginScreen } from '@/components/LoginScreen';
+import { api } from '@/lib/api';
 
 /**
  * Admin POS screen component.
@@ -32,10 +32,13 @@ export default function AdminPOSScreen() {
     checkAuth();
   }, []);
 
-  const checkAuth = async () => {
+  const isAdminRole = (role: string | undefined): boolean =>
+    role === 'ADMIN' || role === 'WHOLESALE';
+
+  const checkAuth = useCallback(async () => {
     try {
-      const session = await getMobileSession();
-      if (session?.user && (session.user.role === 'ADMIN' || session.user.role === 'WHOLESALER')) {
+      const session = await api.auth.getSession();
+      if (session?.user && isAdminRole(session.user.role)) {
         setIsAuthenticated(true);
       }
     } catch {
@@ -43,7 +46,7 @@ export default function AdminPOSScreen() {
     } finally {
       setChecking(false);
     }
-  };
+  }, []);
 
   const handleDiscover = async () => {
     setDiscovering(true);
@@ -51,8 +54,17 @@ export default function AdminPOSScreen() {
     setDiscovering(false);
   };
 
+  const handleLoginSuccess = useCallback(async () => {
+    const session = await api.auth.getSession();
+    if (session?.user && isAdminRole(session.user.role)) {
+      setIsAuthenticated(true);
+    } else {
+      Alert.alert('Access Denied', 'This area is restricted to admin and wholesale users.');
+    }
+  }, []);
+
   if (checking) return <ActivityIndicator style={{ flex: 1 }} size="large" />;
-  if (!isAuthenticated) return <LoginScreen title="Admin Portal Sign In" onLoginSuccess={() => setIsAuthenticated(true)} />;
+  if (!isAuthenticated) return <LoginScreen title="Admin Portal Sign In" onLoginSuccess={handleLoginSuccess} />;
 
   return (
     <View style={styles.container}>

@@ -10,7 +10,7 @@
 import {
   csrfPost,
   post,
-  get,
+  authGet,
   clearSession,
   setSessionToken,
   getSessionToken,
@@ -83,7 +83,7 @@ export async function getSession(): Promise<Session | null> {
   if (!token) return null;
 
   try {
-    const session = await get<Session>('/api/auth/session');
+    const session = await authGet<Session>('/api/auth/session');
     // NextAuth returns an empty object when not authenticated
     if (!session?.user?.id) return null;
     return session;

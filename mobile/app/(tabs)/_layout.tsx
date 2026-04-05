@@ -1,10 +1,13 @@
 /**
  * Tab navigator layout for the main app sections.
  *
- * Defines three tabs:
+ * Defines six tabs:
  * 1. **Storefront** (`index`) -- Product catalog and shopping
- * 2. **Fundraising** -- Campaign management dashboard
- * 3. **Admin POS** -- Stripe Terminal point-of-sale interface
+ * 2. **Orders** -- Order history (auth required)
+ * 3. **Wishlist** -- Saved products (auth required)
+ * 4. **Account** -- Profile, loyalty, settings (auth required)
+ * 5. **Fundraising** -- Campaign management dashboard
+ * 6. **Admin POS** -- Stripe Terminal point-of-sale interface
  *
  * Active tab tint uses the brand red (`#FF0000`).
  *
@@ -16,7 +19,7 @@ import { Tabs } from 'expo-router';
 /**
  * Tab bar layout component.
  *
- * @returns The Expo Router Tabs navigator with three screens.
+ * @returns The Expo Router Tabs navigator.
  */
 export default function TabLayout() {
   return (
@@ -24,7 +27,25 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Storefront',
+          title: 'Shop',
+        }}
+      />
+      <Tabs.Screen
+        name="orders"
+        options={{
+          title: 'Orders',
+        }}
+      />
+      <Tabs.Screen
+        name="wishlist"
+        options={{
+          title: 'Wishlist',
+        }}
+      />
+      <Tabs.Screen
+        name="account"
+        options={{
+          title: 'Account',
         }}
       />
       <Tabs.Screen

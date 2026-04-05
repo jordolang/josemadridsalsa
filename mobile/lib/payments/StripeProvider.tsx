@@ -8,7 +8,7 @@
  * - Google Pay (Android, future)
  */
 
-import { ReactElement } from 'react';
+import { type ReactNode } from 'react';
 import { StripeProvider as StripeNativeProvider } from '@stripe/stripe-react-native';
 import {
   STRIPE_PUBLISHABLE_KEY,
@@ -16,7 +16,7 @@ import {
 } from './stripe-config';
 
 interface Props {
-  children: ReactElement | ReactElement[];
+  children: ReactNode;
 }
 
 export function StripeProvider({ children }: Props) {
@@ -26,7 +26,7 @@ export function StripeProvider({ children }: Props) {
       merchantIdentifier={APPLE_PAY_MERCHANT_ID}
       urlScheme="josemadridsalsa"
     >
-      {children}
+      {children as React.ReactElement}
     </StripeNativeProvider>
   );
 }

@@ -16,8 +16,8 @@
  */
 
 import { useState, useCallback } from 'react';
-import { api, ApiError } from '../lib/api';
-import type { CheckoutRequest } from '../lib/api/types';
+import { api, ApiError } from '@/lib/api';
+import type { CheckoutRequest } from '@/lib/api/types';
 
 interface SquareCheckoutState {
   loading: boolean;

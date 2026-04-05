@@ -18,14 +18,14 @@ import {
   useStripe,
   isPlatformPaySupported,
 } from '@stripe/stripe-react-native';
-import { api, ApiError } from '../lib/api';
-import type { CheckoutRequest, CheckoutResponse } from '../lib/api/types';
+import { api, ApiError } from '@/lib/api';
+import type { CheckoutRequest, CheckoutResponse } from '@/lib/api/types';
 import {
   MERCHANT_COUNTRY_CODE,
   CURRENCY_CODE,
   MERCHANT_DISPLAY_NAME,
   IS_APPLE_PAY_PLATFORM,
-} from '../lib/payments';
+} from '@/lib/payments';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

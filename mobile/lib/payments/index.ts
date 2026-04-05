@@ -1,3 +1,12 @@
+/**
+ * Payment infrastructure barrel export.
+ *
+ * Re-exports the {@link StripeProvider} wrapper component and
+ * Stripe configuration constants used across the mobile app.
+ *
+ * @module mobile/lib/payments
+ */
+
 export { StripeProvider } from './StripeProvider';
 export {
   STRIPE_PUBLISHABLE_KEY,

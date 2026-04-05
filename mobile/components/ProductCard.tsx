@@ -8,7 +8,7 @@
  */
 
 import { View, Text, StyleSheet, Image, TouchableOpacity, Button } from 'react-native';
-import { useCartStore } from '../store/cartStore';
+import { useCartStore } from '@/store/cartStore';
 
 /**
  * Props for the {@link ProductCard} component.

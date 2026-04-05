@@ -10,11 +10,11 @@
 
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, FlatList, ActivityIndicator } from 'react-native';
-import { fetchSalsas, API_BASE_URL } from '../../lib/api';
-import { ProductCard } from '../../components/ProductCard';
-import { useCartStore } from '../../store/cartStore';
+import { api, API_BASE_URL } from '@/lib/api';
+import { ProductCard } from '@/components/ProductCard';
+import { useCartStore } from '@/store/cartStore';
 import { Link } from 'expo-router';
-import type { Product } from '../../lib/api/types';
+import type { Product } from '@/lib/api/types';
 
 /**
  * Main storefront screen component.
@@ -31,16 +31,21 @@ export default function StorefrontScreen() {
 
   const loadSalsas = async () => {
     setLoading(true);
-    const data = await fetchSalsas();
-    // Convert relative image URLs to absolute (immutable — new array of new objects)
-    const formattedData = data.map((item: Product) => {
-      if (item.images?.[0]?.startsWith('/')) {
-        return { ...item, images: [`${API_BASE_URL}${item.images[0]}`, ...item.images.slice(1)] };
-      }
-      return item;
-    });
-    setSalsas(formattedData);
-    setLoading(false);
+    try {
+      const data = await api.products.getSalsas();
+      // Convert relative image URLs to absolute (immutable — new array of new objects)
+      const formattedData = data.map((item: Product) => {
+        if (item.images?.[0]?.startsWith('/')) {
+          return { ...item, images: [`${API_BASE_URL}${item.images[0]}`, ...item.images.slice(1)] };
+        }
+        return item;
+      });
+      setSalsas(formattedData);
+    } catch {
+      setSalsas([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const cartCount = useCartStore((state) => state.totalQuantity());

@@ -1,8 +1,44 @@
+/**
+ * Reusable login screen component used by protected areas of the app
+ * (e.g. admin, account) to gate access behind authentication.
+ *
+ * Renders email/password inputs and delegates credential exchange to
+ * {@link mobileLogin}. On success, the parent's `onLoginSuccess`
+ * callback is invoked so it can swap in the authenticated view.
+ *
+ * @module mobile/components/LoginScreen
+ */
+
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { mobileLogin } from '../lib/auth';
+import { api } from '@/lib/api';
 
-export function LoginScreen({ onLoginSuccess, title }: { onLoginSuccess: () => void, title: string }) {
+/** Props accepted by {@link LoginScreen}. */
+export interface LoginScreenProps {
+  /** Callback fired after the user authenticates successfully. */
+  onLoginSuccess: () => void;
+  /** Heading text displayed above the sign-in form. */
+  title: string;
+}
+
+/**
+ * Full-screen login form with email and password fields.
+ *
+ * Shows an {@link ActivityIndicator} while the request is in flight and
+ * displays a native {@link Alert} on failure.
+ *
+ * @param props - {@link LoginScreenProps}
+ * @returns A centered login form view
+ *
+ * @example
+ * ```tsx
+ * <LoginScreen
+ *   title="Admin Login"
+ *   onLoginSuccess={() => setIsLoggedIn(true)}
+ * />
+ * ```
+ */
+export function LoginScreen({ onLoginSuccess, title }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -10,10 +46,11 @@ export function LoginScreen({ onLoginSuccess, title }: { onLoginSuccess: () => v
   const handleLogin = async () => {
     try {
       setLoading(true);
-      await mobileLogin(email, password);
+      await api.auth.login({ email, password });
       onLoginSuccess();
-    } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'Invalid credentials');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Invalid credentials';
+      Alert.alert('Login Failed', message);
     } finally {
       setLoading(false);
     }

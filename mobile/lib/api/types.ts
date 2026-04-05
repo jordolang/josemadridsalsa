@@ -47,6 +47,7 @@ export type LoyaltyTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
 /** Discount code types supported at checkout. */
 export type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT' | 'FREE_SHIPPING';
 
+/** Visual theme options for gift certificate design. */
 export type GiftCertificateTheme =
   | 'BIRTHDAY'
   | 'BOY_CELEBRATION'
@@ -56,6 +57,7 @@ export type GiftCertificateTheme =
 
 // ─── API Error ───────────────────────────────────────────────────────────────
 
+/** Structured error response from the backend API. */
 export interface ApiErrorResponse {
   error: string;
   details?: {
@@ -67,6 +69,7 @@ export interface ApiErrorResponse {
 
 // ─── Auth / Session ──────────────────────────────────────────────────────────
 
+/** Authenticated user profile from the NextAuth session. */
 export interface SessionUser {
   id: string;
   email: string;
@@ -76,17 +79,20 @@ export interface SessionUser {
   image?: string;
 }
 
+/** NextAuth session containing user profile and expiry. */
 export interface Session {
   user: SessionUser;
   expires: string;
 }
 
+/** Request body for new customer registration. */
 export interface RegisterRequest {
   email: string;
   password: string;
   name: string;
 }
 
+/** Credentials for email/password authentication. */
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -103,6 +109,7 @@ export interface ResetPasswordRequest {
 
 // ─── Products ────────────────────────────────────────────────────────────────
 
+/** FDA-style nutrition facts for a product. Values use grams (G), milligrams (Mg), and daily value percentages (DV). */
 export interface NutritionalInfo {
   id: string;
   servingSize: string;
@@ -141,11 +148,13 @@ export interface ProductIngredient {
   };
 }
 
+/** Full product model from the catalog. Prices are in cents. */
 export interface Product {
   id: string;
   name: string;
   slug: string;
   description: string | null;
+  /** Unit price in cents (e.g., 599 = $5.99) */
   price: number;
   compareAtPrice?: number;
   featuredImage: string | null;
@@ -161,6 +170,7 @@ export interface Product {
   productIngredients: ProductIngredient[];
 }
 
+/** Query parameters for filtering the product catalog. */
 export interface ProductQueryParams {
   heatLevel?: HeatLevel | 'all';
   search?: string;
@@ -193,10 +203,12 @@ export interface CartItemResponse {
   product: CartProduct;
 }
 
+/** Server-side cart state for an authenticated user. */
 export interface CartResponse {
   items: CartItemResponse[];
   itemCount: number;
   totalQuantity: number;
+  /** Subtotal in cents before shipping, tax, and discounts */
   subtotal: number;
 }
 
@@ -246,6 +258,7 @@ export interface CheckoutShipping {
   postalCode: string;
 }
 
+/** Full checkout request with items, customer, shipping, and optional extras. */
 export interface CheckoutRequest {
   items: CheckoutItem[];
   customer: CheckoutCustomer;
@@ -256,9 +269,13 @@ export interface CheckoutRequest {
   referralCode?: string;
 }
 
+/** Response from creating a Stripe checkout. */
 export interface CheckoutResponse {
+  /** Stripe PaymentIntent client secret for confirming payment on the client */
   clientSecret: string;
+  /** Internal order ID created for this checkout */
   orderId: string;
+  /** Total amount in cents */
   amount: number;
 }
 
@@ -339,8 +356,10 @@ export interface OrderItem {
   product: OrderItemProduct | null;
 }
 
+/** Full order model with line items and financial totals. All monetary values in cents. */
 export interface Order {
   id: string;
+  /** Human-readable order number (e.g., "JMS-10042") */
   orderNumber: string;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
@@ -399,6 +418,7 @@ export interface WishlistResponse {
 
 // ─── Loyalty ─────────────────────────────────────────────────────────────────
 
+/** User's loyalty program account with points, tier, and history. */
 export interface LoyaltyAccount {
   id: string;
   userId: string;
@@ -442,6 +462,7 @@ export interface RewardRedemption {
 
 // ─── Locations ───────────────────────────────────────────────────────────────
 
+/** Physical retail location that carries Jose Madrid Salsa products. */
 export interface RetailLocation {
   id: string;
   businessName: string;
@@ -460,6 +481,7 @@ export interface RetailLocation {
 
 // ─── Recipes ─────────────────────────────────────────────────────────────────
 
+/** Recipe from the recipe catalog featuring Jose Madrid Salsa products. */
 export interface Recipe {
   id: string;
   title: string;
@@ -498,6 +520,7 @@ export interface GiftCertificatePurchaseRequest {
 
 // ─── Fundraisers ─────────────────────────────────────────────────────────────
 
+/** Fundraising campaign with organization details, goals, and revenue tracking. */
 export interface Fundraiser {
   id: string;
   name: string;
@@ -519,6 +542,7 @@ export interface Fundraiser {
 
 // ─── Payment Methods ─────────────────────────────────────────────────────────
 
+/** A saved credit/debit card from the user's Stripe customer record. */
 export interface SavedPaymentMethod {
   id: string;
   brand: string;
