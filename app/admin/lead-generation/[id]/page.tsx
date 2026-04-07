@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import { CampaignManager } from './campaign-manager';
 import { LeadsTable } from './leads-table';
+import { ScraperMonitor } from './scraper-monitor';
 
 export default async function CampaignDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -30,6 +31,8 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
       </div>
 
       <CampaignManager campaign={campaign} />
+
+      <ScraperMonitor campaignId={campaign.id} />
 
       <div className="mt-8">
         <h2 className="text-2xl font-semibold mb-4">Leads Found ({campaign.leads.length})</h2>

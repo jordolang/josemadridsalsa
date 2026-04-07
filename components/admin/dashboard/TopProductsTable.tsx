@@ -1,28 +1,35 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Package } from 'lucide-react'
 
 interface TopProduct {
   name: string
   sold: number
   revenue: number
-  trend: number
-  image?: string
 }
 
 interface TopProductsTableProps {
   products?: TopProduct[]
 }
 
-const defaultProducts: TopProduct[] = [
-  { name: 'Ghost Pepper Salsa', sold: 234, revenue: 2808, trend: 12.5 },
-  { name: 'Mango Habanero', sold: 198, revenue: 2376, trend: 8.2 },
-  { name: 'Original Recipe', sold: 176, revenue: 1760, trend: -2.1 },
-  { name: 'Smoky Chipotle', sold: 145, revenue: 1595, trend: 15.7 },
-  { name: 'Carolina Reaper', sold: 89, revenue: 1246, trend: 22.3 },
-]
+export function TopProductsTable({ products }: TopProductsTableProps) {
+  if (!products || products.length === 0) {
+    return (
+      <Card className="h-full">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">Top Products</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <Package className="h-8 w-8 mb-2 opacity-30" />
+            <p className="text-sm">No sales data yet</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
-export function TopProductsTable({ products = defaultProducts }: TopProductsTableProps) {
   const maxSold = Math.max(...products.map((p) => p.sold))
 
   return (
@@ -55,22 +62,12 @@ export function TopProductsTable({ products = defaultProducts }: TopProductsTabl
                   <p className="text-sm font-semibold text-foreground">
                     ${product.revenue.toLocaleString()}
                   </p>
-                  <p
-                    className={`text-xs font-medium ${
-                      product.trend >= 0
-                        ? 'text-emerald-600'
-                        : 'text-red-600'
-                    }`}
-                  >
-                    {product.trend >= 0 ? '+' : ''}
-                    {product.trend}%
-                  </p>
                 </div>
               </div>
               <div className="h-1.5 w-full rounded-full bg-muted">
                 <div
                   className="h-1.5 rounded-full bg-blue-500 transition-all"
-                  style={{ width: `${(product.sold / maxSold) * 100}%` }}
+                  style={{ width: `${maxSold > 0 ? (product.sold / maxSold) * 100 : 0}%` }}
                 />
               </div>
             </div>

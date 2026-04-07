@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { SPORT_PITCHES, SUBJECT_LINE_TEMPLATES, DEFAULT_PITCH } from '@/lib/scraper/school-config';
+import { emitScraperEvent } from '@/lib/scraper/scraper-events';
 
 export async function runCampaignSender(campaignId: string) {
   const campaign = await prisma.leadCampaign.findUnique({ 
@@ -19,11 +20,16 @@ export async function runCampaignSender(campaignId: string) {
     where: { campaignId, status: 'CONTACT_FOUND', email: { not: null } }
   });
 
+  emitScraperEvent(campaignId, 'info', 'email', `Email sender started: ${leads.length} leads to contact`);
+
   let totalSent = campaign.totalSent || 0;
   let totalFailed = campaign.totalFailed || 0;
 
-  for (const lead of leads) {
+  for (let idx = 0; idx < leads.length; idx++) {
+    const lead = leads[idx];
     if (!lead.email) continue;
+
+    emitScraperEvent(campaignId, 'info', 'email', `[${idx + 1}/${leads.length}] Sending to ${lead.email}`, lead.schoolName || '');
 
     try {
       // 1. Process variables in template
@@ -75,9 +81,11 @@ export async function runCampaignSender(campaignId: string) {
         data: { status: 'EMAIL_SENT', sentAt: new Date(), errorMessage: null }
       });
       totalSent++;
+      emitScraperEvent(campaignId, 'success', 'email', `Sent to ${lead.email}`, `${lead.schoolName} - ${lead.title}`);
 
-    } catch (e: any) {
-      console.error(`Failed to send email to ${lead.email}:`, e);
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      emitScraperEvent(campaignId, 'error', 'email', `Failed: ${lead.email} - ${errMsg}`);
       totalFailed++;
       await prisma.lead.update({
         where: { id: lead.id },
@@ -93,4 +101,6 @@ export async function runCampaignSender(campaignId: string) {
     where: { id: campaignId },
     data: { status: 'COMPLETED', totalSent, totalFailed }
   });
+
+  emitScraperEvent(campaignId, 'success', 'email', `Email sending complete: ${totalSent} sent, ${totalFailed} failed`);
 }

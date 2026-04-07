@@ -8,6 +8,7 @@ import {
   Package,
   CreditCard,
   MessageSquare,
+  Activity,
 } from 'lucide-react'
 
 interface ActivityItem {
@@ -31,63 +32,34 @@ const iconMap = {
   message: { icon: MessageSquare, bg: 'bg-pink-100', text: 'text-pink-600' },
 }
 
-const defaultActivities: ActivityItem[] = [
-  {
-    id: '1',
-    type: 'order',
-    message: 'New order received',
-    detail: 'Order #1042 - $45.99',
-    timestamp: '2 min ago',
-  },
-  {
-    id: '2',
-    type: 'user',
-    message: 'New customer registered',
-    detail: 'john.doe@example.com',
-    timestamp: '15 min ago',
-  },
-  {
-    id: '3',
-    type: 'review',
-    message: 'New 5-star review',
-    detail: 'Ghost Pepper Salsa',
-    timestamp: '1 hour ago',
-  },
-  {
-    id: '4',
-    type: 'payment',
-    message: 'Payment processed',
-    detail: 'Order #1041 - $89.50',
-    timestamp: '2 hours ago',
-  },
-  {
-    id: '5',
-    type: 'product',
-    message: 'Product inventory low',
-    detail: 'Mango Habanero - 3 left',
-    timestamp: '3 hours ago',
-  },
-  {
-    id: '6',
-    type: 'message',
-    message: 'New wholesale inquiry',
-    detail: 'From: Restaurant Supply Co.',
-    timestamp: '5 hours ago',
-  },
-]
+export function RecentActivityFeed({ activities }: RecentActivityFeedProps) {
+  if (!activities || activities.length === 0) {
+    return (
+      <Card className="h-full">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <Activity className="h-8 w-8 mb-2 opacity-30" />
+            <p className="text-sm">No recent activity</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
-export function RecentActivityFeed({ activities = defaultActivities }: RecentActivityFeedProps) {
   return (
     <Card className="h-full">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
-          <span className="text-xs text-muted-foreground">Last 24 hours</span>
+          <span className="text-xs text-muted-foreground">Latest events</span>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {activities.map((activity, index) => {
+          {activities.map((activity) => {
             const config = iconMap[activity.type]
             const Icon = config.icon
             return (

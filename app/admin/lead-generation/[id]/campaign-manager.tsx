@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,15 +19,20 @@ export function CampaignManager({ campaign }: { campaign: CampaignWithTemplate }
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // Auto-refresh while an active scraping/parsing/sending stage is running
+  const isActive = ['SCRAPING', 'PARSING_CONTACTS', 'SENDING_EMAILS'].includes(campaign.status);
+  useEffect(() => {
+    if (!isActive) return;
+    const interval = setInterval(() => router.refresh(), 5000);
+    return () => clearInterval(interval);
+  }, [isActive, router]);
+
   const handleAction = async (actionFn: (id: string) => Promise<any>, confirmMsg?: string) => {
     if (confirmMsg && !confirm(confirmMsg)) return;
     setLoading(true);
     try {
       await actionFn(campaign.id);
       router.refresh();
-      if (!confirmMsg) {
-        alert("Action started in background. Refresh the page in a few moments to see updates.");
-      }
     } catch (e) {
       console.error(e);
       alert("Action failed.");

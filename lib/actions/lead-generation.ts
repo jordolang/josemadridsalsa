@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { runGoogleSearchScraper } from '@/lib/scraper/google-search';
 import { runWebsiteParser } from '@/lib/scraper/website-parser';
 import { runCampaignSender } from '@/lib/email/campaign-sender';
+import { emitScraperEvent, clearScraperLogs } from '@/lib/scraper/scraper-events';
 
 export async function createLeadCampaign(data: { name: string, city: string, state: string, district?: string, schoolType?: string, limit?: number }) {
   const campaign = await prisma.leadCampaign.create({
@@ -23,40 +24,63 @@ export async function createLeadCampaign(data: { name: string, city: string, sta
 }
 
 export async function triggerGoogleSearchScraper(campaignId: string) {
-  runGoogleSearchScraper(campaignId).catch(console.error);
+  clearScraperLogs(campaignId);
+  emitScraperEvent(campaignId, 'info', 'system', 'Triggering search scraper...');
+  runGoogleSearchScraper(campaignId).catch((err) => {
+    emitScraperEvent(campaignId, 'error', 'system', `Scraper crashed: ${err instanceof Error ? err.message : String(err)}`);
+  });
   return { success: true };
 }
 
 export async function triggerWebsiteParser(campaignId: string) {
-  runWebsiteParser(campaignId).catch(console.error);
+  emitScraperEvent(campaignId, 'info', 'system', 'Triggering website parser...');
+  runWebsiteParser(campaignId).catch((err) => {
+    emitScraperEvent(campaignId, 'error', 'system', `Parser crashed: ${err instanceof Error ? err.message : String(err)}`);
+  });
   return { success: true };
 }
 
 export async function triggerEmailSender(campaignId: string) {
-  runCampaignSender(campaignId).catch(console.error);
+  emitScraperEvent(campaignId, 'info', 'system', 'Triggering email sender...');
+  runCampaignSender(campaignId).catch((err) => {
+    emitScraperEvent(campaignId, 'error', 'system', `Email sender crashed: ${err instanceof Error ? err.message : String(err)}`);
+  });
   return { success: true };
 }
 
 export async function triggerFullAutomation(campaignId: string) {
+  clearScraperLogs(campaignId);
+  emitScraperEvent(campaignId, 'info', 'system', 'Starting full automation pipeline...');
   (async () => {
     try {
       await runGoogleSearchScraper(campaignId);
-      
-      const campaignAfterScrape = await prisma.leadCampaign.findUnique({ where: { id: campaignId } });
-      if (campaignAfterScrape?.status !== 'SCRAPE_COMPLETED') return;
 
+      const campaignAfterScrape = await prisma.leadCampaign.findUnique({ where: { id: campaignId } });
+      if (campaignAfterScrape?.status !== 'SCRAPE_COMPLETED') {
+        emitScraperEvent(campaignId, 'error', 'system', `Search stage ended with status: ${campaignAfterScrape?.status}`);
+        return;
+      }
+
+      emitScraperEvent(campaignId, 'info', 'system', 'Search complete, starting website parser...');
       await runWebsiteParser(campaignId);
 
       const campaignAfterParse = await prisma.leadCampaign.findUnique({ where: { id: campaignId } });
-      if (campaignAfterParse?.status !== 'PARSING_COMPLETED') return;
-
-      if (!campaignAfterParse.templateId) {
-        throw new Error("Cannot send emails: No template assigned.");
+      if (campaignAfterParse?.status !== 'PARSING_COMPLETED') {
+        emitScraperEvent(campaignId, 'error', 'system', `Parse stage ended with status: ${campaignAfterParse?.status}`);
+        return;
       }
 
+      if (!campaignAfterParse.templateId) {
+        emitScraperEvent(campaignId, 'warn', 'system', 'No email template assigned - skipping email send stage');
+        return;
+      }
+
+      emitScraperEvent(campaignId, 'info', 'system', 'Parsing complete, starting email sender...');
       await runCampaignSender(campaignId);
-    } catch (e) {
-      console.error("Automation error:", e);
+      emitScraperEvent(campaignId, 'success', 'system', 'Full automation pipeline complete!');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      emitScraperEvent(campaignId, 'error', 'system', `Automation failed: ${msg}`);
       await prisma.leadCampaign.update({
         where: { id: campaignId },
         data: { status: 'FAILED' }
