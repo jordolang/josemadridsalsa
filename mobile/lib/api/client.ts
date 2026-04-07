@@ -16,7 +16,11 @@ import type { ApiErrorResponse } from './types';
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
-export const API_BASE_URL = 'https://josemadrid.net';
+export const API_BASE_URL = __DEV__
+  ? Platform.OS === 'android'
+    ? 'http://10.0.2.2:3000'
+    : 'http://127.0.0.1:3000'
+  : 'https://josemadrid.net';
 
 const CSRF_STORE_KEY = 'nextauth_csrf_token';
 const SESSION_STORE_KEY = 'nextauth_session_token';

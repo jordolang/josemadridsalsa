@@ -47,6 +47,10 @@ export default async function AdminLayout({
       </>
     )
   } catch (error) {
+    // Re-throw Next.js internal errors (redirect, notFound, etc.)
+    if (error instanceof Error && error.message.startsWith('NEXT_')) {
+      throw error
+    }
     console.error('[Admin Layout] Error:', error)
     // Return error page instead of crashing
     return (

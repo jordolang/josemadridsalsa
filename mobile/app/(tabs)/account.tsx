@@ -20,7 +20,7 @@ import { useRouter } from 'expo-router';
 import { RequireAuth } from '@/components/RequireAuth';
 import { useAuth } from '@/hooks/useAuth';
 import { api, ApiError } from '@/lib/api';
-import type { Address, LoyaltyAccount, LoyaltyTier } from '@/lib/api/types';
+import type { LoyaltyAccount, LoyaltyTier } from '@/lib/api/types';
 
 const TIER_COLORS: Record<LoyaltyTier, string> = {
   BRONZE: '#cd7f32',
@@ -34,15 +34,12 @@ function AccountContent() {
   const { session, logout } = useAuth();
   const [loyalty, setLoyalty] = useState<LoyaltyAccount | null>(null);
   const [loyaltyLoading, setLoyaltyLoading] = useState(true);
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [addressesLoading, setAddressesLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
-      const [loyaltyResult, addressResult] = await Promise.allSettled([
+      const [loyaltyResult] = await Promise.allSettled([
         api.loyalty.getLoyaltyAccount(),
-        api.account.getAddresses(),
       ]);
 
       if (loyaltyResult.status === 'fulfilled') {
@@ -50,13 +47,8 @@ function AccountContent() {
       } else {
         setLoyalty(null);
       }
-
-      if (addressResult.status === 'fulfilled') {
-        setAddresses(addressResult.value);
-      }
     } finally {
       setLoyaltyLoading(false);
-      setAddressesLoading(false);
       setRefreshing(false);
     }
   }, []);
@@ -160,41 +152,6 @@ function AccountContent() {
         <View style={styles.emptyCard}>
           <Text style={styles.emptyCardText}>
             Start earning loyalty points with your first purchase!
-          </Text>
-        </View>
-      )}
-
-      {/* Addresses Section */}
-      <Text style={styles.sectionTitle}>Saved Addresses</Text>
-      {addressesLoading ? (
-        <ActivityIndicator size="small" color="#d32f2f" style={{ marginVertical: 16 }} />
-      ) : addresses.length > 0 ? (
-        <View style={styles.addressList}>
-          {addresses.map((addr) => (
-            <View key={addr.id} style={styles.addressCard}>
-              <View style={styles.addressHeader}>
-                <Text style={styles.addressName}>
-                  {addr.firstName} {addr.lastName}
-                </Text>
-                {addr.isDefault && (
-                  <View style={styles.defaultBadge}>
-                    <Text style={styles.defaultBadgeText}>Default</Text>
-                  </View>
-                )}
-              </View>
-              {addr.company ? <Text style={styles.addressLine}>{addr.company}</Text> : null}
-              <Text style={styles.addressLine}>{addr.street}</Text>
-              <Text style={styles.addressLine}>
-                {addr.city}, {addr.state} {addr.zipCode}
-              </Text>
-              <Text style={styles.addressType}>{addr.type}</Text>
-            </View>
-          ))}
-        </View>
-      ) : (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyCardText}>
-            No saved addresses yet.
           </Text>
         </View>
       )}

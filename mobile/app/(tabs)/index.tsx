@@ -24,6 +24,7 @@ import type { Product } from '@/lib/api/types';
 export default function StorefrontScreen() {
   const [salsas, setSalsas] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     loadSalsas();
@@ -31,6 +32,7 @@ export default function StorefrontScreen() {
 
   const loadSalsas = async () => {
     setLoading(true);
+    setErrorMsg("");
     try {
       const data = await api.products.getSalsas();
       // Convert relative image URLs to absolute (immutable — new array of new objects)
@@ -41,8 +43,9 @@ export default function StorefrontScreen() {
         return item;
       });
       setSalsas(formattedData);
-    } catch {
+    } catch (err: any) {
       setSalsas([]);
+      setErrorMsg(err?.message || "Unknown error occurred.");
     } finally {
       setLoading(false);
     }
@@ -59,7 +62,7 @@ export default function StorefrontScreen() {
         </Link>
       </View>
       {loading ? (
-        <ActivityIndicator size="large" color="#FF0000" />
+        <ActivityIndicator size="large" color="#d32f2f" />
       ) : (
         <FlatList
           data={salsas}
@@ -67,7 +70,16 @@ export default function StorefrontScreen() {
           numColumns={2}
           contentContainerStyle={{ paddingBottom: 20 }}
           renderItem={({ item }) => <ProductCard item={item} onPress={() => {}} />}
-          ListEmptyComponent={<Text>No salsas found.</Text>}
+          ListEmptyComponent={
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ textAlign: 'center', color: '#666' }}>
+                {errorMsg ? `Network Error: ${errorMsg}` : 'No salsas found.'}
+              </Text>
+              <Text style={{ textAlign: 'center', color: '#999', marginTop: 10, fontSize: 12 }}>
+                Is your Next.js server running exactly on port 3000?
+              </Text>
+            </View>
+          }
         />
       )}
     </View>

@@ -1,676 +1,631 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { FundraiserTeam, BattleState, CharacterState } from "@/types/fundraiser";
 
-// ─── PALETTE ────────────────────────────────────────────────────────────────
-const P = {
-  bg0:"#0a0603", bg1:"#140c05", bg2:"#1e1008", bg3:"#2a1509",
-  gold:"#C8860A", gold2:"#E8A020", gold3:"#F5C842", goldDim:"#6B4A18", goldDark:"#3D2508",
-  brown:"#2A1206", brownMid:"#3D1A08",
-  orange:"#C45A10", orangeLight:"#E07030",
-  maroon:"#5A0A0A", maroonMid:"#7A1212", maroonLight:"#B02020",
-  cream:"#D4A870", creamDim:"#8A6030",
+// ============================================================================
+//  ██████╗ ██████╗ ███╗   ██╗███████╗██╗ ██████╗
+//  ██╔════╝██╔═══██╗████╗  ██║██╔════╝██║██╔════╝
+//  ██║     ██║   ██║██╔██╗ ██║█████╗  ██║██║  ███╗
+//  ██║     ██║   ██║██║╚██╗██║██╔══╝  ██║██║   ██║
+//  ╚██████╗╚██████╔╝██║ ╚████║██║     ██║╚██████╔╝
+//   ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝     ╚═╝ ╚═════╝
+//
+//  Edit only the CONFIG block below.
+//  Nothing below the CONFIG section needs to change unless you are
+//  adding a new mascot sprite or modifying core game mechanics.
+// ============================================================================
+
+const CONFIG = {
+
+  // ── MY TEAM (the fundraiser page this component is embedded on) ──────────
+  myTeam: {
+    id:       "purple",
+    name:     "West M Tornados",
+    school:   "West Muskingum HS",
+    color:    "#9955FF",
+    mascot:   "tornado",           // must match a key in MASCOT_SPRITES
+    goal:     1500,
+    shareUrl: "https://josemadrid.net/fundraise/west-m-tornados",
+    quips: [
+      "SPIN TO WIN!",
+      "You can't catch the wind!",
+      "Category 5, baby!",
+      "Here comes the STORM!",
+      "I'll blow you away!",
+      "Nothing survives the vortex!",
+    ],
+  },
+
+  // ── OPPONENT TEAM ─────────────────────────────────────────────────────────
+  oppTeam: {
+    id:       "gold",
+    name:     "Tri-Valley Scotties",
+    school:   "Tri-Valley HS",
+    color:    "#DDAA00",
+    mascot:   "scottie",
+    goal:     1200,
+    quips: [
+      "Woof. You done?",
+      "These paws hit HARD.",
+      "Terrier-ifying!",
+      "Sit. Stay. Lose.",
+    ],
+  },
+
+  // ── HP / GAME BALANCE ─────────────────────────────────────────────────────
+  // Damage = exact dollar amount of sale ($45 sale = 45 damage).
+  // Rounds reset HP when a mascot reaches 0.
+  startingHP: 1000,
+
+  // ── SHIELD MECHANICS ─────────────────────────────────────────────────────
+  // Activated by a confirmed Facebook share.
+  // Lasts shieldDurationMinutes and absorbs up to shieldHP total damage.
+  // If opponent sale exceeds remaining shieldHP, overflow hits mascot HP.
+  // Example: shield has 30 HP, opponent $100 sale → 30 absorbed, 70 to mascot.
+  // Only one shield active at a time. Sharing while shielded = no effect.
+  shieldDurationMinutes: 30,
+  shieldHP:              30,
+
 };
 
-const CLASSES: Record<string, { name:string; weapon:string; dmgMod:number; hpMod:number; height:number }> = {
-  warrior:  { name:"Warrior",   weapon:"Broadsword",  dmgMod:1.0,  hpMod:1.35, height:1.0  },
-  mage:     { name:"Mage",      weapon:"Arcane Staff", dmgMod:1.45, hpMod:0.7,  height:0.88 },
-  rogue:    { name:"Rogue",     weapon:"Twin Blades",  dmgMod:1.1,  hpMod:0.9,  height:0.93 },
-  archer:   { name:"Archer",    weapon:"Longbow",      dmgMod:1.2,  hpMod:0.85, height:0.95 },
-  paladin:  { name:"Paladin",   weapon:"Holy Mace",    dmgMod:0.9,  hpMod:1.25, height:1.05 },
-  berserker:{ name:"Berserker", weapon:"War Axe",      dmgMod:1.5,  hpMod:1.1,  height:1.08 },
+// ============================================================================
+// MASCOT SPRITES
+// To add a new mascot:
+//   1. Create a function: function MyMascot(p: SpriteProps) { return <svg>...</svg>; }
+//   2. Add to MASCOT_SPRITES: { mymascot: (p) => <MyMascot {...p}/> }
+//   3. Set mascot: "mymascot" in CONFIG.myTeam or CONFIG.oppTeam
+// ============================================================================
+
+type SpriteProps = {
+  color: string; state: string; tick: number;
+  shielded: boolean; flipped: boolean; scale?: number;
 };
 
-const BASE_HP  = 190;
-const BASE_DMG = 30;
-const SHIELD_MS = 15 * 60 * 1000;
-const CRIT_CHANCE = 0.18;
+function TornadoSprite({ color, state, tick, shielded, flipped, scale = 1 }: SpriteProps) {
+  const atk = state === "attack", hit = state === "hit", dead = state === "dead";
+  const bob = Math.sin(tick * 0.7) * 3;
+  const spin = (tick * 18) % 360;
+  const cL = "#C8C0E8", cD = "#2A1A55";
+  const W = Math.round(128 * scale), H = Math.round(160 * scale);
 
-interface CharDef {
-  id: string;
-  name: string;
-  cls: string;
-  gender: "m" | "f";
-  skin: string;
-  hair: string;
-  quips: string[];
-}
+  if (dead) return (
+    <svg width={W} height={Math.round(40*scale)} style={{ imageRendering:"pixelated", transform:`scaleX(${flipped?-1:1})` }}>
+      <ellipse cx={W/2} cy={Math.round(20*scale)} rx={W*0.45} ry={Math.round(14*scale)} fill={color} opacity="0.35"/>
+    </svg>
+  );
 
-interface TeamConfig {
-  id: string;
-  name: string;
-  school: string;
-  color: string;
-  dark: string;
-  roster: CharDef[];
-  goal: number;
-}
-
-export interface BattleArenaProps {
-  /** The team that "owns" this profile page — treated as MY team */
-  myTeam: TeamConfig;
-  /** All other active fundraiser teams this month */
-  opponents: TeamConfig[];
-  /** Fundraiser profile URL to share on Facebook */
-  shareUrl: string;
-  /** Called when a real sale event occurs — triggers an attack */
-  onSaleReceived?: () => void;
-  /** Set to true when a Facebook share is confirmed externally */
-  shieldActive?: boolean;
-  /** ISO timestamp of shield expiry (from your backend) */
-  shieldExpiresAt?: string | null;
-}
-
-function getMaxHP(cls: string) {
-  return Math.round(BASE_HP * (CLASSES[cls]?.hpMod ?? 1));
-}
-
-// ─── CHAIN STRIP ────────────────────────────────────────────────────────────
-function ChainStrip({ width = 700 }: { width?: number }) {
-  const links = Math.floor(width / 20);
   return (
-    <svg width={width} height={16} style={{ display: "block", imageRendering: "pixelated" }}>
-      <rect width={width} height={16} fill={P.goldDark} />
-      {Array.from({ length: links }).map((_, i) => (
+    <svg width={W} height={H} viewBox="0 0 128 160"
+      style={{ imageRendering:"pixelated", transform:`scaleX(${flipped?-1:1}) translateY(${bob}px)`,
+        filter: hit ? "brightness(3) saturate(0)" : "none",
+        transition:"filter 0.08s, transform 0.09s", display:"block" }}>
+      {shielded && <ellipse cx="64" cy="80" rx="60" ry="75" fill={color} opacity="0.08" stroke={color} strokeWidth="2" strokeDasharray="6 4"/>}
+      {([
+        [4,8,120,12],[12,22,104,10],[20,34,88,10],[28,46,72,10],[36,58,56,9],
+        [42,69,44,9],[48,80,32,8],[52,90,24,8],[54,100,20,8],[57,110,14,8],
+        [60,120,8,8],[62,130,6,8],[62,140,4,6],[63,148,2,6],
+      ] as number[][]).map(([x,y,w,h],i)=>(
         <g key={i}>
-          <ellipse cx={i * 20 + 10} cy={8} rx={7} ry={4} fill="none" stroke={P.gold} strokeWidth="2" />
-          <ellipse cx={i * 20 + 10} cy={8} rx={7} ry={4} fill="none" stroke={P.gold3} strokeWidth="0.7" opacity="0.5" />
+          <rect x={x} y={y} width={w} height={h} rx="3" fill={color} opacity={0.9-i*0.04}/>
+          {i<8 && <rect x={x+8} y={y+2} width={w-16} height={h-4} rx="2" fill={cL} opacity="0.38"/>}
         </g>
       ))}
-      <line x1={0} y1={0}  x2={width} y2={0}  stroke={P.gold3}   strokeWidth="0.5" opacity="0.4" />
-      <line x1={0} y1={15} x2={width} y2={15} stroke={P.goldDim} strokeWidth="0.5" />
+      <ellipse cx="64" cy="46" rx="14" ry="10" fill={cD} opacity="0.7"/>
+      <ellipse cx="64" cy="46" rx="7"  ry="5"  fill={cD} opacity="0.9"/>
+      {[...Array(6)].map((_,i)=>{
+        const a=(spin+i*60)*Math.PI/180, r=atk?48+i*4:34+i*3;
+        return <rect key={i} x={64+Math.cos(a)*r*0.65-2} y={44+Math.sin(a)*r*0.32-2} width={3+(i%3)} height={3+(i%3)} rx="0.5" fill={cL} opacity={0.5-i*0.06}/>;
+      })}
+      {[...Array(5)].map((_,i)=>(
+        <ellipse key={i} cx={64+(i-2)*14} cy={156} rx={9-i} ry={3} fill={color} opacity={0.14-i*0.02}/>
+      ))}
+      {atk && <>
+        <line x1="18" y1="28" x2="4"   y2="50" stroke="#FFFF88" strokeWidth="2" opacity="0.85"/>
+        <line x1="110" y1="28" x2="124" y2="50" stroke="#FFFF88" strokeWidth="2" opacity="0.85"/>
+        <line x1="64"  y1="6"  x2="64"  y2="-4" stroke="#FFFF88" strokeWidth="3" opacity="0.9"/>
+        <circle cx="4"   cy="50" r="4" fill="#FFFF88" opacity="0.65"/>
+        <circle cx="124" cy="50" r="4" fill="#FFFF88" opacity="0.65"/>
+      </>}
     </svg>
   );
 }
 
-function Corner({ size = 14, flip = false }: { size?: number; flip?: boolean }) {
-  const s = size;
+function ScottieSprite({ color, state, tick, shielded, flipped, scale = 1 }: SpriteProps) {
+  const atk = state === "attack", hit = state === "hit", dead = state === "dead";
+  const bob = Math.sin(tick * 0.6) * 2;
+  const bc = "#1A1208", col = "#CC1111";
+  const W = Math.round(128 * scale), H = Math.round(120 * scale);
+
+  if (dead) return (
+    <svg width={W} height={Math.round(32*scale)} style={{ imageRendering:"pixelated", transform:`scaleX(${flipped?-1:1})` }}>
+      <ellipse cx={W/2} cy={Math.round(16*scale)} rx={W*0.42} ry={Math.round(12*scale)} fill={bc} opacity="0.45"/>
+    </svg>
+  );
+
   return (
-    <svg width={s} height={s} style={{ imageRendering: "pixelated", transform: flip ? "scaleX(-1)" : "none" }}>
-      <rect x={0} y={0} width={s} height={s} fill={P.bg1} />
-      <line x1={s} y1={0} x2={0} y2={0} stroke={P.gold} strokeWidth="1.5" />
-      <line x1={0} y1={0} x2={0} y2={s} stroke={P.gold} strokeWidth="1.5" />
-      <rect x={2} y={2} width={s * 0.5} height={2} fill={P.gold3} opacity="0.5" />
-      <rect x={2} y={2} width={2} height={s * 0.5} fill={P.gold3} opacity="0.5" />
-      <rect x={3} y={3} width={3} height={3} fill={P.gold3} opacity="0.7" />
+    <svg width={W} height={H} viewBox="0 0 128 120"
+      style={{ imageRendering:"pixelated", transform:`scaleX(${flipped?-1:1}) translateY(${bob}px)`,
+        filter: hit ? "brightness(3) saturate(0)" : "none",
+        transition:"filter 0.08s, transform 0.09s", display:"block" }}>
+      {shielded && <ellipse cx="64" cy="60" rx="58" ry="55" fill={color} opacity="0.08" stroke={color} strokeWidth="2" strokeDasharray="6 4"/>}
+      <rect x="30" y="4"  width="12" height="8"  rx="1" fill={bc}/>
+      <rect x="32" y="0"  width="8"  height="6"  rx="1" fill={bc}/>
+      <rect x="33" y="-4" width="6"  height="6"  rx="1" fill={bc}/>
+      <rect x="56" y="4"  width="12" height="8"  rx="1" fill={bc}/>
+      <rect x="58" y="0"  width="8"  height="6"  rx="1" fill={bc}/>
+      <rect x="59" y="-4" width="6"  height="6"  rx="1" fill={bc}/>
+      <rect x="22" y="10" width="64" height="32" rx="8" fill={bc}/>
+      <rect x="16" y="28" width="32" height="18" rx="4" fill={bc}/>
+      <rect x="14" y="34" width="10" height="8"  rx="2" fill="#333"/>
+      <rect x="15" y="36" width="3"  height="3"  rx="0.5" fill="#555"/>
+      <rect x="38" y="16" width="10" height="10" rx="2" fill="#fff"/>
+      <rect x="40" y="18" width="6"  height="6"  rx="1" fill="#111"/>
+      <rect x="41" y="19" width="2"  height="2"  fill="#fff" opacity="0.8"/>
+      <line x1="18" y1="30" x2="5"  y2="28" stroke="#555" strokeWidth="1.5" opacity="0.6"/>
+      <line x1="18" y1="33" x2="4"  y2="33" stroke="#555" strokeWidth="1.5" opacity="0.6"/>
+      <line x1="18" y1="36" x2="5"  y2="38" stroke="#555" strokeWidth="1.5" opacity="0.6"/>
+      {[36,44,52,60,68].map((x,i)=>(
+        <rect key={i} x={x} y={40} width="8" height="8" rx="1" fill={col} transform={`rotate(${(i-2)*5},${x+4},44)`}/>
+      ))}
+      <circle cx="54" cy="50" r="4" fill="#F5C842"/>
+      <circle cx="54" cy="50" r="2" fill="#6B4010"/>
+      <rect x="30" y="50" width="80" height="38" rx="8" fill={bc}/>
+      <rect x="36" y="52" width="60" height="8"  rx="4" fill="#2A2218" opacity="0.55"/>
+      <rect x="106" y="28" width="12" height="36" rx="6" fill={bc}/>
+      <rect x="106" y="24" width="10" height="10" rx="5" fill={bc}/>
+      <rect x="108" y="16" width="8"  height="12" rx="4" fill={bc}/>
+      {[32,52,74,94].map((x,i)=>(
+        <g key={i}>
+          <rect x={x} y={i<2?80:78} width={14} height={i<2?28:30} rx="4" fill={bc}/>
+          <rect x={x-2} y={100} width={18} height={8} rx="3" fill={bc}/>
+        </g>
+      ))}
+      {atk && <>
+        <line x1="14" y1="72" x2="-10" y2="58" stroke="#FFCC44" strokeWidth="3" opacity="0.9"/>
+        <line x1="12" y1="76" x2="-12" y2="70" stroke="#FFCC44" strokeWidth="2" opacity="0.7"/>
+        <line x1="12" y1="80" x2="-10" y2="84" stroke="#FFCC44" strokeWidth="2" opacity="0.7"/>
+        <circle cx="-10" cy="70" r="9" fill="#FFCC44" opacity="0.18"/>
+      </>}
     </svg>
   );
 }
 
-function OrnatePanel({ children, style = {}, color = P.gold }: { children: React.ReactNode; style?: React.CSSProperties; color?: string }) {
+const MASCOT_SPRITES: Record<string, (p: SpriteProps) => JSX.Element> = {
+  tornado: (p) => <TornadoSprite {...p}/>,
+  scottie: (p) => <ScottieSprite {...p}/>,
+  // Add new mascots here ↑
+};
+
+// ============================================================================
+// PALETTE & HELPERS — do not edit
+// ============================================================================
+
+const PAL = {
+  bg:"#0C0804", panel:"#1A1008", panelBord:"#3D2208",
+  gold:"#C8860A", gold2:"#F5C842", goldDim:"#6B4010",
+  maroon:"#5A0808", maroonBrd:"#8A1414",
+  cream:"#E8D5A8", creamDim:"#9A7E50",
+  orange:"#D4620E", red:"#CC2222",
+  purple:"#4A1A88", purpleBrd:"#7A3ACC",
+};
+
+const SHIELD_MS  = CONFIG.shieldDurationMinutes * 60 * 1000;
+const SHIELD_MAX = CONFIG.shieldHP;
+const MY  = CONFIG.myTeam;
+const OPP = CONFIG.oppTeam;
+const BT  = "'Courier New',monospace";
+
+function Arena({ width, height }: { width:number; height:number }) {
+  const fY = height * 0.7;
+  const stones: React.ReactNode[] = [];
+  for (let r=0;r<Math.ceil(fY/28)+1;r++) for (let c=0;c<Math.ceil(width/36)+1;c++) {
+    const x=c*36+(r%2===0?0:18)-18, y=r*28;
+    const fills=["#161008","#121006","#1A1208","#100E06","#181006"];
+    stones.push(<rect key={`${r}${c}`} x={x+1} y={y+1} width={34} height={26} rx="2" fill={fills[(r*7+c*11)%5]} stroke="#0A0804" strokeWidth="1"/>);
+  }
+  const T=({x,y}:{x:number;y:number})=>(
+    <g>
+      <rect x={x-3} y={y+8} width={6} height={10} rx="1" fill="#4A2408"/>
+      <polygon points={`${x-3},${y+8} ${x},${y-2} ${x+3},${y+8}`} fill="#E07030" opacity="0.9"/>
+      <polygon points={`${x-1.5},${y+6} ${x},${y+1} ${x+1.5},${y+6}`} fill="#F5C842" opacity="0.85"/>
+      <ellipse cx={x} cy={y+4} rx={16} ry={9} fill="#E07030" opacity="0.07"/>
+    </g>
+  );
   return (
-    <div style={{ position: "relative", border: `1.5px solid ${color}`, background: P.bg1, ...style }}>
-      <div style={{ position: "absolute", top: -1, left: -1, zIndex: 2 }}><Corner size={12} /></div>
-      <div style={{ position: "absolute", top: -1, right: -1, zIndex: 2 }}><Corner size={12} flip /></div>
-      {children}
-    </div>
+    <svg width={width} height={height} style={{display:"block",imageRendering:"pixelated"}}>
+      <rect width={width} height={height} fill="#0E0A06"/>
+      {stones}
+      {Array.from({length:Math.ceil(width/32)+1}).map((_,i)=>(
+        <rect key={i} x={i*32} y={fY} width={30} height={height-fY+4} rx="1" fill={i%2===0?"#1C1008":"#181006"} stroke="#0A0804" strokeWidth="0.8"/>
+      ))}
+      <rect x={0} y={fY-8} width={width} height={10} fill="#0A0804" opacity="0.7"/>
+      <T x={80} y={22}/><T x={width-80} y={22}/><T x={Math.round(width/2)} y={18}/>
+      <rect x={0} y={0} width={70} height={height} fill="#0E0A06" opacity="0.45"/>
+      <rect x={width-70} y={0} width={70} height={height} fill="#0E0A06" opacity="0.45"/>
+    </svg>
   );
 }
 
-// ─── HP BAR ─────────────────────────────────────────────────────────────────
-function GoldHPBar({ cur, max, color, name, cls, dead }: { cur:number; max:number; color:string; name:string; cls:string; dead:boolean }) {
-  const pct = Math.max(0, cur / max);
-  const W = 172, H = 12;
-  const fill = Math.max(0, Math.round(pct * (W - 4)));
-  const barColor = pct < 0.25 ? P.maroonLight : pct < 0.5 ? P.orange : P.gold2;
+function HPBar({ cur, max, color, shieldCur, shieldMax }:
+  { cur:number; max:number; color:string; shieldCur?:number; shieldMax?:number }) {
+  const pct = Math.max(0,Math.min(1,cur/max));
+  const bc  = pct<0.25?PAL.red:pct<0.5?PAL.orange:color;
+  const sP  = shieldMax&&shieldMax>0?Math.max(0,Math.min(1,(shieldCur??0)/shieldMax)):0;
   return (
-    <div style={{ marginBottom: 7 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-        <span style={{ fontFamily: "'Courier New',monospace", fontSize: 11, color: dead ? "#4A2A0A" : P.cream, letterSpacing: 1, fontWeight: 700, textDecoration: dead ? "line-through" : "none" }}>{name}</span>
-        <span style={{ fontFamily: "'Courier New',monospace", fontSize: 10, color: P.goldDim }}>{CLASSES[cls]?.name}</span>
+    <div>
+      <div style={{height:14,background:"#0A0804",border:`1px solid ${PAL.goldDim}`,borderRadius:3,overflow:"hidden",position:"relative"}}>
+        <div style={{position:"absolute",inset:0,width:`${pct*100}%`,background:bc,borderRadius:3,transition:"width 0.4s ease"}}/>
+        <div style={{position:"absolute",top:0,left:0,width:`${pct*100}%`,height:"45%",background:"rgba(255,255,255,0.14)",borderRadius:3}}/>
       </div>
-      <svg width={W} height={H} style={{ display: "block", imageRendering: "pixelated" }}>
-        <rect x={0} y={0} width={W} height={H} rx="1" fill={P.bg0} />
-        <rect x={1} y={1} width={W - 2} height={H - 2} rx="0.5" fill="#1A0C04" />
-        {fill > 0 && <rect x={2} y={2} width={fill} height={H - 4} rx="0.5" fill={barColor} />}
-        {fill > 0 && <rect x={2} y={2} width={fill} height={3} fill={P.gold3} opacity="0.3" />}
-        {Array.from({ length: 9 }).map((_, i) => (
-          <line key={i} x1={(i + 1) * (W / 10)} y1={2} x2={(i + 1) * (W / 10)} y2={H - 2} stroke={P.bg0} strokeWidth="1" opacity="0.5" />
-        ))}
-        <rect x={0} y={0} width={W} height={H} rx="1" fill="none" stroke={P.goldDim} strokeWidth="1" />
-        <rect x={0} y={0} width={W} height={H} rx="1" fill="none" stroke={P.gold3}   strokeWidth="0.5" opacity="0.3" />
-      </svg>
-      <div style={{ fontFamily: "'Courier New',monospace", fontSize: 9, color: P.creamDim, marginTop: 1 }}>{Math.round(cur)}/{max} HP</div>
+      {shieldMax&&shieldMax>0&&(
+        <div style={{height:6,background:"#0A0804",border:`1px solid #5A3A88`,borderRadius:2,overflow:"hidden",position:"relative",marginTop:3}}>
+          <div style={{position:"absolute",inset:0,width:`${sP*100}%`,background:"#9B7FFF",borderRadius:2,transition:"width 0.4s ease"}}/>
+          <div style={{position:"absolute",top:0,left:0,width:`${sP*100}%`,height:"45%",background:"rgba(255,255,255,0.2)",borderRadius:2}}/>
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── FLOAT TEXT ──────────────────────────────────────────────────────────────
-function FloatText({ text, color }: { text: string; color: string }) {
+function Float({text,color}:{text:string;color:string}) {
   return (
-    <div style={{ position: "absolute", top: -38, left: "50%", transform: "translateX(-50%)", pointerEvents: "none", animation: "floatUp 1.6s ease-out forwards", whiteSpace: "nowrap", fontFamily: "'Courier New',monospace", fontSize: 13, fontWeight: 700, color, textShadow: `2px 2px 0 ${P.bg0}, -1px -1px 0 ${P.bg0}`, zIndex: 30 }}>
+    <div style={{position:"absolute",top:-54,left:"50%",transform:"translateX(-50%)",pointerEvents:"none",
+      animation:"floatUp 1.6s ease-out forwards",whiteSpace:"nowrap",
+      fontFamily:BT,fontSize:15,fontWeight:700,color,
+      textShadow:"0 2px 6px #000,0 0 3px #000",zIndex:30}}>
       {text}
     </div>
   );
 }
 
-// ─── DUNGEON SCENE ──────────────────────────────────────────────────────────
-function DungeonScene({ width, height }: { width: number; height: number }) {
-  const stones: React.ReactNode[] = [];
-  const cw = 34, rh = 26;
-  const rows = Math.ceil(height * 0.7 / rh) + 1, cols = Math.ceil(width / cw) + 1;
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-    const ox = r % 2 === 0 ? 0 : cw / 2;
-    const x = c * cw + ox - cw / 2, y = r * rh;
-    const v = (r * 7 + c * 13) % 6;
-    const fills = ["#1A0E06","#1E1008","#160C04","#1C1006","#201208","#180A04"];
-    stones.push(<rect key={`s${r}${c}`} x={x+1} y={y+1} width={cw-2} height={rh-2} rx="2" fill={fills[v]} stroke="#0C0602" strokeWidth="1"/>);
-  }
-  const floorY = height * 0.7;
-  const Torch = ({ x, y }: { x:number; y:number }) => (
-    <g>
-      <rect x={x-4} y={y+10} width={8} height={12} rx="1" fill="#4A2808"/>
-      <rect x={x-2} y={y+4} width={4} height={10} fill="#6B3010"/>
-      <ellipse cx={x} cy={y+8} rx={18} ry={10} fill="#C45A10" opacity="0.07"/>
-      <polygon points={`${x-4},${y+6} ${x},${y-4} ${x+4},${y+6} ${x+2},${y+3} ${x-2},${y+3}`} fill="#E07030" opacity="0.95"/>
-      <polygon points={`${x-2},${y+5} ${x},${y} ${x+2},${y+5} ${x+1},${y+3} ${x-1},${y+3}`} fill="#F5C842" opacity="0.9"/>
-    </g>
-  );
-  const Banner = ({ x, dir }: { x:number; dir:number }) => {
-    const bw = 28, bh = 60;
-    const px2 = dir === 1 ? x : x - bw;
-    return (
-      <g>
-        <rect x={px2+bw/2-2} y={0} width={4} height={bh+4} fill="#2A1206"/>
-        <rect x={px2+2} y={8} width={bw-4} height={bh-8} rx="1" fill={P.maroon} stroke={P.goldDim} strokeWidth="0.5"/>
-        <line x1={px2+4} y1={24} x2={px2+bw-4} y2={24} stroke={P.goldDim} strokeWidth="0.5"/>
-        <line x1={px2+4} y1={36} x2={px2+bw-4} y2={36} stroke={P.goldDim} strokeWidth="0.5"/>
-        <circle cx={px2+bw/2} cy={20} r={4} fill={P.goldDark} stroke={P.goldDim} strokeWidth="0.5"/>
-        <rect x={px2+bw/2-1} y={18} width={2} height={4} fill={P.gold3} opacity="0.7"/>
-        <rect x={px2+bw/2-2} y={20} width={4} height={2} fill={P.gold3} opacity="0.7"/>
-      </g>
-    );
-  };
-  return (
-    <svg width={width} height={height} style={{ display: "block", imageRendering: "pixelated" }}>
-      <rect width={width} height={height} fill="#0C0804"/>
-      {stones}
-      {Array.from({ length: Math.ceil(width / 28) + 1 }).map((_, c) => (
-        <rect key={`f${c}`} x={c*28} y={floorY} width={26} height={height-floorY+2} rx="1" fill={c%3===0?"#221006":c%3===1?"#1C0E05":"#261208"} stroke="#0C0602" strokeWidth="0.8"/>
-      ))}
-      <Banner x={56} dir={1}/>
-      <Banner x={width-28} dir={-1}/>
-      <Torch x={100} y={18}/>
-      <Torch x={width-100} y={18}/>
-      <Torch x={Math.round(width/2)} y={14}/>
-      <rect x={0} y={0} width={80} height={height} fill="#0C0804" opacity="0.4"/>
-      <rect x={width-80} y={0} width={80} height={height} fill="#0C0804" opacity="0.4"/>
-      <rect x={0} y={height-40} width={width} height={40} fill="#0C0804" opacity="0.5"/>
-    </svg>
-  );
+// ============================================================================
+// COMPONENT PROPS — wired by your Next.js fundraiser profile page
+// ============================================================================
+
+export interface BattleArenaProps {
+  /**
+   * Dollar amount of the latest sale on MY team's fundraiser page.
+   * Set this to a new value each time a sale webhook fires.
+   * The component detects the change and triggers an attack.
+   * Reset behavior: the component tracks the previous value internally —
+   * just pass the new sale amount and it handles the rest.
+   */
+  incomingSaleDollars?: number;
+
+  /**
+   * Dollar amount of the latest sale on the OPPONENT's fundraiser page.
+   * Same pattern as incomingSaleDollars.
+   */
+  opponentSaleDollars?: number;
+
+  /**
+   * Set to true for one render cycle when a Facebook share is confirmed.
+   * The component activates the shield and resets to false internally.
+   * Toggle this value (not just set to true) so each share triggers a new effect.
+   */
+  shareConfirmed?: boolean;
+
+  /**
+   * ISO timestamp string of when the shield expires.
+   * Passed from your DB on initial page load if a shield is already active.
+   * Example: "2026-04-05T14:30:00.000Z"
+   */
+  shieldExpiresAt?: string | null;
+
+  /**
+   * Remaining shield HP from the DB (passed on initial load).
+   * Allows the shield bar to render correctly after a page refresh.
+   */
+  shieldHPRemaining?: number;
 }
 
-// ─── PIXEL CHARACTER ─────────────────────────────────────────────────────────
-function PixelChar({ char, teamColor, animState, flipped, shielded, tick, scale = 1 }: {
-  char: CharDef; teamColor: string; animState: string; flipped: boolean; shielded: boolean; tick: number; scale?: number;
-}) {
-  const dead = animState === "dead";
-  const atk  = animState === "attack";
-  const hit  = animState === "hit";
-  const bobY = (!dead && !atk) ? Math.sin(tick * 0.6) * 2 : 0;
-  const W = Math.round(52 * scale), H = Math.round(82 * scale);
-  const p = (v: number) => Math.round(v * scale);
-  const tc = teamColor;
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
-  return (
-    <svg width={W} height={H + 8} viewBox={`0 0 ${W} ${H + 8}`}
-      style={{ imageRendering: "pixelated", transform: `scaleX(${flipped ? -1 : 1}) translateY(${bobY}px)`, filter: hit ? "brightness(2.5) saturate(0)" : "none", transition: "filter 0.06s, transform 0.08s", display: "block" }}>
-      {shielded && <>
-        <ellipse cx={W/2} cy={(H+8)/2} rx={W/2-2} ry={(H+8)/2-2} fill={teamColor} opacity="0.1"/>
-        <ellipse cx={W/2} cy={(H+8)/2} rx={W/2-2} ry={(H+8)/2-2} fill="none" stroke={teamColor} strokeWidth="1.5" strokeDasharray="4 3"/>
-      </>}
-      {dead ? (
-        <g transform={`translate(4, ${H-8})`}>
-          <rect x={0} y={0} width={W-10} height={10} rx="2" fill={tc} opacity="0.4"/>
-          <circle cx={8} cy={5} r={4} fill={tc} opacity="0.6"/>
-        </g>
-      ) : (
-        <g>
-          {/* Head */}
-          <circle cx={p(18)} cy={p(8)} r={p(7)} fill={char.skin}/>
-          <rect x={p(10)} y={p(2)} width={p(16)} height={p(10)} rx="3" fill={char.hair} opacity="0.9"/>
-          <rect x={p(11)} y={p(6)} width={p(4)} height={p(4)} rx="0.5" fill="#0A0400"/>
-          <rect x={p(21)} y={p(6)} width={p(4)} height={p(4)} rx="0.5" fill="#0A0400"/>
-          <rect x={p(12)} y={p(12)} width={p(12)} height={p(2)} rx="0.5" fill="#0A0400" opacity="0.5"/>
-          {/* Body */}
-          <rect x={p(7)} y={p(15)} width={p(22)} height={p(18)} rx="2" fill={tc}/>
-          <rect x={p(9)} y={p(17)} width={p(18)} height={p(10)} rx="1" fill={tc} opacity="0.4"/>
-          {/* Arms */}
-          <rect x={p(0)} y={p(16)} width={p(8)} height={p(14)} rx="2" fill={tc} opacity="0.85"/>
-          <rect x={p(29)} y={p(16)} width={p(8)} height={p(14)} rx="2" fill={tc} opacity="0.85"/>
-          {/* Legs */}
-          <rect x={p(9)}  y={p(33)} width={p(8)}  height={p(18)} rx="2" fill={tc}/>
-          <rect x={p(20)} y={p(33)} width={p(8)}  height={p(18)} rx="2" fill={tc}/>
-          {/* Boots */}
-          <rect x={p(8)}  y={p(46)} width={p(10)} height={p(5)} rx="1" fill={char.hair} opacity="0.6"/>
-          <rect x={p(19)} y={p(46)} width={p(10)} height={p(5)} rx="1" fill={char.hair} opacity="0.6"/>
-          {/* Weapon */}
-          {atk && char.cls === "mage" && <circle cx={p(42)} cy={p(10)} r={p(6)} fill="#9B7FFF" opacity="0.8"/>}
-          {atk && char.cls !== "mage" && <rect x={p(36)} y={p(12)} width={p(3)} height={p(18)} rx="1" fill="#C8C0A0"/>}
-          {!atk && <rect x={p(37)} y={p(15)} width={p(2.5)} height={p(16)} rx="1" fill="#909090" opacity="0.8"/>}
-        </g>
-      )}
-    </svg>
-  );
-}
-
-// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 export default function BattleArena({
-  myTeam,
-  opponents,
-  shareUrl,
-  onSaleReceived,
-  shieldActive = false,
+  incomingSaleDollars = 0,
+  opponentSaleDollars = 0,
+  shareConfirmed = false,
   shieldExpiresAt = null,
+  shieldHPRemaining,
 }: BattleArenaProps) {
-  const allTeams = [myTeam, ...opponents];
-
-  const [charHP, setCharHP] = useState<Record<string, number>>(() => {
-    const m: Record<string, number> = {};
-    allTeams.forEach(t => t.roster.forEach(c => { m[c.id] = getMaxHP(c.cls); }));
-    return m;
-  });
-
-  const maxHPRef = useRef<Record<string, number>>({});
-  if (Object.keys(maxHPRef.current).length === 0) {
-    allTeams.forEach(t => t.roster.forEach(c => { maxHPRef.current[c.id] = getMaxHP(c.cls); }));
-  }
-
-  const [oppIdx, setOppIdx]         = useState(0);
-  const [shieldExpiry, setShieldExpiry] = useState<number | null>(
+  const [myHP,      setMyHP]      = useState(CONFIG.startingHP);
+  const [oppHP,     setOppHP]     = useState(CONFIG.startingHP);
+  const [shieldHP,  setShieldHP]  = useState(shieldHPRemaining ?? 0);
+  const [shieldExp, setShieldExp] = useState<number|null>(
     shieldExpiresAt ? new Date(shieldExpiresAt).getTime() : null
   );
-  const [shieldCD, setShieldCD]     = useState<string | null>(null);
-  const [scores, setScores]         = useState<Record<string, number>>(() => {
-    const m: Record<string, number> = {};
-    allTeams.forEach(t => { m[t.id] = 0; });
-    return m;
-  });
-  const [feed, setFeed]             = useState<Array<{ type:string; msg:string; id:number }>>([]);
-  const [charStates, setCharStates] = useState<Record<string, string>>(() => {
-    const m: Record<string, string> = {};
-    allTeams.forEach(t => t.roster.forEach(c => { m[c.id] = "idle"; }));
-    return m;
-  });
-  const [floats, setFloats]         = useState<Array<{ id:number; charId:string; text:string; color:string }>>([]);
-  const [shake, setShake]           = useState(false);
-  const [tick, setTick]             = useState(0);
-  const [clickCounts, setClickCounts] = useState<Record<string, number>>({});
-  const [activeTab, setActiveTab]   = useState("party");
+  const [shieldCD,  setShieldCD]  = useState<string|null>(null);
+  const [myWins,    setMyWins]    = useState(0);
+  const [oppWins,   setOppWins]   = useState(0);
+  const [round,     setRound]     = useState(1);
+  const [feed,      setFeed]      = useState<Array<{id:number;type:string;msg:string}>>([]);
+  const [myState,   setMyState]   = useState("idle");
+  const [oppState,  setOppState]  = useState("idle");
+  const [myFloats,  setMyFloats]  = useState<Array<{id:number;text:string;color:string}>>([]);
+  const [oppFloats, setOppFloats] = useState<Array<{id:number;text:string;color:string}>>([]);
+  const [shake,     setShake]     = useState(false);
+  const [tick,      setTick]      = useState(0);
+  const [tab,       setTab]       = useState<"info"|"log">("info");
 
-  const currentOpp = opponents[oppIdx % opponents.length];
-  const isShielded = !!shieldExpiry && shieldExpiry > Date.now();
-  const myRoster   = myTeam.roster;
-  const oppRoster  = currentOpp.roster;
+  const shieldActive = !!shieldExp && shieldExp > Date.now();
 
-  const frontline = useCallback(
-    (roster: CharDef[]) => roster.find(c => charHP[c.id] > 0) ?? null,
-    [charHP]
-  );
+  useEffect(()=>{ if(shieldExpiresAt) setShieldExp(new Date(shieldExpiresAt).getTime()); },[shieldExpiresAt]);
+  useEffect(()=>{ if(shieldHPRemaining!==undefined) setShieldHP(shieldHPRemaining); },[shieldHPRemaining]);
+  useEffect(()=>{ const id=setInterval(()=>setTick(t=>t+1),360); return()=>clearInterval(id); },[]);
 
-  useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 350);
-    return () => clearInterval(id);
-  }, []);
+  useEffect(()=>{
+    if(!shieldExp) return;
+    const id=setInterval(()=>{
+      const r=Math.max(0,shieldExp-Date.now());
+      if(r===0){setShieldCD(null);setShieldExp(null);setShieldHP(0);return;}
+      setShieldCD(`${Math.floor(r/60000)}:${String(Math.floor((r%60000)/1000)).padStart(2,"0")}`);
+    },1000);
+    return()=>clearInterval(id);
+  },[shieldExp]);
 
-  // Sync external shield prop
-  useEffect(() => {
-    if (shieldActive && !isShielded) {
-      setShieldExpiry(Date.now() + SHIELD_MS);
-    }
-  }, [shieldActive]);
+  const log=useCallback((type:string,msg:string)=>{
+    setFeed(f=>[{id:Date.now()+Math.random(),type,msg},...f].slice(0,40));
+  },[]);
 
-  useEffect(() => {
-    if (shieldExpiresAt) {
-      setShieldExpiry(new Date(shieldExpiresAt).getTime());
-    }
-  }, [shieldExpiresAt]);
+  const addFloat=useCallback((side:"my"|"opp",text:string,color:string)=>{
+    const id=Date.now()+Math.random(), item={id,text,color};
+    if(side==="my"){setMyFloats(f=>[...f,item]);setTimeout(()=>setMyFloats(f=>f.filter(x=>x.id!==id)),1800);}
+    else           {setOppFloats(f=>[...f,item]);setTimeout(()=>setOppFloats(f=>f.filter(x=>x.id!==id)),1800);}
+  },[]);
 
-  const log = useCallback((type: string, msg: string) => {
-    setFeed(f => [{ type, msg, id: Date.now() + Math.random() }, ...f].slice(0, 25));
-  }, []);
+  const doState=useCallback((who:"my"|"opp",s:string,dur=580)=>{
+    if(who==="my"){setMyState(s);setTimeout(()=>setMyState("idle"),dur);}
+    else          {setOppState(s);setTimeout(()=>setOppState("idle"),dur);}
+  },[]);
 
-  const addFloat = useCallback((charId: string, text: string, color: string) => {
-    const id = Date.now() + Math.random();
-    setFloats(f => [...f, { id, charId, text, color }]);
-    setTimeout(() => setFloats(f => f.filter(x => x.id !== id)), 1700);
-  }, []);
+  const resetRound=useCallback(()=>{
+    setTimeout(()=>{setMyHP(CONFIG.startingHP);setOppHP(CONFIG.startingHP);setShieldHP(0);setRound(r=>r+1);},2600);
+  },[]);
 
-  const setCharState = useCallback((id: string, state: string, dur = 500) => {
-    setCharStates(s => ({ ...s, [id]: state }));
-    setTimeout(() => setCharStates(s => ({ ...s, [id]: (charHP[id] ?? 1) <= 0 ? "dead" : "idle" })), dur);
-  }, [charHP]);
+  // ── MY TEAM SALE → ATTACK ────────────────────────────────────────────────
+  const prevMySale=useRef(0);
+  useEffect(()=>{
+    if(!incomingSaleDollars||incomingSaleDollars===prevMySale.current)return;
+    prevMySale.current=incomingSaleDollars;
+    const dmg=incomingSaleDollars;
+    doState("my","attack",600);
+    setTimeout(()=>{
+      setOppHP(h=>{
+        const next=Math.max(0,h-dmg);
+        addFloat("opp",`−${dmg}`,PAL.orange);
+        const q=MY.quips[Math.floor(Math.random()*MY.quips.length)];
+        addFloat("my",`"${q}"`,PAL.gold2);
+        log("attack",`$${dmg} sale — ${MY.name} deals ${dmg} damage!`);
+        doState("opp","hit",360);
+        setShake(true);setTimeout(()=>setShake(false),300);
+        if(next<=0){setMyWins(w=>w+1);log("death",`${OPP.name} defeated! ${MY.name} wins the round!`);resetRound();}
+        return next;
+      });
+    },280);
+  },[incomingSaleDollars]);
 
-  const doDamage = useCallback((targetId: string, rawDmg: number, srcTeamId: string) => {
-    const myIds = myRoster.map(c => c.id);
-    if (myIds.includes(targetId) && isShielded) {
-      addFloat(targetId, "BLOCKED!", "#9B7FFF");
-      return null;
-    }
-    const isCrit = Math.random() < CRIT_CHANCE;
-    const dmg = Math.round(rawDmg * (isCrit ? 1.8 : 1));
-    setCharHP(h => ({ ...h, [targetId]: Math.max(0, h[targetId] - dmg) }));
-    setScores(s => ({ ...s, [srcTeamId]: (s[srcTeamId] || 0) + (isCrit ? 20 : 10) }));
-    addFloat(targetId, isCrit ? `CRIT! -${dmg}` : `-${dmg}`, isCrit ? "#FF5522" : "#E07030");
-    return { dmg, isCrit };
-  }, [isShielded, addFloat, myRoster]);
+  // ── OPP SALE → DAMAGE (with shield absorption) ──────────────────────────
+  const prevOppSale=useRef(0);
+  useEffect(()=>{
+    if(!opponentSaleDollars||opponentSaleDollars===prevOppSale.current)return;
+    prevOppSale.current=opponentSaleDollars;
+    const raw=opponentSaleDollars;
+    doState("opp","attack",600);
+    setTimeout(()=>{
+      log("defend",`${OPP.name} gets a $${raw} sale — incoming!`);
+      setShieldHP(sh=>{
+        setMyHP(mh=>{
+          let absorb=0, hpDmg=raw;
+          if(shieldActive&&sh>0){
+            absorb=Math.min(sh,raw); hpDmg=raw-absorb;
+            if(absorb>0){addFloat("my",`SHIELD −${absorb}`,"#C4A0FF");log("shield",`Shield absorbed ${absorb} damage!`);}
+          }
+          if(hpDmg>0){doState("my","hit",360);addFloat("my",`−${hpDmg}`,PAL.red);log("defend",`${hpDmg} damage hits ${MY.name}!`);}
+          else addFloat("my","FULLY BLOCKED!","#C4A0FF");
+          const next=Math.max(0,mh-hpDmg);
+          if(next<=0){setOppWins(w=>w+1);log("death",`${MY.name} defeated! ${OPP.name} wins the round!`);resetRound();}
+          return next;
+        });
+        return Math.max(0,sh-Math.min(sh,raw));
+      });
+    },280);
+  },[opponentSaleDollars]);
 
-  const doAttack = useCallback((srcTeamId: string, tgtTeamId: string) => {
-    const srcT = allTeams.find(t => t.id === srcTeamId);
-    const tgtT = allTeams.find(t => t.id === tgtTeamId);
-    if (!srcT || !tgtT) return;
-    const attacker = frontline(srcT.roster);
-    const defender = frontline(tgtT.roster);
-    if (!attacker || !defender) return;
-    const dmgBase = Math.round(BASE_DMG * (CLASSES[attacker.cls]?.dmgMod ?? 1));
-    setCharState(attacker.id, "attack", 600);
-    setTimeout(() => {
-      const res = doDamage(defender.id, dmgBase, srcTeamId);
-      if (!res) return;
-      setCharState(defender.id, "hit", 350);
-      if ((charHP[defender.id] || 0) - res.dmg <= 0) {
-        setTimeout(() => setCharState(defender.id, "dead", 99999), 400);
-        log("death", `${defender.name} has fallen!`);
-        if (tgtTeamId === myTeam.id) setTimeout(() => setOppIdx(i => i + 1), 1200);
-      }
-      if (srcTeamId === myTeam.id) {
-        const q = attacker.quips[Math.floor(Math.random() * attacker.quips.length)];
-        addFloat(attacker.id, `"${q}"`, P.gold3);
-        log("attack", `${attacker.name} strikes! ${res.isCrit ? "CRITICAL — " : ""}${res.dmg} dmg to ${defender.name}!`);
-        setShake(true); setTimeout(() => setShake(false), 300);
-      } else if (tgtTeamId === myTeam.id && !isShielded) {
-        log("defend", `${attacker.name} hits ${defender.name} for ${res.dmg}${res.isCrit ? " CRIT" : ""}!`);
-      }
-    }, 280);
-  }, [charHP, doDamage, setCharState, log, addFloat, frontline, isShielded, myTeam, allTeams]);
+  // ── FACEBOOK SHARE → SHIELD ──────────────────────────────────────────────
+  const prevShare=useRef(false);
+  useEffect(()=>{
+    if(!shareConfirmed||shareConfirmed===prevShare.current)return;
+    prevShare.current=shareConfirmed;
+    if(shieldActive){log("shield","Share noted — shield already active.");return;}
+    setShieldExp(Date.now()+SHIELD_MS);
+    setShieldHP(SHIELD_MAX);
+    addFloat("my","SHIELD UP!","#C4A0FF");
+    log("shield",`Shield activated! ${CONFIG.shieldDurationMinutes} min, absorbs up to $${SHIELD_MAX}.`);
+  },[shareConfirmed]);
 
-  // AI simulation ticks for opponent teams
-  useEffect(() => {
-    const id = setInterval(() => {
-      const alive = allTeams.filter(t => t.roster.some(c => charHP[c.id] > 0));
-      if (alive.length < 2) return;
-      const src = alive[Math.floor(Math.random() * alive.length)];
-      const tgts = alive.filter(t => t.id !== src.id);
-      const tgt = tgts[Math.floor(Math.random() * tgts.length)];
-      if (src.id !== myTeam.id) log("event", `${src.name} scores a sale!`);
-      doAttack(src.id, tgt.id);
-    }, 3800);
-    return () => clearInterval(id);
-  }, [charHP, doAttack, log, myTeam]);
-
-  // Shield countdown
-  useEffect(() => {
-    if (!shieldExpiry) return;
-    const id = setInterval(() => {
-      const r = Math.max(0, shieldExpiry - Date.now());
-      if (r === 0) { setShieldCD(null); setShieldExpiry(null); return; }
-      const m = Math.floor(r / 60000), s = Math.floor((r % 60000) / 1000);
-      setShieldCD(`${m}:${String(s).padStart(2, "0")}`);
-    }, 1000);
-    return () => clearInterval(id);
-  }, [shieldExpiry]);
-
-  const handleSale = () => {
-    doAttack(myTeam.id, currentOpp.id);
-    log("sale", "Sale received! Front-liner charges!");
-    onSaleReceived?.();
-  };
-
-  const handleShare = () => {
-    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent("Support our team in the Jose Madrid Salsa Fundraiser Battle!")}`;
-    window.open(fbUrl, "fb", "width=600,height=400,menubar=no,toolbar=no");
-    if (!isShielded) {
-      setShieldExpiry(Date.now() + SHIELD_MS);
-      const f = myRoster.find(c => charHP[c.id] > 0);
-      if (f) addFloat(f.id, "SHIELD UP!", "#C4A0FF");
-      log("shield", "Community SHIELD activated — 15 minutes of protection!");
+  const handleShare=()=>{
+    window.open(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(MY.shareUrl)}&quote=${encodeURIComponent(`Support ${MY.name} in the Jose Madrid Salsa Fundraiser Battle!`)}`,
+      "fb","width=600,height=400,menubar=no,toolbar=no"
+    );
+    // In production your page detects the share callback and sets shareConfirmed=true.
+    // The FB JS SDK fires window.fbAsyncInit events you can hook into.
+    // For now this directly triggers the shield for demo purposes:
+    if(!shieldActive){
+      setShieldExp(Date.now()+SHIELD_MS);
+      setShieldHP(SHIELD_MAX);
+      addFloat("my","SHIELD UP!","#C4A0FF");
+      log("shield",`Shield activated! ${CONFIG.shieldDurationMinutes} min, absorbs up to $${SHIELD_MAX}.`);
     } else {
-      log("shield", "Already shielded. Share noted.");
+      log("shield","Already shielded — no change.");
     }
   };
 
-  const handleClickChar = (char: CharDef) => {
-    if (charHP[char.id] <= 0) return;
-    const next = (clickCounts[char.id] || 0) + 1;
-    setClickCounts(c => ({ ...c, [char.id]: next }));
-    if (next % 5 === 0) {
-      const q = char.quips[Math.floor(Math.random() * char.quips.length)];
-      addFloat(char.id, `"${q}"`, P.gold3);
-      log("click", `${char.name}: "${q}"`);
-    }
-    setCharState(char.id, "attack", 300);
+  const MascotEl=({team,state,fl,side,sc}:{team:typeof MY;state:string;fl:typeof myFloats;side:"my"|"opp";sc?:number})=>{
+    const Sprite=MASCOT_SPRITES[team.mascot]??MASCOT_SPRITES.tornado;
+    return (
+      <div style={{position:"relative",display:"inline-block"}}>
+        {fl.map(f=><Float key={f.id} text={f.text} color={f.color}/>)}
+        <div style={{position:"absolute",bottom:-4,left:"8%",width:"84%",height:8,
+          background:"rgba(0,0,0,0.45)",borderRadius:"50%",filter:"blur(3px)"}}/>
+        <Sprite color={team.color} state={state} tick={tick} shielded={side==="my"&&shieldActive} flipped={side==="opp"} scale={sc??0.95}/>
+      </div>
+    );
   };
 
-  const sorted = [...allTeams].sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0));
-  const BT = "'Courier New',monospace";
+  const FEED_COL: Record<string,string>={attack:PAL.gold2,defend:"#FF7755",shield:"#C4A0FF",death:PAL.red,info:PAL.creamDim};
+  const myPct=myHP/CONFIG.startingHP, oppPct=oppHP/CONFIG.startingHP;
 
   return (
-    <div style={{ background: P.bg0, fontFamily: BT, maxWidth: 700, margin: "0 auto", overflow: "hidden" }}>
+    <div style={{background:PAL.bg,maxWidth:700,margin:"0 auto",fontFamily:BT,overflow:"hidden"}}>
       <style>{`
-        @keyframes floatUp{0%{opacity:1;transform:translateX(-50%) translateY(0)}100%{opacity:0;transform:translateX(-50%) translateY(-46px)}}
-        @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
-        @keyframes goldGlow{0%,100%{color:${P.gold2}}50%{color:${P.gold3}}}
-        @keyframes shieldPulse{0%,100%{opacity:1}50%{opacity:0.3}}
+        @keyframes floatUp{0%{opacity:1;transform:translateX(-50%) translateY(0)}100%{opacity:0;transform:translateX(-50%) translateY(-54px)}}
+        @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+        @keyframes glow{0%,100%{color:${PAL.gold}}50%{color:${PAL.gold2}}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
       `}</style>
 
       {/* HEADER */}
-      <div style={{ background: P.brown, borderBottom: `3px solid ${P.gold}`, padding: "10px 16px 8px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontSize: 10, color: P.goldDim, letterSpacing: 4, marginBottom: 2 }}>JOSE MADRID SALSA</div>
-            <div style={{ fontSize: 20, color: P.gold3, letterSpacing: 3, fontWeight: 700, animation: "goldGlow 2.5s infinite" }}>BATTLE ARENA</div>
-            <div style={{ fontSize: 10, color: P.creamDim, letterSpacing: 2, marginTop: 2 }}>FUNDRAISER DUNGEON</div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 10, color: P.goldDim, letterSpacing: 2 }}>{myTeam.school.toUpperCase()}</div>
-            <div style={{ fontSize: 12, color: myTeam.color, fontWeight: 700, letterSpacing: 1 }}>{myTeam.name.toUpperCase()}</div>
-          </div>
+      <div style={{background:"#080502",borderBottom:`3px solid ${PAL.gold}`,padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div>
+          <div style={{fontSize:9,color:PAL.goldDim,letterSpacing:4}}>JOSE MADRID SALSA</div>
+          <div style={{fontSize:20,fontWeight:700,color:PAL.gold2,letterSpacing:3,animation:"glow 2.5s infinite"}}>MASCOT BATTLE</div>
+          <div style={{fontSize:9,color:PAL.creamDim,letterSpacing:2,marginTop:1}}>FUNDRAISER SHOWDOWN</div>
         </div>
-      </div>
-      <ChainStrip width={700}/>
-
-      {/* BATTLE STAGE */}
-      <div style={{ position: "relative", animation: shake ? "shake 0.3s" : "none" }}>
-        <DungeonScene width={700} height={240}/>
-        <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.05) 3px,rgba(0,0,0,0.05) 4px)", pointerEvents: "none", zIndex: 15 }}/>
-
-        {/* LEFT HP PANEL */}
-        <div style={{ position: "absolute", top: 10, left: 10, zIndex: 12, width: 188 }}>
-          <OrnatePanel>
-            <div style={{ padding: "8px 10px" }}>
-              <div style={{ fontSize: 11, color: myTeam.color, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>{myTeam.name.toUpperCase()}</div>
-              {myRoster.map(c => <GoldHPBar key={c.id} cur={charHP[c.id]} max={maxHPRef.current[c.id]} color={myTeam.color} name={c.name} cls={c.cls} dead={charHP[c.id] <= 0}/>)}
-              {isShielded && <div style={{ fontSize: 10, color: "#C4A0FF", animation: "shieldPulse 1s infinite", letterSpacing: 1, marginTop: 2, fontWeight: 700 }}>SHIELD {shieldCD}</div>}
+        <div style={{textAlign:"center"}}>
+          <div style={{fontSize:9,color:PAL.creamDim,letterSpacing:2,marginBottom:2}}>ROUND</div>
+          <div style={{fontSize:26,fontWeight:700,color:PAL.gold2,lineHeight:1}}>{round}</div>
+        </div>
+        <div style={{textAlign:"right"}}>
+          <div style={{fontSize:9,color:PAL.creamDim,letterSpacing:2,marginBottom:4}}>ROUND WINS</div>
+          <div style={{display:"flex",gap:10,alignItems:"center",justifyContent:"flex-end"}}>
+            <div style={{textAlign:"center"}}>
+              <div style={{fontSize:22,fontWeight:700,color:MY.color}}>{myWins}</div>
+              <div style={{fontSize:8,color:MY.color,opacity:0.7,letterSpacing:1}}>US</div>
             </div>
-          </OrnatePanel>
-        </div>
-
-        {/* RIGHT HP PANEL */}
-        <div style={{ position: "absolute", top: 10, right: 10, zIndex: 12, width: 188 }}>
-          <OrnatePanel>
-            <div style={{ padding: "8px 10px" }}>
-              <div style={{ fontSize: 11, color: currentOpp.color, letterSpacing: 2, fontWeight: 700, marginBottom: 6, textAlign: "right" }}>{currentOpp.name.toUpperCase()}</div>
-              {oppRoster.map(c => <GoldHPBar key={c.id} cur={charHP[c.id]} max={maxHPRef.current[c.id]} color={currentOpp.color} name={c.name} cls={c.cls} dead={charHP[c.id] <= 0}/>)}
+            <div style={{fontSize:13,color:PAL.goldDim}}>—</div>
+            <div style={{textAlign:"center"}}>
+              <div style={{fontSize:22,fontWeight:700,color:OPP.color}}>{oppWins}</div>
+              <div style={{fontSize:8,color:OPP.color,opacity:0.7,letterSpacing:1}}>THEM</div>
             </div>
-          </OrnatePanel>
-        </div>
-
-        {/* MY PARTY */}
-        <div style={{ position: "absolute", bottom: 14, left: 16, display: "flex", gap: 6, alignItems: "flex-end", zIndex: 8 }}>
-          {myRoster.map((char, i) => {
-            const dead = charHP[char.id] <= 0;
-            const myFloats = floats.filter(f => f.charId === char.id);
-            const sc = i === 0 ? 1 : i === 1 ? 0.82 : 0.68;
-            return (
-              <div key={char.id} onClick={() => handleClickChar(char)}
-                style={{ position: "relative", cursor: dead ? "default" : "pointer", opacity: dead ? 0.3 : 1, transform: `translateY(${i === 0 ? 0 : i === 1 ? 10 : 18}px)` }}>
-                {myFloats.map(f => <FloatText key={f.id} text={f.text} color={f.color}/>)}
-                <div style={{ position: "absolute", bottom: -4, left: "10%", width: "80%", height: 4, background: P.bg0, opacity: 0.5, borderRadius: "50%" }}/>
-                <PixelChar char={char} teamColor={myTeam.color} animState={dead ? "dead" : charStates[char.id]} flipped={false} shielded={isShielded && i === 0 && !dead} tick={tick + i * 4} scale={sc}/>
-                {i === 0 && !dead && <div style={{ textAlign: "center", fontSize: 9, color: P.gold, letterSpacing: 1, marginTop: 1, fontWeight: 700 }}>FRONT</div>}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* OPP PARTY */}
-        <div style={{ position: "absolute", bottom: 14, right: 16, display: "flex", gap: 6, alignItems: "flex-end", flexDirection: "row-reverse", zIndex: 8 }}>
-          {oppRoster.map((char, i) => {
-            const dead = charHP[char.id] <= 0;
-            const myFloats = floats.filter(f => f.charId === char.id);
-            const sc = i === 0 ? 1 : i === 1 ? 0.82 : 0.68;
-            return (
-              <div key={char.id} style={{ position: "relative", opacity: dead ? 0.25 : 1, transform: `translateY(${i === 0 ? 0 : i === 1 ? 10 : 18}px)` }}>
-                {myFloats.map(f => <FloatText key={f.id} text={f.text} color={f.color}/>)}
-                <div style={{ position: "absolute", bottom: -4, left: "10%", width: "80%", height: 4, background: P.bg0, opacity: 0.5, borderRadius: "50%" }}/>
-                <PixelChar char={char} teamColor={currentOpp.color} animState={dead ? "dead" : charStates[char.id]} flipped={true} shielded={false} tick={tick + i * 4 + 6} scale={sc}/>
-                {i === 0 && !dead && <div style={{ textAlign: "center", fontSize: 9, color: currentOpp.color, letterSpacing: 1, marginTop: 1, fontWeight: 700 }}>FRONT</div>}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* VS */}
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 14, textAlign: "center", pointerEvents: "none" }}>
-          <div style={{ background: P.bg0, border: `2px solid ${P.gold}`, padding: "6px 14px", display: "inline-block" }}>
-            <div style={{ fontSize: 26, color: P.gold3, letterSpacing: 6, fontWeight: 700, animation: "goldGlow 2s infinite", lineHeight: 1 }}>VS</div>
-            <div style={{ fontSize: 8, color: P.goldDim, letterSpacing: 3, marginTop: 2 }}>DUNGEON BATTLE</div>
           </div>
         </div>
       </div>
 
-      <ChainStrip width={700}/>
+      {/* ARENA */}
+      <div style={{position:"relative",animation:shake?"shake 0.28s":"none"}}>
+        <Arena width={700} height={280}/>
+        <div style={{position:"absolute",inset:0,pointerEvents:"none",background:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 4px)",zIndex:5}}/>
+        <div style={{position:"absolute",bottom:22,left:55,zIndex:8,textAlign:"center"}}>
+          <MascotEl team={MY} state={myHP<=0?"dead":myState} fl={myFloats} side="my"/>
+          <div style={{fontSize:10,color:MY.color,fontWeight:700,letterSpacing:1,marginTop:4}}>{MY.name}</div>
+        </div>
+        <div style={{position:"absolute",bottom:22,right:55,zIndex:8,textAlign:"center"}}>
+          <MascotEl team={OPP} state={oppHP<=0?"dead":oppState} fl={oppFloats} side="opp"/>
+          <div style={{fontSize:10,color:OPP.color,fontWeight:700,letterSpacing:1,marginTop:4}}>{OPP.name}</div>
+        </div>
+        <div style={{position:"absolute",top:"42%",left:"50%",transform:"translate(-50%,-50%)",zIndex:10,textAlign:"center",pointerEvents:"none"}}>
+          <div style={{background:"rgba(8,5,2,0.88)",border:`1px solid ${PAL.goldDim}`,padding:"4px 16px",display:"inline-block"}}>
+            <span style={{fontSize:15,color:PAL.gold2,letterSpacing:5,fontWeight:700}}>VS</span>
+          </div>
+        </div>
+      </div>
 
-      {/* BUTTONS */}
-      <div style={{ background: P.bg1, padding: "10px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <button onClick={handleSale} style={{ background: P.brown, border: `2px solid ${P.gold}`, color: P.gold3, padding: "11px 0", fontSize: 13, fontFamily: BT, fontWeight: 700, cursor: "pointer", letterSpacing: 2, textTransform: "uppercase" }}>
-          SALE RECEIVED
-        </button>
-        <button onClick={handleShare} style={{ background: P.brown, border: `2px solid ${isShielded ? P.goldDim : "#9B7FFF"}`, color: isShielded ? P.creamDim : "#D4AAFF", padding: "11px 0", fontSize: 13, fontFamily: BT, fontWeight: 700, cursor: "pointer", letterSpacing: 2, textTransform: "uppercase" }}>
-          {isShielded ? "SHIELDED" : "SHARE + SHIELD"}
+      {/* HP BARS */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",borderTop:`2px solid ${PAL.goldDim}`,borderBottom:`2px solid ${PAL.goldDim}`}}>
+        <div style={{background:PAL.panel,borderRight:`1px solid ${PAL.panelBord}`,padding:"14px 18px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:10,height:10,borderRadius:2,background:MY.color}}/>
+              <span style={{fontSize:12,color:MY.color,fontWeight:700,letterSpacing:1}}>{MY.name.split(" ").slice(-1)[0].toUpperCase()}</span>
+            </div>
+            <span style={{fontSize:11,color:PAL.creamDim}}>{Math.round(myHP)}/{CONFIG.startingHP}</span>
+          </div>
+          <HPBar cur={myHP} max={CONFIG.startingHP} color={MY.color} shieldCur={shieldHP} shieldMax={shieldActive?SHIELD_MAX:0}/>
+          {shieldActive&&<div style={{marginTop:5,fontSize:10,color:"#C4A0FF",animation:"pulse 1s infinite",letterSpacing:1}}>SHIELD {shieldCD} — {Math.round(shieldHP)}/${SHIELD_MAX} remaining</div>}
+        </div>
+        <div style={{background:PAL.panel,padding:"14px 18px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:10,height:10,borderRadius:2,background:OPP.color}}/>
+              <span style={{fontSize:12,color:OPP.color,fontWeight:700,letterSpacing:1}}>{OPP.name.split(" ").slice(-1)[0].toUpperCase()}</span>
+            </div>
+            <span style={{fontSize:11,color:PAL.creamDim}}>{Math.round(oppHP)}/{CONFIG.startingHP}</span>
+          </div>
+          <HPBar cur={oppHP} max={CONFIG.startingHP} color={OPP.color}/>
+        </div>
+      </div>
+
+      {/* SHARE BUTTON */}
+      <div style={{borderBottom:`2px solid ${PAL.goldDim}`}}>
+        <button onClick={handleShare}
+          style={{width:"100%",background:shieldActive?PAL.purple:"#1A1040",border:"none",
+            color:shieldActive?"#C4A0FF":"#D4AAFF",fontSize:13,fontFamily:BT,fontWeight:700,
+            padding:"14px 0",cursor:"pointer",letterSpacing:2,textTransform:"uppercase"}}>
+          {shieldActive
+            ? `SHIELD ACTIVE — ${shieldCD} — ${Math.round(shieldHP)}/${SHIELD_MAX} HP LEFT`
+            : `SHARE ON FACEBOOK + ACTIVATE ${CONFIG.shieldDurationMinutes}-MIN SHIELD`}
         </button>
       </div>
-
-      <ChainStrip width={700}/>
 
       {/* TABS */}
-      <div style={{ background: P.bg1 }}>
-        <div style={{ display: "flex", borderBottom: `2px solid ${P.goldDark}` }}>
-          {(["party","roster","board","log"] as const).map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              style={{ flex: 1, background: activeTab === tab ? P.bg2 : "transparent", border: "none", borderBottom: activeTab === tab ? `3px solid ${P.gold}` : "3px solid transparent", color: activeTab === tab ? P.gold3 : P.creamDim, padding: "9px 0", fontSize: 10, fontFamily: BT, fontWeight: 700, cursor: "pointer", letterSpacing: 2, textTransform: "uppercase" }}>
-              {tab === "party" ? "MY PARTY" : tab === "roster" ? "ALL UNITS" : tab === "board" ? "RANKINGS" : "BATTLE LOG"}
+      <div style={{background:"#100804"}}>
+        <div style={{display:"flex",borderBottom:`1px solid ${PAL.panelBord}`}}>
+          {(["info","log"] as const).map(t=>(
+            <button key={t} onClick={()=>setTab(t)}
+              style={{flex:1,background:"none",border:"none",borderBottom:tab===t?`3px solid ${PAL.gold}`:"3px solid transparent",
+                color:tab===t?PAL.gold2:PAL.creamDim,padding:"10px 0",fontSize:11,fontFamily:BT,fontWeight:700,cursor:"pointer",letterSpacing:3,textTransform:"uppercase"}}>
+              {t==="info"?"MATCHUP":"BATTLE LOG"}
             </button>
           ))}
         </div>
-
-        {activeTab === "party" && (
-          <div style={{ padding: "12px 14px", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
-            {myRoster.map((char, i) => {
-              const cls = CLASSES[char.cls];
-              const dead = charHP[char.id] <= 0;
-              const pct = charHP[char.id] / maxHPRef.current[char.id];
-              return (
-                <div key={char.id} onClick={() => handleClickChar(char)}
-                  style={{ background: P.bg2, border: `1.5px solid ${dead ? P.goldDark : P.goldDim}`, padding: "10px", cursor: dead ? "default" : "pointer", opacity: dead ? 0.45 : 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
-                    <div style={{ width: 7, height: 7, background: dead ? P.goldDim : cls?.name === "Mage" ? "#A78BFA" : myTeam.color }}/>
-                    <span style={{ fontSize: 12, color: P.cream, fontWeight: 700, letterSpacing: 1 }}>{char.name}</span>
-                    <span style={{ fontSize: 10, color: P.goldDim, marginLeft: "auto" }}>{char.gender === "f" ? "F" : "M"}</span>
-                  </div>
-                  <div style={{ fontSize: 9, color: myTeam.color, marginBottom: 3, letterSpacing: 1 }}>{cls?.name} | {cls?.weapon}</div>
-                  <div style={{ height: 4, background: P.bg0, overflow: "hidden", marginBottom: 5, border: `0.5px solid ${P.goldDim}` }}>
-                    <div style={{ width: `${pct * 100}%`, height: "100%", background: pct < 0.3 ? P.maroonLight : P.gold2, transition: "width 0.3s" }}/>
-                  </div>
-                  <div style={{ fontSize: 9, color: P.creamDim }}>{charHP[char.id]}/{maxHPRef.current[char.id]} HP</div>
-                  <div style={{ fontSize: 8, color: P.goldDim, marginTop: 4, fontStyle: "italic", lineHeight: 1.4 }}>"{char.quips[0]}"</div>
-                  {i === 0 && !dead && <div style={{ fontSize: 8, color: P.gold, marginTop: 4, letterSpacing: 1, fontWeight: 700 }}>FRONTLINE</div>}
-                  {dead && <div style={{ fontSize: 8, color: P.maroonLight, marginTop: 3, letterSpacing: 1 }}>FALLEN</div>}
-                </div>
-              );
-            })}
+        {tab==="info"&&(
+          <div style={{padding:"16px 20px",display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:14,alignItems:"start"}}>
+            <div style={{background:PAL.panel,border:`1px solid ${MY.color}44`,borderRadius:4,padding:"12px 14px"}}>
+              <div style={{fontSize:11,color:MY.color,fontWeight:700,letterSpacing:1,marginBottom:3}}>{MY.name.toUpperCase()}</div>
+              <div style={{fontSize:10,color:PAL.creamDim,marginBottom:10}}>{MY.school}</div>
+              <div style={{fontSize:9,color:PAL.goldDim,letterSpacing:1,marginBottom:3}}>SHIELD</div>
+              <div style={{fontSize:10,color:PAL.cream,lineHeight:1.6,marginBottom:10}}>Share on Facebook for a {CONFIG.shieldDurationMinutes}-min shield absorbing up to ${SHIELD_MAX}.</div>
+              <div style={{fontSize:9,color:PAL.goldDim,letterSpacing:1,marginBottom:3}}>GOAL</div>
+              <div style={{fontSize:16,fontWeight:700,color:MY.color}}>${MY.goal.toLocaleString()}</div>
+            </div>
+            <div style={{textAlign:"center",paddingTop:12}}>
+              <div style={{fontSize:9,color:PAL.goldDim,letterSpacing:2,marginBottom:6}}>DAMAGE</div>
+              <div style={{fontSize:10,color:PAL.cream,lineHeight:1.8}}>$1 sale<br/>= 1 HP</div>
+              <div style={{height:30,borderLeft:`1px solid ${PAL.goldDim}`,margin:"8px auto",width:1}}/>
+              <div style={{fontSize:9,color:PAL.goldDim,letterSpacing:2}}>RULES</div>
+            </div>
+            <div style={{background:PAL.panel,border:`1px solid ${OPP.color}44`,borderRadius:4,padding:"12px 14px"}}>
+              <div style={{fontSize:11,color:OPP.color,fontWeight:700,letterSpacing:1,marginBottom:3}}>{OPP.name.toUpperCase()}</div>
+              <div style={{fontSize:10,color:PAL.creamDim,marginBottom:10}}>{OPP.school}</div>
+              <div style={{fontSize:9,color:PAL.goldDim,letterSpacing:1,marginBottom:3}}>ATTACK</div>
+              <div style={{fontSize:10,color:PAL.cream,lineHeight:1.6,marginBottom:10}}>Every sale on their page deals exact dollar-for-dollar damage.</div>
+              <div style={{fontSize:9,color:PAL.goldDim,letterSpacing:1,marginBottom:3}}>GOAL</div>
+              <div style={{fontSize:16,fontWeight:700,color:OPP.color}}>${OPP.goal.toLocaleString()}</div>
+            </div>
           </div>
         )}
-
-        {activeTab === "roster" && (
-          <div style={{ padding: "12px 14px", maxHeight: 220, overflowY: "auto" }}>
-            {allTeams.map(team => (
-              <div key={team.id} style={{ marginBottom: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                  <div style={{ height: 1, flex: 1, background: P.goldDark }}/>
-                  <span style={{ fontSize: 11, color: team.color, letterSpacing: 2, fontWeight: 700 }}>{team.name.toUpperCase()}</span>
-                  <div style={{ height: 1, flex: 1, background: P.goldDark }}/>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 }}>
-                  {team.roster.map(char => {
-                    const cls = CLASSES[char.cls];
-                    const dead = charHP[char.id] <= 0;
-                    return (
-                      <div key={char.id} style={{ background: P.bg2, border: `0.5px solid ${P.goldDark}`, padding: "7px 8px", opacity: dead ? 0.3 : 1 }}>
-                        <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 2 }}>
-                          <div style={{ width: 5, height: 5, background: team.color }}/>
-                          <span style={{ fontSize: 10, color: P.cream, fontWeight: 700 }}>{char.name}</span>
-                          <span style={{ fontSize: 9, color: P.goldDim, marginLeft: "auto" }}>{char.gender === "f" ? "F" : "M"}</span>
-                        </div>
-                        <div style={{ fontSize: 8, color: team.color, letterSpacing: 1 }}>{cls?.name}</div>
-                        <div style={{ fontSize: 8, color: P.creamDim }}>{cls?.weapon}</div>
-                        {dead && <div style={{ fontSize: 8, color: P.maroonLight, marginTop: 2, letterSpacing: 1 }}>FALLEN</div>}
-                      </div>
-                    );
-                  })}
-                </div>
+        {tab==="log"&&(
+          <div style={{padding:"10px 16px",maxHeight:200,overflowY:"auto"}}>
+            {feed.length===0&&<div style={{fontSize:11,color:PAL.creamDim,padding:"8px 0"}}>No events yet — waiting for sales...</div>}
+            {feed.map(item=>(
+              <div key={item.id} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"5px 0",borderBottom:`1px solid ${PAL.panelBord}`}}>
+                <div style={{width:3,flexShrink:0,alignSelf:"stretch",background:FEED_COL[item.type]??PAL.creamDim,borderRadius:2,marginTop:2}}/>
+                <div style={{fontSize:11,color:FEED_COL[item.type]??PAL.creamDim,lineHeight:1.5,fontWeight:item.type==="death"||item.type==="attack"?700:400}}>{item.msg}</div>
               </div>
             ))}
           </div>
         )}
-
-        {activeTab === "board" && (
-          <div style={{ padding: "12px 14px" }}>
-            {sorted.map((t, i) => {
-              const alive = t.roster.some(c => charHP[c.id] > 0);
-              return (
-                <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: t.id === myTeam.id ? P.bg2 : "transparent", marginBottom: 4, border: t.id === myTeam.id ? `1px solid ${P.goldDim}` : "1px solid transparent" }}>
-                  <span style={{ fontSize: 13, color: P.goldDim, width: 22, fontWeight: 700 }}>#{i + 1}</span>
-                  <div style={{ width: 9, height: 9, background: alive ? t.color : P.goldDim }}/>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, color: alive ? P.cream : P.creamDim, fontWeight: t.id === myTeam.id ? 700 : 400, letterSpacing: 1 }}>{t.name}</div>
-                    <div style={{ fontSize: 9, color: P.goldDim }}>{t.school}</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 13, color: t.id === myTeam.id ? P.gold3 : P.creamDim, fontWeight: 700 }}>{scores[t.id] || 0} pts</div>
-                    {!alive && <div style={{ fontSize: 9, color: P.maroonLight }}>WIPED</div>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {activeTab === "log" && (
-          <div style={{ padding: "12px 14px", maxHeight: 190, overflowY: "auto" }}>
-            {feed.length === 0 && <div style={{ fontSize: 11, color: P.goldDim }}>Awaiting battle events...</div>}
-            {feed.map(item => {
-              const col = item.type === "shield" ? "#C4A0FF" : item.type === "sale" || item.type === "attack" ? P.gold3 : item.type === "defend" ? P.orangeLight : item.type === "death" ? P.maroonLight : item.type === "click" ? P.gold2 : P.creamDim;
-              return (
-                <div key={item.id} style={{ fontSize: 11, color: col, marginBottom: 5, lineHeight: 1.6, borderLeft: `2px solid ${col}55`, paddingLeft: 7, fontWeight: item.type === "death" || item.type === "attack" ? 700 : 400 }}>
-                  {item.msg}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
 
-      <ChainStrip width={700}/>
-
       {/* FOOTER */}
-      <div style={{ background: P.bg0, padding: "7px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ fontSize: 9, color: P.goldDark, letterSpacing: 3 }}>JOSEMADRIDSALSA.COM</div>
-        <a href={shareUrl}
-          onClick={e => { e.preventDefault(); window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, "fb", "width=600,height=400,menubar=no,toolbar=no"); }}
-          style={{ fontSize: 9, color: "#6090E0", textDecoration: "none", border: "1px solid #6090E044", padding: "3px 10px", letterSpacing: 2 }}>
-          f SHARE THIS PAGE
+      <div style={{background:"#080502",borderTop:`1px solid ${PAL.goldDim}`,padding:"7px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{fontSize:9,color:PAL.goldDim,letterSpacing:3}}>JOSEMADRIDSALSA.COM</span>
+        <a href="#" onClick={e=>{e.preventDefault();handleShare();}}
+          style={{fontSize:9,color:"#5A8FE0",textDecoration:"none",border:"1px solid #5A8FE044",borderRadius:2,padding:"3px 10px",letterSpacing:2}}>
+          f SHARE
         </a>
       </div>
     </div>

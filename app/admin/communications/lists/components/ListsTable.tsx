@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Trash2, Users } from 'lucide-react'
+import { Trash2, Users, Upload } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { createMailingList, deleteMailingList } from '../actions'
+import { ConstantContactImportModal } from './ConstantContactImportModal'
 
 type ListWithStats = MailingList & {
   _count: {
@@ -28,6 +29,7 @@ type ListWithStats = MailingList & {
 export function ListsTable({ lists }: { lists: ListWithStats[] }) {
   const [isPending, startTransition] = useTransition()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isCcImportOpen, setIsCcImportOpen] = useState(false)
 
   const handleCreate = async (formData: FormData) => {
     startTransition(async () => {
@@ -53,12 +55,17 @@ export function ListsTable({ lists }: { lists: ListWithStats[] }) {
 
   return (
     <div>
-      <div className="mb-4 flex flex-col items-center justify-between sm:flex-row">
+      <div className="mb-4 flex flex-col items-center justify-between gap-2 sm:flex-row">
         <h2 className="text-xl font-semibold">Existing Lists</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>Create New List</Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsCcImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import from Constant Contact
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>Create New List</Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Mailing List</DialogTitle>
@@ -87,8 +94,16 @@ export function ListsTable({ lists }: { lists: ListWithStats[] }) {
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
+
+      <ConstantContactImportModal
+        lists={lists.map((l) => ({ id: l.id, name: l.name }))}
+        open={isCcImportOpen}
+        onClose={() => setIsCcImportOpen(false)}
+        onSuccess={() => window.location.reload()}
+      />
 
       {lists.length === 0 ? (
         <div className="rounded-md border p-8 text-center text-muted-foreground">

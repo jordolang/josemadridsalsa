@@ -103,3 +103,24 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+export async function GET(request: NextRequest) {
+  try {
+    const fundraisers = await prisma.fundraiser.findMany({
+      where: {
+        isActive: true,
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    })
+
+    return NextResponse.json(fundraisers)
+  } catch (error: any) {
+    console.error('Error fetching fundraisers:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch fundraisers' },
+      { status: 500 }
+    )
+  }
+}
