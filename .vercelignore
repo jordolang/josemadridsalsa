@@ -78,8 +78,8 @@ public/images/Jose-*.png
 .claude/
 .obsidian/
 Chats/
-logs/
+/logs/
 mnt/
-Users/
+/Users/
 piecesdb.json
 .claude-worktrees/
