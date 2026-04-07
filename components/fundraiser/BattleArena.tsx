@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo, type ReactNode } from "react";
 
 // ============================================================================
 //  ██████╗ ██████╗ ███╗   ██╗███████╗██╗ ██████╗
@@ -44,6 +44,7 @@ const CONFIG = {
     color:    "#DDAA00",
     mascot:   "scottie",
     goal:     1200,
+    shareUrl: "https://josemadrid.net/fundraise/tri-valley-scotties",
     quips: [
       "Woof. You done?",
       "These paws hit HARD.",
@@ -190,7 +191,7 @@ function ScottieSprite({ color, state, tick, shielded, flipped, scale = 1 }: Spr
   );
 }
 
-const MASCOT_SPRITES: Record<string, (p: SpriteProps) => JSX.Element> = {
+const MASCOT_SPRITES: Record<string, (p: SpriteProps) => ReactNode> = {
   tornado: (p) => <TornadoSprite {...p}/>,
   scottie: (p) => <ScottieSprite {...p}/>,
   // Add new mascots here ↑
@@ -215,7 +216,7 @@ const MY  = CONFIG.myTeam;
 const OPP = CONFIG.oppTeam;
 const BT  = "'Courier New',monospace";
 
-function Arena({ width, height }: { width:number; height:number }) {
+const Arena = memo(function Arena({ width, height }: { width:number; height:number }) {
   const fY = height * 0.7;
   const stones: React.ReactNode[] = [];
   for (let r=0;r<Math.ceil(fY/28)+1;r++) for (let c=0;c<Math.ceil(width/36)+1;c++) {
@@ -244,9 +245,9 @@ function Arena({ width, height }: { width:number; height:number }) {
       <rect x={width-70} y={0} width={70} height={height} fill="#0E0A06" opacity="0.45"/>
     </svg>
   );
-}
+});
 
-function HPBar({ cur, max, color, shieldCur, shieldMax }:
+const HPBar = memo(function HPBar({ cur, max, color, shieldCur, shieldMax }:
   { cur:number; max:number; color:string; shieldCur?:number; shieldMax?:number }) {
   const pct = Math.max(0,Math.min(1,cur/max));
   const bc  = pct<0.25?PAL.red:pct<0.5?PAL.orange:color;
@@ -265,7 +266,7 @@ function HPBar({ cur, max, color, shieldCur, shieldMax }:
       )}
     </div>
   );
-}
+});
 
 function Float({text,color}:{text:string;color:string}) {
   return (
@@ -318,6 +319,19 @@ export interface BattleArenaProps {
    */
   shieldHPRemaining?: number;
 }
+
+// ============================================================================
+// STATIC STYLES — hoisted to avoid re-creation on every render
+// ============================================================================
+
+const FEED_COL: Record<string,string>={attack:PAL.gold2,defend:"#FF7755",shield:"#C4A0FF",death:PAL.red,info:PAL.creamDim};
+
+const ARENA_KEYFRAMES = `
+  @keyframes floatUp{0%{opacity:1;transform:translateX(-50%) translateY(0)}100%{opacity:0;transform:translateX(-50%) translateY(-54px)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  @keyframes glow{0%,100%{color:${PAL.gold}}50%{color:${PAL.gold2}}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
+`;
 
 // ============================================================================
 // MAIN COMPONENT
@@ -463,7 +477,7 @@ export default function BattleArena({
     }
   };
 
-  const MascotEl=({team,state,fl,side,sc}:{team:typeof MY;state:string;fl:typeof myFloats;side:"my"|"opp";sc?:number})=>{
+  const renderMascot=(team:typeof MY,state:string,fl:typeof myFloats,side:"my"|"opp",sc?:number)=>{
     const Sprite=MASCOT_SPRITES[team.mascot]??MASCOT_SPRITES.tornado;
     return (
       <div style={{position:"relative",display:"inline-block"}}>
@@ -475,17 +489,9 @@ export default function BattleArena({
     );
   };
 
-  const FEED_COL: Record<string,string>={attack:PAL.gold2,defend:"#FF7755",shield:"#C4A0FF",death:PAL.red,info:PAL.creamDim};
-  const myPct=myHP/CONFIG.startingHP, oppPct=oppHP/CONFIG.startingHP;
-
   return (
     <div style={{background:PAL.bg,maxWidth:700,margin:"0 auto",fontFamily:BT,overflow:"hidden"}}>
-      <style>{`
-        @keyframes floatUp{0%{opacity:1;transform:translateX(-50%) translateY(0)}100%{opacity:0;transform:translateX(-50%) translateY(-54px)}}
-        @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
-        @keyframes glow{0%,100%{color:${PAL.gold}}50%{color:${PAL.gold2}}}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
-      `}</style>
+      <style>{ARENA_KEYFRAMES}</style>
 
       {/* HEADER */}
       <div style={{background:"#080502",borderBottom:`3px solid ${PAL.gold}`,padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -519,11 +525,11 @@ export default function BattleArena({
         <Arena width={700} height={280}/>
         <div style={{position:"absolute",inset:0,pointerEvents:"none",background:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 4px)",zIndex:5}}/>
         <div style={{position:"absolute",bottom:22,left:55,zIndex:8,textAlign:"center"}}>
-          <MascotEl team={MY} state={myHP<=0?"dead":myState} fl={myFloats} side="my"/>
+          {renderMascot(MY,myHP<=0?"dead":myState,myFloats,"my")}
           <div style={{fontSize:10,color:MY.color,fontWeight:700,letterSpacing:1,marginTop:4}}>{MY.name}</div>
         </div>
         <div style={{position:"absolute",bottom:22,right:55,zIndex:8,textAlign:"center"}}>
-          <MascotEl team={OPP} state={oppHP<=0?"dead":oppState} fl={oppFloats} side="opp"/>
+          {renderMascot(OPP,oppHP<=0?"dead":oppState,oppFloats,"opp")}
           <div style={{fontSize:10,color:OPP.color,fontWeight:700,letterSpacing:1,marginTop:4}}>{OPP.name}</div>
         </div>
         <div style={{position:"absolute",top:"42%",left:"50%",transform:"translate(-50%,-50%)",zIndex:10,textAlign:"center",pointerEvents:"none"}}>

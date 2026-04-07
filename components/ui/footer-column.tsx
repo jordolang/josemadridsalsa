@@ -73,14 +73,16 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div>
             <div className="text-primary flex justify-center gap-2 sm:justify-start" suppressHydrationWarning>
-              <Image
-                src={company.logo}
-                alt={`${company.name} logo`}
-                width={56}
-                height={56}
-                className="object-contain"
-                priority
-              />
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-salsa-700 p-1">
+                <Image
+                  src={company.logo}
+                  alt={`${company.name} logo`}
+                  width={48}
+                  height={48}
+                  className="object-contain"
+                  priority
+                />
+              </div>
               <span className="text-2xl font-semibold">{company.name}</span>
             </div>
 

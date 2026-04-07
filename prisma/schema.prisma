@@ -3344,12 +3344,12 @@ model FundraiserShield {
   teamId      String
   activatedAt DateTime @default(now())
   expiresAt   DateTime
+  remainingHP Int      @default(30)
 
   // Relations
   team FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-  @@index([teamId])
-  @@index([expiresAt])
+  @@index([teamId, expiresAt])
   @@map("fundraiser_shields")
 }
 

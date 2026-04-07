@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
@@ -118,7 +119,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <Users className="h-8 w-8 text-blue-600" />
@@ -147,7 +148,9 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
 
       {/* Filters */}
       <Card className="p-4">
-        <UsersFilter initialSearch={params.search} initialRole={params.role} />
+        <Suspense fallback={<div className="h-10 animate-pulse bg-slate-100 rounded" />}>
+          <UsersFilter initialSearch={params.search} initialRole={params.role} />
+        </Suspense>
       </Card>
 
       {/* Users Table */}

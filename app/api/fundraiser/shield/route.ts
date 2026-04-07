@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma as db } from "@/lib/prisma";
 import { verifyFundraiserApiKey } from "@/lib/fundraiser-auth";
+import { rateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 
-const SHIELD_MS = 15 * 60 * 1000;
+const SHIELD_MS = 30 * 60 * 1000;
+
+const CUID_RE = /^[a-z0-9]{20,30}$/;
 
 export async function POST(req: NextRequest) {
   const parsed = z.object({ apiKey: z.string().min(32) }).safeParse(await req.json().catch(() => ({})));
@@ -24,12 +27,19 @@ export async function POST(req: NextRequest) {
     data: { teamId: team.id, expiresAt, activatedAt: new Date() },
   });
 
-  return NextResponse.json({ activated: true, expiresAt: shield.expiresAt.toISOString(), durationMinutes: 15 });
+  return NextResponse.json({ activated: true, expiresAt: shield.expiresAt.toISOString(), durationMinutes: 30 });
 }
 
 export async function GET(req: NextRequest) {
   const teamId = req.nextUrl.searchParams.get("teamId");
   if (!teamId) return NextResponse.json({ error: "teamId required" }, { status: 400 });
+  if (!CUID_RE.test(teamId)) return NextResponse.json({ error: "Invalid teamId" }, { status: 400 });
+
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const rl = rateLimit(`shield-get:${ip}`, 30, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } });
+  }
 
   const shield = await db.fundraiserShield.findFirst({
     where: { teamId, expiresAt: { gt: new Date() } },
