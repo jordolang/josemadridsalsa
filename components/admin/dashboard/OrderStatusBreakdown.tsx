@@ -14,18 +14,25 @@ interface OrderStatusBreakdownProps {
   totalOrders?: number
 }
 
-const defaultData: OrderStatus[] = [
-  { status: 'Pending', count: 12, color: 'bg-amber-500', bgColor: 'bg-amber-50 text-amber-700' },
-  { status: 'Processing', count: 8, color: 'bg-blue-500', bgColor: 'bg-blue-50 text-blue-700' },
-  { status: 'Shipped', count: 24, color: 'bg-purple-500', bgColor: 'bg-purple-50 text-purple-700' },
-  { status: 'Delivered', count: 156, color: 'bg-emerald-500', bgColor: 'bg-emerald-50 text-emerald-700' },
-  { status: 'Cancelled', count: 3, color: 'bg-red-500', bgColor: 'bg-red-50 text-red-700' },
-]
-
 export function OrderStatusBreakdown({
-  data = defaultData,
+  data,
   totalOrders,
 }: OrderStatusBreakdownProps) {
+  if (!data || data.length === 0) {
+    return (
+      <Card className="h-full">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">Order Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <p className="text-sm">No orders yet</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   const total = totalOrders ?? data.reduce((sum, d) => sum + d.count, 0)
 
   return (

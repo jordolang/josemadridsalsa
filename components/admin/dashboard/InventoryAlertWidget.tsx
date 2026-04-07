@@ -15,14 +15,31 @@ interface InventoryAlertWidgetProps {
   items?: InventoryItem[]
 }
 
-const defaultItems: InventoryItem[] = [
-  { name: 'Ghost Pepper Salsa 8oz', sku: 'GPS-8', stock: 3, threshold: 10 },
-  { name: 'Mango Habanero 16oz', sku: 'MH-16', stock: 5, threshold: 10 },
-  { name: 'Carolina Reaper 8oz', sku: 'CR-8', stock: 2, threshold: 5 },
-  { name: 'Original Recipe 32oz', sku: 'OR-32', stock: 7, threshold: 15 },
-]
+export function InventoryAlertWidget({ items }: InventoryAlertWidgetProps) {
+  if (!items || items.length === 0) {
+    return (
+      <Card className="h-full">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold">Inventory Alerts</CardTitle>
+            <Link
+              href="/admin/inventory"
+              className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+            >
+              View all <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <AlertTriangle className="h-8 w-8 mb-2 opacity-30" />
+            <p className="text-sm">All stock levels healthy</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
-export function InventoryAlertWidget({ items = defaultItems }: InventoryAlertWidgetProps) {
   return (
     <Card className="h-full">
       <CardHeader className="pb-2">

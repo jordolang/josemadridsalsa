@@ -12,17 +12,22 @@ interface CustomerGrowthChartProps {
   data?: GrowthData[]
 }
 
-const defaultData: GrowthData[] = [
-  { month: 'Aug', customers: 320, newCustomers: 45 },
-  { month: 'Sep', customers: 380, newCustomers: 60 },
-  { month: 'Oct', customers: 425, newCustomers: 45 },
-  { month: 'Nov', customers: 510, newCustomers: 85 },
-  { month: 'Dec', customers: 580, newCustomers: 70 },
-  { month: 'Jan', customers: 650, newCustomers: 70 },
-  { month: 'Feb', customers: 720, newCustomers: 70 },
-]
+export function CustomerGrowthChart({ data }: CustomerGrowthChartProps) {
+  if (!data || data.length === 0) {
+    return (
+      <Card className="h-full">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">Customer Growth</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <p className="text-sm">No customer data yet</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
-export function CustomerGrowthChart({ data = defaultData }: CustomerGrowthChartProps) {
   const maxCustomers = Math.max(...data.map((d) => d.customers))
   const totalNew = data.reduce((sum, d) => sum + d.newCustomers, 0)
   const latestTotal = data[data.length - 1]?.customers ?? 0

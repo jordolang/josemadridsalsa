@@ -15,7 +15,6 @@ import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { TrafficSourcesChart } from '@/components/admin/dashboard/TrafficSourcesChart'
 import { RecentActivityFeed } from '@/components/admin/dashboard/RecentActivityFeed'
 import { TopProductsTable } from '@/components/admin/dashboard/TopProductsTable'
 import { OrderStatusBreakdown } from '@/components/admin/dashboard/OrderStatusBreakdown'
@@ -45,36 +44,19 @@ async function getDashboardStats() {
         take: 10,
         orderBy: { createdAt: 'desc' },
         include: {
-          user: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
+          user: { select: { name: true, email: true } },
         },
       }),
       prisma.product.findMany({
-        where: {
-          inventory: { lte: 10 },
-          isActive: true,
-        },
-        select: {
-          name: true,
-          sku: true,
-          inventory: true,
-          lowStockThreshold: true,
-        },
+        where: { inventory: { lte: 10 }, isActive: true },
+        select: { name: true, sku: true, inventory: true, lowStockThreshold: true },
         orderBy: { inventory: 'asc' },
         take: 5,
       }),
       prisma.user.findMany({
         take: 5,
         orderBy: { createdAt: 'desc' },
-        select: {
-          name: true,
-          email: true,
-          createdAt: true,
-        },
+        select: { name: true, email: true, createdAt: true },
       }),
       prisma.order.groupBy({
         by: ['status'],
@@ -82,32 +64,77 @@ async function getDashboardStats() {
       }),
     ])
 
-    // Calculate total revenue
-    const revenue = await prisma.order.aggregate({
-      _sum: {
-        total: true,
-      },
-      where: {
-        status: {
-          not: 'CANCELLED',
-        },
-      },
-    })
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    // Calculate average review rating
-    const avgRating = await prisma.review.aggregate({
-      _avg: {
-        rating: true,
-      },
-    })
+    const [revenue, avgRating, newUsersThisMonth, monthlySales, topProductRows, recentActivityData, monthlyCustomerGrowth] = await Promise.all([
+      prisma.order.aggregate({ _sum: { total: true }, where: { status: { not: 'CANCELLED' } } }),
+      prisma.review.aggregate({ _avg: { rating: true } }),
+      prisma.user.count({ where: { createdAt: { gte: startOfMonth } } }),
+      prisma.$queryRaw<Array<{ month: string; sales: number; orders: number }>>`
+        SELECT
+          to_char(date_trunc('month', "createdAt"), 'Mon') AS month,
+          COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total ELSE 0 END), 0)::float AS sales,
+          COUNT(*)::int AS orders
+        FROM orders
+        WHERE "createdAt" >= date_trunc('month', NOW()) - interval '6 months'
+        GROUP BY date_trunc('month', "createdAt")
+        ORDER BY date_trunc('month', "createdAt") ASC
+      `,
+      prisma.$queryRaw<Array<{ name: string; sold: number; revenue: number }>>`
+        SELECT
+          oi."productName" AS name,
+          SUM(oi.quantity)::int AS sold,
+          SUM(oi."totalPrice")::float AS revenue
+        FROM order_items oi
+        JOIN orders o ON o.id = oi."orderId"
+        WHERE o.status != 'CANCELLED'
+        GROUP BY oi."productName"
+        ORDER BY sold DESC
+        LIMIT 5
+      `,
+      Promise.all([
+        prisma.order.findMany({
+          take: 3, orderBy: { createdAt: 'desc' },
+          select: { orderNumber: true, total: true, createdAt: true, guestEmail: true, user: { select: { name: true } } },
+        }),
+        prisma.user.findMany({ take: 2, orderBy: { createdAt: 'desc' }, select: { email: true, createdAt: true } }),
+        prisma.review.findMany({ take: 2, orderBy: { createdAt: 'desc' }, select: { rating: true, createdAt: true, product: { select: { name: true } } } }),
+      ]),
+      prisma.$queryRaw<Array<{ month: string; customers: number; new_customers: number }>>`
+        SELECT
+          to_char(months.m, 'Mon') AS month,
+          (SELECT COUNT(*) FROM users WHERE "createdAt" <= months.m + interval '1 month')::int AS customers,
+          (SELECT COUNT(*) FROM users WHERE "createdAt" >= months.m AND "createdAt" < months.m + interval '1 month')::int AS new_customers
+        FROM (
+          SELECT generate_series(
+            date_trunc('month', NOW()) - interval '6 months',
+            date_trunc('month', NOW()),
+            interval '1 month'
+          ) AS m
+        ) months
+        ORDER BY months.m ASC
+      `,
+    ])
 
-    // New users this month
-    const startOfMonth = new Date()
-    startOfMonth.setDate(1)
-    startOfMonth.setHours(0, 0, 0, 0)
-    const newUsersThisMonth = await prisma.user.count({
-      where: { createdAt: { gte: startOfMonth } },
-    })
+    const [latestOrders, latestUsers, latestReviews] = recentActivityData
+    const activityFeed = [
+      ...latestOrders.map((o: any) => ({
+        id: `order-${o.orderNumber}`, type: 'order' as const,
+        message: 'Order received', detail: `#${o.orderNumber} — $${Number(o.total).toFixed(2)}`,
+        timestamp: formatTimeAgo(o.createdAt),
+      })),
+      ...latestUsers.map((u: any) => ({
+        id: `user-${u.email}`, type: 'user' as const,
+        message: 'New customer registered', detail: u.email,
+        timestamp: formatTimeAgo(u.createdAt),
+      })),
+      ...latestReviews.map((r: any, i: number) => ({
+        id: `review-${i}`, type: 'review' as const,
+        message: `New ${r.rating}-star review`, detail: r.product.name,
+        timestamp: formatTimeAgo(r.createdAt),
+      })),
+    ]
 
     return {
       totalOrders,
@@ -125,11 +152,27 @@ async function getDashboardStats() {
         status: o.status,
         count: o._count.id,
       })),
+      monthlySales: monthlySales.map((m) => ({ month: m.month, sales: Number(m.sales), orders: Number(m.orders) })),
+      topProducts: topProductRows.map((p) => ({ name: p.name, sold: Number(p.sold), revenue: Number(p.revenue) })),
+      activityFeed,
+      customerGrowth: monthlyCustomerGrowth.map((m) => ({ month: m.month, customers: Number(m.customers), newCustomers: Number(m.new_customers) })),
     }
   } catch (error) {
     console.error('[Admin Dashboard] Error fetching stats:', error)
     throw new Error('Failed to load dashboard statistics. Please check your database connection.')
   }
+}
+
+function formatTimeAgo(date: Date): string {
+  const now = new Date()
+  const diffMs = now.getTime() - new Date(date).getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return 'Just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr < 24) return `${diffHr}h ago`
+  const diffDays = Math.floor(diffHr / 24)
+  return `${diffDays}d ago`
 }
 
 export default async function AdminDashboard() {
@@ -195,8 +238,6 @@ export default async function AdminDashboard() {
               value={`$${Number(stats.revenue).toLocaleString()}`}
               icon={DollarSign}
               color="green"
-              change={{ value: 12.5, trend: 'up' }}
-              subtitle="vs last month"
             />
           )}
           {canViewOrders && (
@@ -205,8 +246,6 @@ export default async function AdminDashboard() {
               value={stats.totalOrders.toLocaleString()}
               icon={ShoppingCart}
               color="blue"
-              change={{ value: 8.3, trend: 'up' }}
-              subtitle="vs last month"
             />
           )}
           <StatsCard
@@ -214,7 +253,6 @@ export default async function AdminDashboard() {
             value={stats.totalUsers.toLocaleString()}
             icon={Users}
             color="purple"
-            change={{ value: 5.2, trend: 'up' }}
             subtitle={`${stats.newUsersThisMonth} new this month`}
           />
           <StatsCard
@@ -251,7 +289,6 @@ export default async function AdminDashboard() {
               }
               icon={TrendingUp}
               color="blue"
-              change={{ value: 3.8, trend: 'up' }}
             />
           )}
           <StatsCard
@@ -267,46 +304,37 @@ export default async function AdminDashboard() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Sales Overview - takes 2/3 */}
           <div className="lg:col-span-2">
-            {canViewFinancials && <SalesOverview />}
+            {canViewFinancials && <SalesOverview data={stats.monthlySales.length > 0 ? stats.monthlySales : undefined} />}
           </div>
-          {/* Traffic Sources - takes 1/3 */}
+          {/* Order Status - takes 1/3 */}
           <div>
-            <TrafficSourcesChart />
+            <OrderStatusBreakdown
+              data={orderStatusData.length > 0 ? orderStatusData : undefined}
+              totalOrders={stats.totalOrders}
+            />
           </div>
         </div>
 
         {/* Middle Row - 3 equal columns */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <OrderStatusBreakdown
-            data={orderStatusData.length > 0 ? orderStatusData : undefined}
-            totalOrders={stats.totalOrders}
-          />
-          <TopProductsTable />
-          <RecentActivityFeed />
+          <TopProductsTable products={stats.topProducts.length > 0 ? stats.topProducts : undefined} />
+          <RecentActivityFeed activities={stats.activityFeed.length > 0 ? stats.activityFeed : undefined} />
+          <InventoryAlertWidget items={inventoryAlerts.length > 0 ? inventoryAlerts : undefined} />
         </div>
 
         {/* Bottom Row */}
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <CustomerGrowthChart />
+            <CustomerGrowthChart data={stats.customerGrowth.length > 0 ? stats.customerGrowth : undefined} />
           </div>
-          <div>
-            <InventoryAlertWidget
-              items={inventoryAlerts.length > 0 ? inventoryAlerts : undefined}
-            />
-          </div>
-        </div>
-
-        {/* Quick Actions + Recent Orders */}
-        <div className="grid gap-6 lg:grid-cols-3">
           <div>
             <QuickActionsGrid />
           </div>
+        </div>
 
-          {/* Recent Orders */}
-          {canViewOrders && stats.recentOrders.length > 0 && (
-            <div className="lg:col-span-2">
-              <Card className="h-full">
+        {/* Recent Orders */}
+        {canViewOrders && stats.recentOrders.length > 0 && (
+          <Card>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base font-semibold">
@@ -374,11 +402,9 @@ export default async function AdminDashboard() {
                       </tbody>
                     </table>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* New Users */}
         {stats.recentUsers.length > 0 && (

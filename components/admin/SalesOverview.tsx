@@ -14,18 +14,21 @@ interface SalesOverviewProps {
   loading?: boolean
 }
 
-// Default demo data for visualization
-const defaultData: SalesData[] = [
-  { month: 'Jan', sales: 12500, orders: 145 },
-  { month: 'Feb', sales: 15800, orders: 178 },
-  { month: 'Mar', sales: 13200, orders: 156 },
-  { month: 'Apr', sales: 18500, orders: 203 },
-  { month: 'May', sales: 21300, orders: 234 },
-  { month: 'Jun', sales: 24800, orders: 267 },
-  { month: 'Jul', sales: 22100, orders: 245 },
-]
+export function SalesOverview({ data, loading }: SalesOverviewProps) {
+  if (!data || data.length === 0) {
+    return (
+      <Card className="p-6">
+        <div className="space-y-6">
+          <h2 className="text-xl font-semibold text-foreground">Sales Overview</h2>
+          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+            <p className="text-sm font-medium">No sales data yet</p>
+            <p className="text-xs mt-1">Sales will appear here once orders are placed</p>
+          </div>
+        </div>
+      </Card>
+    )
+  }
 
-export function SalesOverview({ data = defaultData, loading }: SalesOverviewProps) {
   if (loading) {
     return (
       <Card className="p-6">
