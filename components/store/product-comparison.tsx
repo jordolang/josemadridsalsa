@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useComparisonStore, ComparisonProduct } from '@/lib/store/comparison'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { X, ShoppingCart, Scale, ChevronRight, Trash2 } from 'lucide-react'
+import { X, ShoppingCart, Scale, Trash2 } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -401,11 +401,11 @@ export function CompareFloatingButton() {
   return (
     <button
       onClick={openPanel}
-      className="fixed bottom-6 right-6 bg-salsa-600 text-white px-5 py-3 rounded-full shadow-lg hover:bg-salsa-700 transition-all z-40 flex items-center gap-2 group"
+      className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center rounded-l-lg border border-r-0 border-gray-200 bg-[#FFF8EE] py-4 px-2 text-gray-600 shadow-md hover:bg-[#F7EDD8] hover:shadow-lg hover:pr-3 active:scale-y-95 transition-all duration-200 cursor-pointer"
+      style={{ writingMode: 'vertical-rl', transform: 'translateY(-50%) rotate(180deg)' }}
     >
-      <Scale className="h-4 w-4" />
-      <span className="font-semibold">Compare ({products.length})</span>
-      <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+      <Scale className="h-4 w-4 mb-2" style={{ transform: 'rotate(180deg)' }} />
+      <span className="uppercase tracking-widest text-[10px] font-semibold">Compare ({products.length})</span>
     </button>
   )
 }

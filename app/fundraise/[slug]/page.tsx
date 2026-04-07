@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma as db } from "@/lib/prisma";
-import BattleArena from "@/components/fundraiser/BattleArena";
+import FundraiserBattleWrapper from "@/components/fundraiser/FundraiserBattleWrapper";
 import type { Metadata } from "next";
 
 interface Props { params: { slug: string } }
@@ -65,11 +65,11 @@ export default async function FundraiserProfilePage({ params }: Props) {
         </div>
       </section>
       <section className="w-full max-w-2xl">
-        <BattleArena
-          myTeam={mapTeam(team)}
-          opponents={opponents.map(mapTeam)}
-          shareUrl={`https://josemadrid.net/fundraise/${params.slug}`}
+        <FundraiserBattleWrapper
+          myTeamId={team.id}
+          oppTeamId={opponents[0]?.id ?? null}
           shieldExpiresAt={shieldRecord?.expiresAt?.toISOString() ?? null}
+          shieldHPRemaining={shieldRecord?.remainingHP ?? 0}
         />
       </section>
       <section className="w-full max-w-2xl mt-8 text-center">

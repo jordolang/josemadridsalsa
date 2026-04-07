@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { getMonthlyChampionship } from '@/lib/actions/social-features'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Trophy, TrendingUp, Medal, Flame, Calendar as CalIcon } from 'lucide-react'
@@ -10,8 +10,10 @@ import { format } from 'date-fns'
 
 export default function FundraiserBattlesPage() {
   const [data, setData] = useState<any>(null)
-  const currentMonth = new Date().getMonth() + 1
-  const currentYear = new Date().getFullYear()
+  const { currentMonth, currentYear } = useMemo(() => {
+    const now = new Date()
+    return { currentMonth: now.getMonth() + 1, currentYear: now.getFullYear() }
+  }, [])
 
   useEffect(() => {
     const fetchLead = async () => {

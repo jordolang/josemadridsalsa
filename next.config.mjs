@@ -74,8 +74,6 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ['localhost:3000'],
     },
-    // Use system TLS certificates for Turbopack font downloads
-    turbopackUseSystemTlsCerts: true,
   },
   /**
    * Exclude large, unused directories from serverless traces to keep
