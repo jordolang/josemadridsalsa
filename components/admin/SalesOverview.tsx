@@ -1,7 +1,7 @@
 'use client'
 
 import { Card } from '@/components/ui/card'
-import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-react'
+import { TrendingUp, TrendingDown } from 'lucide-react'
 
 interface SalesData {
   month: string
@@ -15,6 +15,20 @@ interface SalesOverviewProps {
 }
 
 export function SalesOverview({ data, loading }: SalesOverviewProps) {
+  if (!data || data.length === 0) {
+    return (
+      <Card className="p-6">
+        <div className="space-y-6">
+          <h2 className="text-xl font-semibold text-foreground">Sales Overview</h2>
+          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+            <p className="text-sm font-medium">No sales data yet</p>
+            <p className="text-xs mt-1">Sales will appear here once orders are placed</p>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
   if (loading) {
     return (
       <Card className="p-6">
@@ -26,54 +40,41 @@ export function SalesOverview({ data, loading }: SalesOverviewProps) {
     )
   }
 
-  if (!data || data.length === 0) {
-    return (
-      <Card className="p-6">
-        <div className="space-y-6">
-          <h2 className="text-xl font-semibold text-foreground">Sales Overview</h2>
-          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-            <BarChart3 className="h-12 w-12 mb-3 opacity-30" />
-            <p className="text-sm font-medium">No sales data yet</p>
-            <p className="text-xs mt-1">Sales will appear here once orders are placed</p>
-          </div>
-        </div>
-      </Card>
-    )
-  }
-
+  // Calculate max value for scaling
   const maxSales = Math.max(...data.map(d => d.sales))
   const totalSales = data.reduce((sum, d) => sum + d.sales, 0)
   const totalOrders = data.reduce((sum, d) => sum + d.orders, 0)
-  const avgOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0
+  const avgOrderValue = totalSales / totalOrders
 
-  const growthRate = data.length > 1 && data[0].sales > 0
+  // Calculate growth from first to last month
+  const growthRate = data.length > 1
     ? ((data[data.length - 1].sales - data[0].sales) / data[0].sales) * 100
     : 0
 
   return (
     <Card className="p-6">
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-foreground">Sales Overview</h2>
-            <p className="text-sm text-muted-foreground mt-1">
+            <h2 className="text-xl font-semibold text-slate-900">Sales Overview</h2>
+            <p className="text-sm text-slate-600 mt-1">
               Revenue trends over the last {data.length} months
             </p>
           </div>
-          {data.length > 1 && (
-            <div className="flex items-center gap-2">
-              {growthRate >= 0 ? (
-                <TrendingUp className="h-5 w-5 text-green-600" />
-              ) : (
-                <TrendingDown className="h-5 w-5 text-red-600" />
-              )}
-              <span className={`text-sm font-medium ${growthRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {growthRate >= 0 ? '+' : ''}{growthRate.toFixed(1)}%
-              </span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {growthRate >= 0 ? (
+              <TrendingUp className="h-5 w-5 text-green-600" />
+            ) : (
+              <TrendingDown className="h-5 w-5 text-red-600" />
+            )}
+            <span className={`text-sm font-medium ${growthRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {growthRate >= 0 ? '+' : ''}{growthRate.toFixed(1)}%
+            </span>
+          </div>
         </div>
 
+        {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="rounded-lg bg-blue-50 p-4">
             <p className="text-sm font-medium text-blue-900">Total Revenue</p>
@@ -95,17 +96,19 @@ export function SalesOverview({ data, loading }: SalesOverviewProps) {
           </div>
         </div>
 
+        {/* Bar Chart */}
         <div className="space-y-3">
           <div className="flex items-end justify-between gap-2 h-64">
-            {data.map((item) => {
-              const height = maxSales > 0 ? (item.sales / maxSales) * 100 : 0
+            {data.map((item, index) => {
+              const height = (item.sales / maxSales) * 100
               return (
                 <div key={item.month} className="flex-1 flex flex-col items-center gap-2">
                   <div className="w-full flex items-end justify-center h-full">
                     <div
                       className="w-full max-w-[60px] bg-gradient-to-t from-blue-600 to-blue-400 rounded-t-lg hover:from-blue-700 hover:to-blue-500 transition-all cursor-pointer group relative"
-                      style={{ height: `${Math.max(height, 2)}%` }}
+                      style={{ height: `${height}%` }}
                     >
+                      {/* Tooltip on hover */}
                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         <div className="bg-slate-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
                           <div className="font-medium">${item.sales.toLocaleString()}</div>
@@ -114,10 +117,18 @@ export function SalesOverview({ data, loading }: SalesOverviewProps) {
                       </div>
                     </div>
                   </div>
-                  <span className="text-xs font-medium text-muted-foreground">{item.month}</span>
+                  <span className="text-xs font-medium text-slate-600">{item.month}</span>
                 </div>
               )
             })}
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center justify-center gap-6 pt-4 border-t">
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-3 rounded-full bg-blue-600" />
+            <span className="text-sm text-slate-600">Monthly Revenue</span>
           </div>
         </div>
       </div>

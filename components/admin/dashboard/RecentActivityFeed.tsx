@@ -8,7 +8,6 @@ import {
   Package,
   CreditCard,
   MessageSquare,
-  Activity,
 } from 'lucide-react'
 
 interface ActivityItem {
@@ -41,7 +40,6 @@ export function RecentActivityFeed({ activities }: RecentActivityFeedProps) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <Activity className="h-8 w-8 mb-2 opacity-30" />
             <p className="text-sm">No recent activity</p>
           </div>
         </CardContent>
@@ -54,12 +52,12 @@ export function RecentActivityFeed({ activities }: RecentActivityFeedProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
-          <span className="text-xs text-muted-foreground">Latest events</span>
+          <span className="text-xs text-muted-foreground">Last 24 hours</span>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {activities.map((activity) => {
+          {activities.map((activity, index) => {
             const config = iconMap[activity.type]
             const Icon = config.icon
             return (

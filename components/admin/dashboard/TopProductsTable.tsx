@@ -1,7 +1,6 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Package } from 'lucide-react'
 
 interface TopProduct {
   name: string
@@ -22,7 +21,6 @@ export function TopProductsTable({ products }: TopProductsTableProps) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <Package className="h-8 w-8 mb-2 opacity-30" />
             <p className="text-sm">No sales data yet</p>
           </div>
         </CardContent>
@@ -67,7 +65,7 @@ export function TopProductsTable({ products }: TopProductsTableProps) {
               <div className="h-1.5 w-full rounded-full bg-muted">
                 <div
                   className="h-1.5 rounded-full bg-blue-500 transition-all"
-                  style={{ width: `${maxSold > 0 ? (product.sold / maxSold) * 100 : 0}%` }}
+                  style={{ width: `${(product.sold / maxSold) * 100}%` }}
                 />
               </div>
             </div>

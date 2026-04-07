@@ -24,9 +24,6 @@ import { QuickActionsGrid } from '@/components/admin/dashboard/QuickActionsGrid'
 
 async function getDashboardStats() {
   try {
-    const now = new Date()
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-
     const [
       totalOrders,
       totalUsers,
@@ -37,13 +34,6 @@ async function getDashboardStats() {
       lowStockProducts,
       recentUsers,
       ordersByStatus,
-      revenue,
-      avgRating,
-      newUsersThisMonth,
-      monthlySales,
-      topProductRows,
-      recentActivity,
-      monthlyCustomerGrowth,
     ] = await Promise.all([
       prisma.order.count(),
       prisma.user.count(),
@@ -54,9 +44,7 @@ async function getDashboardStats() {
         take: 10,
         orderBy: { createdAt: 'desc' },
         include: {
-          user: {
-            select: { name: true, email: true },
-          },
+          user: { select: { name: true, email: true } },
         },
       }),
       prisma.product.findMany({
@@ -74,17 +62,15 @@ async function getDashboardStats() {
         by: ['status'],
         _count: { id: true },
       }),
-      prisma.order.aggregate({
-        _sum: { total: true },
-        where: { status: { not: 'CANCELLED' } },
-      }),
-      prisma.review.aggregate({
-        _avg: { rating: true },
-      }),
-      prisma.user.count({
-        where: { createdAt: { gte: startOfMonth } },
-      }),
-      // Monthly sales for the last 7 months
+    ])
+
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+
+    const [revenue, avgRating, newUsersThisMonth, monthlySales, topProductRows, recentActivityData, monthlyCustomerGrowth] = await Promise.all([
+      prisma.order.aggregate({ _sum: { total: true }, where: { status: { not: 'CANCELLED' } } }),
+      prisma.review.aggregate({ _avg: { rating: true } }),
+      prisma.user.count({ where: { createdAt: { gte: startOfMonth } } }),
       prisma.$queryRaw<Array<{ month: string; sales: number; orders: number }>>`
         SELECT
           to_char(date_trunc('month', "createdAt"), 'Mon') AS month,
@@ -95,7 +81,6 @@ async function getDashboardStats() {
         GROUP BY date_trunc('month', "createdAt")
         ORDER BY date_trunc('month', "createdAt") ASC
       `,
-      // Top 5 products by units sold (from order_items)
       prisma.$queryRaw<Array<{ name: string; sold: number; revenue: number }>>`
         SELECT
           oi."productName" AS name,
@@ -108,25 +93,14 @@ async function getDashboardStats() {
         ORDER BY sold DESC
         LIMIT 5
       `,
-      // Recent real activity: latest orders, users, reviews
       Promise.all([
         prisma.order.findMany({
-          take: 3,
-          orderBy: { createdAt: 'desc' },
+          take: 3, orderBy: { createdAt: 'desc' },
           select: { orderNumber: true, total: true, createdAt: true, guestEmail: true, user: { select: { name: true } } },
         }),
-        prisma.user.findMany({
-          take: 2,
-          orderBy: { createdAt: 'desc' },
-          select: { email: true, createdAt: true },
-        }),
-        prisma.review.findMany({
-          take: 2,
-          orderBy: { createdAt: 'desc' },
-          select: { rating: true, createdAt: true, product: { select: { name: true } } },
-        }),
+        prisma.user.findMany({ take: 2, orderBy: { createdAt: 'desc' }, select: { email: true, createdAt: true } }),
+        prisma.review.findMany({ take: 2, orderBy: { createdAt: 'desc' }, select: { rating: true, createdAt: true, product: { select: { name: true } } } }),
       ]),
-      // Monthly customer growth for last 7 months
       prisma.$queryRaw<Array<{ month: string; customers: number; new_customers: number }>>`
         SELECT
           to_char(months.m, 'Mon') AS month,
@@ -143,34 +117,24 @@ async function getDashboardStats() {
       `,
     ])
 
-    // Build recent activity feed from real data
-    const [latestOrders, latestUsers, latestReviews] = recentActivity
+    const [latestOrders, latestUsers, latestReviews] = recentActivityData
     const activityFeed = [
-      ...latestOrders.map((o) => ({
-        id: `order-${o.orderNumber}`,
-        type: 'order' as const,
-        message: 'Order received',
-        detail: `#${o.orderNumber} — $${Number(o.total).toFixed(2)}`,
+      ...latestOrders.map((o: any) => ({
+        id: `order-${o.orderNumber}`, type: 'order' as const,
+        message: 'Order received', detail: `#${o.orderNumber} — $${Number(o.total).toFixed(2)}`,
         timestamp: formatTimeAgo(o.createdAt),
       })),
-      ...latestUsers.map((u) => ({
-        id: `user-${u.email}`,
-        type: 'user' as const,
-        message: 'New customer registered',
-        detail: u.email,
+      ...latestUsers.map((u: any) => ({
+        id: `user-${u.email}`, type: 'user' as const,
+        message: 'New customer registered', detail: u.email,
         timestamp: formatTimeAgo(u.createdAt),
       })),
-      ...latestReviews.map((r, i) => ({
-        id: `review-${i}`,
-        type: 'review' as const,
-        message: `New ${r.rating}-star review`,
-        detail: r.product.name,
+      ...latestReviews.map((r: any, i: number) => ({
+        id: `review-${i}`, type: 'review' as const,
+        message: `New ${r.rating}-star review`, detail: r.product.name,
         timestamp: formatTimeAgo(r.createdAt),
       })),
-    ].sort((a, b) => {
-      // Sort by most recent (timestamp is relative, so sort by original data)
-      return 0 // Already mixed from recent data
-    })
+    ]
 
     return {
       totalOrders,
@@ -188,22 +152,10 @@ async function getDashboardStats() {
         status: o.status,
         count: o._count.id,
       })),
-      monthlySales: monthlySales.map((m) => ({
-        month: m.month,
-        sales: Number(m.sales),
-        orders: Number(m.orders),
-      })),
-      topProducts: topProductRows.map((p) => ({
-        name: p.name,
-        sold: Number(p.sold),
-        revenue: Number(p.revenue),
-      })),
+      monthlySales: monthlySales.map((m) => ({ month: m.month, sales: Number(m.sales), orders: Number(m.orders) })),
+      topProducts: topProductRows.map((p) => ({ name: p.name, sold: Number(p.sold), revenue: Number(p.revenue) })),
       activityFeed,
-      customerGrowth: monthlyCustomerGrowth.map((m) => ({
-        month: m.month,
-        customers: Number(m.customers),
-        newCustomers: Number(m.new_customers),
-      })),
+      customerGrowth: monthlyCustomerGrowth.map((m) => ({ month: m.month, customers: Number(m.customers), newCustomers: Number(m.new_customers) })),
     }
   } catch (error) {
     console.error('[Admin Dashboard] Error fetching stats:', error)
@@ -352,9 +304,7 @@ export default async function AdminDashboard() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Sales Overview - takes 2/3 */}
           <div className="lg:col-span-2">
-            {canViewFinancials && (
-              <SalesOverview data={stats.monthlySales.length > 0 ? stats.monthlySales : undefined} />
-            )}
+            {canViewFinancials && <SalesOverview data={stats.monthlySales.length > 0 ? stats.monthlySales : undefined} />}
           </div>
           {/* Order Status - takes 1/3 */}
           <div>
@@ -369,9 +319,7 @@ export default async function AdminDashboard() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <TopProductsTable products={stats.topProducts.length > 0 ? stats.topProducts : undefined} />
           <RecentActivityFeed activities={stats.activityFeed.length > 0 ? stats.activityFeed : undefined} />
-          <InventoryAlertWidget
-            items={inventoryAlerts.length > 0 ? inventoryAlerts : undefined}
-          />
+          <InventoryAlertWidget items={inventoryAlerts.length > 0 ? inventoryAlerts : undefined} />
         </div>
 
         {/* Bottom Row */}

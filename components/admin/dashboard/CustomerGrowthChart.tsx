@@ -1,7 +1,6 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users } from 'lucide-react'
 
 interface GrowthData {
   month: string
@@ -22,7 +21,6 @@ export function CustomerGrowthChart({ data }: CustomerGrowthChartProps) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Users className="h-8 w-8 mb-2 opacity-30" />
             <p className="text-sm">No customer data yet</p>
           </div>
         </CardContent>
@@ -34,15 +32,14 @@ export function CustomerGrowthChart({ data }: CustomerGrowthChartProps) {
   const totalNew = data.reduce((sum, d) => sum + d.newCustomers, 0)
   const latestTotal = data[data.length - 1]?.customers ?? 0
 
+  // Build SVG line chart points
   const chartWidth = 400
   const chartHeight = 120
   const padding = 4
 
   const points = data.map((d, i) => {
-    const x = padding + (i / Math.max(data.length - 1, 1)) * (chartWidth - 2 * padding)
-    const y = maxCustomers > 0
-      ? chartHeight - padding - ((d.customers / maxCustomers) * (chartHeight - 2 * padding))
-      : chartHeight - padding
+    const x = padding + (i / (data.length - 1)) * (chartWidth - 2 * padding)
+    const y = chartHeight - padding - ((d.customers / maxCustomers) * (chartHeight - 2 * padding))
     return { x, y }
   })
 
@@ -70,6 +67,7 @@ export function CustomerGrowthChart({ data }: CustomerGrowthChartProps) {
         </div>
       </CardHeader>
       <CardContent>
+        {/* Line chart */}
         <svg
           viewBox={`0 0 ${chartWidth} ${chartHeight}`}
           className="w-full h-32"
@@ -103,6 +101,7 @@ export function CustomerGrowthChart({ data }: CustomerGrowthChartProps) {
           ))}
         </svg>
 
+        {/* Month labels */}
         <div className="flex justify-between mt-2 px-1">
           {data.map((d) => (
             <span key={d.month} className="text-xs text-muted-foreground">
@@ -111,6 +110,7 @@ export function CustomerGrowthChart({ data }: CustomerGrowthChartProps) {
           ))}
         </div>
 
+        {/* New customer bars */}
         <div className="mt-4 pt-4 border-t border-border">
           <p className="text-xs font-medium text-muted-foreground mb-3">
             New Customers per Month
@@ -118,12 +118,12 @@ export function CustomerGrowthChart({ data }: CustomerGrowthChartProps) {
           <div className="flex items-end gap-1.5 h-12">
             {data.map((d) => {
               const maxNew = Math.max(...data.map((dd) => dd.newCustomers))
-              const height = maxNew > 0 ? (d.newCustomers / maxNew) * 100 : 0
+              const height = (d.newCustomers / maxNew) * 100
               return (
                 <div key={d.month} className="flex-1 flex flex-col items-center gap-1">
                   <div
                     className="w-full rounded-t bg-blue-500 hover:bg-blue-600 transition-colors"
-                    style={{ height: `${Math.max(height, 2)}%` }}
+                    style={{ height: `${height}%` }}
                   />
                 </div>
               )
