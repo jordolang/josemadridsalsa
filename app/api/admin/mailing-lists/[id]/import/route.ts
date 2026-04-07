@@ -65,6 +65,11 @@ export async function POST(
       return NextResponse.json({ error: 'Email column mapping is required' }, { status: 400 })
     }
 
+    const statusMappingStr = formData.get('statusMapping') as string | null
+    const statusMapping: Record<string, string> | null = statusMappingStr
+      ? JSON.parse(statusMappingStr)
+      : null
+
     const result: ImportResult = { imported: 0, skipped: 0, errors: [] }
     const BATCH_SIZE = 500
 
@@ -77,6 +82,7 @@ export async function POST(
         lastName: string | null
         phone: string | null
         source: string
+        status: 'SUBSCRIBED' | 'UNSUBSCRIBED' | 'BOUNCED' | 'COMPLAINED'
         customFields: Record<string, string> | null
         tags: string[]
       }[] = []
@@ -87,6 +93,14 @@ export async function POST(
           result.errors.push(`Invalid email: ${rawEmail || '(empty)'}`)
           result.skipped++
           continue
+        }
+
+        let resolvedStatus: 'SUBSCRIBED' | 'UNSUBSCRIBED' | 'BOUNCED' | 'COMPLAINED' = 'SUBSCRIBED'
+        if (mapping.status && statusMapping) {
+          const rawStatus = row[mapping.status]?.trim()
+          if (rawStatus && statusMapping[rawStatus]) {
+            resolvedStatus = statusMapping[rawStatus] as typeof resolvedStatus
+          }
         }
 
         const knownMappedValues = new Set(Object.values(mapping))
@@ -103,7 +117,8 @@ export async function POST(
           firstName: mapping.firstName ? (row[mapping.firstName]?.trim() || null) : null,
           lastName: mapping.lastName ? (row[mapping.lastName]?.trim() || null) : null,
           phone: mapping.phone ? (row[mapping.phone]?.trim() || null) : null,
-          source: 'csv_import',
+          source: mapping.source ? (row[mapping.source]?.trim() || 'csv_import') : 'csv_import',
+          status: resolvedStatus,
           customFields: Object.keys(customFields).length > 0 ? customFields : null,
           tags: [],
         })
@@ -122,13 +137,14 @@ export async function POST(
               source: sub.source,
               customFields: sub.customFields ?? undefined,
               tags: sub.tags,
-              status: 'SUBSCRIBED',
+              status: sub.status,
             },
             update: {
               firstName: sub.firstName ?? undefined,
               lastName: sub.lastName ?? undefined,
               phone: sub.phone ?? undefined,
               customFields: sub.customFields ?? undefined,
+              status: sub.status,
             },
           })
           result.imported++
