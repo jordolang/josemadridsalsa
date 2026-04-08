@@ -109,36 +109,122 @@ export async function createCampaign(formData: FormData) {
 
 export async function launchCampaign(campaignId: string) {
   const user = await getCurrentUser()
-  
+
   if (!user || !(await hasAnyPermission(user, ['content:write']))) {
     return { error: 'Unauthorized' }
   }
-  
+
   try {
     const campaign = await prisma.emailCampaign.findUnique({
       where: { id: campaignId },
     })
-    
+
     if (!campaign) {
       return { error: 'Campaign not found' }
     }
-    
+
     if (campaign.status !== 'DRAFT') {
       return { error: 'Campaign must be in DRAFT status to launch' }
     }
-    
+
     // Launch campaign asynchronously via the queue processor
     processCampaign({ campaignId }).catch((error) => {
       console.error('Campaign send error:', error)
     })
-    
+
     revalidatePath('/admin/email-campaigns')
     revalidatePath(`/admin/email-campaigns/${campaignId}`)
-    
+
     return { success: true }
   } catch (error) {
     console.error('Error launching campaign:', error)
     return { error: 'Failed to launch campaign' }
+  }
+}
+
+export async function resumeCampaign(campaignId: string) {
+  const user = await getCurrentUser()
+
+  if (!user || !(await hasAnyPermission(user, ['content:write']))) {
+    return { error: 'Unauthorized' }
+  }
+
+  try {
+    const campaign = await prisma.emailCampaign.findUnique({
+      where: { id: campaignId },
+    })
+
+    if (!campaign) {
+      return { error: 'Campaign not found' }
+    }
+
+    if (campaign.status !== 'PAUSED') {
+      return { error: 'Campaign must be PAUSED to resume' }
+    }
+
+    // Resume via the queue processor (it accepts PAUSED status)
+    processCampaign({ campaignId }).catch((error) => {
+      console.error('Campaign resume error:', error)
+    })
+
+    revalidatePath('/admin/email-campaigns')
+    revalidatePath(`/admin/email-campaigns/${campaignId}`)
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error resuming campaign:', error)
+    return { error: 'Failed to resume campaign' }
+  }
+}
+
+export async function cancelCampaign(campaignId: string) {
+  const user = await getCurrentUser()
+
+  if (!user || !(await hasAnyPermission(user, ['content:write']))) {
+    return { error: 'Unauthorized' }
+  }
+
+  try {
+    const campaign = await prisma.emailCampaign.findUnique({
+      where: { id: campaignId },
+    })
+
+    if (!campaign) {
+      return { error: 'Campaign not found' }
+    }
+
+    if (!['SENDING', 'PAUSED', 'SCHEDULED'].includes(campaign.status)) {
+      return { error: 'Campaign must be SENDING, PAUSED, or SCHEDULED to cancel' }
+    }
+
+    // Mark unsent recipients as failed
+    await prisma.emailRecipient.updateMany({
+      where: {
+        campaignId,
+        status: { in: ['PENDING', 'SENDING'] },
+      },
+      data: {
+        status: 'FAILED',
+        errorMessage: 'Campaign cancelled',
+        failedAt: new Date(),
+      },
+    })
+
+    await prisma.emailCampaign.update({
+      where: { id: campaignId },
+      data: {
+        status: 'CANCELLED',
+        completedAt: new Date(),
+      },
+    })
+
+    revalidatePath('/admin/email-campaigns')
+    revalidatePath(`/admin/email-campaigns/${campaignId}`)
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error cancelling campaign:', error)
+    return { error: 'Failed to cancel campaign' }
   }
 }
 

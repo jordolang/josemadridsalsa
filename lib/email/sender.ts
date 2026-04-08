@@ -346,18 +346,43 @@ export async function sendCampaign({
 }
 
 /**
- * Retry failed recipients in a campaign
+ * Retry failed recipients in a campaign.
+ * Resets eligible failed recipients to PENDING and re-processes via the queue.
  */
-export async function retryCampaignFailures(campaignId: string) {
+export async function retryCampaignFailures(campaignId: string): Promise<{
+  success: boolean
+  retriableCount: number
+  error?: string
+}> {
+  const campaign = await prisma.emailCampaign.findUnique({
+    where: { id: campaignId },
+    select: { status: true, maxRetries: true },
+  })
+
+  if (!campaign) {
+    return { success: false, retriableCount: 0, error: 'Campaign not found' }
+  }
+
+  if (!['SENT', 'FAILED', 'PAUSED'].includes(campaign.status)) {
+    return { success: false, retriableCount: 0, error: 'Campaign must be SENT, FAILED, or PAUSED to retry' }
+  }
+
+  const maxRetries = campaign.maxRetries ?? 3
+
   const failedRecipients = await prisma.emailRecipient.findMany({
     where: {
       campaignId,
       status: 'FAILED',
-      retryCount: { lt: 3 }, // Max 3 retries
+      retryCount: { lt: maxRetries },
     },
+    select: { id: true },
   })
-  
-  // Reset to pending for retry
+
+  if (failedRecipients.length === 0) {
+    return { success: true, retriableCount: 0 }
+  }
+
+  // Reset failed recipients to PENDING for retry
   await prisma.emailRecipient.updateMany({
     where: {
       id: { in: failedRecipients.map((r) => r.id) },
@@ -367,9 +392,20 @@ export async function retryCampaignFailures(campaignId: string) {
       errorMessage: null,
     },
   })
-  
-  // Send campaign again (only pending recipients will be sent)
-  return sendCampaign({ campaignId })
+
+  // Set campaign back to a state the queue processor accepts
+  await prisma.emailCampaign.update({
+    where: { id: campaignId },
+    data: { status: 'PAUSED' },
+  })
+
+  // Import dynamically to avoid circular dependency
+  const { processCampaign } = await import('./queue')
+  processCampaign({ campaignId }).catch((err) => {
+    console.error('Retry processCampaign error:', err)
+  })
+
+  return { success: true, retriableCount: failedRecipients.length }
 }
 
 /**
