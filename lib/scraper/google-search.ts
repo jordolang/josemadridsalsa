@@ -123,7 +123,7 @@ export async function runGoogleSearchScraper(campaignId: string) {
             lead: {
               id: lead.id,
               schoolName: lead.schoolName,
-              schoolUrl: lead.schoolUrl,
+              schoolUrl: lead.schoolUrl ?? '',
               status: lead.status,
             }
           }
