@@ -1,0 +1,54 @@
+---
+title: Getting Started
+description: Set up your José Madrid Salsa development environment
+---
+
+# Getting Started
+
+This section covers the initial setup and configuration needed to get the José Madrid Salsa platform running.
+
+## Prerequisites
+
+- Node.js 18+ (recommended: Node.js 24 LTS)
+- npm or pnpm package manager
+- PostgreSQL database
+- Git
+
+## Quick Start
+
+### 1. Environment Setup
+
+Follow the [Environment Setup Guide](/docs/getting-started/environment-setup) to configure your development environment.
+
+### 2. Database Setup
+
+Initialize your database using the [Database Guide](/docs/getting-started/database). The platform uses Prisma as the ORM.
+
+### 3. Authentication Configuration
+
+Configure authentication providers in the [Authentication Guide](/docs/getting-started/authentication).
+
+### 4. Running the Application
+
+```bash
+npm install
+npm run dev
+```
+
+The application will be available at http://localhost:3000
+
+## Core Directories
+
+- `/app` - Next.js App Router routes and pages
+- `/components` - Reusable React components
+- `/lib` - Utility functions and helpers
+- `/hooks` - Custom React hooks
+- `/prisma` - Database schema and migrations
+- `/public` - Static assets
+- `/emails` - Email templates
+
+## Next Steps
+
+- [API Documentation](/docs/api) - Understand available endpoints
+- [Features](/docs/features) - Explore core functionality
+- [Configuration](/docs/configuration) - Advanced setup options

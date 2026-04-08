@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
-import { parseCSV, parseTextList, sendCampaign } from '@/lib/email/sender'
+import { parseCSV, parseTextList } from '@/lib/email/sender'
+import { processCampaign } from '@/lib/email/queue'
 
 export async function createCampaign(formData: FormData) {
   const user = await getCurrentUser()
@@ -126,9 +127,8 @@ export async function launchCampaign(campaignId: string) {
       return { error: 'Campaign must be in DRAFT status to launch' }
     }
     
-    // Launch campaign asynchronously
-    // In production, you'd use a background job queue
-    sendCampaign({ campaignId }).catch((error) => {
+    // Launch campaign asynchronously via the queue processor
+    processCampaign({ campaignId }).catch((error) => {
       console.error('Campaign send error:', error)
     })
     

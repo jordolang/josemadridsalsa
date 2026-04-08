@@ -1,322 +1,203 @@
 import { chromium } from 'playwright';
 import { prisma } from '@/lib/prisma';
+import { eventBus } from './event-bus';
 import {
   SEARCH_QUERY_TEMPLATES,
   MAX_SEARCH_PAGES,
-  EXCLUDED_DOMAINS,
-  SCHOOL_DOMAIN_PATTERNS,
+  EXCLUDED_DOMAINS
 } from './school-config';
-import { emitScraperEvent } from './scraper-events';
-
-const BRAVE_SEARCH_URL = 'https://search.brave.com/search';
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export async function runGoogleSearchScraper(campaignId: string) {
-  const campaign = await prisma.leadCampaign.findUnique({
-    where: { id: campaignId },
-  });
-  if (!campaign) throw new Error('Campaign not found');
+  const campaign = await prisma.leadCampaign.findUnique({ where: { id: campaignId } });
+  if (!campaign) throw new Error("Campaign not found");
 
   await prisma.leadCampaign.update({
     where: { id: campaignId },
-    data: { status: 'SCRAPING' },
+    data: { status: 'SCRAPING' }
   });
 
-  emitScraperEvent(
-    campaignId,
-    'info',
-    'search',
-    'Search scraper started (Brave Search)',
-    `Target: ${campaign.city}, ${campaign.state}`
-  );
-
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
+  // Emit status change
+  eventBus.emit({
+    type: 'campaign:status_changed',
+    data: {
+      campaignId,
+      status: 'SCRAPING',
+      message: 'Started Google Search scraping'
+    }
   });
 
-  const context = await browser.newContext({
-    userAgent:
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    viewport: { width: 1280, height: 720 },
-    locale: 'en-US',
-  });
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext();
+  const page = await context.newPage();
 
   try {
-    const queries = buildSearchQueries(campaign);
-    emitScraperEvent(
-      campaignId,
-      'info',
-      'search',
-      `Generated ${queries.length} search queries`,
-      queries.join(' | ')
-    );
+    // Construct query
+    let queryTemplate = SEARCH_QUERY_TEMPLATES.by_city;
+    if (campaign.schoolType?.toLowerCase().includes('middle')) {
+      queryTemplate = SEARCH_QUERY_TEMPLATES.by_city_middle;
+    } else if (campaign.district) {
+      queryTemplate = SEARCH_QUERY_TEMPLATES.by_district;
+    }
 
+    let query = queryTemplate
+      .replace('{city}', campaign.city || '')
+      .replace('{state}', campaign.state || '')
+      .replace('{district}', campaign.district || '');
+    
+    // Fallback if no specific templates fit
+    if (!query) {
+       query = `${campaign.city} ${campaign.state} ${campaign.schoolType} athletics`;
+    }
+
+    const encodedQuery = encodeURIComponent(query.trim().replace(/\s+/g, ' '));
+    let currentUrl = `https://www.google.com/search?q=${encodedQuery}&gl=us&hl=en`;
+    
     let totalFound = 0;
     const seenUrls = new Set<string>();
-    const limit = campaign.limit || 50;
 
-    for (const query of queries) {
-      if (totalFound >= limit) break;
+    for (let pageNum = 0; pageNum < MAX_SEARCH_PAGES; pageNum++) {
+      await page.goto(currentUrl, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(1000 + Math.random() * 1000); // Random delay
 
-      for (let pageNum = 0; pageNum < MAX_SEARCH_PAGES; pageNum++) {
-        if (totalFound >= limit) break;
+      // Try to click consent buttons if they appear
+      try {
+        await page.click('button#L2AGLb, button#W0wltc, button:has-text("Accept all"), button:has-text("I agree")', { timeout: 1500 });
+        await page.waitForTimeout(1000);
+      } catch (e) {
+        // No consent page or already accepted
+      }
 
-        emitScraperEvent(
-          campaignId,
-          'info',
-          'search',
-          `Searching: "${query}" (page ${pageNum + 1})`,
-          `Found so far: ${totalFound}`
-        );
+      // Parse search results
 
-        const page = await context.newPage();
+      const results = await page.$$eval('#main a, #search a, #res a, a', elements => {
+        return elements.map(el => {
+          const a = el as HTMLAnchorElement;
+          let url = a.href || '';
+          if (url.includes('/url?q=')) {
+            try { url = new URL(url).searchParams.get('q') || url; } catch(e) {}
+          }
+          const h3 = el.querySelector('h3');
+          return {
+            url,
+            title: h3 ? h3.textContent : el.textContent
+          };
+        }).filter(item => item.url && item.url.startsWith('http') && !item.url.includes('google.com') && item.title);
+      });
+      
+      console.log(`Found ${results.length} links on page ${pageNum}`);
 
+      for (const res of results) {
+        // Clean URL (remove tracking params, hash, etc.)
+        let cleanUrl = res.url;
         try {
-          const searchUrl =
-            pageNum === 0
-              ? `${BRAVE_SEARCH_URL}?q=${encodeURIComponent(query)}`
-              : `${BRAVE_SEARCH_URL}?q=${encodeURIComponent(query)}&offset=${pageNum}`;
-
-          await page.goto(searchUrl, {
-            waitUntil: 'domcontentloaded',
-            timeout: 20000,
-          });
-
-          // Wait for results to render
-          await page
-            .waitForSelector('#results .snippet', { timeout: 10000 })
-            .catch(() => null);
-          await delay(2000);
-
-          // Parse Brave Search snippets - take only the FIRST external link per snippet
-          // (the main result), skipping sub-links like "Online Store", "For Students", etc.
-          const snippets = page.locator('#results .snippet');
-          const snippetCount = await snippets.count();
-
-          const pageResults: Array<{ url: string; title: string }> = [];
-          const seenSnippetDomains = new Set<string>();
-
-          for (let i = 0; i < snippetCount; i++) {
-            const snippet = snippets.nth(i);
-            const anchors = snippet.locator('a[href^="http"]');
-            const anchorCount = await anchors.count();
-
-            if (anchorCount > 0) {
-              const mainAnchor = anchors.first();
-              const url = (await mainAnchor.getAttribute('href')) || '';
-              const rawTitle = (await mainAnchor.textContent()) || '';
-
-              if (
-                url.startsWith('http') &&
-                rawTitle.trim().length > 3 &&
-                !url.includes('brave.com')
-              ) {
-                // Deduplicate by domain within a single page of results
-                // (Brave shows sub-links under the same domain)
-                let domain: string;
-                try {
-                  domain = new URL(url).hostname;
-                } catch {
-                  domain = url;
-                }
-
-                if (!seenSnippetDomains.has(domain)) {
-                  seenSnippetDomains.add(domain);
-                  pageResults.push({
-                    url,
-                    title: cleanTitle(rawTitle.trim()),
-                  });
-                }
-              }
-            }
-          }
-
-          emitScraperEvent(
-            campaignId,
-            'info',
-            'search',
-            `Page ${pageNum + 1}: found ${pageResults.length} results from ${snippetCount} snippets`
-          );
-
-          for (const res of pageResults) {
-            if (totalFound >= limit) break;
-
-            let cleanUrl: string;
-            try {
-              const urlObj = new URL(res.url);
-              cleanUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`;
-            } catch {
-              cleanUrl = res.url;
-            }
-
-            const isExcluded = EXCLUDED_DOMAINS.some((domain) =>
-              cleanUrl.includes(domain)
-            );
-            if (isExcluded) continue;
-            if (seenUrls.has(cleanUrl)) continue;
-
-            seenUrls.add(cleanUrl);
-
-            const isSchoolDomain = SCHOOL_DOMAIN_PATTERNS.some((p) =>
-              cleanUrl.includes(p)
-            );
-
-            await prisma.lead.create({
-              data: {
-                campaignId,
-                schoolName: res.title || 'Unknown School',
-                schoolUrl: res.url,
-                city: campaign.city,
-                state: campaign.state,
-                district: campaign.district,
-                status: 'SCRAPED',
-              },
-            });
-            totalFound++;
-
-            const domainTag = isSchoolDomain ? ' [school domain]' : '';
-            emitScraperEvent(
-              campaignId,
-              'success',
-              'search',
-              `Saved: ${res.title}${domainTag}`,
-              cleanUrl
-            );
-          }
-
-          await delay(1500 + Math.random() * 1000);
-        } catch (err: unknown) {
-          const message =
-            err instanceof Error ? err.message : 'Unknown search error';
-          emitScraperEvent(
-            campaignId,
-            'warn',
-            'search',
-            `Search page ${pageNum + 1} failed: ${message}`
-          );
-          await delay(3000);
-        } finally {
-          await page.close();
+          const urlObj = new URL(res.url);
+          cleanUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`;
+        } catch (e) {
+          // invalid url
         }
+
+        // Check if excluded domain
+        const isExcluded = EXCLUDED_DOMAINS.some(domain => cleanUrl.includes(domain));
+        if (isExcluded || seenUrls.has(cleanUrl)) continue;
+
+        seenUrls.add(cleanUrl);
+
+        // Store Lead
+        const lead = await prisma.lead.create({
+          data: {
+            campaignId,
+            schoolName: res.title || 'Unknown School',
+            schoolUrl: res.url, // save original url
+            city: campaign.city,
+            state: campaign.state,
+            district: campaign.district,
+            status: 'SCRAPED',
+          }
+        });
+
+        // Emit real-time event
+        eventBus.emit({
+          type: 'lead:found',
+          data: {
+            campaignId,
+            lead: {
+              id: lead.id,
+              schoolName: lead.schoolName,
+              schoolUrl: lead.schoolUrl,
+              status: lead.status,
+            }
+          }
+        });
+
+        totalFound++;
+        
+        if (totalFound >= (campaign.limit || 50)) break;
+      }
+
+      if (totalFound >= (campaign.limit || 50)) break;
+
+      // Emit progress
+      eventBus.emit({
+        type: 'campaign:progress',
+        data: {
+          campaignId,
+          currentStep: 'search',
+          progress: {
+            current: totalFound,
+            total: campaign.limit || 50
+          }
+        }
+      });
+
+      // Next page
+      const nextButton = await page.$('a#pnnext');
+      if (nextButton) {
+        const nextHref = await nextButton.getAttribute('href');
+        if (nextHref) {
+          currentUrl = `https://www.google.com${nextHref}`;
+        } else {
+          break;
+        }
+      } else {
+        break;
       }
     }
 
     await prisma.leadCampaign.update({
       where: { id: campaignId },
-      data: { status: 'SCRAPE_COMPLETED', totalFound },
+      data: { status: 'SCRAPE_COMPLETED', totalFound }
     });
 
-    emitScraperEvent(
-      campaignId,
-      'success',
-      'search',
-      `Search complete: ${totalFound} schools found`,
-      `Unique URLs checked: ${seenUrls.size}`
-    );
-  } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : 'Unknown error';
-    emitScraperEvent(
-      campaignId,
-      'error',
-      'search',
-      `Search scraper failed: ${message}`
-    );
+    // Emit completion event
+    eventBus.emit({
+      type: 'campaign:status_changed',
+      data: {
+        campaignId,
+        status: 'SCRAPE_COMPLETED',
+        message: `Completed with ${totalFound} leads found`
+      }
+    });
+
+  } catch (error) {
+    console.error("Google Search Scraping failed:", error);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
     await prisma.leadCampaign.update({
       where: { id: campaignId },
-      data: { status: 'FAILED' },
+      data: { status: 'FAILED' }
+    });
+
+    // Emit error event
+    eventBus.emit({
+      type: 'campaign:error',
+      data: {
+        campaignId,
+        error: errorMessage,
+        step: 'search'
+      }
     });
   } finally {
     await browser.close();
   }
-}
-
-function buildSearchQueries(campaign: {
-  city: string | null;
-  state: string | null;
-  district: string | null;
-  schoolType: string | null;
-}): string[] {
-  const city = campaign.city || '';
-  const state = campaign.state || '';
-  const district = campaign.district || '';
-  const schoolType = campaign.schoolType || 'high school';
-
-  const queries: string[] = [];
-
-  if (district) {
-    queries.push(
-      SEARCH_QUERY_TEMPLATES.by_district
-        .replace('{district}', district)
-        .replace('{state}', state)
-    );
-  }
-
-  if (schoolType.toLowerCase().includes('middle')) {
-    queries.push(
-      SEARCH_QUERY_TEMPLATES.by_city_middle
-        .replace('{city}', city)
-        .replace('{state}', state)
-    );
-  } else {
-    queries.push(
-      SEARCH_QUERY_TEMPLATES.by_city
-        .replace('{city}', city)
-        .replace('{state}', state)
-    );
-  }
-
-  queries.push(
-    SEARCH_QUERY_TEMPLATES.by_city_coaches
-      .replace('{city}', city)
-      .replace('{state}', state)
-  );
-
-  queries.push(
-    `${city} ${state} ${schoolType} athletics coaching staff directory`
-  );
-
-  return queries.filter((q) => q.trim().length > 0);
-}
-
-function cleanTitle(title: string): string {
-  let cleaned = title;
-
-  // Brave format: "SiteName domain.com  > breadcrumb  > path   Actual Title - Suffix"
-  // Strategy: find the last segment after breadcrumb arrows + whitespace gap
-  const breadcrumbMatch = cleaned.match(
-    /^[A-Za-z0-9 ]+\s+[a-z0-9.-]+\.[a-z]{2,}(?:\s*[›>]\s*[^\s][^›>]*)*\s{2,}(.+)$/i
-  );
-  if (breadcrumbMatch && breadcrumbMatch[1].length >= 5) {
-    cleaned = breadcrumbMatch[1];
-  }
-
-  // Remove video duration prefix (e.g., "01:29  YouTube")
-  cleaned = cleaned.replace(/^\d{2}:\d{2}\s+YouTube\s+/i, '');
-
-  // Remove trailing site names / suffixes
-  cleaned = cleaned.replace(
-    /\s*[-|]\s*(Brave|Search|Home|Official Site|Website|YouTube).*$/i,
-    ''
-  );
-
-  // Remove trailing ellipsis
-  cleaned = cleaned.replace(/\s*\.{3}\s*$/, '');
-
-  cleaned = cleaned.trim();
-
-  // If cleaning made it too short, try extracting from the original title
-  // by just removing the domain part
-  if (cleaned.length < 5) {
-    cleaned = title
-      .replace(/^[A-Za-z0-9 ]+\s+[a-z0-9.-]+\.[a-z]{2,}\s*/i, '')
-      .replace(/[›>]/g, '')
-      .trim();
-  }
-
-  return cleaned.length >= 3 ? cleaned : title.trim();
 }

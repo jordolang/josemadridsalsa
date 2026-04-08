@@ -1,0 +1,292 @@
+---
+title: Battle Arena Integration
+description: Passive pixel art mascot battle game for fundraiser team profile pages with real-time sales-driven gameplay
+---
+
+# Fundraiser Battle Arena — Integration Guide
+
+## Overview
+
+The Battle Arena is a passive, sale-driven pixel art mascot battle game
+embedded on each fundraiser team's profile page at:
+
+  https://josemadrid.net/fundraise/[team-slug]
+
+Every sale on a team's page triggers an attack. Sharing the page on Facebook
+activates a 30-minute shield. No manual gameplay exists — the game reflects
+real fundraising activity in real time.
+
+---
+
+## Files Installed
+
+```
+components/fundraiser/BattleArena.tsx   ← the entire game component
+docs/BATTLE_ARENA_INTEGRATION.md        ← this file
+```
+
+---
+
+## Step 1 — Embed the component in a fundraiser profile page
+
+Your fundraiser profile page lives at:
+  app/fundraise/[slug]/page.tsx
+
+The page is a Server Component. BattleArena is a Client Component ("use client").
+Pass data from your DB as props:
+
+```tsx
+// app/fundraise/[slug]/page.tsx  (Server Component — no changes needed here)
+
+import BattleArena from "@/components/fundraiser/BattleArena";
+import FundraiserBattleWrapper from "@/components/fundraiser/FundraiserBattleWrapper";
+
+export default async function FundraiserProfilePage({ params }) {
+  const team = await db.fundraiserTeam.findUnique({
+    where: { slug: params.slug, status: "ACTIVE" },
+  });
+  if (!team) notFound();
+
+  const oppTeam = await db.fundraiserTeam.findFirst({
+    where: {
+      status: "ACTIVE",
+      id: { not: team.id },
+      activePeriod: { equals: team.activePeriod },
+    },
+    orderBy: { salesCount: "desc" },
+  });
+
+  const shield = await db.fundraiserShield.findFirst({
+    where: { teamId: team.id, expiresAt: { gt: new Date() } },
+    orderBy: { expiresAt: "desc" },
+  });
+
+  return (
+    <main>
+      {/* ... rest of your page ... */}
+      <FundraiserBattleWrapper
+        shieldExpiresAt={shield?.expiresAt?.toISOString() ?? null}
+        shieldHPRemaining={shield?.remainingHP ?? 0}
+        myTeamId={team.id}
+        oppTeamId={oppTeam?.id ?? null}
+      />
+    </main>
+  );
+}
+```
+
+---
+
+## Step 2 — Create the BattleWrapper client component
+
+This wrapper handles polling for new sale events and passing them as props:
+
+```tsx
+// components/fundraiser/FundraiserBattleWrapper.tsx
+"use client";
+
+import { useState, useEffect } from "react";
+import BattleArena from "./BattleArena";
+
+interface Props {
+  myTeamId: string;
+  oppTeamId: string | null;
+  shieldExpiresAt: string | null;
+  shieldHPRemaining: number;
+}
+
+export default function FundraiserBattleWrapper({
+  myTeamId, oppTeamId, shieldExpiresAt, shieldHPRemaining,
+}: Props) {
+  const [mySale,    setMySale]    = useState(0);
+  const [oppSale,   setOppSale]   = useState(0);
+  const [sharedAt,  setSharedAt]  = useState(false);
+  const [shieldExp, setShieldExp] = useState(shieldExpiresAt);
+  const [shieldHP,  setShieldHP]  = useState(shieldHPRemaining);
+
+  // Poll for new sale events every 10 seconds
+  useEffect(() => {
+    const poll = async () => {
+      const res = await fetch(`/api/fundraiser/battle-state?myTeam=${myTeamId}&oppTeam=${oppTeamId??""}`);
+      const data = await res.json();
+
+      if (data.latestMySaleDollars)  setMySale(data.latestMySaleDollars + Math.random() * 0.0001);
+      if (data.latestOppSaleDollars) setOppSale(data.latestOppSaleDollars + Math.random() * 0.0001);
+      if (data.shieldExpiresAt)      setShieldExp(data.shieldExpiresAt);
+      if (data.shieldHPRemaining !== undefined) setShieldHP(data.shieldHPRemaining);
+    };
+
+    poll();
+    const id = setInterval(poll, 10_000);
+    return () => clearInterval(id);
+  }, [myTeamId, oppTeamId]);
+
+  return (
+    <BattleArena
+      incomingSaleDollars={mySale}
+      opponentSaleDollars={oppSale}
+      shareConfirmed={sharedAt}
+      shieldExpiresAt={shieldExp}
+      shieldHPRemaining={shieldHP}
+    />
+  );
+}
+```
+
+---
+
+## Step 3 — Create the battle-state API route
+
+```ts
+// app/api/fundraiser/battle-state/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+
+export async function GET(req: NextRequest) {
+  const myTeamId  = req.nextUrl.searchParams.get("myTeam");
+  const oppTeamId = req.nextUrl.searchParams.get("oppTeam");
+  if (!myTeamId) return NextResponse.json({ error: "myTeam required" }, { status: 400 });
+
+  // Latest sale on MY team's page (last 30 seconds to avoid replaying old events)
+  const mySale = await db.fundraiserSaleEvent.findFirst({
+    where: { teamId: myTeamId, createdAt: { gt: new Date(Date.now() - 30_000) } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const oppSale = oppTeamId ? await db.fundraiserSaleEvent.findFirst({
+    where: { teamId: oppTeamId, createdAt: { gt: new Date(Date.now() - 30_000) } },
+    orderBy: { createdAt: "desc" },
+  }) : null;
+
+  const shield = await db.fundraiserShield.findFirst({
+    where: { teamId: myTeamId, expiresAt: { gt: new Date() } },
+    orderBy: { expiresAt: "desc" },
+  });
+
+  return NextResponse.json({
+    latestMySaleDollars:  mySale?.amount  ?? 0,
+    latestOppSaleDollars: oppSale?.amount ?? 0,
+    shieldExpiresAt:      shield?.expiresAt?.toISOString() ?? null,
+    shieldHPRemaining:    shield?.remainingHP ?? 0,
+  });
+}
+```
+
+---
+
+## Step 4 — Update CONFIG in BattleArena.tsx for each team
+
+For each new team you onboard, create a copy of BattleArena.tsx
+OR — better — make CONFIG a prop:
+
+```tsx
+// Option A: One component per team (simplest)
+// Duplicate BattleArena.tsx → BattleArena_WestM.tsx, change CONFIG block.
+
+// Option B: Pass CONFIG as a prop (recommended for many teams)
+// Change the component signature to accept a config prop and
+// remove the hardcoded CONFIG const.
+```
+
+The CONFIG fields to update per team:
+
+| Field                     | What to change                              |
+|---------------------------|---------------------------------------------|
+| myTeam.name               | Team display name                           |
+| myTeam.school             | School name                                 |
+| myTeam.color              | Hex color matching team colors              |
+| myTeam.mascot             | Key matching MASCOT_SPRITES                 |
+| myTeam.goal               | Fundraising goal in dollars                 |
+| myTeam.shareUrl           | Full URL to this team's fundraiser page     |
+| myTeam.quips              | Array of battle cry strings (4–8 items)     |
+| oppTeam.*                 | Same fields for the opposing team           |
+| startingHP                | HP per round (default 1000)                 |
+| shieldDurationMinutes     | Minutes per Facebook share (default 30)     |
+| shieldHP                  | Max damage shield absorbs (default 30)      |
+
+---
+
+## Step 5 — Add a new mascot sprite
+
+1. Open components/fundraiser/BattleArena.tsx
+2. Add your function above the MASCOT_SPRITES object:
+
+```tsx
+function EagleSprite({ color, state, tick, shielded, flipped, scale = 1 }: SpriteProps) {
+  // Build your SVG pixel art here
+  // state values: "idle" | "attack" | "hit" | "dead"
+  // Use tick for bob/animation: Math.sin(tick * 0.7) * 3
+  return <svg>...</svg>;
+}
+```
+
+3. Register it:
+```tsx
+const MASCOT_SPRITES = {
+  tornado: (p) => <TornadoSprite {...p}/>,
+  scottie: (p) => <ScottieSprite {...p}/>,
+  eagle:   (p) => <EagleSprite {...p}/>,   // ← new
+};
+```
+
+4. Set mascot: "eagle" in your team's CONFIG block.
+
+---
+
+## Step 6 — Shield DB schema addition
+
+Add `remainingHP` to your FundraiserShield model:
+
+```prisma
+model FundraiserShield {
+  id          String   @id @default(cuid())
+  teamId      String
+  team        FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  activatedAt DateTime @default(now())
+  expiresAt   DateTime
+  remainingHP Int      @default(30)   // ← add this field
+
+  @@index([teamId, expiresAt])
+}
+```
+
+Run: `npx prisma migrate dev --name add_shield_remaining_hp`
+
+Update the shield route to decrement remainingHP on each opponent sale:
+
+```ts
+// In app/api/fundraiser/sale/route.ts — after processing an opp sale
+// find the active shield for the team that was attacked and decrement
+const activeShield = await db.fundraiserShield.findFirst({
+  where: { teamId: attackedTeamId, expiresAt: { gt: new Date() }, remainingHP: { gt: 0 } },
+});
+if (activeShield) {
+  const absorb = Math.min(activeShield.remainingHP, saleDollars);
+  await db.fundraiserShield.update({
+    where: { id: activeShield.id },
+    data: { remainingHP: { decrement: absorb } },
+  });
+}
+```
+
+---
+
+## Game Mechanics Reference
+
+| Event                        | Result                                               |
+|------------------------------|------------------------------------------------------|
+| $45 sale on MY page          | MY mascot attacks for 45 damage                      |
+| $100 sale on OPP page        | OPP mascot attacks for 100 damage                    |
+| Shield active, OPP $100 sale | Shield absorbs up to $30, remaining 70 hits HP       |
+| Shield active, OPP $20 sale  | Shield absorbs all 20, mascot HP unchanged           |
+| Shield at 0 HP remaining     | Shield inactive, full damage hits mascot HP          |
+| Facebook share (no shield)   | 30-min shield activates, absorbs up to $30           |
+| Facebook share (shielded)    | No effect                                            |
+| Mascot HP reaches 0          | Round ends, both HP reset, round counter increments  |
+
+---
+
+## Removing the Demo Controls
+
+The component has no demo controls in this version.
+All events are driven by props from your wrapper component.
