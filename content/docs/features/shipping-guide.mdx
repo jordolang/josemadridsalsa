@@ -1,0 +1,327 @@
+---
+title: Shipping Configuration Guide
+description: Setup and manage shipping rates, carriers, and address validation for the e-commerce platform
+---
+
+# Shipping Configuration Guide
+
+How to set up and manage shipping for the Jose Madrid Salsa e-commerce platform.
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Environment Variables](#environment-variables)
+- [Admin Settings](#admin-settings)
+- [Carrier API Setup](#carrier-api-setup)
+- [Rate Calculation Logic](#rate-calculation-logic)
+- [Fallback Rate System](#fallback-rate-system)
+- [PO Box Handling](#po-box-handling)
+- [Caching](#caching)
+- [Address Validation](#address-validation)
+- [Key Files](#key-files)
+
+---
+
+## Overview
+
+The shipping system calculates real-time rates from carrier APIs (EasyPost or Shippo) with automatic fallback to estimate-based rates when the API is unavailable. This ensures checkout is never blocked by shipping failures.
+
+### Design Principles
+
+1. **Never block checkout** - All errors fall back to estimate rates
+2. **Server-side truth** - Shipping cost is always recalculated server-side; client values are never trusted
+3. **Configurable** - Free shipping threshold and origin address are managed from the admin panel
+4. **PO Box aware** - Automatically filters to USPS-only options for PO Box addresses
+
+---
+
+## Architecture
+
+```
+Checkout Page                     Server
+    |                               |
+    |  POST /api/checkout/          |
+    |  calculate-shipping           |
+    |------------------------------>|
+    |                               |
+    |                    +----------+-----------+
+    |                    |  Check in-memory     |
+    |                    |  cache (5 min TTL)   |
+    |                    +----------+-----------+
+    |                               |
+    |                    +----------+-----------+
+    |                    |  Fetch product       |
+    |                    |  weights from DB     |
+    |                    +----------+-----------+
+    |                               |
+    |                    +----------+-----------+
+    |                    |  calculateShipping() |
+    |                    |                      |
+    |                    |  1. Free threshold?  |
+    |                    |  2. Carrier API call |
+    |                    |  3. Fallback rates   |
+    |                    +----------+-----------+
+    |                               |
+    |  { availableOptions, cost }   |
+    |<------------------------------|
+```
+
+---
+
+## Environment Variables
+
+### Required
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `SHIPPING_API_KEY` | API key for the shipping provider (EasyPost or Shippo) | `EZAKxxxxxxxx` |
+
+### Optional
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SHIPPING_PROVIDER` | `easypost` | Shipping provider to use (`easypost` or `shippo`) |
+| `SHIPPING_TEST_MODE` | `false` | Set to `true` to use test/sandbox mode |
+| `SHIPPING_ORIGIN_ADDRESS` | `123 Main St` | Fallback origin street address |
+| `SHIPPING_ORIGIN_CITY` | `San Francisco` | Fallback origin city |
+| `SHIPPING_ORIGIN_STATE` | `CA` | Fallback origin state |
+| `SHIPPING_ORIGIN_ZIP` | `94111` | Fallback origin ZIP code |
+
+The `SHIPPING_ORIGIN_*` environment variables serve as defaults. The admin settings page origin address takes precedence when configured.
+
+---
+
+## Admin Settings
+
+**URL:** `/admin/settings/shipping`
+
+**Required permission:** `settings:read` to view, `settings:write` to modify.
+
+### Configurable Fields
+
+#### Free Shipping Threshold
+- Numeric dollar amount (e.g., `75.00`)
+- Orders at or above this amount receive free shipping
+- Leave blank to disable free shipping
+- Stored in the `ShippingSettings` table (singleton row)
+- Default fallback: `$50.00` (hardcoded in `SHIPPING_RATES.FREE_SHIPPING_THRESHOLD`)
+
+#### Origin Address
+- Street address, city, state, ZIP code, country
+- Used as the "from" address for carrier rate API calls
+- Required for accurate rate calculations
+- Admin page shows warning badge if not configured
+
+#### Default Carrier
+- Dropdown: None (use cheapest), USPS, UPS, FedEx
+- When set to "None", the system returns the cheapest available rate as the default option
+
+#### Enabled Carriers
+- Checkbox selection: USPS, UPS, FedEx
+- Controls which carriers appear in rate calculations
+- Admin page shows warning if no carriers are enabled
+
+### Status Dashboard
+
+The admin page displays current configuration status with badges:
+- **Free shipping:** Active (with threshold) or Disabled
+- **Origin address:** Configured (with address preview) or Required
+- **Carriers:** Active (count + names) or Warning (none enabled)
+
+All settings changes are audit-logged with the user ID, action, and changed values.
+
+---
+
+## Carrier API Setup
+
+### Supported Providers
+
+#### EasyPost
+
+1. Create an account at easypost.com
+2. Obtain your API key from the dashboard
+3. Set `SHIPPING_API_KEY` to your EasyPost API key
+4. Set `SHIPPING_PROVIDER=easypost` (this is the default)
+5. For testing, set `SHIPPING_TEST_MODE=true`
+
+**Current status:** The EasyPost client (`EasyPostClient` in `lib/shipping-api.ts`) returns mock rates. Install `@easypost/api` and implement real API calls for production.
+
+#### Shippo
+
+1. Create an account at goshippo.com
+2. Obtain your API token from the dashboard
+3. Set `SHIPPING_API_KEY` to your Shippo API token
+4. Set `SHIPPING_PROVIDER=shippo`
+5. For testing, set `SHIPPING_TEST_MODE=true`
+
+**Current status:** The Shippo client (`ShippoClient` in `lib/shipping-api.ts`) returns mock rates. Install the `shippo` package and implement real API calls for production.
+
+### Validation
+
+Call `validateShippingConfiguration()` from `lib/shipping-api.ts` at app startup to verify:
+- API key is set
+- Provider client can be instantiated
+- Test rate fetch returns results
+
+```
+const result = await validateShippingConfiguration()
+// { configured: true, provider: 'easypost', testMode: false }
+// { configured: false, error: 'SHIPPING_API_KEY is not set' }
+```
+
+---
+
+## Rate Calculation Logic
+
+### `calculateShipping()` in `lib/shipping-calculator.ts`
+
+The main entry point for all shipping calculations. Called by both the checkout API and the shipping estimate endpoint.
+
+### Step-by-Step Flow
+
+1. **Free shipping check** - Fetch threshold from DB (`ShippingSettings` singleton); if subtotal >= threshold, return `$0.00` immediately
+2. **International check** - Non-US addresses use estimate-based rates (carrier API not yet supported for international)
+3. **Parcel dimensions** - Aggregate item weights and dimensions:
+   - Weight: sum of `(item weight * quantity)`, converted to ounces (1 lb = 16 oz); default 1 lb per item
+   - Length/width: maximum across all items; defaults: 10" x 8"
+   - Height: sum of item heights * quantities, capped at 24"; default 2" per item
+4. **Carrier API call** - Build `ShipmentRequest` with origin address and destination, call `getShippingRates()`
+5. **PO Box filter** - If destination is a PO Box, filter to USPS-only rates
+6. **Sort and return** - Sort rates by cost (cheapest first), return all as `availableOptions`
+7. **Fallback** - On any error, return estimate-based rates with `fallback: true` flag
+
+### Estimate-Based Rates (Fallback)
+
+Used when the carrier API is unavailable or returns no rates.
+
+| Condition | Rate |
+|-----------|------|
+| Subtotal >= free shipping threshold | $0.00 (Free Shipping) |
+| International (non-US) | $24.99 |
+| Standard domestic (flat rate) | $6.99 |
+| Weight > 5 lbs | $4.99 base + $0.50/lb over 5 lbs |
+| Express shipping | $14.99 |
+
+#### State Multipliers
+
+Remote states have a cost multiplier applied:
+
+| State | Multiplier |
+|-------|-----------|
+| Alaska (AK) | 1.5x |
+| Hawaii (HI) | 1.5x |
+| Puerto Rico (PR) | 2.0x |
+
+#### PO Box Estimate Options
+
+When the destination is a PO Box, only USPS options are offered:
+
+| Service | Rate |
+|---------|------|
+| USPS Ground Advantage | base rate |
+| USPS Priority Mail | base rate x 1.5 |
+| USPS Priority Mail Express | express rate |
+
+#### Non-PO-Box Estimate Options
+
+| Service | Rate |
+|---------|------|
+| Standard Shipping | base rate |
+| Express Shipping | express rate |
+
+---
+
+## Fallback Rate System
+
+The system has multiple fallback layers to ensure checkout is never blocked:
+
+1. **Carrier API succeeds** - Use real carrier rates
+2. **Carrier API returns no rates** - Use estimate-based rates with `fallback: true`
+3. **Carrier API errors** - Log error, use estimate-based rates with `fallback: true`
+4. **API key missing** - `getShippingClient()` throws; caught by `getShippingRates()`, returns empty rates; calculator falls back to estimates
+5. **Calculate-shipping endpoint fails entirely** - Returns HTTP 200 with flat-rate estimate ($6.99) rather than HTTP 500
+6. **Free shipping threshold DB fetch fails** - Falls back to hardcoded `$50.00` threshold
+
+---
+
+## PO Box Handling
+
+The system detects PO Box addresses using pattern matching on the address line.
+
+### Detection Patterns
+
+The following patterns (case-insensitive, periods removed) trigger PO Box detection:
+
+- `PO BOX`, `P.O. BOX`, `P O BOX`
+- `POST OFFICE BOX`
+- `POB`, `P.O.B`
+- `BOX 123` (only at start of address)
+
+### Behavior When PO Box Detected
+
+- **Carrier API mode:** Filters rates to USPS-only (UPS and FedEx cannot deliver to PO Boxes)
+- **Fallback mode:** Returns USPS Ground Advantage, Priority Mail, and Priority Mail Express options only
+- If no USPS rates are available from the carrier API, falls back to estimate rates
+
+---
+
+## Caching
+
+### Server-Side In-Memory Cache
+
+**Location:** `app/api/checkout/calculate-shipping/route.ts`
+
+The shipping calculation endpoint caches results in memory to avoid redundant carrier API calls during a checkout session.
+
+| Parameter | Value |
+|-----------|-------|
+| TTL | 5 minutes |
+| Max entries | 100 |
+| Cache key | Sorted `productId:quantity` pairs + `city\|state\|postalCode` |
+
+Cache pruning runs after each new entry. Expired entries are removed first; if still over the limit, oldest entries are evicted.
+
+### Client-Side Debouncing
+
+The checkout page debounces shipping calculation requests by 800ms as the user types address fields (city, state, ZIP code).
+
+---
+
+## Address Validation
+
+### `validateShippingAddress()` in `lib/shipping-calculator.ts`
+
+Validates address fields with the following rules:
+
+| Field | Rule |
+|-------|------|
+| `address1` | Required, minimum 3 characters |
+| `city` | Required, minimum 2 characters |
+| `state` | Required, exactly 2 characters (e.g., CA, NY) |
+| `postalCode` | Required, minimum 5 characters |
+| `country` | Required, exactly 2 characters (e.g., US) |
+
+Returns `{ valid: boolean, errors: string[] }`.
+
+### API-Level Validation
+
+The calculate-shipping endpoint validates with Zod:
+- `items`: non-empty array of `{ productId: CUID, quantity: positive int }`
+- `shippingAddress.state`: exactly 2 letters
+- `shippingAddress.postalCode`: minimum 5 characters
+- `shippingAddress.country`: defaults to `US`
+
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/shipping-calculator.ts` | Core shipping calculation logic, rate computation, fallback system |
+| `lib/shipping-api.ts` | Carrier API client (EasyPost/Shippo), rate fetching, configuration validation |
+| `lib/shipping-carriers.ts` | Carrier constants (`usps`, `ups`, `fedex`) and display labels |
+| `app/api/checkout/calculate-shipping/route.ts` | HTTP endpoint for real-time shipping estimates with caching |
+| `app/admin/settings/shipping/page.tsx` | Admin UI for configuring shipping settings |

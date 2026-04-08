@@ -1,10 +1,11 @@
 import { chromium, Page } from 'playwright';
 import { prisma } from '@/lib/prisma';
-import { 
-  ATHLETICS_PAGE_KEYWORDS, 
-  STAFF_TITLE_PATTERNS, 
+import { eventBus } from './event-bus';
+import {
+  ATHLETICS_PAGE_KEYWORDS,
+  STAFF_TITLE_PATTERNS,
   GENERIC_EMAIL_PREFIXES,
-  PAGE_LOAD_TIMEOUT 
+  PAGE_LOAD_TIMEOUT
 } from './school-config';
 
 export async function runWebsiteParser(campaignId: string) {
@@ -14,6 +15,16 @@ export async function runWebsiteParser(campaignId: string) {
   await prisma.leadCampaign.update({
     where: { id: campaignId },
     data: { status: 'PARSING_CONTACTS' }
+  });
+
+  // Emit status change
+  eventBus.emit({
+    type: 'campaign:status_changed',
+    data: {
+      campaignId,
+      status: 'PARSING_CONTACTS',
+      message: 'Started parsing contact information'
+    }
   });
 
   const leads = await prisma.lead.findMany({
@@ -128,12 +139,29 @@ export async function runWebsiteParser(campaignId: string) {
               status: 'CONTACT_FOUND'
             }
           });
+
+          // Emit contact parsed event
+          eventBus.emit({
+            type: 'lead:contact_parsed',
+            data: {
+              campaignId,
+              leadId: lead.id,
+              contact: {
+                email: firstContact.email,
+                phone: undefined,
+                contactName: firstContact.name,
+                title: firstContact.title,
+                sport: firstContact.sport
+              }
+            }
+          });
+
           totalEmailsFound++;
 
           // Create new leads for the remaining contacts
           for (let i = 1; i < contactsFound.length; i++) {
             const contact = contactsFound[i];
-            await prisma.lead.create({
+            const newLead = await prisma.lead.create({
               data: {
                 campaignId: lead.campaignId,
                 schoolName: lead.schoolName,
@@ -148,6 +176,23 @@ export async function runWebsiteParser(campaignId: string) {
                 status: 'CONTACT_FOUND'
               }
             });
+
+            // Emit contact parsed event for new lead
+            eventBus.emit({
+              type: 'lead:contact_parsed',
+              data: {
+                campaignId,
+                leadId: newLead.id,
+                contact: {
+                  email: contact.email,
+                  phone: undefined,
+                  contactName: contact.name,
+                  title: contact.title,
+                  sport: contact.sport
+                }
+              }
+            });
+
             totalEmailsFound++;
           }
         } else {
@@ -174,11 +219,34 @@ export async function runWebsiteParser(campaignId: string) {
       data: { status: 'PARSING_COMPLETED', totalEmailsFound }
     });
 
+    // Emit completion event
+    eventBus.emit({
+      type: 'campaign:status_changed',
+      data: {
+        campaignId,
+        status: 'PARSING_COMPLETED',
+        message: `Completed parsing ${totalEmailsFound} emails`
+      }
+    });
+
   } catch (error) {
     console.error("Website parsing failed:", error);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
     await prisma.leadCampaign.update({
       where: { id: campaignId },
       data: { status: 'FAILED' }
+    });
+
+    // Emit error event
+    eventBus.emit({
+      type: 'campaign:error',
+      data: {
+        campaignId,
+        error: errorMessage,
+        step: 'parse'
+      }
     });
   } finally {
     await browser.close();

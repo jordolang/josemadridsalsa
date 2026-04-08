@@ -1,9 +1,10 @@
 import { chromium } from 'playwright';
 import { prisma } from '@/lib/prisma';
-import { 
-  SEARCH_QUERY_TEMPLATES, 
-  MAX_SEARCH_PAGES, 
-  EXCLUDED_DOMAINS 
+import { eventBus } from './event-bus';
+import {
+  SEARCH_QUERY_TEMPLATES,
+  MAX_SEARCH_PAGES,
+  EXCLUDED_DOMAINS
 } from './school-config';
 
 export async function runGoogleSearchScraper(campaignId: string) {
@@ -13,6 +14,16 @@ export async function runGoogleSearchScraper(campaignId: string) {
   await prisma.leadCampaign.update({
     where: { id: campaignId },
     data: { status: 'SCRAPING' }
+  });
+
+  // Emit status change
+  eventBus.emit({
+    type: 'campaign:status_changed',
+    data: {
+      campaignId,
+      status: 'SCRAPING',
+      message: 'Started Google Search scraping'
+    }
   });
 
   const browser = await chromium.launch({ headless: true });
@@ -92,7 +103,7 @@ export async function runGoogleSearchScraper(campaignId: string) {
         seenUrls.add(cleanUrl);
 
         // Store Lead
-        await prisma.lead.create({
+        const lead = await prisma.lead.create({
           data: {
             campaignId,
             schoolName: res.title || 'Unknown School',
@@ -103,12 +114,40 @@ export async function runGoogleSearchScraper(campaignId: string) {
             status: 'SCRAPED',
           }
         });
+
+        // Emit real-time event
+        eventBus.emit({
+          type: 'lead:found',
+          data: {
+            campaignId,
+            lead: {
+              id: lead.id,
+              schoolName: lead.schoolName,
+              schoolUrl: lead.schoolUrl,
+              status: lead.status,
+            }
+          }
+        });
+
         totalFound++;
         
         if (totalFound >= (campaign.limit || 50)) break;
       }
 
       if (totalFound >= (campaign.limit || 50)) break;
+
+      // Emit progress
+      eventBus.emit({
+        type: 'campaign:progress',
+        data: {
+          campaignId,
+          currentStep: 'search',
+          progress: {
+            current: totalFound,
+            total: campaign.limit || 50
+          }
+        }
+      });
 
       // Next page
       const nextButton = await page.$('a#pnnext');
@@ -129,11 +168,34 @@ export async function runGoogleSearchScraper(campaignId: string) {
       data: { status: 'SCRAPE_COMPLETED', totalFound }
     });
 
+    // Emit completion event
+    eventBus.emit({
+      type: 'campaign:status_changed',
+      data: {
+        campaignId,
+        status: 'SCRAPE_COMPLETED',
+        message: `Completed with ${totalFound} leads found`
+      }
+    });
+
   } catch (error) {
     console.error("Google Search Scraping failed:", error);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
     await prisma.leadCampaign.update({
       where: { id: campaignId },
       data: { status: 'FAILED' }
+    });
+
+    // Emit error event
+    eventBus.emit({
+      type: 'campaign:error',
+      data: {
+        campaignId,
+        error: errorMessage,
+        step: 'search'
+      }
     });
   } finally {
     await browser.close();

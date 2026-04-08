@@ -232,15 +232,15 @@ export function Navigation() {
           </div>
 
           {/* Actions — 25% right */}
-          <div className="flex items-center justify-end gap-0.5 lg:gap-1 w-[25%]">
+          <div className="flex items-center justify-end gap-1 lg:gap-2 w-[25%] flex-shrink-0">
             {/* Social Links — desktop only */}
-            <div className="hidden xl:flex items-center gap-0.5">
+            <div className="hidden xl:flex items-center gap-0.5 flex-shrink-0">
               {socialLinks.map((social) => (
                 <Button
                   key={social.name}
                   variant="ghost"
                   asChild
-                  className="min-h-[44px] min-w-[44px] p-0 text-muted-foreground hover:text-salsa-500 dark:hover:text-salsa-300"
+                  className="min-h-[44px] min-w-[44px] p-0 flex-shrink-0 text-muted-foreground hover:text-salsa-500 dark:hover:text-salsa-300"
                 >
                   <a
                     href={social.href}
@@ -254,20 +254,20 @@ export function Navigation() {
               ))}
             </div>
 
-            <ThemeToggle className="min-h-[44px] min-w-[44px] p-0" />
+            <ThemeToggle className="min-h-[44px] min-w-[44px] p-0 flex-shrink-0" />
 
             {/* Search Icon (Mobile) */}
-            <Button variant="ghost" aria-label="Search" className="md:hidden min-h-[44px] min-w-[44px] p-0">
+            <Button variant="ghost" aria-label="Search" className="md:hidden min-h-[44px] min-w-[44px] p-0 flex-shrink-0">
               <Search className="h-5 w-5 text-muted-foreground" />
             </Button>
 
             {/* Account (Mobile) */}
             {isSignedIn ? (
-              <div className="lg:hidden">
+              <div className="lg:hidden flex-shrink-0">
                 <UserButton />
               </div>
             ) : (
-              <Button variant="ghost" asChild className="lg:hidden min-h-[44px] min-w-[44px] p-0">
+              <Button variant="ghost" asChild className="lg:hidden min-h-[44px] min-w-[44px] p-0 flex-shrink-0">
                 <SignInButton mode="modal">
                   <span aria-label="Sign in to your account"><User className="w-5 h-5" /></span>
                 </SignInButton>
@@ -278,7 +278,7 @@ export function Navigation() {
             {isSignedIn ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" aria-label="Account menu" className="hidden lg:flex min-h-[44px] min-w-[44px] p-0 relative">
+                  <Button variant="ghost" aria-label="Account menu" className="hidden lg:flex min-h-[44px] min-w-[44px] p-0 relative flex-shrink-0">
                     <User className="w-5 h-5" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -328,14 +328,14 @@ export function Navigation() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="hidden lg:flex gap-1">
+              <div className="hidden lg:flex gap-1 flex-shrink-0">
                 <SignInButton mode="modal">
-                  <Button variant="ghost" className="min-h-[44px] px-3 text-xs">
+                  <Button variant="ghost" className="min-h-[44px] px-3 text-xs whitespace-nowrap flex-shrink-0">
                     Sign In
                   </Button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <Button className="min-h-[44px] px-3 text-xs">
+                  <Button className="min-h-[44px] px-3 text-xs whitespace-nowrap flex-shrink-0">
                     Sign Up
                   </Button>
                 </SignUpButton>
@@ -343,19 +343,21 @@ export function Navigation() {
             )}
 
             {/* Gift Certificates */}
-            <Button variant="ghost" asChild className="hidden lg:flex min-h-[44px] min-w-[44px] p-0 relative">
+            <Button variant="ghost" asChild className="hidden lg:flex min-h-[44px] min-w-[44px] p-0 relative flex-shrink-0">
               <Link href="/gift-certificates/purchase" aria-label="Purchase Gift Certificate">
                 <Gift className="w-5 h-5" />
               </Link>
             </Button>
 
             {/* Cart */}
-            <CartIcon />
+            <div className="flex-shrink-0">
+              <CartIcon />
+            </div>
 
             {/* Mobile Menu */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"} className="lg:hidden min-h-[44px] min-w-[44px] p-0">
+                <Button variant="ghost" aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"} className="lg:hidden min-h-[44px] min-w-[44px] p-0 flex-shrink-0">
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>

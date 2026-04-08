@@ -32,7 +32,7 @@ export async function processCampaign({
 
   if (!campaign) throw new Error(`Campaign ${campaignId} not found`)
   if (campaign.status === 'CANCELLED') return
-  if (campaign.status !== 'SENDING' && campaign.status !== 'SCHEDULED') return
+  if (!['DRAFT', 'SENDING', 'SCHEDULED', 'PAUSED'].includes(campaign.status)) return
 
   // Mark as SENDING
   await prisma.emailCampaign.update({

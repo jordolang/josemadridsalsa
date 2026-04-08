@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import { CampaignManager } from './campaign-manager';
 import { LeadsTable } from './leads-table';
+import { LiveLeadFeed } from './live-lead-feed';
 
 export default async function CampaignDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -31,8 +32,14 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
 
       <CampaignManager campaign={campaign} />
 
+      {/* Real-time scraper results */}
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">Real-Time Scraping Results</h2>
+        <LiveLeadFeed campaignId={id} />
+      </div>
+
       <div className="mt-8">
-        <h2 className="text-2xl font-semibold mb-4">Leads Found ({campaign.leads.length})</h2>
+        <h2 className="text-2xl font-semibold mb-4">All Leads ({campaign.leads.length})</h2>
         <LeadsTable leads={campaign.leads} />
       </div>
     </div>

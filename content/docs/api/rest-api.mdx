@@ -1,0 +1,791 @@
+---
+title: REST API
+description: Complete REST API documentation for the e-commerce platform, including cart management, order processing, and payment handling.
+---
+
+# E-Commerce REST API
+
+Complete REST API documentation for Jose Madrid Salsa's e-commerce platform. This API provides endpoints for cart management, order processing, and payment handling.
+
+## Overview
+
+**Base URL:** `https://josemadrid.net/api` (Production) or `http://localhost:3000/api` (Development)
+
+**Content Type:** `application/json`
+
+**API Version:** 1.0
+
+All endpoints return JSON responses with a consistent structure and use standard HTTP status codes.
+
+## Authentication
+
+Most endpoints require authentication using NextAuth session cookies. Users must be logged in to access protected endpoints.
+
+**Protected Endpoints:**
+- All cart endpoints (`/api/cart/*`)
+- All order endpoints (`/api/orders/*`)
+- Payment processing (`/api/payment`)
+
+**Authentication Method:** Session-based authentication via NextAuth
+
+**How to Authenticate:**
+1. User logs in through the web interface
+2. NextAuth creates a secure session
+3. Session cookie is automatically included in subsequent requests
+
+**Unauthenticated Response:**
+```json
+{
+  "error": "Unauthorized - authentication required"
+}
+```
+**Status Code:** `401 Unauthorized`
+
+## Error Handling
+
+All API endpoints follow a standardized error response format:
+
+```json
+{
+  "error": "Error message description",
+  "details": {
+    // Optional detailed error information (validation errors, etc.)
+  }
+}
+```
+
+**Common HTTP Status Codes:**
+- `200 OK` - Request succeeded
+- `201 Created` - Resource created successfully
+- `400 Bad Request` - Invalid request data
+- `401 Unauthorized` - Authentication required
+- `403 Forbidden` - Insufficient permissions
+- `404 Not Found` - Resource not found
+- `429 Too Many Requests` - Rate limit exceeded
+- `500 Internal Server Error` - Server error
+
+## Rate Limiting
+
+API endpoints are protected by rate limiting to prevent abuse:
+
+**Default Limits:**
+- 100 requests per 15-minute window per IP address
+- Limits apply per endpoint
+
+**Rate Limit Headers:**
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1640995200
+```
+
+**Rate Limit Exceeded Response:**
+```json
+{
+  "error": "Rate limit exceeded. Please try again later."
+}
+```
+**Status Code:** `429 Too Many Requests`
+**Header:** `Retry-After: 900` (seconds until reset)
+
+---
+
+## Cart Management
+
+### Get Cart
+
+Retrieve the authenticated user's shopping cart with all items and totals.
+
+**Endpoint:** `GET /api/cart`
+
+**Authentication:** Required
+
+**Response (200 OK):**
+```json
+{
+  "items": [
+    {
+      "id": "cm5abc123xyz",
+      "productId": "cm5prod456def",
+      "quantity": 2,
+      "product": {
+        "id": "cm5prod456def",
+        "name": "Jalapeño Hot Sauce",
+        "slug": "jalapeno-hot-sauce",
+        "price": 8.99,
+        "compareAtPrice": 10.99,
+        "featuredImage": "https://cdn.josemadrid.net/products/jalapeno.jpg",
+        "heatLevel": 3,
+        "inventory": 50
+      }
+    }
+  ],
+  "itemCount": 1,
+  "totalQuantity": 2,
+  "subtotal": 17.98
+}
+```
+
+**Error Responses:**
+- `401 Unauthorized` - User not authenticated
+- `500 Internal Server Error` - Database error
+
+**Example Request:**
+```bash
+curl -X GET https://josemadrid.net/api/cart \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json"
+```
+
+### Add to Cart
+
+Add a product to the authenticated user's cart. If the product already exists in the cart, the quantity is incremented.
+
+**Endpoint:** `POST /api/cart`
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "productId": "cm5prod456def",
+  "quantity": 2
+}
+```
+
+**Field Validation:**
+- `productId` (required): Valid CUID string
+- `quantity` (required): Positive integer (minimum 1)
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "cartItem": {
+    "id": "cm5cart789ghi",
+    "productId": "cm5prod456def",
+    "quantity": 2,
+    "product": {
+      "id": "cm5prod456def",
+      "name": "Jalapeño Hot Sauce",
+      "price": 8.99,
+      "featuredImage": "https://cdn.josemadrid.net/products/jalapeno.jpg"
+    }
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request` - Invalid request payload or validation error
+- `401 Unauthorized` - User not authenticated
+- `404 Not Found` - Product not found
+- `500 Internal Server Error` - Database error
+
+**Example Request:**
+```bash
+curl -X POST https://josemadrid.net/api/cart \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productId": "cm5prod456def",
+    "quantity": 2
+  }'
+```
+
+### Update Cart Item
+
+Update the quantity of an existing cart item.
+
+**Endpoint:** `PUT /api/cart/{id}`
+
+**Authentication:** Required
+
+**Path Parameters:**
+- `id` (required): Cart item ID (CUID string)
+
+**Request Body:**
+```json
+{
+  "quantity": 3
+}
+```
+
+**Field Validation:**
+- `quantity` (required): Positive integer (minimum 1)
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "cartItem": {
+    "id": "cm5cart789ghi",
+    "productId": "cm5prod456def",
+    "quantity": 3,
+    "product": {
+      "id": "cm5prod456def",
+      "name": "Jalapeño Hot Sauce",
+      "price": 8.99,
+      "featuredImage": "https://cdn.josemadrid.net/products/jalapeno.jpg"
+    }
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request` - Invalid quantity or insufficient inventory
+- `401 Unauthorized` - User not authenticated
+- `403 Forbidden` - Cart item belongs to another user
+- `404 Not Found` - Cart item not found
+- `500 Internal Server Error` - Database error
+
+**Example Request:**
+```bash
+curl -X PUT https://josemadrid.net/api/cart/cm5cart789ghi \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "quantity": 3
+  }'
+```
+
+### Remove Cart Item
+
+Remove an item from the authenticated user's cart.
+
+**Endpoint:** `DELETE /api/cart/{id}`
+
+**Authentication:** Required
+
+**Path Parameters:**
+- `id` (required): Cart item ID (CUID string)
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Cart item removed successfully"
+}
+```
+
+**Error Responses:**
+- `401 Unauthorized` - User not authenticated
+- `403 Forbidden` - Cart item belongs to another user
+- `404 Not Found` - Cart item not found
+- `500 Internal Server Error` - Database error
+
+**Example Request:**
+```bash
+curl -X DELETE https://josemadrid.net/api/cart/cm5cart789ghi \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json"
+```
+
+---
+
+## Order Management
+
+### Create Order
+
+Create a new order from cart items. This endpoint:
+- Validates inventory availability
+- Calculates tax using Stripe Tax API
+- Calculates shipping costs
+- Creates the order and order items
+- Removes cart items after successful order creation
+- Creates a Stripe payment intent
+- Queues Shopify sync
+
+**Endpoint:** `POST /api/orders`
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "cartItemIds": ["cm5cart123abc", "cm5cart456def"],
+  "shippingAddress": {
+    "address1": "123 Main Street",
+    "address2": "Apt 4B",
+    "city": "Austin",
+    "state": "TX",
+    "postalCode": "78701",
+    "country": "US"
+  },
+  "billingAddress": {
+    "address1": "123 Main Street",
+    "city": "Austin",
+    "state": "TX",
+    "postalCode": "78701",
+    "country": "US"
+  },
+  "notes": "Please ring doorbell"
+}
+```
+
+**Field Validation:**
+- `cartItemIds` (required): Array of cart item IDs (minimum 1 item)
+- `shippingAddress` (required): Object with address fields
+  - `address1` (required): Street address
+  - `address2` (optional): Apartment, suite, etc.
+  - `city` (required): City name
+  - `state` (required): State/province code
+  - `postalCode` (required): ZIP/postal code
+  - `country` (optional): Country code (defaults to "US")
+- `billingAddress` (optional): Same structure as shipping address
+- `notes` (optional): Customer notes
+
+**Response (200 OK):**
+```json
+{
+  "clientSecret": "pi_3ABC123xyz_secret_DEF456uvw",
+  "orderId": "cm5order789ghi",
+  "orderNumber": "JMS-20260301-1234",
+  "amount": 42.57
+}
+```
+
+**Response Fields:**
+- `clientSecret`: Stripe payment intent client secret for frontend payment processing
+- `orderId`: Unique order ID for tracking
+- `orderNumber`: Human-readable order number (format: `JMS-YYYYMMDD-XXXX`)
+- `amount`: Total order amount in USD
+
+**Error Responses:**
+- `400 Bad Request` - Invalid payload, cart items not found, or insufficient inventory
+- `401 Unauthorized` - User not authenticated
+- `500 Internal Server Error` - Order creation failed
+
+**Example Request:**
+```bash
+curl -X POST https://josemadrid.net/api/orders \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cartItemIds": ["cm5cart123abc"],
+    "shippingAddress": {
+      "address1": "123 Main Street",
+      "city": "Austin",
+      "state": "TX",
+      "postalCode": "78701",
+      "country": "US"
+    }
+  }'
+```
+
+### List Orders
+
+Retrieve a paginated list of orders for the authenticated user with optional filtering.
+
+**Endpoint:** `GET /api/orders`
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `status` (optional): Filter by order status (`PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`, `REFUNDED`, or `all`)
+- `paymentStatus` (optional): Filter by payment status (`PENDING`, `PAID`, `FAILED`, `REFUNDED`, or `all`)
+- `skip` (optional): Number of orders to skip (default: 0)
+- `take` (optional): Number of orders to return (no default, returns all if not specified)
+- `sortOrder` (optional): Sort order by creation date (`asc` or `desc`, default: `desc`)
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "cm5order789ghi",
+    "orderNumber": "JMS-20260301-1234",
+    "status": "CONFIRMED",
+    "paymentStatus": "PAID",
+    "subtotal": 35.96,
+    "shippingCost": 5.99,
+    "tax": 3.42,
+    "discountAmount": 0,
+    "total": 45.37,
+    "shippingMethod": "123 Main Street, Apt 4B\nAustin, TX 78701",
+    "trackingNumber": null,
+    "customerNotes": "Please ring doorbell",
+    "stripePaymentIntentId": "pi_3ABC123xyz",
+    "createdAt": "2026-03-01T10:30:00.000Z",
+    "updatedAt": "2026-03-01T10:35:00.000Z",
+    "items": [
+      {
+        "id": "cm5item123abc",
+        "productId": "cm5prod456def",
+        "productName": "Jalapeño Hot Sauce",
+        "productSku": "JHS-001",
+        "productImage": "https://cdn.josemadrid.net/products/jalapeno.jpg",
+        "quantity": 4,
+        "unitPrice": 8.99,
+        "totalPrice": 35.96,
+        "product": {
+          "id": "cm5prod456def",
+          "name": "Jalapeño Hot Sauce",
+          "slug": "jalapeno-hot-sauce",
+          "featuredImage": "https://cdn.josemadrid.net/products/jalapeno.jpg",
+          "heatLevel": 3
+        }
+      }
+    ]
+  }
+]
+```
+
+**Error Responses:**
+- `401 Unauthorized` - User not authenticated
+- `500 Internal Server Error` - Database error
+
+**Example Request:**
+```bash
+# Get all orders
+curl -X GET https://josemadrid.net/api/orders \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json"
+
+# Get paid orders with pagination
+curl -X GET "https://josemadrid.net/api/orders?paymentStatus=PAID&skip=0&take=10" \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json"
+```
+
+### Get Order Details
+
+Retrieve detailed information about a specific order.
+
+**Endpoint:** `GET /api/orders/{id}`
+
+**Authentication:** Required
+
+**Path Parameters:**
+- `id` (required): Order ID (CUID string)
+
+**Response (200 OK):**
+```json
+{
+  "id": "cm5order789ghi",
+  "orderNumber": "JMS-20260301-1234",
+  "status": "CONFIRMED",
+  "paymentStatus": "PAID",
+  "subtotal": 35.96,
+  "shippingCost": 5.99,
+  "tax": 3.42,
+  "discountAmount": 0,
+  "total": 45.37,
+  "shippingMethod": "123 Main Street, Apt 4B\nAustin, TX 78701",
+  "trackingNumber": "1Z999AA10123456784",
+  "customerNotes": "Please ring doorbell",
+  "stripePaymentIntentId": "pi_3ABC123xyz",
+  "createdAt": "2026-03-01T10:30:00.000Z",
+  "updatedAt": "2026-03-01T10:35:00.000Z",
+  "items": [
+    {
+      "id": "cm5item123abc",
+      "productId": "cm5prod456def",
+      "productName": "Jalapeño Hot Sauce",
+      "productSku": "JHS-001",
+      "productImage": "https://cdn.josemadrid.net/products/jalapeno.jpg",
+      "quantity": 4,
+      "unitPrice": 8.99,
+      "totalPrice": 35.96,
+      "product": {
+        "id": "cm5prod456def",
+        "name": "Jalapeño Hot Sauce",
+        "slug": "jalapeno-hot-sauce",
+        "featuredImage": "https://cdn.josemadrid.net/products/jalapeno.jpg",
+        "heatLevel": 3
+      }
+    }
+  ]
+}
+```
+
+**Error Responses:**
+- `401 Unauthorized` - User not authenticated
+- `403 Forbidden` - Order belongs to a different user
+- `404 Not Found` - Order not found
+- `500 Internal Server Error` - Database error
+
+**Example Request:**
+```bash
+curl -X GET https://josemadrid.net/api/orders/cm5order789ghi \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json"
+```
+
+---
+
+## Payment Processing
+
+### Process Payment
+
+Process payment for an existing order using Stripe. This endpoint:
+- Validates order ownership and status
+- Prevents duplicate payments
+- Confirms the existing Stripe PaymentIntent created by `POST /api/orders`
+- Updates order payment and status
+- Logs audit events
+
+**Endpoint:** `POST /api/payment`
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "orderId": "cm5order789ghi",
+  "paymentMethodId": "pm_1ABC123xyz456"
+}
+```
+
+**Field Validation:**
+- `orderId` (required): Valid order ID (CUID string)
+- `paymentMethodId` (required): Stripe payment method ID
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "paymentIntent": {
+    "id": "pi_3ABC123xyz",
+    "status": "succeeded",
+    "clientSecret": "pi_3ABC123xyz_secret_DEF456uvw"
+  },
+  "order": {
+    "id": "cm5order789ghi",
+    "orderNumber": "JMS-20260301-1234",
+    "paymentStatus": "PAID",
+    "status": "CONFIRMED"
+  }
+}
+```
+
+**Payment Intent Status Values:**
+- `succeeded` - Payment completed successfully (order status → CONFIRMED, payment status → PAID)
+- `requires_action` - Additional authentication required (3D Secure, etc.)
+- `requires_payment_method` - Payment method declined, new method needed
+- `canceled` - Payment canceled (payment status → FAILED)
+
+**Error Responses:**
+- `400 Bad Request` - Invalid payload
+- `400 Bad Request` - Order already paid
+- `400 Bad Request` - Order in non-payable status
+- `401 Unauthorized` - User not authenticated
+- `402 Payment Required` - Card declined (Stripe card error)
+- `403 Forbidden` - User doesn't own the order
+- `404 Not Found` - Order not found
+- `500 Internal Server Error` - Payment processing error
+
+**Example Request:**
+```bash
+curl -X POST https://josemadrid.net/api/payment \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "orderId": "cm5order789ghi",
+    "paymentMethodId": "pm_1ABC123xyz456"
+  }'
+```
+
+---
+
+## Common Error Codes
+
+| Status Code | Meaning | Common Causes |
+|-------------|---------|---------------|
+| `400` | Bad Request | Invalid input, validation errors, business rule violations |
+| `401` | Unauthorized | Not logged in, session expired |
+| `403` | Forbidden | Insufficient permissions, accessing another user's resource |
+| `404` | Not Found | Resource doesn't exist |
+| `429` | Too Many Requests | Rate limit exceeded |
+| `500` | Internal Server Error | Database error, external service failure |
+
+---
+
+## Complete Purchase Flow Example
+
+This example demonstrates a complete purchase flow from adding items to cart through payment processing.
+
+### Step 1: Add Products to Cart
+
+```bash
+# Add first product
+curl -X POST https://josemadrid.net/api/cart \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productId": "cm5prod123",
+    "quantity": 2
+  }'
+
+# Add second product
+curl -X POST https://josemadrid.net/api/cart \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productId": "cm5prod456",
+    "quantity": 1
+  }'
+```
+
+### Step 2: Review Cart
+
+```bash
+curl -X GET https://josemadrid.net/api/cart \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json"
+```
+
+### Step 3: Create Order
+
+```bash
+curl -X POST https://josemadrid.net/api/orders \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cartItemIds": ["cm5cart123", "cm5cart456"],
+    "shippingAddress": {
+      "address1": "123 Main Street",
+      "city": "Austin",
+      "state": "TX",
+      "postalCode": "78701",
+      "country": "US"
+    }
+  }'
+```
+
+**Response:**
+```json
+{
+  "clientSecret": "pi_3ABC123xyz_secret_DEF456uvw",
+  "orderId": "cm5order789",
+  "orderNumber": "JMS-20260301-1234",
+  "amount": 42.57
+}
+```
+
+### Step 4: Process Payment
+
+```bash
+curl -X POST https://josemadrid.net/api/payment \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "orderId": "cm5order789",
+    "paymentMethodId": "pm_1ABC123xyz456"
+  }'
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "paymentIntent": {
+    "id": "pi_3ABC123xyz",
+    "status": "succeeded",
+    "clientSecret": "pi_3ABC123xyz_secret_DEF456uvw"
+  },
+  "order": {
+    "id": "cm5order789",
+    "orderNumber": "JMS-20260301-1234",
+    "paymentStatus": "PAID",
+    "status": "CONFIRMED"
+  }
+}
+```
+
+### Step 5: Get Order Details
+
+```bash
+curl -X GET https://josemadrid.net/api/orders/cm5order789 \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json"
+```
+
+---
+
+## Cart Management Example
+
+Managing cart items:
+
+```bash
+# Get current cart
+curl -X GET https://josemadrid.net/api/cart \
+  -H "Cookie: next-auth.session-token=..."
+
+# Update quantity
+curl -X PUT https://josemadrid.net/api/cart/cm5cart123 \
+  -H "Cookie: next-auth.session-token=..." \
+  -H "Content-Type: application/json" \
+  -d '{"quantity": 5}'
+
+# Remove item
+curl -X DELETE https://josemadrid.net/api/cart/cm5cart456 \
+  -H "Cookie: next-auth.session-token=..."
+```
+
+---
+
+## Order History Example
+
+Retrieving order history with filtering:
+
+```bash
+# Get all orders (most recent first)
+curl -X GET https://josemadrid.net/api/orders \
+  -H "Cookie: next-auth.session-token=..."
+
+# Get only paid orders
+curl -X GET "https://josemadrid.net/api/orders?paymentStatus=PAID" \
+  -H "Cookie: next-auth.session-token=..."
+
+# Get pending orders with pagination
+curl -X GET "https://josemadrid.net/api/orders?status=PENDING&skip=0&take=10&sortOrder=asc" \
+  -H "Cookie: next-auth.session-token=..."
+```
+
+---
+
+## Security Features
+
+### Authentication
+- Session-based authentication via NextAuth
+- All cart, order, and payment endpoints require authentication
+- User can only access their own resources (cart items, orders)
+
+### Authorization
+- Row-level security: Users can only view/modify their own data
+- Ownership validation on all update/delete operations
+- Forbidden (403) response when attempting to access another user's resources
+
+### Input Validation
+- All request payloads validated using Zod schemas
+- Type-safe validation for all fields
+- Detailed validation error messages
+
+### Inventory Protection
+- Inventory checked before adding to cart
+- Inventory re-validated during order creation
+- Prevents overselling with race condition handling
+
+### Payment Security
+- Stripe integration for PCI-compliant payment processing
+- Payment intent validation
+- Duplicate payment prevention
+- Order status validation before payment
+
+### Audit Logging
+- All cart, order, and payment operations are logged
+- Includes user ID, action type, and changes
+- IP address and user agent tracked for security
+
+### Rate Limiting
+- 100 requests per 15 minutes per IP
+- Prevents brute force and abuse
+- Automatic rate limit headers in responses
+
+---
+
+## Support
+
+For API support or questions:
+- **Email:** support@josemadrid.net
+- **Documentation:** https://josemadrid.net/docs
+- **Status Page:** https://status.josemadrid.net

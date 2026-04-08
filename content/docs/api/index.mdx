@@ -1,0 +1,73 @@
+---
+title: API Documentation
+description: REST API endpoints and integration guide
+---
+
+# API Documentation
+
+The José Madrid Salsa platform provides comprehensive REST API endpoints for integration with external systems and mobile applications.
+
+## Authentication
+
+All API requests require proper authentication. See [API Authentication](/docs/api/authentication) for details.
+
+## Available Endpoints
+
+### Products API
+- `GET /api/products` - List all products
+- `GET /api/products/:id` - Get product details
+- `POST /api/products` - Create product (admin)
+- `PUT /api/products/:id` - Update product (admin)
+- `DELETE /api/products/:id` - Delete product (admin)
+
+### Orders API
+- `GET /api/orders` - List user orders
+- `GET /api/orders/:id` - Get order details
+- `POST /api/orders` - Create new order
+- `PUT /api/orders/:id/status` - Update order status (admin)
+
+### Users API
+- `GET /api/users/me` - Get current user profile
+- `PUT /api/users/me` - Update user profile
+- `POST /api/users/password` - Change password
+
+### Locations API
+- `GET /api/locations` - List all store locations
+- `GET /api/locations/nearby` - Find nearby locations
+
+### Shopping Cart API
+- `GET /api/cart` - Get current cart
+- `POST /api/cart/items` - Add item to cart
+- `DELETE /api/cart/items/:itemId` - Remove item from cart
+- `POST /api/cart/checkout` - Initiate checkout
+
+## Response Format
+
+All responses follow a standard format:
+
+```json
+{
+  "success": true,
+  "data": {
+    // Response data
+  },
+  "error": null,
+  "meta": {
+    "total": 100,
+    "page": 1,
+    "limit": 10
+  }
+}
+```
+
+## Error Handling
+
+See [Error Responses](/docs/api/errors) for comprehensive error handling information.
+
+## Rate Limiting
+
+The API implements rate limiting. See [Rate Limiting](/docs/api/rate-limiting) for details.
+
+## OpenAPI Specification
+
+The complete OpenAPI specification is available at `/docs/openapi.yaml`
