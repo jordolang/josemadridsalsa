@@ -1,13 +1,13 @@
 /**
- * Patches fumadocs-mdx to replace `packages: "external"` with a plugin
- * that externalizes node_modules without catching the entry point.
+ * Patches fumadocs-mdx to make its esbuild entry point use an absolute
+ * path via path.resolve(). This prevents esbuild 0.25+'s
+ * `packages: "external"` from matching the entry point as a package.
  *
- * esbuild 0.25+ treats `packages: "external"` as also externalizing
- * entry points, which breaks fumadocs-mdx's compilation of source.config.ts.
- *
- * The fix: use an esbuild plugin with an onResolve filter that only
- * externalizes imports that look like bare package specifiers, excluding
- * anything that could be an entry point (like "source.config.ts").
+ * The root cause: fumadocs-mdx passes configPath as "source.config.ts"
+ * (a bare name) to esbuild's entryPoints. With `packages: "external"`,
+ * esbuild 0.25+ treats this bare name as a package and externalizes it.
+ * By resolving it to an absolute path first, esbuild recognizes it as
+ * a file path and doesn't externalize it.
  */
 const fs = require('fs');
 const path = require('path');
@@ -18,28 +18,6 @@ if (!fs.existsSync(baseDir)) {
   console.log('[patch-fumadocs] fumadocs-mdx dist not found, skipping');
   process.exit(0);
 }
-
-/**
- * The plugin externalizes bare package specifiers (e.g. "fumadocs-mdx/config",
- * "esbuild", "@scope/pkg") but NOT:
- * - Relative paths ("./foo", "../bar")
- * - Absolute paths ("/foo/bar")
- * - The entry point file ("source.config.ts" or similar)
- *
- * We detect entry points by checking if the path ends in a known config
- * extension pattern.
- */
-const PLUGIN_CODE = `plugins: [{
-        name: "externalize-deps",
-        setup(b) {
-          b.onResolve({ filter: /.*/ }, (args) => {
-            if (args.kind === "entry-point") return undefined;
-            if (args.path.startsWith(".") || args.path.startsWith("/")) return undefined;
-            if (args.path.includes("source.config")) return undefined;
-            return { path: args.path, external: true };
-          });
-        }
-      }]`;
 
 let patched = false;
 
@@ -60,15 +38,45 @@ function scanDir(dir) {
 
     const content = fs.readFileSync(fullPath, 'utf8');
 
-    if (content.includes('packages: "external"') || content.includes("packages: 'external'")) {
-      const updated = content
-        .replace(/packages:\s*"external"/g, PLUGIN_CODE)
-        .replace(/packages:\s*'external'/g, PLUGIN_CODE);
+    // Look for the compileConfig function that has the esbuild build() call
+    // with `in: configPath` in the entryPoints
+    if ((content.includes('packages: "external"') || content.includes("packages: 'external'"))
+        && content.includes('in: configPath')) {
 
-      fs.writeFileSync(fullPath, updated, 'utf8');
-      const relPath = path.relative(baseDir, fullPath);
-      console.log(`[patch-fumadocs] Patched ${relPath}: replaced packages:"external" with externalize plugin`);
-      patched = true;
+      // Wrap configPath with path.resolve() so esbuild gets an absolute path.
+      // Also add `const __path = require("path");` or import if not present.
+      let updated = content;
+
+      // For CJS files
+      if (entry.name.endsWith('.cjs')) {
+        // Add path require at the top if not already there
+        if (!updated.includes('require("node:path")') && !updated.includes("require('node:path')")) {
+          if (!updated.includes('require("path")') && !updated.includes("require('path')")) {
+            updated = `const __patchPath = require("path");\n` + updated;
+          }
+        }
+
+        // Replace `in: configPath` with `in: require("path").resolve(configPath)`
+        updated = updated.replace(
+          /in:\s*configPath,\s*\n?\s*out:\s*"source\.config"/g,
+          'in: require("path").resolve(configPath),\n\t\t\tout: "source.config"'
+        );
+      } else {
+        // For ESM files - use the already-imported path or add import
+        // Replace `in: configPath` with resolved version
+        // Use inline import since the file likely already has node:url imported
+        updated = updated.replace(
+          /in:\s*configPath,\s*\n?\s*out:\s*"source\.config"/g,
+          'in: configPath.startsWith("/") ? configPath : process.cwd() + "/" + configPath,\n\t\t\tout: "source.config"'
+        );
+      }
+
+      if (updated !== content) {
+        fs.writeFileSync(fullPath, updated, 'utf8');
+        const relPath = path.relative(baseDir, fullPath);
+        console.log(`[patch-fumadocs] Patched ${relPath}: resolved configPath to absolute for esbuild entry point`);
+        patched = true;
+      }
     }
   }
 }
