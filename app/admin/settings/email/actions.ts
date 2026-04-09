@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
 import nodemailer from 'nodemailer'
-import { encrypt, decrypt } from '@/lib/encryption'
+import { encrypt, decrypt, isEncrypted } from '@/lib/encryption'
 
 export async function saveEmailConfig(formData: FormData) {
   const user = await getCurrentUser()
@@ -96,19 +96,27 @@ export async function testEmailConfig(configId: string) {
       return { success: false, message: 'No SMTP configuration to test' }
     }
     
-    // Create transporter with decrypted password
-    const decryptedPassword = config.smtpPassword ? decrypt(config.smtpPassword) : null
+    // Decrypt password — handle both encrypted and plaintext (legacy/seed) values
+    const decryptedPassword = config.smtpPassword
+      ? isEncrypted(config.smtpPassword)
+        ? decrypt(config.smtpPassword)
+        : config.smtpPassword
+      : null
     
+    const port = config.smtpPort || 587
+    // Port 465 = implicit SSL (secure: true), port 587 = STARTTLS (secure: false)
+    const secure = port === 465
+
     const transporter = nodemailer.createTransport({
       host: config.smtpHost,
-      port: config.smtpPort || 587,
-      secure: config.smtpSecure,
+      port,
+      secure,
       auth: config.smtpUsername && decryptedPassword ? {
         user: config.smtpUsername,
         pass: decryptedPassword,
       } : undefined,
     })
-    
+
     // Verify connection
     await transporter.verify()
     
@@ -122,6 +130,30 @@ export async function testEmailConfig(configId: string) {
       success: false, 
       message: `Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
     }
+  }
+}
+
+export async function updateSmtpPassword(configId: string, password: string) {
+  const user = await getCurrentUser()
+
+  if (!user || !(await hasAnyPermission(user, ['settings:write']))) {
+    return { error: 'Unauthorized' }
+  }
+
+  try {
+    const encryptedPassword = password ? encrypt(password) : null
+
+    await prisma.emailConfiguration.update({
+      where: { id: configId },
+      data: { smtpPassword: encryptedPassword },
+    })
+
+    revalidatePath('/admin/settings/email')
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating SMTP password:', error)
+    return { error: 'Failed to update password' }
   }
 }
 

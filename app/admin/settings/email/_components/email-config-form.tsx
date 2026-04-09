@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { saveEmailConfig, testEmailConfig, deleteEmailConfig } from '../actions'
+import { saveEmailConfig, testEmailConfig, deleteEmailConfig, updateSmtpPassword } from '../actions'
 
 interface EmailConfig {
   id: string
@@ -23,6 +23,7 @@ interface EmailConfig {
   useResend: boolean
   maxPerHour: number
   maxPerDay: number
+  hasPassword: boolean
   createdAt: Date
 }
 
@@ -37,14 +38,33 @@ export function EmailConfigForm({ configs, canWrite }: EmailConfigFormProps) {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [showNewForm, setShowNewForm] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editPasswordId, setEditPasswordId] = useState<string | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [passwordSaving, setPasswordSaving] = useState(false)
 
   const handleTestConfig = async (configId: string) => {
     setIsTestingId(configId)
     setTestResult(null)
-    
+
     const result = await testEmailConfig(configId)
     setTestResult(result)
     setIsTestingId(null)
+  }
+
+  const handleUpdatePassword = async (configId: string) => {
+    if (!newPassword.trim()) return
+    setPasswordSaving(true)
+
+    const result = await updateSmtpPassword(configId, newPassword)
+
+    setPasswordSaving(false)
+    if (result.success) {
+      setEditPasswordId(null)
+      setNewPassword('')
+      setTestResult({ success: true, message: 'Password updated and encrypted. Test the connection to verify.' })
+    } else {
+      setTestResult({ success: false, message: result.error || 'Failed to update password' })
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -167,8 +187,8 @@ export function EmailConfigForm({ configs, canWrite }: EmailConfigFormProps) {
 
               {testResult && isTestingId === null && (
                 <div className={`mt-4 p-3 rounded-lg flex items-center gap-2 ${
-                  testResult.success 
-                    ? 'bg-green-50 text-green-900' 
+                  testResult.success
+                    ? 'bg-green-50 text-green-900'
                     : 'bg-red-50 text-red-900'
                 }`}>
                   {testResult.success ? (
@@ -177,6 +197,52 @@ export function EmailConfigForm({ configs, canWrite }: EmailConfigFormProps) {
                     <AlertCircle className="h-5 w-5 text-red-600" />
                   )}
                   <p className="text-sm">{testResult.message}</p>
+                </div>
+              )}
+
+              {canWrite && config.smtpHost && (
+                <div className="mt-4 border-t pt-4">
+                  {editPasswordId === config.id ? (
+                    <div className="flex items-end gap-3">
+                      <div className="flex-1">
+                        <Label htmlFor={`password-${config.id}`}>SMTP Password</Label>
+                        <Input
+                          id={`password-${config.id}`}
+                          type="password"
+                          placeholder="Enter Gmail App Password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="mt-1.5"
+                        />
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleUpdatePassword(config.id)}
+                        disabled={passwordSaving || !newPassword.trim()}
+                      >
+                        {passwordSaving ? 'Saving...' : 'Save'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditPasswordId(null)
+                          setNewPassword('')
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditPasswordId(config.id)}
+                    >
+                      <Mail className="h-4 w-4 mr-2" />
+                      {config.hasPassword ? 'Update SMTP Password' : 'Set SMTP Password'}
+                    </Button>
+                  )}
                 </div>
               )}
             </Card>
@@ -309,11 +375,10 @@ export function EmailConfigForm({ configs, canWrite }: EmailConfigFormProps) {
                           type="checkbox"
                           id="smtpSecure"
                           name="smtpSecure"
-                          defaultChecked
                           className="rounded border-slate-300"
                         />
                         <Label htmlFor="smtpSecure" className="font-normal cursor-pointer">
-                          Use TLS/SSL encryption
+                          Use implicit SSL (port 465 only — leave unchecked for port 587 TLS)
                         </Label>
                       </div>
                     </div>

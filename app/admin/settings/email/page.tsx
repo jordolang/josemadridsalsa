@@ -22,7 +22,13 @@ export default async function EmailSettingsPage() {
   }
 
   const canWrite = await hasAnyPermission(user, ['settings:write'])
-  const configs = await getEmailConfigurations()
+  const rawConfigs = await getEmailConfigurations()
+
+  // Strip encrypted passwords before sending to client — expose only a boolean flag
+  const configs = rawConfigs.map(({ smtpPassword, ...rest }) => ({
+    ...rest,
+    hasPassword: Boolean(smtpPassword),
+  }))
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -33,8 +39,8 @@ export default async function EmailSettingsPage() {
         </p>
       </div>
 
-      <EmailConfigForm 
-        configs={configs} 
+      <EmailConfigForm
+        configs={configs}
         canWrite={canWrite}
       />
     </div>

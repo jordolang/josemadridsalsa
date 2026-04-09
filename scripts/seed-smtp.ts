@@ -8,20 +8,14 @@ async function main() {
   const defaultEmail = 'mike@josemadridsalsa.com'
 
   // Upsert the default EmailConfiguration
+  // Password left null — must be set via admin UI (where it gets encrypted)
   const emailConfig = await prisma.emailConfiguration.upsert({
-    where: { 
-      // We don't have a unique constraint on name or fromEmail in this snippet, 
-      // but let's check if there is an existing one. If not, we can create one.
-      // Wait, there is no unique constraint we know of. Let's just findFirst,
-      // and if it doesn't exist, create it.
-      id: "default-smtp-config" // we can pass an ID or just check 
-    },
+    where: { id: 'default-smtp-config' },
     update: {
       name: 'Primary SMTP (Mike)',
       smtpHost: 'smtp.gmail.com',
       smtpPort: 587,
       smtpUsername: defaultEmail,
-      smtpPassword: 'YOUR_APP_PASSWORD_HERE', // Placeholder
       smtpSecure: false,
       fromEmail: defaultEmail,
       fromName: 'Mike @ JMS',
@@ -31,12 +25,12 @@ async function main() {
       useResend: false,
     },
     create: {
-      id: "default-smtp-config",
+      id: 'default-smtp-config',
       name: 'Primary SMTP (Mike)',
       smtpHost: 'smtp.gmail.com',
       smtpPort: 587,
       smtpUsername: defaultEmail,
-      smtpPassword: 'YOUR_APP_PASSWORD_HERE', // Placeholder
+      smtpPassword: null,
       smtpSecure: false,
       fromEmail: defaultEmail,
       fromName: 'Mike @ JMS',

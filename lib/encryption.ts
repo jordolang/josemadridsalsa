@@ -16,39 +16,27 @@ const AUTH_TAG_LENGTH = 16 // 16 bytes for GCM authentication tag
  * In production, this should be a strong, randomly generated key stored securely
  */
 
-// Cache for development key to ensure consistency within a session
-let devKeyCache: Buffer | null = null
+// Cache derived key to avoid repeated scrypt calls
+let keyCache: Buffer | null = null
 
 function getEncryptionKey(): Buffer {
-  const key = process.env.ENCRYPTION_KEY
-  
-  if (!key) {
-    // Development fallback - DO NOT use in production
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error(
-        'ENCRYPTION_KEY environment variable is required in production'
-      )
-    }
-    
-    // Use cached development key for consistency within session
-    if (!devKeyCache) {
-      console.warn(
-        '[Encryption] Using default key for development. Set ENCRYPTION_KEY in production!'
-      )
-      // Generate a session-specific key for development to avoid predictable patterns
-      const devKey = `dev-${Date.now()}-${Math.random()}`
-      devKeyCache = crypto.scryptSync(devKey, crypto.randomBytes(16), 32)
-    }
-    
-    return devKeyCache
+  if (keyCache) {
+    return keyCache
   }
-  
+
+  const key = process.env.ENCRYPTION_KEY
+
+  if (!key) {
+    throw new Error(
+      'ENCRYPTION_KEY environment variable is required. Generate one with: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'base64\'))"'
+    )
+  }
+
   // Derive a 32-byte key from the environment variable using scrypt
-  // Use a consistent salt for key derivation - this is intentional and secure
-  // because each encryption operation uses a unique random IV
-  // The salt ensures the same ENCRYPTION_KEY always derives to the same key
+  // Consistent salt is intentional — each encryption uses a unique random IV
   const salt = crypto.createHash('sha256').update('jose-madrid-salsa-v1').digest()
-  return crypto.scryptSync(key, salt, 32)
+  keyCache = crypto.scryptSync(key, salt, 32)
+  return keyCache
 }
 
 /**
