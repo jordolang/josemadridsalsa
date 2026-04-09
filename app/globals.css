@@ -1,10 +1,6 @@
 @import 'tailwindcss';
-@import 'fumadocs-ui/css/shadcn.css';
-@import 'fumadocs-ui/css/preset.css';
 
 @config '../tailwind.config.ts';
-
-@source '../node_modules/fumadocs-ui/dist/**/*.js';
 
 @layer base {
   html {

@@ -56,10 +56,6 @@ const navigationItems = [
     title: "Where Is Jose?",
     href: "/where-is-jose",
   },
-  {
-    title: "Docs",
-    href: "/docs",
-  },
 ];
 
 const googleBusinessUrl =
