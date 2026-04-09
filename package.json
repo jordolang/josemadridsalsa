@@ -12,7 +12,7 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "postinstall": "prisma generate",
+    "postinstall": "node scripts/patch-fumadocs-esbuild.js && prisma generate",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
@@ -188,7 +188,6 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "esbuild": "0.24.2",
     "vercel": "^50.28.0",
     "vitest": "^4.0.6"
   },
@@ -202,7 +201,6 @@
     ]
   },
   "overrides": {
-    "esbuild": "0.24.2",
     "tar": ">=7.5.10",
     "@tootallnate/once": ">=3.0.1",
     "minimatch": ">=10.2.3",
@@ -237,7 +235,6 @@
   },
   "resolutions": {
     "next": "16.2.1",
-    "esbuild": "0.24.2",
     "fast-xml-parser": ">=5.3.6",
     "prismjs": ">=1.30.0"
   }
