@@ -201,6 +201,9 @@
     ]
   },
   "overrides": {
+    "fumadocs-mdx": {
+      "esbuild": "0.24.2"
+    },
     "tar": ">=7.5.10",
     "@tootallnate/once": ">=3.0.1",
     "minimatch": ">=10.2.3",
