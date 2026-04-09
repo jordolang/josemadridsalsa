@@ -201,9 +201,7 @@
     ]
   },
   "overrides": {
-    "fumadocs-mdx": {
-      "esbuild": "0.24.2"
-    },
+    "esbuild": "0.24.2",
     "tar": ">=7.5.10",
     "@tootallnate/once": ">=3.0.1",
     "minimatch": ">=10.2.3",
@@ -238,6 +236,7 @@
   },
   "resolutions": {
     "next": "16.2.1",
+    "esbuild": "0.24.2",
     "fast-xml-parser": ">=5.3.6",
     "prismjs": ">=1.30.0"
   }
