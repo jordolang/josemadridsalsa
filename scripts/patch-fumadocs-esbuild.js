@@ -1,24 +1,16 @@
 /**
- * Patches fumadocs-mdx to remove `packages: "external"` from its esbuild
- * config. This prevents esbuild 0.25+ from externalizing the entry point
- * `source.config.ts`, which causes a build failure.
+ * Patches fumadocs-mdx to replace `packages: "external"` with a plugin
+ * that externalizes node_modules without catching the entry point.
  *
- * Instead of externalizing all packages, we let esbuild bundle them.
- * The compiled output is a small config file so bundling is fine.
+ * esbuild 0.25+ treats `packages: "external"` as also externalizing
+ * entry points, which breaks fumadocs-mdx's compilation of source.config.ts.
+ *
+ * The fix: use an esbuild plugin with a filter that only externalizes
+ * bare specifiers (package imports), not file paths (entry points).
  */
 const fs = require('fs');
 const path = require('path');
 
-const targetFile = path.join(
-  __dirname,
-  '..',
-  'node_modules',
-  'fumadocs-mdx',
-  'dist',
-  'load-from-file-vlVZ_DdD.js'
-);
-
-// Also check for any other file that might contain the compileConfig function
 const distDir = path.join(__dirname, '..', 'node_modules', 'fumadocs-mdx', 'dist');
 
 if (!fs.existsSync(distDir)) {
@@ -35,12 +27,22 @@ for (const file of fs.readdirSync(distDir)) {
   const content = fs.readFileSync(filePath, 'utf8');
 
   if (content.includes('packages: "external"') && content.includes('source.config')) {
+    // Replace `packages: "external"` with a plugin that externalizes bare
+    // specifiers (node_modules) but not file paths or entry points.
     const updated = content.replace(
-      /packages:\s*"external",?\s*/g,
-      ''
+      /packages:\s*"external"/g,
+      `plugins: [{
+        name: "externalize-packages",
+        setup(b) {
+          b.onResolve({ filter: /^[^./]/ }, (args) => ({
+            path: args.path,
+            external: true
+          }));
+        }
+      }]`
     );
     fs.writeFileSync(filePath, updated, 'utf8');
-    console.log(`[patch-fumadocs] Patched ${file}: removed packages:"external" from esbuild config`);
+    console.log(`[patch-fumadocs] Patched ${file}: replaced packages:"external" with externalize plugin`);
     patched = true;
   }
 }
