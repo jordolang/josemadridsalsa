@@ -9,10 +9,6 @@ export async function requireAdminSession(): Promise<{ id: string; email?: strin
     return { id: "admin", email: "admin@josemadrid.net" };
   }
 
-  // Swap for NextAuth / Clerk below if needed:
-  // import { getServerSession } from "next-auth";
-  // const session = await getServerSession(authOptions);
-  // if (!session?.user?.isAdmin) redirect("/admin/login");
   // return { id: session.user.id };
 
   redirect("/admin/login");

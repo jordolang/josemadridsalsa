@@ -1,9 +1,9 @@
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
-// TODO: Add Facebook OAuth when ready:
-// import FacebookProvider from 'next-auth/providers/facebook'
-// Requires FACEBOOK_CLIENT_ID and FACEBOOK_CLIENT_SECRET env vars
+import GitHubProvider from 'next-auth/providers/github'
+import FacebookProvider from 'next-auth/providers/facebook'
+import AppleProvider from 'next-auth/providers/apple'
 import type { NextAuthOptions } from 'next-auth'
 import bcrypt from 'bcryptjs'
 
@@ -88,11 +88,18 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    // TODO: Uncomment when FACEBOOK_CLIENT_ID + FACEBOOK_CLIENT_SECRET are set in Vercel env:
-    // FacebookProvider({
-    //   clientId: process.env.FACEBOOK_CLIENT_ID!,
-    //   clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
-    // }),
+    GitHubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    }),
+    FacebookProvider({
+      clientId: process.env.FACEBOOK_CLIENT_ID!,
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+    }),
+    AppleProvider({
+      clientId: process.env.APPLE_CLIENT_ID!,
+      clientSecret: process.env.APPLE_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -160,8 +167,9 @@ export const authOptions: NextAuthOptions = {
       try {
         console.log('[JWT Callback] Trigger:', trigger || 'initial')
 
-        // Handle Google OAuth sign-in — upsert user in DB
-        if (account?.provider === 'google' && token.email) {
+        // Handle OAuth sign-in (Google, GitHub, Facebook, Apple) — upsert user in DB
+        const oauthProviders = ['google', 'github', 'facebook', 'apple']
+        if (account?.provider && oauthProviders.includes(account.provider) && token.email) {
           try {
             const prisma = await getPrisma()
             const normalizedEmail = (token.email as string).toLowerCase().trim()
@@ -170,7 +178,6 @@ export const authOptions: NextAuthOptions = {
               select: { id: true, role: true, name: true },
             })
             if (!dbUser) {
-              // Create new user for Google sign-in
               dbUser = await prisma.user.create({
                 data: {
                   email: normalizedEmail,
@@ -180,24 +187,19 @@ export const authOptions: NextAuthOptions = {
                 },
                 select: { id: true, role: true, name: true },
               })
-              console.log('[JWT Callback] Created new user via Google OAuth:', normalizedEmail)
+              console.log(`[JWT Callback] Created new user via ${account.provider} OAuth:`, normalizedEmail)
             }
             token.id = dbUser.id
             token.role = dbUser.role
-            // Store Google profile picture from token
+            // Store profile picture from token if available
             if (token.picture) {
-              token.avatar = typeof token.picture === 'string' 
-                ? token.picture 
+              token.avatar = typeof token.picture === 'string'
+                ? token.picture
                 : (token.picture as any)?.data?.url ?? null
             }
-          } catch (googleError) {
-            console.error('[JWT Callback] Google OAuth DB error:', googleError)
+          } catch (oauthError) {
+            console.error(`[JWT Callback] ${account.provider} OAuth DB error:`, oauthError)
           }
-        }
-
-        // TODO: Handle Facebook OAuth sign-in when provider is enabled
-        if (false && account?.provider === 'facebook' && token.email) {
-          // Placeholder — enable when FacebookProvider is uncommented above
         }
 
         // On sign in via credentials, add user data to token

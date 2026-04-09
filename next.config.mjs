@@ -1,8 +1,10 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { withSentryConfig } from '@sentry/nextjs'
+import { createMDX } from 'fumadocs-mdx/next'
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url))
+const withMDX = createMDX()
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -152,4 +154,4 @@ const sentryOptions = {
   automaticVercelMonitors: true,
 }
 
-export default withSentryConfig(nextConfig, sentryWebpackPluginOptions, sentryOptions);
+export default withSentryConfig(withMDX(nextConfig), sentryWebpackPluginOptions, sentryOptions);

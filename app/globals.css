@@ -1,6 +1,10 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/shadcn.css';
+@import 'fumadocs-ui/css/preset.css';
+
+@config '../tailwind.config.ts';
+
+@source '../node_modules/fumadocs-ui/dist/**/*.js';
 
 @layer base {
   html {
@@ -96,7 +100,9 @@
   }
   
   .card {
-    @apply rounded-xl border border-border bg-card text-card-foreground surface-shadow;
+    @apply rounded-xl border border-border bg-card text-card-foreground;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    transition: box-shadow 0.35s ease, transform 0.35s ease;
   }
 
   .interactive-card {

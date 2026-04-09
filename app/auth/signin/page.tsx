@@ -18,6 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { SocialLoginButtons, SocialLoginDivider } from '@/components/auth/social-login-buttons'
 
 const signInSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Must be a valid email address').trim(),
@@ -94,7 +95,9 @@ function SignInFormInner() {
             Sign in to manage your orders and explore the latest Jose Madrid Salsa releases.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          <SocialLoginButtons />
+          <SocialLoginDivider />
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

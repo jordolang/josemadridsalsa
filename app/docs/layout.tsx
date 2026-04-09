@@ -1,18 +1,25 @@
-import type { Metadata } from 'next'
+import { source } from '@/lib/source';
+import { DocsLayout } from 'fumadocs-ui/layouts/docs';
+import { RootProvider } from 'fumadocs-ui/provider/next';
+import type { ReactNode } from 'react';
 
-export const metadata: Metadata = {
-  title: 'Documentation | José Madrid Salsa',
-  description: 'Complete documentation for the José Madrid Salsa e-commerce platform',
-}
-
-export default function DocsLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen">
-      {children}
-    </div>
-  )
+    <RootProvider>
+      <DocsLayout
+        tree={source.getPageTree()}
+        nav={{
+          title: 'Jose Madrid Salsa',
+          url: '/docs',
+        }}
+        links={[
+          { text: 'Shop', url: '/' },
+          { text: 'Products', url: '/products' },
+          { text: 'Recipes', url: '/recipes' },
+        ]}
+      >
+        {children}
+      </DocsLayout>
+    </RootProvider>
+  );
 }

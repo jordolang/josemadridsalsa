@@ -47,6 +47,7 @@ const serviceLinks = [
 const helpfulLinks = [
   { text: 'Wholesale Program', href: '/wholesale' },
   { text: 'Retail Partner Resources', href: '/forms' },
+  { text: 'Documentation', href: '/docs' },
   { text: 'Customer Login', href: '/auth/signin' },
   { text: 'Support', href: `mailto:${supportEmail}` },
 ]

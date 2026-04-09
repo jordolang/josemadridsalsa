@@ -8,6 +8,9 @@ node_modules/
 
 # Next.js
 /.next/
+
+# Fumadocs MDX (auto-generated)
+.source/
 /out/
 .source/
 
