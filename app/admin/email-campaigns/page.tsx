@@ -36,7 +36,7 @@ async function getCampaigns() {
 function getStatusIcon(status: string) {
   switch (status) {
     case 'DRAFT':
-      return <Clock className="h-4 w-4 text-slate-500" />
+      return <Clock className="h-4 w-4 text-muted-foreground" />
     case 'SCHEDULED':
       return <Clock className="h-4 w-4 text-blue-500" />
     case 'SENDING':
@@ -47,9 +47,9 @@ function getStatusIcon(status: string) {
       return <Pause className="h-4 w-4 text-yellow-500" />
     case 'CANCELLED':
     case 'FAILED':
-      return <XCircle className="h-4 w-4 text-red-500" />
+      return <XCircle className="h-4 w-4 text-destructive" />
     default:
-      return <Mail className="h-4 w-4 text-slate-500" />
+      return <Mail className="h-4 w-4 text-muted-foreground" />
   }
 }
 
@@ -58,7 +58,7 @@ function getStatusBadge(status: string) {
   
   switch (status) {
     case 'DRAFT':
-      return <span className={`${baseClasses} bg-slate-100 text-slate-800`}>Draft</span>
+      return <span className={`${baseClasses} bg-muted text-foreground`}>Draft</span>
     case 'SCHEDULED':
       return <span className={`${baseClasses} bg-blue-100 text-blue-800`}>Scheduled</span>
     case 'SENDING':
@@ -68,11 +68,11 @@ function getStatusBadge(status: string) {
     case 'PAUSED':
       return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>Paused</span>
     case 'CANCELLED':
-      return <span className={`${baseClasses} bg-slate-100 text-slate-800`}>Cancelled</span>
+      return <span className={`${baseClasses} bg-muted text-foreground`}>Cancelled</span>
     case 'FAILED':
-      return <span className={`${baseClasses} bg-red-100 text-red-800`}>Failed</span>
+      return <span className={`${baseClasses} bg-destructive/10 text-destructive`}>Failed</span>
     default:
-      return <span className={`${baseClasses} bg-slate-100 text-slate-800`}>{status}</span>
+      return <span className={`${baseClasses} bg-muted text-foreground`}>{status}</span>
   }
 }
 
@@ -90,8 +90,8 @@ export default async function EmailCampaignsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Email Campaigns</h1>
-          <p className="text-slate-600 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Email Campaigns</h1>
+          <p className="text-muted-foreground mt-1">
             Send mass emails and track campaign performance
           </p>
         </div>
@@ -108,9 +108,9 @@ export default async function EmailCampaignsPage() {
       {campaigns.length === 0 ? (
         <Card className="p-12">
           <div className="text-center">
-            <Mail className="mx-auto h-12 w-12 text-slate-400" />
-            <h3 className="mt-4 text-lg font-medium text-slate-900">No campaigns yet</h3>
-            <p className="mt-2 text-sm text-slate-500">
+            <Mail className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-medium text-foreground">No campaigns yet</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
               Get started by creating your first email campaign.
             </p>
             {canWrite && (
@@ -139,15 +139,15 @@ export default async function EmailCampaignsPage() {
                       <div>
                         <Link
                           href={`/admin/email-campaigns/${campaign.id}`}
-                          className="text-lg font-semibold text-slate-900 hover:text-blue-600"
+                          className="text-lg font-semibold text-foreground hover:text-blue-600"
                         >
                           {campaign.name}
                         </Link>
-                        <p className="text-sm text-slate-600">{campaign.subject}</p>
+                        <p className="text-sm text-muted-foreground">{campaign.subject}</p>
                       </div>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                    <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Mail className="h-4 w-4" />
                         <span>Template: {campaign.template.name}</span>
@@ -167,11 +167,11 @@ export default async function EmailCampaignsPage() {
                         </div>
                       )}
                       {campaign.failedCount > 0 && (
-                        <div className="text-red-600">
+                        <div className="text-destructive">
                           Failed: {campaign.failedCount.toLocaleString()}
                         </div>
                       )}
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-muted-foreground">
                         Created {campaign.createdAt.toLocaleDateString()}
                       </div>
                     </div>
@@ -179,10 +179,10 @@ export default async function EmailCampaignsPage() {
                     {campaign.status === 'SENDING' && campaign.totalRecipients > 0 && (
                       <div className="mt-4">
                         <div className="flex items-center justify-between text-sm mb-2">
-                          <span className="text-slate-600">Progress</span>
+                          <span className="text-muted-foreground">Progress</span>
                           <span className="font-medium">{Math.round(progress)}%</span>
                         </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div className="w-full bg-muted rounded-full h-2">
                           <div
                             className="bg-blue-600 h-2 rounded-full transition-all"
                             style={{ width: `${progress}%` }}

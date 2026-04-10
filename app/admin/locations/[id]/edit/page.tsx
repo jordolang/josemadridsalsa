@@ -48,7 +48,7 @@ export default async function EditLocationPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Edit Location</h1>
-        <p className="text-slate-600">{location.businessName}</p>
+        <p className="text-muted-foreground">{location.businessName}</p>
       </div>
 
       <LocationForm location={location} />

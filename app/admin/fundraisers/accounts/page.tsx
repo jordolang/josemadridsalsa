@@ -74,9 +74,9 @@ export default function FundraiserAccountsPage() {
       case 'APPROVED':
         return 'bg-green-100 text-green-800'
       case 'SUSPENDED':
-        return 'bg-red-100 text-red-800'
+        return 'bg-destructive/10 text-destructive'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-muted text-foreground'
     }
   }
 
@@ -94,8 +94,8 @@ export default function FundraiserAccountsPage() {
             onClick={() => setFilter(s)}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
               filter === s
-                ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-foreground text-white'
+                : 'bg-muted text-muted-foreground hover:bg-muted'
             }`}
           >
             {s || 'All'}
@@ -104,9 +104,9 @@ export default function FundraiserAccountsPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-gray-500">Loading...</p>
+        <p className="text-muted-foreground">Loading...</p>
       ) : accounts.length === 0 ? (
-        <Card className="p-8 text-center text-gray-500">
+        <Card className="p-8 text-center text-muted-foreground">
           No fundraiser accounts found.
         </Card>
       ) : (
@@ -116,7 +116,7 @@ export default function FundraiserAccountsPage() {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <h3 className="font-semibold text-gray-900">
+                    <h3 className="font-semibold text-foreground">
                       {account.fundraiser.organizationName}
                     </h3>
                     <span
@@ -125,7 +125,7 @@ export default function FundraiserAccountsPage() {
                       {account.status}
                     </span>
                   </div>
-                  <div className="mt-1 flex gap-4 text-sm text-gray-500">
+                  <div className="mt-1 flex gap-4 text-sm text-muted-foreground">
                     <span>{account.user.email}</span>
                     <span>{account.user.name}</span>
                     <span>

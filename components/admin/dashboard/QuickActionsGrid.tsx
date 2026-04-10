@@ -58,7 +58,7 @@ const actions: QuickAction[] = [
     label: 'Locations',
     href: '/admin/locations',
     icon: MapPin,
-    color: 'bg-red-500',
+    color: 'bg-destructive',
     description: 'Store locations',
   },
   {
@@ -79,7 +79,7 @@ const actions: QuickAction[] = [
     label: 'Settings',
     href: '/admin/settings',
     icon: Settings,
-    color: 'bg-slate-500',
+    color: 'bg-muted/500',
     description: 'Configure',
   },
 ]

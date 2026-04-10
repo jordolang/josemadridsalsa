@@ -41,12 +41,12 @@ const STATUS_META: Record<
   },
   FAILED: {
     label: 'Failed',
-    badgeClass: 'bg-red-50 text-red-700 border border-red-200',
+    badgeClass: 'bg-destructive/10 text-destructive border border-destructive/30',
     description: 'Extraction failed. Try again or convert the file.',
   },
   UNSUPPORTED: {
     label: 'Unsupported',
-    badgeClass: 'bg-slate-100 text-slate-600 border border-slate-200',
+    badgeClass: 'bg-muted text-muted-foreground border border-border',
     description: 'Format requires OCR or manual transcription',
   },
 }
@@ -125,28 +125,28 @@ export default async function TrainingDataPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold">AI Training Data</h1>
-        <p className="text-slate-600">
+        <p className="text-muted-foreground">
           Drop in documents or scrape trusted URLs to keep the assistant sharp.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="p-4">
-          <p className="text-sm text-slate-500">Total sources</p>
+          <p className="text-sm text-muted-foreground">Total sources</p>
           <p className="text-2xl font-semibold">{stats.total}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-slate-500">Ready</p>
+          <p className="text-sm text-muted-foreground">Ready</p>
           <p className="text-2xl font-semibold">{stats[TrainingDocumentStatus.READY]}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-slate-500">Needs review</p>
+          <p className="text-sm text-muted-foreground">Needs review</p>
           <p className="text-2xl font-semibold">
             {stats[TrainingDocumentStatus.NEEDS_REVIEW]}
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-slate-500">Characters indexed</p>
+          <p className="text-sm text-muted-foreground">Characters indexed</p>
           <p className="text-2xl font-semibold">
             {stats.readyCharacters.toLocaleString()}
           </p>
@@ -157,7 +157,7 @@ export default async function TrainingDataPage() {
         <Card className="p-6 space-y-4">
           <div>
             <h2 className="text-xl font-semibold">Upload documents</h2>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               Accepts markdown, text, Office docs, CSV/XLSX, PDFs, and more. Images are
               captured for manual follow-up.
             </p>
@@ -168,7 +168,7 @@ export default async function TrainingDataPage() {
         <Card className="p-6 space-y-4">
           <div>
             <h2 className="text-xl font-semibold">Scrape a URL</h2>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               Paste blog posts, help-center articles, or trusted resources. HTML is cleaned
               before indexing.
             </p>
@@ -182,21 +182,21 @@ export default async function TrainingDataPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Recent ingests</h2>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Showing the latest {documents.length} sources.
               </p>
             </div>
           </div>
 
           {documents.length === 0 ? (
-            <div className="py-12 text-center text-slate-500">
+            <div className="py-12 text-center text-muted-foreground">
               No training documents yet. Upload your first file to get started.
             </div>
           ) : (
             <div className="mt-6 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="pb-3">Title</th>
                     <th className="pb-3">Source</th>
                     <th className="pb-3">Status</th>
@@ -204,12 +204,12 @@ export default async function TrainingDataPage() {
                     <th className="pb-3">Added</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border">
                   {documents.map((doc) => (
                       <tr key={doc.id} className="align-top">
                         <td className="py-4">
                           <p className="font-medium">{doc.title}</p>
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-1 text-xs text-muted-foreground">
                             {summarizeContent(doc.content)}
                           </p>
                           {Array.isArray(doc.warnings) && doc.warnings.length > 0 && (
@@ -218,7 +218,7 @@ export default async function TrainingDataPage() {
                             </p>
                           )}
                           {doc.notes && (
-                            <p className="mt-1 text-xs text-slate-500">Notes: {doc.notes}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">Notes: {doc.notes}</p>
                           )}
                         </td>
                         <td className="py-4">
@@ -226,19 +226,19 @@ export default async function TrainingDataPage() {
                             {SOURCE_LABELS[doc.sourceType]}
                           </Badge>
                           {doc.url && (
-                            <p className="mt-1 truncate text-xs text-slate-500 max-w-xs">
+                            <p className="mt-1 truncate text-xs text-muted-foreground max-w-xs">
                               {doc.url}
                             </p>
                           )}
                           {doc.fileName && (
-                            <p className="mt-1 text-xs text-slate-500">{doc.fileName}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{doc.fileName}</p>
                           )}
                         </td>
                         <td className="py-4">
                           <div className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${STATUS_META[doc.status].badgeClass}`}>
                             {STATUS_META[doc.status].label}
                           </div>
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-1 text-xs text-muted-foreground">
                             {STATUS_META[doc.status].description}
                           </p>
                         </td>
@@ -246,7 +246,7 @@ export default async function TrainingDataPage() {
                         <td className="py-4">
                           <p>{formatDate(doc.createdAt)}</p>
                           {doc.ingestedAt && (
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-muted-foreground">
                               Ready {formatDate(doc.ingestedAt)}
                             </p>
                           )}

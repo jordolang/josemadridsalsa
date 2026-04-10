@@ -135,11 +135,11 @@ export default async function IntegrationsPage() {
       <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Integrations</h1>
-          <p className="text-slate-600">
+          <p className="text-muted-foreground">
             Manage encrypted API credentials for payments, shipping, calendar sync, email, and social platforms.
           </p>
         </div>
-        <div className="rounded-lg bg-slate-100 px-4 py-2 text-sm text-slate-600">
+        <div className="rounded-lg bg-muted px-4 py-2 text-sm text-muted-foreground">
           Encryption enabled • Keys stored using AES-256-GCM
         </div>
       </div>
@@ -147,13 +147,13 @@ export default async function IntegrationsPage() {
       <Card className="p-6">
         <h2 className="text-xl font-semibold">Current credentials</h2>
         {serviceKeys.length === 0 ? (
-          <div className="py-12 text-center text-sm text-slate-500">
+          <div className="py-12 text-center text-sm text-muted-foreground">
             No integrations configured yet. Add Stripe, shipping provider, Google Calendar, or social media secrets below.
           </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[720px]">
-              <thead className="border-b bg-slate-50 text-sm text-slate-600">
+              <thead className="border-b bg-muted/50 text-sm text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Service</th>
                   <th className="px-4 py-3 text-left font-medium">Key</th>
@@ -169,19 +169,19 @@ export default async function IntegrationsPage() {
                   const disableAction = toggleServiceKey.bind(null, serviceKey.id, 'disable')
                   return (
                     <tr key={serviceKey.id} className="border-b last:border-0">
-                      <td className="px-4 py-4 font-medium text-slate-900">
+                      <td className="px-4 py-4 font-medium text-foreground">
                         {serviceKey.serviceName}
                       </td>
-                      <td className="px-4 py-4 text-slate-600">{serviceKey.keyName}</td>
+                      <td className="px-4 py-4 text-muted-foreground">{serviceKey.keyName}</td>
                       <td className="px-4 py-4">
-                        <Badge className={serviceKey.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}>
+                        <Badge className={serviceKey.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-muted text-muted-foreground'}>
                           {serviceKey.isActive ? 'Active' : 'Disabled'}
                         </Badge>
                       </td>
-                      <td className="px-4 py-4 text-slate-600">
+                      <td className="px-4 py-4 text-muted-foreground">
                         {serviceKey.lastUsed ? serviceKey.lastUsed.toLocaleString() : 'Never'}
                       </td>
-                      <td className="px-4 py-4 text-slate-600">
+                      <td className="px-4 py-4 text-muted-foreground">
                         {serviceKey.updatedAt.toLocaleString()}
                       </td>
                       {canManage && (
@@ -214,13 +214,13 @@ export default async function IntegrationsPage() {
 
       <Card className="p-6">
         <h2 className="text-xl font-semibold">Add or rotate credentials</h2>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted-foreground">
           Secrets are encrypted immediately and never returned in plaintext. Re-enter a value to rotate it.
         </p>
         {canManage ? (
           <form action={saveServiceKey} className="mt-4 grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="serviceName">
+              <label className="text-sm font-medium text-foreground" htmlFor="serviceName">
                 Service name
               </label>
               <Input
@@ -230,12 +230,12 @@ export default async function IntegrationsPage() {
                 required
                 className="font-mono text-sm"
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 Lowercase identifier, e.g. <code>stripe</code>, <code>shipping</code>, <code>google_calendar</code>.
               </p>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="keyName">
+              <label className="text-sm font-medium text-foreground" htmlFor="keyName">
                 Key name
               </label>
               <Input
@@ -245,12 +245,12 @@ export default async function IntegrationsPage() {
                 required
                 className="font-mono text-sm"
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 Label for this secret, e.g. <code>api_key</code>, <code>webhook_secret</code>.
               </p>
             </div>
             <div className="md:col-span-2 space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="value">
+              <label className="text-sm font-medium text-foreground" htmlFor="value">
                 Secret value
               </label>
               <Textarea
@@ -259,7 +259,7 @@ export default async function IntegrationsPage() {
                 placeholder="Paste the API key or credential value..."
                 className="h-32 font-mono text-xs"
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 Leave blank to keep the existing value for this service/key combination.
               </p>
             </div>
@@ -269,9 +269,9 @@ export default async function IntegrationsPage() {
                 name="isActive"
                 type="checkbox"
                 defaultChecked
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-input text-blue-600 focus:ring-blue-500"
               />
-              <label htmlFor="isActive" className="text-sm text-slate-700">
+              <label htmlFor="isActive" className="text-sm text-foreground">
                 Enable immediately
               </label>
             </div>

@@ -40,7 +40,7 @@ export default function MediaDetailDialog({
         </DialogHeader>
         <div className="grid gap-6 md:grid-cols-2">
           {/* Image Preview */}
-          <div className="rounded-lg bg-slate-100 p-4">
+          <div className="rounded-lg bg-muted p-4">
             {media.mimeType.startsWith('image/') ? (
               <div className="relative w-full" style={{ aspectRatio: media.width && media.height ? `${media.width}/${media.height}` : '1' }}>
                 <Image
@@ -61,37 +61,37 @@ export default function MediaDetailDialog({
           {/* Metadata */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-medium text-slate-600">Filename</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Filename</h3>
               <p className="mt-1">{media.filename}</p>
             </div>
 
             {media.alt && (
               <div>
-                <h3 className="text-sm font-medium text-slate-600">Alt Text</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">Alt Text</h3>
                 <p className="mt-1">{media.alt}</p>
               </div>
             )}
 
             {media.caption && (
               <div>
-                <h3 className="text-sm font-medium text-slate-600">Caption</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">Caption</h3>
                 <p className="mt-1">{media.caption}</p>
               </div>
             )}
 
             <div>
-              <h3 className="text-sm font-medium text-slate-600">File Type</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">File Type</h3>
               <p className="mt-1">{media.mimeType}</p>
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-slate-600">File Size</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">File Size</h3>
               <p className="mt-1">{formatFileSize(media.fileSize)}</p>
             </div>
 
             {media.width && media.height && (
               <div>
-                <h3 className="text-sm font-medium text-slate-600">Dimensions</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">Dimensions</h3>
                 <p className="mt-1">
                   {media.width} × {media.height} px
                 </p>
@@ -99,13 +99,13 @@ export default function MediaDetailDialog({
             )}
 
             <div>
-              <h3 className="text-sm font-medium text-slate-600">URL</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">URL</h3>
               <div className="mt-1 flex gap-2">
                 <input
                   type="text"
                   value={media.url}
                   readOnly
-                  className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
+                  className="flex-1 rounded border border-input px-3 py-2 text-sm"
                 />
                 <Button size="sm" variant="outline" onClick={handleCopyUrl}>
                   <Copy className="h-4 w-4" />
@@ -119,8 +119,8 @@ export default function MediaDetailDialog({
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-slate-600">Uploaded</h3>
-              <p className="mt-1 text-sm text-slate-500">
+              <h3 className="text-sm font-medium text-muted-foreground">Uploaded</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
                 {new Date(media.createdAt).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',

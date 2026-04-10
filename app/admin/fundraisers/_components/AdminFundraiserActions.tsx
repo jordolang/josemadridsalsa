@@ -60,13 +60,13 @@ export default function AdminFundraiserActions({ signupId, teamId, teamName, has
     finally { setLoading(false); }
   };
 
-  if (done && !apiKey) return <span className="text-xs text-gray-400">Done</span>;
+  if (done && !apiKey) return <span className="text-xs text-muted-foreground">Done</span>;
 
   if (apiKey) return (
     <div className="bg-black rounded p-3 mt-2">
       <div className="text-xs text-amber-400 mb-1 font-mono font-bold">API KEY — SHOWN ONCE. COPY NOW.</div>
       <code className="text-xs text-green-400 font-mono break-all block mb-2">{apiKey}</code>
-      <div className="text-xs text-gray-500 mb-2">Email this key to {teamName}. It will not be shown again.</div>
+      <div className="text-xs text-muted-foreground mb-2">Email this key to {teamName}. It will not be shown again.</div>
       <button onClick={() => navigator.clipboard.writeText(apiKey)} className="text-xs bg-green-700 text-white px-3 py-1 rounded mr-2">Copy to Clipboard</button>
       {slug && <a href={`/fundraise/${slug}`} target="_blank" className="text-xs text-blue-400 underline">View Profile Page</a>}
     </div>
@@ -76,11 +76,11 @@ export default function AdminFundraiserActions({ signupId, teamId, teamName, has
     <div className="space-y-2 mt-2">
       <div className="flex gap-3 items-center flex-wrap">
         <div>
-          <label className="text-xs text-gray-500 block mb-1">Team Color</label>
+          <label className="text-xs text-muted-foreground block mb-1">Team Color</label>
           <input type="color" value={color} onChange={e => setColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer"/>
         </div>
         <div>
-          <label className="text-xs text-gray-500 block mb-1">Active Period (YYYY-MM)</label>
+          <label className="text-xs text-muted-foreground block mb-1">Active Period (YYYY-MM)</label>
           <input type="month" value={period} onChange={e => setPeriod(e.target.value)} className="border rounded px-2 py-1 text-xs"/>
         </div>
       </div>
@@ -89,7 +89,7 @@ export default function AdminFundraiserActions({ signupId, teamId, teamName, has
         <button onClick={approve} disabled={loading} className="flex-1 bg-green-600 text-white text-xs py-2 px-3 rounded font-semibold disabled:opacity-50">
           {loading ? "Processing..." : "APPROVE + ISSUE API KEY"}
         </button>
-        <button onClick={reject} disabled={loading} className="bg-red-100 text-red-700 text-xs py-2 px-3 rounded font-semibold disabled:opacity-50">Reject</button>
+        <button onClick={reject} disabled={loading} className="bg-destructive/10 text-destructive text-xs py-2 px-3 rounded font-semibold disabled:opacity-50">Reject</button>
       </div>
     </div>
   );

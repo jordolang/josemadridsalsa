@@ -27,11 +27,11 @@ type FieldErrors = {
 }
 
 const roleColors: Record<string, string> = {
-  ADMIN: 'bg-red-100 text-red-700',
+  ADMIN: 'bg-destructive/10 text-destructive',
   DEVELOPER: 'bg-purple-100 text-purple-700',
   STAFF: 'bg-blue-100 text-blue-700',
   WHOLESALE: 'bg-amber-100 text-amber-700',
-  CUSTOMER: 'bg-gray-100 text-gray-700',
+  CUSTOMER: 'bg-muted text-foreground',
 }
 
 function SaveBanner({ message, isError }: { message: string; isError: boolean }) {
@@ -39,7 +39,7 @@ function SaveBanner({ message, isError }: { message: string; isError: boolean })
     <div
       className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
         isError
-          ? 'bg-red-50 text-red-700'
+          ? 'bg-destructive/10 text-destructive'
           : 'bg-emerald-50 text-emerald-700'
       }`}
     >
@@ -186,7 +186,7 @@ export default function AdminProfilePage() {
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-input border-t-foreground" />
       </div>
     )
   }
@@ -194,7 +194,7 @@ export default function AdminProfilePage() {
   if (!profile) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <p className="text-slate-500">Failed to load profile.</p>
+        <p className="text-muted-foreground">Failed to load profile.</p>
       </div>
     )
   }
@@ -219,14 +219,14 @@ export default function AdminProfilePage() {
     <div className="max-w-3xl space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">My Profile</h1>
-        <p className="mt-1 text-slate-600">
+        <h1 className="text-3xl font-bold text-foreground">My Profile</h1>
+        <p className="mt-1 text-muted-foreground">
           Manage your account information and security settings.
         </p>
       </div>
 
       {/* Account overview card */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6">
+      <div className="rounded-xl border border-border bg-card p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             {/* Avatar circle */}
@@ -234,12 +234,12 @@ export default function AdminProfilePage() {
               {(profile.name || profile.email).charAt(0).toUpperCase()}
             </div>
             <div>
-              <p className="text-lg font-semibold text-slate-900">
+              <p className="text-lg font-semibold text-foreground">
                 {profile.name || '(no name set)'}
               </p>
-              <p className="text-sm text-slate-500">{profile.email}</p>
+              <p className="text-sm text-muted-foreground">{profile.email}</p>
               <div className="mt-1 flex items-center gap-2">
-                <Badge className={`text-xs ${roleColors[profile.role] || 'bg-gray-100 text-gray-700'}`}>
+                <Badge className={`text-xs ${roleColors[profile.role] || 'bg-muted text-foreground'}`}>
                   {profile.role}
                 </Badge>
                 {profile.isEmailVerified && (
@@ -250,7 +250,7 @@ export default function AdminProfilePage() {
               </div>
             </div>
           </div>
-          <div className="space-y-1 text-right text-xs text-slate-500">
+          <div className="space-y-1 text-right text-xs text-muted-foreground">
             <p>Member since {memberSince}</p>
             <p>Last login: {lastLogin}</p>
           </div>
@@ -258,10 +258,10 @@ export default function AdminProfilePage() {
       </div>
 
       {/* Personal info form */}
-      <form onSubmit={handleProfileSave} className="rounded-xl border border-slate-200 bg-white p-6 space-y-5">
+      <form onSubmit={handleProfileSave} className="rounded-xl border border-border bg-card p-6 space-y-5">
         <div className="flex items-center gap-2">
-          <User className="h-5 w-5 text-slate-400" />
-          <h2 className="text-lg font-semibold text-slate-900">Personal Information</h2>
+          <User className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-lg font-semibold text-foreground">Personal Information</h2>
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
@@ -276,10 +276,10 @@ export default function AdminProfilePage() {
                 setProfileErrors((prev) => ({ ...prev, name: undefined }))
               }}
               placeholder="Your full name"
-              className={profileErrors.name ? 'border-red-400 focus-visible:ring-red-400' : ''}
+              className={profileErrors.name ? 'border-destructive focus-visible:ring-destructive' : ''}
             />
             {profileErrors.name && (
-              <p className="text-xs text-red-600">{profileErrors.name}</p>
+              <p className="text-xs text-destructive">{profileErrors.name}</p>
             )}
           </div>
 
@@ -291,9 +291,9 @@ export default function AdminProfilePage() {
               value={profile.email}
               readOnly
               disabled
-              className="bg-slate-50 text-slate-500 cursor-not-allowed"
+              className="bg-muted/50 text-muted-foreground cursor-not-allowed"
             />
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               Email changes are handled by an administrator.
             </p>
           </div>
@@ -301,7 +301,7 @@ export default function AdminProfilePage() {
           {/* Phone */}
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="phone" className="flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5 text-slate-400" />
+              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
               Phone number
             </Label>
             <Input
@@ -328,10 +328,10 @@ export default function AdminProfilePage() {
       </form>
 
       {/* Password form */}
-      <form onSubmit={handlePasswordSave} className="rounded-xl border border-slate-200 bg-white p-6 space-y-5">
+      <form onSubmit={handlePasswordSave} className="rounded-xl border border-border bg-card p-6 space-y-5">
         <div className="flex items-center gap-2">
-          <Lock className="h-5 w-5 text-slate-400" />
-          <h2 className="text-lg font-semibold text-slate-900">Change Password</h2>
+          <Lock className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-lg font-semibold text-foreground">Change Password</h2>
         </div>
 
         <div className="max-w-sm space-y-4">
@@ -348,19 +348,19 @@ export default function AdminProfilePage() {
                   setPasswordErrors((prev) => ({ ...prev, currentPassword: undefined }))
                 }}
                 placeholder="••••••••"
-                className={`pr-10 ${passwordErrors.currentPassword ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
+                className={`pr-10 ${passwordErrors.currentPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
               />
               <button
                 type="button"
                 onClick={() => setShowCurrent((v) => !v)}
-                className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
+                className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-muted-foreground"
                 tabIndex={-1}
               >
                 {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             {passwordErrors.currentPassword && (
-              <p className="text-xs text-red-600">{passwordErrors.currentPassword}</p>
+              <p className="text-xs text-destructive">{passwordErrors.currentPassword}</p>
             )}
           </div>
 
@@ -377,19 +377,19 @@ export default function AdminProfilePage() {
                   setPasswordErrors((prev) => ({ ...prev, newPassword: undefined }))
                 }}
                 placeholder="Min 8 characters"
-                className={`pr-10 ${passwordErrors.newPassword ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
+                className={`pr-10 ${passwordErrors.newPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
               />
               <button
                 type="button"
                 onClick={() => setShowNew((v) => !v)}
-                className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
+                className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-muted-foreground"
                 tabIndex={-1}
               >
                 {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             {passwordErrors.newPassword && (
-              <p className="text-xs text-red-600">{passwordErrors.newPassword}</p>
+              <p className="text-xs text-destructive">{passwordErrors.newPassword}</p>
             )}
             {/* Strength hint */}
             {newPassword.length > 0 && (
@@ -400,13 +400,13 @@ export default function AdminProfilePage() {
                     className={`h-1 flex-1 rounded-full transition-colors ${
                       newPassword.length >= i * 4
                         ? i <= 1
-                          ? 'bg-red-400'
+                          ? 'bg-destructive/80'
                           : i <= 2
                           ? 'bg-amber-400'
                           : i <= 3
                           ? 'bg-yellow-400'
                           : 'bg-emerald-500'
-                        : 'bg-slate-200'
+                        : 'bg-muted'
                     }`}
                   />
                 ))}
@@ -427,19 +427,19 @@ export default function AdminProfilePage() {
                   setPasswordErrors((prev) => ({ ...prev, confirmPassword: undefined }))
                 }}
                 placeholder="••••••••"
-                className={`pr-10 ${passwordErrors.confirmPassword ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
+                className={`pr-10 ${passwordErrors.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirm((v) => !v)}
-                className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
+                className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-muted-foreground"
                 tabIndex={-1}
               >
                 {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             {passwordErrors.confirmPassword && (
-              <p className="text-xs text-red-600">{passwordErrors.confirmPassword}</p>
+              <p className="text-xs text-destructive">{passwordErrors.confirmPassword}</p>
             )}
           </div>
         </div>
@@ -449,7 +449,7 @@ export default function AdminProfilePage() {
             type="submit"
             disabled={passwordSaving}
             variant="outline"
-            className="border-slate-300"
+            className="border-input"
           >
             {passwordSaving ? 'Updating…' : 'Update password'}
           </Button>
@@ -458,12 +458,12 @@ export default function AdminProfilePage() {
       </form>
 
       {/* Security info card */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-6">
+      <div className="rounded-xl border border-border bg-muted/50 p-6">
         <div className="flex items-center gap-2 mb-3">
-          <Shield className="h-5 w-5 text-slate-400" />
-          <h2 className="text-base font-semibold text-slate-700">Security notes</h2>
+          <Shield className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-base font-semibold text-foreground">Security notes</h2>
         </div>
-        <ul className="space-y-2 text-sm text-slate-600">
+        <ul className="space-y-2 text-sm text-muted-foreground">
           <li className="flex items-start gap-2">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
             Your password is stored using bcrypt with a 12-round salt — never in plaintext.

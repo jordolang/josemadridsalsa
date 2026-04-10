@@ -224,12 +224,12 @@ export function ConstantContactImportModal({
             <div
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                 selectedListId
-                  ? 'border-gray-300 cursor-pointer hover:border-blue-400'
-                  : 'border-gray-200 cursor-not-allowed opacity-60'
+                  ? 'border-input cursor-pointer hover:border-blue-400'
+                  : 'border-border cursor-not-allowed opacity-60'
               }`}
               onClick={() => selectedListId && fileRef.current?.click()}
             >
-              <Upload className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+              <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
               <p className="text-sm font-medium">
                 {selectedListId ? 'Click to upload Constant Contact CSV' : 'Select a list first'}
               </p>
@@ -250,7 +250,7 @@ export function ConstantContactImportModal({
               </div>
             )}
             {error && (
-              <div className="flex items-center gap-2 text-sm text-red-600">
+              <div className="flex items-center gap-2 text-sm text-destructive">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" /> {error}
               </div>
             )}
@@ -324,7 +324,7 @@ export function ConstantContactImportModal({
                               className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
                                 row['Email status'] === 'Active'
                                   ? 'bg-green-100 text-green-700'
-                                  : 'bg-red-100 text-red-700'
+                                  : 'bg-destructive/10 text-destructive'
                               }`}
                             >
                               {row['Email status']}
@@ -339,7 +339,7 @@ export function ConstantContactImportModal({
             )}
 
             {error && (
-              <div className="flex items-center gap-2 text-sm text-red-600">
+              <div className="flex items-center gap-2 text-sm text-destructive">
                 <AlertCircle className="h-4 w-4" /> {error}
               </div>
             )}
@@ -380,10 +380,10 @@ export function ConstantContactImportModal({
             </div>
             {result.errors.length > 0 && (
               <div className="space-y-1">
-                <p className="text-sm font-medium text-red-600">
+                <p className="text-sm font-medium text-destructive">
                   Errors ({result.errors.length}):
                 </p>
-                <div className="max-h-32 overflow-y-auto text-xs text-red-500 bg-red-50 rounded p-2 space-y-1">
+                <div className="max-h-32 overflow-y-auto text-xs text-destructive bg-destructive/10 rounded p-2 space-y-1">
                   {result.errors.slice(0, 20).map((e, i) => (
                     <p key={i}>{e}</p>
                   ))}

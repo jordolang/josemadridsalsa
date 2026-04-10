@@ -41,7 +41,7 @@ export default async function EditTagPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Edit Tag</h1>
-        <p className="text-slate-600">Update tag details</p>
+        <p className="text-muted-foreground">Update tag details</p>
       </div>
 
       <TagForm tag={tag} />

@@ -119,7 +119,7 @@ export default function CredentialImportDialog({
                   ? 'border-blue-400 bg-blue-50'
                   : file
                     ? 'border-green-300 bg-green-50'
-                    : 'border-slate-300 hover:border-slate-400'
+                    : 'border-input hover:border-muted-foreground'
               }`}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
               onDragLeave={() => setDragOver(false)}
@@ -136,20 +136,20 @@ export default function CredentialImportDialog({
                   if (f) handleFileSelect(f)
                 }}
               />
-              <Upload className="mx-auto mb-3 h-8 w-8 text-slate-400" />
+              <Upload className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
               {file ? (
                 <div>
                   <p className="font-medium text-green-700">{file.name}</p>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {(file.size / 1024).toFixed(1)} KB - Click or drop to replace
                   </p>
                 </div>
               ) : (
                 <div>
-                  <p className="font-medium text-slate-700">
+                  <p className="font-medium text-foreground">
                     Drop your file here or click to browse
                   </p>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Supports .csv and .xlsx files
                   </p>
                 </div>
@@ -157,9 +157,9 @@ export default function CredentialImportDialog({
             </div>
 
             {/* Column Info */}
-            <div className="rounded-lg bg-slate-50 p-3">
-              <p className="text-xs font-medium text-slate-600">Expected Columns:</p>
-              <p className="mt-1 text-xs text-slate-500">
+            <div className="rounded-lg bg-muted/50 p-3">
+              <p className="text-xs font-medium text-muted-foreground">Expected Columns:</p>
+              <p className="mt-1 text-xs text-muted-foreground">
                 Provider (or Service Name), Label, Username (or Email), Password, URL, Notes
               </p>
             </div>
@@ -168,28 +168,28 @@ export default function CredentialImportDialog({
           /* Results */
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-lg bg-slate-50 p-3 text-center">
+              <div className="rounded-lg bg-muted/50 p-3 text-center">
                 <p className="text-2xl font-bold">{result.totalRows}</p>
-                <p className="text-xs text-slate-500">Total Rows</p>
+                <p className="text-xs text-muted-foreground">Total Rows</p>
               </div>
               <div className="rounded-lg bg-green-50 p-3 text-center">
                 <p className="text-2xl font-bold text-green-700">{result.successCount}</p>
                 <p className="text-xs text-green-600">Imported</p>
               </div>
-              <div className="rounded-lg bg-red-50 p-3 text-center">
-                <p className="text-2xl font-bold text-red-700">{result.errorCount}</p>
-                <p className="text-xs text-red-600">Failed</p>
+              <div className="rounded-lg bg-destructive/10 p-3 text-center">
+                <p className="text-2xl font-bold text-destructive">{result.errorCount}</p>
+                <p className="text-xs text-destructive">Failed</p>
               </div>
             </div>
 
             {result.errorCount > 0 && (
               <div className="max-h-40 overflow-y-auto rounded-lg border p-3">
-                <p className="mb-2 text-sm font-medium text-red-700">Errors:</p>
+                <p className="mb-2 text-sm font-medium text-destructive">Errors:</p>
                 {result.results
                   .filter((r) => r.status === 'error')
                   .map((r) => (
                     <div key={r.row} className="flex items-start gap-2 text-sm">
-                      <XCircle className="mt-0.5 h-3 w-3 shrink-0 text-red-500" />
+                      <XCircle className="mt-0.5 h-3 w-3 shrink-0 text-destructive" />
                       <span>
                         Row {r.row}: {r.error}
                       </span>

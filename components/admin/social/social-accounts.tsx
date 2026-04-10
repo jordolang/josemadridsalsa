@@ -112,7 +112,7 @@ export function SocialAccounts({ accounts }: Props) {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
           <button className="ml-2 underline" onClick={() => setError(null)}>
             Dismiss
@@ -123,7 +123,7 @@ export function SocialAccounts({ accounts }: Props) {
       {/* Connected accounts */}
       {localAccounts.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-slate-900">Connected Accounts</h3>
+          <h3 className="text-lg font-semibold text-foreground">Connected Accounts</h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {localAccounts.map((account) => {
               const Icon = PLATFORM_ICONS[account.platform]
@@ -144,14 +144,14 @@ export function SocialAccounts({ accounts }: Props) {
                             className="h-10 w-10 rounded-full object-cover"
                           />
                         ) : (
-                          <div className={cn('flex h-10 w-10 items-center justify-center rounded-full bg-slate-100', meta.color)}>
+                          <div className={cn('flex h-10 w-10 items-center justify-center rounded-full bg-muted', meta.color)}>
                             <Icon className="h-5 w-5" />
                           </div>
                         )}
                         <div>
-                          <p className="font-semibold text-slate-900">{account.accountName}</p>
+                          <p className="font-semibold text-foreground">{account.accountName}</p>
                           {account.accountHandle && (
-                            <p className="text-sm text-slate-500">{account.accountHandle}</p>
+                            <p className="text-sm text-muted-foreground">{account.accountHandle}</p>
                           )}
                         </div>
                       </div>
@@ -161,7 +161,7 @@ export function SocialAccounts({ accounts }: Props) {
                     {/* Status */}
                     <div className="mt-4 space-y-2">
                       {account.connectionError ? (
-                        <div className="flex items-center gap-2 text-sm text-red-600">
+                        <div className="flex items-center gap-2 text-sm text-destructive">
                           <AlertTriangle className="h-4 w-4" />
                           {account.connectionError}
                         </div>
@@ -183,28 +183,28 @@ export function SocialAccounts({ accounts }: Props) {
                           <Badge
                             key={scope}
                             variant="outline"
-                            className="border-slate-200 text-[10px] text-slate-500"
+                            className="border-border text-[10px] text-muted-foreground"
                           >
                             <Shield className="mr-1 h-2.5 w-2.5" />
                             {scope.split('.').pop() || scope}
                           </Badge>
                         ))}
                         {account.scopes.length > 3 && (
-                          <Badge variant="outline" className="border-slate-200 text-[10px] text-slate-500">
+                          <Badge variant="outline" className="border-border text-[10px] text-muted-foreground">
                             +{account.scopes.length - 3} more
                           </Badge>
                         )}
                       </div>
 
                       {account.lastVerifiedAt && (
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-muted-foreground">
                           Verified {new Date(account.lastVerifiedAt).toLocaleDateString()}
                         </p>
                       )}
                     </div>
 
                     {/* Actions */}
-                    <div className="mt-4 flex gap-2 border-t border-slate-100 pt-4">
+                    <div className="mt-4 flex gap-2 border-t border-border pt-4">
                       <Button
                         variant="outline"
                         size="sm"
@@ -224,7 +224,7 @@ export function SocialAccounts({ accounts }: Props) {
                         size="sm"
                         onClick={() => handleDisconnect(account.id)}
                         disabled={disconnecting === account.id}
-                        className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                       >
                         {disconnecting === account.id ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
@@ -243,10 +243,10 @@ export function SocialAccounts({ accounts }: Props) {
 
       {/* Available platforms to connect */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-slate-900">
+        <h3 className="text-lg font-semibold text-foreground">
           {localAccounts.length > 0 ? 'Connect More Platforms' : 'Connect Your Social Accounts'}
         </h3>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           Link your social media accounts to publish content directly from this dashboard.
           Your credentials are encrypted and stored securely.
         </p>
@@ -258,18 +258,18 @@ export function SocialAccounts({ accounts }: Props) {
             return (
               <Card
                 key={platform}
-                className="group flex flex-col border-dashed border-slate-300 p-5 transition hover:border-solid hover:border-slate-400 hover:shadow-md"
+                className="group flex flex-col border-dashed border-input p-5 transition hover:border-solid hover:border-muted-foreground hover:shadow-md"
               >
                 <div className="flex items-center gap-3">
-                  <div className={cn('rounded-xl p-2.5', meta.color, 'bg-slate-100')}>
+                  <div className={cn('rounded-xl p-2.5', meta.color, 'bg-muted')}>
                     <Icon className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900">{meta.label}</p>
-                    <p className="text-xs text-slate-400">Not connected</p>
+                    <p className="font-semibold text-foreground">{meta.label}</p>
+                    <p className="text-xs text-muted-foreground">Not connected</p>
                   </div>
                 </div>
-                <p className="mt-3 flex-1 text-sm text-slate-600">{meta.description}</p>
+                <p className="mt-3 flex-1 text-sm text-muted-foreground">{meta.description}</p>
                 <Button
                   className="mt-4 w-full"
                   onClick={() => handleConnect(platform)}

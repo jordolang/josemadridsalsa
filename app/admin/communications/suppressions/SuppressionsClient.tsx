@@ -26,11 +26,11 @@ interface SuppressionsClientProps {
 }
 
 const reasonColors: Record<SuppressionReason, string> = {
-  HARD_BOUNCE: 'bg-red-100 text-red-800',
+  HARD_BOUNCE: 'bg-destructive/10 text-destructive',
   SOFT_BOUNCE: 'bg-orange-100 text-orange-800',
   SPAM_COMPLAINT: 'bg-rose-100 text-rose-800',
-  MANUAL: 'bg-gray-100 text-gray-800',
-  UNSUBSCRIBE: 'bg-slate-100 text-slate-800',
+  MANUAL: 'bg-muted text-foreground',
+  UNSUBSCRIBE: 'bg-muted text-foreground',
   ADMIN: 'bg-purple-100 text-purple-800',
 }
 
@@ -191,7 +191,7 @@ export function SuppressionsClient({ initialData, initialTotal }: SuppressionsCl
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                {addError && <p className="text-sm text-red-600">{addError}</p>}
+                {addError && <p className="text-sm text-destructive">{addError}</p>}
                 <div className="grid gap-2">
                   <Label htmlFor="sup-email">Email Address</Label>
                   <Input
@@ -240,7 +240,7 @@ export function SuppressionsClient({ initialData, initialTotal }: SuppressionsCl
         {total} suppressed email{total !== 1 ? 's' : ''}
       </p>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       {items.length === 0 ? (
         <div className="rounded-md border p-8 text-center text-muted-foreground">
@@ -277,7 +277,7 @@ export function SuppressionsClient({ initialData, initialTotal }: SuppressionsCl
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={() => handleRemove(item.email)}
                       disabled={loading}
                       title="Remove from suppression list"

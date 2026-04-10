@@ -48,8 +48,8 @@ export default async function NewCampaignPage() {
   return (
     <div className="max-w-4xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Create Email Campaign</h1>
-        <p className="text-slate-600 mt-1">
+        <h1 className="text-3xl font-bold text-foreground">Create Email Campaign</h1>
+        <p className="text-muted-foreground mt-1">
           Set up a mass email campaign with your chosen template
         </p>
       </div>

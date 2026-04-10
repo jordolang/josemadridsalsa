@@ -92,7 +92,7 @@ export default async function ParticipantsPage({
             </Button>
           </div>
           <h1 className="text-3xl font-bold">Participants</h1>
-          <p className="text-slate-600">
+          <p className="text-muted-foreground">
             {fundraiser.name} - {fundraiser.organizationName}
           </p>
         </div>
@@ -105,7 +105,7 @@ export default async function ParticipantsPage({
           <div className="flex items-center gap-3">
             <Users className="h-8 w-8 text-purple-600" />
             <div>
-              <p className="text-sm text-slate-600">Total Participants</p>
+              <p className="text-sm text-muted-foreground">Total Participants</p>
               <p className="text-2xl font-bold">{stats.totalParticipants}</p>
             </div>
           </div>
@@ -114,7 +114,7 @@ export default async function ParticipantsPage({
           <div className="flex items-center gap-3">
             <DollarSign className="h-8 w-8 text-green-600" />
             <div>
-              <p className="text-sm text-slate-600">Total Revenue</p>
+              <p className="text-sm text-muted-foreground">Total Revenue</p>
               <p className="text-2xl font-bold">${Number(stats.totalRevenue).toFixed(2)}</p>
             </div>
           </div>
@@ -123,7 +123,7 @@ export default async function ParticipantsPage({
           <div className="flex items-center gap-3">
             <TrendingUp className="h-8 w-8 text-blue-600" />
             <div>
-              <p className="text-sm text-slate-600">Total Commission</p>
+              <p className="text-sm text-muted-foreground">Total Commission</p>
               <p className="text-2xl font-bold">${Number(stats.totalCommission).toFixed(2)}</p>
             </div>
           </div>
@@ -132,7 +132,7 @@ export default async function ParticipantsPage({
           <div className="flex items-center gap-3">
             <Users className="h-8 w-8 text-orange-600" />
             <div>
-              <p className="text-sm text-slate-600">Total Orders</p>
+              <p className="text-sm text-muted-foreground">Total Orders</p>
               <p className="text-2xl font-bold">{stats.totalOrders}</p>
             </div>
           </div>
@@ -143,7 +143,7 @@ export default async function ParticipantsPage({
       <Card className="p-6">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">All Participants</h2>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted-foreground">
             Manage participants and track their performance
           </p>
         </div>

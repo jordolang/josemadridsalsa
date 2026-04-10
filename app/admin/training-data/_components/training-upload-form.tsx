@@ -134,7 +134,7 @@ export function TrainingUploadForm() {
     <div className="space-y-4">
       <div
         className={`rounded-lg border border-dashed p-6 text-center transition ${
-          isDragging ? 'border-salsa-500 bg-salsa-50' : 'border-slate-300'
+          isDragging ? 'border-salsa-500 bg-salsa-50' : 'border-input'
         }`}
       >
         <input
@@ -158,7 +158,7 @@ export function TrainingUploadForm() {
             <p className="text-base font-semibold">
               Drag & drop files or click to browse
             </p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Supports {ACCEPTED_FILE_EXTENSIONS.join(', ')}
             </p>
           </div>
@@ -180,7 +180,7 @@ export function TrainingUploadForm() {
       </div>
 
       {tasks.length > 0 && (
-        <div className="space-y-2 rounded-lg border border-slate-200 p-4">
+        <div className="space-y-2 rounded-lg border border-border p-4">
           <p className="text-sm font-medium">Recent uploads</p>
           <div className="space-y-3">
             {tasks.map((task) => (
@@ -188,12 +188,12 @@ export function TrainingUploadForm() {
                 <div>
                   <p className="font-medium">{task.fileName}</p>
                   {task.message && (
-                    <p className="text-xs text-slate-500">{task.message}</p>
+                    <p className="text-xs text-muted-foreground">{task.message}</p>
                   )}
                 </div>
                 <div>
                   {task.status === 'uploading' && (
-                    <span className="flex items-center gap-1 text-slate-500">
+                    <span className="flex items-center gap-1 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Uploading
                     </span>
@@ -205,13 +205,13 @@ export function TrainingUploadForm() {
                     </span>
                   )}
                   {task.status === 'error' && (
-                    <span className="flex items-center gap-1 text-red-600">
+                    <span className="flex items-center gap-1 text-destructive">
                       <AlertTriangle className="h-4 w-4" />
                       Failed
                     </span>
                   )}
                   {task.status === 'pending' && (
-                    <span className="flex items-center gap-1 text-slate-500">
+                    <span className="flex items-center gap-1 text-muted-foreground">
                       <Loader2 className="h-4 w-4" />
                       Queued
                     </span>
@@ -223,7 +223,7 @@ export function TrainingUploadForm() {
         </div>
       )}
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-muted-foreground">
         Tip: limit batches to {MAX_FILES_PER_BATCH} files. Documents longer than{' '}
         {TRAINING_MAX_CHARACTERS.toLocaleString()} characters are automatically truncated.
       </p>

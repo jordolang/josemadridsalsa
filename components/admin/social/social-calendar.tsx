@@ -18,17 +18,17 @@ const PLATFORM_ICONS: Record<SocialMediaPlatform, React.ElementType> = {
 }
 
 const STATUS_COLORS: Record<SocialMediaPostStatus, string> = {
-  DRAFT: 'bg-slate-400',
+  DRAFT: 'bg-muted-foreground',
   SCHEDULED: 'bg-blue-500',
   PUBLISHED: 'bg-emerald-500',
-  FAILED: 'bg-red-500',
+  FAILED: 'bg-destructive',
 }
 
 const STATUS_BG: Record<SocialMediaPostStatus, string> = {
-  DRAFT: 'border-slate-200 bg-slate-50',
+  DRAFT: 'border-border bg-muted/50',
   SCHEDULED: 'border-blue-200 bg-blue-50',
   PUBLISHED: 'border-emerald-200 bg-emerald-50',
-  FAILED: 'border-red-200 bg-red-50',
+  FAILED: 'border-destructive/30 bg-destructive/10',
 }
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -120,7 +120,7 @@ export function SocialCalendar({ posts, onNavigate }: Props) {
         {/* Calendar grid */}
         <Card className="overflow-hidden">
           {/* Month header */}
-          <div className="flex items-center justify-between border-b bg-slate-50 px-5 py-4">
+          <div className="flex items-center justify-between border-b bg-muted/50 px-5 py-4">
             <Button
               variant="ghost"
               size="sm"
@@ -128,7 +128,7 @@ export function SocialCalendar({ posts, onNavigate }: Props) {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <h3 className="text-lg font-semibold text-slate-900">
+            <h3 className="text-lg font-semibold text-foreground">
               {MONTHS[month]} {year}
             </h3>
             <Button
@@ -141,9 +141,9 @@ export function SocialCalendar({ posts, onNavigate }: Props) {
           </div>
 
           {/* Day headers */}
-          <div className="grid grid-cols-7 border-b bg-slate-50">
+          <div className="grid grid-cols-7 border-b bg-muted/50">
             {DAYS.map((day) => (
-              <div key={day} className="px-2 py-2 text-center text-xs font-medium text-slate-500">
+              <div key={day} className="px-2 py-2 text-center text-xs font-medium text-muted-foreground">
                 {day}
               </div>
             ))}
@@ -160,8 +160,8 @@ export function SocialCalendar({ posts, onNavigate }: Props) {
                   type="button"
                   onClick={() => setSelectedDate(day.dateStr)}
                   className={cn(
-                    'relative min-h-[80px] border-b border-r p-1.5 text-left transition hover:bg-slate-50',
-                    !day.isCurrentMonth && 'bg-slate-50/50 text-slate-400',
+                    'relative min-h-[80px] border-b border-r p-1.5 text-left transition hover:bg-muted/50',
+                    !day.isCurrentMonth && 'bg-muted/50/50 text-muted-foreground',
                     isSelected && 'ring-2 ring-inset ring-salsa-500',
                   )}
                 >
@@ -169,7 +169,7 @@ export function SocialCalendar({ posts, onNavigate }: Props) {
                     className={cn(
                       'inline-flex h-6 w-6 items-center justify-center rounded-full text-xs',
                       day.isToday && 'bg-salsa-500 font-bold text-white',
-                      !day.isToday && day.isCurrentMonth && 'text-slate-700',
+                      !day.isToday && day.isCurrentMonth && 'text-foreground',
                     )}
                   >
                     {day.date.getDate()}
@@ -189,7 +189,7 @@ export function SocialCalendar({ posts, onNavigate }: Props) {
                         </div>
                       ))}
                       {dayPosts.length > 3 && (
-                        <p className="px-1 text-[10px] text-slate-400">+{dayPosts.length - 3} more</p>
+                        <p className="px-1 text-[10px] text-muted-foreground">+{dayPosts.length - 3} more</p>
                       )}
                     </div>
                   )}
@@ -202,7 +202,7 @@ export function SocialCalendar({ posts, onNavigate }: Props) {
         {/* Selected day panel */}
         <div className="space-y-4">
           <Card className="p-5">
-            <h3 className="font-semibold text-slate-900">
+            <h3 className="font-semibold text-foreground">
               {selectedDate
                 ? new Date(selectedDate + 'T12:00:00').toLocaleDateString(undefined, {
                     weekday: 'long',
@@ -213,12 +213,12 @@ export function SocialCalendar({ posts, onNavigate }: Props) {
             </h3>
 
             {!selectedDate ? (
-              <p className="mt-3 text-sm text-slate-500">
+              <p className="mt-3 text-sm text-muted-foreground">
                 Click on a date to see scheduled and published posts.
               </p>
             ) : selectedDayPosts.length === 0 ? (
               <div className="mt-4 text-center">
-                <p className="text-sm text-slate-500">No posts on this day</p>
+                <p className="text-sm text-muted-foreground">No posts on this day</p>
                 <Button size="sm" className="mt-3" onClick={() => onNavigate('compose')}>
                   Create post
                 </Button>
@@ -236,14 +236,14 @@ export function SocialCalendar({ posts, onNavigate }: Props) {
                           'text-[10px]',
                           post.status === 'PUBLISHED' && 'bg-emerald-100 text-emerald-700',
                           post.status === 'SCHEDULED' && 'bg-blue-100 text-blue-700',
-                          post.status === 'DRAFT' && 'bg-slate-100 text-slate-600',
-                          post.status === 'FAILED' && 'bg-red-100 text-red-700',
+                          post.status === 'DRAFT' && 'bg-muted text-muted-foreground',
+                          post.status === 'FAILED' && 'bg-destructive/10 text-destructive',
                         )}
                       >
                         {post.status}
                       </Badge>
                       {post.scheduledAt && (
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-muted-foreground">
                           {new Date(post.scheduledAt).toLocaleTimeString(undefined, {
                             hour: 'numeric',
                             minute: '2-digit',
@@ -251,11 +251,11 @@ export function SocialCalendar({ posts, onNavigate }: Props) {
                         </span>
                       )}
                     </div>
-                    <p className="mt-2 line-clamp-3 text-sm text-slate-700">{post.content}</p>
+                    <p className="mt-2 line-clamp-3 text-sm text-foreground">{post.content}</p>
                     <div className="mt-2 flex gap-1">
                       {post.platforms.map((p) => {
                         const PIcon = PLATFORM_ICONS[p]
-                        return <PIcon key={p} className="h-3.5 w-3.5 text-slate-400" />
+                        return <PIcon key={p} className="h-3.5 w-3.5 text-muted-foreground" />
                       })}
                     </div>
                   </div>
@@ -266,10 +266,10 @@ export function SocialCalendar({ posts, onNavigate }: Props) {
 
           {/* Legend */}
           <Card className="p-4">
-            <p className="text-xs font-medium text-slate-500">Status Legend</p>
+            <p className="text-xs font-medium text-muted-foreground">Status Legend</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {(Object.entries(STATUS_COLORS) as [SocialMediaPostStatus, string][]).map(([status, color]) => (
-                <div key={status} className="flex items-center gap-2 text-xs text-slate-600">
+                <div key={status} className="flex items-center gap-2 text-xs text-muted-foreground">
                   <div className={cn('h-2.5 w-2.5 rounded-full', color)} />
                   {status}
                 </div>

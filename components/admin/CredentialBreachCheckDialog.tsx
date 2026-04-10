@@ -110,12 +110,12 @@ export default function CredentialBreachCheckDialog({
 
         {!hasChecked && !isChecking ? (
           <div className="py-6 text-center">
-            <ShieldAlert className="mx-auto mb-4 h-16 w-16 text-slate-300" />
-            <p className="text-sm text-slate-600">
+            <ShieldAlert className="mx-auto mb-4 h-16 w-16 text-muted-foreground/60" />
+            <p className="text-sm text-muted-foreground">
               Click the button below to check{' '}
               {credentialId ? 'this credential' : 'all credentials'} against known data breaches.
             </p>
-            <p className="mt-2 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-muted-foreground">
               Passwords are never sent in full. Only the first 5 characters of the SHA-1 hash are
               transmitted (k-anonymity).
             </p>
@@ -124,7 +124,7 @@ export default function CredentialBreachCheckDialog({
           <div className="py-8 text-center">
             <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-blue-500" />
             <p className="text-sm font-medium">Checking credentials...</p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               This may take a moment. Do not close this dialog.
             </p>
           </div>
@@ -132,13 +132,13 @@ export default function CredentialBreachCheckDialog({
           <div className="space-y-4">
             {/* Summary */}
             <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-lg bg-slate-50 p-3 text-center">
+              <div className="rounded-lg bg-muted/50 p-3 text-center">
                 <p className="text-2xl font-bold">{results.length}</p>
-                <p className="text-xs text-slate-500">Checked</p>
+                <p className="text-xs text-muted-foreground">Checked</p>
               </div>
-              <div className="rounded-lg bg-red-50 p-3 text-center">
-                <p className="text-2xl font-bold text-red-700">{breachedResults.length}</p>
-                <p className="text-xs text-red-600">Breached</p>
+              <div className="rounded-lg bg-destructive/10 p-3 text-center">
+                <p className="text-2xl font-bold text-destructive">{breachedResults.length}</p>
+                <p className="text-xs text-destructive">Breached</p>
               </div>
               <div className="rounded-lg bg-green-50 p-3 text-center">
                 <p className="text-2xl font-bold text-green-700">{safeResults.length}</p>
@@ -149,7 +149,7 @@ export default function CredentialBreachCheckDialog({
             {/* Breached Credentials */}
             {breachedResults.length > 0 && (
               <div>
-                <h3 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-red-700">
+                <h3 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-destructive">
                   <AlertTriangle className="h-4 w-4" />
                   Breached Passwords
                 </h3>
@@ -157,11 +157,11 @@ export default function CredentialBreachCheckDialog({
                   {breachedResults.map((r) => (
                     <div
                       key={r.id}
-                      className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-3"
+                      className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/10 p-3"
                     >
                       <div>
                         <p className="text-sm font-medium">{r.serviceName}</p>
-                        <p className="text-xs text-slate-500">{r.label}</p>
+                        <p className="text-xs text-muted-foreground">{r.label}</p>
                       </div>
                       <Badge variant="destructive" className="text-xs">
                         Found {r.breachCount.toLocaleString()}x

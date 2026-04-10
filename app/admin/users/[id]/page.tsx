@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 const roleColors: Record<string, string> = {
   CUSTOMER: 'bg-blue-100 text-blue-800',
   STAFF: 'bg-purple-100 text-purple-800',
-  ADMIN: 'bg-red-100 text-red-800',
+  ADMIN: 'bg-destructive/10 text-destructive',
   DEVELOPER: 'bg-orange-100 text-orange-800',
   WHOLESALE: 'bg-teal-100 text-teal-800',
 }
@@ -21,8 +21,8 @@ const orderStatusInfo: Record<string, { label: string; color: string }> = {
   PROCESSING: { label: 'Processing', color: 'bg-purple-100 text-purple-800' },
   SHIPPED: { label: 'Shipped', color: 'bg-indigo-100 text-indigo-800' },
   DELIVERED: { label: 'Delivered', color: 'bg-green-100 text-green-800' },
-  CANCELLED: { label: 'Cancelled', color: 'bg-red-100 text-red-800' },
-  REFUNDED: { label: 'Refunded', color: 'bg-gray-100 text-gray-800' },
+  CANCELLED: { label: 'Cancelled', color: 'bg-destructive/10 text-destructive' },
+  REFUNDED: { label: 'Refunded', color: 'bg-muted text-foreground' },
 }
 
 async function getUserWithOrders(id: string) {
@@ -79,7 +79,7 @@ export default async function UserDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Badge className={roleColors[user.role] || 'bg-gray-100 text-gray-800'}>
+          <Badge className={roleColors[user.role] || 'bg-muted text-foreground'}>
             {user.role}
           </Badge>
           {canWrite && (
@@ -101,7 +101,7 @@ export default async function UserDetailPage({
               <h2 className="text-lg font-semibold mb-4">User Information</h2>
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-slate-400" />
+                  <Mail className="h-4 w-4 text-muted-foreground" />
                   <span>{user.email}</span>
                   {user.isEmailVerified ? (
                     <Badge variant="outline" className="text-green-600 border-green-300 text-xs">Verified</Badge>
@@ -111,21 +111,21 @@ export default async function UserDetailPage({
                 </div>
                 {user.phone && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-slate-400" />
+                    <Phone className="h-4 w-4 text-muted-foreground" />
                     <span>{user.phone}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-sm">
-                  <Shield className="h-4 w-4 text-slate-400" />
+                  <Shield className="h-4 w-4 text-muted-foreground" />
                   <span>Role: {user.role}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-slate-400" />
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
                 </div>
                 {user.lastLoginAt && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-slate-400" />
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span>Last login {new Date(user.lastLoginAt).toLocaleDateString()}</span>
                   </div>
                 )}
@@ -182,7 +182,7 @@ export default async function UserDetailPage({
                       {user.orders.map((order) => {
                         const status = orderStatusInfo[order.status] || {
                           label: order.status,
-                          color: 'bg-gray-100 text-gray-800',
+                          color: 'bg-muted text-foreground',
                         }
                         return (
                           <tr key={order.id} className="border-b last:border-0">

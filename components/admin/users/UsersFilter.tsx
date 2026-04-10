@@ -48,7 +48,7 @@ export function UsersFilter({ initialSearch = '', initialRole = 'all' }: UsersFi
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <div className="relative">
-        <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 ${isPending ? 'opacity-50' : ''}`} />
+        <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground ${isPending ? 'opacity-50' : ''}`} />
         <Input
           type="search"
           placeholder="Search users..."
@@ -61,7 +61,7 @@ export function UsersFilter({ initialSearch = '', initialRole = 'all' }: UsersFi
         />
       </div>
       <select
-        className="rounded-md border border-slate-300 px-3 py-2 text-sm bg-background text-foreground"
+        className="rounded-md border border-input px-3 py-2 text-sm bg-background text-foreground"
         value={role}
         onChange={(e) => {
           setRole(e.target.value)

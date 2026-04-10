@@ -339,7 +339,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-salsa-500">Templates</p>
-              <h2 className="font-serif text-xl font-semibold text-slate-900">Form library</h2>
+              <h2 className="font-serif text-xl font-semibold text-foreground">Form library</h2>
             </div>
             <div className="flex gap-2">
               <Select value={activeSource} onValueChange={(value: 'all' | TemplateSource) => setActiveSource(value)}>
@@ -378,26 +378,26 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
                     'w-full rounded-xl border px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-salsa-500',
                     isActive
                       ? 'border-salsa-200 bg-salsa-50'
-                      : 'border-slate-200 bg-white hover:border-salsa-200 hover:bg-salsa-50/50',
+                      : 'border-border bg-card hover:border-salsa-200 hover:bg-salsa-50/50',
                   )}
                   onClick={() => setSelectedTemplateId(template.id)}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900">{template.name}</p>
+                    <p className="text-sm font-semibold text-foreground">{template.name}</p>
                     <div className="flex flex-wrap gap-1">
-                      <Badge variant="outline" className="border-slate-200 text-xs text-slate-600">
+                      <Badge variant="outline" className="border-border text-xs text-muted-foreground">
                         {categories.find((category) => category.id === template.categoryId)?.label ?? template.categoryId}
                       </Badge>
                       {template.estimatedCompletion ? (
-                        <Badge variant="outline" className="border-slate-200 text-xs text-slate-600">
+                        <Badge variant="outline" className="border-border text-xs text-muted-foreground">
                           {template.estimatedCompletion}
                         </Badge>
                       ) : null}
                       <Badge
                         variant="outline"
                         className={cn(
-                          'border-slate-200 text-xs capitalize',
-                          template.source === 'saved' ? 'text-emerald-600 border-emerald-200' : 'text-slate-500',
+                          'border-border text-xs capitalize',
+                          template.source === 'saved' ? 'text-emerald-600 border-emerald-200' : 'text-muted-foreground',
                         )}
                       >
                         {template.source === 'saved' ? 'Saved' : 'Library'}
@@ -405,18 +405,18 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
                     </div>
                   </div>
                   <p className="mt-1 text-xs uppercase tracking-wide text-salsa-500">{template.tags.join(' · ')}</p>
-                  <p className="mt-2 text-sm text-slate-600">{template.description}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{template.description}</p>
                   {template.source === 'saved' ? (
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       {template.status ? (
                         <Badge
                           variant="outline"
                           className={cn(
-                            'border-slate-200 text-xs capitalize',
+                            'border-border text-xs capitalize',
                             template.status === 'PUBLISHED'
                               ? 'text-emerald-600 border-emerald-200'
                               : template.status === 'ARCHIVED'
-                                ? 'text-slate-500 border-slate-200'
+                                ? 'text-muted-foreground border-border'
                                 : 'text-amber-600 border-amber-200',
                           )}
                         >
@@ -444,8 +444,8 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
 
         <Card className="space-y-4 p-5">
           <div className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-slate-500" />
-            <h3 className="font-serif text-lg font-semibold text-slate-900">Sections</h3>
+            <Layers className="h-4 w-4 text-muted-foreground" />
+            <h3 className="font-serif text-lg font-semibold text-foreground">Sections</h3>
           </div>
           <div className="space-y-3">
             {combinedSections.map((section) => {
@@ -455,7 +455,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
                   key={section.id}
                   className={cn(
                     'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition',
-                    included ? 'border-salsa-200 bg-salsa-50' : 'border-slate-200 bg-white hover:border-slate-300',
+                    included ? 'border-salsa-200 bg-salsa-50' : 'border-border bg-card hover:border-input',
                   )}
                 >
                   <input
@@ -466,12 +466,12 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
                         prev.includes(section.id) ? prev.filter((id) => id !== section.id) : [...prev, section.id],
                       )
                     }
-                    className="mt-1 h-4 w-4 rounded border-slate-300 text-salsa-600 focus:ring-salsa-500"
+                    className="mt-1 h-4 w-4 rounded border-input text-salsa-600 focus:ring-salsa-500"
                   />
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">{section.label}</p>
+                    <p className="text-sm font-semibold text-foreground">{section.label}</p>
                     {section.description ? (
-                      <p className="mt-1 text-xs text-slate-500">{section.description}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{section.description}</p>
                     ) : null}
                   </div>
                 </label>
@@ -482,21 +482,21 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
 
         <Card className="space-y-4 p-5">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-slate-500" />
-            <h3 className="font-serif text-lg font-semibold text-slate-900">Blocks</h3>
+            <Sparkles className="h-4 w-4 text-muted-foreground" />
+            <h3 className="font-serif text-lg font-semibold text-foreground">Blocks</h3>
           </div>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted-foreground">
             Drop reusable blocks into any template: terms, payment receipts, marketing consent, and more.
           </p>
           <div className="space-y-3">
             {blockLibrary.map((block) => {
               const isActive = activeBlocks.includes(block.id)
               return (
-                <div key={block.id} className="rounded-xl border border-slate-200 bg-white px-3 py-3">
+                <div key={block.id} className="rounded-xl border border-border bg-card px-3 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">{block.label}</p>
-                      <p className="text-xs text-slate-500">{block.description}</p>
+                      <p className="text-sm font-semibold text-foreground">{block.label}</p>
+                      <p className="text-xs text-muted-foreground">{block.description}</p>
                     </div>
                     <Button
                       variant={isActive ? 'outline' : 'default'}
@@ -520,10 +520,10 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-salsa-500">Builder</p>
-              <h2 className="font-serif text-2xl font-semibold text-slate-900">
+              <h2 className="font-serif text-2xl font-semibold text-foreground">
                 {selectedTemplate?.name ?? 'Select a template'}
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 {selectedTemplate?.source === 'saved'
                   ? `Version ${selectedTemplate.version ?? 1}`
                   : 'Library template'}
@@ -547,7 +547,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="form-title">
+              <label className="text-sm font-medium text-foreground" htmlFor="form-title">
                 Form title
               </label>
               <Input
@@ -558,7 +558,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="branding-toggle">
+              <label className="text-sm font-medium text-foreground" htmlFor="branding-toggle">
                 Branding
               </label>
               <button
@@ -569,7 +569,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
                   'flex h-10 w-full items-center justify-center rounded-md border text-sm font-medium transition',
                   includeBranding
                     ? 'border-salsa-200 bg-salsa-50 text-salsa-600'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
+                    : 'border-border bg-card text-muted-foreground hover:border-input',
                 )}
               >
                 {includeBranding ? 'Branding enabled' : 'Branding hidden'}
@@ -578,7 +578,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700" htmlFor="form-notes">
+            <label className="text-sm font-medium text-foreground" htmlFor="form-notes">
               Notes for the footer (optional)
             </label>
             <Textarea
@@ -592,7 +592,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
 
           {selectedTemplate?.source === 'saved' ? (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="changelog-notes">
+              <label className="text-sm font-medium text-foreground" htmlFor="changelog-notes">
                 Changelog notes (optional)
               </label>
               <Textarea
@@ -602,17 +602,17 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
                 rows={3}
                 placeholder="Summarize what changed for auditing and rollbacks."
               />
-              <p className="text-xs text-slate-500">Visible to staff reviewing version history.</p>
+              <p className="text-xs text-muted-foreground">Visible to staff reviewing version history.</p>
             </div>
           ) : null}
 
           {selectedTemplate ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Wand2 className="h-4 w-4 text-slate-500" />
+            <div className="rounded-2xl border border-border bg-muted/50 p-4">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Wand2 className="h-4 w-4 text-muted-foreground" />
                 Recommended uses
               </h3>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
                 {selectedTemplate.recommendedUses.map((use) => (
                   <li key={use}>{use}</li>
                 ))}
@@ -624,7 +624,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
             <Button
               onClick={() => persistTemplate('DRAFT')}
               disabled={isSaving}
-              className="bg-slate-900 hover:bg-slate-800"
+              className="bg-foreground hover:bg-foreground/90"
             >
               {isSaving ? 'Saving…' : 'Save draft'}
             </Button>
@@ -638,24 +638,24 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
           <Card className="space-y-4 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Version history</p>
-                <h3 className="font-serif text-lg font-semibold text-slate-900">Recent changes</h3>
+                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Version history</p>
+                <h3 className="font-serif text-lg font-semibold text-foreground">Recent changes</h3>
               </div>
-              <History className="h-4 w-4 text-slate-400" />
+              <History className="h-4 w-4 text-muted-foreground" />
             </div>
             {versionHistory.length === 0 ? (
-              <p className="text-sm text-slate-500">Publish updates to start building a changelog.</p>
+              <p className="text-sm text-muted-foreground">Publish updates to start building a changelog.</p>
             ) : (
               <ol className="space-y-3">
                 {versionHistory.map((entry) => (
-                  <li key={entry.version} className="rounded-2xl border border-slate-200 bg-white p-3">
-                    <div className="flex items-center justify-between text-sm font-semibold text-slate-900">
+                  <li key={entry.version} className="rounded-2xl border border-border bg-card p-3">
+                    <div className="flex items-center justify-between text-sm font-semibold text-foreground">
                       <span>v{entry.version}</span>
-                      <span className="text-xs font-normal text-slate-500">{formatHistoryTimestamp(entry.createdAt)}</span>
+                      <span className="text-xs font-normal text-muted-foreground">{formatHistoryTimestamp(entry.createdAt)}</span>
                     </div>
-                    <p className="text-xs text-slate-500">{resolveHistoryAuthor(entry)}</p>
+                    <p className="text-xs text-muted-foreground">{resolveHistoryAuthor(entry)}</p>
                     {entry.changelogNotes ? (
-                      <p className="mt-2 text-sm text-slate-700">{entry.changelogNotes}</p>
+                      <p className="mt-2 text-sm text-foreground">{entry.changelogNotes}</p>
                     ) : null}
                   </li>
                 ))}
@@ -664,13 +664,13 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
           </Card>
         ) : null}
 
-        <Card className="overflow-hidden border border-slate-200">
-          <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
-            <h3 className="text-sm font-semibold text-slate-900">Live preview</h3>
-            <p className="text-xs text-slate-500">Scroll to review the printable layout exactly as it will export.</p>
+        <Card className="overflow-hidden border border-border">
+          <div className="border-b border-border bg-muted/50 px-5 py-3">
+            <h3 className="text-sm font-semibold text-foreground">Live preview</h3>
+            <p className="text-xs text-muted-foreground">Scroll to review the printable layout exactly as it will export.</p>
           </div>
-          <div className="max-h-[760px] overflow-auto bg-slate-100">
-            <div className="min-h-[640px] bg-white" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+          <div className="max-h-[760px] overflow-auto bg-muted">
+            <div className="min-h-[640px] bg-card" dangerouslySetInnerHTML={{ __html: previewHtml }} />
           </div>
         </Card>
       </div>

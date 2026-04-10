@@ -129,11 +129,11 @@ async function updateInvoiceNotes(invoiceId: string, formData: FormData) {
 }
 
 const statusStyles: Record<string, string> = {
-  DRAFT: 'bg-slate-100 text-slate-700',
+  DRAFT: 'bg-muted text-foreground',
   SENT: 'bg-blue-100 text-blue-700',
   PAID: 'bg-emerald-100 text-emerald-700',
-  OVERDUE: 'bg-red-100 text-red-700',
-  CANCELLED: 'bg-slate-200 text-slate-500',
+  OVERDUE: 'bg-destructive/10 text-destructive',
+  CANCELLED: 'bg-muted text-muted-foreground',
 }
 
 export default async function InvoiceDetailPage(props: PageProps) {
@@ -170,11 +170,11 @@ export default async function InvoiceDetailPage(props: PageProps) {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold">{invoice.number}</h1>
-            <Badge className={statusStyles[invoice.status] || 'bg-slate-100 text-slate-600'}>
+            <Badge className={statusStyles[invoice.status] || 'bg-muted text-muted-foreground'}>
               {invoice.status}
             </Badge>
           </div>
-          <p className="text-slate-600">
+          <p className="text-muted-foreground">
             Issued {invoice.createdAt.toLocaleDateString()} • Due{' '}
             {invoice.dueDate.toLocaleDateString()}
           </p>
@@ -214,13 +214,13 @@ export default async function InvoiceDetailPage(props: PageProps) {
         <Card className="p-6">
           <h2 className="text-xl font-semibold">Line items</h2>
           {lines.length === 0 ? (
-            <div className="py-12 text-center text-sm text-slate-500">
+            <div className="py-12 text-center text-sm text-muted-foreground">
               This invoice has no line items. Update the invoice to add billing rows.
             </div>
           ) : (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full min-w-[640px]">
-                <thead className="border-b bg-slate-50 text-sm text-slate-600">
+                <thead className="border-b bg-muted/50 text-sm text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">Description</th>
                     <th className="px-4 py-3 text-right font-medium">Qty</th>
@@ -232,18 +232,18 @@ export default async function InvoiceDetailPage(props: PageProps) {
                   {lines.map((line, index) => (
                     <tr key={`${line.description}-${index}`} className="border-b last:border-0">
                       <td className="px-4 py-4">
-                        <p className="font-medium text-slate-800">{line.description}</p>
+                        <p className="font-medium text-foreground">{line.description}</p>
                         {line.notes && (
-                          <p className="text-xs text-slate-500">{line.notes}</p>
+                          <p className="text-xs text-muted-foreground">{line.notes}</p>
                         )}
                       </td>
-                      <td className="px-4 py-4 text-right text-slate-600">
+                      <td className="px-4 py-4 text-right text-muted-foreground">
                         {line.quantity.toLocaleString()}
                       </td>
-                      <td className="px-4 py-4 text-right text-slate-600">
+                      <td className="px-4 py-4 text-right text-muted-foreground">
                         {formatPrice(line.unitPrice)}
                       </td>
-                      <td className="px-4 py-4 text-right font-semibold text-slate-900">
+                      <td className="px-4 py-4 text-right font-semibold text-foreground">
                         {formatPrice(line.total)}
                       </td>
                     </tr>
@@ -253,16 +253,16 @@ export default async function InvoiceDetailPage(props: PageProps) {
             </div>
           )}
           <div className="mt-6 flex justify-end border-t pt-4">
-            <div className="space-y-2 text-right text-sm text-slate-600">
+            <div className="space-y-2 text-right text-sm text-muted-foreground">
               <p>
                 Subtotal:{' '}
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-foreground">
                   {formatPrice(subtotal)}
                 </span>
               </p>
               <p>
                 Invoice total:{' '}
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-foreground">
                   {formatPrice(Number(invoice.total || 0))}
                 </span>
               </p>
@@ -273,10 +273,10 @@ export default async function InvoiceDetailPage(props: PageProps) {
         <Card className="space-y-4 p-6">
           <div>
             <h2 className="text-lg font-semibold">Details</h2>
-            <div className="mt-3 space-y-2 text-sm text-slate-600">
+            <div className="mt-3 space-y-2 text-sm text-muted-foreground">
               <p>
                 Customer:{' '}
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-foreground">
                   {invoice.customerId || 'Manual billing'}
                 </span>
               </p>
@@ -290,18 +290,18 @@ export default async function InvoiceDetailPage(props: PageProps) {
                     View order
                   </Link>
                 ) : (
-                  <span className="text-slate-500">—</span>
+                  <span className="text-muted-foreground">—</span>
                 )}
               </p>
               <p>
                 Sent at:{' '}
-                <span className="text-slate-700">
+                <span className="text-foreground">
                   {invoice.sentAt ? invoice.sentAt.toLocaleString() : 'Not sent'}
                 </span>
               </p>
               <p>
                 Paid:{' '}
-                <span className="text-slate-700">
+                <span className="text-foreground">
                   {invoice.paidAt ? invoice.paidAt.toLocaleString() : 'Unpaid'}
                 </span>
               </p>
@@ -323,7 +323,7 @@ export default async function InvoiceDetailPage(props: PageProps) {
                 </Button>
               </form>
             ) : (
-              <div className="mt-3 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
+              <div className="mt-3 rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
                 {invoice.notes || 'No notes added to this invoice.'}
               </div>
             )}

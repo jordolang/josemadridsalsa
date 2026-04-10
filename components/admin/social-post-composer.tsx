@@ -51,12 +51,12 @@ export function SocialPostComposer({
   )
 
   return (
-    <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-salsa-500">Composer</p>
-          <h2 className="font-serif text-2xl font-semibold text-slate-900">Create a social post</h2>
-          <p className="text-sm text-slate-600">
+          <h2 className="font-serif text-2xl font-semibold text-foreground">Create a social post</h2>
+          <p className="text-sm text-muted-foreground">
             Draft once and push to every connected platform. Schedule posts or mark them as published when you launch.
           </p>
         </div>
@@ -82,14 +82,14 @@ export function SocialPostComposer({
       ) : null}
 
       {state.status === 'error' && state.message ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {state.message}
         </div>
       ) : null}
 
       <form action={formAction} className="space-y-6">
         <fieldset className="space-y-4">
-          <legend className="text-sm font-medium text-slate-800">Select platforms</legend>
+          <legend className="text-sm font-medium text-foreground">Select platforms</legend>
           <div className="grid gap-3 md:grid-cols-2">
             {platformOptions.map((platform) => (
               <label
@@ -97,7 +97,7 @@ export function SocialPostComposer({
                 className={cn(
                   'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition',
                   platform.isConnected
-                    ? 'border-slate-200 bg-slate-50 hover:border-salsa-200'
+                    ? 'border-border bg-muted/50 hover:border-salsa-200'
                     : 'border-amber-200 bg-amber-50/70 hover:border-amber-300',
                 )}
               >
@@ -105,14 +105,14 @@ export function SocialPostComposer({
                   type="checkbox"
                   name="platforms"
                   value={platform.value}
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-salsa-600 focus:ring-salsa-500"
+                  className="mt-1 h-4 w-4 rounded border-input text-salsa-600 focus:ring-salsa-500"
                   defaultChecked={platform.isConnected}
                 />
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-900">{platform.label}</span>
+                    <span className="text-sm font-semibold text-foreground">{platform.label}</span>
                     {platform.handle ? (
-                      <span className="text-xs text-slate-500">{platform.handle}</span>
+                      <span className="text-xs text-muted-foreground">{platform.handle}</span>
                     ) : null}
                     {platform.isConnected ? (
                       <Badge className="bg-emerald-100 text-emerald-700">Connected</Badge>
@@ -122,9 +122,9 @@ export function SocialPostComposer({
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-slate-600">{platform.description}</p>
+                  <p className="text-xs text-muted-foreground">{platform.description}</p>
                   {platform.lastSyncedAt ? (
-                    <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                       Synced {new Date(platform.lastSyncedAt).toLocaleString()}
                     </p>
                   ) : null}
@@ -133,19 +133,19 @@ export function SocialPostComposer({
             ))}
           </div>
           {state.fieldErrors?.platforms ? (
-            <p className="text-xs text-red-600">{state.fieldErrors.platforms.join(' ')}</p>
+            <p className="text-xs text-destructive">{state.fieldErrors.platforms.join(' ')}</p>
           ) : null}
         </fieldset>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label htmlFor="content" className="text-sm font-medium text-slate-800">
+            <label htmlFor="content" className="text-sm font-medium text-foreground">
               Post copy
             </label>
             <p
               className={cn(
                 'text-xs',
-                exceedsTwitterLimit ? 'text-red-600' : charCount > 180 ? 'text-amber-600' : 'text-slate-400',
+                exceedsTwitterLimit ? 'text-destructive' : charCount > 180 ? 'text-amber-600' : 'text-muted-foreground',
               )}
             >
               {charCount} / {TWITTER_CHAR_LIMIT} for X
@@ -161,22 +161,22 @@ export function SocialPostComposer({
             className="resize-y"
           />
           {state.fieldErrors?.content ? (
-            <p className="text-xs text-red-600">{state.fieldErrors.content.join(' ')}</p>
+            <p className="text-xs text-destructive">{state.fieldErrors.content.join(' ')}</p>
           ) : null}
         </div>
 
         <fieldset className="space-y-3">
-          <legend className="text-sm font-medium text-slate-800">Scheduling</legend>
-          <label className="flex items-center gap-2 text-sm text-slate-600">
+          <legend className="text-sm font-medium text-foreground">Scheduling</legend>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <input
               type="checkbox"
-              className="h-4 w-4 rounded border-slate-300 text-salsa-600 focus:ring-salsa-500"
+              className="h-4 w-4 rounded border-input text-salsa-600 focus:ring-salsa-500"
               checked={scheduleEnabled}
               onChange={(event) => setScheduleEnabled(event.target.checked)}
               disabled={!canSchedule}
             />
             Enable scheduling
-            {!canSchedule ? <span className="text-xs text-slate-400">(requires scheduling permission)</span> : null}
+            {!canSchedule ? <span className="text-xs text-muted-foreground">(requires scheduling permission)</span> : null}
           </label>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="flex-1">
@@ -187,10 +187,10 @@ export function SocialPostComposer({
                 className="w-full"
               />
               {state.fieldErrors?.scheduledAt ? (
-                <p className="text-xs text-red-600">{state.fieldErrors.scheduledAt.join(' ')}</p>
+                <p className="text-xs text-destructive">{state.fieldErrors.scheduledAt.join(' ')}</p>
               ) : null}
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <CalendarDays className="h-4 w-4" />
               Tip: schedule fundraisers 24 hours before launch.
             </div>
@@ -198,7 +198,7 @@ export function SocialPostComposer({
         </fieldset>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-muted-foreground">
             Saved posts appear immediately in the table below. Scheduling queues the content for approval.
           </div>
           <div className="flex flex-wrap gap-2">

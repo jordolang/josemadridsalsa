@@ -129,7 +129,7 @@ export function EmailComposer({ templateId, onSave }: EmailComposerProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -137,7 +137,7 @@ export function EmailComposer({ templateId, onSave }: EmailComposerProps) {
   if (!availableBlocks) {
     return (
       <Card className="p-6">
-        <p className="text-red-600">Failed to load email blocks</p>
+        <p className="text-destructive">Failed to load email blocks</p>
       </Card>
     )
   }
@@ -147,8 +147,8 @@ export function EmailComposer({ templateId, onSave }: EmailComposerProps) {
   return (
     <div className="space-y-6">
       {error && (
-        <Card className="p-4 bg-red-50 border-red-200">
-          <p className="text-sm text-red-900">{error}</p>
+        <Card className="p-4 bg-destructive/10 border-destructive/30">
+          <p className="text-sm text-destructive">{error}</p>
         </Card>
       )}
 
@@ -201,7 +201,7 @@ export function EmailComposer({ templateId, onSave }: EmailComposerProps) {
                   className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
                     activeCategory === category
                       ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'hover:bg-slate-50'
+                      : 'hover:bg-muted/50'
                   }`}
                 >
                   {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -215,7 +215,7 @@ export function EmailComposer({ templateId, onSave }: EmailComposerProps) {
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <p className="font-medium text-sm">{block.name}</p>
-                      <p className="text-xs text-slate-500">{block.description}</p>
+                      <p className="text-xs text-muted-foreground">{block.description}</p>
                     </div>
                   </div>
                   <Button
@@ -239,7 +239,7 @@ export function EmailComposer({ templateId, onSave }: EmailComposerProps) {
             <h3 className="font-semibold mb-4">Email Composition</h3>
 
             {selectedBlocks.length === 0 ? (
-              <div className="text-center py-12 text-slate-500">
+              <div className="text-center py-12 text-muted-foreground">
                 <p>No blocks added yet</p>
                 <p className="text-sm mt-2">Select blocks from the library to build your email</p>
               </div>
@@ -250,7 +250,7 @@ export function EmailComposer({ templateId, onSave }: EmailComposerProps) {
                     <div className="flex items-center justify-between mb-2">
                       <div>
                         <p className="font-medium">{block.name}</p>
-                        <p className="text-xs text-slate-500">{block.category}</p>
+                        <p className="text-xs text-muted-foreground">{block.category}</p>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
@@ -273,7 +273,7 @@ export function EmailComposer({ templateId, onSave }: EmailComposerProps) {
                           onClick={() => removeBlock(index)}
                           size="sm"
                           variant="ghost"
-                          className="text-red-600 hover:text-red-700"
+                          className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -281,7 +281,7 @@ export function EmailComposer({ templateId, onSave }: EmailComposerProps) {
                     </div>
 
                     {/* Block preview */}
-                    <div className="mt-3 p-3 bg-slate-50 rounded border text-xs font-mono overflow-x-auto">
+                    <div className="mt-3 p-3 bg-muted/50 rounded border text-xs font-mono overflow-x-auto">
                       <div dangerouslySetInnerHTML={{ __html: block.html.substring(0, 200) + '...' }} />
                     </div>
                   </div>

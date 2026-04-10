@@ -150,7 +150,7 @@ export default function CredentialAccessManager({
           </DialogHeader>
 
           {/* Add New Grant */}
-          <div className="rounded-lg border bg-slate-50 p-4">
+          <div className="rounded-lg border bg-muted/50 p-4">
             <h3 className="mb-3 text-sm font-medium">Add New Access Grant</h3>
             <div className="space-y-3">
               <div>
@@ -174,7 +174,7 @@ export default function CredentialAccessManager({
                         onChange={(e) =>
                           setNewPerms((prev) => ({ ...prev, [perm]: e.target.checked }))
                         }
-                        className="h-4 w-4 rounded border-slate-300"
+                        className="h-4 w-4 rounded border-input"
                       />
                       {perm.replace('can', '')}
                     </label>
@@ -196,9 +196,9 @@ export default function CredentialAccessManager({
           <div>
             <h3 className="mb-2 text-sm font-medium">Active Grants ({activeGrants.length})</h3>
             {isLoading ? (
-              <div className="py-4 text-center text-sm text-slate-500">Loading...</div>
+              <div className="py-4 text-center text-sm text-muted-foreground">Loading...</div>
             ) : activeGrants.length === 0 ? (
-              <div className="py-4 text-center text-sm text-slate-500">No active grants</div>
+              <div className="py-4 text-center text-sm text-muted-foreground">No active grants</div>
             ) : (
               <div className="space-y-2">
                 {activeGrants.map((grant) => (
@@ -219,7 +219,7 @@ export default function CredentialAccessManager({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-red-600 hover:text-red-700"
+                      className="text-destructive hover:text-destructive"
                       onClick={() => setRevokeEmail(grant.email)}
                     >
                       <X className="h-4 w-4" />
@@ -233,7 +233,7 @@ export default function CredentialAccessManager({
           {/* Revoked Grants */}
           {revokedGrants.length > 0 && (
             <div>
-              <h3 className="mb-2 text-sm font-medium text-slate-500">
+              <h3 className="mb-2 text-sm font-medium text-muted-foreground">
                 Revoked ({revokedGrants.length})
               </h3>
               <div className="space-y-1">
@@ -243,7 +243,7 @@ export default function CredentialAccessManager({
                     className="flex items-center justify-between rounded-lg border border-dashed p-2 opacity-50"
                   >
                     <span className="text-sm line-through">{grant.email}</span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-muted-foreground">
                       Revoked {new Date(grant.revokedAt!).toLocaleDateString()}
                     </span>
                   </div>
@@ -276,7 +276,7 @@ export default function CredentialAccessManager({
             <AlertDialogAction
               onClick={handleRevoke}
               disabled={isRevoking}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90"
             >
               {isRevoking ? 'Revoking...' : 'Revoke Access'}
             </AlertDialogAction>

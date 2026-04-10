@@ -40,7 +40,7 @@ export function LeadsTable({ leads }: { leads: any[] }) {
                    {lead.status}
                  </Badge>
                  {lead.errorMessage && (
-                    <p className="text-xs text-red-500 mt-1 truncate max-w-[150px]" title={lead.errorMessage}>
+                    <p className="text-xs text-destructive mt-1 truncate max-w-[150px]" title={lead.errorMessage}>
                       {lead.errorMessage}
                     </p>
                  )}

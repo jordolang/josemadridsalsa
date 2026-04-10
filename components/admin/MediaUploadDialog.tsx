@@ -197,7 +197,7 @@ export default function MediaUploadDialog({ children }: MediaUploadDialogProps) 
             <form onSubmit={handleUrlSubmit} className="space-y-4 pt-2">
               <div className="space-y-2">
                 <Label htmlFor="url">
-                  Image URL <span className="text-red-500">*</span>
+                  Image URL <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="url"

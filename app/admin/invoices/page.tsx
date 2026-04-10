@@ -25,11 +25,11 @@ const STATUS_OPTIONS = [
 ]
 
 const statusClasses: Record<string, string> = {
-  DRAFT: 'bg-slate-100 text-slate-700',
+  DRAFT: 'bg-muted text-foreground',
   SENT: 'bg-blue-100 text-blue-700',
   PAID: 'bg-emerald-100 text-emerald-700',
-  OVERDUE: 'bg-red-100 text-red-700',
-  CANCELLED: 'bg-slate-200 text-slate-500',
+  OVERDUE: 'bg-destructive/10 text-destructive',
+  CANCELLED: 'bg-muted text-muted-foreground',
 }
 
 function parseLineCount(lines: any): number {
@@ -111,7 +111,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Invoices</h1>
-          <p className="text-slate-600">
+          <p className="text-muted-foreground">
             Manage billing records, outstanding balances, and payment tracking.
           </p>
         </div>
@@ -123,14 +123,14 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {STATUS_OPTIONS.filter((option) => option.value !== 'ALL').map((option) => (
           <Card key={option.value} className="px-4 py-3">
-            <p className="text-xs uppercase text-slate-500">{option.label}</p>
+            <p className="text-xs uppercase text-muted-foreground">{option.label}</p>
             <p
               className={`mt-2 text-xl font-semibold ${
                 option.value === 'PAID'
                   ? 'text-emerald-600'
                   : option.value === 'OVERDUE'
-                  ? 'text-red-600'
-                  : 'text-slate-800'
+                  ? 'text-destructive'
+                  : 'text-foreground'
               }`}
             >
               {(statusSummary[option.value] || 0).toLocaleString()}
@@ -142,7 +142,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       <Card className="p-4">
         <form className="flex flex-col gap-4 sm:flex-row" method="get">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               name="q"
@@ -178,7 +178,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                 className={`rounded-full px-3 py-1 text-sm font-medium ${
                   isActive
                     ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-muted text-muted-foreground hover:bg-muted'
                 }`}
               >
                 {option.label}
@@ -191,7 +191,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       <Card>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px]">
-            <thead className="border-b bg-slate-50 text-sm text-slate-600">
+            <thead className="border-b bg-muted/50 text-sm text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 text-left font-medium">Invoice</th>
                 <th className="px-4 py-3 text-left font-medium">Customer</th>
@@ -205,7 +205,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
             <tbody className="text-sm">
               {invoices.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                     No invoices found for this filter.
                   </td>
                 </tr>
@@ -216,25 +216,25 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                     <tr key={invoice.id} className="border-b last:border-0">
                       <td className="px-4 py-4">
                         <div>
-                          <p className="font-medium text-slate-900">{invoice.number}</p>
-                          <p className="text-xs text-slate-500">
+                          <p className="font-medium text-foreground">{invoice.number}</p>
+                          <p className="text-xs text-muted-foreground">
                             Created {invoice.createdAt.toLocaleDateString()}
                           </p>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-slate-600">
+                      <td className="px-4 py-4 text-muted-foreground">
                         {invoice.customerId || '—'}
                       </td>
-                      <td className="px-4 py-4 text-slate-600">
+                      <td className="px-4 py-4 text-muted-foreground">
                         {invoice.dueDate.toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-4 text-slate-600">{lineCount}</td>
+                      <td className="px-4 py-4 text-muted-foreground">{lineCount}</td>
                       <td className="px-4 py-4">
-                        <Badge className={statusClasses[invoice.status] || 'bg-slate-100 text-slate-600'}>
+                        <Badge className={statusClasses[invoice.status] || 'bg-muted text-muted-foreground'}>
                           {invoice.status}
                         </Badge>
                       </td>
-                      <td className="px-4 py-4 text-right font-semibold text-slate-900">
+                      <td className="px-4 py-4 text-right font-semibold text-foreground">
                         {formatPrice(Number(invoice.total || 0))}
                       </td>
                       <td className="px-4 py-4 text-right">
@@ -254,7 +254,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t px-6 py-4 text-sm text-slate-600">
+          <div className="flex items-center justify-between border-t px-6 py-4 text-sm text-muted-foreground">
             <span>
               Page {page} of {totalPages}
             </span>
@@ -265,8 +265,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                 }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
                 className={`rounded-md border px-3 py-1 ${
                   page === 1
-                    ? 'pointer-events-none border-slate-200 text-slate-300'
-                    : 'border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
+                    ? 'pointer-events-none border-border text-muted-foreground/60'
+                    : 'border-border text-muted-foreground hover:border-blue-300 hover:text-blue-600'
                 }`}
               >
                 Previous
@@ -277,8 +277,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                 }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
                 className={`rounded-md border px-3 py-1 ${
                   page === totalPages
-                    ? 'pointer-events-none border-slate-200 text-slate-300'
-                    : 'border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
+                    ? 'pointer-events-none border-border text-muted-foreground/60'
+                    : 'border-border text-muted-foreground hover:border-blue-300 hover:text-blue-600'
                 }`}
               >
                 Next

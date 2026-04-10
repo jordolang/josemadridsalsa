@@ -96,15 +96,17 @@ export function AutomationsClient({ initialAutomations }: AutomationsClientProps
 
   if (automations.length === 0) {
     return (
-      <div className="text-center py-16 border rounded-lg">
-        <Zap className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No automations yet</h3>
+      <div className="text-center py-16 border rounded-lg bg-card">
+        <Zap className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-semibold mb-2 text-foreground">No automations yet</h3>
         <p className="text-muted-foreground mb-4">
           Create your first automation to send triggered emails automatically.
         </p>
-        <Link href="/admin/email-marketing/automations/new">
-          <Button>Create First Automation</Button>
-        </Link>
+        <Button asChild>
+          <Link href="/admin/email-marketing/automations/new">
+            Create First Automation
+          </Link>
+        </Button>
       </div>
     )
   }
@@ -114,7 +116,7 @@ export function AutomationsClient({ initialAutomations }: AutomationsClientProps
       {automations.map((automation) => (
         <div
           key={automation.id}
-          className="flex items-center gap-4 p-4 border rounded-lg bg-white dark:bg-slate-900 hover:shadow-sm transition-shadow"
+          className="flex items-center gap-4 p-4 border rounded-lg bg-card hover:shadow-sm transition-shadow"
         >
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -145,13 +147,13 @@ export function AutomationsClient({ initialAutomations }: AutomationsClientProps
               checked={automation.isActive}
               onCheckedChange={(checked) => handleToggle(automation.id, checked)}
             />
-            <Link href={`/admin/email-marketing/automations/${automation.id}`}>
-              <Button variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/admin/email-marketing/automations/${automation.id}`}>
                 <Pencil className="h-4 w-4" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setDeleteId(automation.id)}>
-              <Trash2 className="h-4 w-4 text-red-500" />
+              <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
         </div>
@@ -169,7 +171,7 @@ export function AutomationsClient({ initialAutomations }: AutomationsClientProps
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
             </AlertDialogAction>

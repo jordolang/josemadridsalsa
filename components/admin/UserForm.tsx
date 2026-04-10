@@ -7,6 +7,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Loader2, Save, X } from 'lucide-react'
 import type { User, UserRole } from '@prisma/client'
 
@@ -72,7 +79,7 @@ export default function UserForm({ user }: UserFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -90,7 +97,7 @@ export default function UserForm({ user }: UserFormProps) {
               required
               disabled={isEditing}
             />
-            {isEditing && <p className="text-xs text-slate-500">Email cannot be changed</p>}
+            {isEditing && <p className="text-xs text-muted-foreground">Email cannot be changed</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
@@ -118,19 +125,22 @@ export default function UserForm({ user }: UserFormProps) {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="role">Role *</Label>
-            <select
-              id="role"
+            <Select
               value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-              className="w-full rounded-md border px-3 py-2"
+              onValueChange={(value) => setRole(value as UserRole)}
             >
-              <option value="CUSTOMER">Customer</option>
-              <option value="WHOLESALE">Wholesale</option>
-              <option value="STAFF">Staff</option>
-              <option value="ADMIN">Admin</option>
-              <option value="DEVELOPER">Developer</option>
-            </select>
-            <p className="text-xs text-slate-500">
+              <SelectTrigger id="role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CUSTOMER">Customer</SelectItem>
+                <SelectItem value="WHOLESALE">Wholesale</SelectItem>
+                <SelectItem value="STAFF">Staff</SelectItem>
+                <SelectItem value="ADMIN">Admin</SelectItem>
+                <SelectItem value="DEVELOPER">Developer</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
               {role === 'CUSTOMER' && 'Regular customer with shopping access'}
               {role === 'WHOLESALE' && 'Wholesale customer with bulk pricing'}
               {role === 'STAFF' && 'Staff member with admin panel access'}
@@ -141,7 +151,7 @@ export default function UserForm({ user }: UserFormProps) {
           <div className="flex items-center justify-between">
             <div>
               <Label>Email Verified</Label>
-              <p className="text-sm text-slate-500">Mark email address as verified</p>
+              <p className="text-sm text-muted-foreground">Mark email address as verified</p>
             </div>
             <Switch
               checked={isEmailVerified}

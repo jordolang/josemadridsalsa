@@ -33,8 +33,8 @@ export default async function EmailSettingsPage() {
   return (
     <div className="max-w-4xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Email Settings</h1>
-        <p className="text-slate-600 mt-1">
+        <h1 className="text-3xl font-bold text-foreground">Email Settings</h1>
+        <p className="text-muted-foreground mt-1">
           Configure SMTP servers and email sending preferences
         </p>
       </div>

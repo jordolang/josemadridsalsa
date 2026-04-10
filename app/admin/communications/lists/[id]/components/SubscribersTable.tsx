@@ -29,8 +29,8 @@ interface SubscribersTableProps {
 
 const statusColors: Record<SubscriberStatus, string> = {
   SUBSCRIBED: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-  UNSUBSCRIBED: 'text-slate-700 bg-slate-50 border-slate-200',
-  BOUNCED: 'text-red-700 bg-red-50 border-red-200',
+  UNSUBSCRIBED: 'text-foreground bg-muted/50 border-border',
+  BOUNCED: 'text-destructive bg-destructive/10 border-destructive/30',
   COMPLAINED: 'text-amber-700 bg-amber-50 border-amber-200',
 }
 
@@ -151,7 +151,7 @@ export function SubscribersTable({ listId, listName, subscribers }: SubscribersT
             </DialogHeader>
             <form action={handleAdd}>
               <div className="grid gap-4 py-4">
-                {error && <div className="text-sm font-medium text-red-500">{error}</div>}
+                {error && <div className="text-sm font-medium text-destructive">{error}</div>}
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email Address</Label>
                   <Input id="email" name="email" type="email" required placeholder="subscriber@example.com" />
@@ -232,7 +232,7 @@ export function SubscribersTable({ listId, listName, subscribers }: SubscribersT
               Clear
             </Button>
           </div>
-          {bulkError && <p className="text-xs text-red-600 w-full mt-1">{bulkError}</p>}
+          {bulkError && <p className="text-xs text-destructive w-full mt-1">{bulkError}</p>}
         </div>
       )}
 

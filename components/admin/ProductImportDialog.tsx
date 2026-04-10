@@ -153,20 +153,20 @@ export function ProductImportDialog({
             <div className="flex items-center gap-3">
               <label
                 htmlFor="file"
-                className="flex flex-1 items-center justify-center gap-2 rounded-md border-2 border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-sm transition-colors hover:border-slate-400 hover:bg-slate-100 cursor-pointer"
+                className="flex flex-1 items-center justify-center gap-2 rounded-md border-2 border-dashed border-input bg-muted/50 px-6 py-8 text-sm transition-colors hover:border-muted-foreground hover:bg-muted cursor-pointer"
               >
                 {file ? (
                   <>
                     {getFileIcon()}
                     <span className="font-medium">{file.name}</span>
-                    <span className="text-slate-500">
+                    <span className="text-muted-foreground">
                       ({(file.size / 1024).toFixed(1)} KB)
                     </span>
                   </>
                 ) : (
                   <>
-                    <Upload className="h-5 w-5 text-slate-400" />
-                    <span className="text-slate-600">
+                    <Upload className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-muted-foreground">
                       Click to upload or drag and drop
                     </span>
                   </>
@@ -195,7 +195,7 @@ export function ProductImportDialog({
                 </Button>
               )}
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Supported formats: JSON (.json), CSV (.csv), Excel (.xlsx, .xls). Max size: 10MB
             </p>
           </div>
@@ -227,7 +227,7 @@ export function ProductImportDialog({
               checked={skipDuplicates}
               onChange={(e) => setSkipDuplicates(e.target.checked)}
               disabled={isUploading}
-              className="h-4 w-4 rounded border-slate-300"
+              className="h-4 w-4 rounded border-input"
             />
             <Label htmlFor="skipDuplicates" className="text-sm font-normal cursor-pointer">
               Skip products with duplicate SKUs (import only new products)
@@ -250,11 +250,11 @@ export function ProductImportDialog({
 
           {/* Result Messages */}
           {result && (
-            <Alert className={result.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}>
+            <Alert className={result.success ? 'border-green-500 bg-green-50' : 'border-destructive bg-destructive/10'}>
               {result.success ? (
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
               ) : (
-                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertCircle className="h-4 w-4 text-destructive" />
               )}
               <AlertDescription>
                 {result.success ? (
@@ -270,15 +270,15 @@ export function ProductImportDialog({
                 ) : (
                   <div className="space-y-2">
                     {result.errors?.map((error, index) => (
-                      <p key={index} className="text-sm text-red-900">
+                      <p key={index} className="text-sm text-destructive">
                         {error}
                       </p>
                     ))}
                     {result.validationErrors && result.validationErrors.length > 0 && (
                       <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
-                        <p className="font-medium text-red-900">Validation errors:</p>
+                        <p className="font-medium text-destructive">Validation errors:</p>
                         {result.validationErrors.slice(0, 10).map((err, index) => (
-                          <div key={index} className="text-xs text-red-800 bg-red-100 p-2 rounded">
+                          <div key={index} className="text-xs text-destructive bg-destructive/10 p-2 rounded">
                             <strong>Row {err.row}:</strong>
                             <ul className="list-disc list-inside mt-1">
                               {err.errors.map((e, i) => (
@@ -288,7 +288,7 @@ export function ProductImportDialog({
                           </div>
                         ))}
                         {result.validationErrors.length > 10 && (
-                          <p className="text-xs text-red-700">
+                          <p className="text-xs text-destructive">
                             ... and {result.validationErrors.length - 10} more errors
                           </p>
                         )}

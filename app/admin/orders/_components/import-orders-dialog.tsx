@@ -111,11 +111,11 @@ export function ImportOrdersDialog() {
               </div>
 
               {result.errorCount > 0 && (
-                <div className="flex items-start gap-2 p-4 bg-red-50 rounded-lg">
-                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                <div className="flex items-start gap-2 p-4 bg-destructive/10 rounded-lg">
+                  <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-medium text-red-900">{result.errorCount} errors</p>
-                    <div className="mt-2 space-y-1 text-sm text-red-800">
+                    <p className="font-medium text-destructive">{result.errorCount} errors</p>
+                    <div className="mt-2 space-y-1 text-sm text-destructive">
                       {result.errors.slice(0, 5).map((err: any, i: number) => (
                         <p key={i}>Row {err.row}: {err.message}</p>
                       ))}

@@ -85,7 +85,7 @@ export default function SEOPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">SEO Manager</h1>
-          <p className="text-slate-600">Manage global SEO settings and meta templates</p>
+          <p className="text-muted-foreground">Manage global SEO settings and meta templates</p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
           {saved ? (
@@ -179,7 +179,7 @@ export default function SEOPage() {
           <div className="space-y-2">
             <Label htmlFor="productMetaTemplate">Product Meta Title Template</Label>
             <Input id="productMetaTemplate" placeholder="{product_name} | Jose Madrid Salsa" disabled />
-            <p className="text-xs text-slate-500">Use &#123;product_name&#125;, &#123;category&#125;, &#123;heat_level&#125; as variables</p>
+            <p className="text-xs text-muted-foreground">Use &#123;product_name&#125;, &#123;category&#125;, &#123;heat_level&#125; as variables</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="recipeMetaTemplate">Recipe Meta Title Template</Label>
@@ -198,17 +198,17 @@ export default function SEOPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Organization Schema</Label>
-            <p className="text-sm text-slate-600 mb-2">Configure organization information for rich search results</p>
+            <p className="text-sm text-muted-foreground mb-2">Configure organization information for rich search results</p>
             <Button variant="outline" disabled>Configure Organization</Button>
           </div>
           <div className="space-y-2">
             <Label>Product Schema</Label>
-            <p className="text-sm text-slate-600 mb-2">Automatically generated from product data</p>
+            <p className="text-sm text-muted-foreground mb-2">Automatically generated from product data</p>
             <Badge className="bg-green-100 text-green-800">Active</Badge>
           </div>
           <div className="space-y-2">
             <Label>Recipe Schema</Label>
-            <p className="text-sm text-slate-600 mb-2">Automatically generated from recipe data</p>
+            <p className="text-sm text-muted-foreground mb-2">Automatically generated from recipe data</p>
             <Badge className="bg-green-100 text-green-800">Active</Badge>
           </div>
         </div>
@@ -221,14 +221,14 @@ export default function SEOPage() {
           <div className="flex items-center justify-between">
             <div>
               <Label>Sitemap Generation</Label>
-              <p className="text-sm text-slate-600">Automatically generated at /sitemap.xml</p>
+              <p className="text-sm text-muted-foreground">Automatically generated at /sitemap.xml</p>
             </div>
             <Badge className="bg-green-100 text-green-800">Active</Badge>
           </div>
           <div className="flex items-center justify-between">
             <div>
               <Label>Robots.txt</Label>
-              <p className="text-sm text-slate-600">Located at /robots.txt</p>
+              <p className="text-sm text-muted-foreground">Located at /robots.txt</p>
             </div>
             <Button variant="outline" disabled>Edit Robots.txt</Button>
           </div>

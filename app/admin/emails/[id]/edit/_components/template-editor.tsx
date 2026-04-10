@@ -135,10 +135,10 @@ export function TemplateEditor({ template }: TemplateEditorProps) {
   return (
     <div className="space-y-6">
       {error && (
-        <Card className="p-4 bg-red-50 border-red-200">
+        <Card className="p-4 bg-destructive/10 border-destructive/30">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-            <p className="text-sm text-red-900">{error}</p>
+            <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         </Card>
       )}
@@ -174,18 +174,18 @@ export function TemplateEditor({ template }: TemplateEditorProps) {
               id="isActive"
               checked={formData.isActive}
               onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-              className="rounded border-slate-300"
+              className="rounded border-input"
             />
             <Label htmlFor="isActive" className="font-normal cursor-pointer">
               Template is active
             </Label>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <span className="px-2 py-1 bg-slate-100 rounded text-xs font-medium">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="px-2 py-1 bg-muted rounded text-xs font-medium">
               {template.category}
             </span>
-            <span className="text-slate-400">•</span>
+            <span className="text-muted-foreground">•</span>
             <span>Key: {template.key}</span>
           </div>
         </div>
@@ -210,7 +210,7 @@ export function TemplateEditor({ template }: TemplateEditorProps) {
               </button>
             ))}
           </div>
-          <p className="text-xs text-slate-500 mt-3">
+          <p className="text-xs text-muted-foreground mt-3">
             Click to insert variable at cursor position
           </p>
         </Card>
@@ -275,7 +275,7 @@ export function TemplateEditor({ template }: TemplateEditorProps) {
               id="html-editor"
               value={formData.html}
               onChange={(e) => setFormData({ ...formData, html: e.target.value })}
-              className="mt-2 w-full h-96 rounded-md border border-slate-300 px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-2 w-full h-96 rounded-md border border-input px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </Card>
 
@@ -286,7 +286,7 @@ export function TemplateEditor({ template }: TemplateEditorProps) {
               value={formData.text}
               onChange={(e) => setFormData({ ...formData, text: e.target.value })}
               placeholder="Plain text fallback for email clients that don't support HTML"
-              className="mt-2 w-full h-48 rounded-md border border-slate-300 px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-2 w-full h-48 rounded-md border border-input px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </Card>
         </div>
@@ -310,9 +310,9 @@ export function TemplateEditor({ template }: TemplateEditorProps) {
             </div>
           </div>
 
-          <div className="border rounded-lg p-4 bg-white">
+          <div className="border rounded-lg p-4 bg-card">
             <div className="mb-4 pb-4 border-b">
-              <p className="text-sm text-slate-600">Subject:</p>
+              <p className="text-sm text-muted-foreground">Subject:</p>
               <p className="font-medium">{substituteVariables(formData.subject, previewVariables)}</p>
             </div>
             <div 
@@ -333,12 +333,12 @@ export function TemplateEditor({ template }: TemplateEditorProps) {
               <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
                 testResult.success 
                   ? 'bg-green-50 text-green-900' 
-                  : 'bg-red-50 text-red-900'
+                  : 'bg-destructive/10 text-destructive'
               }`}>
                 {testResult.success ? (
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 ) : (
-                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  <AlertCircle className="h-5 w-5 text-destructive" />
                 )}
                 <p className="text-sm">{testResult.message}</p>
               </div>

@@ -24,7 +24,7 @@ export function InventoryAlertWidget({ items }: InventoryAlertWidgetProps) {
             <CardTitle className="text-base font-semibold">Inventory Alerts</CardTitle>
             <Link
               href="/admin/inventory"
-              className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+              className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
               View all <ArrowRight className="h-3 w-3" />
             </Link>
@@ -46,13 +46,13 @@ export function InventoryAlertWidget({ items }: InventoryAlertWidgetProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CardTitle className="text-base font-semibold">Inventory Alerts</CardTitle>
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-100 text-xs font-bold text-red-600">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive/10 text-xs font-bold text-destructive">
               {items.length}
             </span>
           </div>
           <Link
             href="/admin/inventory"
-            className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+            className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
           >
             View all <ArrowRight className="h-3 w-3" />
           </Link>
@@ -76,21 +76,21 @@ export function InventoryAlertWidget({ items }: InventoryAlertWidgetProps) {
                     <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
                   </div>
                   {isCritical && (
-                    <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                    <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
                   )}
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="h-1.5 flex-1 rounded-full bg-muted">
                     <div
                       className={`h-1.5 rounded-full transition-all ${
-                        isCritical ? 'bg-red-500' : 'bg-amber-500'
+                        isCritical ? 'bg-destructive' : 'bg-amber-500'
                       }`}
                       style={{ width: `${Math.min(percentage, 100)}%` }}
                     />
                   </div>
                   <span
                     className={`text-xs font-semibold ${
-                      isCritical ? 'text-red-600' : 'text-amber-600'
+                      isCritical ? 'text-destructive' : 'text-amber-600 dark:text-amber-400'
                     }`}
                   >
                     {item.stock} left

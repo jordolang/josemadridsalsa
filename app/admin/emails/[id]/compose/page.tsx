@@ -56,15 +56,15 @@ export default async function EmailComposePage({ params }: PageProps) {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Compose: {template.name}</h1>
-            <p className="text-sm text-gray-600 mt-1">
+            <h1 className="text-2xl font-semibold text-foreground">Compose: {template.name}</h1>
+            <p className="text-sm text-muted-foreground mt-1">
               Build your email template using pre-designed blocks
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="px-3 py-1 bg-slate-100 rounded text-sm font-medium">
+          <span className="px-3 py-1 bg-muted rounded text-sm font-medium">
             {template.category}
           </span>
           {template.isActive && (

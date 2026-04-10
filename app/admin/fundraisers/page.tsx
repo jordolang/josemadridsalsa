@@ -71,10 +71,10 @@ async function getFundraisers(searchParams: SearchParams) {
 }
 
 const statusColors: Record<FundraiserStatus, string> = {
-  DRAFT: 'bg-slate-100 text-slate-800',
+  DRAFT: 'bg-muted text-foreground',
   ACTIVE: 'bg-green-100 text-green-800',
   ENDED: 'bg-blue-100 text-blue-800',
-  CANCELLED: 'bg-red-100 text-red-800',
+  CANCELLED: 'bg-destructive/10 text-destructive',
 }
 
 export default async function FundraisersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -93,7 +93,7 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Fundraisers</h1>
-          <p className="text-slate-600">Manage fundraising campaigns</p>
+          <p className="text-muted-foreground">Manage fundraising campaigns</p>
         </div>
         {canWrite && (
           <Button asChild>
@@ -111,7 +111,7 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
           <div className="flex items-center gap-3">
             <DollarSign className="h-8 w-8 text-green-600" />
             <div>
-              <p className="text-sm text-slate-600">Total Revenue</p>
+              <p className="text-sm text-muted-foreground">Total Revenue</p>
               <p className="text-2xl font-bold">${Number(stats.revenue).toFixed(2)}</p>
             </div>
           </div>
@@ -120,7 +120,7 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
           <div className="flex items-center gap-3">
             <TrendingUp className="h-8 w-8 text-blue-600" />
             <div>
-              <p className="text-sm text-slate-600">Total Commission</p>
+              <p className="text-sm text-muted-foreground">Total Commission</p>
               <p className="text-2xl font-bold">${Number(stats.commission).toFixed(2)}</p>
             </div>
           </div>
@@ -129,7 +129,7 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
           <div className="flex items-center gap-3">
             <Users className="h-8 w-8 text-purple-600" />
             <div>
-              <p className="text-sm text-slate-600">Total Orders</p>
+              <p className="text-sm text-muted-foreground">Total Orders</p>
               <p className="text-2xl font-bold">{stats.orders}</p>
             </div>
           </div>
@@ -140,7 +140,7 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
       <Card className="p-4">
         <div className="flex gap-4">
           <select
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-md border border-input px-3 py-2 text-sm"
             defaultValue={params.status || 'all'}
           >
             <option value="all">All Statuses</option>
@@ -155,8 +155,8 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
       {/* Fundraisers Grid */}
       {fundraisers.length === 0 ? (
         <Card className="p-12">
-          <div className="text-center text-slate-500">
-            <Users className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+          <div className="text-center text-muted-foreground">
+            <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground/60" />
             <p className="text-lg font-medium">No fundraisers found</p>
             <p className="mt-1 text-sm">Create your first fundraiser to get started</p>
             {canWrite && (
@@ -179,31 +179,31 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
                     <Link href={`/admin/fundraisers/${fundraiser.id}`} className="hover:underline">
                       <h3 className="font-semibold">{fundraiser.name}</h3>
                     </Link>
-                    <p className="text-sm text-slate-600">{fundraiser.organizationName}</p>
+                    <p className="text-sm text-muted-foreground">{fundraiser.organizationName}</p>
                   </div>
                   <Badge className={statusColors[fundraiser.status]}>{fundraiser.status}</Badge>
                 </div>
 
                 <div className="mb-4 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Commission:</span>
+                    <span className="text-muted-foreground">Commission:</span>
                     <span className="font-medium">{Number(fundraiser.commissionRate)}%</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Revenue:</span>
+                    <span className="text-muted-foreground">Revenue:</span>
                     <span className="font-medium">${Number(fundraiser.totalRevenue).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Orders:</span>
+                    <span className="text-muted-foreground">Orders:</span>
                     <span className="font-medium">{fundraiser.totalOrders}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Products:</span>
+                    <span className="text-muted-foreground">Products:</span>
                     <span className="font-medium">{fundraiser._count.products}</span>
                   </div>
                 </div>
 
-                <div className="space-y-2 border-t pt-4 text-xs text-slate-500">
+                <div className="space-y-2 border-t pt-4 text-xs text-muted-foreground">
                   <div>Start: {new Date(fundraiser.startDate).toLocaleDateString()}</div>
                   <div>End: {new Date(fundraiser.endDate).toLocaleDateString()}</div>
                   {fundraiser.goal && <div>Goal: ${Number(fundraiser.goal).toFixed(2)}</div>}
@@ -230,7 +230,7 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
               <Button variant="outline" disabled={page === 1} asChild={page > 1}>
                 {page > 1 ? <Link href={`/admin/fundraisers?page=${page - 1}`}>Previous</Link> : <span>Previous</span>}
               </Button>
-              <span className="text-sm text-slate-600">
+              <span className="text-sm text-muted-foreground">
                 Page {page} of {totalPages}
               </span>
               <Button variant="outline" disabled={page === totalPages} asChild={page < totalPages}>

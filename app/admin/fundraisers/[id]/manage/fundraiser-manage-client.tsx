@@ -108,10 +108,10 @@ function toDateInput(iso: string) {
 }
 
 const STATUS_COLORS: Record<FundraiserStatus, string> = {
-  DRAFT: 'bg-slate-100 text-slate-800',
+  DRAFT: 'bg-muted text-foreground',
   ACTIVE: 'bg-green-100 text-green-800',
   ENDED: 'bg-blue-100 text-blue-800',
-  CANCELLED: 'bg-red-100 text-red-800',
+  CANCELLED: 'bg-destructive/10 text-destructive',
 }
 
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
@@ -271,7 +271,7 @@ function OverviewTab({ fundraiser }: { fundraiser: FundraiserData }) {
         </Card>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={saving}>
@@ -388,7 +388,7 @@ function ProductsTab({ fundraiser, allProducts }: { fundraiser: FundraiserData; 
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="space-y-2">
         {filteredProducts.map(product => {
@@ -398,11 +398,11 @@ function ProductsTab({ fundraiser, allProducts }: { fundraiser: FundraiserData; 
             <Card key={product.id} className={`transition-colors ${sel.included ? 'border-green-300 bg-green-50/30 dark:bg-green-950/10' : ''}`}>
               <CardContent className="flex items-center gap-4 py-3">
                 {/* Image */}
-                <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-md border bg-slate-100">
+                <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-md border bg-muted">
                   {product.featuredImage ? (
                     <Image src={product.featuredImage} alt={product.name} width={56} height={56} className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-slate-400">
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
                       <Package className="h-6 w-6" />
                     </div>
                   )}
@@ -579,7 +579,7 @@ function CommissionTab({ fundraiser, allProducts }: { fundraiser: FundraiserData
               </div>
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
             <div className="flex items-center gap-3">
               <Button onClick={handleSaveCommission} disabled={saving}>
@@ -803,7 +803,7 @@ function BrandingTab({ fundraiser }: { fundraiser: FundraiserData }) {
         </Button>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </form>
   )
 }
@@ -851,12 +851,12 @@ function ParticipantsTab({ fundraiser }: { fundraiser: FundraiserData }) {
         </Button>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       {participants.length === 0 ? (
         <Card className="p-12">
           <div className="text-center text-muted-foreground">
-            <Users className="mx-auto mb-3 h-12 w-12 text-slate-300" />
+            <Users className="mx-auto mb-3 h-12 w-12 text-muted-foreground/60" />
             <p>No participants yet</p>
           </div>
         </Card>
@@ -874,7 +874,7 @@ function ParticipantsTab({ fundraiser }: { fundraiser: FundraiserData }) {
                   <p className="font-semibold text-green-600">${fmt(p.totalRevenue)}</p>
                   <p className="text-sm text-muted-foreground">{p.totalOrders} orders</p>
                 </div>
-                <Badge className={p.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}>
+                <Badge className={p.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-muted text-foreground'}>
                   {p.status}
                 </Badge>
                 <div className="flex gap-2">
@@ -916,7 +916,7 @@ const ORDER_STATUS_COLORS: Record<string, string> = {
   PROCESSING: 'bg-blue-100 text-blue-800',
   SHIPPED: 'bg-purple-100 text-purple-800',
   DELIVERED: 'bg-green-100 text-green-800',
-  CANCELLED: 'bg-red-100 text-red-800',
+  CANCELLED: 'bg-destructive/10 text-destructive',
   REFUNDED: 'bg-orange-100 text-orange-800',
 }
 
@@ -940,7 +940,7 @@ function OrdersTab({ fundraiser }: { fundraiser: FundraiserData }) {
       {orders.length === 0 ? (
         <Card className="p-12">
           <div className="text-center text-muted-foreground">
-            <Package className="mx-auto mb-3 h-12 w-12 text-slate-300" />
+            <Package className="mx-auto mb-3 h-12 w-12 text-muted-foreground/60" />
             <p>No orders yet</p>
           </div>
         </Card>
@@ -962,7 +962,7 @@ function OrdersTab({ fundraiser }: { fundraiser: FundraiserData }) {
                   </p>
                 </div>
                 <p className="font-semibold">${fmt(order.total)}</p>
-                <Badge className={ORDER_STATUS_COLORS[order.status] ?? 'bg-slate-100 text-slate-800'}>
+                <Badge className={ORDER_STATUS_COLORS[order.status] ?? 'bg-muted text-foreground'}>
                   {order.status}
                 </Badge>
               </CardContent>

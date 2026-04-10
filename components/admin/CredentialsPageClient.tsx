@@ -351,7 +351,7 @@ export default function CredentialsPageClient({
         <div className="flex flex-wrap items-center gap-3">
           {/* Search */}
           <div className="relative min-w-[280px] flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search by provider, label, email..."
@@ -437,8 +437,8 @@ export default function CredentialsPageClient({
       {/* Data Table */}
       {filteredCredentials.length === 0 ? (
         <Card className="p-12">
-          <div className="text-center text-slate-500">
-            <KeyRound className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+          <div className="text-center text-muted-foreground">
+            <KeyRound className="mx-auto mb-4 h-12 w-12 text-muted-foreground/60" />
             <p className="text-lg font-medium">No credentials found</p>
             <p className="mt-1 text-sm">
               {hasActiveFilters
@@ -457,13 +457,13 @@ export default function CredentialsPageClient({
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b bg-slate-50">
+              <thead className="border-b bg-muted/50">
                 <tr>
                   {/* Provider Column */}
                   <th className="px-4 py-3 text-left">
                     <div className="flex items-center gap-1">
                       <button
-                        className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
+                        className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
                         onClick={() => toggleSort('serviceName')}
                       >
                         Provider
@@ -471,8 +471,8 @@ export default function CredentialsPageClient({
                       </button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="rounded p-0.5 hover:bg-slate-200">
-                            <Filter className={`h-3 w-3 ${providerFilter.size > 0 ? 'text-blue-600' : 'text-slate-400'}`} />
+                          <button className="rounded p-0.5 hover:bg-muted">
+                            <Filter className={`h-3 w-3 ${providerFilter.size > 0 ? 'text-blue-600' : 'text-muted-foreground'}`} />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="max-h-60 overflow-y-auto">
@@ -498,7 +498,7 @@ export default function CredentialsPageClient({
                             <>
                               <DropdownMenuSeparator />
                               <button
-                                className="w-full px-2 py-1.5 text-left text-xs text-blue-600 hover:bg-slate-50"
+                                className="w-full px-2 py-1.5 text-left text-xs text-blue-600 hover:bg-muted/50"
                                 onClick={() => setProviderFilter(new Set())}
                               >
                                 Clear filter
@@ -514,7 +514,7 @@ export default function CredentialsPageClient({
                   <th className="px-4 py-3 text-left">
                     <div className="flex items-center gap-1">
                       <button
-                        className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
+                        className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
                         onClick={() => toggleSort('label')}
                       >
                         Label
@@ -522,8 +522,8 @@ export default function CredentialsPageClient({
                       </button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="rounded p-0.5 hover:bg-slate-200">
-                            <Filter className={`h-3 w-3 ${labelFilter.size > 0 ? 'text-blue-600' : 'text-slate-400'}`} />
+                          <button className="rounded p-0.5 hover:bg-muted">
+                            <Filter className={`h-3 w-3 ${labelFilter.size > 0 ? 'text-blue-600' : 'text-muted-foreground'}`} />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="max-h-60 overflow-y-auto">
@@ -549,7 +549,7 @@ export default function CredentialsPageClient({
                             <>
                               <DropdownMenuSeparator />
                               <button
-                                className="w-full px-2 py-1.5 text-left text-xs text-blue-600 hover:bg-slate-50"
+                                className="w-full px-2 py-1.5 text-left text-xs text-blue-600 hover:bg-muted/50"
                                 onClick={() => setLabelFilter(new Set())}
                               >
                                 Clear filter
@@ -564,7 +564,7 @@ export default function CredentialsPageClient({
                   {/* Username Column */}
                   <th className="px-4 py-3 text-left">
                     <button
-                      className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
+                      className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
                       onClick={() => toggleSort('username')}
                     >
                       Username / Email
@@ -573,19 +573,19 @@ export default function CredentialsPageClient({
                   </th>
 
                   {/* Password Column */}
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
                     Password
                   </th>
 
                   {/* URL Column */}
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
                     URL
                   </th>
 
                   {/* Password Age Column */}
                   <th className="px-4 py-3 text-left">
                     <button
-                      className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
+                      className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
                       onClick={() => toggleSort('passwordChangedAt')}
                     >
                       Age
@@ -594,7 +594,7 @@ export default function CredentialsPageClient({
                   </th>
 
                   {/* Actions Column */}
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
                     Actions
                   </th>
                 </tr>
@@ -612,14 +612,14 @@ export default function CredentialsPageClient({
                       key={credential.id}
                       className={`transition-colors ${
                         expired
-                          ? 'bg-red-50 hover:bg-red-100'
-                          : 'hover:bg-slate-50'
+                          ? 'bg-destructive/10 hover:bg-destructive/10'
+                          : 'hover:bg-muted/50'
                       }`}
                     >
                       {/* Provider */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-slate-900">
+                          <span className="font-medium text-foreground">
                             {credential.serviceName}
                           </span>
                           {expired && (
@@ -627,7 +627,7 @@ export default function CredentialsPageClient({
                               title="This password has not been changed in over 90 days. It is recommended to update it for security."
                               className="cursor-help"
                             >
-                              <AlertTriangle className="h-4 w-4 text-red-500" />
+                              <AlertTriangle className="h-4 w-4 text-destructive" />
                             </span>
                           )}
                         </div>
@@ -642,7 +642,7 @@ export default function CredentialsPageClient({
                       <td className="px-4 py-3">
                         {credential.username ? (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm text-slate-700">
+                            <span className="text-sm text-foreground">
                               {credential.username}
                             </span>
                             <Button
@@ -657,19 +657,19 @@ export default function CredentialsPageClient({
                             </Button>
                           </div>
                         ) : (
-                          <span className="text-sm text-slate-400">-</span>
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </td>
 
                       {/* Password */}
                       <td className="px-4 py-3">
                         {!hasPassword ? (
-                          <span className="text-sm italic text-slate-400">
+                          <span className="text-sm italic text-muted-foreground">
                             No password
                           </span>
                         ) : isRevealed ? (
                           <div className="flex items-center gap-1.5">
-                            <code className="rounded bg-slate-100 px-2 py-1 font-mono text-sm">
+                            <code className="rounded bg-muted px-2 py-1 font-mono text-sm">
                               {revealedPasswords[credential.id]}
                             </code>
                             <Button
@@ -686,12 +686,12 @@ export default function CredentialsPageClient({
                               <Copy className="h-3 w-3" />
                             </Button>
                             {countdown !== undefined && (
-                              <span className="text-xs text-slate-400">{countdown}s</span>
+                              <span className="text-xs text-muted-foreground">{countdown}s</span>
                             )}
                           </div>
                         ) : (
                           <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-sm text-slate-500">
+                            <span className="font-mono text-sm text-muted-foreground">
                               ********
                             </span>
                             <Button
@@ -720,19 +720,19 @@ export default function CredentialsPageClient({
                               <ExternalLink className="h-3 w-3" />
                             </a>
                           ) : (
-                            <span className="text-sm text-slate-700">
+                            <span className="text-sm text-foreground">
                               {truncateUrl(credential.url)}
                             </span>
                           )
                         ) : (
-                          <span className="text-sm text-slate-400">-</span>
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </td>
 
                       {/* Password Age */}
                       <td className="px-4 py-3">
                         <span
-                          className={`text-sm ${expired ? 'font-medium text-red-600' : 'text-slate-500'}`}
+                          className={`text-sm ${expired ? 'font-medium text-destructive' : 'text-muted-foreground'}`}
                         >
                           {ageDays}d
                         </span>
@@ -764,7 +764,7 @@ export default function CredentialsPageClient({
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                               onClick={() => {
                                 setDeletingCredential(credential)
                                 setDeleteDialogOpen(true)
@@ -783,7 +783,7 @@ export default function CredentialsPageClient({
           </div>
 
           {/* Table footer with count */}
-          <div className="border-t px-4 py-2 text-sm text-slate-500">
+          <div className="border-t px-4 py-2 text-sm text-muted-foreground">
             Showing {filteredCredentials.length} of {credentials.length} credentials
             {hasActiveFilters && ' (filtered)'}
           </div>
@@ -840,7 +840,7 @@ export default function CredentialsPageClient({
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90"
             >
               {isDeleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>

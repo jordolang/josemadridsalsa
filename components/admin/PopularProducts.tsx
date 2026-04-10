@@ -1,6 +1,14 @@
 import Image from 'next/image'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 interface PopularProduct {
   id: string
@@ -17,12 +25,15 @@ interface PopularProductsProps {
   loading?: boolean
 }
 
-const heatLevelColors: Record<string, string> = {
-  MILD: 'bg-green-100 text-green-800',
-  MEDIUM: 'bg-yellow-100 text-yellow-800',
-  HOT: 'bg-orange-100 text-orange-800',
-  EXTRA_HOT: 'bg-red-100 text-red-800',
-  FRUIT: 'bg-purple-100 text-purple-800',
+const heatLevelVariants: Record<
+  string,
+  'default' | 'secondary' | 'destructive' | 'outline'
+> = {
+  MILD: 'secondary',
+  MEDIUM: 'secondary',
+  HOT: 'default',
+  EXTRA_HOT: 'destructive',
+  FRUIT: 'outline',
 }
 
 function formatCurrency(amount: number): string {
@@ -35,51 +46,60 @@ function formatCurrency(amount: number): string {
 export function PopularProducts({ products, loading }: PopularProductsProps) {
   if (loading) {
     return (
-      <Card className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-5 w-40 bg-slate-200 rounded" />
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4">
-              <div className="h-10 w-10 bg-slate-200 rounded" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-32 bg-slate-200 rounded" />
-                <div className="h-3 w-20 bg-slate-200 rounded" />
+      <Card>
+        <CardHeader>
+          <CardTitle>Popular Products</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="animate-pulse space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <div className="h-10 w-10 bg-muted rounded" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-32 bg-muted rounded" />
+                  <div className="h-3 w-20 bg-muted rounded" />
+                </div>
+                <div className="h-4 w-16 bg-muted rounded" />
               </div>
-              <div className="h-4 w-16 bg-slate-200 rounded" />
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card className="p-6">
-      <h3 className="text-lg font-semibold text-slate-900">Popular Products</h3>
-      <p className="mt-1 text-sm text-slate-600">Top 10 best-selling products</p>
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-slate-600">
-              <th className="pb-3 font-medium">#</th>
-              <th className="pb-3 font-medium">Product</th>
-              <th className="pb-3 font-medium">Heat Level</th>
-              <th className="pb-3 text-right font-medium">Units Sold</th>
-              <th className="pb-3 text-right font-medium">Revenue</th>
-            </tr>
-          </thead>
-          <tbody>
+    <Card>
+      <CardHeader>
+        <CardTitle>Popular Products</CardTitle>
+        <p className="text-sm text-muted-foreground">Top 10 best-selling products</p>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-10">#</TableHead>
+              <TableHead>Product</TableHead>
+              <TableHead>Heat Level</TableHead>
+              <TableHead className="text-right">Units Sold</TableHead>
+              <TableHead className="text-right">Revenue</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {products.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="py-8 text-center text-slate-500">
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   No product data available
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               products.slice(0, 10).map((product, index) => (
-                <tr key={product.id} className="border-b last:border-0">
-                  <td className="py-3 text-slate-500">{index + 1}</td>
-                  <td className="py-3">
+                <TableRow key={product.id}>
+                  <TableCell className="text-muted-foreground">{index + 1}</TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-3">
                       {product.imageUrl ? (
                         <Image
@@ -90,39 +110,35 @@ export function PopularProducts({ products, loading }: PopularProductsProps) {
                           className="rounded object-cover"
                         />
                       ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded bg-slate-100 text-xs text-slate-400">
+                        <div className="flex h-10 w-10 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
                           N/A
                         </div>
                       )}
                       <div>
-                        <p className="font-medium text-slate-900">{product.name}</p>
-                        <p className="text-xs text-slate-500">{product.sku}</p>
+                        <p className="font-medium text-foreground">{product.name}</p>
+                        <p className="text-xs text-muted-foreground">{product.sku}</p>
                       </div>
                     </div>
-                  </td>
-                  <td className="py-3">
+                  </TableCell>
+                  <TableCell>
                     {product.heatLevel && (
-                      <Badge
-                        className={
-                          heatLevelColors[product.heatLevel] || 'bg-slate-100 text-slate-800'
-                        }
-                      >
+                      <Badge variant={heatLevelVariants[product.heatLevel] ?? 'outline'}>
                         {product.heatLevel.replace('_', ' ')}
                       </Badge>
                     )}
-                  </td>
-                  <td className="py-3 text-right text-slate-900">
+                  </TableCell>
+                  <TableCell className="text-right text-foreground">
                     {product.totalSold.toLocaleString()}
-                  </td>
-                  <td className="py-3 text-right font-medium text-slate-900">
+                  </TableCell>
+                  <TableCell className="text-right font-medium text-foreground">
                     {formatCurrency(product.revenue)}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </CardContent>
     </Card>
   )
 }

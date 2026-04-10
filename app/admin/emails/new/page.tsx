@@ -82,7 +82,7 @@ export default async function NewEmailTemplatePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Create Email Template</h1>
-        <p className="text-slate-600">
+        <p className="text-muted-foreground">
           Build reusable email content for order updates, marketing, and support.
         </p>
       </div>
@@ -90,13 +90,13 @@ export default async function NewEmailTemplatePage() {
       <Card className="p-6">
         <form action={createTemplate} className="space-y-5">
           <div>
-            <label htmlFor="name" className="text-sm font-medium text-slate-700">
+            <label htmlFor="name" className="text-sm font-medium text-foreground">
               Template name
             </label>
             <Input id="name" name="name" placeholder="Order confirmation" className="mt-2" required />
           </div>
           <div>
-            <label htmlFor="key" className="text-sm font-medium text-slate-700">
+            <label htmlFor="key" className="text-sm font-medium text-foreground">
               Template key
             </label>
             <Input
@@ -106,12 +106,12 @@ export default async function NewEmailTemplatePage() {
               className="mt-2 font-mono text-sm"
               required
             />
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               Lowercase with underscores. Used when sending emails programmatically.
             </p>
           </div>
           <div>
-            <label htmlFor="subject" className="text-sm font-medium text-slate-700">
+            <label htmlFor="subject" className="text-sm font-medium text-foreground">
               Email subject
             </label>
             <Input
@@ -124,10 +124,10 @@ export default async function NewEmailTemplatePage() {
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <label htmlFor="html" className="text-sm font-medium text-slate-700">
+              <label htmlFor="html" className="text-sm font-medium text-foreground">
                 HTML content
               </label>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-muted-foreground">
                 Example variables: <code>{'{{customerName}}'}</code>, <code>{'{{orderNumber}}'}</code>
               </span>
             </div>
@@ -140,7 +140,7 @@ export default async function NewEmailTemplatePage() {
             />
           </div>
           <div>
-            <label htmlFor="text" className="text-sm font-medium text-slate-700">
+            <label htmlFor="text" className="text-sm font-medium text-foreground">
               Plain text fallback (optional)
             </label>
             <Textarea

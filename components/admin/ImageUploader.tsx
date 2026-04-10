@@ -92,7 +92,7 @@ export function ImageUploader({
             Add Image
           </Button>
           {isMaxReached && (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Maximum of {maxImages} images reached
             </p>
           )}
@@ -124,19 +124,19 @@ export function ImageUploader({
                         }}
                       />
                     ) : null}
-                    <div className="hidden h-20 w-20 flex items-center justify-center rounded-md bg-slate-100">
-                      <ImageIcon className="h-8 w-8 text-slate-400" />
+                    <div className="hidden h-20 w-20 flex items-center justify-center rounded-md bg-muted">
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
                     </div>
                   </div>
 
                   {/* Image Details */}
                   <div className="flex-1 space-y-2">
                     <div className="space-y-1">
-                      <Label className="text-xs text-slate-500">URL</Label>
+                      <Label className="text-xs text-muted-foreground">URL</Label>
                       <p className="text-sm truncate">{image.url}</p>
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor={`alt-${index}`} className="text-xs text-slate-500">
+                      <Label htmlFor={`alt-${index}`} className="text-xs text-muted-foreground">
                         Alt Text
                       </Label>
                       <Input
@@ -169,12 +169,12 @@ export function ImageUploader({
       )}
 
       {images.length === 0 && (
-        <div className="rounded-lg border-2 border-dashed border-slate-200 p-8 text-center">
-          <ImageIcon className="mx-auto h-12 w-12 text-slate-400" />
-          <p className="mt-2 text-sm text-slate-500">
+        <div className="rounded-lg border-2 border-dashed border-border p-8 text-center">
+          <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground" />
+          <p className="mt-2 text-sm text-muted-foreground">
             No images added yet
           </p>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted-foreground">
             Add image URLs above to upload
           </p>
         </div>

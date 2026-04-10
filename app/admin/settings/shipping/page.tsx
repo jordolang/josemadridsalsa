@@ -110,7 +110,7 @@ export default async function ShippingSettingsPage() {
           </p>
         </div>
         {settings && (
-          <div className="rounded-lg bg-slate-100 px-4 py-2 text-sm text-muted-foreground">
+          <div className="rounded-lg bg-muted px-4 py-2 text-sm text-muted-foreground">
             Last updated: {settings.updatedAt.toLocaleString()}
           </div>
         )}
@@ -124,7 +124,7 @@ export default async function ShippingSettingsPage() {
 
         <form action={saveShippingSettings} className="mt-6 space-y-6">
           <div>
-            <label htmlFor="freeShippingThreshold" className="block text-sm font-medium text-slate-700">
+            <label htmlFor="freeShippingThreshold" className="block text-sm font-medium text-foreground">
               Free shipping threshold
             </label>
             <p className="text-xs text-muted-foreground">
@@ -154,7 +154,7 @@ export default async function ShippingSettingsPage() {
 
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label htmlFor="street" className="block text-sm font-medium text-slate-700">
+                <label htmlFor="street" className="block text-sm font-medium text-foreground">
                   Street address
                 </label>
                 <Input
@@ -169,7 +169,7 @@ export default async function ShippingSettingsPage() {
               </div>
 
               <div>
-                <label htmlFor="city" className="block text-sm font-medium text-slate-700">
+                <label htmlFor="city" className="block text-sm font-medium text-foreground">
                   City
                 </label>
                 <Input
@@ -184,7 +184,7 @@ export default async function ShippingSettingsPage() {
               </div>
 
               <div>
-                <label htmlFor="state" className="block text-sm font-medium text-slate-700">
+                <label htmlFor="state" className="block text-sm font-medium text-foreground">
                   State / Province
                 </label>
                 <Input
@@ -199,7 +199,7 @@ export default async function ShippingSettingsPage() {
               </div>
 
               <div>
-                <label htmlFor="zipCode" className="block text-sm font-medium text-slate-700">
+                <label htmlFor="zipCode" className="block text-sm font-medium text-foreground">
                   ZIP / Postal code
                 </label>
                 <Input
@@ -214,7 +214,7 @@ export default async function ShippingSettingsPage() {
               </div>
 
               <div>
-                <label htmlFor="country" className="block text-sm font-medium text-slate-700">
+                <label htmlFor="country" className="block text-sm font-medium text-foreground">
                   Country
                 </label>
                 <Input
@@ -237,14 +237,14 @@ export default async function ShippingSettingsPage() {
             </p>
 
             <div className="mt-4">
-              <label htmlFor="defaultCarrier" className="block text-sm font-medium text-slate-700">
+              <label htmlFor="defaultCarrier" className="block text-sm font-medium text-foreground">
                 Default carrier
               </label>
               <select
                 id="defaultCarrier"
                 name="defaultCarrier"
                 defaultValue={settings?.defaultCarrier || ''}
-                className="mt-1 block w-full max-w-xs rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-muted-foreground"
+                className="mt-1 block w-full max-w-xs rounded-md border border-input bg-card px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-muted/50 disabled:text-muted-foreground"
                 disabled={!canManage}
               >
                 <option value="">None (use cheapest)</option>
@@ -257,7 +257,7 @@ export default async function ShippingSettingsPage() {
             </div>
 
             <fieldset className="mt-4">
-              <legend className="block text-sm font-medium text-slate-700">
+              <legend className="block text-sm font-medium text-foreground">
                 Enabled carriers
               </legend>
               <p id="enabled-carriers-desc" className="text-xs text-muted-foreground">
@@ -272,12 +272,12 @@ export default async function ShippingSettingsPage() {
                       name="enabledCarriers"
                       value={carrier.value}
                       defaultChecked={settings?.enabledCarriers?.includes(carrier.value)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                      className="h-4 w-4 rounded border-input text-blue-600 focus:ring-blue-500 disabled:opacity-50"
                       disabled={!canManage}
                     />
                     <label
                       htmlFor={`carrier-${carrier.value}`}
-                      className="ml-2 text-sm text-slate-700"
+                      className="ml-2 text-sm text-foreground"
                     >
                       {carrier.label}
                     </label>
@@ -310,7 +310,7 @@ export default async function ShippingSettingsPage() {
               </>
             ) : (
               <>
-                <Badge className="bg-slate-200 text-muted-foreground">Disabled</Badge>
+                <Badge className="bg-muted text-muted-foreground">Disabled</Badge>
                 <p className="text-muted-foreground">Free shipping threshold not configured</p>
               </>
             )}

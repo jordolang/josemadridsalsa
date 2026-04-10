@@ -187,7 +187,7 @@ export default function CredentialFormDialog({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="serviceName">
-                Provider / Service Name <span className="text-red-500">*</span>
+                Provider / Service Name <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="serviceName"
@@ -195,13 +195,13 @@ export default function CredentialFormDialog({
                 {...register('serviceName')}
               />
               {errors.serviceName && (
-                <p className="text-sm text-red-600">{errors.serviceName.message}</p>
+                <p className="text-sm text-destructive">{errors.serviceName.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="label">
-                Label <span className="text-red-500">*</span>
+                Label <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="label"
@@ -209,7 +209,7 @@ export default function CredentialFormDialog({
                 {...register('label')}
               />
               {errors.label && (
-                <p className="text-sm text-red-600">{errors.label.message}</p>
+                <p className="text-sm text-destructive">{errors.label.message}</p>
               )}
             </div>
 
@@ -221,14 +221,14 @@ export default function CredentialFormDialog({
                 {...register('username')}
               />
               {errors.username && (
-                <p className="text-sm text-red-600">{errors.username.message}</p>
+                <p className="text-sm text-destructive">{errors.username.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">
-                  Password {mode === 'create' && <span className="text-red-500">*</span>}
+                  Password {mode === 'create' && <span className="text-destructive">*</span>}
                 </Label>
                 <Button
                   type="button"
@@ -248,12 +248,12 @@ export default function CredentialFormDialog({
                 {...register('password')}
               />
               {errors.password && (
-                <p className="text-sm text-red-600">{errors.password.message}</p>
+                <p className="text-sm text-destructive">{errors.password.message}</p>
               )}
               {showSuggestions && passwordSuggestions.length > 0 && (
-                <div className="mt-2 space-y-1 rounded-lg border bg-slate-50 p-3">
+                <div className="mt-2 space-y-1 rounded-lg border bg-muted/50 p-3">
                   <div className="mb-1.5 flex items-center justify-between">
-                    <p className="text-xs font-medium text-slate-600">
+                    <p className="text-xs font-medium text-muted-foreground">
                       Suggested Passwords (12-15 chars, alphanumeric)
                     </p>
                     <Button
@@ -288,7 +288,7 @@ export default function CredentialFormDialog({
                 {...register('url')}
               />
               {errors.url && (
-                <p className="text-sm text-red-600">{errors.url.message}</p>
+                <p className="text-sm text-destructive">{errors.url.message}</p>
               )}
             </div>
 
@@ -301,13 +301,13 @@ export default function CredentialFormDialog({
                 {...register('notes')}
               />
               {errors.notes && (
-                <p className="text-sm text-red-600">{errors.notes.message}</p>
+                <p className="text-sm text-destructive">{errors.notes.message}</p>
               )}
             </div>
 
             {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-                <p className="text-sm text-red-800">{error}</p>
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+                <p className="text-sm text-destructive">{error}</p>
               </div>
             )}
           </div>

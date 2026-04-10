@@ -57,7 +57,7 @@ export default async function ProductEditorPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Edit Product</h1>
-        <p className="text-slate-600">Update product details</p>
+        <p className="text-muted-foreground">Update product details</p>
       </div>
 
       <ImageUploaderWrapper productId={id} initialImages={product.images} />

@@ -117,7 +117,7 @@ export function EmailConfigForm({ configs, canWrite }: EmailConfigFormProps) {
                       </span>
                     )}
                     {!config.isActive && (
-                      <span className="px-2 py-0.5 bg-slate-100 text-slate-800 text-xs font-medium rounded">
+                      <span className="px-2 py-0.5 bg-muted text-foreground text-xs font-medium rounded">
                         Inactive
                       </span>
                     )}
@@ -125,29 +125,29 @@ export function EmailConfigForm({ configs, canWrite }: EmailConfigFormProps) {
 
                   <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-slate-600">SMTP Server</p>
+                      <p className="text-muted-foreground">SMTP Server</p>
                       <p className="font-medium">
                         {config.smtpHost ? `${config.smtpHost}:${config.smtpPort}` : 'Not configured'}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-slate-600">From Email</p>
+                      <p className="text-muted-foreground">From Email</p>
                       <p className="font-medium">{config.fromEmail}</p>
                     </div>
 
                     <div>
-                      <p className="text-slate-600">Security</p>
+                      <p className="text-muted-foreground">Security</p>
                       <p className="font-medium">{config.smtpSecure ? 'TLS/SSL' : 'None'}</p>
                     </div>
 
                     <div>
-                      <p className="text-slate-600">Fallback to Resend</p>
+                      <p className="text-muted-foreground">Fallback to Resend</p>
                       <p className="font-medium">{config.useResend ? 'Yes' : 'No'}</p>
                     </div>
 
                     <div>
-                      <p className="text-slate-600">Rate Limits</p>
+                      <p className="text-muted-foreground">Rate Limits</p>
                       <p className="font-medium">
                         {config.maxPerHour}/hr, {config.maxPerDay}/day
                       </p>
@@ -189,12 +189,12 @@ export function EmailConfigForm({ configs, canWrite }: EmailConfigFormProps) {
                 <div className={`mt-4 p-3 rounded-lg flex items-center gap-2 ${
                   testResult.success
                     ? 'bg-green-50 text-green-900'
-                    : 'bg-red-50 text-red-900'
+                    : 'bg-destructive/10 text-destructive'
                 }`}>
                   {testResult.success ? (
                     <CheckCircle2 className="h-5 w-5 text-green-600" />
                   ) : (
-                    <AlertCircle className="h-5 w-5 text-red-600" />
+                    <AlertCircle className="h-5 w-5 text-destructive" />
                   )}
                   <p className="text-sm">{testResult.message}</p>
                 </div>
@@ -263,9 +263,9 @@ export function EmailConfigForm({ configs, canWrite }: EmailConfigFormProps) {
                 <h2 className="text-lg font-semibold">New Email Configuration</h2>
 
                 {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-                    <p className="text-sm text-red-900">{error}</p>
+                  <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+                    <p className="text-sm text-destructive">{error}</p>
                   </div>
                 )}
 
@@ -318,7 +318,7 @@ export function EmailConfigForm({ configs, canWrite }: EmailConfigFormProps) {
 
                   <div className="border-t pt-4 mt-4">
                     <h3 className="font-medium mb-3">SMTP Configuration (Optional)</h3>
-                    <p className="text-sm text-slate-600 mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Leave blank to use Resend only
                     </p>
 
@@ -375,7 +375,7 @@ export function EmailConfigForm({ configs, canWrite }: EmailConfigFormProps) {
                           type="checkbox"
                           id="smtpSecure"
                           name="smtpSecure"
-                          className="rounded border-slate-300"
+                          className="rounded border-input"
                         />
                         <Label htmlFor="smtpSecure" className="font-normal cursor-pointer">
                           Use implicit SSL (port 465 only — leave unchecked for port 587 TLS)
@@ -394,7 +394,7 @@ export function EmailConfigForm({ configs, canWrite }: EmailConfigFormProps) {
                           id="useResend"
                           name="useResend"
                           defaultChecked
-                          className="rounded border-slate-300"
+                          className="rounded border-input"
                         />
                         <Label htmlFor="useResend" className="font-normal cursor-pointer">
                           Fallback to Resend if SMTP fails
@@ -407,7 +407,7 @@ export function EmailConfigForm({ configs, canWrite }: EmailConfigFormProps) {
                           id="isDefault"
                           name="isDefault"
                           defaultChecked={configs.length === 0}
-                          className="rounded border-slate-300"
+                          className="rounded border-input"
                         />
                         <Label htmlFor="isDefault" className="font-normal cursor-pointer">
                           Set as default configuration
@@ -420,7 +420,7 @@ export function EmailConfigForm({ configs, canWrite }: EmailConfigFormProps) {
                           id="isActive"
                           name="isActive"
                           defaultChecked
-                          className="rounded border-slate-300"
+                          className="rounded border-input"
                         />
                         <Label htmlFor="isActive" className="font-normal cursor-pointer">
                           Active

@@ -175,7 +175,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -186,7 +186,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">
-              Product Name <span className="text-red-500">*</span>
+              Product Name <span className="text-destructive">*</span>
             </Label>
             <Input
               id="name"
@@ -197,17 +197,17 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
               }}
             />
             {errors.name && (
-              <p className="text-sm text-red-600">{errors.name.message}</p>
+              <p className="text-sm text-destructive">{errors.name.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="slug">
-              Slug <span className="text-red-500">*</span>
+              Slug <span className="text-destructive">*</span>
             </Label>
             <Input id="slug" {...register('slug')} />
             {errors.slug && (
-              <p className="text-sm text-red-600">{errors.slug.message}</p>
+              <p className="text-sm text-destructive">{errors.slug.message}</p>
             )}
           </div>
 
@@ -223,7 +223,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="categoryId">
-              Category <span className="text-red-500">*</span>
+              Category <span className="text-destructive">*</span>
             </Label>
             <Select
               value={watch('categoryId')}
@@ -241,13 +241,13 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
               </SelectContent>
             </Select>
             {errors.categoryId && (
-              <p className="text-sm text-red-600">{errors.categoryId.message}</p>
+              <p className="text-sm text-destructive">{errors.categoryId.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="heatLevel">
-              Heat Level <span className="text-red-500">*</span>
+              Heat Level <span className="text-destructive">*</span>
             </Label>
             <Select
               value={watch('heatLevel')}
@@ -286,11 +286,11 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="sku">
-              SKU <span className="text-red-500">*</span>
+              SKU <span className="text-destructive">*</span>
             </Label>
             <Input id="sku" {...register('sku')} />
             {errors.sku && (
-              <p className="text-sm text-red-600">{errors.sku.message}</p>
+              <p className="text-sm text-destructive">{errors.sku.message}</p>
             )}
           </div>
 
@@ -301,7 +301,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="price">
-              Price ($) <span className="text-red-500">*</span>
+              Price ($) <span className="text-destructive">*</span>
             </Label>
             <Input
               id="price"
@@ -310,7 +310,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
               {...register('price')}
             />
             {errors.price && (
-              <p className="text-sm text-red-600">{errors.price.message}</p>
+              <p className="text-sm text-destructive">{errors.price.message}</p>
             )}
           </div>
 
@@ -336,7 +336,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="inventory">
-              Inventory <span className="text-red-500">*</span>
+              Inventory <span className="text-destructive">*</span>
             </Label>
             <Input
               id="inventory"
@@ -377,7 +377,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
               {...register('featuredImage')}
               placeholder="https://..."
             />
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Main product image displayed in lists and product pages
             </p>
           </div>
@@ -390,7 +390,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
               placeholder="https://..., https://..."
               rows={2}
             />
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Additional product images for gallery
             </p>
           </div>
@@ -447,7 +447,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
           <div className="flex items-center justify-between">
             <div>
               <Label>Active</Label>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Display product on storefront
               </p>
             </div>
@@ -460,7 +460,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
           <div className="flex items-center justify-between">
             <div>
               <Label>Featured</Label>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Show in featured products section
               </p>
             </div>
@@ -478,7 +478,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
               {...register('sortOrder')}
               placeholder="0"
             />
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Lower numbers appear first
             </p>
           </div>

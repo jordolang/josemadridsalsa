@@ -65,7 +65,7 @@ export function FetchPhotosButton() {
         </Button>
       </div>
       {result && (
-        <p className={`text-sm ${result.startsWith('✓') ? 'text-green-600' : 'text-red-600'}`}>
+        <p className={`text-sm ${result.startsWith('✓') ? 'text-green-600' : 'text-destructive'}`}>
           {result}
         </p>
       )}

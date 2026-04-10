@@ -630,7 +630,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
             <h1 className="text-3xl font-bold">Analytics</h1>
             <p className="text-muted-foreground">Store performance overview and key trends</p>
           </div>
-          <div className="flex items-center gap-2 rounded-lg bg-white p-1 shadow-sm">
+          <div className="flex items-center gap-2 rounded-lg bg-card p-1 shadow-sm">
             {RANGE_OPTIONS.map((option) => {
               const isActive = option.value === activeRange
               return (
@@ -638,7 +638,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                   key={option.value}
                   href={`/admin/analytics?range=${option.value}`}
                   className={`rounded-md px-3 py-1 text-sm font-medium ${
-                    isActive ? 'bg-slate-900 text-white' : 'text-muted-foreground hover:bg-slate-200'
+                    isActive ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted'
                   }`}
                 >
                   {option.label}
@@ -742,7 +742,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
             <h2 className="text-xl font-semibold">Google Analytics overview</h2>
             <p className="text-sm text-muted-foreground">Live GA4 metrics for the selected range</p>
           </div>
-          <Badge className={gaStatusIsReady ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-foreground'}>
+          <Badge className={gaStatusIsReady ? 'bg-emerald-100 text-emerald-800' : 'bg-muted text-foreground'}>
             {gaStatusIsReady ? 'Live data' : 'Awaiting configuration'}
           </Badge>
         </div>
@@ -785,7 +785,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 gaChartsById.get(definition.id) ??
                 ({ definition, points: [], total: 0 } as GoogleAnalyticsChartResult)
               return (
-                <div key={definition.id} className="rounded-lg border bg-white p-4 shadow-sm">
+                <div key={definition.id} className="rounded-lg border bg-card p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
@@ -841,7 +841,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 <select
                   id="metric"
                   name="metric"
-                  className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
                   required
                   defaultValue=""
                 >
@@ -862,7 +862,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 <select
                   id="dimension"
                   name="dimension"
-                  className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
                   required
                   defaultValue=""
                 >
@@ -883,7 +883,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 <select
                   id="chartType"
                   name="chartType"
-                  className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
                   defaultValue="line"
                 >
                   <option value="line">Line</option>
@@ -898,7 +898,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 <select
                   id="color"
                   name="color"
-                  className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
                   defaultValue="indigo"
                 >
                   {GOOGLE_ANALYTICS_CHART_COLORS.map((color) => (
@@ -1134,7 +1134,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
               data.orderStatus.map((status) => (
                 <div key={status.status} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-2 w-2 rounded-full bg-slate-400" />
+                    <span className="inline-flex h-2 w-2 rounded-full bg-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">
                       {status.status.replace('_', ' ')}
                     </span>

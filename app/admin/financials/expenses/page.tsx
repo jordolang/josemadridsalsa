@@ -29,8 +29,8 @@ export default async function ExpensesPage() {
       <header className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-salsa-500">Expenses</p>
-          <h1 className="text-3xl font-serif font-semibold text-slate-900">Expense management</h1>
-          <p className="text-sm text-slate-600">
+          <h1 className="text-3xl font-serif font-semibold text-foreground">Expense management</h1>
+          <p className="text-sm text-muted-foreground">
             Upload receipts, classify spend, and sync reimbursements to QuickBooks, Quicken, or Xero.
           </p>
         </div>
@@ -44,19 +44,19 @@ export default async function ExpensesPage() {
       <Card className="space-y-4 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-slate-900">Submission queue</h2>
-            <p className="text-sm text-slate-600">
+            <h2 className="text-xl font-semibold text-foreground">Submission queue</h2>
+            <p className="text-sm text-muted-foreground">
               Filter by status and push approved expenses directly to your general ledger.
             </p>
           </div>
-          <Badge className="bg-slate-100 text-slate-600">
+          <Badge className="bg-muted text-muted-foreground">
             {awaitingApproval.length} awaiting approval
           </Badge>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] divide-y divide-slate-200 text-sm">
+          <table className="w-full min-w-[720px] divide-y divide-border text-sm">
             <thead>
-              <tr className="bg-slate-50 text-slate-600">
+              <tr className="bg-muted/50 text-muted-foreground">
                 <th className="px-4 py-2 text-left font-semibold">Vendor</th>
                 <th className="px-4 py-2 text-left font-semibold">Category</th>
                 <th className="px-4 py-2 text-left font-semibold">Submitted by</th>
@@ -65,14 +65,14 @@ export default async function ExpensesPage() {
                 <th className="px-4 py-2 text-left font-semibold">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {expenseQueue.map((expense) => (
-                <tr key={expense.id} className="text-slate-700">
-                  <td className="px-4 py-3 font-medium text-slate-900">{expense.vendor}</td>
+                <tr key={expense.id} className="text-foreground">
+                  <td className="px-4 py-3 font-medium text-foreground">{expense.vendor}</td>
                   <td className="px-4 py-3">{expense.category}</td>
                   <td className="px-4 py-3">{expense.submittedBy}</td>
                   <td className="px-4 py-3">{new Date(expense.submittedAt).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatPrice(expense.amount)}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-foreground">{formatPrice(expense.amount)}</td>
                   <td className="px-4 py-3">
                     <Badge
                       className={`text-xs ${
@@ -91,15 +91,15 @@ export default async function ExpensesPage() {
             </tbody>
           </table>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-500">
+        <div className="rounded-xl border border-border bg-muted/50 p-4 text-xs text-muted-foreground">
           Tip: attach PDF or JPG receipts to each expense entry. Approved reimbursements sync nightly when the QuickBooks
           integration is connected.
         </div>
       </Card>
 
       <Card className="space-y-3 p-6">
-        <h2 className="text-xl font-semibold text-slate-900">Automation roadmap</h2>
-        <ul className="space-y-2 text-sm text-slate-600">
+        <h2 className="text-xl font-semibold text-foreground">Automation roadmap</h2>
+        <ul className="space-y-2 text-sm text-muted-foreground">
           <li>• OCR receipt scanning and auto-category suggestions</li>
           <li>• Mileage reimbursement calculator with IRS rates</li>
           <li>• Sync to virtual card spend (Ramp, Brex) for instant reconciliation</li>

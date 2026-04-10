@@ -67,7 +67,7 @@ export function AIChatStats() {
   if (loading) {
     return (
       <Card className="p-6">
-        <div className="text-center text-slate-500">Loading AI Chat statistics...</div>
+        <div className="text-center text-muted-foreground">Loading AI Chat statistics...</div>
       </Card>
     )
   }
@@ -75,7 +75,7 @@ export function AIChatStats() {
   if (error || !stats) {
     return (
       <Card className="p-6">
-        <div className="text-center text-red-500">
+        <div className="text-center text-destructive">
           <AlertTriangle className="mx-auto h-8 w-8 mb-2" />
           {error || 'Failed to load statistics'}
         </div>
@@ -103,7 +103,7 @@ export function AIChatStats() {
               className={`px-3 py-1 text-sm rounded ${
                 days === d
                   ? 'bg-blue-600 text-white'
-                  : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                  : 'bg-muted text-foreground hover:bg-muted'
               }`}
             >
               {d} days
@@ -118,9 +118,9 @@ export function AIChatStats() {
           <div className="flex items-center gap-3">
             <MessageSquare className="h-8 w-8 text-blue-600" />
             <div>
-              <p className="text-sm text-slate-600">Total Requests</p>
+              <p className="text-sm text-muted-foreground">Total Requests</p>
               <p className="text-2xl font-bold">{stats.aiChat.totalRequests}</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 {stats.aiChat.totalMessages} messages
               </p>
             </div>
@@ -133,13 +133,13 @@ export function AIChatStats() {
               className={`h-8 w-8 ${successRate >= 95 ? 'text-green-600' : 'text-yellow-600'}`}
             />
             <div>
-              <p className="text-sm text-slate-600">Success Rate</p>
+              <p className="text-sm text-muted-foreground">Success Rate</p>
               <p className="text-2xl font-bold">{successRate}%</p>
               <div className="flex gap-1 text-xs">
                 <Badge variant="outline" className="text-green-700 border-green-300">
                   {stats.aiChat.successfulRequests} ✓
                 </Badge>
-                <Badge variant="outline" className="text-red-700 border-red-300">
+                <Badge variant="outline" className="text-destructive border-destructive/30">
                   {stats.aiChat.failedRequests} ✗
                 </Badge>
               </div>
@@ -151,9 +151,9 @@ export function AIChatStats() {
           <div className="flex items-center gap-3">
             <Clock className="h-8 w-8 text-purple-600" />
             <div>
-              <p className="text-sm text-slate-600">Avg Response Time</p>
+              <p className="text-sm text-muted-foreground">Avg Response Time</p>
               <p className="text-2xl font-bold">{stats.aiChat.avgResponseTime}ms</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 {stats.aiChat.avgResponseTime < 1000 ? 'Fast' : 'Slow'}
               </p>
             </div>
@@ -164,15 +164,15 @@ export function AIChatStats() {
           <div className="flex items-center gap-3">
             <Users className="h-8 w-8 text-orange-600" />
             <div>
-              <p className="text-sm text-slate-600">User Types</p>
+              <p className="text-sm text-muted-foreground">User Types</p>
               <div className="flex gap-2 mt-1">
                 <div>
                   <p className="text-lg font-bold">{stats.aiChat.authenticatedRequests}</p>
-                  <p className="text-xs text-slate-500">Logged in</p>
+                  <p className="text-xs text-muted-foreground">Logged in</p>
                 </div>
                 <div className="border-l pl-2">
                   <p className="text-lg font-bold">{stats.aiChat.guestRequests}</p>
-                  <p className="text-xs text-slate-500">Guest</p>
+                  <p className="text-xs text-muted-foreground">Guest</p>
                 </div>
               </div>
             </div>

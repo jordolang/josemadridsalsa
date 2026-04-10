@@ -86,7 +86,7 @@ const statusConfig: Record<
   },
   not_configured: {
     label: 'Not configured',
-    badgeClass: 'bg-slate-200 text-muted-foreground',
+    badgeClass: 'bg-muted text-muted-foreground',
     Icon: XCircle,
   },
   error: {
@@ -123,12 +123,12 @@ export default async function PaymentSettingsPage() {
             <Card key={provider.id} className="p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-start gap-4">
-                  <div className="rounded-lg bg-slate-100 p-3">
+                  <div className="rounded-lg bg-muted p-3">
                     <CreditCard className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <h2 className="text-lg font-semibold text-slate-900">
+                      <h2 className="text-lg font-semibold text-foreground">
                         {provider.name}
                       </h2>
                       <Badge className={config.badgeClass}>
@@ -156,13 +156,13 @@ export default async function PaymentSettingsPage() {
                 )}
               </div>
 
-              <div className="mt-4 rounded-lg bg-slate-50 p-4">
-                <p className="text-sm text-slate-700">{provider.statusDetail}</p>
+              <div className="mt-4 rounded-lg bg-muted/50 p-4">
+                <p className="text-sm text-foreground">{provider.statusDetail}</p>
               </div>
 
               {provider.setupInstructions && provider.status === 'not_configured' && (
-                <div className="mt-3 rounded-lg border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-2">
+                <div className="mt-3 rounded-lg border border-border bg-card p-4">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
                     Setup instructions
                   </p>
                   <p className="text-sm text-muted-foreground">

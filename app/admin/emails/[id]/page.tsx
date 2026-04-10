@@ -84,12 +84,12 @@ export default async function EmailTemplateDetailPage(props: PageProps) {
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold">{template.name}</h1>
-          <p className="text-slate-600">
+          <p className="text-muted-foreground">
             Update the copy and layout for this automated email.
           </p>
         </div>
-        <div className="rounded-lg bg-slate-100 px-4 py-2 text-sm text-slate-600">
-          Template key: <span className="font-mono text-slate-800">{template.key}</span>
+        <div className="rounded-lg bg-muted px-4 py-2 text-sm text-muted-foreground">
+          Template key: <span className="font-mono text-foreground">{template.key}</span>
         </div>
       </div>
 
@@ -97,7 +97,7 @@ export default async function EmailTemplateDetailPage(props: PageProps) {
         <Card className="p-6">
           <form action={updateAction} className="space-y-5">
             <div>
-              <label className="text-sm font-medium text-slate-700" htmlFor="name">
+              <label className="text-sm font-medium text-foreground" htmlFor="name">
                 Template name
               </label>
               <Input
@@ -111,7 +111,7 @@ export default async function EmailTemplateDetailPage(props: PageProps) {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-700" htmlFor="subject">
+              <label className="text-sm font-medium text-foreground" htmlFor="subject">
                 Email subject
               </label>
               <Input
@@ -126,10 +126,10 @@ export default async function EmailTemplateDetailPage(props: PageProps) {
 
             <div>
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-slate-700" htmlFor="html">
+                <label className="text-sm font-medium text-foreground" htmlFor="html">
                   HTML content
                 </label>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-muted-foreground">
                   Supports Handlebars-style variables: <code>{'{{variable}}'}</code>
                 </span>
               </div>
@@ -144,7 +144,7 @@ export default async function EmailTemplateDetailPage(props: PageProps) {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-700" htmlFor="text">
+              <label className="text-sm font-medium text-foreground" htmlFor="text">
                 Plain text fallback
               </label>
               <Textarea
@@ -171,21 +171,21 @@ export default async function EmailTemplateDetailPage(props: PageProps) {
         <Card className="space-y-4 p-6">
           <div>
             <h2 className="text-lg font-semibold">Template Details</h2>
-            <div className="mt-3 space-y-2 text-sm text-slate-600">
+            <div className="mt-3 space-y-2 text-sm text-muted-foreground">
               <p>
-                <span className="font-medium text-slate-700">Template key:</span>{' '}
+                <span className="font-medium text-foreground">Template key:</span>{' '}
                 <span className="font-mono">{template.key}</span>
               </p>
               <p>
-                <span className="font-medium text-slate-700">Created:</span>{' '}
+                <span className="font-medium text-foreground">Created:</span>{' '}
                 {template.createdAt.toLocaleString()}
               </p>
               <p>
-                <span className="font-medium text-slate-700">Last updated:</span>{' '}
+                <span className="font-medium text-foreground">Last updated:</span>{' '}
                 {template.updatedAt.toLocaleString()}
               </p>
               <p>
-                <span className="font-medium text-slate-700">Plain text version:</span>{' '}
+                <span className="font-medium text-foreground">Plain text version:</span>{' '}
                 {template.text ? 'Yes' : 'No'}
               </p>
             </div>
@@ -193,7 +193,7 @@ export default async function EmailTemplateDetailPage(props: PageProps) {
 
           <div>
             <h2 className="text-lg font-semibold">HTML Preview</h2>
-            <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <div className="mt-3 overflow-hidden rounded-lg border border-border bg-card">
               <div
                 className="prose max-w-none p-4"
                 dangerouslySetInnerHTML={{ __html: template.html }}

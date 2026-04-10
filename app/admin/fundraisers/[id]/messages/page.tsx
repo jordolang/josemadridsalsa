@@ -95,7 +95,7 @@ export default function FundraiserMessagesAdminPage() {
       </div>
 
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 mb-6">
+        <div className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive mb-6">
           {error}
         </div>
       )}
@@ -116,7 +116,7 @@ export default function FundraiserMessagesAdminPage() {
         </Card>
         <Card>
           <CardContent className="pt-4 pb-4 text-center">
-            <p className="text-2xl font-bold text-red-500">{hidden.length}</p>
+            <p className="text-2xl font-bold text-destructive">{hidden.length}</p>
             <p className="text-xs text-muted-foreground">Hidden</p>
           </CardContent>
         </Card>
@@ -175,7 +175,7 @@ export default function FundraiserMessagesAdminPage() {
                     size="sm"
                     disabled={toggling === msg.id}
                     onClick={() => toggleHidden(msg.id, msg.isHidden)}
-                    className={msg.isHidden ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-red-200 text-red-600 hover:bg-red-50'}
+                    className={msg.isHidden ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-destructive/30 text-destructive hover:bg-destructive/10'}
                     title={msg.isHidden ? 'Show message' : 'Hide message'}
                   >
                     {msg.isHidden ? (
