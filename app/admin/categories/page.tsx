@@ -2,10 +2,18 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Plus, Edit, Trash2, Loader2 } from 'lucide-react'
+import { Edit, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import CategoryForm from '@/components/admin/CategoryForm'
 import {
   AlertDialog,
@@ -52,15 +60,25 @@ export default function CategoriesPage() {
     if (!deletingCategory) return
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/admin/categories/${deletingCategory.id}`, { method: 'DELETE' })
+      const response = await fetch(
+        `/api/admin/categories/${deletingCategory.id}`,
+        { method: 'DELETE' }
+      )
       if (!response.ok) {
         const error = await response.json()
-        alert(error.error || 'Failed to delete')
+        toast.error('Failed to delete', {
+          description: error.error || 'Unknown error',
+        })
         return
       }
+      toast.success('Category deleted', {
+        description: `${deletingCategory.name} has been removed.`,
+      })
       fetchCategories()
     } catch (error) {
-      alert('Failed to delete category')
+      toast.error('Failed to delete category', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      })
     } finally {
       setIsDeleting(false)
       setDeletingCategory(null)
@@ -69,8 +87,19 @@ export default function CategoriesPage() {
 
   if (loading) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-9 w-32" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-64 w-full" />
+          ))}
+        </div>
       </div>
     )
   }
@@ -80,13 +109,13 @@ export default function CategoriesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Categories</h1>
-          <p className="text-slate-600">
+          <h1 className="text-2xl font-bold tracking-tight">Categories</h1>
+          <p className="text-sm text-muted-foreground">
             Organize your products into categories
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-2 size-4" />
           Add Category
         </Button>
       </div>
@@ -94,72 +123,80 @@ export default function CategoriesPage() {
       {/* Categories Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {categories.map((category) => (
-          <Card key={category.id} className="p-6">
+          <Card key={category.id}>
             {category.image && (
-              <div className="relative mb-4 h-32 w-full">
+              <div className="relative mx-6 mt-6 h-32 overflow-hidden rounded">
                 <Image
                   src={category.image}
                   alt={category.name}
                   fill
-                  className="rounded object-cover"
+                  className="object-cover"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
               </div>
             )}
-            <div className="space-y-2">
-              <div className="flex items-start justify-between">
-                <h3 className="text-lg font-semibold">{category.name}</h3>
-                <Badge
-                  className={
-                    category.isActive
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }
-                >
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-2">
+                <CardTitle className="text-lg">{category.name}</CardTitle>
+                <Badge variant={category.isActive ? 'default' : 'outline'}>
                   {category.isActive ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
+            </CardHeader>
+            <CardContent className="space-y-2 pb-3">
               {category.description && (
-                <p className="text-sm text-slate-600 line-clamp-2">
+                <p className="line-clamp-2 text-sm text-muted-foreground">
                   {category.description}
                 </p>
               )}
-              <div className="flex items-center justify-between pt-2 text-sm">
-                <span className="text-slate-600">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
                   {category._count.products} products
                 </span>
-                <span className="text-slate-500">
+                <span className="text-muted-foreground">
                   Sort: {category.sortOrder}
                 </span>
               </div>
-              <div className="mt-2 flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => setEditingCategory(category)}>
-                  <Edit className="mr-1 h-3 w-3" />Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDeletingCategory(category)}
-                  className="text-red-600 hover:bg-red-50"
-                  disabled={category._count.products > 0}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
+            </CardContent>
+            <CardFooter className="gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => setEditingCategory(category)}
+              >
+                <Edit className="mr-1 size-3" />
+                Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setDeletingCategory(category)}
+                className="text-destructive hover:text-destructive"
+                disabled={category._count.products > 0}
+                aria-label={`Delete ${category.name}`}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </CardFooter>
           </Card>
         ))}
       </div>
 
       {categories.length === 0 && (
-        <Card className="p-12">
-          <div className="text-center">
-            <p className="text-slate-500">No categories yet</p>
-            <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Your First Category
-            </Button>
-          </div>
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center">
+              <p className="text-muted-foreground">No categories yet</p>
+              <Button
+                className="mt-4"
+                onClick={() => setShowCreateDialog(true)}
+              >
+                <Plus className="mr-2 size-4" />
+                Create Your First Category
+              </Button>
+            </div>
+          </CardContent>
         </Card>
       )}
 
@@ -194,7 +231,10 @@ export default function CategoriesPage() {
             <AlertDialogDescription>
               Are you sure you want to delete "{deletingCategory?.name}"?
               {deletingCategory?._count?.products > 0 && (
-                <span className="block mt-2 text-red-600">This category has {deletingCategory._count.products} products and cannot be deleted.</span>
+                <span className="mt-2 block text-destructive">
+                  This category has {deletingCategory._count.products} products
+                  and cannot be deleted.
+                </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -203,7 +243,7 @@ export default function CategoriesPage() {
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting || deletingCategory?._count?.products > 0}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>

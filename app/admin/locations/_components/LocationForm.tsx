@@ -19,7 +19,7 @@ import {
 import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Loader2, Save, X, MapPin } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { PhotoGalleryInput } from './PhotoGalleryInput'
 
 const US_STATES = [
@@ -59,7 +59,6 @@ interface LocationFormProps {
 
 export default function LocationForm({ location }: LocationFormProps) {
   const router = useRouter()
-  const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGeocoding, setIsGeocoding] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -131,8 +130,7 @@ export default function LocationForm({ location }: LocationFormProps) {
         throw new Error(result.error || 'Failed to save location')
       }
 
-      toast({
-        title: isEditing ? 'Location updated' : 'Location created',
+      toast.success(isEditing ? 'Location updated' : 'Location created', {
         description: `${data.businessName} has been saved successfully.`,
       })
 
@@ -152,10 +150,8 @@ export default function LocationForm({ location }: LocationFormProps) {
     const zipCode = watch('zipCode')
 
     if (!address) {
-      toast({
-        title: 'Address required',
+      toast.error('Address required', {
         description: 'Please enter an address before geocoding.',
-        variant: 'destructive',
       })
       return
     }
@@ -178,16 +174,11 @@ export default function LocationForm({ location }: LocationFormProps) {
       setValue('latitude', result.latitude.toString())
       setValue('longitude', result.longitude.toString())
 
-      toast({
-        title: 'Geocoding successful',
+      toast.success('Geocoding successful', {
         description: `Coordinates: ${result.latitude}, ${result.longitude}`,
       })
     } catch (err: any) {
-      toast({
-        title: 'Geocoding failed',
-        description: err.message,
-        variant: 'destructive',
-      })
+      toast.error('Geocoding failed', { description: err.message })
     } finally {
       setIsGeocoding(false)
     }

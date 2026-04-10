@@ -75,7 +75,7 @@ export default async function UserDetailPage({
           </Button>
           <div>
             <h1 className="text-3xl font-bold">{user.name || 'Unnamed User'}</h1>
-            <p className="text-slate-600">{user.email}</p>
+            <p className="text-muted-foreground">{user.email}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -139,16 +139,16 @@ export default async function UserDetailPage({
               <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Total Orders</span>
+                  <span className="text-muted-foreground">Total Orders</span>
                   <span className="font-medium">{user.orders.length}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Total Spent</span>
+                  <span className="text-muted-foreground">Total Spent</span>
                   <span className="font-medium">${totalSpent.toFixed(2)}</span>
                 </div>
                 {user.orders.length > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Average Order</span>
+                    <span className="text-muted-foreground">Average Order</span>
                     <span className="font-medium">
                       ${(totalSpent / user.orders.length).toFixed(2)}
                     </span>
@@ -165,17 +165,17 @@ export default async function UserDetailPage({
             <div className="p-6">
               <h2 className="text-lg font-semibold mb-4">Order History</h2>
               {user.orders.length === 0 ? (
-                <p className="text-slate-500 text-sm">No orders found for this user.</p>
+                <p className="text-muted-foreground text-sm">No orders found for this user.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b text-left">
-                        <th className="pb-3 font-medium text-slate-600">Order</th>
-                        <th className="pb-3 font-medium text-slate-600">Date</th>
-                        <th className="pb-3 font-medium text-slate-600">Status</th>
-                        <th className="pb-3 font-medium text-slate-600">Items</th>
-                        <th className="pb-3 font-medium text-slate-600 text-right">Total</th>
+                        <th className="pb-3 font-medium text-muted-foreground">Order</th>
+                        <th className="pb-3 font-medium text-muted-foreground">Date</th>
+                        <th className="pb-3 font-medium text-muted-foreground">Status</th>
+                        <th className="pb-3 font-medium text-muted-foreground">Items</th>
+                        <th className="pb-3 font-medium text-muted-foreground text-right">Total</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -194,13 +194,13 @@ export default async function UserDetailPage({
                                 {order.orderNumber}
                               </Link>
                             </td>
-                            <td className="py-3 text-slate-600">
+                            <td className="py-3 text-muted-foreground">
                               {new Date(order.createdAt).toLocaleDateString()}
                             </td>
                             <td className="py-3">
                               <Badge className={status.color}>{status.label}</Badge>
                             </td>
-                            <td className="py-3 text-slate-600">
+                            <td className="py-3 text-muted-foreground">
                               {order.items.reduce((sum, item) => sum + item.quantity, 0)}
                             </td>
                             <td className="py-3 text-right font-medium">

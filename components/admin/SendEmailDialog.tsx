@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail } from 'lucide-react'
+import { AlertTriangle, Mail } from 'lucide-react'
+import { toast } from 'sonner'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -50,7 +52,6 @@ export default function SendEmailDialog({
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
 
   const selectedType = EMAIL_TYPES.find((t) => t.value === emailType)!
   const isCustom = emailType === 'custom'
@@ -58,7 +59,6 @@ export default function SendEmailDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setSuccess(false)
     setIsLoading(true)
 
     try {
@@ -78,13 +78,12 @@ export default function SendEmailDialog({
         throw new Error(result.error || 'Failed to send email')
       }
 
-      setSuccess(true)
-      setTimeout(() => {
-        setOpen(false)
-        setSuccess(false)
-        setSubject('')
-        setMessage('')
-      }, 1500)
+      toast.success('Email sent', {
+        description: `${selectedType.label} sent to ${customerEmail}.`,
+      })
+      setOpen(false)
+      setSubject('')
+      setMessage('')
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -96,7 +95,6 @@ export default function SendEmailDialog({
     setOpen(value)
     if (!value) {
       setError('')
-      setSuccess(false)
     }
   }
 
@@ -104,7 +102,7 @@ export default function SendEmailDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full">
-          <Mail className="mr-2 h-4 w-4" />
+          <Mail className="mr-2 size-4" />
           Send Email
         </Button>
       </DialogTrigger>
@@ -131,22 +129,26 @@ export default function SendEmailDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-slate-500">{selectedType.description}</p>
+              <p className="text-xs text-muted-foreground">
+                {selectedType.description}
+              </p>
             </div>
 
             {emailType === 'shipping' && !trackingNumber && (
-              <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-                <p className="text-sm text-yellow-800">
-                  No tracking number found. Add tracking first for a better shipping notification.
-                </p>
-              </div>
+              <Alert>
+                <AlertTriangle className="size-4" />
+                <AlertDescription>
+                  No tracking number found. Add tracking first for a better
+                  shipping notification.
+                </AlertDescription>
+              </Alert>
             )}
 
             {isCustom && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="subject">
-                    Subject <span className="text-red-500">*</span>
+                    Subject <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="subject"
@@ -158,7 +160,7 @@ export default function SendEmailDialog({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="message">
-                    Message <span className="text-red-500">*</span>
+                    Message <span className="text-destructive">*</span>
                   </Label>
                   <Textarea
                     id="message"
@@ -172,9 +174,10 @@ export default function SendEmailDialog({
               </>
             )}
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            {success && (
-              <p className="text-sm text-green-600 font-medium">Email sent successfully!</p>
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
           </div>
           <DialogFooter>

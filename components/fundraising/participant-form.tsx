@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import Link from 'next/link'
 import type { FundraiserParticipant } from '@prisma/client'
 import {
@@ -60,8 +60,7 @@ export function ParticipantForm({
         throw new Error(data?.error || 'Unable to update participant')
       }
 
-      toast({
-        title: 'Participant updated',
+      toast.success('Participant updated', {
         description: 'Participant details have been successfully updated',
       })
 
@@ -69,11 +68,7 @@ export function ParticipantForm({
       router.refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to update participant'
-      toast({
-        title: 'Failed to update participant',
-        description: message,
-        variant: 'destructive',
-      })
+      toast.error('Failed to update participant', { description: message })
     } finally {
       setIsSubmitting(false)
     }

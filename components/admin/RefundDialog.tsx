@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { DollarSign } from 'lucide-react'
+import { DollarSign, Info } from 'lucide-react'
+import { toast } from 'sonner'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -72,6 +74,9 @@ export default function RefundDialog({
         throw new Error(result.error || 'Failed to process refund')
       }
 
+      toast.success('Refund processed', {
+        description: `$${refundAmount.toFixed(2)} refunded for ${orderNumber}.`,
+      })
       setOpen(false)
       setAmount('')
       router.refresh()
@@ -100,7 +105,7 @@ export default function RefundDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full" disabled={!canRefund}>
-          <DollarSign className="mr-2 h-4 w-4" />
+          <DollarSign className="mr-2 size-4" />
           Process Refund
         </Button>
       </DialogTrigger>
@@ -113,14 +118,16 @@ export default function RefundDialog({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="rounded-lg bg-slate-50 p-3 space-y-2">
+            <div className="space-y-2 rounded-lg bg-muted p-3">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Total Paid</span>
-                <span className="font-medium">${totalPaid.toFixed(2)}</span>
+                <span className="text-muted-foreground">Total Paid</span>
+                <span className="font-medium tabular-nums">
+                  ${totalPaid.toFixed(2)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Refundable Amount</span>
-                <span className="font-medium text-green-600">
+                <span className="text-muted-foreground">Refundable Amount</span>
+                <span className="font-medium tabular-nums">
                   ${refundableAmount.toFixed(2)}
                 </span>
               </div>
@@ -128,11 +135,11 @@ export default function RefundDialog({
 
             <div className="space-y-2">
               <Label htmlFor="amount">
-                Refund Amount <span className="text-red-500">*</span>
+                Refund Amount <span className="text-destructive">*</span>
               </Label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                     $
                   </span>
                   <Input
@@ -155,16 +162,19 @@ export default function RefundDialog({
                 </Button>
               </div>
               {error && (
-                <p className="text-sm text-red-600">{error}</p>
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
             </div>
 
-            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-              <p className="text-sm text-yellow-800">
-                <strong>Note:</strong> This action will create a refund in Stripe.
-                The order status will be updated automatically via webhook.
-              </p>
-            </div>
+            <Alert>
+              <Info className="size-4" />
+              <AlertDescription>
+                This action will create a refund in Stripe. The order status
+                will update automatically via webhook.
+              </AlertDescription>
+            </Alert>
           </div>
           <DialogFooter>
             <Button

@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser, getUserPermissions } from '@/lib/rbac'
 import { adminNavigation, filterNavByPermissions } from '@/lib/permissions-map'
 import { AdminLayoutClient } from '@/components/admin/AdminLayoutClient'
-import { Toaster } from '@/components/ui/toaster'
+import { Toaster } from '@/components/ui/sonner'
 import type { Metadata } from 'next'
 import { createMetadata } from '@/lib/metadata'
 

@@ -20,10 +20,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export function InventoryExportDialog() {
-  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [format, setFormat] = useState<'csv' | 'excel'>('csv');
@@ -60,17 +59,14 @@ export function InventoryExportDialog() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      toast({
-        title: 'Export successful',
+      toast.success('Export successful', {
         description: `Inventory data exported as ${format.toUpperCase()}`,
       });
 
       setOpen(false);
     } catch (error) {
-      toast({
-        title: 'Export failed',
+      toast.error('Export failed', {
         description: error instanceof Error ? error.message : 'An unexpected error occurred',
-        variant: 'destructive',
       });
     } finally {
       setLoading(false);

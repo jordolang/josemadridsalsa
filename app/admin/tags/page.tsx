@@ -92,7 +92,7 @@ export default async function TagsPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Tags</h1>
-          <p className="text-slate-600">
+          <p className="text-muted-foreground">
             Organize content with universal tagging
           </p>
         </div>
@@ -134,7 +134,7 @@ export default async function TagsPage({
       {/* Tags Grid */}
       {tagsWithUsage.length === 0 ? (
         <Card className="p-12">
-          <div className="text-center text-slate-500">
+          <div className="text-center text-muted-foreground">
             <TagIcon className="mx-auto mb-4 h-12 w-12 text-slate-300" />
             <p className="text-lg font-medium">No tags found</p>
             <p className="mt-1 text-sm">
@@ -165,13 +165,13 @@ export default async function TagsPage({
                       {tagTypeLabels[tag.type as keyof typeof tagTypeLabels]}
                     </Badge>
                     {tag.totalUsage > 0 && (
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-muted-foreground">
                         Used {tag.totalUsage} {tag.totalUsage === 1 ? 'time' : 'times'}
                       </span>
                     )}
                   </div>
                   {tag.totalUsage > 0 && (
-                    <div className="mt-2 flex gap-2 text-xs text-slate-500">
+                    <div className="mt-2 flex gap-2 text-xs text-muted-foreground">
                       {tag._count.productTags > 0 && (
                         <span>{tag._count.productTags} product{tag._count.productTags !== 1 ? 's' : ''}</span>
                       )}

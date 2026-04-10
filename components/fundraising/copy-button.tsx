@@ -2,7 +2,7 @@
 
 import { Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 export function CopyButton({
   text,
@@ -16,15 +16,12 @@ export function CopyButton({
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(text)
-      toast({
-        title: 'Copied!',
+      toast.success('Copied!', {
         description: label ? `${label} copied to clipboard` : 'Copied to clipboard',
       })
     } catch (error) {
-      toast({
-        title: 'Failed to copy',
+      toast.error('Failed to copy', {
         description: 'Please copy manually',
-        variant: 'destructive',
       })
     }
   }

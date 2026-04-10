@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Upload, FileSpreadsheet, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 interface ImportResult {
   totalRows: number
@@ -31,7 +31,6 @@ export default function CredentialImportDialog({
   onOpenChange,
   onSuccess,
 }: CredentialImportDialogProps) {
-  const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -41,10 +40,8 @@ export default function CredentialImportDialog({
   const handleFileSelect = (selectedFile: File) => {
     const name = selectedFile.name.toLowerCase()
     if (!name.endsWith('.csv') && !name.endsWith('.xlsx') && !name.endsWith('.xls')) {
-      toast({
-        title: 'Invalid file type',
+      toast.error('Invalid file type', {
         description: 'Please select a .csv or .xlsx file',
-        variant: 'destructive',
       })
       return
     }
@@ -81,14 +78,13 @@ export default function CredentialImportDialog({
       setResult(data)
 
       if (data.successCount > 0) {
-        toast({
-          title: 'Import Complete',
+        toast.success('Import Complete', {
           description: `${data.successCount} credentials imported successfully${data.errorCount > 0 ? `, ${data.errorCount} failed` : ''}`,
         })
         onSuccess()
       }
     } catch (err: any) {
-      toast({ title: 'Import Failed', description: err.message, variant: 'destructive' })
+      toast.error('Import Failed', { description: err.message })
     } finally {
       setIsUploading(false)
     }

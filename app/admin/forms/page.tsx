@@ -2,7 +2,13 @@ import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
-import { Card } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   businessFormTemplates,
@@ -99,66 +105,75 @@ export default async function AdminFormsPage() {
   const operationalForms = combinedTemplates.filter((template) => template.categoryId === 'operations').length
   const savedCount = savedTemplateSummaries.length
 
+  const overviewCards = [
+    {
+      label: 'Templates ready',
+      value: totalForms,
+      icon: FileText,
+      blurb: 'Sales, fundraising, HR, finance, and operations workflows.',
+    },
+    {
+      label: 'Fundraising coverage',
+      value: fundraisingForms,
+      icon: ClipboardList,
+      blurb: 'Tally sheets, volunteer rosters, and marketing consent blocks.',
+    },
+    {
+      label: 'Operational playbooks',
+      value: operationalForms,
+      icon: Users,
+      blurb: 'Event sign-in sheets, inventory counts, and payroll timesheets.',
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
-          <p className="text-xs uppercase tracking-[0.35em] text-salsa-500">Operations</p>
-          <h1 className="text-3xl font-serif font-semibold text-slate-900">Business forms studio</h1>
-          <p className="max-w-3xl text-sm text-slate-600">
-            Generate printable forms for wholesale orders, fundraisers, payroll, and day-to-day operations. Export as
-            HTML, print on demand, or share the public link with partners.
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Operations
+          </p>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Business forms studio
+          </h1>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Generate printable forms for wholesale orders, fundraisers,
+            payroll, and day-to-day operations. Export as HTML, print on
+            demand, or share the public link with partners.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Badge variant="outline" className="border-salsa-200 text-xs text-salsa-600">
+          <Badge variant="outline">
             {totalForms} templates ({savedCount} saved)
           </Badge>
-          <Badge variant="outline" className="border-salsa-200 text-xs text-salsa-600">
+          <Badge variant="outline">
             {formBlockLibrary.length} reusable blocks
           </Badge>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="space-y-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-salsa-50 text-salsa-500">
-              <FileText className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-xs uppercase text-slate-500">Templates ready</p>
-              <p className="text-2xl font-semibold text-slate-900">{totalForms}</p>
-            </div>
-          </div>
-          <p className="text-xs text-slate-500">Sales, fundraising, HR, finance, and operations workflows.</p>
-        </Card>
-
-        <Card className="space-y-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-amber-600">
-              <ClipboardList className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-xs uppercase text-slate-500">Fundraising coverage</p>
-              <p className="text-2xl font-semibold text-slate-900">{fundraisingForms}</p>
-            </div>
-          </div>
-          <p className="text-xs text-slate-500">Tally sheets, volunteer rosters, and marketing consent blocks.</p>
-        </Card>
-
-        <Card className="space-y-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-              <Users className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-xs uppercase text-slate-500">Operational playbooks</p>
-              <p className="text-2xl font-semibold text-slate-900">{operationalForms}</p>
-            </div>
-          </div>
-          <p className="text-xs text-slate-500">Event sign-in sheets, inventory counts, and payroll timesheets.</p>
-        </Card>
+        {overviewCards.map((card) => {
+          const Icon = card.icon
+          return (
+            <Card key={card.label}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardDescription className="text-xs font-medium uppercase tracking-wide">
+                  {card.label}
+                </CardDescription>
+                <Icon className="size-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <CardTitle className="text-2xl font-bold tabular-nums">
+                  {card.value}
+                </CardTitle>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {card.blurb}
+                </p>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       <FormTemplateBuilder

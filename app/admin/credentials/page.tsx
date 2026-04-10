@@ -1,9 +1,17 @@
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
+import { AlertCircle, AlertTriangle, Clock, KeyRound, Lock } from 'lucide-react'
+
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
-import { Card } from '@/components/ui/card'
-import { Lock, KeyRound, Clock, AlertTriangle, AlertCircle } from 'lucide-react'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import { createMetadata } from '@/lib/metadata'
 import { isSuperAdmin, getGrantPermissions, isMissingTableError } from '@/lib/credentials'
 import CredentialsPageClient from '@/components/admin/CredentialsPageClient'
@@ -20,13 +28,18 @@ const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000
 function SetupRequired() {
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
-      <Card className="max-w-md p-12 text-center">
-        <AlertCircle className="mx-auto mb-4 h-16 w-16 text-amber-500" />
-        <h2 className="text-2xl font-bold">Setup Required</h2>
-        <p className="mt-2 text-slate-600">
-          The credentials vault tables have not been created yet.
-          Please run database migrations: <code>prisma migrate deploy</code>
-        </p>
+      <Card className="max-w-md">
+        <CardContent className="p-12 text-center">
+          <AlertCircle className="mx-auto mb-4 size-16 text-amber-500 dark:text-amber-400" />
+          <h2 className="text-2xl font-bold">Setup Required</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            The credentials vault tables have not been created yet. Please run
+            database migrations:{' '}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+              prisma migrate deploy
+            </code>
+          </p>
+        </CardContent>
       </Card>
     </div>
   )
@@ -73,13 +86,15 @@ export default async function CredentialsPage() {
   if (!accessGrant && !superAdmin) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Card className="max-w-md p-12 text-center">
-          <Lock className="mx-auto mb-4 h-16 w-16 text-slate-300" />
-          <h2 className="text-2xl font-bold">Credentials Vault</h2>
-          <p className="mt-2 text-slate-600">
-            Access to the credentials vault requires explicit authorization.
-            Contact the system administrator.
-          </p>
+        <Card className="max-w-md">
+          <CardContent className="p-12 text-center">
+            <Lock className="mx-auto mb-4 size-16 text-muted-foreground/40" />
+            <h2 className="text-2xl font-bold">Credentials Vault</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Access to the credentials vault requires explicit authorization.
+              Contact the system administrator.
+            </p>
+          </CardContent>
         </Card>
       </div>
     )
@@ -162,44 +177,64 @@ export default async function CredentialsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Credentials</h1>
-        <p className="text-slate-600">Secure credential vault</p>
+        <h1 className="text-2xl font-bold tracking-tight">Credentials</h1>
+        <p className="text-sm text-muted-foreground">Secure credential vault</p>
       </div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <KeyRound className="h-8 w-8 text-blue-600" />
-            <div>
-              <p className="text-sm text-slate-600">Total Credentials</p>
-              <p className="text-2xl font-bold">{totalCount}</p>
-            </div>
-          </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">
+              Total Credentials
+            </CardDescription>
+            <KeyRound className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <CardTitle className="text-2xl font-bold tabular-nums">
+              {totalCount}
+            </CardTitle>
+          </CardContent>
         </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <Clock className="h-8 w-8 text-slate-600" />
-            <div>
-              <p className="text-sm text-slate-600">Last Updated</p>
-              <p className="text-2xl font-bold">
-                {lastUpdated ? new Date(lastUpdated).toLocaleDateString() : 'Never'}
-              </p>
-            </div>
-          </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">
+              Last Updated
+            </CardDescription>
+            <Clock className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <CardTitle className="text-2xl font-bold">
+              {lastUpdated
+                ? new Date(lastUpdated).toLocaleDateString()
+                : 'Never'}
+            </CardTitle>
+          </CardContent>
         </Card>
-        <Card className={`p-4 ${expiredCount > 0 ? 'border-red-200 bg-red-50' : ''}`}>
-          <div className="flex items-center gap-3">
+        <Card className={cn(expiredCount > 0 && 'border-destructive')}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">
+              Passwords 90+ Days
+            </CardDescription>
             <AlertTriangle
-              className={`h-8 w-8 ${expiredCount > 0 ? 'text-red-500' : 'text-green-600'}`}
+              className={cn(
+                'size-4',
+                expiredCount > 0
+                  ? 'text-destructive'
+                  : 'text-muted-foreground'
+              )}
             />
-            <div>
-              <p className="text-sm text-slate-600">Passwords 90+ Days</p>
-              <p className={`text-2xl font-bold ${expiredCount > 0 ? 'text-red-600' : ''}`}>
-                {expiredCount}
-              </p>
-            </div>
-          </div>
+          </CardHeader>
+          <CardContent>
+            <CardTitle
+              className={cn(
+                'text-2xl font-bold tabular-nums',
+                expiredCount > 0 && 'text-destructive'
+              )}
+            >
+              {expiredCount}
+            </CardTitle>
+          </CardContent>
         </Card>
       </div>
 

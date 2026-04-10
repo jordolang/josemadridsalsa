@@ -131,11 +131,13 @@ export default async function InventoryPage() {
   const lowStockAlerts = activeAlerts.filter((a) => a.type === InventoryAlertType.LOW_STOCK);
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Inventory Management</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl font-bold tracking-tight">
+            Inventory Management
+          </h1>
+          <p className="text-sm text-muted-foreground">
             Real-time inventory tracking and alerts
           </p>
         </div>
@@ -143,36 +145,48 @@ export default async function InventoryPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">
+              Total Products
+            </CardTitle>
+            <Package className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalProducts}</div>
-            <p className="text-xs text-muted-foreground">Active products in catalog</p>
+            <div className="text-2xl font-bold tabular-nums">
+              {stats.totalProducts}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Active products in catalog
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Out of Stock</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <AlertTriangle className="size-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{stats.outOfStockCount}</div>
-            <p className="text-xs text-muted-foreground">Products requiring immediate attention</p>
+            <div className="text-2xl font-bold tabular-nums text-destructive">
+              {stats.outOfStockCount}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Products requiring immediate attention
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
-            <TrendingDown className="h-4 w-4 text-yellow-600" />
+            <TrendingDown className="size-4 text-amber-600 dark:text-amber-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.lowStockCount}</div>
+            <div className="text-2xl font-bold tabular-nums text-amber-600 dark:text-amber-400">
+              {stats.lowStockCount}
+            </div>
             <p className="text-xs text-muted-foreground">Below threshold</p>
           </CardContent>
         </Card>
@@ -180,21 +194,27 @@ export default async function InventoryPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
-            <Bell className="h-4 w-4 text-muted-foreground" />
+            <Bell className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeAlerts.length}</div>
-            <p className="text-xs text-muted-foreground">Pending inventory alerts</p>
+            <div className="text-2xl font-bold tabular-nums">
+              {activeAlerts.length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pending inventory alerts
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Active Alerts */}
       {activeAlerts.length > 0 && (
-        <Card className="mb-8">
+        <Card>
           <CardHeader>
             <CardTitle>Active Inventory Alerts</CardTitle>
-            <CardDescription>Products requiring immediate attention</CardDescription>
+            <CardDescription>
+              Products requiring immediate attention
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <InventoryAlertsTable alerts={activeAlerts} canWrite={canWrite} />
@@ -203,7 +223,7 @@ export default async function InventoryPage() {
       )}
 
       {/* Low Stock Products */}
-      <Card className="mb-8">
+      <Card>
         <CardHeader>
           <CardTitle>Low Stock Products</CardTitle>
           <CardDescription>
@@ -212,24 +232,24 @@ export default async function InventoryPage() {
         </CardHeader>
         <CardContent>
           {lowStockProducts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">All products are adequately stocked</p>
+            <div className="py-12 text-center text-muted-foreground">
+              <Package className="mx-auto mb-4 size-12 opacity-50" />
+              <p className="text-lg font-medium text-foreground">
+                All products are adequately stocked
+              </p>
               <p className="text-sm">No low stock alerts at this time</p>
             </div>
           ) : (
             <div className="space-y-2">
               {lowStockProducts.map((product) => {
-                const isOutOfStock = product.inventory === 0;
-                const stockPercentage = (product.inventory / product.lowStockThreshold) * 100;
-
+                const isOutOfStock = product.inventory === 0
                 return (
                   <div
                     key={product.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
                   >
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="mb-1 flex items-center gap-2">
                         <Link
                           href={`/admin/products/${product.id}`}
                           className="font-medium hover:underline"
@@ -247,7 +267,13 @@ export default async function InventoryPage() {
                         <span>Category: {product.category.name}</span>
                         <span>
                           Current Stock:{' '}
-                          <span className={isOutOfStock ? 'text-destructive font-medium' : 'text-yellow-600 font-medium'}>
+                          <span
+                            className={
+                              isOutOfStock
+                                ? 'font-medium text-destructive'
+                                : 'font-medium text-amber-600 dark:text-amber-400'
+                            }
+                          >
                             {product.inventory}
                           </span>
                         </span>
@@ -255,10 +281,13 @@ export default async function InventoryPage() {
                       </div>
                     </div>
                     {canWrite && (
-                      <InventoryAdjustmentDialog productId={product.id} productName={product.name} />
+                      <InventoryAdjustmentDialog
+                        productId={product.id}
+                        productName={product.name}
+                      />
                     )}
                   </div>
-                );
+                )
               })}
             </div>
           )}
@@ -278,38 +307,45 @@ export default async function InventoryPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {recentTransactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between p-3 border rounded-lg text-sm"
-                >
-                  <div className="flex-1">
-                    <div className="font-medium">{transaction.product.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      SKU: {transaction.product.sku}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Badge variant="outline">{transaction.type}</Badge>
-                    <div className="text-right">
-                      <div
-                        className={`font-medium ${
-                          transaction.quantity > 0 ? 'text-green-600' : 'text-red-600'
-                        }`}
-                      >
-                        {transaction.quantity > 0 ? '+' : ''}
-                        {transaction.quantity}
+              {recentTransactions.map((transaction) => {
+                const isPositive = transaction.quantity > 0
+                return (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between rounded-lg border p-3 text-sm"
+                  >
+                    <div className="flex-1">
+                      <div className="font-medium">
+                        {transaction.product.name}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {transaction.previousStock} → {transaction.newStock}
+                        SKU: {transaction.product.sku}
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground w-32 text-right">
-                      {new Date(transaction.createdAt).toLocaleString()}
+                    <div className="flex items-center gap-4">
+                      <Badge variant="outline">{transaction.type}</Badge>
+                      <div className="text-right">
+                        <div
+                          className={
+                            isPositive
+                              ? 'font-medium tabular-nums text-emerald-600 dark:text-emerald-400'
+                              : 'font-medium tabular-nums text-destructive'
+                          }
+                        >
+                          {isPositive ? '+' : ''}
+                          {transaction.quantity}
+                        </div>
+                        <div className="text-xs text-muted-foreground tabular-nums">
+                          {transaction.previousStock} → {transaction.newStock}
+                        </div>
+                      </div>
+                      <div className="w-32 text-right text-xs text-muted-foreground">
+                        {new Date(transaction.createdAt).toLocaleString()}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>

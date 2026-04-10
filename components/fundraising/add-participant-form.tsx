@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 type FormState = {
   name: string
@@ -54,18 +54,13 @@ export function AddParticipantForm({ fundraiserId }: { fundraiserId: string }) {
 
       setFormState(initialState)
       setIsOpen(false)
-      toast({
-        title: 'Participant added',
+      toast.success('Participant added', {
         description: `${participant.name} has been added with referral code ${participant.referralCode}`,
       })
       router.refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to add participant'
-      toast({
-        title: 'Failed to add participant',
-        description: message,
-        variant: 'destructive',
-      })
+      toast.error('Failed to add participant', { description: message })
     } finally {
       setIsSubmitting(false)
     }

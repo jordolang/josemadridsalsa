@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Loader2, UserPlus, X, Shield } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 interface AccessGrant {
   id: string
@@ -48,7 +48,6 @@ export default function CredentialAccessManager({
   open,
   onOpenChange,
 }: CredentialAccessManagerProps) {
-  const { toast } = useToast()
   const [grants, setGrants] = useState<AccessGrant[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -76,7 +75,7 @@ export default function CredentialAccessManager({
         setGrants(result.grants)
       }
     } catch {
-      toast({ title: 'Error', description: 'Failed to load access grants', variant: 'destructive' })
+      toast.error('Error', { description: 'Failed to load access grants' })
     } finally {
       setIsLoading(false)
     }
@@ -100,12 +99,12 @@ export default function CredentialAccessManager({
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Failed to add grant')
 
-      toast({ title: 'Success', description: `Access granted to ${newEmail}` })
+      toast.success('Success', { description: `Access granted to ${newEmail}` })
       setNewEmail('')
       setNewPerms({ canView: true, canAdd: false, canEdit: false, canDelete: false, canUpload: false })
       fetchGrants()
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' })
+      toast.error('Error', { description: err.message })
     } finally {
       setIsSaving(false)
     }
@@ -123,11 +122,11 @@ export default function CredentialAccessManager({
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Failed to revoke access')
 
-      toast({ title: 'Revoked', description: `Access revoked for ${revokeEmail}` })
+      toast.success('Revoked', { description: `Access revoked for ${revokeEmail}` })
       setRevokeEmail(null)
       fetchGrants()
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' })
+      toast.error('Error', { description: err.message })
     } finally {
       setIsRevoking(false)
     }

@@ -1,17 +1,41 @@
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
+import { Plus, ShieldAlert, User, Users } from 'lucide-react'
+import Link from 'next/link'
+import type { UserRole } from '@prisma/client'
+
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, User, Users, ShieldAlert } from 'lucide-react'
-import Link from 'next/link'
-import { UserRole } from '@prisma/client'
-import { createMetadata } from '@/lib/metadata'
-
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { UsersFilter } from '@/components/admin/users/UsersFilter'
+import { createMetadata } from '@/lib/metadata'
+import { formatUserRole, getRoleBadgeVariant } from '@/lib/user-role'
 
 export const metadata: Metadata = createMetadata({
   title: 'Users - Jose Madrid Salsa Admin',
@@ -81,17 +105,12 @@ async function getUsers(searchParams: SearchParams) {
   }
 }
 
-const roleColors: Record<UserRole, string> = {
-  CUSTOMER: 'bg-blue-100 text-blue-800',
-  STAFF: 'bg-green-100 text-green-800',
-  ADMIN: 'bg-purple-100 text-purple-800',
-  DEVELOPER: 'bg-orange-100 text-orange-800',
-  WHOLESALE: 'bg-yellow-100 text-yellow-800',
-  FUNDRAISER: 'bg-pink-100 text-pink-800',
-}
-
-export default async function UsersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const params = await searchParams;
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}) {
+  const params = await searchParams
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'users:read'))) {
@@ -101,17 +120,27 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const canWrite = await hasPermission(user, 'users:write')
   const { users, total, page, totalPages, roleStats } = await getUsers(params)
 
+  const buildPageHref = (targetPage: number) => {
+    const qs = new URLSearchParams()
+    if (params.search) qs.set('search', params.search)
+    if (params.role) qs.set('role', params.role)
+    qs.set('page', String(targetPage))
+    return `/admin/users?${qs.toString()}`
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Users</h1>
-          <p className="text-slate-600">Manage user accounts and roles</p>
+          <h1 className="text-2xl font-bold tracking-tight">Users</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage user accounts and roles
+          </p>
         </div>
         {canWrite && (
           <Button asChild>
             <Link href="/admin/users/new">
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 size-4" />
               Add User
             </Link>
           </Button>
@@ -119,133 +148,155 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <Users className="h-8 w-8 text-blue-600" />
-            <div>
-              <p className="text-sm text-slate-600">Total Users</p>
-              <p className="text-2xl font-bold">{total}</p>
-            </div>
-          </div>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">
+              Total Users
+            </CardDescription>
+            <Users className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold tabular-nums">{total}</p>
+          </CardContent>
         </Card>
-        {roleStats.map((stat) => (
-          <Card key={stat.role} className="p-4">
-            <div className="flex items-center gap-3">
-              {stat.role === 'ADMIN' || stat.role === 'DEVELOPER' ? (
-                <ShieldAlert className="h-8 w-8 text-purple-600" />
-              ) : (
-                <User className="h-8 w-8 text-slate-600" />
-              )}
-              <div>
-                <p className="text-sm text-slate-600">{stat.role}</p>
-                <p className="text-2xl font-bold">{stat._count}</p>
-              </div>
-            </div>
-          </Card>
-        ))}
+        {roleStats.map((stat) => {
+          const isPrivileged =
+            stat.role === 'ADMIN' || stat.role === 'DEVELOPER'
+          const Icon = isPrivileged ? ShieldAlert : User
+          return (
+            <Card key={stat.role}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardDescription className="text-xs font-medium uppercase tracking-wide">
+                  {formatUserRole(stat.role)}
+                </CardDescription>
+                <Icon className="size-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold tabular-nums">
+                  {stat._count}
+                </p>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <Suspense fallback={<div className="h-10 animate-pulse bg-slate-100 rounded" />}>
-          <UsersFilter initialSearch={params.search} initialRole={params.role} />
-        </Suspense>
+      <Card>
+        <CardContent className="pt-6">
+          <Suspense fallback={<Skeleton className="h-10 w-full" />}>
+            <UsersFilter
+              initialSearch={params.search}
+              initialRole={params.role}
+            />
+          </Suspense>
+        </CardContent>
       </Card>
 
       {/* Users Table */}
       {users.length === 0 ? (
-        <Card className="p-12">
-          <div className="text-center text-slate-500">
-            <User className="mx-auto mb-4 h-12 w-12 text-slate-300" />
-            <p className="text-lg font-medium">No users found</p>
-            <p className="mt-1 text-sm">
-              {params.search ? 'Try a different search term' : 'Create your first user to get started'}
-            </p>
-            {canWrite && (
-              <Button className="mt-4" asChild>
-                <Link href="/admin/users/new">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add User
-                </Link>
-              </Button>
-            )}
-          </div>
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center text-muted-foreground">
+              <User className="mx-auto mb-4 size-12 opacity-40" />
+              <p className="text-lg font-medium text-foreground">
+                No users found
+              </p>
+              <p className="mt-1 text-sm">
+                {params.search
+                  ? 'Try a different search term'
+                  : 'Create your first user to get started'}
+              </p>
+              {canWrite && (
+                <Button className="mt-4" asChild>
+                  <Link href="/admin/users/new">
+                    <Plus className="mr-2 size-4" />
+                    Add User
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </CardContent>
         </Card>
       ) : (
         <>
-          <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">User</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Role</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Status</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Orders</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Last Login</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id} className="border-b hover:bg-slate-50">
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="font-medium">{u.name || 'No name'}</p>
-                          <p className="text-sm text-slate-600">{u.email}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge className={roleColors[u.role]}>{u.role}</Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        {u.isEmailVerified ? (
-                          <Badge className="bg-green-100 text-green-800">Verified</Badge>
-                        ) : (
-                          <Badge className="bg-yellow-100 text-yellow-800">Unverified</Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm">{u._count.orders}</td>
-                      <td className="px-4 py-3 text-sm text-slate-600">
-                        {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString() : 'Never'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Button size="sm" variant="ghost" asChild>
-                          <Link href={`/admin/users/${u.id}/edit`}>Edit</Link>
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Orders</TableHead>
+                  <TableHead>Last Login</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((u) => (
+                  <TableRow key={u.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{u.name || 'No name'}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {u.email}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getRoleBadgeVariant(u.role)}>
+                        {formatUserRole(u.role)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={u.isEmailVerified ? 'default' : 'outline'}
+                      >
+                        {u.isEmailVerified ? 'Verified' : 'Unverified'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {u._count.orders}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {u.lastLoginAt
+                        ? new Date(u.lastLoginAt).toLocaleDateString()
+                        : 'Never'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="ghost" asChild>
+                        <Link href={`/admin/users/${u.id}/edit`}>Edit</Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (() => {
-            const createPageUrl = (targetPage: number) => {
-              const urlParams = new URLSearchParams()
-              if (params.search) urlParams.set('search', params.search)
-              if (params.role) urlParams.set('role', params.role)
-              urlParams.set('page', targetPage.toString())
-              return `/admin/users?${urlParams.toString()}`
-            }
-
-            return (
-              <div className="flex items-center justify-center gap-2">
-                <Button variant="outline" disabled={page === 1} asChild={page > 1}>
-                  {page > 1 ? <Link href={createPageUrl(page - 1)}>Previous</Link> : <span>Previous</span>}
-                </Button>
-                <span className="text-sm text-slate-600">
-                  Page {page} of {totalPages}
-                </span>
-                <Button variant="outline" disabled={page === totalPages} asChild={page < totalPages}>
-                  {page < totalPages ? <Link href={createPageUrl(page + 1)}>Next</Link> : <span>Next</span>}
-                </Button>
-              </div>
-            )
-          })()}
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                {page > 1 && (
+                  <PaginationItem>
+                    <PaginationPrevious href={buildPageHref(page - 1)} />
+                  </PaginationItem>
+                )}
+                <PaginationItem>
+                  <PaginationLink href="#" isActive>
+                    {page} / {totalPages}
+                  </PaginationLink>
+                </PaginationItem>
+                {page < totalPages && (
+                  <PaginationItem>
+                    <PaginationNext href={buildPageHref(page + 1)} />
+                  </PaginationItem>
+                )}
+              </PaginationContent>
+            </Pagination>
+          )}
         </>
       )}
     </div>

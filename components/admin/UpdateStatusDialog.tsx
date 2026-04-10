@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { RefreshCw } from 'lucide-react'
+import { toast } from 'sonner'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -22,15 +24,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { formatOrderStatus } from '@/lib/order-status'
 
 const ORDER_STATUSES = [
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'CONFIRMED', label: 'Confirmed' },
-  { value: 'PROCESSING', label: 'Processing' },
-  { value: 'SHIPPED', label: 'Shipped' },
-  { value: 'DELIVERED', label: 'Delivered' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-  { value: 'REFUNDED', label: 'Refunded' },
+  'PENDING',
+  'CONFIRMED',
+  'PROCESSING',
+  'SHIPPED',
+  'DELIVERED',
+  'CANCELLED',
+  'REFUNDED',
 ] as const
 
 interface UpdateStatusDialogProps {
@@ -69,6 +72,9 @@ export default function UpdateStatusDialog({
         throw new Error(result.error || 'Failed to update status')
       }
 
+      toast.success('Status updated', {
+        description: `Order ${orderNumber} is now ${formatOrderStatus(status)}.`,
+      })
       setOpen(false)
       setAdminNote('')
       router.refresh()
@@ -83,7 +89,7 @@ export default function UpdateStatusDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full">
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="mr-2 size-4" />
           Update Status
         </Button>
       </DialogTrigger>
@@ -104,8 +110,8 @@ export default function UpdateStatusDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {ORDER_STATUSES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
+                    <SelectItem key={s} value={s}>
+                      {formatOrderStatus(s)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -121,7 +127,11 @@ export default function UpdateStatusDialog({
                 rows={3}
               />
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
           </div>
           <DialogFooter>
             <Button

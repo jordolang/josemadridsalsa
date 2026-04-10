@@ -1,14 +1,38 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { Star, Search } from 'lucide-react'
+import { Search, Star } from 'lucide-react'
+
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
-import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { logAudit } from '@/lib/audit'
+import { cn } from '@/lib/utils'
 
 type SearchParams = {
   status?: string
@@ -21,7 +45,18 @@ const STATUS_OPTIONS = [
   { value: 'PENDING', label: 'Pending' },
   { value: 'APPROVED', label: 'Approved' },
   { value: 'REJECTED', label: 'Rejected' },
-]
+] as const
+
+type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+
+const REVIEW_STATUS_VARIANT: Record<
+  ReviewStatus,
+  'default' | 'secondary' | 'destructive' | 'outline' | 'warning'
+> = {
+  PENDING: 'warning',
+  APPROVED: 'default',
+  REJECTED: 'destructive',
+}
 
 async function getReviews(searchParams: SearchParams) {
   const page = Number(searchParams.page) || 1
@@ -55,7 +90,7 @@ async function getReviews(searchParams: SearchParams) {
     ]
   }
 
-  const [reviews, total, pending, approved, rejected, ratingAggregate] = await Promise.all([
+  const [reviews, total, pending, , , ratingAggregate] = await Promise.all([
     prisma.review.findMany({
       where,
       skip,
@@ -96,16 +131,14 @@ async function getReviews(searchParams: SearchParams) {
     total,
     page,
     totalPages: Math.ceil(total / limit),
-    counts: {
-      pending,
-      approved,
-      rejected,
-    },
-    averageRating: ratingAggregate._avg.rating ? Number(ratingAggregate._avg.rating) : null,
+    counts: { pending },
+    averageRating: ratingAggregate._avg.rating
+      ? Number(ratingAggregate._avg.rating)
+      : null,
   }
 }
 
-async function updateReviewStatus(reviewId: string, status: 'PENDING' | 'APPROVED' | 'REJECTED') {
+async function updateReviewStatus(reviewId: string, status: ReviewStatus) {
   'use server'
 
   const user = await getCurrentUser()
@@ -163,8 +196,12 @@ async function toggleVerified(reviewId: string, nextState: 'true' | 'false') {
   revalidatePath('/admin/reviews')
 }
 
-export default async function ReviewsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const params = await searchParams;
+export default async function ReviewsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}) {
+  const params = await searchParams
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'content:read'))) {
@@ -172,241 +209,283 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
   }
 
   const canModerate = await hasPermission(user, 'content:write')
-  const { reviews, total, page, totalPages, counts, averageRating } = await getReviews(params)
+  const { reviews, page, totalPages, counts, averageRating } = await getReviews(
+    params
+  )
 
   const statusCandidate = params.status?.toUpperCase()
-  const activeStatus = STATUS_OPTIONS.some((option) => option.value === statusCandidate)
-    ? (statusCandidate as 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED')
+  const activeStatus = STATUS_OPTIONS.some(
+    (option) => option.value === statusCandidate
+  )
+    ? (statusCandidate as 'ALL' | ReviewStatus)
     : 'ALL'
+
+  const buildPageHref = (targetPage: number) => {
+    const qs = new URLSearchParams()
+    qs.set('page', String(targetPage))
+    if (params.status) qs.set('status', activeStatus)
+    if (params.q) qs.set('q', params.q)
+    return `/admin/reviews?${qs.toString()}`
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Product Reviews</h1>
-          <p className="text-slate-600">
+          <h1 className="text-2xl font-bold tracking-tight">Product Reviews</h1>
+          <p className="text-sm text-muted-foreground">
             Moderate customer feedback before it appears on the storefront.
           </p>
         </div>
         <div className="flex gap-3">
-          <Card className="px-4 py-3">
-            <p className="text-xs uppercase text-slate-500">Pending</p>
-            <p className="text-lg font-semibold text-amber-600">
-              {counts.pending.toLocaleString()}
-            </p>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs font-medium uppercase tracking-wide">
+                Pending
+              </CardDescription>
+              <CardTitle className="text-2xl font-bold tabular-nums">
+                {counts.pending.toLocaleString()}
+              </CardTitle>
+            </CardHeader>
           </Card>
-          <Card className="px-4 py-3">
-            <p className="text-xs uppercase text-slate-500">Average Rating</p>
-            <p className="text-lg font-semibold text-emerald-600">
-              {averageRating ? averageRating.toFixed(1) : '—'}
-            </p>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs font-medium uppercase tracking-wide">
+                Avg Rating
+              </CardDescription>
+              <CardTitle className="text-2xl font-bold tabular-nums">
+                {averageRating ? averageRating.toFixed(1) : '—'}
+              </CardTitle>
+            </CardHeader>
           </Card>
         </div>
       </div>
 
-      <Card className="p-4">
-        <form className="flex flex-col gap-4 sm:flex-row" method="get">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              type="search"
-              name="q"
-              defaultValue={params.q}
-              placeholder="Search by product, customer, or comment"
-              className="pl-9"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button type="submit" variant="outline">
-              Search
-            </Button>
-            {params.q && (
-              <Button asChild variant="ghost">
-                <Link href="/admin/reviews">Clear</Link>
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <form className="flex flex-col gap-4 sm:flex-row" method="get">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                name="q"
+                defaultValue={params.q}
+                placeholder="Search by product, customer, or comment"
+                className="pl-9"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" variant="outline">
+                Search
               </Button>
-            )}
+              {params.q && (
+                <Button asChild variant="ghost">
+                  <Link href="/admin/reviews">Clear</Link>
+                </Button>
+              )}
+            </div>
+          </form>
+          <div className="flex flex-wrap items-center gap-2">
+            {STATUS_OPTIONS.map((option) => {
+              const isActive = option.value === activeStatus
+              const href =
+                option.value === 'ALL'
+                  ? `/admin/reviews${
+                      params.q ? `?q=${encodeURIComponent(params.q)}` : ''
+                    }`
+                  : `/admin/reviews?status=${option.value}${
+                      params.q ? `&q=${encodeURIComponent(params.q)}` : ''
+                    }`
+              return (
+                <Button
+                  key={option.value}
+                  asChild
+                  variant={isActive ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  <Link href={href}>{option.label}</Link>
+                </Button>
+              )
+            })}
           </div>
-        </form>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {STATUS_OPTIONS.map((option) => {
-            const isActive = option.value === activeStatus
-            const href =
-              option.value === 'ALL'
-                ? `/admin/reviews${params.q ? `?q=${encodeURIComponent(params.q)}` : ''}`
-                : `/admin/reviews?status=${option.value}${
-                    params.q ? `&q=${encodeURIComponent(params.q)}` : ''
-                  }`
-            return (
-              <Link
-                key={option.value}
-                href={href}
-                className={`rounded-full px-3 py-1 text-sm font-medium ${
-                  isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {option.label}
-              </Link>
-            )
-          })}
-        </div>
+        </CardContent>
       </Card>
 
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px]">
-            <thead className="border-b bg-slate-50 text-sm text-slate-600">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Product</th>
-                <th className="px-4 py-3 text-left font-medium">Customer</th>
-                <th className="px-4 py-3 text-left font-medium">Rating</th>
-                <th className="px-4 py-3 text-left font-medium">Comment</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium">Submitted</th>
-                <th className="px-4 py-3 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm">
-              {reviews.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
-                    No reviews found for this filter.
-                  </td>
-                </tr>
-              ) : (
-                reviews.map((review) => {
-                  const approveAction = updateReviewStatus.bind(null, review.id, 'APPROVED')
-                  const rejectAction = updateReviewStatus.bind(null, review.id, 'REJECTED')
-                  const resetAction = updateReviewStatus.bind(null, review.id, 'PENDING')
-                  const toggleVerifiedAction = toggleVerified.bind(
-                    null,
-                    review.id,
-                    review.isVerified ? 'false' : 'true'
-                  )
+      <div className="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Product</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Rating</TableHead>
+              <TableHead>Comment</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Submitted</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {reviews.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="py-12 text-center text-muted-foreground"
+                >
+                  No reviews found for this filter.
+                </TableCell>
+              </TableRow>
+            ) : (
+              reviews.map((review) => {
+                const approveAction = updateReviewStatus.bind(
+                  null,
+                  review.id,
+                  'APPROVED'
+                )
+                const rejectAction = updateReviewStatus.bind(
+                  null,
+                  review.id,
+                  'REJECTED'
+                )
+                const resetAction = updateReviewStatus.bind(
+                  null,
+                  review.id,
+                  'PENDING'
+                )
+                const toggleVerifiedAction = toggleVerified.bind(
+                  null,
+                  review.id,
+                  review.isVerified ? 'false' : 'true'
+                )
 
-                  return (
-                    <tr key={review.id} className="border-b last:border-0">
-                      <td className="px-4 py-4 font-medium text-slate-900">
-                        {review.product?.name || 'Deleted product'}
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">
-                        {review.user?.name || review.user?.email || 'Unknown customer'}
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-1 text-amber-500">
-                          {Array.from({ length: 5 }).map((_, index) => (
-                            <Star
-                              key={index}
-                              className={`h-4 w-4 ${
-                                index < review.rating ? 'fill-current' : 'stroke-current text-slate-300'
-                              }`}
+                return (
+                  <TableRow key={review.id}>
+                    <TableCell className="font-medium">
+                      {review.product?.name || 'Deleted product'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {review.user?.name ||
+                        review.user?.email ||
+                        'Unknown customer'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-0.5">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <Star
+                            key={index}
+                            className={cn(
+                              'size-3.5',
+                              index < review.rating
+                                ? 'fill-amber-400 text-amber-400'
+                                : 'text-muted-foreground/30'
+                            )}
+                          />
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-xs text-muted-foreground">
+                      <p className="line-clamp-2">
+                        {review.comment || 'No comment provided'}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <Badge
+                          variant={
+                            REVIEW_STATUS_VARIANT[review.status as ReviewStatus] ??
+                            'outline'
+                          }
+                        >
+                          {review.status}
+                        </Badge>
+                        {review.isVerified && (
+                          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            Verified
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {review.createdAt.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {canModerate ? (
+                        <div className="flex flex-col items-end gap-2">
+                          <form action={toggleVerifiedAction}>
+                            <input
+                              type="hidden"
+                              name="verified"
+                              value={review.isVerified ? 'false' : 'true'}
                             />
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">
-                        <p className="line-clamp-2">
-                          {review.comment || 'No comment provided'}
-                        </p>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex flex-col gap-1">
-                          <Badge
-                            className={
-                              review.status === 'PENDING'
-                                ? 'bg-amber-100 text-amber-700'
-                                : review.status === 'APPROVED'
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : 'bg-red-100 text-red-700'
-                            }
-                          >
-                            {review.status}
-                          </Badge>
-                          {review.isVerified && (
-                            <span className="text-xs font-medium text-emerald-600">Verified</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">
-                        {review.createdAt.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        {canModerate ? (
-                          <div className="flex flex-col items-end gap-2">
-                            <form action={toggleVerifiedAction}>
-                              <input type="hidden" name="verified" value={review.isVerified ? 'false' : 'true'} />
-                              <Button type="submit" variant="ghost" size="sm">
-                                {review.isVerified ? 'Unverify' : 'Mark verified'}
-                              </Button>
-                            </form>
-                            {review.status === 'PENDING' ? (
-                              <div className="flex gap-2">
-                                <form action={approveAction}>
-                                  <Button type="submit" size="sm">
-                                    Approve
-                                  </Button>
-                                </form>
-                                <form action={rejectAction}>
-                                  <Button type="submit" variant="outline" size="sm">
-                                    Reject
-                                  </Button>
-                                </form>
-                              </div>
-                            ) : (
-                              <form action={resetAction}>
-                                <Button type="submit" variant="ghost" size="sm">
-                                  Move to pending
+                            <Button type="submit" variant="ghost" size="sm">
+                              {review.isVerified
+                                ? 'Unverify'
+                                : 'Mark verified'}
+                            </Button>
+                          </form>
+                          {review.status === 'PENDING' ? (
+                            <div className="flex gap-2">
+                              <form action={approveAction}>
+                                <Button type="submit" size="sm">
+                                  Approve
                                 </Button>
                               </form>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-400">Read-only</span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                              <form action={rejectAction}>
+                                <Button
+                                  type="submit"
+                                  variant="outline"
+                                  size="sm"
+                                >
+                                  Reject
+                                </Button>
+                              </form>
+                            </div>
+                          ) : (
+                            <form action={resetAction}>
+                              <Button
+                                type="submit"
+                                variant="ghost"
+                                size="sm"
+                              >
+                                Move to pending
+                              </Button>
+                            </form>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          Read-only
+                        </span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t px-6 py-4 text-sm text-slate-600">
-            <span>
-              Page {page} of {totalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <Link
-                href={`/admin/reviews?page=${Math.max(page - 1, 1)}${
-                  params.status ? `&status=${activeStatus}` : ''
-                }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
-                className={`rounded-md border px-3 py-1 ${
-                  page === 1
-                    ? 'pointer-events-none border-slate-200 text-slate-300'
-                    : 'border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
-                }`}
-              >
-                Previous
-              </Link>
-              <Link
-                href={`/admin/reviews?page=${Math.min(page + 1, totalPages)}${
-                  params.status ? `&status=${activeStatus}` : ''
-                }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
-                className={`rounded-md border px-3 py-1 ${
-                  page === totalPages
-                    ? 'pointer-events-none border-slate-200 text-slate-300'
-                    : 'border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
-                }`}
-              >
-                Next
-              </Link>
-            </div>
-          </div>
-        )}
-      </Card>
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            {page > 1 && (
+              <PaginationItem>
+                <PaginationPrevious href={buildPageHref(page - 1)} />
+              </PaginationItem>
+            )}
+            <PaginationItem>
+              <PaginationLink href="#" isActive>
+                {page} / {totalPages}
+              </PaginationLink>
+            </PaginationItem>
+            {page < totalPages && (
+              <PaginationItem>
+                <PaginationNext href={buildPageHref(page + 1)} />
+              </PaginationItem>
+            )}
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   )
 }

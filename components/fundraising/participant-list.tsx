@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import type { FundraiserParticipant } from '@prisma/client'
 
 type ParticipantWithStats = FundraiserParticipant
@@ -37,16 +37,9 @@ export function ParticipantList({
     const link = `${baseUrl}/${code}`
     try {
       await navigator.clipboard.writeText(link)
-      toast({
-        title: 'Link copied!',
-        description: 'Referral link copied to clipboard',
-      })
+      toast.success('Link copied!', { description: 'Referral link copied to clipboard' })
     } catch (error) {
-      toast({
-        title: 'Failed to copy',
-        description: 'Please copy the link manually',
-        variant: 'destructive',
-      })
+      toast.error('Failed to copy', { description: 'Please copy the link manually' })
     }
   }
 
@@ -69,18 +62,13 @@ export function ParticipantList({
         throw new Error(data?.error || 'Failed to delete participant')
       }
 
-      toast({
-        title: 'Participant removed',
+      toast.success('Participant removed', {
         description: `${participantName} has been removed from the campaign`,
       })
       router.refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete participant'
-      toast({
-        title: 'Error',
-        description: message,
-        variant: 'destructive',
-      })
+      toast.error('Error', { description: message })
     } finally {
       setDeletingId(null)
     }

@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 interface LocationActionsProps {
   location: {
@@ -34,7 +34,6 @@ interface LocationActionsProps {
 
 export function LocationActions({ location }: LocationActionsProps) {
   const router = useRouter()
-  const { toast } = useToast()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -51,18 +50,13 @@ export function LocationActions({ location }: LocationActionsProps) {
         throw new Error(result.error || 'Failed to delete location')
       }
 
-      toast({
-        title: 'Location deleted',
+      toast.success('Location deleted', {
         description: `${location.businessName} has been removed.`,
       })
 
       router.refresh()
     } catch (error: any) {
-      toast({
-        title: 'Delete failed',
-        description: error.message,
-        variant: 'destructive',
-      })
+      toast.error('Delete failed', { description: error.message })
     } finally {
       setIsDeleting(false)
       setShowDeleteDialog(false)

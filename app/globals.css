@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 
+@custom-variant dark (&:is(.dark *));
+
 @config '../tailwind.config.ts';
 
 @layer base {
@@ -94,7 +96,7 @@
   .btn-secondary:active {
     transform: translateY(0);
   }
-  
+
   .card {
     @apply rounded-xl border border-border bg-card text-card-foreground;
     box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
@@ -178,15 +180,15 @@
       transform: translateX(100%);
     }
   }
-  
+
   .input-field {
     @apply block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-salsa-500 focus:border-salsa-500 transition-colors duration-200;
   }
-  
+
   .hero-gradient {
     background: linear-gradient(135deg, #e53e3e 0%, #f59e0b 100%);
   }
-  
+
   .text-gradient {
     @apply bg-gradient-to-r from-salsa-600 to-chile-600 bg-clip-text text-transparent;
   }
@@ -196,11 +198,11 @@
   .animation-delay-200 {
     animation-delay: 0.2s;
   }
-  
+
   .animation-delay-400 {
     animation-delay: 0.4s;
   }
-  
+
   .animation-delay-600 {
     animation-delay: 0.6s;
   }
@@ -430,8 +432,6 @@
   }
 }
 
-
-
 @layer base {
   * {
     @apply border-border;
@@ -439,4 +439,37 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+:root {
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+.dark {
+  --sidebar: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+@theme inline {
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }

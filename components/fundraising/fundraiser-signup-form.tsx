@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 type FormState = {
   contactName: string
@@ -48,17 +48,12 @@ export function FundraiserSignupForm() {
 
       setIsSubmitted(true)
       setFormState(initialState)
-      toast({
-        title: 'Thanks for reaching out!',
+      toast.success('Thanks for reaching out!', {
         description: 'Our fundraising team will contact you shortly.',
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to submit signup'
-      toast({
-        title: 'Submission failed',
-        description: message,
-        variant: 'destructive',
-      })
+      toast.error('Submission failed', { description: message })
     } finally {
       setIsSubmitting(false)
     }

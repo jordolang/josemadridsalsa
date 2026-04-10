@@ -1,12 +1,26 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Package, Truck, CheckCircle } from 'lucide-react'
+import {
+  ArrowLeft,
+  CheckCircle,
+  Package,
+  Truck,
+  XCircle,
+  type LucideIcon,
+} from 'lucide-react'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { getOrderStatusVariant } from '@/lib/order-status'
 import RefundDialog from '@/components/admin/RefundDialog'
 import UpdateStatusDialog from '@/components/admin/UpdateStatusDialog'
 import TrackingDialog from '@/components/admin/TrackingDialog'
@@ -71,14 +85,24 @@ async function getRefundableAmount(order: {
   }
 }
 
-const statusInfo = {
-  PENDING: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Package },
-  CONFIRMED: { label: 'Confirmed', color: 'bg-blue-100 text-blue-800', icon: Package },
-  PROCESSING: { label: 'Processing', color: 'bg-purple-100 text-purple-800', icon: Package },
-  SHIPPED: { label: 'Shipped', color: 'bg-indigo-100 text-indigo-800', icon: Truck },
-  DELIVERED: { label: 'Delivered', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  CANCELLED: { label: 'Cancelled', color: 'bg-red-100 text-red-800', icon: Package },
-  REFUNDED: { label: 'Refunded', color: 'bg-gray-100 text-gray-800', icon: Package },
+const STATUS_ICON: Record<string, LucideIcon> = {
+  PENDING: Package,
+  CONFIRMED: Package,
+  PROCESSING: Package,
+  SHIPPED: Truck,
+  DELIVERED: CheckCircle,
+  CANCELLED: XCircle,
+  REFUNDED: Package,
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: 'Pending',
+  CONFIRMED: 'Confirmed',
+  PROCESSING: 'Processing',
+  SHIPPED: 'Shipped',
+  DELIVERED: 'Delivered',
+  CANCELLED: 'Cancelled',
+  REFUNDED: 'Refunded',
 }
 
 export default async function OrderDetailPage({
@@ -108,8 +132,8 @@ export default async function OrderDetailPage({
     total: order.total,
   })
 
-  const status = statusInfo[order.status as keyof typeof statusInfo]
-  const StatusIcon = status.icon
+  const StatusIcon = STATUS_ICON[order.status] ?? Package
+  const statusLabel = STATUS_LABEL[order.status] ?? order.status
   const shopifyAdminBase =
     process.env.NEXT_PUBLIC_SHOPIFY_ADMIN_URL ??
     (process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN || process.env.SHOPIFY_STORE_DOMAIN
@@ -129,22 +153,24 @@ export default async function OrderDetailPage({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/admin/orders">
-              <ArrowLeft className="h-5 w-5" />
+            <Link href="/admin/orders" aria-label="Back to orders">
+              <ArrowLeft className="size-5" />
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Order {order.orderNumber}</h1>
-            <p className="text-slate-600">
+            <h1 className="text-2xl font-bold tracking-tight">
+              Order {order.orderNumber}
+            </h1>
+            <p className="text-sm text-muted-foreground">
               Placed on {new Date(order.createdAt).toLocaleDateString()} at{' '}
               {new Date(order.createdAt).toLocaleTimeString()}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Badge className={status.color}>
-            <StatusIcon className="mr-1 h-3 w-3" />
-            {status.label}
+          <Badge variant={getOrderStatusVariant(order.status)} className="gap-1">
+            <StatusIcon className="size-3" />
+            {statusLabel}
           </Badge>
           {shopifyOrderUrl ? (
             <Button variant="outline" size="sm" asChild>
@@ -161,74 +187,92 @@ export default async function OrderDetailPage({
         <div className="space-y-6 lg:col-span-2">
           {/* Order Items */}
           <Card>
-            <div className="p-6">
-              <h2 className="text-lg font-semibold mb-4">Order Items</h2>
-              <div className="space-y-4">
-                {order.items.map((item) => (
-                  <div key={item.id} className="flex gap-4">
-                    {item.productImage && (
-                      <div className="relative h-16 w-16 flex-shrink-0">
-                        <Image
-                          src={item.productImage}
-                          alt={item.productName}
-                          fill
-                          className="rounded object-cover"
-                          sizes="64px"
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <p className="font-medium">{item.productName}</p>
-                      <p className="text-sm text-slate-600">SKU: {item.productSku}</p>
-                      <p className="text-sm text-slate-600">
-                        Quantity: {item.quantity} × ${Number(item.unitPrice).toFixed(2)}
-                      </p>
+            <CardHeader>
+              <CardTitle>Order Items</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {order.items.map((item) => (
+                <div key={item.id} className="flex gap-4">
+                  {item.productImage && (
+                    <div className="relative size-16 shrink-0">
+                      <Image
+                        src={item.productImage}
+                        alt={item.productName}
+                        fill
+                        className="rounded object-cover"
+                        sizes="64px"
+                      />
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium">
-                        ${Number(item.totalPrice).toFixed(2)}
-                      </p>
-                    </div>
+                  )}
+                  <div className="flex-1">
+                    <p className="font-medium">{item.productName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      SKU: {item.productSku}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Quantity: {item.quantity} × $
+                      {Number(item.unitPrice).toFixed(2)}
+                    </p>
                   </div>
-                ))}
-              </div>
+                  <div className="text-right">
+                    <p className="font-medium tabular-nums">
+                      ${Number(item.totalPrice).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              ))}
 
               {/* Order Summary */}
-              <div className="mt-6 space-y-2 border-t pt-4">
+              <Separator />
+              <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Subtotal</span>
-                  <span>${Number(order.subtotal).toFixed(2)}</span>
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="tabular-nums">
+                    ${Number(order.subtotal).toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Shipping</span>
-                  <span>${Number(order.shippingCost).toFixed(2)}</span>
+                  <span className="text-muted-foreground">Shipping</span>
+                  <span className="tabular-nums">
+                    ${Number(order.shippingCost).toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Tax</span>
-                  <span>${Number(order.tax).toFixed(2)}</span>
+                  <span className="text-muted-foreground">Tax</span>
+                  <span className="tabular-nums">
+                    ${Number(order.tax).toFixed(2)}
+                  </span>
                 </div>
                 {Number(order.discountAmount) > 0 && (
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span>Discount</span>
-                    <span>-${Number(order.discountAmount).toFixed(2)}</span>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Discount</span>
+                    <span className="tabular-nums">
+                      -${Number(order.discountAmount).toFixed(2)}
+                    </span>
                   </div>
                 )}
-                <div className="flex justify-between border-t pt-2 text-lg font-semibold">
+                <Separator />
+                <div className="flex justify-between pt-1 text-lg font-semibold">
                   <span>Total</span>
-                  <span>${Number(order.total).toFixed(2)}</span>
+                  <span className="tabular-nums">
+                    ${Number(order.total).toFixed(2)}
+                  </span>
                 </div>
               </div>
-            </div>
+            </CardContent>
           </Card>
 
           {/* Shipping Information */}
           {order.shippingAddress && (
             <Card>
-              <div className="p-6">
-                <h2 className="text-lg font-semibold mb-4">Shipping Information</h2>
-                <div className="space-y-2 text-sm">
+              <CardHeader>
+                <CardTitle>Shipping Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1 text-sm">
                   <p className="font-medium">
-                    {order.shippingAddress.firstName} {order.shippingAddress.lastName}
+                    {order.shippingAddress.firstName}{' '}
+                    {order.shippingAddress.lastName}
                   </p>
                   {order.shippingAddress.company && (
                     <p>{order.shippingAddress.company}</p>
@@ -240,37 +284,47 @@ export default async function OrderDetailPage({
                   </p>
                   <p>{order.shippingAddress.country}</p>
                   {order.shippingAddress.phone && (
-                    <p className="pt-2">Phone: {order.shippingAddress.phone}</p>
+                    <p className="pt-2 text-muted-foreground">
+                      Phone: {order.shippingAddress.phone}
+                    </p>
                   )}
                 </div>
 
                 {order.trackingNumber && (
-                  <div className="mt-4 rounded-lg bg-slate-50 p-3">
-                    <p className="text-sm font-medium text-slate-600">Tracking Number</p>
-                    <p className="font-mono text-sm">{order.trackingNumber}</p>
+                  <div className="mt-4 rounded-lg bg-muted p-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Tracking Number
+                    </p>
+                    <p className="mt-1 font-mono text-sm">
+                      {order.trackingNumber}
+                    </p>
                     {order.shippingLabelUrl && (
                       <a
                         href={order.shippingLabelUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-1 inline-block text-xs text-blue-600 hover:underline"
+                        className="mt-1 inline-block text-xs text-primary hover:underline"
                       >
                         Track Package →
                       </a>
                     )}
                   </div>
                 )}
-              </div>
+              </CardContent>
             </Card>
           )}
 
           {/* Customer Notes */}
           {order.customerNotes && (
             <Card>
-              <div className="p-6">
-                <h2 className="text-lg font-semibold mb-2">Customer Notes</h2>
-                <p className="text-sm text-slate-600">{order.customerNotes}</p>
-              </div>
+              <CardHeader>
+                <CardTitle>Customer Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  {order.customerNotes}
+                </p>
+              </CardContent>
             </Card>
           )}
         </div>
@@ -279,19 +333,28 @@ export default async function OrderDetailPage({
         <div className="space-y-6">
           {/* Customer Info */}
           <Card>
-            <div className="p-6">
-              <h2 className="text-lg font-semibold mb-4">Customer</h2>
+            <CardHeader>
+              <CardTitle>Customer</CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-3 text-sm">
                 {order.user ? (
                   <>
                     <div>
                       <p className="font-medium">{order.user.name || 'N/A'}</p>
-                      <p className="text-slate-600">{order.user.email}</p>
+                      <p className="text-muted-foreground">{order.user.email}</p>
                     </div>
                     {order.user.phone && (
-                      <p className="text-slate-600">Phone: {order.user.phone}</p>
+                      <p className="text-muted-foreground">
+                        Phone: {order.user.phone}
+                      </p>
                     )}
-                    <Button variant="outline" size="sm" className="w-full" asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      asChild
+                    >
                       <Link href={`/admin/users/${order.user.id}`}>
                         View Profile
                       </Link>
@@ -300,46 +363,52 @@ export default async function OrderDetailPage({
                 ) : (
                   <>
                     <p className="font-medium">Guest Order</p>
-                    <p className="text-slate-600">{order.guestEmail}</p>
+                    <p className="text-muted-foreground">{order.guestEmail}</p>
                     {order.guestPhone && (
-                      <p className="text-slate-600">Phone: {order.guestPhone}</p>
+                      <p className="text-muted-foreground">
+                        Phone: {order.guestPhone}
+                      </p>
                     )}
                   </>
                 )}
               </div>
-            </div>
+            </CardContent>
           </Card>
 
           {/* Payment Info */}
           <Card>
-            <div className="p-6">
-              <h2 className="text-lg font-semibold mb-4">Payment</h2>
+            <CardHeader>
+              <CardTitle>Payment</CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Method</span>
-                  <span className="capitalize">{order.paymentMethod || 'N/A'}</span>
+                  <span className="text-muted-foreground">Method</span>
+                  <span className="capitalize">
+                    {order.paymentMethod || 'N/A'}
+                  </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Status</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Status</span>
                   <Badge
-                    className={
-                      order.paymentStatus === 'PAID'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
+                    variant={
+                      order.paymentStatus === 'PAID' ? 'default' : 'outline'
                     }
                   >
                     {order.paymentStatus}
                   </Badge>
                 </div>
               </div>
-            </div>
+            </CardContent>
           </Card>
 
           {/* Actions */}
           {canWrite && (
             <Card>
-              <div className="p-6">
-                <h2 className="text-lg font-semibold mb-4">Actions</h2>
+              <CardHeader>
+                <CardTitle>Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-2">
                   <UpdateStatusDialog
                     orderId={order.id}
@@ -419,7 +488,7 @@ export default async function OrderDetailPage({
                   />
                   <PackingSlipButton orderId={order.id} />
                 </div>
-              </div>
+              </CardContent>
             </Card>
           )}
         </div>

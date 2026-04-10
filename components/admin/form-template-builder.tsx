@@ -23,7 +23,7 @@ import type {
 } from '@/types/forms'
 import type { FormBlockLibraryItem } from '@/lib/forms/templates'
 import { Download, FileType2, History, Layers, Printer, Sparkles, Wand2 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { createFormTemplate, updateFormTemplate } from '@/app/admin/forms/actions'
 
 type TemplateSource = NonNullable<BusinessFormTemplate['source']>
@@ -70,7 +70,6 @@ const defaultSectionSelection = (template: BuilderTemplate) =>
 
 export function FormTemplateBuilder({ templates, categories, blockLibrary, currentUser }: FormTemplateBuilderProps) {
   const router = useRouter()
-  const { toast } = useToast()
   const [isSaving, startSaving] = useTransition()
 
   const initialTemplates = useMemo(() => templates.map(ensureSource), [templates])
@@ -226,9 +225,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
 
   const persistTemplate = (status: 'DRAFT' | 'PUBLISHED') => {
     if (!selectedTemplate) {
-      toast({
-        variant: 'destructive',
-        title: 'Select a template',
+      toast.error('Select a template', {
         description: 'Choose a template before saving.',
       })
       return
@@ -236,9 +233,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
 
     const sectionsToPersist = combinedSections.filter((section) => includeSectionsList.includes(section.id))
     if (sectionsToPersist.length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Select at least one section',
+      toast.error('Select at least one section', {
         description: 'Choose the sections you want to include before saving.',
       })
       return
@@ -281,19 +276,15 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
           setChangelogNotes('')
         }
 
-        toast({
-          title: status === 'PUBLISHED' ? 'Template published' : 'Draft saved',
-          description: `${mapped.name} is now ${status.toLowerCase()}.`,
-        })
+        toast.success(
+          status === 'PUBLISHED' ? 'Template published' : 'Draft saved',
+          { description: `${mapped.name} is now ${status.toLowerCase()}.` }
+        )
 
         router.refresh()
       } catch (error) {
         const message = error instanceof Error ? error.message : 'An unexpected error occurred.'
-        toast({
-          variant: 'destructive',
-          title: 'Save failed',
-          description: message,
-        })
+        toast.error('Save failed', { description: message })
       }
     })
   }
