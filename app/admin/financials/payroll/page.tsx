@@ -3,6 +3,14 @@ import type { Metadata } from 'next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { formatPrice } from '@/lib/utils'
 import { payrollRuns, payrollEmployees } from '@/lib/financials/config'
@@ -27,7 +35,7 @@ export default async function PayrollPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-salsa-500">Payroll</p>
+          <p className="text-xs uppercase tracking-[0.35em] text-primary">Payroll</p>
           <h1 className="text-3xl font-serif font-semibold text-foreground">Payroll workspace</h1>
           <p className="text-sm text-muted-foreground">
             Review hours, taxes, and employee earnings before exporting runs to ADP, QuickBooks, or Xero.
@@ -83,36 +91,36 @@ export default async function PayrollPage() {
         </div>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[720px] divide-y divide-border text-sm">
-            <thead>
-              <tr className="bg-muted/50 text-muted-foreground">
-                <th className="px-4 py-2 text-left font-semibold">Employee</th>
-                <th className="px-4 py-2 text-left font-semibold">Role</th>
-                <th className="px-4 py-2 text-left font-semibold">Pay type</th>
-                <th className="px-4 py-2 text-right font-semibold">Rate</th>
-                <th className="px-4 py-2 text-right font-semibold">Hours</th>
-                <th className="px-4 py-2 text-right font-semibold">Gross</th>
-                <th className="px-4 py-2 text-right font-semibold">Taxes</th>
-                <th className="px-4 py-2 text-right font-semibold">Net</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+          <Table className="min-w-[720px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Employee</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Pay type</TableHead>
+                <TableHead className="text-right">Rate</TableHead>
+                <TableHead className="text-right">Hours</TableHead>
+                <TableHead className="text-right">Gross</TableHead>
+                <TableHead className="text-right">Taxes</TableHead>
+                <TableHead className="text-right">Net</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {payrollEmployees.map((employee) => (
-                <tr key={employee.id} className="text-foreground">
-                  <td className="px-4 py-3">
+                <TableRow key={employee.id}>
+                  <TableCell>
                     <p className="font-medium text-foreground">{employee.name}</p>
-                  </td>
-                  <td className="px-4 py-3">{employee.role}</td>
-                  <td className="px-4 py-3 capitalize">{employee.payType}</td>
-                  <td className="px-4 py-3 text-right">{formatPrice(employee.rate)}</td>
-                  <td className="px-4 py-3 text-right">{employee.hoursThisPeriod.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right">{formatPrice(employee.grossPay)}</td>
-                  <td className="px-4 py-3 text-right">{formatPrice(employee.taxes)}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-foreground">{formatPrice(employee.netPay)}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell>{employee.role}</TableCell>
+                  <TableCell className="capitalize">{employee.payType}</TableCell>
+                  <TableCell className="text-right">{formatPrice(employee.rate)}</TableCell>
+                  <TableCell className="text-right">{employee.hoursThisPeriod.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">{formatPrice(employee.grossPay)}</TableCell>
+                  <TableCell className="text-right">{formatPrice(employee.taxes)}</TableCell>
+                  <TableCell className="text-right font-semibold text-foreground">{formatPrice(employee.netPay)}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </Card>
 
@@ -129,7 +137,7 @@ export default async function PayrollPage() {
             <span className="font-semibold text-foreground">3.</span> Export to ADP Workforce Now or QuickBooks Payroll and log the confirmation number.
           </li>
         </ul>
-        <Badge className="bg-emerald-100 text-emerald-700">
+        <Badge className="bg-primary/10 text-primary">
           Payroll automation roadmap in progress
         </Badge>
       </Card>

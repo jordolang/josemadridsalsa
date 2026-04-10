@@ -98,7 +98,7 @@ export function UrlScrapeForm() {
       {feedback && (
         <p
           className={`text-sm ${
-            feedback.type === 'success' ? 'text-emerald-600' : 'text-destructive'
+            feedback.type === 'success' ? 'text-primary' : 'text-destructive'
           }`}
         >
           {feedback.message}

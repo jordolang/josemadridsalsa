@@ -26,7 +26,7 @@ export default async function TaxesPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-salsa-500">Tax prep</p>
+          <p className="text-xs uppercase tracking-[0.35em] text-primary">Tax prep</p>
           <h1 className="text-3xl font-serif font-semibold text-foreground">Tax compliance hub</h1>
           <p className="text-sm text-muted-foreground">
             Organize federal, state, and local filings with owners, due dates, and supporting notes.
@@ -58,10 +58,10 @@ export default async function TaxesPage() {
                 <Badge
                   className={`text-xs ${
                     task.status === 'completed'
-                      ? 'bg-emerald-100 text-emerald-700'
+                      ? 'bg-primary/10 text-primary'
                       : task.status === 'overdue'
                         ? 'bg-destructive/10 text-destructive'
-                        : 'bg-amber-100 text-amber-700'
+                        : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   {task.status}

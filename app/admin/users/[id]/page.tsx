@@ -6,9 +6,17 @@ import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 const roleColors: Record<string, string> = {
-  CUSTOMER: 'bg-blue-100 text-blue-800',
+  CUSTOMER: 'bg-primary/10 text-primary',
   STAFF: 'bg-purple-100 text-purple-800',
   ADMIN: 'bg-destructive/10 text-destructive',
   DEVELOPER: 'bg-orange-100 text-orange-800',
@@ -17,10 +25,10 @@ const roleColors: Record<string, string> = {
 
 const orderStatusInfo: Record<string, { label: string; color: string }> = {
   PENDING: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
-  CONFIRMED: { label: 'Confirmed', color: 'bg-blue-100 text-blue-800' },
+  CONFIRMED: { label: 'Confirmed', color: 'bg-primary/10 text-primary' },
   PROCESSING: { label: 'Processing', color: 'bg-purple-100 text-purple-800' },
   SHIPPED: { label: 'Shipped', color: 'bg-indigo-100 text-indigo-800' },
-  DELIVERED: { label: 'Delivered', color: 'bg-green-100 text-green-800' },
+  DELIVERED: { label: 'Delivered', color: 'bg-primary/10 text-primary' },
   CANCELLED: { label: 'Cancelled', color: 'bg-destructive/10 text-destructive' },
   REFUNDED: { label: 'Refunded', color: 'bg-muted text-foreground' },
 }
@@ -104,7 +112,7 @@ export default async function UserDetailPage({
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <span>{user.email}</span>
                   {user.isEmailVerified ? (
-                    <Badge variant="outline" className="text-green-600 border-green-300 text-xs">Verified</Badge>
+                    <Badge variant="outline" className="text-primary border-border text-xs">Verified</Badge>
                   ) : (
                     <Badge variant="outline" className="text-yellow-600 border-yellow-300 text-xs">Unverified</Badge>
                   )}
@@ -168,49 +176,49 @@ export default async function UserDetailPage({
                 <p className="text-muted-foreground text-sm">No orders found for this user.</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left">
-                        <th className="pb-3 font-medium text-muted-foreground">Order</th>
-                        <th className="pb-3 font-medium text-muted-foreground">Date</th>
-                        <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                        <th className="pb-3 font-medium text-muted-foreground">Items</th>
-                        <th className="pb-3 font-medium text-muted-foreground text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Items</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {user.orders.map((order) => {
                         const status = orderStatusInfo[order.status] || {
                           label: order.status,
                           color: 'bg-muted text-foreground',
                         }
                         return (
-                          <tr key={order.id} className="border-b last:border-0">
-                            <td className="py-3">
+                          <TableRow key={order.id}>
+                            <TableCell>
                               <Link
                                 href={`/admin/orders/${order.id}`}
-                                className="font-medium text-blue-600 hover:underline"
+                                className="font-medium text-primary hover:underline"
                               >
                                 {order.orderNumber}
                               </Link>
-                            </td>
-                            <td className="py-3 text-muted-foreground">
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
                               {new Date(order.createdAt).toLocaleDateString()}
-                            </td>
-                            <td className="py-3">
+                            </TableCell>
+                            <TableCell>
                               <Badge className={status.color}>{status.label}</Badge>
-                            </td>
-                            <td className="py-3 text-muted-foreground">
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
                               {order.items.reduce((sum, item) => sum + item.quantity, 0)}
-                            </td>
-                            <td className="py-3 text-right font-medium">
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
                               ${Number(order.total).toFixed(2)}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         )
                       })}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </div>

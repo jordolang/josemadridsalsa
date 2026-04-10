@@ -116,13 +116,13 @@ export function ProjectStatusDashboard({ analysis }: Props) {
 
       {/* Work Session - Most Important */}
       {analysis.workSession && (
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 p-6">
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-border p-6">
           <div className="flex items-start justify-between mb-4">
             <div>
               <h2 className="text-2xl font-bold text-foreground">
                 Claude Code Work Session #{analysis.workSession.sessionNumber}
               </h2>
-              <p className="text-lg font-semibold text-blue-900 mt-1">
+              <p className="text-lg font-semibold text-foreground mt-1">
                 {analysis.workSession.focus}
               </p>
             </div>
@@ -157,7 +157,7 @@ export function ProjectStatusDashboard({ analysis }: Props) {
             {analysis.workSession.tasks.map((task) => (
               <div
                 key={task.taskNumber}
-                className="bg-card rounded-lg border-2 border-blue-300 border-l-4 p-4"
+                className="bg-card rounded-lg border-2 border-border border-l-4 p-4"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -188,7 +188,7 @@ export function ProjectStatusDashboard({ analysis }: Props) {
                     )}
 
                     <details className="mt-3">
-                      <summary className="cursor-pointer text-sm font-semibold text-blue-700 hover:text-blue-900">
+                      <summary className="cursor-pointer text-sm font-semibold text-primary hover:text-foreground">
                         View Instructions
                       </summary>
                       <pre className="mt-2 whitespace-pre-wrap text-xs bg-muted/50 p-3 rounded border border-border overflow-x-auto">
@@ -328,9 +328,9 @@ interface StatsCardProps {
 
 function StatsCard({ title, value, subtitle, icon, color }: StatsCardProps) {
   const colors: Record<StatsCardProps['color'], string> = {
-    blue: 'bg-blue-50 border-blue-200 text-blue-700',
+    blue: 'bg-primary/5 border-border text-primary',
     purple: 'bg-purple-50 border-purple-200 text-purple-700',
-    green: 'bg-green-50 border-green-200 text-green-700',
+    green: 'bg-primary/5 border-border text-primary',
     orange: 'bg-orange-50 border-orange-200 text-orange-700',
   }
 
@@ -373,7 +373,7 @@ function FeatureSection({ title, features, color }: FeatureSectionProps) {
   const colors: Record<FeatureSectionProps['color'], string> = {
     red: 'bg-destructive/10 border-destructive/30',
     yellow: 'bg-yellow-50 border-yellow-200',
-    green: 'bg-green-50 border-green-200',
+    green: 'bg-primary/5 border-border',
   }
 
   return (
@@ -418,7 +418,7 @@ function ProgressBar({ label, current, total, percentage }: ProgressBarProps) {
       </div>
       <div className="h-3 bg-muted rounded-full overflow-hidden">
         <div
-          className="h-full bg-blue-600 transition-all"
+          className="h-full bg-primary transition-all"
           style={{ width: `${percentage}%` }}
         />
       </div>

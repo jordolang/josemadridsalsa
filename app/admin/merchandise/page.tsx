@@ -5,6 +5,14 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 const relativeTimeFormatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -40,9 +48,9 @@ function formatRelativeTimeFromNow(isoDate: string) {
 function getStatusBadgeStyles(status: 'draft' | 'active' | 'out-of-stock') {
   switch (status) {
     case 'active':
-      return 'bg-emerald-100 text-emerald-700 border-emerald-200'
+      return 'bg-primary/10 text-primary border-border'
     case 'out-of-stock':
-      return 'bg-amber-100 text-amber-700 border-amber-200'
+      return 'bg-muted text-muted-foreground border-border'
     case 'draft':
     default:
       return 'bg-muted text-foreground border-border'
@@ -58,7 +66,7 @@ export default function AdminMerchandisePage() {
     <div className="space-y-8">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.35em] text-salsa-500">Merchandise</p>
+          <p className="text-xs uppercase tracking-[0.35em] text-primary">Merchandise</p>
           <h1 className="text-3xl font-serif font-semibold text-foreground">Catalog & fulfillment</h1>
           <p className="text-sm text-muted-foreground max-w-2xl">
             Monitor catalog sync, connect directly to {fulfillmentContact.partnerName}, and stage the next product drop
@@ -110,41 +118,41 @@ export default function AdminMerchandisePage() {
             Sync now
           </Button>
         </header>
-        <div className="overflow-hidden rounded-xl border border-border">
-          <table className="min-w-full divide-y divide-gray-200 bg-card text-sm">
-            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-              <tr>
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
                 {tableHeaders.map((header) => (
-                  <th key={header} scope="col" className="px-4 py-3 font-semibold tracking-wide">
+                  <TableHead key={header} className="text-xs uppercase">
                     {header}
-                  </th>
+                  </TableHead>
                 ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {adminMerchProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-muted/50">
-                  <td className="px-4 py-3 text-foreground">
+                <TableRow key={product.id}>
+                  <TableCell className="text-foreground">
                     <div className="font-medium">{product.name}</div>
                     <p className="text-xs text-muted-foreground">
                       Margin target {Math.round((product.margin / product.retailPrice) * 100)}%
                     </p>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{product.sku}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{product.category}</td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{product.sku}</TableCell>
+                  <TableCell className="text-muted-foreground">{product.category}</TableCell>
+                  <TableCell>
                     <Badge className={cn('capitalize', getStatusBadgeStyles(product.status))}>
                       {product.status.replace('-', ' ')}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-foreground">{currencyFormatter.format(product.baseCost)}</td>
-                  <td className="px-4 py-3 text-foreground">{currencyFormatter.format(product.retailPrice)}</td>
-                  <td className="px-4 py-3 text-foreground">{currencyFormatter.format(product.margin)}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{formatRelativeTimeFromNow(product.lastSyncedAt)}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="text-foreground">{currencyFormatter.format(product.baseCost)}</TableCell>
+                  <TableCell className="text-foreground">{currencyFormatter.format(product.retailPrice)}</TableCell>
+                  <TableCell className="text-foreground">{currencyFormatter.format(product.margin)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatRelativeTimeFromNow(product.lastSyncedAt)}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </section>
 
@@ -174,22 +182,22 @@ export default function AdminMerchandisePage() {
             ))}
           </div>
         </div>
-        <div className="space-y-4 rounded-2xl border border-salsa-100 bg-gradient-to-br from-salsa-50 via-white to-chile-50 p-6 shadow-sm">
-          <h2 className="font-serif text-xl font-semibold text-salsa-700">Launch checklist</h2>
-          <ul className="space-y-3 text-sm text-salsa-700">
+        <div className="space-y-4 rounded-2xl border border-border bg-muted/30 p-6 shadow-sm">
+          <h2 className="font-serif text-xl font-semibold text-foreground">Launch checklist</h2>
+          <ul className="space-y-3 text-sm text-muted-foreground">
             {merchCollections.map((collection) => (
-              <li key={collection.id} className="flex gap-3 rounded-xl border border-salsa-100 bg-white/70 p-4">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-salsa-500 text-xs font-semibold text-white">
+              <li key={collection.id} className="flex gap-3 rounded-xl border border-border bg-background p-4">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                   {collection.items.length}
                 </div>
                 <div>
-                  <p className="font-semibold text-salsa-700">{collection.title}</p>
-                  <p className="text-xs text-salsa-600">{collection.description}</p>
+                  <p className="font-semibold text-foreground">{collection.title}</p>
+                  <p className="text-xs text-muted-foreground">{collection.description}</p>
                 </div>
               </li>
             ))}
           </ul>
-          <Button asChild className="w-full bg-salsa-600 hover:bg-salsa-700">
+          <Button asChild className="w-full">
             <Link href={`mailto:${fulfillmentContact.email}?subject=Jose%20Madrid%20Merch%20Launch`}>
               Send updated catalog brief
               <ArrowRight className="ml-2 h-4 w-4" />

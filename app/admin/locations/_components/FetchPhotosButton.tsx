@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { Image, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -41,15 +43,16 @@ export function FetchPhotosButton() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="force-refetch"
             checked={force}
-            onChange={(e) => setForce(e.target.checked)}
-            className="rounded"
+            onCheckedChange={(checked) => setForce(checked === true)}
           />
-          Force re-fetch all
-        </label>
+          <Label htmlFor="force-refetch" className="font-normal text-muted-foreground">
+            Force re-fetch all
+          </Label>
+        </div>
         <Button onClick={run} disabled={loading} variant="outline" size="sm">
           {loading ? (
             <>
@@ -65,7 +68,7 @@ export function FetchPhotosButton() {
         </Button>
       </div>
       {result && (
-        <p className={`text-sm ${result.startsWith('✓') ? 'text-green-600' : 'text-destructive'}`}>
+        <p className={`text-sm ${result.startsWith('✓') ? 'text-primary' : 'text-destructive'}`}>
           {result}
         </p>
       )}

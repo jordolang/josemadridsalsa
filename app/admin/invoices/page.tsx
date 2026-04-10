@@ -6,6 +6,14 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { formatPrice } from '@/lib/utils'
 import { Search } from 'lucide-react'
 
@@ -24,12 +32,12 @@ const STATUS_OPTIONS = [
   { value: 'CANCELLED', label: 'Cancelled' },
 ]
 
-const statusClasses: Record<string, string> = {
-  DRAFT: 'bg-muted text-foreground',
-  SENT: 'bg-blue-100 text-blue-700',
-  PAID: 'bg-emerald-100 text-emerald-700',
-  OVERDUE: 'bg-destructive/10 text-destructive',
-  CANCELLED: 'bg-muted text-muted-foreground',
+const statusVariants: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  DRAFT: 'outline',
+  SENT: 'secondary',
+  PAID: 'default',
+  OVERDUE: 'destructive',
+  CANCELLED: 'outline',
 }
 
 function parseLineCount(lines: any): number {
@@ -127,7 +135,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
             <p
               className={`mt-2 text-xl font-semibold ${
                 option.value === 'PAID'
-                  ? 'text-emerald-600'
+                  ? 'text-primary'
                   : option.value === 'OVERDUE'
                   ? 'text-destructive'
                   : 'text-foreground'
@@ -177,7 +185,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                 href={href}
                 className={`rounded-full px-3 py-1 text-sm font-medium ${
                   isActive
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-muted text-muted-foreground hover:bg-muted'
                 }`}
               >
@@ -190,67 +198,64 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
 
       <Card>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px]">
-            <thead className="border-b bg-muted/50 text-sm text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Invoice</th>
-                <th className="px-4 py-3 text-left font-medium">Customer</th>
-                <th className="px-4 py-3 text-left font-medium">Due Date</th>
-                <th className="px-4 py-3 text-left font-medium">Items</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-right font-medium">Total</th>
-                <th className="px-4 py-3 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm">
+          <Table className="min-w-[720px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Invoice</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Due Date</TableHead>
+                <TableHead>Items</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {invoices.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                <TableRow>
+                  <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
                     No invoices found for this filter.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 invoices.map((invoice) => {
                   const lineCount = parseLineCount(invoice.lines)
                   return (
-                    <tr key={invoice.id} className="border-b last:border-0">
-                      <td className="px-4 py-4">
+                    <TableRow key={invoice.id}>
+                      <TableCell>
                         <div>
                           <p className="font-medium text-foreground">{invoice.number}</p>
                           <p className="text-xs text-muted-foreground">
                             Created {invoice.createdAt.toLocaleDateString()}
                           </p>
                         </div>
-                      </td>
-                      <td className="px-4 py-4 text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {invoice.customerId || '—'}
-                      </td>
-                      <td className="px-4 py-4 text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {invoice.dueDate.toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-4 text-muted-foreground">{lineCount}</td>
-                      <td className="px-4 py-4">
-                        <Badge className={statusClasses[invoice.status] || 'bg-muted text-muted-foreground'}>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{lineCount}</TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariants[invoice.status] || 'outline'}>
                           {invoice.status}
                         </Badge>
-                      </td>
-                      <td className="px-4 py-4 text-right font-semibold text-foreground">
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-foreground">
                         {formatPrice(Number(invoice.total || 0))}
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <Link
-                          href={`/admin/invoices/${invoice.id}`}
-                          className="text-sm font-medium text-blue-600 hover:underline"
-                        >
-                          View
-                        </Link>
-                      </td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="link" size="sm" asChild className="h-auto p-0">
+                          <Link href={`/admin/invoices/${invoice.id}`}>View</Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   )
                 })
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {totalPages > 1 && (
@@ -266,7 +271,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                 className={`rounded-md border px-3 py-1 ${
                   page === 1
                     ? 'pointer-events-none border-border text-muted-foreground/60'
-                    : 'border-border text-muted-foreground hover:border-blue-300 hover:text-blue-600'
+                    : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
                 }`}
               >
                 Previous
@@ -278,7 +283,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                 className={`rounded-md border px-3 py-1 ${
                   page === totalPages
                     ? 'pointer-events-none border-border text-muted-foreground/60'
-                    : 'border-border text-muted-foreground hover:border-blue-300 hover:text-blue-600'
+                    : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
                 }`}
               >
                 Next

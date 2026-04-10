@@ -138,7 +138,7 @@ export default async function CommunicationsPage() {
               </p>
             </div>
             <div className="rounded-full bg-emerald-100 p-3">
-              <Mail className="h-6 w-6 text-emerald-600" />
+              <Mail className="h-6 w-6 text-primary" />
             </div>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
@@ -270,11 +270,11 @@ export default async function CommunicationsPage() {
               </Link>
             )}
             {canReply ? (
-              <p className="rounded-md bg-emerald-50 px-4 py-3 text-xs text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+              <p className="rounded-md bg-primary/5 px-4 py-3 text-xs text-primary dark:bg-emerald-950/40 dark:text-emerald-300">
                 You have reply access. Respond directly to customer inquiries.
               </p>
             ) : (
-              <p className="rounded-md bg-amber-50 px-4 py-3 text-xs text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+              <p className="rounded-md bg-muted/50 px-4 py-3 text-xs text-muted-foreground dark:bg-amber-950/40 dark:text-amber-300">
                 You have read-only access. Contact an admin to send replies.
               </p>
             )}

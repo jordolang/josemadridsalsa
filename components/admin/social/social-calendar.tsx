@@ -19,15 +19,15 @@ const PLATFORM_ICONS: Record<SocialMediaPlatform, React.ElementType> = {
 
 const STATUS_COLORS: Record<SocialMediaPostStatus, string> = {
   DRAFT: 'bg-muted-foreground',
-  SCHEDULED: 'bg-blue-500',
+  SCHEDULED: 'bg-primary',
   PUBLISHED: 'bg-emerald-500',
   FAILED: 'bg-destructive',
 }
 
 const STATUS_BG: Record<SocialMediaPostStatus, string> = {
   DRAFT: 'border-border bg-muted/50',
-  SCHEDULED: 'border-blue-200 bg-blue-50',
-  PUBLISHED: 'border-emerald-200 bg-emerald-50',
+  SCHEDULED: 'border-border bg-primary/5',
+  PUBLISHED: 'border-border bg-primary/5',
   FAILED: 'border-destructive/30 bg-destructive/10',
 }
 
@@ -160,15 +160,15 @@ export function SocialCalendar({ posts, onNavigate }: Props) {
                   type="button"
                   onClick={() => setSelectedDate(day.dateStr)}
                   className={cn(
-                    'relative min-h-[80px] border-b border-r p-1.5 text-left transition hover:bg-muted/50',
-                    !day.isCurrentMonth && 'bg-muted/50/50 text-muted-foreground',
-                    isSelected && 'ring-2 ring-inset ring-salsa-500',
+                    'relative min-h-[80px] border-b border-r border-border p-1.5 text-left transition hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                    !day.isCurrentMonth && 'bg-muted/30 text-muted-foreground',
+                    isSelected && 'ring-2 ring-inset ring-primary',
                   )}
                 >
                   <span
                     className={cn(
                       'inline-flex h-6 w-6 items-center justify-center rounded-full text-xs',
-                      day.isToday && 'bg-salsa-500 font-bold text-white',
+                      day.isToday && 'bg-primary font-bold text-primary-foreground',
                       !day.isToday && day.isCurrentMonth && 'text-foreground',
                     )}
                   >
@@ -234,8 +234,8 @@ export function SocialCalendar({ posts, onNavigate }: Props) {
                       <Badge
                         className={cn(
                           'text-[10px]',
-                          post.status === 'PUBLISHED' && 'bg-emerald-100 text-emerald-700',
-                          post.status === 'SCHEDULED' && 'bg-blue-100 text-blue-700',
+                          post.status === 'PUBLISHED' && 'bg-primary/10 text-primary',
+                          post.status === 'SCHEDULED' && 'bg-primary/10 text-primary',
                           post.status === 'DRAFT' && 'bg-muted text-muted-foreground',
                           post.status === 'FAILED' && 'bg-destructive/10 text-destructive',
                         )}

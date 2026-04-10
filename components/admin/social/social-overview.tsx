@@ -5,6 +5,14 @@ import type { SocialMediaPlatform, SocialMediaPostStatus } from '@prisma/client'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import type { SocialAccountInfo, DashboardTab } from '@/types/social'
 
@@ -17,11 +25,11 @@ const PLATFORM_ICONS: Record<SocialMediaPlatform, React.ElementType> = {
 }
 
 const PLATFORM_COLORS: Record<SocialMediaPlatform, { bg: string; text: string; border: string }> = {
-  FACEBOOK: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200' },
+  FACEBOOK: { bg: 'bg-primary/5', text: 'text-primary', border: 'border-border' },
   INSTAGRAM: { bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-200' },
   TWITTER: { bg: 'bg-muted/50', text: 'text-foreground', border: 'border-border' },
   TIKTOK: { bg: 'bg-muted/50', text: 'text-foreground', border: 'border-border' },
-  GOOGLE_MY_BUSINESS: { bg: 'bg-blue-50', text: 'text-blue-500', border: 'border-blue-200' },
+  GOOGLE_MY_BUSINESS: { bg: 'bg-primary/5', text: 'text-primary', border: 'border-border' },
 }
 
 const PLATFORM_LABELS: Record<SocialMediaPlatform, string> = {
@@ -34,8 +42,8 @@ const PLATFORM_LABELS: Record<SocialMediaPlatform, string> = {
 
 const STATUS_CONFIG: Record<SocialMediaPostStatus, { icon: React.ElementType; color: string; label: string }> = {
   DRAFT: { icon: FileText, color: 'text-muted-foreground', label: 'Drafts' },
-  SCHEDULED: { icon: Clock, color: 'text-blue-500', label: 'Scheduled' },
-  PUBLISHED: { icon: CheckCircle2, color: 'text-emerald-500', label: 'Published' },
+  SCHEDULED: { icon: Clock, color: 'text-primary', label: 'Scheduled' },
+  PUBLISHED: { icon: CheckCircle2, color: 'text-primary', label: 'Published' },
   FAILED: { icon: AlertCircle, color: 'text-destructive', label: 'Failed' },
 }
 
@@ -182,7 +190,7 @@ export function SocialOverview({
                   key={post.id}
                   className="flex items-start gap-3 rounded-lg border border-border bg-muted/50/50 p-3"
                 >
-                  <div className="rounded-lg bg-blue-100 p-2 text-blue-600">
+                  <div className="rounded-lg bg-blue-100 p-2 text-primary">
                     <Clock className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -244,7 +252,7 @@ export function SocialOverview({
                       </div>
                       <div className="h-2 overflow-hidden rounded-full bg-muted">
                         <div
-                          className="h-full rounded-full bg-salsa-500 transition-all"
+                          className="h-full rounded-full bg-primary transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -269,68 +277,68 @@ export function SocialOverview({
           </Button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px]">
-            <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3 text-left font-medium">Content</th>
-                <th className="px-5 py-3 text-left font-medium">Platforms</th>
-                <th className="px-5 py-3 text-left font-medium">Status</th>
-                <th className="px-5 py-3 text-left font-medium">Date</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm">
+          <Table className="min-w-[640px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Content</TableHead>
+                <TableHead>Platforms</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {recentPosts.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-5 py-12 text-center text-muted-foreground">
+                <TableRow>
+                  <TableCell colSpan={4} className="py-12 text-center text-muted-foreground">
                     No posts created yet. Start composing!
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
-                recentPosts.slice(0, 10).map((post) => (
-                  <tr key={post.id} className="border-b last:border-0 hover:bg-muted/50/50">
-                    <td className="max-w-xs px-5 py-3">
-                      <p className="line-clamp-2 text-foreground">{post.content}</p>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex gap-1">
-                        {post.platforms.map((p) => {
-                          const PIcon = PLATFORM_ICONS[p]
-                          return (
-                            <span
-                              key={p}
-                              className={cn('rounded-md p-1.5', PLATFORM_COLORS[p].bg, PLATFORM_COLORS[p].text)}
-                              title={PLATFORM_LABELS[p]}
-                            >
-                              <PIcon className="h-3.5 w-3.5" />
-                            </span>
-                          )
-                        })}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <Badge
-                        className={cn(
-                          'text-xs',
-                          post.status === 'PUBLISHED' && 'bg-emerald-100 text-emerald-700',
-                          post.status === 'SCHEDULED' && 'bg-blue-100 text-blue-700',
-                          post.status === 'DRAFT' && 'bg-muted text-muted-foreground',
-                          post.status === 'FAILED' && 'bg-destructive/10 text-destructive',
+                recentPosts.slice(0, 10).map((post) => {
+                  const statusVariant: 'default' | 'secondary' | 'outline' | 'destructive' =
+                    post.status === 'PUBLISHED'
+                      ? 'default'
+                      : post.status === 'SCHEDULED'
+                        ? 'secondary'
+                        : post.status === 'FAILED'
+                          ? 'destructive'
+                          : 'outline'
+                  return (
+                    <TableRow key={post.id}>
+                      <TableCell className="max-w-xs">
+                        <p className="line-clamp-2 text-foreground">{post.content}</p>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {post.platforms.map((p) => {
+                            const PIcon = PLATFORM_ICONS[p]
+                            return (
+                              <span
+                                key={p}
+                                className={cn('rounded-md p-1.5', PLATFORM_COLORS[p].bg, PLATFORM_COLORS[p].text)}
+                                title={PLATFORM_LABELS[p]}
+                              >
+                                <PIcon className="h-3.5 w-3.5" />
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant}>{post.status}</Badge>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {new Date(post.publishedAt || post.scheduledAt || post.createdAt).toLocaleDateString(
+                          undefined,
+                          { month: 'short', day: 'numeric', year: 'numeric' },
                         )}
-                      >
-                        {post.status}
-                      </Badge>
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3 text-muted-foreground">
-                      {new Date(post.publishedAt || post.scheduledAt || post.createdAt).toLocaleDateString(
-                        undefined,
-                        { month: 'short', day: 'numeric', year: 'numeric' },
-                      )}
-                    </td>
-                  </tr>
-                ))
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </Card>
     </div>

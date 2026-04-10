@@ -85,8 +85,8 @@ async function getFundraiserWithStats(fundraiserId: string) {
 
 const statusColors: Record<FundraiserStatus, string> = {
   DRAFT: 'bg-muted text-foreground',
-  ACTIVE: 'bg-green-100 text-green-800',
-  ENDED: 'bg-blue-100 text-blue-800',
+  ACTIVE: 'bg-primary/10 text-primary',
+  ENDED: 'bg-primary/10 text-primary',
   CANCELLED: 'bg-destructive/10 text-destructive',
 }
 
@@ -205,7 +205,7 @@ export default async function FundraiserDetailPage({
           title="Total Revenue"
           value={`$${Number(fundraiser.totalRevenue).toFixed(2)}`}
           icon={DollarSign}
-          iconColor="text-green-600"
+          iconColor="text-primary"
           borderColor="border-l-green-500"
           progress={fundraiser.goal ? goalProgress : undefined}
           progressLabel={fundraiser.goal ? `${goalProgress.toFixed(1)}% to $${Number(fundraiser.goal).toFixed(2)} goal` : undefined}
@@ -214,7 +214,7 @@ export default async function FundraiserDetailPage({
           title="Total Commission"
           value={`$${Number(fundraiser.totalCommission).toFixed(2)}`}
           icon={TrendingUp}
-          iconColor="text-blue-600"
+          iconColor="text-primary"
           borderColor="border-l-blue-500"
         />
         <CampaignStatsCard
@@ -264,12 +264,12 @@ export default async function FundraiserDetailPage({
         <Card className="border-l-4 border-l-amber-500">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-amber-600" />
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
               Commission Rate
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
+            <div className="text-2xl font-bold text-muted-foreground">
               {Number(fundraiser.commissionRate)}%
             </div>
           </CardContent>
@@ -460,7 +460,7 @@ export default async function FundraiserDetailPage({
                       className={`flex items-center justify-between rounded-lg border p-4 ${
                         index === 0 ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20' :
                         index === 1 ? 'bg-muted/50 border-border' :
-                        index === 2 ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20' :
+                        index === 2 ? 'bg-muted/50 border-border dark:bg-amber-950/20' :
                         ''
                       }`}
                     >
@@ -479,7 +479,7 @@ export default async function FundraiserDetailPage({
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-bold text-green-600">
+                        <p className="text-xl font-bold text-primary">
                           ${Number(participant.totalRevenue).toFixed(2)}
                         </p>
                         <p className="text-sm text-muted-foreground">

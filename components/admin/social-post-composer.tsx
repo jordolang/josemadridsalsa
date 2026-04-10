@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import type { SocialComposerState, SocialPlatformOption } from '@/types/social'
 
@@ -54,19 +56,19 @@ export function SocialPostComposer({
     <div className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-salsa-500">Composer</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-primary">Composer</p>
           <h2 className="font-serif text-2xl font-semibold text-foreground">Create a social post</h2>
           <p className="text-sm text-muted-foreground">
             Draft once and push to every connected platform. Schedule posts or mark them as published when you launch.
           </p>
         </div>
-        <Badge variant="outline" className="border-salsa-200 text-xs text-salsa-600">
+        <Badge variant="outline" className="border-border text-xs text-primary">
           {connectedPlatforms.length} platform{connectedPlatforms.length === 1 ? '' : 's'} connected
         </Badge>
       </div>
 
       {disconnectedPlatforms.length > 0 ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+        <div className="rounded-xl border border-border bg-muted/50 px-4 py-3 text-xs text-muted-foreground">
           Connect{' '}
           {disconnectedPlatforms
             .map((platform) => platform.label)
@@ -76,7 +78,7 @@ export function SocialPostComposer({
       ) : null}
 
       {state.status === 'success' ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-xl border border-border bg-primary/5 px-4 py-3 text-sm text-primary">
           {state.message}
         </div>
       ) : null}
@@ -92,20 +94,21 @@ export function SocialPostComposer({
           <legend className="text-sm font-medium text-foreground">Select platforms</legend>
           <div className="grid gap-3 md:grid-cols-2">
             {platformOptions.map((platform) => (
-              <label
+              <Label
                 key={platform.value}
+                htmlFor={`platform-${platform.value}`}
                 className={cn(
-                  'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition',
+                  'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 font-normal transition',
                   platform.isConnected
-                    ? 'border-border bg-muted/50 hover:border-salsa-200'
-                    : 'border-amber-200 bg-amber-50/70 hover:border-amber-300',
+                    ? 'border-border bg-muted/50 hover:border-input'
+                    : 'border-border bg-muted/20 hover:border-input',
                 )}
               >
-                <input
-                  type="checkbox"
+                <Checkbox
+                  id={`platform-${platform.value}`}
                   name="platforms"
                   value={platform.value}
-                  className="mt-1 h-4 w-4 rounded border-input text-salsa-600 focus:ring-salsa-500"
+                  className="mt-1"
                   defaultChecked={platform.isConnected}
                 />
                 <div className="space-y-1">
@@ -115,11 +118,9 @@ export function SocialPostComposer({
                       <span className="text-xs text-muted-foreground">{platform.handle}</span>
                     ) : null}
                     {platform.isConnected ? (
-                      <Badge className="bg-emerald-100 text-emerald-700">Connected</Badge>
+                      <Badge>Connected</Badge>
                     ) : (
-                      <Badge variant="outline" className="border-amber-300 text-amber-600">
-                        Connect
-                      </Badge>
+                      <Badge variant="outline">Connect</Badge>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">{platform.description}</p>
@@ -129,7 +130,7 @@ export function SocialPostComposer({
                     </p>
                   ) : null}
                 </div>
-              </label>
+              </Label>
             ))}
           </div>
           {state.fieldErrors?.platforms ? (
@@ -145,7 +146,7 @@ export function SocialPostComposer({
             <p
               className={cn(
                 'text-xs',
-                exceedsTwitterLimit ? 'text-destructive' : charCount > 180 ? 'text-amber-600' : 'text-muted-foreground',
+                exceedsTwitterLimit ? 'text-destructive' : charCount > 180 ? 'text-muted-foreground' : 'text-muted-foreground',
               )}
             >
               {charCount} / {TWITTER_CHAR_LIMIT} for X
@@ -167,17 +168,22 @@ export function SocialPostComposer({
 
         <fieldset className="space-y-3">
           <legend className="text-sm font-medium text-foreground">Scheduling</legend>
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-input text-salsa-600 focus:ring-salsa-500"
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="schedule-enabled"
               checked={scheduleEnabled}
-              onChange={(event) => setScheduleEnabled(event.target.checked)}
+              onCheckedChange={(checked) => setScheduleEnabled(checked === true)}
               disabled={!canSchedule}
             />
-            Enable scheduling
-            {!canSchedule ? <span className="text-xs text-muted-foreground">(requires scheduling permission)</span> : null}
-          </label>
+            <Label htmlFor="schedule-enabled" className="font-normal text-muted-foreground">
+              Enable scheduling
+              {!canSchedule ? (
+                <span className="ml-1 text-xs text-muted-foreground">
+                  (requires scheduling permission)
+                </span>
+              ) : null}
+            </Label>
+          </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="flex-1">
               <Input

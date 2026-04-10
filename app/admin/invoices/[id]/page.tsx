@@ -6,6 +6,14 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { formatPrice } from '@/lib/utils'
 import { logAudit } from '@/lib/audit'
 import Link from 'next/link'
@@ -130,8 +138,8 @@ async function updateInvoiceNotes(invoiceId: string, formData: FormData) {
 
 const statusStyles: Record<string, string> = {
   DRAFT: 'bg-muted text-foreground',
-  SENT: 'bg-blue-100 text-blue-700',
-  PAID: 'bg-emerald-100 text-emerald-700',
+  SENT: 'bg-primary/10 text-primary',
+  PAID: 'bg-primary/10 text-primary',
   OVERDUE: 'bg-destructive/10 text-destructive',
   CANCELLED: 'bg-muted text-muted-foreground',
 }
@@ -219,37 +227,37 @@ export default async function InvoiceDetailPage(props: PageProps) {
             </div>
           ) : (
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[640px]">
-                <thead className="border-b bg-muted/50 text-sm text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium">Description</th>
-                    <th className="px-4 py-3 text-right font-medium">Qty</th>
-                    <th className="px-4 py-3 text-right font-medium">Unit price</th>
-                    <th className="px-4 py-3 text-right font-medium">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm">
+              <Table className="min-w-[640px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Unit price</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {lines.map((line, index) => (
-                    <tr key={`${line.description}-${index}`} className="border-b last:border-0">
-                      <td className="px-4 py-4">
+                    <TableRow key={`${line.description}-${index}`}>
+                      <TableCell>
                         <p className="font-medium text-foreground">{line.description}</p>
                         {line.notes && (
                           <p className="text-xs text-muted-foreground">{line.notes}</p>
                         )}
-                      </td>
-                      <td className="px-4 py-4 text-right text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
                         {line.quantity.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-4 text-right text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
                         {formatPrice(line.unitPrice)}
-                      </td>
-                      <td className="px-4 py-4 text-right font-semibold text-foreground">
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-foreground">
                         {formatPrice(line.total)}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
           <div className="mt-6 flex justify-end border-t pt-4">
@@ -285,7 +293,7 @@ export default async function InvoiceDetailPage(props: PageProps) {
                 {invoice.orderId ? (
                   <Link
                     href={`/admin/orders/${invoice.orderId}`}
-                    className="font-medium text-blue-600 hover:underline"
+                    className="font-medium text-primary hover:underline"
                   >
                     View order
                   </Link>
@@ -329,7 +337,7 @@ export default async function InvoiceDetailPage(props: PageProps) {
             )}
           </div>
           {!canEdit && (
-            <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
+            <p className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
               You have read-only access to invoice records. Contact a finance administrator to make changes.
             </p>
           )}

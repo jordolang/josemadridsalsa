@@ -95,7 +95,7 @@ export function CampaignManager({ campaign }: { campaign: CampaignWithTemplate }
              </div>
              <div className="flex justify-between border-b pb-1">
                <span className="text-muted-foreground">Emails Sent:</span>
-               <span className="font-medium text-green-600">{campaign.totalSent}</span>
+               <span className="font-medium text-primary">{campaign.totalSent}</span>
              </div>
              <div className="flex justify-between pb-1">
                <span className="text-muted-foreground">Emails Failed:</span>

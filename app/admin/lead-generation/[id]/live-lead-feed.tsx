@@ -3,6 +3,14 @@
 import { useScraperStream } from '@/hooks/use-scraper-stream'
 import type { ScraperEvent } from '@/lib/scraper/event-bus'
 import { useCallback, useState } from 'react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 interface Lead {
   id: string
@@ -138,7 +146,7 @@ export function LiveLeadFeed({ campaignId }: LiveLeadFeedProps) {
           </div>
 
           {scraperStatus.active && (
-            <div className="text-sm text-blue-600">{scraperStatus.message}</div>
+            <div className="text-sm text-primary">{scraperStatus.message}</div>
           )}
 
           {error && (
@@ -167,67 +175,53 @@ export function LiveLeadFeed({ campaignId }: LiveLeadFeedProps) {
       {leads.length > 0 && (
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border bg-muted/50">
-                <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-foreground">
-                    School Name
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-foreground">
-                    Contact Name
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-foreground">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-foreground">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-foreground">
-                    Phone
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-foreground">
-                    Sport
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>School Name</TableHead>
+                  <TableHead>Contact Name</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Sport</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {leads.map((lead, index) => (
-                  <tr
+                  <TableRow
                     key={lead.id}
-                    className={`border-b border-border ${
-                      index === 0 ? 'bg-blue-50' : ''
-                    } hover:bg-muted/50`}
+                    className={index === 0 ? 'bg-primary/5' : undefined}
                   >
-                    <td className="px-6 py-3 text-foreground">
+                    <TableCell className="text-foreground">
                       <div className="font-medium">{lead.schoolName}</div>
                       <div className="text-xs text-muted-foreground truncate">
                         {lead.schoolUrl}
                       </div>
-                    </td>
-                    <td className="px-6 py-3 text-foreground">
+                    </TableCell>
+                    <TableCell className="text-foreground">
                       {lead.contactName || '—'}
-                    </td>
-                    <td className="px-6 py-3 text-foreground">{lead.title || '—'}</td>
-                    <td className="px-6 py-3">
+                    </TableCell>
+                    <TableCell className="text-foreground">{lead.title || '—'}</TableCell>
+                    <TableCell>
                       {lead.email ? (
                         <a
                           href={`mailto:${lead.email}`}
-                          className="text-blue-600 hover:underline"
+                          className="text-primary hover:underline"
                         >
                           {lead.email}
                         </a>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
-                    </td>
-                    <td className="px-6 py-3 text-foreground">
+                    </TableCell>
+                    <TableCell className="text-foreground">
                       {lead.phone || '—'}
-                    </td>
-                    <td className="px-6 py-3 text-foreground">{lead.sport || '—'}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-foreground">{lead.sport || '—'}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}

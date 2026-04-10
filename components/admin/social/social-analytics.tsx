@@ -77,10 +77,10 @@ export function SocialAnalytics({ metrics }: Props) {
     : 0
 
   const STAT_CARDS = [
-    { label: 'Total Posts', value: totals.posts, icon: BarChart3, color: 'text-salsa-500' },
-    { label: 'Total Reach', value: formatNumber(totals.reach), icon: Users, color: 'text-blue-500' },
+    { label: 'Total Posts', value: totals.posts, icon: BarChart3, color: 'text-primary' },
+    { label: 'Total Reach', value: formatNumber(totals.reach), icon: Users, color: 'text-primary' },
     { label: 'Impressions', value: formatNumber(totals.impressions), icon: Eye, color: 'text-purple-500' },
-    { label: 'Engagement', value: `${overallEngagement.toFixed(1)}%`, icon: TrendingUp, color: 'text-emerald-500' },
+    { label: 'Engagement', value: `${overallEngagement.toFixed(1)}%`, icon: TrendingUp, color: 'text-primary' },
     { label: 'Likes', value: formatNumber(totals.likes), icon: Heart, color: 'text-destructive' },
     { label: 'Comments', value: formatNumber(totals.comments), icon: MessageCircle, color: 'text-amber-500' },
     { label: 'Shares', value: formatNumber(totals.shares), icon: Share2, color: 'text-indigo-500' },
@@ -210,9 +210,9 @@ function MetricCell({
   highlight?: boolean
 }) {
   return (
-    <div className={cn('bg-card p-3 text-center', highlight && 'bg-emerald-50')}>
+    <div className={cn('bg-card p-3 text-center', highlight && 'bg-primary/5')}>
       <Icon className="mx-auto h-4 w-4 text-muted-foreground" />
-      <p className={cn('mt-1 text-lg font-bold', highlight ? 'text-emerald-700' : 'text-foreground')}>{value}</p>
+      <p className={cn('mt-1 text-lg font-bold', highlight ? 'text-primary' : 'text-foreground')}>{value}</p>
       <p className="text-[10px] text-muted-foreground">{label}</p>
     </div>
   )

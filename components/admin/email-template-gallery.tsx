@@ -66,23 +66,23 @@ export function EmailTemplateGallery({ templates, blocks }: EmailTemplateGallery
                 type="button"
                 onClick={() => setSelectedTemplateId(template.id)}
                 className={cn(
-                  'w-full rounded-xl border px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-salsa-500',
+                  'w-full rounded-xl border px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   isActive
-                    ? 'border-salsa-200 bg-salsa-50'
-                    : 'border-border bg-card hover:border-salsa-200 hover:bg-salsa-50/40',
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border bg-card hover:border-input hover:bg-muted/50',
                 )}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-medium text-foreground">{template.name}</p>
                   <div className="flex flex-wrap gap-1">
                     {template.tags.map((tag) => (
-                      <Badge key={`${template.id}-${tag}`} variant="outline" className="border-salsa-200 text-xs text-salsa-600">
+                      <Badge key={`${template.id}-${tag}`} variant="outline" className="text-xs">
                         {tag}
                       </Badge>
                     ))}
                   </div>
                 </div>
-                <p className="mt-1 text-xs uppercase tracking-wide text-salsa-500">{template.subject}</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">{template.subject}</p>
                 <p className="mt-2 text-sm text-muted-foreground">{template.description}</p>
               </button>
             )
@@ -95,7 +95,7 @@ export function EmailTemplateGallery({ templates, blocks }: EmailTemplateGallery
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-salsa-500">Preview</p>
+                <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Preview</p>
                 <h3 className="font-serif text-2xl font-semibold text-foreground">{selectedTemplate.name}</h3>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -129,7 +129,7 @@ export function EmailTemplateGallery({ templates, blocks }: EmailTemplateGallery
               <div key={block.id} className="rounded-xl border border-border bg-muted/50 p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-foreground">{block.label}</p>
-                  <Badge variant="outline" className="border-salsa-200 text-xs capitalize text-salsa-600">
+                  <Badge variant="outline" className="border-border text-xs capitalize text-primary">
                     {block.category}
                   </Badge>
                 </div>
@@ -137,7 +137,7 @@ export function EmailTemplateGallery({ templates, blocks }: EmailTemplateGallery
                 <Button
                   variant="link"
                   size="sm"
-                  className="mt-2 px-0 text-salsa-600"
+                  className="mt-2 px-0"
                   onClick={() => navigator.clipboard?.writeText(block.html).catch(() => undefined)}
                 >
                   Copy block markup

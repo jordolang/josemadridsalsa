@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { MessageSquare, Users, Clock, TrendingUp, AlertTriangle } from 'lucide-react'
 
 interface AIChatMetrics {
@@ -97,17 +98,14 @@ export function AIChatStats() {
         <h2 className="text-xl font-semibold">AI Chat Analytics</h2>
         <div className="flex gap-2">
           {[7, 30, 90].map((d) => (
-            <button
+            <Button
               key={d}
+              size="sm"
+              variant={days === d ? 'default' : 'outline'}
               onClick={() => setDays(d)}
-              className={`px-3 py-1 text-sm rounded ${
-                days === d
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-muted text-foreground hover:bg-muted'
-              }`}
             >
               {d} days
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -116,7 +114,7 @@ export function AIChatStats() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <MessageSquare className="h-8 w-8 text-blue-600" />
+            <MessageSquare className="h-8 w-8 text-primary" />
             <div>
               <p className="text-sm text-muted-foreground">Total Requests</p>
               <p className="text-2xl font-bold">{stats.aiChat.totalRequests}</p>
@@ -130,13 +128,13 @@ export function AIChatStats() {
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <TrendingUp
-              className={`h-8 w-8 ${successRate >= 95 ? 'text-green-600' : 'text-yellow-600'}`}
+              className={`h-8 w-8 ${successRate >= 95 ? 'text-primary' : 'text-yellow-600'}`}
             />
             <div>
               <p className="text-sm text-muted-foreground">Success Rate</p>
               <p className="text-2xl font-bold">{successRate}%</p>
               <div className="flex gap-1 text-xs">
-                <Badge variant="outline" className="text-green-700 border-green-300">
+                <Badge variant="outline" className="text-primary border-border">
                   {stats.aiChat.successfulRequests} ✓
                 </Badge>
                 <Badge variant="outline" className="text-destructive border-destructive/30">

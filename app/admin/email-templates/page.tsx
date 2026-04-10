@@ -13,7 +13,7 @@ export default function AdminEmailTemplatesPage() {
   return (
     <div className="space-y-8">
       <header className="space-y-3">
-        <p className="text-xs uppercase tracking-[0.35em] text-salsa-500">Email studio</p>
+        <p className="text-xs uppercase tracking-[0.35em] text-primary">Email studio</p>
         <h1 className="text-3xl font-serif font-semibold text-foreground">Newsletter templates</h1>
         <p className="text-sm text-muted-foreground max-w-2xl">
           Export ready-to-send HTML newsletters or assemble your own using drag-and-drop friendly blocks. Templates

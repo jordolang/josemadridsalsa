@@ -90,7 +90,7 @@ export function InventoryAlertWidget({ items }: InventoryAlertWidgetProps) {
                   </div>
                   <span
                     className={`text-xs font-semibold ${
-                      isCritical ? 'text-destructive' : 'text-amber-600 dark:text-amber-400'
+                      isCritical ? 'text-destructive' : 'text-muted-foreground dark:text-muted-foreground'
                     }`}
                   >
                     {item.stock} left

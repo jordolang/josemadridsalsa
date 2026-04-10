@@ -71,13 +71,13 @@ export function SalesOverview({ data, loading }: SalesOverviewProps) {
           </div>
           <div className="flex items-center gap-2">
             {isPositive ? (
-              <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <TrendingUp className="h-5 w-5 text-primary dark:text-emerald-400" />
             ) : (
               <TrendingDown className="h-5 w-5 text-destructive" />
             )}
             <span
               className={`text-sm font-medium ${
-                isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'
+                isPositive ? 'text-primary dark:text-emerald-400' : 'text-destructive'
               }`}
             >
               {isPositive ? '+' : ''}

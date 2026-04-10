@@ -4,6 +4,14 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useState, useTransition } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 
 interface UsersFilterProps {
   initialSearch?: string
@@ -15,14 +23,14 @@ export function UsersFilter({ initialSearch = '', initialRole = 'all' }: UsersFi
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
-  
+
   const [search, setSearch] = useState(initialSearch)
   const [role, setRole] = useState(initialRole)
 
   const handleSearch = useCallback(
     (newSearch: string, newRole: string) => {
       const params = new URLSearchParams(searchParams.toString())
-      
+
       if (newSearch) {
         params.set('search', newSearch)
       } else {
@@ -42,13 +50,18 @@ export function UsersFilter({ initialSearch = '', initialRole = 'all' }: UsersFi
         router.push(`${pathname}?${params.toString()}`)
       })
     },
-    [pathname, router, searchParams]
+    [pathname, router, searchParams],
   )
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <div className="relative">
-        <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground ${isPending ? 'opacity-50' : ''}`} />
+        <Search
+          className={cn(
+            'absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground',
+            isPending && 'opacity-50',
+          )}
+        />
         <Input
           type="search"
           placeholder="Search users..."
@@ -60,23 +73,27 @@ export function UsersFilter({ initialSearch = '', initialRole = 'all' }: UsersFi
           className="pl-9"
         />
       </div>
-      <select
-        className="rounded-md border border-input px-3 py-2 text-sm bg-background text-foreground"
+      <Select
         value={role}
-        onChange={(e) => {
-          setRole(e.target.value)
-          handleSearch(search, e.target.value)
+        onValueChange={(value) => {
+          setRole(value)
+          handleSearch(search, value)
         }}
         disabled={isPending}
       >
-        <option value="all">All Roles</option>
-        <option value="CUSTOMER">Customer</option>
-        <option value="WHOLESALE">Wholesale</option>
-        <option value="STAFF">Staff</option>
-        <option value="ADMIN">Admin</option>
-        <option value="DEVELOPER">Developer</option>
-        <option value="FUNDRAISER">Fundraiser</option>
-      </select>
+        <SelectTrigger>
+          <SelectValue placeholder="All Roles" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Roles</SelectItem>
+          <SelectItem value="CUSTOMER">Customer</SelectItem>
+          <SelectItem value="WHOLESALE">Wholesale</SelectItem>
+          <SelectItem value="STAFF">Staff</SelectItem>
+          <SelectItem value="ADMIN">Admin</SelectItem>
+          <SelectItem value="DEVELOPER">Developer</SelectItem>
+          <SelectItem value="FUNDRAISER">Fundraiser</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   )
 }

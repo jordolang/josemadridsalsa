@@ -24,6 +24,22 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { RevenueChart } from '@/components/admin/RevenueChart'
 import { PopularProducts } from '@/components/admin/PopularProducts'
@@ -711,7 +727,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           <p>
             <span className="font-semibold text-foreground">Service account:</span>{' '}
             {serviceAccountConfigured ? (
-              <span className="text-emerald-700">Connected</span>
+              <span className="text-primary">Connected</span>
             ) : (
               <span>
                 Missing — add <code className="rounded bg-muted px-1">google_analytics / service_account</code> in{' '}
@@ -729,7 +745,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
       </Card>
 
       {gaDashboard.status !== 'ready' && gaDashboard.message && (
-        <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+        <Alert className="border-border bg-muted/50 text-foreground">
           <AlertTriangle className="h-5 w-5" />
           <AlertTitle>Google Analytics setup</AlertTitle>
           <AlertDescription>{gaDashboard.message}</AlertDescription>
@@ -835,78 +851,62 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 <Input id="description" name="description" placeholder="Visible to admins only" />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="metric" className="text-sm font-medium text-foreground">
-                  Metric
-                </label>
-                <select
-                  id="metric"
-                  name="metric"
-                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
-                  required
-                  defaultValue=""
-                >
-                  <option value="" disabled>
-                    Select a metric
-                  </option>
-                  {GOOGLE_ANALYTICS_METRIC_OPTIONS.map((metric) => (
-                    <option key={metric.value} value={metric.value}>
-                      {metric.label}
-                    </option>
-                  ))}
-                </select>
+                <Label htmlFor="metric">Metric</Label>
+                <Select name="metric" required>
+                  <SelectTrigger id="metric">
+                    <SelectValue placeholder="Select a metric" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GOOGLE_ANALYTICS_METRIC_OPTIONS.map((metric) => (
+                      <SelectItem key={metric.value} value={metric.value}>
+                        {metric.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="dimension" className="text-sm font-medium text-foreground">
-                  Dimension
-                </label>
-                <select
-                  id="dimension"
-                  name="dimension"
-                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
-                  required
-                  defaultValue=""
-                >
-                  <option value="" disabled>
-                    Select a dimension
-                  </option>
-                  {GOOGLE_ANALYTICS_DIMENSION_OPTIONS.map((dimension) => (
-                    <option key={dimension.value} value={dimension.value}>
-                      {dimension.label}
-                    </option>
-                  ))}
-                </select>
+                <Label htmlFor="dimension">Dimension</Label>
+                <Select name="dimension" required>
+                  <SelectTrigger id="dimension">
+                    <SelectValue placeholder="Select a dimension" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GOOGLE_ANALYTICS_DIMENSION_OPTIONS.map((dimension) => (
+                      <SelectItem key={dimension.value} value={dimension.value}>
+                        {dimension.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="chartType" className="text-sm font-medium text-foreground">
-                  Chart type
-                </label>
-                <select
-                  id="chartType"
-                  name="chartType"
-                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
-                  defaultValue="line"
-                >
-                  <option value="line">Line</option>
-                  <option value="bar">Bar</option>
-                  <option value="pie">Pie</option>
-                </select>
+                <Label htmlFor="chartType">Chart type</Label>
+                <Select name="chartType" defaultValue="line">
+                  <SelectTrigger id="chartType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="line">Line</SelectItem>
+                    <SelectItem value="bar">Bar</SelectItem>
+                    <SelectItem value="pie">Pie</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="color" className="text-sm font-medium text-foreground">
-                  Color theme
-                </label>
-                <select
-                  id="color"
-                  name="color"
-                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
-                  defaultValue="indigo"
-                >
-                  {GOOGLE_ANALYTICS_CHART_COLORS.map((color) => (
-                    <option key={color.value} value={color.value}>
-                      {color.label}
-                    </option>
-                  ))}
-                </select>
+                <Label htmlFor="color">Color theme</Label>
+                <Select name="color" defaultValue="indigo">
+                  <SelectTrigger id="color">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GOOGLE_ANALYTICS_CHART_COLORS.map((color) => (
+                      <SelectItem key={color.value} value={color.value}>
+                        {color.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="limit" className="text-sm font-medium text-foreground">
@@ -978,34 +978,34 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[480px]">
-                <thead className="border-b bg-muted text-sm text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-2 text-left font-medium">Date</th>
-                    <th className="px-4 py-2 text-left font-medium">Orders</th>
-                    <th className="px-4 py-2 text-left font-medium">Revenue</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm">
+              <Table className="min-w-[480px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Orders</TableHead>
+                    <TableHead>Revenue</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {data.chart.map((point) => (
-                    <tr key={point.date} className="border-b last:border-0">
-                      <td className="px-4 py-3 text-foreground">{point.label}</td>
-                      <td className="px-4 py-3">
+                    <TableRow key={point.date}>
+                      <TableCell className="text-foreground">{point.label}</TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="w-32 rounded-full bg-muted">
                             <div
-                              className="h-2 rounded-full bg-blue-500 transition-all"
+                              className="h-2 rounded-full bg-primary transition-all"
                               style={{ width: getBarWidth(point.orders, maxOrders) }}
                             />
                           </div>
                           <span className="font-medium text-foreground">{point.orders}</span>
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="w-32 rounded-full bg-muted">
                             <div
-                              className="h-2 rounded-full bg-emerald-500 transition-all"
+                              className="h-2 rounded-full bg-primary transition-all"
                               style={{ width: getBarWidth(point.revenue, maxRevenue) }}
                             />
                           </div>
@@ -1013,11 +1013,11 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                             {formatPrice(point.revenue)}
                           </span>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </Card>
@@ -1094,32 +1094,32 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
             </div>
           ) : (
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[480px]">
-                <thead className="border-b bg-muted text-sm text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-2 text-left font-medium">Product</th>
-                    <th className="px-4 py-2 text-right font-medium">Orders</th>
-                    <th className="px-4 py-2 text-right font-medium">Units</th>
-                    <th className="px-4 py-2 text-right font-medium">Revenue</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm">
+              <Table className="min-w-[480px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead className="text-right">Orders</TableHead>
+                    <TableHead className="text-right">Units</TableHead>
+                    <TableHead className="text-right">Revenue</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {data.topProducts.map((product) => (
-                    <tr key={product.productId} className="border-b last:border-0">
-                      <td className="px-4 py-3 font-medium text-foreground">{product.name}</td>
-                      <td className="px-4 py-3 text-right text-foreground">
+                    <TableRow key={product.productId}>
+                      <TableCell className="font-medium text-foreground">{product.name}</TableCell>
+                      <TableCell className="text-right text-foreground">
                         {product.orders.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-right text-foreground">
+                      </TableCell>
+                      <TableCell className="text-right text-foreground">
                         {product.quantity.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-foreground">
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-foreground">
                         {formatPrice(product.revenue)}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </Card>
@@ -1224,28 +1224,28 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[480px]">
-              <thead className="border-b bg-muted text-sm text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-2 text-left font-medium">Type</th>
-                  <th className="px-4 py-2 text-left font-medium">Page</th>
-                  <th className="px-4 py-2 text-left font-medium">Action</th>
-                  <th className="px-4 py-2 text-left font-medium">Timestamp</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
+            <Table className="min-w-[480px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Page</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Timestamp</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {data.recentEvents.map((event) => (
-                  <tr key={event.id} className="border-b last:border-0">
-                    <td className="px-4 py-3 font-medium text-foreground">{event.type}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{event.page || '—'}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{event.action || '—'}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                  <TableRow key={event.id}>
+                    <TableCell className="font-medium text-foreground">{event.type}</TableCell>
+                    <TableCell className="text-muted-foreground">{event.page || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">{event.action || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">
                       {event.createdAt.toLocaleString()}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </Card>

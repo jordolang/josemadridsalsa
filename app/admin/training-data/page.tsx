@@ -6,6 +6,14 @@ import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { TrainingUploadForm } from './_components/training-upload-form'
 import { UrlScrapeForm } from './_components/url-scrape-form'
 
@@ -22,31 +30,35 @@ type TrainingStats = Record<TrainingDocumentStatus, number> & {
 
 const STATUS_META: Record<
   TrainingDocumentStatus,
-  { label: string; badgeClass: string; description: string }
+  {
+    label: string
+    variant: 'default' | 'secondary' | 'outline' | 'destructive'
+    description: string
+  }
 > = {
   PROCESSING: {
     label: 'Processing',
-    badgeClass: 'bg-blue-50 text-blue-700 border border-blue-200',
+    variant: 'secondary',
     description: 'Queued for ingestion',
   },
   READY: {
     label: 'Ready',
-    badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    variant: 'default',
     description: 'Available to the AI assistant',
   },
   NEEDS_REVIEW: {
     label: 'Needs review',
-    badgeClass: 'bg-amber-50 text-amber-700 border border-amber-200',
+    variant: 'outline',
     description: 'Text extracted but should be double-checked',
   },
   FAILED: {
     label: 'Failed',
-    badgeClass: 'bg-destructive/10 text-destructive border border-destructive/30',
+    variant: 'destructive',
     description: 'Extraction failed. Try again or convert the file.',
   },
   UNSUPPORTED: {
     label: 'Unsupported',
-    badgeClass: 'bg-muted text-muted-foreground border border-border',
+    variant: 'outline',
     description: 'Format requires OCR or manual transcription',
   },
 }
@@ -194,67 +206,67 @@ export default async function TrainingDataPage() {
             </div>
           ) : (
             <div className="mt-6 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <th className="pb-3">Title</th>
-                    <th className="pb-3">Source</th>
-                    <th className="pb-3">Status</th>
-                    <th className="pb-3">Size</th>
-                    <th className="pb-3">Added</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Size</TableHead>
+                    <TableHead>Added</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {documents.map((doc) => (
-                      <tr key={doc.id} className="align-top">
-                        <td className="py-4">
-                          <p className="font-medium">{doc.title}</p>
+                    <TableRow key={doc.id} className="align-top">
+                      <TableCell>
+                        <p className="font-medium">{doc.title}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {summarizeContent(doc.content)}
+                        </p>
+                        {Array.isArray(doc.warnings) && doc.warnings.length > 0 && (
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {summarizeContent(doc.content)}
+                            Warnings: {doc.warnings.join('; ')}
                           </p>
-                          {Array.isArray(doc.warnings) && doc.warnings.length > 0 && (
-                            <p className="mt-1 text-xs text-amber-600">
-                              Warnings: {doc.warnings.join('; ')}
-                            </p>
-                          )}
-                          {doc.notes && (
-                            <p className="mt-1 text-xs text-muted-foreground">Notes: {doc.notes}</p>
-                          )}
-                        </td>
-                        <td className="py-4">
-                          <Badge variant="outline">
-                            {SOURCE_LABELS[doc.sourceType]}
-                          </Badge>
-                          {doc.url && (
-                            <p className="mt-1 truncate text-xs text-muted-foreground max-w-xs">
-                              {doc.url}
-                            </p>
-                          )}
-                          {doc.fileName && (
-                            <p className="mt-1 text-xs text-muted-foreground">{doc.fileName}</p>
-                          )}
-                        </td>
-                        <td className="py-4">
-                          <div className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${STATUS_META[doc.status].badgeClass}`}>
-                            {STATUS_META[doc.status].label}
-                          </div>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {STATUS_META[doc.status].description}
+                        )}
+                        {doc.notes && (
+                          <p className="mt-1 text-xs text-muted-foreground">Notes: {doc.notes}</p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {SOURCE_LABELS[doc.sourceType]}
+                        </Badge>
+                        {doc.url && (
+                          <p className="mt-1 max-w-xs truncate text-xs text-muted-foreground">
+                            {doc.url}
                           </p>
-                        </td>
-                        <td className="py-4">{formatBytes(doc.fileSize)}</td>
-                        <td className="py-4">
-                          <p>{formatDate(doc.createdAt)}</p>
-                          {doc.ingestedAt && (
-                            <p className="text-xs text-muted-foreground">
-                              Ready {formatDate(doc.ingestedAt)}
-                            </p>
-                          )}
-                        </td>
-                      </tr>
+                        )}
+                        {doc.fileName && (
+                          <p className="mt-1 text-xs text-muted-foreground">{doc.fileName}</p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={STATUS_META[doc.status].variant}>
+                          {STATUS_META[doc.status].label}
+                        </Badge>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {STATUS_META[doc.status].description}
+                        </p>
+                      </TableCell>
+                      <TableCell>{formatBytes(doc.fileSize)}</TableCell>
+                      <TableCell>
+                        <p>{formatDate(doc.createdAt)}</p>
+                        {doc.ingestedAt && (
+                          <p className="text-xs text-muted-foreground">
+                            Ready {formatDate(doc.ingestedAt)}
+                          </p>
+                        )}
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </div>

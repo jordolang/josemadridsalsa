@@ -27,6 +27,9 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
 import type { SocialComposerState, SocialAccountInfo } from '@/types/social'
 import { PLATFORM_CONFIGS } from '@/types/social'
@@ -40,11 +43,11 @@ const PLATFORM_ICONS: Record<SocialMediaPlatform, React.ElementType> = {
 }
 
 const PLATFORM_COLORS: Record<SocialMediaPlatform, string> = {
-  FACEBOOK: 'border-blue-400 bg-blue-50 text-blue-700',
+  FACEBOOK: 'border-primary bg-primary/5 text-primary',
   INSTAGRAM: 'border-pink-400 bg-pink-50 text-pink-700',
   TWITTER: 'border-muted-foreground bg-muted/50 text-foreground',
   TIKTOK: 'border-muted-foreground bg-muted/50 text-foreground',
-  GOOGLE_MY_BUSINESS: 'border-blue-300 bg-blue-50 text-blue-600',
+  GOOGLE_MY_BUSINESS: 'border-border bg-primary/5 text-primary',
 }
 
 type Props = {
@@ -121,16 +124,16 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
   return (
     <div className="space-y-6">
       {state.status === 'success' && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-primary/5 px-4 py-3 text-sm text-primary">
           <CheckCircle2 className="h-4 w-4" />
           {state.message}
         </div>
       )}
       {state.status === 'error' && state.message && (
-        <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          {state.message}
-        </div>
+          <AlertDescription>{state.message}</AlertDescription>
+        </Alert>
       )}
 
       <form action={formAction} className="space-y-6">
@@ -146,7 +149,7 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
           <div className="space-y-5">
             {/* Platform selector */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-foreground">Post to</label>
+              <Label>Post to</Label>
               <div className="flex flex-wrap gap-2">
                 {(['FACEBOOK', 'TWITTER', 'TIKTOK', 'INSTAGRAM', 'GOOGLE_MY_BUSINESS'] as SocialMediaPlatform[]).map(
                   (platform) => {
@@ -156,18 +159,15 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
                     const isConnected = connectedPlatforms.has(platform)
 
                     return (
-                      <button
+                      <Button
                         key={platform}
                         type="button"
+                        variant={isSelected ? 'default' : 'outline'}
                         onClick={() => togglePlatform(platform)}
                         disabled={!isConnected}
                         className={cn(
-                          'flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition-all',
-                          isSelected
-                            ? PLATFORM_COLORS[platform]
-                            : isConnected
-                              ? 'border-border bg-card text-muted-foreground hover:border-input'
-                              : 'cursor-not-allowed border-dashed border-border bg-muted/50 text-muted-foreground',
+                          'gap-2',
+                          !isConnected && 'border-dashed',
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -175,11 +175,11 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
                         {!isConnected && (
                           <span className="text-xs text-muted-foreground">Setup needed</span>
                         )}
-                        {/* Hidden checkbox for form submission */}
+                        {/* Hidden input for form submission */}
                         {isSelected && (
                           <input type="hidden" name="platforms" value={platform} />
                         )}
-                      </button>
+                      </Button>
                     )
                   },
                 )}
@@ -205,7 +205,7 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
                         key={p}
                         className={cn(
                           'text-xs',
-                          w.over ? 'text-destructive font-semibold' : w.count > w.max * 0.8 ? 'text-amber-600' : 'text-muted-foreground',
+                          w.over ? 'text-destructive font-semibold' : w.count > w.max * 0.8 ? 'text-muted-foreground' : 'text-muted-foreground',
                         )}
                       >
                         {config.shortLabel}: {w.count}/{w.max}
@@ -231,14 +231,16 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
             {/* Platform-specific overrides */}
             {selectedPlatforms.size > 1 && (
               <div>
-                <button
+                <Button
                   type="button"
+                  variant="link"
+                  size="sm"
                   onClick={() => setShowOverrides(!showOverrides)}
-                  className="flex items-center gap-2 text-sm text-salsa-600 hover:text-salsa-700"
+                  className="h-auto gap-2 p-0"
                 >
                   <Eye className="h-4 w-4" />
                   {showOverrides ? 'Hide' : 'Customize'} per-platform content
-                </button>
+                </Button>
 
                 {showOverrides && (
                   <div className="mt-3 space-y-3">
@@ -305,19 +307,22 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
 
             {/* Scheduling */}
             <div className="space-y-3 rounded-xl border border-border bg-muted/50 p-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-input text-salsa-600 focus:ring-salsa-500"
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="schedule-enabled"
                   checked={scheduleEnabled}
-                  onChange={(e) => setScheduleEnabled(e.target.checked)}
+                  onCheckedChange={(checked) => setScheduleEnabled(checked === true)}
                   disabled={!canSchedule}
                 />
-                <span className="text-sm font-medium text-foreground">Schedule for later</span>
+                <Label htmlFor="schedule-enabled" className="font-medium">
+                  Schedule for later
+                </Label>
                 {!canSchedule && (
-                  <span className="text-xs text-muted-foreground">(requires scheduling permission)</span>
+                  <span className="text-xs text-muted-foreground">
+                    (requires scheduling permission)
+                  </span>
                 )}
-              </label>
+              </div>
               {scheduleEnabled && (
                 <div className="flex items-center gap-3">
                   <CalendarDays className="h-4 w-4 text-muted-foreground" />
@@ -371,19 +376,17 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
                     {Array.from(selectedPlatforms).map((p) => {
                       const Icon = PLATFORM_ICONS[p]
                       return (
-                        <button
+                        <Button
                           key={p}
                           type="button"
+                          variant={activePreviewPlatform === p ? 'secondary' : 'ghost'}
+                          size="icon"
+                          className="h-8 w-8"
                           onClick={() => setActivePreviewPlatform(p)}
-                          className={cn(
-                            'rounded-lg p-1.5 transition',
-                            activePreviewPlatform === p
-                              ? 'bg-card shadow-sm'
-                              : 'hover:bg-card/50',
-                          )}
                         >
                           <Icon className="h-4 w-4" />
-                        </button>
+                          <span className="sr-only">Preview {p}</span>
+                        </Button>
                       )
                     })}
                   </div>
@@ -479,7 +482,7 @@ function PostPreview({
             fullContent.length > config.maxChars
               ? 'font-semibold text-destructive'
               : fullContent.length > config.maxChars * 0.8
-                ? 'text-amber-600'
+                ? 'text-muted-foreground'
                 : 'text-muted-foreground',
           )}
         >

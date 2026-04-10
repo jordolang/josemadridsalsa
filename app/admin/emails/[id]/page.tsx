@@ -161,7 +161,7 @@ export default async function EmailTemplateDetailPage(props: PageProps) {
                 <Button type="submit">Save changes</Button>
               </div>
             ) : (
-              <p className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              <p className="rounded-md bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
                 You have read-only access to this template.
               </p>
             )}

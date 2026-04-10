@@ -26,7 +26,7 @@ export function LeadsTable({ leads }: { leads: any[] }) {
                <TableCell>
                  <div className="font-medium truncate max-w-[200px]" title={lead.schoolName}>{lead.schoolName}</div>
                  {lead.schoolUrl && (
-                    <a href={lead.schoolUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline truncate block max-w-[200px]">
+                    <a href={lead.schoolUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline truncate block max-w-[200px]">
                       Website
                     </a>
                  )}

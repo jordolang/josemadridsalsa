@@ -4,10 +4,20 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { logAudit } from '@/lib/audit'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import { ALLOWED_CARRIERS, CARRIER_LABELS } from '@/lib/shipping-carriers'
 
 async function saveShippingSettings(formData: FormData) {
@@ -37,7 +47,8 @@ async function saveShippingSettings(formData: FormData) {
     ? { street, city, state, zipCode, country: country || 'US' }
     : null
 
-  const defaultCarrier = String(formData.get('defaultCarrier') || '').trim() || null
+  const defaultCarrierRaw = String(formData.get('defaultCarrier') || '').trim()
+  const defaultCarrier = defaultCarrierRaw && defaultCarrierRaw !== 'none' ? defaultCarrierRaw : null
 
   const enabledCarriers = formData.getAll('enabledCarriers').map((c: FormDataEntryValue) => String(c))
 
@@ -116,238 +127,236 @@ export default async function ShippingSettingsPage() {
         )}
       </div>
 
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold">Configuration</h2>
-        <p className="text-sm text-muted-foreground">
-          Set the free shipping threshold and origin address used for real-time carrier rate calculations.
-        </p>
-
-        <form action={saveShippingSettings} className="mt-6 space-y-6">
-          <div>
-            <label htmlFor="freeShippingThreshold" className="block text-sm font-medium text-foreground">
-              Free shipping threshold
-            </label>
-            <p className="text-xs text-muted-foreground">
-              Orders above this amount qualify for free shipping. Leave blank to disable.
-            </p>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-muted-foreground">$</span>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                id="freeShippingThreshold"
-                name="freeShippingThreshold"
-                defaultValue={settings?.freeShippingThreshold?.toString() || ''}
-                placeholder="75.00"
-                className="max-w-xs"
-                disabled={!canManage}
-              />
-            </div>
-          </div>
-
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold">Origin address</h3>
-            <p className="text-sm text-muted-foreground">
-              The warehouse or fulfillment center address used to calculate shipping costs.
-            </p>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label htmlFor="street" className="block text-sm font-medium text-foreground">
-                  Street address
-                </label>
-                <Input
-                  type="text"
-                  id="street"
-                  name="street"
-                  defaultValue={originAddress?.street || ''}
-                  placeholder="123 Warehouse Blvd"
-                  className="mt-1"
-                  disabled={!canManage}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="city" className="block text-sm font-medium text-foreground">
-                  City
-                </label>
-                <Input
-                  type="text"
-                  id="city"
-                  name="city"
-                  defaultValue={originAddress?.city || ''}
-                  placeholder="San Francisco"
-                  className="mt-1"
-                  disabled={!canManage}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="state" className="block text-sm font-medium text-foreground">
-                  State / Province
-                </label>
-                <Input
-                  type="text"
-                  id="state"
-                  name="state"
-                  defaultValue={originAddress?.state || ''}
-                  placeholder="CA"
-                  className="mt-1"
-                  disabled={!canManage}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="zipCode" className="block text-sm font-medium text-foreground">
-                  ZIP / Postal code
-                </label>
-                <Input
-                  type="text"
-                  id="zipCode"
-                  name="zipCode"
-                  defaultValue={originAddress?.zipCode || ''}
-                  placeholder="94111"
-                  className="mt-1"
-                  disabled={!canManage}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="country" className="block text-sm font-medium text-foreground">
-                  Country
-                </label>
-                <Input
-                  type="text"
-                  id="country"
-                  name="country"
-                  defaultValue={originAddress?.country || 'US'}
-                  placeholder="US"
-                  className="mt-1"
-                  disabled={!canManage}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold">Carrier settings</h3>
-            <p className="text-sm text-muted-foreground">
-              Select which shipping carriers to enable for rate calculation.
-            </p>
-
-            <div className="mt-4">
-              <label htmlFor="defaultCarrier" className="block text-sm font-medium text-foreground">
-                Default carrier
-              </label>
-              <select
-                id="defaultCarrier"
-                name="defaultCarrier"
-                defaultValue={settings?.defaultCarrier || ''}
-                className="mt-1 block w-full max-w-xs rounded-md border border-input bg-card px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-muted/50 disabled:text-muted-foreground"
-                disabled={!canManage}
-              >
-                <option value="">None (use cheapest)</option>
-                {availableCarriers.map((carrier) => (
-                  <option key={carrier.value} value={carrier.value}>
-                    {carrier.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <fieldset className="mt-4">
-              <legend className="block text-sm font-medium text-foreground">
-                Enabled carriers
-              </legend>
-              <p id="enabled-carriers-desc" className="text-xs text-muted-foreground">
-                Select which carriers to include in rate calculations.
+      <Card>
+        <CardHeader>
+          <CardTitle>Configuration</CardTitle>
+          <CardDescription>
+            Set the free shipping threshold and origin address used for real-time carrier rate calculations.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={saveShippingSettings} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="freeShippingThreshold">Free shipping threshold</Label>
+              <p className="text-xs text-muted-foreground">
+                Orders above this amount qualify for free shipping. Leave blank to disable.
               </p>
-              <div className="mt-2 space-y-2" role="group" aria-describedby="enabled-carriers-desc">
-                {availableCarriers.map((carrier) => (
-                  <div key={carrier.value} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id={`carrier-${carrier.value}`}
-                      name="enabledCarriers"
-                      value={carrier.value}
-                      defaultChecked={settings?.enabledCarriers?.includes(carrier.value)}
-                      className="h-4 w-4 rounded border-input text-blue-600 focus:ring-blue-500 disabled:opacity-50"
-                      disabled={!canManage}
-                    />
-                    <label
-                      htmlFor={`carrier-${carrier.value}`}
-                      className="ml-2 text-sm text-foreground"
-                    >
-                      {carrier.label}
-                    </label>
-                  </div>
-                ))}
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">$</span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  id="freeShippingThreshold"
+                  name="freeShippingThreshold"
+                  defaultValue={settings?.freeShippingThreshold?.toString() || ''}
+                  placeholder="75.00"
+                  className="max-w-xs"
+                  disabled={!canManage}
+                />
               </div>
-            </fieldset>
-          </div>
-
-          {canManage && (
-            <div className="flex justify-end border-t pt-6">
-              <Button type="submit">
-                Save shipping settings
-              </Button>
             </div>
-          )}
-        </form>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Origin address</h3>
+                <p className="text-sm text-muted-foreground">
+                  The warehouse or fulfillment center address used to calculate shipping costs.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="street">Street address</Label>
+                  <Input
+                    type="text"
+                    id="street"
+                    name="street"
+                    defaultValue={originAddress?.street || ''}
+                    placeholder="123 Warehouse Blvd"
+                    disabled={!canManage}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    type="text"
+                    id="city"
+                    name="city"
+                    defaultValue={originAddress?.city || ''}
+                    placeholder="San Francisco"
+                    disabled={!canManage}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="state">State / Province</Label>
+                  <Input
+                    type="text"
+                    id="state"
+                    name="state"
+                    defaultValue={originAddress?.state || ''}
+                    placeholder="CA"
+                    disabled={!canManage}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="zipCode">ZIP / Postal code</Label>
+                  <Input
+                    type="text"
+                    id="zipCode"
+                    name="zipCode"
+                    defaultValue={originAddress?.zipCode || ''}
+                    placeholder="94111"
+                    disabled={!canManage}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="country">Country</Label>
+                  <Input
+                    type="text"
+                    id="country"
+                    name="country"
+                    defaultValue={originAddress?.country || 'US'}
+                    placeholder="US"
+                    disabled={!canManage}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Carrier settings</h3>
+                <p className="text-sm text-muted-foreground">
+                  Select which shipping carriers to enable for rate calculation.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="defaultCarrier">Default carrier</Label>
+                <Select
+                  name="defaultCarrier"
+                  defaultValue={settings?.defaultCarrier || 'none'}
+                  disabled={!canManage}
+                >
+                  <SelectTrigger id="defaultCarrier" className="max-w-xs">
+                    <SelectValue placeholder="None (use cheapest)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None (use cheapest)</SelectItem>
+                    {availableCarriers.map((carrier) => (
+                      <SelectItem key={carrier.value} value={carrier.value}>
+                        {carrier.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium text-foreground">
+                  Enabled carriers
+                </legend>
+                <p id="enabled-carriers-desc" className="text-xs text-muted-foreground">
+                  Select which carriers to include in rate calculations.
+                </p>
+                <div className="space-y-2 pt-1" role="group" aria-describedby="enabled-carriers-desc">
+                  {availableCarriers.map((carrier) => (
+                    <div key={carrier.value} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`carrier-${carrier.value}`}
+                        name="enabledCarriers"
+                        value={carrier.value}
+                        defaultChecked={settings?.enabledCarriers?.includes(carrier.value)}
+                        disabled={!canManage}
+                      />
+                      <Label
+                        htmlFor={`carrier-${carrier.value}`}
+                        className="font-normal"
+                      >
+                        {carrier.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </fieldset>
+            </div>
+
+            {canManage && (
+              <>
+                <Separator />
+                <div className="flex justify-end">
+                  <Button type="submit">Save shipping settings</Button>
+                </div>
+              </>
+            )}
+          </form>
+        </CardContent>
       </Card>
 
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold">Current status</h2>
-        <div className="mt-4 space-y-3 text-sm">
-          <div className="flex items-start gap-2">
-            {settings?.freeShippingThreshold ? (
-              <>
-                <Badge className="bg-emerald-100 text-emerald-700">Active</Badge>
-                <p className="text-muted-foreground">
-                  Free shipping enabled for orders over ${settings.freeShippingThreshold.toString()}
-                </p>
-              </>
-            ) : (
-              <>
-                <Badge className="bg-muted text-muted-foreground">Disabled</Badge>
-                <p className="text-muted-foreground">Free shipping threshold not configured</p>
-              </>
-            )}
-          </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Current status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-start gap-2">
+              {settings?.freeShippingThreshold ? (
+                <>
+                  <Badge>Active</Badge>
+                  <p className="text-muted-foreground">
+                    Free shipping enabled for orders over ${settings.freeShippingThreshold.toString()}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Badge variant="outline">Disabled</Badge>
+                  <p className="text-muted-foreground">Free shipping threshold not configured</p>
+                </>
+              )}
+            </div>
 
-          <div className="flex items-start gap-2">
-            {originAddress?.street && originAddress?.city ? (
-              <>
-                <Badge className="bg-emerald-100 text-emerald-700">Configured</Badge>
-                <p className="text-muted-foreground">
-                  Origin address: {originAddress.street}, {originAddress.city}, {originAddress.state} {originAddress.zipCode}
-                </p>
-              </>
-            ) : (
-              <>
-                <Badge className="bg-amber-100 text-amber-700">Required</Badge>
-                <p className="text-muted-foreground">Origin address required for carrier rate calculation</p>
-              </>
-            )}
-          </div>
+            <div className="flex items-start gap-2">
+              {originAddress?.street && originAddress?.city ? (
+                <>
+                  <Badge>Configured</Badge>
+                  <p className="text-muted-foreground">
+                    Origin address: {originAddress.street}, {originAddress.city}, {originAddress.state} {originAddress.zipCode}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Badge variant="secondary">Required</Badge>
+                  <p className="text-muted-foreground">Origin address required for carrier rate calculation</p>
+                </>
+              )}
+            </div>
 
-          <div className="flex items-start gap-2">
-            {settings?.enabledCarriers && settings.enabledCarriers.length > 0 ? (
-              <>
-                <Badge className="bg-emerald-100 text-emerald-700">Active</Badge>
-                <p className="text-muted-foreground">
-                  {settings.enabledCarriers.length} carrier{settings.enabledCarriers.length !== 1 ? 's' : ''} enabled: {settings.enabledCarriers.map(c => c.toUpperCase()).join(', ')}
-                </p>
-              </>
-            ) : (
-              <>
-                <Badge className="bg-amber-100 text-amber-700">Warning</Badge>
-                <p className="text-muted-foreground">No carriers enabled - shipping calculations may fail</p>
-              </>
-            )}
+            <div className="flex items-start gap-2">
+              {settings?.enabledCarriers && settings.enabledCarriers.length > 0 ? (
+                <>
+                  <Badge>Active</Badge>
+                  <p className="text-muted-foreground">
+                    {settings.enabledCarriers.length} carrier{settings.enabledCarriers.length !== 1 ? 's' : ''} enabled: {settings.enabledCarriers.map(c => c.toUpperCase()).join(', ')}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Badge variant="secondary">Warning</Badge>
+                  <p className="text-muted-foreground">No carriers enabled - shipping calculations may fail</p>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        </CardContent>
       </Card>
     </div>
   )

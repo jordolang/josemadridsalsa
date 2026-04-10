@@ -112,7 +112,7 @@ export default async function ParticipantsPage({
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <DollarSign className="h-8 w-8 text-green-600" />
+            <DollarSign className="h-8 w-8 text-primary" />
             <div>
               <p className="text-sm text-muted-foreground">Total Revenue</p>
               <p className="text-2xl font-bold">${Number(stats.totalRevenue).toFixed(2)}</p>
@@ -121,7 +121,7 @@ export default async function ParticipantsPage({
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <TrendingUp className="h-8 w-8 text-blue-600" />
+            <TrendingUp className="h-8 w-8 text-primary" />
             <div>
               <p className="text-sm text-muted-foreground">Total Commission</p>
               <p className="text-2xl font-bold">${Number(stats.totalCommission).toFixed(2)}</p>

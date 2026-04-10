@@ -375,7 +375,7 @@ export default async function ReviewsPage({
                             className={cn(
                               'size-3.5',
                               index < review.rating
-                                ? 'fill-amber-400 text-amber-400'
+                                ? 'fill-amber-400 text-muted-foreground'
                                 : 'text-muted-foreground/30'
                             )}
                           />
@@ -398,7 +398,7 @@ export default async function ReviewsPage({
                           {review.status}
                         </Badge>
                         {review.isVerified && (
-                          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                          <span className="text-xs font-medium text-primary dark:text-emerald-400">
                             Verified
                           </span>
                         )}

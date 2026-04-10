@@ -17,6 +17,14 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { CampaignActions } from './_components/campaign-actions'
 
 async function getCampaign(id: string) {
@@ -78,7 +86,7 @@ function getStatusBadge(status: string) {
       )
     case 'SCHEDULED':
       return (
-        <span className={`${baseClasses} bg-blue-100 text-blue-800`}>
+        <span className={`${baseClasses} bg-primary/10 text-primary`}>
           <Clock className="h-4 w-4" />
           Scheduled
         </span>
@@ -92,7 +100,7 @@ function getStatusBadge(status: string) {
       )
     case 'SENT':
       return (
-        <span className={`${baseClasses} bg-green-100 text-green-800`}>
+        <span className={`${baseClasses} bg-primary/10 text-primary`}>
           <CheckCircle2 className="h-4 w-4" />
           Sent
         </span>
@@ -136,7 +144,7 @@ function getRecipientStatusBadge(status: string) {
     case 'SENDING':
       return <span className={`${base} bg-orange-100 text-orange-700`}>Sending</span>
     case 'SENT':
-      return <span className={`${base} bg-green-100 text-green-700`}>Sent</span>
+      return <span className={`${base} bg-primary/10 text-primary`}>Sent</span>
     case 'FAILED':
       return <span className={`${base} bg-destructive/10 text-destructive`}>Failed</span>
     case 'BOUNCED':
@@ -210,7 +218,7 @@ export default async function CampaignDetailPage({
         </Card>
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">Sent</div>
-          <div className="text-2xl font-bold text-green-600 mt-1">
+          <div className="text-2xl font-bold text-primary mt-1">
             {campaign.sentCount.toLocaleString()}
           </div>
         </Card>
@@ -237,7 +245,7 @@ export default async function CampaignDetailPage({
           </div>
           <div className="w-full bg-muted rounded-full h-2.5">
             <div
-              className="bg-blue-600 h-2.5 rounded-full transition-all"
+              className="bg-primary h-2.5 rounded-full transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -313,39 +321,39 @@ export default async function CampaignDetailPage({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-2 px-3 text-muted-foreground font-medium">Email</th>
-                <th className="text-left py-2 px-3 text-muted-foreground font-medium">Name</th>
-                <th className="text-left py-2 px-3 text-muted-foreground font-medium">Status</th>
-                <th className="text-left py-2 px-3 text-muted-foreground font-medium">Sent At</th>
-                <th className="text-left py-2 px-3 text-muted-foreground font-medium">Error</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Sent At</TableHead>
+                <TableHead>Error</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {campaign.recipients.map((recipient) => (
-                <tr key={recipient.id} className="border-b border-border">
-                  <td className="py-2 px-3 font-mono text-xs">{recipient.email}</td>
-                  <td className="py-2 px-3">{recipient.name || '-'}</td>
-                  <td className="py-2 px-3">{getRecipientStatusBadge(recipient.status)}</td>
-                  <td className="py-2 px-3 text-muted-foreground">
+                <TableRow key={recipient.id}>
+                  <TableCell className="font-mono text-xs">{recipient.email}</TableCell>
+                  <TableCell>{recipient.name || '-'}</TableCell>
+                  <TableCell>{getRecipientStatusBadge(recipient.status)}</TableCell>
+                  <TableCell className="text-muted-foreground">
                     {recipient.sentAt ? recipient.sentAt.toLocaleString() : '-'}
-                  </td>
-                  <td className="py-2 px-3 text-destructive text-xs max-w-[200px] truncate">
+                  </TableCell>
+                  <TableCell className="max-w-[200px] truncate text-xs text-destructive">
                     {recipient.errorMessage || '-'}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
               {campaign.recipients.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-muted-foreground">
+                <TableRow>
+                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                     No recipients found
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </Card>
     </div>

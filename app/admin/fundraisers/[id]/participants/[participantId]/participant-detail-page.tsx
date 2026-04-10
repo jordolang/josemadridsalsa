@@ -76,7 +76,7 @@ async function getParticipantWithDetails(participantId: string, fundraiserId: st
 }
 
 const statusColors: Record<FundraiserParticipantStatus, string> = {
-  ACTIVE: 'bg-green-100 text-green-800',
+  ACTIVE: 'bg-primary/10 text-primary',
   INACTIVE: 'bg-muted text-foreground',
 }
 
@@ -136,7 +136,7 @@ export default async function ParticipantDetailPage({
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <DollarSign className="h-8 w-8 text-green-600" />
+            <DollarSign className="h-8 w-8 text-primary" />
             <div>
               <p className="text-sm text-muted-foreground">Total Revenue</p>
               <p className="text-2xl font-bold">${Number(participant.totalRevenue).toFixed(2)}</p>
@@ -145,7 +145,7 @@ export default async function ParticipantDetailPage({
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <TrendingUp className="h-8 w-8 text-blue-600" />
+            <TrendingUp className="h-8 w-8 text-primary" />
             <div>
               <p className="text-sm text-muted-foreground">Total Commission</p>
               <p className="text-2xl font-bold">${Number(participant.totalCommission).toFixed(2)}</p>

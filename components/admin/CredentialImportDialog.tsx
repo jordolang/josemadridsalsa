@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Upload, FileSpreadsheet, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 interface ImportResult {
   totalRows: number
@@ -114,13 +115,14 @@ export default function CredentialImportDialog({
           <div className="space-y-4">
             {/* Drop Zone */}
             <div
-              className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+              className={cn(
+                'cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors',
                 dragOver
-                  ? 'border-blue-400 bg-blue-50'
+                  ? 'border-primary bg-primary/5'
                   : file
-                    ? 'border-green-300 bg-green-50'
-                    : 'border-input hover:border-muted-foreground'
-              }`}
+                    ? 'border-primary bg-primary/5'
+                    : 'border-input hover:border-muted-foreground',
+              )}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
@@ -139,7 +141,7 @@ export default function CredentialImportDialog({
               <Upload className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
               {file ? (
                 <div>
-                  <p className="font-medium text-green-700">{file.name}</p>
+                  <p className="font-medium text-primary">{file.name}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {(file.size / 1024).toFixed(1)} KB - Click or drop to replace
                   </p>
@@ -172,9 +174,9 @@ export default function CredentialImportDialog({
                 <p className="text-2xl font-bold">{result.totalRows}</p>
                 <p className="text-xs text-muted-foreground">Total Rows</p>
               </div>
-              <div className="rounded-lg bg-green-50 p-3 text-center">
-                <p className="text-2xl font-bold text-green-700">{result.successCount}</p>
-                <p className="text-xs text-green-600">Imported</p>
+              <div className="rounded-lg bg-primary/10 p-3 text-center">
+                <p className="text-2xl font-bold text-primary">{result.successCount}</p>
+                <p className="text-xs text-primary">Imported</p>
               </div>
               <div className="rounded-lg bg-destructive/10 p-3 text-center">
                 <p className="text-2xl font-bold text-destructive">{result.errorCount}</p>

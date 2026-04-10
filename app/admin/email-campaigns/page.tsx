@@ -38,11 +38,11 @@ function getStatusIcon(status: string) {
     case 'DRAFT':
       return <Clock className="h-4 w-4 text-muted-foreground" />
     case 'SCHEDULED':
-      return <Clock className="h-4 w-4 text-blue-500" />
+      return <Clock className="h-4 w-4 text-primary" />
     case 'SENDING':
       return <Send className="h-4 w-4 text-orange-500 animate-pulse" />
     case 'SENT':
-      return <CheckCircle2 className="h-4 w-4 text-green-500" />
+      return <CheckCircle2 className="h-4 w-4 text-primary" />
     case 'PAUSED':
       return <Pause className="h-4 w-4 text-yellow-500" />
     case 'CANCELLED':
@@ -60,11 +60,11 @@ function getStatusBadge(status: string) {
     case 'DRAFT':
       return <span className={`${baseClasses} bg-muted text-foreground`}>Draft</span>
     case 'SCHEDULED':
-      return <span className={`${baseClasses} bg-blue-100 text-blue-800`}>Scheduled</span>
+      return <span className={`${baseClasses} bg-primary/10 text-primary`}>Scheduled</span>
     case 'SENDING':
       return <span className={`${baseClasses} bg-orange-100 text-orange-800`}>Sending</span>
     case 'SENT':
-      return <span className={`${baseClasses} bg-green-100 text-green-800`}>Sent</span>
+      return <span className={`${baseClasses} bg-primary/10 text-primary`}>Sent</span>
     case 'PAUSED':
       return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>Paused</span>
     case 'CANCELLED':
@@ -139,7 +139,7 @@ export default async function EmailCampaignsPage() {
                       <div>
                         <Link
                           href={`/admin/email-campaigns/${campaign.id}`}
-                          className="text-lg font-semibold text-foreground hover:text-blue-600"
+                          className="text-lg font-semibold text-foreground hover:text-primary"
                         >
                           {campaign.name}
                         </Link>
@@ -162,7 +162,7 @@ export default async function EmailCampaignsPage() {
                         Recipients: {campaign.totalRecipients.toLocaleString()}
                       </div>
                       {campaign.sentCount > 0 && (
-                        <div className="text-green-600">
+                        <div className="text-primary">
                           Sent: {campaign.sentCount.toLocaleString()}
                         </div>
                       )}
@@ -184,7 +184,7 @@ export default async function EmailCampaignsPage() {
                         </div>
                         <div className="w-full bg-muted rounded-full h-2">
                           <div
-                            className="bg-blue-600 h-2 rounded-full transition-all"
+                            className="bg-primary h-2 rounded-full transition-all"
                             style={{ width: `${progress}%` }}
                           />
                         </div>

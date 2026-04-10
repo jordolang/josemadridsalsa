@@ -166,7 +166,7 @@ export function CsvImportModal({ listId, listName, open, onClose, onSuccess }: C
         {step === 'upload' && (
           <div className="space-y-4">
             <div
-              className="border-2 border-dashed border-input rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
+              className="cursor-pointer rounded-lg border-2 border-dashed border-input p-8 text-center transition-colors hover:border-primary"
               onClick={() => fileRef.current?.click()}
             >
               <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
@@ -257,11 +257,11 @@ export function CsvImportModal({ listId, listName, open, onClose, onSuccess }: C
 
         {step === 'result' && result && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
-              <CheckCircle2 className="h-8 w-8 text-green-600 flex-shrink-0" />
+            <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-lg border border-border">
+              <CheckCircle2 className="h-8 w-8 text-primary flex-shrink-0" />
               <div>
                 <p className="font-semibold text-green-800">Import Complete</p>
-                <p className="text-sm text-green-700">
+                <p className="text-sm text-primary">
                   {result.imported} imported · {result.skipped} skipped
                 </p>
               </div>

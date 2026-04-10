@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Copy, ExternalLink } from 'lucide-react'
 
 interface MediaDetailDialogProps {
@@ -101,11 +102,11 @@ export default function MediaDetailDialog({
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">URL</h3>
               <div className="mt-1 flex gap-2">
-                <input
+                <Input
                   type="text"
                   value={media.url}
                   readOnly
-                  className="flex-1 rounded border border-input px-3 py-2 text-sm"
+                  className="flex-1 text-sm"
                 />
                 <Button size="sm" variant="outline" onClick={handleCopyUrl}>
                   <Copy className="h-4 w-4" />

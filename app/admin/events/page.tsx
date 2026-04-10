@@ -94,7 +94,7 @@ export default function EventsPage() {
             <p className="text-sm text-muted-foreground mb-4">
               Sync events from your Google Calendar to display on your website
             </p>
-            <Badge className={isConnected ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+            <Badge className={isConnected ? 'bg-primary/10 text-primary' : 'bg-yellow-100 text-yellow-800'}>
               {isConnected ? 'Connected' : 'Not Connected'}
             </Badge>
           </div>
@@ -184,7 +184,7 @@ function EventCard({ event, onRefresh }: { event: FeaturedEvent; onRefresh: () =
               </Badge>
             )}
             {event.manuallyModified && (
-              <Badge variant="outline" className="text-xs bg-blue-50">
+              <Badge variant="outline" className="text-xs bg-primary/5">
                 Modified
               </Badge>
             )}

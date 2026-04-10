@@ -6,6 +6,14 @@ import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 type SearchParams = {
   q?: string
@@ -103,20 +111,20 @@ export default async function EmailTemplatesPage({ searchParams }: { searchParam
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px]">
-              <thead className="border-b bg-muted/50 text-sm text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">Name</th>
-                  <th className="px-4 py-3 text-left font-medium">Key</th>
-                  <th className="px-4 py-3 text-left font-medium">Subject</th>
-                  <th className="px-4 py-3 text-left font-medium">Last Updated</th>
-                  <th className="px-4 py-3 text-right font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
+            <Table className="min-w-[640px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Key</TableHead>
+                  <TableHead>Subject</TableHead>
+                  <TableHead>Last Updated</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {templates.map((template) => (
-                  <tr key={template.id} className="border-b last:border-0">
-                    <td className="px-4 py-4">
+                  <TableRow key={template.id}>
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-muted-foreground" />
                         <div>
@@ -124,24 +132,21 @@ export default async function EmailTemplatesPage({ searchParams }: { searchParam
                           <p className="text-xs text-muted-foreground">ID: {template.id}</p>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-4 text-muted-foreground">{template.key}</td>
-                    <td className="px-4 py-4 text-muted-foreground">{template.subject}</td>
-                    <td className="px-4 py-4 text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{template.key}</TableCell>
+                    <TableCell className="text-muted-foreground">{template.subject}</TableCell>
+                    <TableCell className="text-muted-foreground">
                       {template.updatedAt.toLocaleString()}
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <Link
-                        href={`/admin/emails/${template.id}`}
-                        className="text-sm font-medium text-blue-600 hover:underline"
-                      >
-                        View
-                      </Link>
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="link" size="sm" asChild className="h-auto p-0">
+                        <Link href={`/admin/emails/${template.id}`}>View</Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </Card>

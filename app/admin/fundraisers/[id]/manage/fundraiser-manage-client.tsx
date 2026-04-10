@@ -109,8 +109,8 @@ function toDateInput(iso: string) {
 
 const STATUS_COLORS: Record<FundraiserStatus, string> = {
   DRAFT: 'bg-muted text-foreground',
-  ACTIVE: 'bg-green-100 text-green-800',
-  ENDED: 'bg-blue-100 text-blue-800',
+  ACTIVE: 'bg-primary/10 text-primary',
+  ENDED: 'bg-primary/10 text-primary',
   CANCELLED: 'bg-destructive/10 text-destructive',
 }
 
@@ -172,7 +172,7 @@ function OverviewTab({ fundraiser }: { fundraiser: FundraiserData }) {
         <Card className="border-l-4 border-l-green-500">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <DollarSign className="h-8 w-8 text-green-600" />
+              <DollarSign className="h-8 w-8 text-primary" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
                 <p className="text-2xl font-bold">${fmt(fundraiser.totalRevenue)}</p>
@@ -183,7 +183,7 @@ function OverviewTab({ fundraiser }: { fundraiser: FundraiserData }) {
         <Card className="border-l-4 border-l-blue-500">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <TrendingUp className="h-8 w-8 text-blue-600" />
+              <TrendingUp className="h-8 w-8 text-primary" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Commission</p>
                 <p className="text-2xl font-bold">${fmt(fundraiser.totalCommission)}</p>
@@ -278,7 +278,7 @@ function OverviewTab({ fundraiser }: { fundraiser: FundraiserData }) {
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Save Overview
         </Button>
-        {saved && <span className="flex items-center gap-1 text-sm text-green-600"><CheckCircle className="h-4 w-4" /> Saved!</span>}
+        {saved && <span className="flex items-center gap-1 text-sm text-primary"><CheckCircle className="h-4 w-4" /> Saved!</span>}
       </div>
     </form>
   )
@@ -384,7 +384,7 @@ function ProductsTab({ fundraiser, allProducts }: { fundraiser: FundraiserData; 
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save Changes
           </Button>
-          {saved && <span className="flex items-center gap-1 text-sm text-green-600"><CheckCircle className="h-4 w-4" />Saved!</span>}
+          {saved && <span className="flex items-center gap-1 text-sm text-primary"><CheckCircle className="h-4 w-4" />Saved!</span>}
         </div>
       </div>
 
@@ -395,7 +395,7 @@ function ProductsTab({ fundraiser, allProducts }: { fundraiser: FundraiserData; 
           const sel = selections[product.id]
           if (!sel) return null
           return (
-            <Card key={product.id} className={`transition-colors ${sel.included ? 'border-green-300 bg-green-50/30 dark:bg-green-950/10' : ''}`}>
+            <Card key={product.id} className={`transition-colors ${sel.included ? 'border-border bg-primary/5/30 dark:bg-green-950/10' : ''}`}>
               <CardContent className="flex items-center gap-4 py-3">
                 {/* Image */}
                 <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-md border bg-muted">
@@ -570,7 +570,7 @@ function CommissionTab({ fundraiser, allProducts }: { fundraiser: FundraiserData
                 </div>
                 <div className="flex justify-between">
                   <span>Commission ({rate}%)</span>
-                  <span className="font-semibold text-green-600">${sampleCommission.toFixed(2)}</span>
+                  <span className="font-semibold text-primary">${sampleCommission.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Current total commission earned</span>
@@ -586,7 +586,7 @@ function CommissionTab({ fundraiser, allProducts }: { fundraiser: FundraiserData
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Save Commission Rate
               </Button>
-              {saved && <span className="flex items-center gap-1 text-sm text-green-600"><CheckCircle className="h-4 w-4" />Saved!</span>}
+              {saved && <span className="flex items-center gap-1 text-sm text-primary"><CheckCircle className="h-4 w-4" />Saved!</span>}
             </div>
           </CardContent>
         </Card>
@@ -634,7 +634,7 @@ function CommissionTab({ fundraiser, allProducts }: { fundraiser: FundraiserData
                 {bulkSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <TrendingUp className="mr-2 h-4 w-4" />}
                 Apply Bulk Markup
               </Button>
-              {bulkSaved && <span className="flex items-center gap-1 text-sm text-green-600"><CheckCircle className="h-4 w-4" />Applied!</span>}
+              {bulkSaved && <span className="flex items-center gap-1 text-sm text-primary"><CheckCircle className="h-4 w-4" />Applied!</span>}
             </div>
           </CardContent>
         </Card>
@@ -794,7 +794,7 @@ function BrandingTab({ fundraiser }: { fundraiser: FundraiserData }) {
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Save Branding
         </Button>
-        {saved && <span className="flex items-center gap-1 text-sm text-green-600"><CheckCircle className="h-4 w-4" />Saved!</span>}
+        {saved && <span className="flex items-center gap-1 text-sm text-primary"><CheckCircle className="h-4 w-4" />Saved!</span>}
         <Button type="button" variant="outline" asChild>
           <Link href={publicUrl} target="_blank">
             <ExternalLink className="mr-2 h-4 w-4" />
@@ -871,10 +871,10 @@ function ParticipantsTab({ fundraiser }: { fundraiser: FundraiserData }) {
                   <p className="text-xs text-muted-foreground font-mono">Code: {p.referralCode}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-green-600">${fmt(p.totalRevenue)}</p>
+                  <p className="font-semibold text-primary">${fmt(p.totalRevenue)}</p>
                   <p className="text-sm text-muted-foreground">{p.totalOrders} orders</p>
                 </div>
-                <Badge className={p.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-muted text-foreground'}>
+                <Badge className={p.status === 'ACTIVE' ? 'bg-primary/10 text-primary' : 'bg-muted text-foreground'}>
                   {p.status}
                 </Badge>
                 <div className="flex gap-2">
@@ -913,9 +913,9 @@ function ParticipantsTab({ fundraiser }: { fundraiser: FundraiserData }) {
 
 const ORDER_STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-800',
-  PROCESSING: 'bg-blue-100 text-blue-800',
+  PROCESSING: 'bg-primary/10 text-primary',
   SHIPPED: 'bg-purple-100 text-purple-800',
-  DELIVERED: 'bg-green-100 text-green-800',
+  DELIVERED: 'bg-primary/10 text-primary',
   CANCELLED: 'bg-destructive/10 text-destructive',
   REFUNDED: 'bg-orange-100 text-orange-800',
 }
@@ -1008,7 +1008,7 @@ export default function FundraiserManageClient({ fundraiser, allProducts }: Prop
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="products">
             Products
-            <span className="ml-1.5 rounded-full bg-green-100 text-green-800 px-1.5 py-0.5 text-xs font-medium">
+            <span className="ml-1.5 rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-xs font-medium">
               {fundraiser.products.length}
             </span>
           </TabsTrigger>
@@ -1016,7 +1016,7 @@ export default function FundraiserManageClient({ fundraiser, allProducts }: Prop
           <TabsTrigger value="branding">Branding</TabsTrigger>
           <TabsTrigger value="participants">
             Participants
-            <span className="ml-1.5 rounded-full bg-blue-100 text-blue-800 px-1.5 py-0.5 text-xs font-medium">
+            <span className="ml-1.5 rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-xs font-medium">
               {fundraiser.participants.length}
             </span>
           </TabsTrigger>

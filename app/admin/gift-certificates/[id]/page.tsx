@@ -50,8 +50,8 @@ export default async function GiftCertificateDetailPage({
   }
 
   const statusColors = {
-    ACTIVE: 'bg-green-100 text-green-800',
-    REDEEMED: 'bg-blue-100 text-blue-800',
+    ACTIVE: 'bg-primary/10 text-primary',
+    REDEEMED: 'bg-primary/10 text-primary',
     EXPIRED: 'bg-muted text-foreground',
     CANCELLED: 'bg-destructive/10 text-destructive',
   }
@@ -108,7 +108,7 @@ export default async function GiftCertificateDetailPage({
                   <dt className="text-sm font-medium text-muted-foreground">Current Balance</dt>
                   <dd
                     className={`mt-1 text-lg font-semibold ${
-                      Number(giftCertificate.balance) > 0 ? 'text-green-600' : 'text-muted-foreground'
+                      Number(giftCertificate.balance) > 0 ? 'text-primary' : 'text-muted-foreground'
                     }`}
                   >
                     {formatPrice(Number(giftCertificate.balance))}
@@ -177,7 +177,7 @@ export default async function GiftCertificateDetailPage({
                   <dd className="mt-1">
                     <Link
                       href={`/admin/orders/${giftCertificate.order.id}`}
-                      className="text-sm font-mono text-salsa-600 hover:text-salsa-700"
+                      className="text-sm font-mono text-primary hover:text-primary"
                     >
                       {giftCertificate.order.orderNumber}
                     </Link>
@@ -217,7 +217,7 @@ export default async function GiftCertificateDetailPage({
                           Order:{' '}
                           <Link
                             href={`/admin/orders/${usage.order.id}`}
-                            className="text-salsa-600 hover:text-salsa-700"
+                            className="text-primary hover:text-primary"
                           >
                             {usage.order.orderNumber}
                           </Link>

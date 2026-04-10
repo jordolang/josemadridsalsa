@@ -14,7 +14,7 @@ interface LogEntry {
 }
 
 const LEVEL_COLORS: Record<LogEntry['level'], string> = {
-  info: 'text-blue-400',
+  info: 'text-primary',
   warn: 'text-yellow-400',
   error: 'text-destructive',
   success: 'text-green-400',
@@ -28,7 +28,7 @@ const STAGE_LABELS: Record<LogEntry['stage'], string> = {
 };
 
 const STAGE_COLORS: Record<LogEntry['stage'], string> = {
-  search: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  search: 'bg-primary/20 text-blue-300 border-blue-500/30',
   parse: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
   email: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
   system: 'bg-muted text-muted-foreground border-border',

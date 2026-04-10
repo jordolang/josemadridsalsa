@@ -180,7 +180,7 @@ export default async function ConversationPage(props: PageProps) {
             <Badge
               className={
                 conversation.status === 'OPEN'
-                  ? 'bg-blue-100 text-blue-700'
+                  ? 'bg-primary/10 text-primary'
                   : 'bg-muted text-muted-foreground'
               }
             >
@@ -217,7 +217,7 @@ export default async function ConversationPage(props: PageProps) {
                   <div
                     key={message.id}
                     className={`rounded-lg border p-4 ${
-                      isAdmin ? 'border-blue-100 bg-blue-50' : 'border-border bg-card'
+                      isAdmin ? 'border-border bg-primary/5' : 'border-border bg-card'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -258,7 +258,7 @@ export default async function ConversationPage(props: PageProps) {
               </div>
             </form>
           ) : (
-            <div className="mt-6 rounded-lg bg-amber-50 p-4 text-sm text-amber-700">
+            <div className="mt-6 rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
               You have read-only access to this conversation. Contact an administrator to respond on behalf of the team.
             </div>
           )}

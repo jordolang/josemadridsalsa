@@ -68,7 +68,7 @@ export function ImageUploaderWrapper({
         <h2 className="text-xl font-semibold">Product Images</h2>
         <p className="text-sm text-muted-foreground">
           Manage product images for display in the storefront
-          {isSaving && <span className="ml-2 text-blue-600">Saving...</span>}
+          {isSaving && <span className="ml-2 text-primary">Saving...</span>}
         </p>
       </div>
       <ImageUploader

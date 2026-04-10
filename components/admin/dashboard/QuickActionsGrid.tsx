@@ -30,7 +30,7 @@ const actions: QuickAction[] = [
     label: 'New Product',
     href: '/admin/products/new',
     icon: Plus,
-    color: 'bg-blue-500',
+    color: 'bg-primary',
     description: 'Add a product',
   },
   {

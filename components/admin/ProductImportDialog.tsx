@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -127,10 +128,10 @@ export function ProductImportDialog({
   const getFileIcon = () => {
     switch (fileType) {
       case 'json':
-        return <FileJson className="h-5 w-5 text-blue-500" />;
+        return <FileJson className="h-5 w-5 text-primary" />;
       case 'csv':
       case 'excel':
-        return <FileSpreadsheet className="h-5 w-5 text-green-500" />;
+        return <FileSpreadsheet className="h-5 w-5 text-primary" />;
       default:
         return <Upload className="h-5 w-5" />;
     }
@@ -221,15 +222,13 @@ export function ProductImportDialog({
 
           {/* Skip Duplicates Option */}
           <div className="flex items-center gap-2">
-            <input
+            <Checkbox
               id="skipDuplicates"
-              type="checkbox"
               checked={skipDuplicates}
-              onChange={(e) => setSkipDuplicates(e.target.checked)}
+              onCheckedChange={(checked) => setSkipDuplicates(checked === true)}
               disabled={isUploading}
-              className="h-4 w-4 rounded border-input"
             />
-            <Label htmlFor="skipDuplicates" className="text-sm font-normal cursor-pointer">
+            <Label htmlFor="skipDuplicates" className="text-sm font-normal">
               Skip products with duplicate SKUs (import only new products)
             </Label>
           </div>
@@ -250,18 +249,18 @@ export function ProductImportDialog({
 
           {/* Result Messages */}
           {result && (
-            <Alert className={result.success ? 'border-green-500 bg-green-50' : 'border-destructive bg-destructive/10'}>
+            <Alert className={result.success ? 'border-green-500 bg-primary/5' : 'border-destructive bg-destructive/10'}>
               {result.success ? (
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 text-primary" />
               ) : (
                 <AlertCircle className="h-4 w-4 text-destructive" />
               )}
               <AlertDescription>
                 {result.success ? (
                   <div>
-                    <p className="font-medium text-green-900">{result.message}</p>
+                    <p className="font-medium text-foreground">{result.message}</p>
                     {result.imported !== undefined && (
-                      <p className="text-sm text-green-700 mt-1">
+                      <p className="text-sm text-primary mt-1">
                         Imported: {result.imported} products
                         {result.skipped ? ` | Skipped: ${result.skipped}` : ''}
                       </p>

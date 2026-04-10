@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -338,7 +340,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
         <Card className="space-y-4 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-salsa-500">Templates</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-primary">Templates</p>
               <h2 className="font-serif text-xl font-semibold text-foreground">Form library</h2>
             </div>
             <div className="flex gap-2">
@@ -375,10 +377,10 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
                   key={template.id}
                   type="button"
                   className={cn(
-                    'w-full rounded-xl border px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-salsa-500',
+                    'w-full rounded-xl border px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                     isActive
-                      ? 'border-salsa-200 bg-salsa-50'
-                      : 'border-border bg-card hover:border-salsa-200 hover:bg-salsa-50/50',
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border bg-card hover:border-input hover:bg-muted/50',
                   )}
                   onClick={() => setSelectedTemplateId(template.id)}
                 >
@@ -397,14 +399,14 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
                         variant="outline"
                         className={cn(
                           'border-border text-xs capitalize',
-                          template.source === 'saved' ? 'text-emerald-600 border-emerald-200' : 'text-muted-foreground',
+                          template.source === 'saved' ? 'text-primary border-border' : 'text-muted-foreground',
                         )}
                       >
                         {template.source === 'saved' ? 'Saved' : 'Library'}
                       </Badge>
                     </div>
                   </div>
-                  <p className="mt-1 text-xs uppercase tracking-wide text-salsa-500">{template.tags.join(' · ')}</p>
+                  <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">{template.tags.join(' · ')}</p>
                   <p className="mt-2 text-sm text-muted-foreground">{template.description}</p>
                   {template.source === 'saved' ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -414,10 +416,10 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
                           className={cn(
                             'border-border text-xs capitalize',
                             template.status === 'PUBLISHED'
-                              ? 'text-emerald-600 border-emerald-200'
+                              ? 'text-primary border-border'
                               : template.status === 'ARCHIVED'
                                 ? 'text-muted-foreground border-border'
-                                : 'text-amber-600 border-amber-200',
+                                : 'text-muted-foreground border-border',
                           )}
                         >
                           {template.status.toLowerCase()}
@@ -451,22 +453,23 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
             {combinedSections.map((section) => {
               const included = includeSectionsList.includes(section.id)
               return (
-                <label
+                <Label
                   key={section.id}
+                  htmlFor={`section-${section.id}`}
                   className={cn(
-                    'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition',
-                    included ? 'border-salsa-200 bg-salsa-50' : 'border-border bg-card hover:border-input',
+                    'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 font-normal transition',
+                    included ? 'border-primary bg-primary/5' : 'border-border bg-card hover:border-input',
                   )}
                 >
-                  <input
-                    type="checkbox"
+                  <Checkbox
+                    id={`section-${section.id}`}
                     checked={included}
-                    onChange={() =>
+                    onCheckedChange={() =>
                       setSelectedSections((prev) =>
                         prev.includes(section.id) ? prev.filter((id) => id !== section.id) : [...prev, section.id],
                       )
                     }
-                    className="mt-1 h-4 w-4 rounded border-input text-salsa-600 focus:ring-salsa-500"
+                    className="mt-1"
                   />
                   <div>
                     <p className="text-sm font-semibold text-foreground">{section.label}</p>
@@ -474,7 +477,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
                       <p className="mt-1 text-xs text-muted-foreground">{section.description}</p>
                     ) : null}
                   </div>
-                </label>
+                </Label>
               )
             })}
           </div>
@@ -519,7 +522,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
         <Card className="space-y-5 p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-salsa-500">Builder</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Builder</p>
               <h2 className="font-serif text-2xl font-semibold text-foreground">
                 {selectedTemplate?.name ?? 'Select a template'}
               </h2>
@@ -547,9 +550,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground" htmlFor="form-title">
-                Form title
-              </label>
+              <Label htmlFor="form-title">Form title</Label>
               <Input
                 id="form-title"
                 value={customTitle}
@@ -558,29 +559,21 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground" htmlFor="branding-toggle">
-                Branding
-              </label>
-              <button
+              <Label htmlFor="branding-toggle">Branding</Label>
+              <Button
                 type="button"
                 id="branding-toggle"
+                variant={includeBranding ? 'default' : 'outline'}
                 onClick={() => setIncludeBranding((prev) => !prev)}
-                className={cn(
-                  'flex h-10 w-full items-center justify-center rounded-md border text-sm font-medium transition',
-                  includeBranding
-                    ? 'border-salsa-200 bg-salsa-50 text-salsa-600'
-                    : 'border-border bg-card text-muted-foreground hover:border-input',
-                )}
+                className="h-10 w-full"
               >
                 {includeBranding ? 'Branding enabled' : 'Branding hidden'}
-              </button>
+              </Button>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground" htmlFor="form-notes">
-              Notes for the footer (optional)
-            </label>
+            <Label htmlFor="form-notes">Notes for the footer (optional)</Label>
             <Textarea
               id="form-notes"
               value={notes}
@@ -592,9 +585,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
 
           {selectedTemplate?.source === 'saved' ? (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground" htmlFor="changelog-notes">
-                Changelog notes (optional)
-              </label>
+              <Label htmlFor="changelog-notes">Changelog notes (optional)</Label>
               <Textarea
                 id="changelog-notes"
                 value={changelogNotes}

@@ -85,7 +85,7 @@ export function BrandKitClient({ initialData }: { initialData: BrandKitData | nu
               <div key={field}>
                 <Label className="capitalize">{field.replace('Color', ' Color')}</Label>
                 <div className="flex gap-2">
-                  <input type="color" value={data[field] ?? '#000000'} onChange={(e) => update(field, e.target.value)} className="h-10 w-12 rounded cursor-pointer border" />
+                  <Input type="color" value={data[field] ?? '#000000'} onChange={(e) => update(field, e.target.value)} className="h-10 w-14 cursor-pointer p-1" />
                   <Input value={data[field] ?? ''} onChange={(e) => update(field, e.target.value)} />
                 </div>
               </div>

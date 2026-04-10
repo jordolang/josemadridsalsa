@@ -204,12 +204,12 @@ export default function SEOPage() {
           <div className="space-y-2">
             <Label>Product Schema</Label>
             <p className="text-sm text-muted-foreground mb-2">Automatically generated from product data</p>
-            <Badge className="bg-green-100 text-green-800">Active</Badge>
+            <Badge className="bg-primary/10 text-primary">Active</Badge>
           </div>
           <div className="space-y-2">
             <Label>Recipe Schema</Label>
             <p className="text-sm text-muted-foreground mb-2">Automatically generated from recipe data</p>
-            <Badge className="bg-green-100 text-green-800">Active</Badge>
+            <Badge className="bg-primary/10 text-primary">Active</Badge>
           </div>
         </div>
       </Card>
@@ -223,7 +223,7 @@ export default function SEOPage() {
               <Label>Sitemap Generation</Label>
               <p className="text-sm text-muted-foreground">Automatically generated at /sitemap.xml</p>
             </div>
-            <Badge className="bg-green-100 text-green-800">Active</Badge>
+            <Badge className="bg-primary/10 text-primary">Active</Badge>
           </div>
           <div className="flex items-center justify-between">
             <div>
@@ -236,8 +236,8 @@ export default function SEOPage() {
       </Card>
 
       {/* Implementation Note */}
-      <Card className="p-6 border-blue-200 bg-blue-50">
-        <h3 className="font-semibold text-blue-900 mb-2">SEO Manager - Coming Soon</h3>
+      <Card className="p-6 border-border bg-primary/5">
+        <h3 className="font-semibold text-foreground mb-2">SEO Manager - Coming Soon</h3>
         <div className="text-sm text-blue-800 space-y-2">
           <p><strong>Planned Features:</strong></p>
           <ul className="list-disc list-inside space-y-1 ml-2">

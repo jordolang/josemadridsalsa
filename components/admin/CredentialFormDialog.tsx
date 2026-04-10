@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Wand2, RefreshCw } from 'lucide-react'
 
 const credentialSchema = (mode: 'create' | 'edit') =>
@@ -251,7 +252,7 @@ export default function CredentialFormDialog({
                 <p className="text-sm text-destructive">{errors.password.message}</p>
               )}
               {showSuggestions && passwordSuggestions.length > 0 && (
-                <div className="mt-2 space-y-1 rounded-lg border bg-muted/50 p-3">
+                <div className="mt-2 space-y-1 rounded-lg border border-border bg-muted/50 p-3">
                   <div className="mb-1.5 flex items-center justify-between">
                     <p className="text-xs font-medium text-muted-foreground">
                       Suggested Passwords (12-15 chars, alphanumeric)
@@ -259,22 +260,24 @@ export default function CredentialFormDialog({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
+                      size="icon"
+                      className="h-6 w-6"
                       onClick={generatePasswords}
                     >
                       <RefreshCw className="h-3 w-3" />
+                      <span className="sr-only">Regenerate suggestions</span>
                     </Button>
                   </div>
                   {passwordSuggestions.map((pw, i) => (
-                    <button
+                    <Button
                       key={i}
                       type="button"
-                      className="block w-full rounded px-2 py-1.5 text-left font-mono text-sm hover:bg-blue-50 hover:text-blue-700"
+                      variant="ghost"
+                      className="h-auto w-full justify-start px-2 py-1.5 font-mono text-sm"
                       onClick={() => selectSuggestion(pw)}
                     >
                       {pw}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               )}
@@ -306,9 +309,9 @@ export default function CredentialFormDialog({
             </div>
 
             {error && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3">
-                <p className="text-sm text-destructive">{error}</p>
-              </div>
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
           </div>
           <DialogFooter>

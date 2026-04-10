@@ -5,6 +5,13 @@ import prisma from '@/lib/prisma'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Plus, DollarSign, TrendingUp, Users } from 'lucide-react'
 import Link from 'next/link'
 import { FundraiserStatus } from '@prisma/client'
@@ -70,11 +77,11 @@ async function getFundraisers(searchParams: SearchParams) {
   }
 }
 
-const statusColors: Record<FundraiserStatus, string> = {
-  DRAFT: 'bg-muted text-foreground',
-  ACTIVE: 'bg-green-100 text-green-800',
-  ENDED: 'bg-blue-100 text-blue-800',
-  CANCELLED: 'bg-destructive/10 text-destructive',
+const statusVariants: Record<FundraiserStatus, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  DRAFT: 'outline',
+  ACTIVE: 'default',
+  ENDED: 'secondary',
+  CANCELLED: 'destructive',
 }
 
 export default async function FundraisersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -109,7 +116,7 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <DollarSign className="h-8 w-8 text-green-600" />
+            <DollarSign className="h-8 w-8 text-primary" />
             <div>
               <p className="text-sm text-muted-foreground">Total Revenue</p>
               <p className="text-2xl font-bold">${Number(stats.revenue).toFixed(2)}</p>
@@ -118,7 +125,7 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <TrendingUp className="h-8 w-8 text-blue-600" />
+            <TrendingUp className="h-8 w-8 text-primary" />
             <div>
               <p className="text-sm text-muted-foreground">Total Commission</p>
               <p className="text-2xl font-bold">${Number(stats.commission).toFixed(2)}</p>
@@ -127,7 +134,7 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <Users className="h-8 w-8 text-purple-600" />
+            <Users className="h-8 w-8 text-primary" />
             <div>
               <p className="text-sm text-muted-foreground">Total Orders</p>
               <p className="text-2xl font-bold">{stats.orders}</p>
@@ -138,18 +145,20 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="flex gap-4">
-          <select
-            className="rounded-md border border-input px-3 py-2 text-sm"
-            defaultValue={params.status || 'all'}
-          >
-            <option value="all">All Statuses</option>
-            <option value="DRAFT">Draft</option>
-            <option value="ACTIVE">Active</option>
-            <option value="ENDED">Ended</option>
-            <option value="CANCELLED">Cancelled</option>
-          </select>
-        </div>
+        <form className="flex gap-4">
+          <Select name="status" defaultValue={params.status || 'all'}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="DRAFT">Draft</SelectItem>
+              <SelectItem value="ACTIVE">Active</SelectItem>
+              <SelectItem value="ENDED">Ended</SelectItem>
+              <SelectItem value="CANCELLED">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+        </form>
       </Card>
 
       {/* Fundraisers Grid */}
@@ -181,7 +190,7 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
                     </Link>
                     <p className="text-sm text-muted-foreground">{fundraiser.organizationName}</p>
                   </div>
-                  <Badge className={statusColors[fundraiser.status]}>{fundraiser.status}</Badge>
+                  <Badge variant={statusVariants[fundraiser.status]}>{fundraiser.status}</Badge>
                 </div>
 
                 <div className="mb-4 space-y-2 text-sm">

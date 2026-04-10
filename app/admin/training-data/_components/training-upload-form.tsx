@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { AlertTriangle, CheckCircle2, Loader2, UploadCloud } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 import {
   ACCEPTED_FILE_EXTENSIONS,
   ACCEPTED_MIME_TYPES,
@@ -133,9 +134,10 @@ export function TrainingUploadForm() {
   return (
     <div className="space-y-4">
       <div
-        className={`rounded-lg border border-dashed p-6 text-center transition ${
-          isDragging ? 'border-salsa-500 bg-salsa-50' : 'border-input'
-        }`}
+        className={cn(
+          'rounded-lg border border-dashed p-6 text-center transition',
+          isDragging ? 'border-primary bg-primary/5' : 'border-input',
+        )}
       >
         <input
           id={fileInputId}
@@ -153,7 +155,7 @@ export function TrainingUploadForm() {
           onDragLeave={handleDragLeave}
           className="flex cursor-pointer flex-col items-center justify-center gap-3"
         >
-          <UploadCloud className="h-10 w-10 text-salsa-600" />
+          <UploadCloud className="h-10 w-10 text-primary" />
           <div className="space-y-1">
             <p className="text-base font-semibold">
               Drag & drop files or click to browse
@@ -199,7 +201,7 @@ export function TrainingUploadForm() {
                     </span>
                   )}
                   {task.status === 'success' && (
-                    <span className="flex items-center gap-1 text-emerald-600">
+                    <span className="flex items-center gap-1 text-primary">
                       <CheckCircle2 className="h-4 w-4" />
                       Ready
                     </span>

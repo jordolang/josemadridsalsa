@@ -20,6 +20,7 @@ import type { SocialMediaPlatform } from '@prisma/client'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
 import type { SocialAccountInfo } from '@/types/social'
 
@@ -112,12 +113,18 @@ export function SocialAccounts({ accounts }: Props) {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-          <button className="ml-2 underline" onClick={() => setError(null)}>
-            Dismiss
-          </button>
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription className="flex items-center justify-between gap-3">
+            <span>{error}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setError(null)}
+            >
+              Dismiss
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Connected accounts */}
@@ -166,12 +173,12 @@ export function SocialAccounts({ accounts }: Props) {
                           {account.connectionError}
                         </div>
                       ) : isExpired ? (
-                        <div className="flex items-center gap-2 text-sm text-amber-600">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <AlertTriangle className="h-4 w-4" />
                           Token expired. Reconnect to continue posting.
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 text-sm text-emerald-600">
+                        <div className="flex items-center gap-2 text-sm text-primary">
                           <CheckCircle2 className="h-4 w-4" />
                           Connected and active
                         </div>
@@ -289,12 +296,12 @@ export function SocialAccounts({ accounts }: Props) {
       </div>
 
       {/* Setup info */}
-      <Card className="border-blue-200 bg-blue-50 p-5">
-        <h4 className="font-semibold text-blue-900">Platform Setup Requirements</h4>
+      <Card className="border-border bg-primary/5 p-5">
+        <h4 className="font-semibold text-foreground">Platform Setup Requirements</h4>
         <div className="mt-3 grid gap-4 text-sm text-blue-800 sm:grid-cols-2">
           <div>
             <p className="font-medium">Facebook & Instagram</p>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-blue-700">
+            <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
               <li>Facebook App created at developers.facebook.com</li>
               <li>App ID and Secret in environment variables</li>
               <li>Business Page with admin access</li>
@@ -303,7 +310,7 @@ export function SocialAccounts({ accounts }: Props) {
           </div>
           <div>
             <p className="font-medium">X (Twitter)</p>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-blue-700">
+            <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
               <li>Twitter Developer App at developer.x.com</li>
               <li>OAuth 2.0 with PKCE enabled</li>
               <li>Client ID and Secret configured</li>
@@ -311,7 +318,7 @@ export function SocialAccounts({ accounts }: Props) {
           </div>
           <div>
             <p className="font-medium">TikTok</p>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-blue-700">
+            <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
               <li>TikTok Developer App at developers.tiktok.com</li>
               <li>Content Posting API access approved</li>
               <li>Client Key and Secret configured</li>
@@ -319,7 +326,7 @@ export function SocialAccounts({ accounts }: Props) {
           </div>
           <div>
             <p className="font-medium">Environment Variables</p>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-blue-700">
+            <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
               <li>FACEBOOK_APP_ID, FACEBOOK_APP_SECRET</li>
               <li>TWITTER_CLIENT_ID, TWITTER_CLIENT_SECRET</li>
               <li>TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET</li>

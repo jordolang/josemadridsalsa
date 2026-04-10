@@ -193,19 +193,17 @@ export function EmailComposer({ templateId, onSave }: EmailComposerProps) {
           <Card className="p-4">
             <h3 className="font-semibold mb-4">Block Library</h3>
 
-            <div className="space-y-2 mb-4">
+            <div className="space-y-1 mb-4">
               {categories.map((category) => (
-                <button
+                <Button
                   key={category}
+                  variant={activeCategory === category ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="w-full justify-start"
                   onClick={() => setActiveCategory(category)}
-                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeCategory === category
-                      ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'hover:bg-muted/50'
-                  }`}
                 >
                   {category.charAt(0).toUpperCase() + category.slice(1)}
-                </button>
+                </Button>
               ))}
             </div>
 

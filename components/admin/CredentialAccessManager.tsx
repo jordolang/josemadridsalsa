@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -167,17 +168,21 @@ export default function CredentialAccessManager({
                 <Label className="mb-2 block">Permissions</Label>
                 <div className="flex flex-wrap gap-4">
                   {(['canView', 'canAdd', 'canEdit', 'canDelete', 'canUpload'] as const).map((perm) => (
-                    <label key={perm} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
+                    <div key={perm} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`new-perm-${perm}`}
                         checked={newPerms[perm]}
-                        onChange={(e) =>
-                          setNewPerms((prev) => ({ ...prev, [perm]: e.target.checked }))
+                        onCheckedChange={(checked) =>
+                          setNewPerms((prev) => ({ ...prev, [perm]: checked === true }))
                         }
-                        className="h-4 w-4 rounded border-input"
                       />
-                      {perm.replace('can', '')}
-                    </label>
+                      <Label
+                        htmlFor={`new-perm-${perm}`}
+                        className="text-sm font-normal"
+                      >
+                        {perm.replace('can', '')}
+                      </Label>
+                    </div>
                   ))}
                 </div>
               </div>

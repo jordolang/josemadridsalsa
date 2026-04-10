@@ -7,6 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Trash2, Upload, Download, ShieldAlert } from 'lucide-react'
 import {
   Dialog,
@@ -28,10 +36,10 @@ interface SubscribersTableProps {
 }
 
 const statusColors: Record<SubscriberStatus, string> = {
-  SUBSCRIBED: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+  SUBSCRIBED: 'text-primary bg-primary/5 border-border',
   UNSUBSCRIBED: 'text-foreground bg-muted/50 border-border',
   BOUNCED: 'text-destructive bg-destructive/10 border-destructive/30',
-  COMPLAINED: 'text-amber-700 bg-amber-50 border-amber-200',
+  COMPLAINED: 'text-muted-foreground bg-muted/50 border-border',
 }
 
 export function SubscribersTable({ listId, listName, subscribers }: SubscribersTableProps) {
@@ -175,7 +183,7 @@ export function SubscribersTable({ listId, listName, subscribers }: SubscribersT
       </div>
 
       {someSelected && (
-        <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200 flex-wrap">
+        <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-border flex-wrap">
           <span className="text-sm font-medium text-blue-800">{selected.size} selected</span>
           <div className="flex items-center gap-2 flex-wrap ml-2">
             <Select value={bulkStatus} onValueChange={(v) => setBulkStatus(v as SubscriberStatus)}>
@@ -242,41 +250,41 @@ export function SubscribersTable({ listId, listName, subscribers }: SubscribersT
         </div>
       ) : (
         <div className="rounded-md border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-muted/50">
-              <tr>
-                <th className="p-4 w-10">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">
                   <Checkbox
                     checked={allSelected}
                     onCheckedChange={toggleAll}
                     aria-label="Select all"
                   />
-                </th>
-                <th className="p-4 text-left font-medium">Email</th>
-                <th className="p-4 text-left font-medium">Name</th>
-                <th className="p-4 text-left font-medium">Status</th>
-                <th className="p-4 text-left font-medium">Joined</th>
-                <th className="p-4 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Joined</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {subscribers.map((subscriber) => (
-                <tr
+                <TableRow
                   key={subscriber.id}
-                  className={`border-b last:border-0 hover:bg-muted/50 ${selected.has(subscriber.id) ? 'bg-blue-50/50' : ''}`}
+                  className={selected.has(subscriber.id) ? 'bg-primary/5' : undefined}
                 >
-                  <td className="p-4">
+                  <TableCell>
                     <Checkbox
                       checked={selected.has(subscriber.id)}
                       onCheckedChange={() => toggleOne(subscriber.id)}
                       aria-label={`Select ${subscriber.email}`}
                     />
-                  </td>
-                  <td className="p-4 font-medium">{subscriber.email}</td>
-                  <td className="p-4 text-muted-foreground">
+                  </TableCell>
+                  <TableCell className="font-medium">{subscriber.email}</TableCell>
+                  <TableCell className="text-muted-foreground">
                     {[subscriber.firstName, subscriber.lastName].filter(Boolean).join(' ') || '-'}
-                  </td>
-                  <td className="p-4">
+                  </TableCell>
+                  <TableCell>
                     <Select
                       defaultValue={subscriber.status}
                       disabled={isPending}
@@ -292,11 +300,11 @@ export function SubscribersTable({ listId, listName, subscribers }: SubscribersT
                         <SelectItem value="COMPLAINED">COMPLAINED</SelectItem>
                       </SelectContent>
                     </Select>
-                  </td>
-                  <td className="p-4 text-muted-foreground">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {new Date(subscriber.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="p-4 text-right">
+                  </TableCell>
+                  <TableCell className="text-right">
                     <Button
                       variant="destructive"
                       size="icon"
@@ -307,11 +315,11 @@ export function SubscribersTable({ listId, listName, subscribers }: SubscribersT
                       <span className="sr-only">Remove</span>
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 

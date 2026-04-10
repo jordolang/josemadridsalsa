@@ -7,6 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Trash2, Plus, Download, Search } from 'lucide-react'
 import {
   Dialog,
@@ -248,36 +256,36 @@ export function SuppressionsClient({ initialData, initialTotal }: SuppressionsCl
         </div>
       ) : (
         <div className="rounded-md border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-muted/50">
-              <tr>
-                <th className="p-4 text-left font-medium">Email</th>
-                <th className="p-4 text-left font-medium">Reason</th>
-                <th className="p-4 text-left font-medium">Source</th>
-                <th className="p-4 text-left font-medium">Notes</th>
-                <th className="p-4 text-left font-medium">Added</th>
-                <th className="p-4 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead>Notes</TableHead>
+                <TableHead>Added</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {items.map((item) => (
-                <tr key={item.id} className="border-b last:border-0 hover:bg-muted/50">
-                  <td className="p-4 font-medium">{item.email}</td>
-                  <td className="p-4">
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">{item.email}</TableCell>
+                  <TableCell>
                     <Badge className={reasonColors[item.reason]}>
                       {reasonLabels[item.reason]}
                     </Badge>
-                  </td>
-                  <td className="p-4 text-muted-foreground">{item.source || '-'}</td>
-                  <td className="p-4 text-muted-foreground max-w-xs truncate">{item.notes || '-'}</td>
-                  <td className="p-4 text-muted-foreground">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{item.source || '-'}</TableCell>
+                  <TableCell className="max-w-xs truncate text-muted-foreground">{item.notes || '-'}</TableCell>
+                  <TableCell className="text-muted-foreground">
                     {new Date(item.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="p-4 text-right">
+                  </TableCell>
+                  <TableCell className="text-right">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => handleRemove(item.email)}
                       disabled={loading}
                       title="Remove from suppression list"
@@ -285,11 +293,11 @@ export function SuppressionsClient({ initialData, initialTotal }: SuppressionsCl
                       <span className="sr-only">Remove</span>
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

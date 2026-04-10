@@ -19,6 +19,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 import { Upload, CheckCircle2, AlertCircle, Loader2, FileSpreadsheet } from 'lucide-react'
 
 interface ConstantContactImportModalProps {
@@ -222,11 +232,12 @@ export function ConstantContactImportModal({
             </div>
 
             <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+              className={cn(
+                'border-2 border-dashed rounded-lg p-8 text-center transition-colors',
                 selectedListId
-                  ? 'border-input cursor-pointer hover:border-blue-400'
-                  : 'border-border cursor-not-allowed opacity-60'
-              }`}
+                  ? 'cursor-pointer border-input hover:border-primary'
+                  : 'cursor-not-allowed border-border opacity-60',
+              )}
               onClick={() => selectedListId && fileRef.current?.click()}
             >
               <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
@@ -290,9 +301,9 @@ export function ConstantContactImportModal({
                     <span className="text-muted-foreground">{header}</span>
                     <span className="font-mono text-xs">
                       {parsedData.headers.includes(header) ? (
-                        <span className="text-green-600">&#10003; {field}</span>
+                        <span className="text-primary">&#10003; {field}</span>
                       ) : (
-                        <span className="text-amber-600">-- not found</span>
+                        <span className="text-muted-foreground">-- not found</span>
                       )}
                     </span>
                   </div>
@@ -304,36 +315,30 @@ export function ConstantContactImportModal({
               <div className="space-y-2">
                 <p className="text-sm font-medium">Preview (first {parsedData.preview.length} rows)</p>
                 <div className="overflow-x-auto rounded-lg border">
-                  <table className="w-full text-xs">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="p-2 text-left">Email</th>
-                        <th className="p-2 text-left">Name</th>
-                        <th className="p-2 text-left">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {parsedData.preview.map((row, i) => (
-                        <tr key={i} className="border-t">
-                          <td className="p-2">{row['Email address'] || '-'}</td>
-                          <td className="p-2">
+                        <TableRow key={i}>
+                          <TableCell>{row['Email address'] || '-'}</TableCell>
+                          <TableCell>
                             {[row['First name'], row['Last name']].filter(Boolean).join(' ') || '-'}
-                          </td>
-                          <td className="p-2">
-                            <span
-                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                                row['Email status'] === 'Active'
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-destructive/10 text-destructive'
-                              }`}
-                            >
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={row['Email status'] === 'Active' ? 'default' : 'destructive'}>
                               {row['Email status']}
-                            </span>
-                          </td>
-                        </tr>
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             )}
@@ -364,15 +369,15 @@ export function ConstantContactImportModal({
 
         {step === 'result' && result && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
-              <CheckCircle2 className="h-8 w-8 text-green-600 flex-shrink-0" />
+            <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-lg border border-border">
+              <CheckCircle2 className="h-8 w-8 text-primary flex-shrink-0" />
               <div>
                 <p className="font-semibold text-green-800">Import Complete</p>
-                <p className="text-sm text-green-700">
+                <p className="text-sm text-primary">
                   {result.imported} imported · {result.skipped} skipped
                 </p>
                 {selectedListName && (
-                  <p className="text-xs text-green-600 mt-1">
+                  <p className="text-xs text-primary mt-1">
                     Imported into &ldquo;{selectedListName}&rdquo;
                   </p>
                 )}

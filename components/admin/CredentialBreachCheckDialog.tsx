@@ -122,7 +122,7 @@ export default function CredentialBreachCheckDialog({
           </div>
         ) : isChecking ? (
           <div className="py-8 text-center">
-            <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-blue-500" />
+            <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-primary" />
             <p className="text-sm font-medium">Checking credentials...</p>
             <p className="mt-1 text-xs text-muted-foreground">
               This may take a moment. Do not close this dialog.
@@ -140,9 +140,9 @@ export default function CredentialBreachCheckDialog({
                 <p className="text-2xl font-bold text-destructive">{breachedResults.length}</p>
                 <p className="text-xs text-destructive">Breached</p>
               </div>
-              <div className="rounded-lg bg-green-50 p-3 text-center">
-                <p className="text-2xl font-bold text-green-700">{safeResults.length}</p>
-                <p className="text-xs text-green-600">Safe</p>
+              <div className="rounded-lg bg-primary/5 p-3 text-center">
+                <p className="text-2xl font-bold text-primary">{safeResults.length}</p>
+                <p className="text-xs text-primary">Safe</p>
               </div>
             </div>
 
@@ -175,7 +175,7 @@ export default function CredentialBreachCheckDialog({
             {/* Safe Credentials */}
             {safeResults.length > 0 && (
               <div>
-                <h3 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-green-700">
+                <h3 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-primary">
                   <ShieldCheck className="h-4 w-4" />
                   Safe Passwords
                 </h3>
@@ -183,10 +183,10 @@ export default function CredentialBreachCheckDialog({
                   {safeResults.map((r) => (
                     <div
                       key={r.id}
-                      className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 p-2"
+                      className="flex items-center justify-between rounded-lg border border-border bg-primary/5 p-2"
                     >
                       <p className="text-sm">{r.serviceName} - {r.label}</p>
-                      <ShieldCheck className="h-4 w-4 text-green-600" />
+                      <ShieldCheck className="h-4 w-4 text-primary" />
                     </div>
                   ))}
                 </div>
@@ -196,11 +196,11 @@ export default function CredentialBreachCheckDialog({
             {/* Errors */}
             {errorResults.length > 0 && (
               <div>
-                <h3 className="mb-2 text-sm font-medium text-amber-700">
+                <h3 className="mb-2 text-sm font-medium text-muted-foreground">
                   Errors ({errorResults.length})
                 </h3>
                 {errorResults.map((r) => (
-                  <div key={r.id} className="text-xs text-amber-600">
+                  <div key={r.id} className="text-xs text-muted-foreground">
                     {r.serviceName}: {r.error}
                   </div>
                 ))}

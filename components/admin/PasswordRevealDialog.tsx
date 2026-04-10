@@ -63,7 +63,7 @@ export default function PasswordRevealDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
-            <Eye className="h-6 w-6 text-amber-600" />
+            <Eye className="h-6 w-6 text-muted-foreground" />
           </div>
           <AlertDialogTitle className="text-center">Reveal Password</AlertDialogTitle>
           <AlertDialogDescription className="text-center">

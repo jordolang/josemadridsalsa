@@ -81,7 +81,7 @@ const statusConfig: Record<
 > = {
   connected: {
     label: 'Connected',
-    badgeClass: 'bg-emerald-100 text-emerald-700',
+    badgeClass: 'bg-primary/10 text-primary',
     Icon: CheckCircle2,
   },
   not_configured: {

@@ -417,7 +417,7 @@ export function VariantEditor({
                       variant={variant.inStock ? 'default' : 'destructive'}
                       className={
                         variant.inStock
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-primary/10 text-primary'
                           : undefined
                       }
                     >

@@ -47,8 +47,8 @@ async function getTags(searchParams: SearchParams) {
 }
 
 const tagTypeColors = {
-  PRODUCT: 'bg-blue-100 text-blue-800',
-  RECIPE: 'bg-green-100 text-green-800',
+  PRODUCT: 'bg-primary/10 text-primary',
+  RECIPE: 'bg-primary/10 text-primary',
   MEDIA: 'bg-purple-100 text-purple-800',
   EVENT: 'bg-orange-100 text-orange-800',
   GENERAL: 'bg-muted text-foreground',
