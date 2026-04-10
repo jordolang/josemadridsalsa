@@ -150,7 +150,7 @@ export function AnimatedTestimonials({ reviewsData, autoplay = true }: AnimatedT
             <div className="relative h-80 w-full max-w-xs">
               <AnimatePresence>
                 {reviews.map((review, index) => {
-                  const showPhoto = Boolean((review as any).profilePhotoUrl) && !failedImages[index]
+                  const showPhoto = Boolean(review.profilePhotoUrl) && !failedImages[index]
                   return (
                     <motion.div
                       key={index}
@@ -166,14 +166,15 @@ export function AnimatedTestimonials({ reviewsData, autoplay = true }: AnimatedT
                       transition={{ duration: 0.5, ease: 'easeInOut' }}
                       className="absolute inset-0 origin-bottom"
                     >
-                      {showPhoto ? (
+                      {showPhoto && review.profilePhotoUrl ? (
                         <Image
-                          src={(review as any).profilePhotoUrl ?? ''}
+                          src={review.profilePhotoUrl}
                           alt={review.authorName}
                           fill
                           className="rounded-3xl object-cover shadow-2xl"
                           sizes="(min-width: 1024px) 320px, 100vw"
                           onError={() => handleImageError(index)}
+                          unoptimized
                         />
                       ) : null}
                       <div

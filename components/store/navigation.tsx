@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { Search, ShoppingCart, Menu, X, User, Gift, LogOut, Settings, Facebook, Twitter, Store, Heart } from "lucide-react";
+import { Search, ShoppingCart, Menu, X, User, Gift, LogOut, Settings, Facebook, Twitter, Store, Heart, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -119,10 +119,10 @@ export function Navigation() {
     >
       <div className="container mx-auto px-2 sm:px-4 max-w-[1400px]">
         <div className="flex h-16 items-center gap-1">
-          {/* Logo — 25% */}
+          {/* Logo */}
           <Link
             href="/"
-            className="flex items-center space-x-2 font-serif font-bold text-base lg:text-xl flex-shrink-0 min-h-[44px] w-[25%]"
+            className="flex items-center space-x-2 font-serif font-bold text-base lg:text-xl flex-shrink-0 min-h-[44px]"
           >
             <div className="relative w-11 h-11 lg:w-12 lg:h-12 flex-shrink-0" suppressHydrationWarning>
               <Image
@@ -134,11 +134,11 @@ export function Navigation() {
                 sizes="(max-width: 640px) 2.75rem, 3rem"
               />
             </div>
-            <span className="hidden sm:inline text-gradient">Jose Madrid Salsa</span>
+            <span className="hidden sm:inline text-gradient whitespace-nowrap">Jose Madrid Salsa</span>
           </Link>
 
-          {/* Desktop Navigation + Search — 50% centered */}
-          <div className="hidden lg:flex lg:items-center lg:justify-center lg:gap-2 w-[50%]">
+          {/* Desktop Navigation + Search — fills center */}
+          <div className="hidden lg:flex lg:items-center lg:justify-center lg:gap-2 flex-1 min-w-0">
             {/* Search inline with nav */}
             <form onSubmit={handleSearch} className="flex">
               <div className="relative">
@@ -198,7 +198,7 @@ export function Navigation() {
                       <NavigationMenuLink asChild>
                         <Link
                           href={item.href}
-                          className="group inline-flex h-auto min-h-[44px] w-max items-center justify-center rounded-md px-1.5 py-1.5 text-[11px] font-medium transition-colors hover:text-salsa-600 focus:text-salsa-600 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+                          className="group inline-flex h-auto min-h-[44px] w-max items-center justify-center whitespace-nowrap rounded-md px-1.5 py-1.5 text-[11px] font-medium transition-colors hover:text-salsa-600 focus:text-salsa-600 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
                         >
                           {item.title}
                         </Link>
@@ -208,6 +208,22 @@ export function Navigation() {
                 ))}
               </NavigationMenuList>
             </NavigationMenu>
+
+            {/* Social Links — inline with nav, always visible regardless of auth state */}
+            <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
+              {socialLinks.map((social) => (
+                <a
+                  key={social.name}
+                  href={social.href}
+                  aria-label={`Visit our ${social.name} profile`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-salsa-500 dark:hover:text-salsa-300"
+                >
+                  <social.icon className="w-4 h-4" />
+                </a>
+              ))}
+            </div>
           </div>
 
           {/* Search Bar — part of the 50% center block, hidden on lg since it's inside nav block */}
@@ -232,28 +248,23 @@ export function Navigation() {
             </form>
           </div>
 
-          {/* Actions — 25% right */}
-          <div className="flex items-center justify-end gap-1 lg:gap-2 w-[25%] flex-shrink-0">
-            {/* Social Links — desktop only */}
-            <div className="hidden xl:flex items-center gap-0.5 flex-shrink-0">
-              {socialLinks.map((social) => (
-                <Button
-                  key={social.name}
-                  variant="ghost"
-                  asChild
-                  className="min-h-[44px] min-w-[44px] p-0 flex-shrink-0 text-muted-foreground hover:text-salsa-500 dark:hover:text-salsa-300"
-                >
-                  <a
-                    href={social.href}
-                    aria-label={`Visit our ${social.name} profile`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <social.icon className="w-5 h-5" />
-                  </a>
-                </Button>
-              ))}
-            </div>
+          {/* Actions — right */}
+          <div className="flex items-center justify-end gap-1 lg:gap-1.5 flex-shrink-0">
+            {/* Docs link — desktop only */}
+            <Button
+              variant="ghost"
+              asChild
+              className="hidden lg:flex min-h-[44px] min-w-[44px] p-0 flex-shrink-0 text-muted-foreground hover:text-salsa-500 dark:hover:text-salsa-300"
+            >
+              <a
+                href="https://salsadocs.vercel.app"
+                aria-label="Developer Documentation"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <BookOpen className="w-5 h-5" />
+              </a>
+            </Button>
 
             <ThemeToggle className="min-h-[44px] min-w-[44px] p-0 flex-shrink-0" />
 
@@ -326,10 +337,13 @@ export function Navigation() {
               </DropdownMenu>
             ) : (
               <div className="hidden lg:flex gap-1 flex-shrink-0">
-                <Button variant="ghost" asChild className="min-h-[44px] px-3 text-xs whitespace-nowrap flex-shrink-0">
-                  <Link href="/auth/signin">Sign In</Link>
+                <Button variant="ghost" asChild className="min-h-[44px] px-2.5 text-xs whitespace-nowrap flex-shrink-0">
+                  <Link href="/auth/signin">
+                    <User className="w-4 h-4 mr-1" />
+                    Sign In
+                  </Link>
                 </Button>
-                <Button asChild className="min-h-[44px] px-3 text-xs whitespace-nowrap flex-shrink-0">
+                <Button asChild className="min-h-[44px] px-2.5 text-xs whitespace-nowrap flex-shrink-0 bg-salsa-600 hover:bg-salsa-700">
                   <Link href="/auth/signup">Sign Up</Link>
                 </Button>
               </div>
@@ -423,7 +437,7 @@ export function Navigation() {
                         <Button
                           key={social.name}
                           variant="outline"
-                                    asChild
+                          asChild
                           className="min-h-[44px] min-w-[44px] rounded-full p-0 text-muted-foreground"
                         >
                           <a
@@ -436,6 +450,20 @@ export function Navigation() {
                           </a>
                         </Button>
                       ))}
+                      <Button
+                        variant="outline"
+                        asChild
+                        className="min-h-[44px] min-w-[44px] rounded-full p-0 text-muted-foreground"
+                      >
+                        <a
+                          href="https://salsadocs.vercel.app"
+                          aria-label="Developer Documentation"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <BookOpen className="h-5 w-5" />
+                        </a>
+                      </Button>
                     </div>
                   </div>
 

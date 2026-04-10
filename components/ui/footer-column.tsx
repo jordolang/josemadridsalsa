@@ -18,7 +18,7 @@ const company = {
   name: 'Jose Madrid Salsa',
   description:
     'Handcrafted, small-batch salsas made in Ohio since 1989. We partner with families, fundraisers, and retail shops across the Midwest.',
-  logo: '/images/jose-madrid-salsa-logo.png',
+  logo: '/images/logo-image.png',
 }
 
 const socialLinks = [
@@ -35,6 +35,7 @@ const aboutLinks = [
   { text: 'Where is Jose?', href: '/where-is-jose' },
   { text: 'Recipes', href: '/recipes' },
   { text: 'Developer', href: '/developer' },
+  { text: 'Developer Documentation', href: 'https://salsadocs.vercel.app' },
 ]
 
 const serviceLinks = [
@@ -47,7 +48,7 @@ const serviceLinks = [
 const helpfulLinks = [
   { text: 'Wholesale Program', href: '/wholesale' },
   { text: 'Retail Partner Resources', href: '/forms' },
-  { text: 'Documentation', href: '/docs' },
+  { text: 'Documentation', href: 'https://salsadocs.vercel.app' },
   { text: 'Customer Login', href: '/auth/signin' },
   { text: 'Support', href: `mailto:${supportEmail}` },
 ]
@@ -73,14 +74,14 @@ export function Footer() {
       <div className="mx-auto max-w-screen-xl px-4 pt-16 pb-6 sm:px-6 lg:px-8 lg:pt-24">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div>
-            <div className="text-primary flex justify-center gap-2 sm:justify-start" suppressHydrationWarning>
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-salsa-700 p-1">
+            <div className="text-primary flex items-center justify-center gap-3 sm:justify-start" suppressHydrationWarning>
+              <div className="relative h-14 w-14 shrink-0">
                 <Image
                   src={company.logo}
                   alt={`${company.name} logo`}
-                  width={48}
-                  height={48}
+                  fill
                   className="object-contain"
+                  sizes="3.5rem"
                   priority
                 />
               </div>
@@ -140,11 +141,16 @@ const FooterColumn = ({ title, links }: FooterColumnProps) => (
     <p className="text-lg font-medium">{title}</p>
     <ul className="mt-8 space-y-4 text-sm">
       {links.map(({ text, href }) => {
-        const isExternal = href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('tel:')
+        const isHttp = href.startsWith('http')
+        const isExternal = isHttp || href.startsWith('mailto:') || href.startsWith('tel:')
         return (
           <li key={text}>
             {isExternal ? (
-              <a className="text-secondary-foreground/70 transition hover:text-primary" href={href}>
+              <a
+                className="text-secondary-foreground/70 transition hover:text-primary"
+                href={href}
+                {...(isHttp ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              >
                 {text}
               </a>
             ) : (
