@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import Script from 'next/script'
 import { CartSidebar } from '@/components/store/cart-sidebar'
-import { Toaster } from '@/components/ui/toaster'
+import { Toaster } from '@/components/ui/sonner'
 import { Navigation } from '@/components/store/navigation'
 import Footer from '@/components/ui/footer-column'
 import { AiChatWidget } from '@/components/chat/ai-chat-widget'

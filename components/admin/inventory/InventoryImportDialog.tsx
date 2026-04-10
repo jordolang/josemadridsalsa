@@ -22,11 +22,10 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export function InventoryImportDialog() {
   const router = useRouter();
-  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [format, setFormat] = useState<'csv' | 'excel'>('csv');
@@ -38,20 +37,16 @@ export function InventoryImportDialog() {
       // Validate file type
       const extension = selectedFile.name.split('.').pop()?.toLowerCase();
       if (format === 'csv' && extension !== 'csv') {
-        toast({
-          title: 'Invalid file type',
+        toast.error('Invalid file type', {
           description: 'Please select a CSV file',
-          variant: 'destructive',
         });
         setFile(null);
         e.currentTarget.value = '';
         return;
       }
       if (format === 'excel' && !['xlsx', 'xls'].includes(extension || '')) {
-        toast({
-          title: 'Invalid file type',
+        toast.error('Invalid file type', {
           description: 'Please select an Excel file (.xlsx or .xls)',
-          variant: 'destructive',
         });
         setFile(null);
         e.currentTarget.value = '';
@@ -65,10 +60,8 @@ export function InventoryImportDialog() {
     e.preventDefault();
 
     if (!file) {
-      toast({
-        title: 'No file selected',
+      toast.error('No file selected', {
         description: 'Please select a file to import',
-        variant: 'destructive',
       });
       return;
     }
@@ -97,8 +90,7 @@ export function InventoryImportDialog() {
         throw new Error(detail);
       }
 
-      toast({
-        title: 'Import successful',
+      toast.success('Import successful', {
         description: data.message || `Successfully imported ${data.updated || 0} product(s)`,
       });
 
@@ -106,10 +98,8 @@ export function InventoryImportDialog() {
       setFile(null);
       router.refresh();
     } catch (error) {
-      toast({
-        title: 'Import failed',
+      toast.error('Import failed', {
         description: error instanceof Error ? error.message : 'An unexpected error occurred',
-        variant: 'destructive',
       });
     } finally {
       setLoading(false);

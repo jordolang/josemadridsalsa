@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { InventoryAlertType } from '@prisma/client';
 
 interface InventoryAlert {
@@ -41,7 +41,6 @@ interface InventoryAlertsTableProps {
 
 export function InventoryAlertsTable({ alerts, canWrite }: InventoryAlertsTableProps) {
   const router = useRouter();
-  const { toast } = useToast();
   const [loadingAlertId, setLoadingAlertId] = useState<string | null>(null);
 
   const handleAlertAction = async (alertId: string, action: 'acknowledge' | 'resolve' | 'dismiss') => {
@@ -62,17 +61,14 @@ export function InventoryAlertsTable({ alerts, canWrite }: InventoryAlertsTableP
         throw new Error(data.message || `Failed to ${action} alert`);
       }
 
-      toast({
-        title: 'Alert updated',
+      toast.success('Alert updated', {
         description: data.message,
       });
 
       router.refresh();
     } catch (error: any) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error.message,
-        variant: 'destructive',
       });
     } finally {
       setLoadingAlertId(null);
@@ -123,11 +119,13 @@ export function InventoryAlertsTable({ alerts, canWrite }: InventoryAlertsTableP
                 )}
               </TableCell>
               <TableCell>
-                <span className={
-                  alert.product.inventory === 0
-                    ? 'text-destructive font-medium'
-                    : 'text-yellow-600 font-medium'
-                }>
+                <span
+                  className={
+                    alert.product.inventory === 0
+                      ? 'font-medium text-destructive'
+                      : 'font-medium text-amber-600 dark:text-amber-400'
+                  }
+                >
                   {alert.product.inventory}
                 </span>
               </TableCell>
@@ -137,30 +135,33 @@ export function InventoryAlertsTable({ alerts, canWrite }: InventoryAlertsTableP
               </TableCell>
               {canWrite && (
                 <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-end gap-1">
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
                       onClick={() => handleAlertAction(alert.id, 'acknowledge')}
                       disabled={loadingAlertId === alert.id}
+                      aria-label="Acknowledge alert"
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="size-4" />
                     </Button>
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
                       onClick={() => handleAlertAction(alert.id, 'resolve')}
                       disabled={loadingAlertId === alert.id}
+                      aria-label="Resolve alert"
                     >
-                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <CheckCircle className="size-4 text-emerald-600 dark:text-emerald-400" />
                     </Button>
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
                       onClick={() => handleAlertAction(alert.id, 'dismiss')}
                       disabled={loadingAlertId === alert.id}
+                      aria-label="Dismiss alert"
                     >
-                      <XCircle className="h-4 w-4 text-red-600" />
+                      <XCircle className="size-4 text-destructive" />
                     </Button>
                   </div>
                 </TableCell>

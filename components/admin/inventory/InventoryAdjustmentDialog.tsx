@@ -23,7 +23,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface InventoryAdjustmentDialogProps {
   productId: string;
@@ -41,7 +41,6 @@ const TRANSACTION_TYPES = [
 
 export function InventoryAdjustmentDialog({ productId, productName }: InventoryAdjustmentDialogProps) {
   const router = useRouter();
-  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -61,10 +60,8 @@ export function InventoryAdjustmentDialog({ productId, productName }: InventoryA
       let quantity = parseInt(formData.quantity, 10);
 
       if (isNaN(quantity) || quantity === 0) {
-        toast({
-          title: 'Invalid quantity',
+        toast.error('Invalid quantity', {
           description: 'Please enter a valid quantity',
-          variant: 'destructive',
         });
         setLoading(false);
         return;
@@ -97,8 +94,7 @@ export function InventoryAdjustmentDialog({ productId, productName }: InventoryA
         throw new Error(data.message || 'Failed to adjust inventory');
       }
 
-      toast({
-        title: 'Inventory adjusted',
+      toast.success('Inventory adjusted', {
         description: `Successfully updated inventory for ${productName}`,
       });
 
@@ -112,10 +108,8 @@ export function InventoryAdjustmentDialog({ productId, productName }: InventoryA
 
       router.refresh();
     } catch (error: any) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error.message,
-        variant: 'destructive',
       });
     } finally {
       setLoading(false);

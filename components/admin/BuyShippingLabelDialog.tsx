@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Tag } from 'lucide-react'
+import { CheckCircle2, Tag } from 'lucide-react'
+import { toast } from 'sonner'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -149,6 +151,9 @@ export default function BuyShippingLabelDialog({
         service: data.label.service,
       })
       setStep('success')
+      toast.success('Label purchased', {
+        description: `${data.label.carrier} ${data.label.service} — tracking ${data.label.trackingNumber}`,
+      })
       router.refresh()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to purchase label')
@@ -172,7 +177,7 @@ export default function BuyShippingLabelDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full justify-start gap-2">
-          <Tag className="h-4 w-4" />
+          <Tag className="size-4" />
           Buy Shipping Label
         </Button>
       </DialogTrigger>
@@ -220,70 +225,77 @@ export default function BuyShippingLabelDialog({
               <div className="space-y-2">
                 <Label>Service</Label>
                 <div className="space-y-2">
-                  {rates.map((rate) => (
-                    <label
-                      key={rate.id}
-                      className={`flex items-center justify-between rounded-lg border-2 p-3 cursor-pointer transition-colors ${
-                        selectedRate?.id === rate.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="shippingRate"
-                          checked={selectedRate?.id === rate.id}
-                          onChange={() => setSelectedRate(rate)}
-                          className="h-4 w-4 text-blue-600"
-                        />
-                        <div>
-                          <p className="text-sm font-medium">{rate.service}</p>
-                          {rate.deliveryDays && (
-                            <p className="text-xs text-slate-500">
-                              {rate.deliveryDays} business days
-                            </p>
-                          )}
+                  {rates.map((rate) => {
+                    const isSelected = selectedRate?.id === rate.id
+                    return (
+                      <label
+                        key={rate.id}
+                        data-state={isSelected ? 'selected' : undefined}
+                        className="flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors hover:bg-accent/50 data-[state=selected]:border-primary data-[state=selected]:bg-primary/5"
+                      >
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="radio"
+                            name="shippingRate"
+                            checked={isSelected}
+                            onChange={() => setSelectedRate(rate)}
+                            className="size-4 accent-primary"
+                          />
+                          <div>
+                            <p className="text-sm font-medium">{rate.service}</p>
+                            {rate.deliveryDays && (
+                              <p className="text-xs text-muted-foreground">
+                                {rate.deliveryDays} business days
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <span className="text-sm font-semibold">
-                        ${rate.rate.toFixed(2)}
-                      </span>
-                    </label>
-                  ))}
+                        <span className="text-sm font-semibold tabular-nums">
+                          ${rate.rate.toFixed(2)}
+                        </span>
+                      </label>
+                    )
+                  })}
                 </div>
               </div>
             )}
 
             {error && (
-              <p className="text-sm text-red-600">{error}</p>
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
           </div>
         )}
 
         {step === 'success' && result && (
           <div className="space-y-4 py-4">
-            <div className="rounded-lg bg-green-50 border border-green-200 p-4 text-center">
-              <p className="text-sm font-semibold text-green-800">
-                Shipping label purchased successfully
-              </p>
-            </div>
+            <Alert>
+              <CheckCircle2 className="size-4" />
+              <AlertDescription>
+                Shipping label purchased successfully.
+              </AlertDescription>
+            </Alert>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-600">Carrier</span>
+                <span className="text-muted-foreground">Carrier</span>
                 <span className="font-medium">{result.carrier}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Service</span>
+                <span className="text-muted-foreground">Service</span>
                 <span className="font-medium">{result.service}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Cost</span>
-                <span className="font-medium">${result.cost.toFixed(2)}</span>
+                <span className="text-muted-foreground">Cost</span>
+                <span className="font-medium tabular-nums">
+                  ${result.cost.toFixed(2)}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Tracking</span>
-                <span className="font-mono text-xs">{result.trackingNumber}</span>
+                <span className="text-muted-foreground">Tracking</span>
+                <span className="font-mono text-xs">
+                  {result.trackingNumber}
+                </span>
               </div>
             </div>
           </div>
@@ -293,8 +305,10 @@ export default function BuyShippingLabelDialog({
           {step === 'select' && selectedRate && (
             <div className="flex w-full items-center justify-between">
               <div className="text-sm">
-                <span className="text-slate-500">Cost: </span>
-                <span className="font-semibold">${selectedRate.rate.toFixed(2)}</span>
+                <span className="text-muted-foreground">Cost: </span>
+                <span className="font-semibold tabular-nums">
+                  ${selectedRate.rate.toFixed(2)}
+                </span>
               </div>
               <Button
                 onClick={handlePurchase}

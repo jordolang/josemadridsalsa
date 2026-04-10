@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ShieldAlert, ShieldCheck, Loader2, AlertTriangle } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 interface BreachResult {
   id: string
@@ -37,7 +37,6 @@ export default function CredentialBreachCheckDialog({
   credentialId,
   credentialLabel,
 }: CredentialBreachCheckDialogProps) {
-  const { toast } = useToast()
   const [isChecking, setIsChecking] = useState(false)
   const [results, setResults] = useState<BreachResult[]>([])
   const [hasChecked, setHasChecked] = useState(false)
@@ -64,19 +63,16 @@ export default function CredentialBreachCheckDialog({
 
       const breachedCount = data.results.filter((r: BreachResult) => r.breached).length
       if (breachedCount > 0) {
-        toast({
-          title: 'Breached Passwords Found',
+        toast.error('Breached Passwords Found', {
           description: `${breachedCount} password(s) found in known data breaches`,
-          variant: 'destructive',
         })
       } else {
-        toast({
-          title: 'All Clear',
+        toast.success('All Clear', {
           description: 'No passwords found in known data breaches',
         })
       }
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' })
+      toast.error('Error', { description: err.message })
     } finally {
       setIsChecking(false)
     }

@@ -86,7 +86,7 @@ const statusConfig: Record<
   },
   not_configured: {
     label: 'Not configured',
-    badgeClass: 'bg-slate-200 text-slate-600',
+    badgeClass: 'bg-slate-200 text-muted-foreground',
     Icon: XCircle,
   },
   error: {
@@ -109,7 +109,7 @@ export default async function PaymentSettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Payment Providers</h1>
-        <p className="text-slate-600">
+        <p className="text-muted-foreground">
           Manage payment provider connections and configuration.
         </p>
       </div>
@@ -124,7 +124,7 @@ export default async function PaymentSettingsPage() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-start gap-4">
                   <div className="rounded-lg bg-slate-100 p-3">
-                    <CreditCard className="h-6 w-6 text-slate-600" />
+                    <CreditCard className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
@@ -136,7 +136,7 @@ export default async function PaymentSettingsPage() {
                         {config.label}
                       </Badge>
                     </div>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {provider.description}
                     </p>
                   </div>
@@ -165,7 +165,7 @@ export default async function PaymentSettingsPage() {
                   <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-2">
                     Setup instructions
                   </p>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-muted-foreground">
                     {provider.setupInstructions}
                   </p>
                 </div>

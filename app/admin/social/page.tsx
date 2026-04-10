@@ -1,7 +1,11 @@
 import { redirect } from 'next/navigation'
 import type { SocialMediaPlatform, SocialMediaPostStatus } from '@prisma/client'
+import { CheckCircle2, XCircle } from 'lucide-react'
+
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { SocialDashboardClient } from '@/components/admin/social/social-dashboard-client'
 import { createSocialPost } from './actions'
 import type { SocialAccountInfo, CalendarPost, PlatformMetrics, DashboardTab } from '@/types/social'
@@ -207,31 +211,39 @@ export default async function SocialMediaPage({
       {/* Header */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Social Media</h1>
-          <p className="text-slate-600">
-            Manage content, shops, and commerce across Facebook, X, TikTok, Instagram & Google Business.
+          <h1 className="text-2xl font-bold tracking-tight">Social Media</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage content, shops, and commerce across Facebook, X, TikTok,
+            Instagram & Google Business.
           </p>
         </div>
         {(canSchedule || canPublish) && (
-          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+          <Badge variant="default" className="gap-1.5 px-3 py-1">
+            <span className="size-1.5 rounded-full bg-current" />
             Full publishing access enabled
-          </div>
+          </Badge>
         )}
       </div>
 
       {/* Connection success banner */}
       {connectedPlatform && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          Successfully connected {connectedPlatform}! You can now publish directly to this platform.
-        </div>
+        <Alert>
+          <CheckCircle2 className="size-4" />
+          <AlertDescription>
+            Successfully connected {connectedPlatform}! You can now publish
+            directly to this platform.
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Error banner */}
       {errorMessage && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          Connection error: {decodeURIComponent(errorMessage)}
-        </div>
+        <Alert variant="destructive">
+          <XCircle className="size-4" />
+          <AlertDescription>
+            Connection error: {decodeURIComponent(errorMessage)}
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Dashboard */}

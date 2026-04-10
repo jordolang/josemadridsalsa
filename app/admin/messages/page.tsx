@@ -1,12 +1,36 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { MessageSquare, Search } from 'lucide-react'
+import { Info, MessageSquare, Search } from 'lucide-react'
+
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
-import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 type SearchParams = {
   status?: string
@@ -18,7 +42,7 @@ const STATUS_OPTIONS = [
   { value: 'ALL', label: 'All' },
   { value: 'OPEN', label: 'Open' },
   { value: 'CLOSED', label: 'Closed' },
-]
+] as const
 
 async function getConversations(searchParams: SearchParams) {
   const page = Number(searchParams.page) || 1
@@ -86,221 +110,253 @@ async function getConversations(searchParams: SearchParams) {
   }
 }
 
-export default async function MessagesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const params = await searchParams;
+export default async function MessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}) {
+  const params = await searchParams
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'messaging:read'))) {
     redirect('/admin')
   }
 
-  const { conversations, total, page, totalPages, openCount, unreadCount } = await getConversations(
-    params
-  )
+  const { conversations, total, page, totalPages, openCount, unreadCount } =
+    await getConversations(params)
 
   const statusCandidate = params.status?.toUpperCase()
-  const activeStatus = STATUS_OPTIONS.some((option) => option.value === statusCandidate)
+  const activeStatus = STATUS_OPTIONS.some(
+    (option) => option.value === statusCandidate
+  )
     ? (statusCandidate as 'ALL' | 'OPEN' | 'CLOSED')
     : 'ALL'
 
+  const buildPageHref = (targetPage: number) => {
+    const qs = new URLSearchParams()
+    qs.set('page', String(targetPage))
+    if (params.status) qs.set('status', activeStatus)
+    if (params.q) qs.set('q', params.q)
+    return `/admin/messages?${qs.toString()}`
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Customer Messages</h1>
-          <p className="text-slate-600">
+          <h1 className="text-2xl font-bold tracking-tight">
+            Customer Messages
+          </h1>
+          <p className="text-sm text-muted-foreground">
             Track conversations from customers across the storefront
           </p>
         </div>
-        <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          {unreadCount === 0 ? 'All caught up! No unread messages.' : `${unreadCount} customer message(s) awaiting reply.`}
-        </div>
+        <Alert className="w-fit">
+          <Info className="size-4" />
+          <AlertDescription>
+            {unreadCount === 0
+              ? 'All caught up! No unread messages.'
+              : `${unreadCount} customer message(s) awaiting reply.`}
+          </AlertDescription>
+        </Alert>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="p-4">
-          <p className="text-sm text-slate-600">Total conversations</p>
-          <p className="mt-2 text-2xl font-semibold">{total.toLocaleString()}</p>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">
+              Total conversations
+            </CardDescription>
+            <CardTitle className="text-2xl font-bold tabular-nums">
+              {total.toLocaleString()}
+            </CardTitle>
+          </CardHeader>
         </Card>
-        <Card className="p-4">
-          <p className="text-sm text-slate-600">Open conversations</p>
-          <p className="mt-2 text-2xl font-semibold text-blue-600">{openCount.toLocaleString()}</p>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">
+              Open conversations
+            </CardDescription>
+            <CardTitle className="text-2xl font-bold tabular-nums">
+              {openCount.toLocaleString()}
+            </CardTitle>
+          </CardHeader>
         </Card>
-        <Card className="p-4">
-          <p className="text-sm text-slate-600">Unread messages</p>
-          <p className="mt-2 text-2xl font-semibold text-amber-600">{unreadCount.toLocaleString()}</p>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">
+              Unread messages
+            </CardDescription>
+            <CardTitle className="text-2xl font-bold tabular-nums">
+              {unreadCount.toLocaleString()}
+            </CardTitle>
+          </CardHeader>
         </Card>
       </div>
 
-      <Card className="p-4">
-        <form className="grid gap-4 md:grid-cols-[2fr_auto] lg:grid-cols-[2fr_auto_auto]" method="get">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              type="search"
-              name="q"
-              placeholder="Search by subject, customer, or email"
-              defaultValue={params.q}
-              className="pl-9"
-            />
-          </div>
-          <input type="hidden" name="status" value={activeStatus} />
-          <Button type="submit" variant="outline" className="justify-self-start md:justify-self-end">
-            Search
-          </Button>
-          <Link
-            href="/admin/messages"
-            className="hidden rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 lg:inline-block"
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <form
+            className="grid gap-4 md:grid-cols-[2fr_auto] lg:grid-cols-[2fr_auto_auto]"
+            method="get"
           >
-            Reset
-          </Link>
-        </form>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {STATUS_OPTIONS.map((option) => {
-            const isActive = option.value === activeStatus
-            const href =
-              option.value === 'ALL'
-                ? `/admin/messages${params.q ? `?q=${encodeURIComponent(params.q)}` : ''}`
-                : `/admin/messages?status=${option.value}${
-                    params.q ? `&q=${encodeURIComponent(params.q)}` : ''
-                  }`
-            return (
-              <Link
-                key={option.value}
-                href={href}
-                className={`rounded-full px-3 py-1 text-sm font-medium ${
-                  isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {option.label}
-              </Link>
-            )
-          })}
-        </div>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                name="q"
+                placeholder="Search by subject, customer, or email"
+                defaultValue={params.q}
+                className="pl-9"
+              />
+            </div>
+            <input type="hidden" name="status" value={activeStatus} />
+            <Button
+              type="submit"
+              variant="outline"
+              className="justify-self-start md:justify-self-end"
+            >
+              Search
+            </Button>
+            <Button asChild variant="ghost" className="hidden lg:inline-flex">
+              <Link href="/admin/messages">Reset</Link>
+            </Button>
+          </form>
+          <div className="flex flex-wrap items-center gap-2">
+            {STATUS_OPTIONS.map((option) => {
+              const isActive = option.value === activeStatus
+              const href =
+                option.value === 'ALL'
+                  ? `/admin/messages${
+                      params.q ? `?q=${encodeURIComponent(params.q)}` : ''
+                    }`
+                  : `/admin/messages?status=${option.value}${
+                      params.q ? `&q=${encodeURIComponent(params.q)}` : ''
+                    }`
+              return (
+                <Button
+                  key={option.value}
+                  asChild
+                  variant={isActive ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  <Link href={href}>{option.label}</Link>
+                </Button>
+              )
+            })}
+          </div>
+        </CardContent>
       </Card>
 
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px]">
-            <thead className="border-b bg-slate-50 text-sm text-slate-600">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Subject</th>
-                <th className="px-4 py-3 text-left font-medium">Customer</th>
-                <th className="px-4 py-3 text-left font-medium">Messages</th>
-                <th className="px-4 py-3 text-left font-medium">Updated</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm">
-              {conversations.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                    No conversations found.
-                  </td>
-                </tr>
-              ) : (
-                conversations.map((conversation) => {
-                  const latestMessage = conversation.messages[0]
-                  const hasUnread =
-                    latestMessage?.senderType === 'USER' && latestMessage?.readAt === null
-                  return (
-                    <tr key={conversation.id} className="border-b last:border-0">
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4 text-slate-400" />
-                          <div>
-                            <p className="font-medium text-slate-900">
-                              {conversation.subject || 'General Inquiry'}
+      <div className="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Subject</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead className="text-right">Messages</TableHead>
+              <TableHead>Updated</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {conversations.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={6}
+                  className="py-12 text-center text-muted-foreground"
+                >
+                  No conversations found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              conversations.map((conversation) => {
+                const latestMessage = conversation.messages[0]
+                const hasUnread =
+                  latestMessage?.senderType === 'USER' &&
+                  latestMessage?.readAt === null
+                return (
+                  <TableRow key={conversation.id}>
+                    <TableCell>
+                      <div className="flex items-start gap-2">
+                        <MessageSquare className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">
+                            {conversation.subject || 'General Inquiry'}
+                          </p>
+                          {latestMessage && (
+                            <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                              {latestMessage.body}
                             </p>
-                            {latestMessage && (
-                              <p className="mt-1 line-clamp-1 text-xs text-slate-500">
-                                {latestMessage.body}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">
-                        {conversation.user?.name ||
-                          conversation.user?.email ||
-                          conversation.email ||
-                          'Anonymous'}
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">
-                        {conversation._count.messages.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">
-                        {conversation.updatedAt.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            className={
-                              conversation.status === 'OPEN'
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-slate-100 text-slate-600'
-                            }
-                          >
-                            {conversation.status}
-                          </Badge>
-                          {hasUnread && (
-                            <span className="text-xs font-medium text-amber-600">Unread</span>
                           )}
                         </div>
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <Link
-                          href={`/admin/messages/${conversation.id}`}
-                          className="text-sm font-medium text-blue-600 hover:underline"
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {conversation.user?.name ||
+                        conversation.user?.email ||
+                        conversation.email ||
+                        'Anonymous'}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {conversation._count.messages.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {conversation.updatedAt.toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={
+                            conversation.status === 'OPEN'
+                              ? 'default'
+                              : 'outline'
+                          }
                         >
+                          {conversation.status}
+                        </Badge>
+                        {hasUnread && (
+                          <Badge variant="warning">Unread</Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/admin/messages/${conversation.id}`}>
                           View
                         </Link>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t px-6 py-4 text-sm text-slate-600">
-            <span>
-              Page {page} of {totalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <Link
-                href={`/admin/messages?page=${Math.max(page - 1, 1)}${
-                  params.status ? `&status=${activeStatus}` : ''
-                }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
-                className={`rounded-md border px-3 py-1 ${
-                  page === 1
-                    ? 'pointer-events-none border-slate-200 text-slate-300'
-                    : 'border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
-                }`}
-              >
-                Previous
-              </Link>
-              <Link
-                href={`/admin/messages?page=${Math.min(page + 1, totalPages)}${
-                  params.status ? `&status=${activeStatus}` : ''
-                }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
-                className={`rounded-md border px-3 py-1 ${
-                  page === totalPages
-                    ? 'pointer-events-none border-slate-200 text-slate-300'
-                    : 'border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
-                }`}
-              >
-                Next
-              </Link>
-            </div>
-          </div>
-        )}
-      </Card>
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            {page > 1 && (
+              <PaginationItem>
+                <PaginationPrevious href={buildPageHref(page - 1)} />
+              </PaginationItem>
+            )}
+            <PaginationItem>
+              <PaginationLink href="#" isActive>
+                {page} / {totalPages}
+              </PaginationLink>
+            </PaginationItem>
+            {page < totalPages && (
+              <PaginationItem>
+                <PaginationNext href={buildPageHref(page + 1)} />
+              </PaginationItem>
+            )}
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   )
 }

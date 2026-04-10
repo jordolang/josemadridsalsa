@@ -14,6 +14,16 @@ import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import Link from 'next/link'
 import { RecentActivityFeed } from '@/components/admin/dashboard/RecentActivityFeed'
 import { TopProductsTable } from '@/components/admin/dashboard/TopProductsTable'
@@ -21,6 +31,7 @@ import { OrderStatusBreakdown } from '@/components/admin/dashboard/OrderStatusBr
 import { InventoryAlertWidget } from '@/components/admin/dashboard/InventoryAlertWidget'
 import { CustomerGrowthChart } from '@/components/admin/dashboard/CustomerGrowthChart'
 import { QuickActionsGrid } from '@/components/admin/dashboard/QuickActionsGrid'
+import { getOrderStatusVariant } from '@/lib/order-status'
 
 async function getDashboardStats() {
   try {
@@ -346,62 +357,45 @@ export default async function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b text-left text-xs text-muted-foreground">
-                          <th className="pb-3 font-medium">Order</th>
-                          <th className="pb-3 font-medium">Customer</th>
-                          <th className="pb-3 font-medium">Status</th>
-                          <th className="pb-3 font-medium">Total</th>
-                          <th className="pb-3 font-medium">Date</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-sm">
-                        {stats.recentOrders.slice(0, 7).map((order) => (
-                          <tr
-                            key={order.id}
-                            className="border-b last:border-0 hover:bg-muted/50 transition-colors"
-                          >
-                            <td className="py-2.5">
-                              <Link
-                                href={`/admin/orders/${order.id}`}
-                                className="font-medium text-blue-600 hover:underline"
-                              >
-                                {order.orderNumber}
-                              </Link>
-                            </td>
-                            <td className="py-2.5 text-muted-foreground">
-                              {order.user?.name || order.guestEmail || 'Guest'}
-                            </td>
-                            <td className="py-2.5">
-                              <span
-                                className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                                  order.status === 'DELIVERED'
-                                    ? 'bg-emerald-50 text-emerald-700'
-                                    : order.status === 'CANCELLED'
-                                    ? 'bg-red-50 text-red-700'
-                                    : order.status === 'SHIPPED'
-                                    ? 'bg-purple-50 text-purple-700'
-                                    : order.status === 'PROCESSING'
-                                    ? 'bg-blue-50 text-blue-700'
-                                    : 'bg-amber-50 text-amber-700'
-                                }`}
-                              >
-                                {order.status}
-                              </span>
-                            </td>
-                            <td className="py-2.5 font-medium">
-                              ${Number(order.total).toFixed(2)}
-                            </td>
-                            <td className="py-2.5 text-muted-foreground">
-                              {new Date(order.createdAt).toLocaleDateString()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-right">Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {stats.recentOrders.slice(0, 7).map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-medium">
+                            <Link
+                              href={`/admin/orders/${order.id}`}
+                              className="text-primary hover:underline"
+                            >
+                              {order.orderNumber}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {order.user?.name || order.guestEmail || 'Guest'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getOrderStatusVariant(order.status)}>
+                              {order.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-medium tabular-nums">
+                            ${Number(order.total).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {new Date(order.createdAt).toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
             </CardContent>
           </Card>
         )}
@@ -424,16 +418,18 @@ export default async function AdminDashboard() {
                 {stats.recentUsers.map((u) => (
                   <div
                     key={u.email}
-                    className="flex items-center gap-3 rounded-lg border border-border p-3"
+                    className="flex items-center gap-3 rounded-lg border p-3"
                   >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-white text-sm font-bold">
-                      {(u.name?.charAt(0) || u.email.charAt(0)).toUpperCase()}
-                    </div>
+                    <Avatar className="size-10">
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                        {(u.name?.charAt(0) || u.email.charAt(0)).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
+                      <p className="truncate text-sm font-medium">
                         {u.name || 'New User'}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="truncate text-xs text-muted-foreground">
                         {new Date(u.createdAt).toLocaleDateString()}
                       </p>
                     </div>

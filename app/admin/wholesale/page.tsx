@@ -1,13 +1,49 @@
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import {
+  AlertCircle,
+  Building2,
+  CheckCircle,
+  Clock,
+  XCircle,
+  type LucideIcon,
+} from 'lucide-react'
+import type { WholesaleStatus } from '@prisma/client'
+
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Building2, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
-import Link from 'next/link'
-import { WholesaleStatus } from '@prisma/client'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+} from '@/components/ui/card'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { createMetadata } from '@/lib/metadata'
 
 export const metadata: Metadata = createMetadata({
@@ -19,6 +55,23 @@ export const metadata: Metadata = createMetadata({
 type SearchParams = {
   status?: string
   page?: string
+}
+
+const STATUS_VARIANT: Record<
+  WholesaleStatus,
+  'default' | 'secondary' | 'destructive' | 'outline' | 'warning'
+> = {
+  PENDING: 'warning',
+  APPROVED: 'default',
+  REJECTED: 'destructive',
+  SUSPENDED: 'outline',
+}
+
+const STATUS_ICON: Record<WholesaleStatus, LucideIcon> = {
+  PENDING: Clock,
+  APPROVED: CheckCircle,
+  REJECTED: XCircle,
+  SUSPENDED: AlertCircle,
 }
 
 async function getWholesaleAccounts(searchParams: SearchParams) {
@@ -64,22 +117,12 @@ async function getWholesaleAccounts(searchParams: SearchParams) {
   }
 }
 
-const statusColors: Record<WholesaleStatus, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800',
-  APPROVED: 'bg-green-100 text-green-800',
-  REJECTED: 'bg-red-100 text-red-800',
-  SUSPENDED: 'bg-orange-100 text-orange-800',
-}
-
-const statusIcons = {
-  PENDING: Clock,
-  APPROVED: CheckCircle,
-  REJECTED: XCircle,
-  SUSPENDED: AlertCircle,
-}
-
-export default async function WholesalePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const params = await searchParams;
+export default async function WholesalePage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}) {
+  const params = await searchParams
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'users:read'))) {
@@ -87,142 +130,189 @@ export default async function WholesalePage({ searchParams }: { searchParams: Pr
   }
 
   const canWrite = await hasPermission(user, 'users:write')
-  const { accounts, total, page, totalPages, statusCounts } = await getWholesaleAccounts(params)
+  const { accounts, page, totalPages, statusCounts } =
+    await getWholesaleAccounts(params)
+
+  const buildPageHref = (targetPage: number) => {
+    const qs = new URLSearchParams()
+    qs.set('page', String(targetPage))
+    if (params.status) qs.set('status', params.status)
+    return `/admin/wholesale?${qs.toString()}`
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Wholesale Accounts</h1>
-          <p className="text-slate-600">Manage wholesale customer applications</p>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Wholesale Accounts
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Manage wholesale customer applications
+          </p>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         {statusCounts.map((stat) => {
-          const Icon = statusIcons[stat.status]
+          const Icon = STATUS_ICON[stat.status]
           return (
-            <Card key={stat.status} className="p-4">
-              <div className="flex items-center gap-3">
-                <Icon className="h-8 w-8 text-slate-600" />
-                <div>
-                  <p className="text-sm text-slate-600">{stat.status}</p>
-                  <p className="text-2xl font-bold">{stat._count}</p>
-                </div>
-              </div>
+            <Card key={stat.status}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardDescription className="text-xs font-medium uppercase tracking-wide">
+                  {stat.status}
+                </CardDescription>
+                <Icon className="size-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold tabular-nums">{stat._count}</p>
+              </CardContent>
             </Card>
           )
         })}
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="flex gap-4">
-          <select
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-            defaultValue={params.status || 'all'}
-          >
-            <option value="all">All Statuses</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
-            <option value="SUSPENDED">Suspended</option>
-          </select>
-        </div>
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex gap-4">
+            <Select defaultValue={params.status || 'all'}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="APPROVED">Approved</SelectItem>
+                <SelectItem value="REJECTED">Rejected</SelectItem>
+                <SelectItem value="SUSPENDED">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
       </Card>
 
       {/* Accounts Table */}
       {accounts.length === 0 ? (
-        <Card className="p-12">
-          <div className="text-center text-slate-500">
-            <Building2 className="mx-auto mb-4 h-12 w-12 text-slate-300" />
-            <p className="text-lg font-medium">No wholesale accounts found</p>
-            <p className="mt-1 text-sm">Applications will appear here when submitted</p>
-          </div>
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center text-muted-foreground">
+              <Building2 className="mx-auto mb-4 size-12 opacity-40" />
+              <p className="text-lg font-medium text-foreground">
+                No wholesale accounts found
+              </p>
+              <p className="mt-1 text-sm">
+                Applications will appear here when submitted
+              </p>
+            </div>
+          </CardContent>
         </Card>
       ) : (
         <>
-          <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Business</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Contact</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Type</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Status</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Discount</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Applied</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounts.map((account) => (
-                    <tr key={account.id} className="border-b hover:bg-slate-50">
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="font-medium">{account.businessName}</p>
-                          <p className="text-sm text-slate-600">{account.user.email}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm">
-                          <p>{account.contactName}</p>
-                          {account.website && (
-                            <a href={account.website} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
-                              Website
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm">{account.businessType.replace('_', ' ')}</td>
-                      <td className="px-4 py-3">
-                        <Badge className={statusColors[account.status]}>{account.status}</Badge>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium">
-                        {Number(account.discountRate)}%
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">
-                        {new Date(account.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="ghost" asChild>
-                            <Link href={`/admin/wholesale/${account.id}`}>View</Link>
-                          </Button>
-                          {canWrite && account.status === 'PENDING' && (
-                            <>
-                              <Button size="sm" variant="outline" className="text-green-600 hover:bg-green-50">
-                                Approve
-                              </Button>
-                              <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50">
-                                Reject
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Business</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Discount</TableHead>
+                  <TableHead>Applied</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {accounts.map((account) => (
+                  <TableRow key={account.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{account.businessName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {account.user.email}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <p>{account.contactName}</p>
+                        {account.website && (
+                          <a
+                            href={account.website}
+                            className="text-primary hover:underline"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Website
+                          </a>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {account.businessType.replace('_', ' ')}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={STATUS_VARIANT[account.status]}>
+                        {account.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {Number(account.discountRate)}%
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(account.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="ghost" asChild>
+                          <Link href={`/admin/wholesale/${account.id}`}>
+                            View
+                          </Link>
+                        </Button>
+                        {canWrite && account.status === 'PENDING' && (
+                          <>
+                            <Button size="sm" variant="outline">
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <Button variant="outline" disabled={page === 1} asChild={page > 1}>
-                {page > 1 ? <Link href={`/admin/wholesale?page=${page - 1}`}>Previous</Link> : <span>Previous</span>}
-              </Button>
-              <span className="text-sm text-slate-600">
-                Page {page} of {totalPages}
-              </span>
-              <Button variant="outline" disabled={page === totalPages} asChild={page < totalPages}>
-                {page < totalPages ? <Link href={`/admin/wholesale?page=${page + 1}`}>Next</Link> : <span>Next</span>}
-              </Button>
-            </div>
+            <Pagination>
+              <PaginationContent>
+                {page > 1 && (
+                  <PaginationItem>
+                    <PaginationPrevious href={buildPageHref(page - 1)} />
+                  </PaginationItem>
+                )}
+                <PaginationItem>
+                  <PaginationLink href="#" isActive>
+                    {page} / {totalPages}
+                  </PaginationLink>
+                </PaginationItem>
+                {page < totalPages && (
+                  <PaginationItem>
+                    <PaginationNext href={buildPageHref(page + 1)} />
+                  </PaginationItem>
+                )}
+              </PaginationContent>
+            </Pagination>
           )}
         </>
       )}

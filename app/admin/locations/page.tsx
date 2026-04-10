@@ -1,13 +1,22 @@
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import { MapPin, Plus, Search } from 'lucide-react'
+
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Plus, MapPin, Search } from 'lucide-react'
-import Link from 'next/link'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { LocationActions } from './_components/LocationActions'
 import { FetchPhotosButton } from './_components/FetchPhotosButton'
 import { createMetadata } from '@/lib/metadata'
@@ -119,8 +128,10 @@ export default async function AdminLocationsPage({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Retail Locations</h1>
-          <p className="text-slate-600">
+          <h1 className="text-2xl font-bold tracking-tight">
+            Retail Locations
+          </h1>
+          <p className="text-sm text-muted-foreground">
             Manage where Jose Madrid Salsa products are sold
           </p>
         </div>
@@ -128,7 +139,7 @@ export default async function AdminLocationsPage({
           <FetchPhotosButton />
           <Button asChild>
             <Link href="/admin/locations/new">
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 size-4" />
               Add Location
             </Link>
           </Button>
@@ -136,62 +147,69 @@ export default async function AdminLocationsPage({
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="space-y-4">
+      <Card>
+        <CardContent className="space-y-4 pt-6">
           <div className="flex flex-wrap gap-3">
             {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <div className="relative min-w-[200px] flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <form action="/admin/locations" method="get">
                 <Input
                   name="search"
                   placeholder="Search business name, city, or address..."
                   defaultValue={params.search}
-                  className="pl-10"
+                  className="pl-9"
                 />
               </form>
             </div>
 
-            {/* State Filter */}
+            {/* Active Filter */}
             <div className="flex items-center gap-2">
-              <Link href="/admin/locations?isActive=all">
-                <Button
-                  variant={
-                    !params.isActive || params.isActive === 'all'
-                      ? 'default'
-                      : 'outline'
-                  }
-                  size="sm"
-                >
+              <Button
+                asChild
+                variant={
+                  !params.isActive || params.isActive === 'all'
+                    ? 'default'
+                    : 'outline'
+                }
+                size="sm"
+              >
+                <Link href="/admin/locations?isActive=all">
                   All ({locations.length})
-                </Button>
-              </Link>
-              <Link href="/admin/locations?isActive=true">
-                <Button
-                  variant={params.isActive === 'true' ? 'default' : 'outline'}
-                  size="sm"
-                >
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant={params.isActive === 'true' ? 'default' : 'outline'}
+                size="sm"
+              >
+                <Link href="/admin/locations?isActive=true">
                   Active ({activeCount})
-                </Button>
-              </Link>
-              <Link href="/admin/locations?isActive=false">
-                <Button
-                  variant={params.isActive === 'false' ? 'default' : 'outline'}
-                  size="sm"
-                >
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant={params.isActive === 'false' ? 'default' : 'outline'}
+                size="sm"
+              >
+                <Link href="/admin/locations?isActive=false">
                   Inactive ({inactiveCount})
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
 
           {/* State Pills */}
           {states.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm text-slate-500">States:</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">States:</span>
               <Link href="/admin/locations">
                 <Badge
-                  variant={!params.state || params.state === 'all' ? 'default' : 'outline'}
+                  variant={
+                    !params.state || params.state === 'all'
+                      ? 'default'
+                      : 'outline'
+                  }
                   className="cursor-pointer"
                 >
                   All
@@ -202,7 +220,9 @@ export default async function AdminLocationsPage({
                 return (
                   <Link key={state} href={`/admin/locations?state=${state}`}>
                     <Badge
-                      variant={params.state === state ? 'default' : 'outline'}
+                      variant={
+                        params.state === state ? 'default' : 'outline'
+                      }
                       className="cursor-pointer"
                     >
                       {state} ({count})
@@ -212,127 +232,103 @@ export default async function AdminLocationsPage({
               })}
             </div>
           )}
-        </div>
+        </CardContent>
       </Card>
 
       {/* Locations Table */}
       {locations.length === 0 ? (
-        <Card className="p-12">
-          <div className="text-center text-slate-500">
-            <MapPin className="mx-auto mb-4 h-12 w-12 text-slate-300" />
-            <p className="text-lg font-medium">No locations found</p>
-            <p className="mt-1 text-sm">
-              {params.search || params.state || params.city
-                ? 'Try adjusting your filters or search terms'
-                : 'Add your first retail location to get started'}
-            </p>
-            {!params.search && !params.state && !params.city && (
-              <Button className="mt-4" asChild>
-                <Link href="/admin/locations/new">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Location
-                </Link>
-              </Button>
-            )}
-          </div>
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center text-muted-foreground">
+              <MapPin className="mx-auto mb-4 size-12 opacity-40" />
+              <p className="text-lg font-medium text-foreground">
+                No locations found
+              </p>
+              <p className="mt-1 text-sm">
+                {params.search || params.state || params.city
+                  ? 'Try adjusting your filters or search terms'
+                  : 'Add your first retail location to get started'}
+              </p>
+              {!params.search && !params.state && !params.city && (
+                <Button className="mt-4" asChild>
+                  <Link href="/admin/locations/new">
+                    <Plus className="mr-2 size-4" />
+                    Add Location
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </CardContent>
         </Card>
       ) : (
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">
-                    Business Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">
-                    Location
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">
-                    Contact
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">
-                    Photos
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-slate-600">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {locations.map((location) => (
-                  <tr key={location.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3">
-                      <div className="font-medium">{location.businessName}</div>
-                      {location.county && (
-                        <div className="text-xs text-slate-500">
-                          {location.county} County
-                        </div>
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Business Name</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead className="text-right">Photos</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {locations.map((location) => (
+                <TableRow key={location.id}>
+                  <TableCell>
+                    <div className="font-medium">{location.businessName}</div>
+                    {location.county && (
+                      <div className="text-xs text-muted-foreground">
+                        {location.county} County
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">{location.address}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {location.city}, {location.state}{' '}
+                      {location.zipCode && location.zipCode}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1 text-sm">
+                      {location.phone && <div>{location.phone}</div>}
+                      {location.website && (
+                        <a
+                          href={location.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          Website
+                        </a>
                       )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm">{location.address}</div>
-                      <div className="text-sm text-slate-500">
-                        {location.city}, {location.state}{' '}
-                        {location.zipCode && location.zipCode}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="space-y-1 text-sm">
-                        {location.phone && (
-                          <div className="text-slate-700">{location.phone}</div>
-                        )}
-                        {location.website && (
-                          <a
-                            href={location.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-salsa-600 hover:underline"
-                          >
-                            Website
-                          </a>
-                        )}
-                        {!location.phone && !location.website && (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 text-sm">
-                        {location._count.photos > 0 ? (
-                          <>
-                            <MapPin className="h-4 w-4 text-slate-400" />
-                            <span>{location._count.photos}</span>
-                          </>
-                        ) : (
-                          <span className="text-slate-400">0</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        variant={location.isActive ? 'default' : 'outline'}
-                        className={
-                          location.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-slate-100 text-slate-600'
-                        }
-                      >
-                        {location.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <LocationActions location={location} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                      {!location.phone && !location.website && (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {location._count.photos > 0 ? (
+                      location._count.photos
+                    ) : (
+                      <span className="text-muted-foreground">0</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={location.isActive ? 'default' : 'outline'}>
+                      {location.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <LocationActions location={location} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   )

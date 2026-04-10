@@ -1,13 +1,21 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
-import { Plus, Download, Upload, Search, Eye, Edit } from 'lucide-react'
+import { Download, Edit, Eye, Plus, Search } from 'lucide-react'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
 import {
   Select,
   SelectContent,
@@ -15,7 +23,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { ProductImportButton } from '@/components/admin/ProductImportButton'
+import { formatHeatLevel, getHeatLevelClass } from '@/lib/heat-level'
+import { cn } from '@/lib/utils'
 
 interface SearchParams {
   search?: string
@@ -86,20 +104,12 @@ async function getProducts(searchParams: SearchParams) {
   }
 }
 
-const heatLevelColors = {
-  MILD: 'bg-green-100 text-green-800',
-  MEDIUM: 'bg-yellow-100 text-yellow-800',
-  HOT: 'bg-orange-100 text-orange-800',
-  EXTRA_HOT: 'bg-red-100 text-red-800',
-  FRUIT: 'bg-purple-100 text-purple-800',
-}
-
 export default async function ProductsPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>
 }) {
-  const params = await searchParams;
+  const params = await searchParams
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'products:read'))) {
@@ -110,15 +120,27 @@ export default async function ProductsPage({
   const canExport = await hasPermission(user, 'products:export')
   const canImport = await hasPermission(user, 'products:import')
 
-  const { products, total, page, totalPages, categories } = await getProducts(params)
+  const { products, total, page, totalPages, categories } = await getProducts(
+    params
+  )
+
+  const buildPageHref = (targetPage: number) => {
+    const qs = new URLSearchParams()
+    qs.set('page', String(targetPage))
+    if (params.search) qs.set('search', params.search)
+    if (params.category) qs.set('category', params.category)
+    if (params.heatLevel) qs.set('heatLevel', params.heatLevel)
+    if (params.active) qs.set('active', params.active)
+    return `/admin/products?${qs.toString()}`
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Products</h1>
-          <p className="text-slate-600">
+          <h1 className="text-2xl font-bold tracking-tight">Products</h1>
+          <p className="text-sm text-muted-foreground">
             Manage your salsa products and inventory
           </p>
         </div>
@@ -127,7 +149,7 @@ export default async function ProductsPage({
             <Button variant="outline" asChild>
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a href="/api/admin/products/export">
-                <Download className="mr-2 h-4 w-4" />
+                <Download className="mr-2 size-4" />
                 Export
               </a>
             </Button>
@@ -136,7 +158,7 @@ export default async function ProductsPage({
           {canWrite && (
             <Button asChild>
               <Link href="/admin/products/new">
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 size-4" />
                 Add Product
               </Link>
             </Button>
@@ -145,99 +167,91 @@ export default async function ProductsPage({
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="grid gap-4 md:grid-cols-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              type="search"
-              placeholder="Search products..."
-              defaultValue={params.search}
-              className="pl-9"
-            />
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search products..."
+                defaultValue={params.search}
+                className="pl-9"
+              />
+            </div>
+            <Select defaultValue={params.category || 'all'}>
+              <SelectTrigger>
+                <SelectValue placeholder="All categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select defaultValue={params.heatLevel || 'all'}>
+              <SelectTrigger>
+                <SelectValue placeholder="All heat levels" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Heat Levels</SelectItem>
+                <SelectItem value="MILD">Mild</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="HOT">Hot</SelectItem>
+                <SelectItem value="EXTRA_HOT">Extra Hot</SelectItem>
+                <SelectItem value="FRUIT">Fruit</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select defaultValue={params.active || 'all'}>
+              <SelectTrigger>
+                <SelectValue placeholder="All products" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Products</SelectItem>
+                <SelectItem value="true">Active Only</SelectItem>
+                <SelectItem value="false">Inactive Only</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select defaultValue={params.category || 'all'}>
-            <SelectTrigger>
-              <SelectValue placeholder="All categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select defaultValue={params.heatLevel || 'all'}>
-            <SelectTrigger>
-              <SelectValue placeholder="All heat levels" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Heat Levels</SelectItem>
-              <SelectItem value="MILD">Mild</SelectItem>
-              <SelectItem value="MEDIUM">Medium</SelectItem>
-              <SelectItem value="HOT">Hot</SelectItem>
-              <SelectItem value="EXTRA_HOT">Extra Hot</SelectItem>
-              <SelectItem value="FRUIT">Fruit</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select defaultValue={params.active}>
-            <SelectTrigger>
-              <SelectValue placeholder="All products" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Products</SelectItem>
-              <SelectItem value="true">Active Only</SelectItem>
-              <SelectItem value="false">Inactive Only</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        </CardContent>
       </Card>
 
       {/* Products Table */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-medium text-slate-600">
-                  Product
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-slate-600">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-slate-600">
-                  Heat Level
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-slate-600">
-                  Price
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-slate-600">
-                  Inventory
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-slate-600">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-sm font-medium text-slate-600">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {products.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
-                    No products found
-                  </td>
-                </tr>
-              ) : (
-                products.map((product) => (
-                  <tr key={product.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4">
+      <div className="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Product</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Heat Level</TableHead>
+              <TableHead className="text-right">Price</TableHead>
+              <TableHead className="text-right">Inventory</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {products.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="py-12 text-center text-muted-foreground"
+                >
+                  No products found
+                </TableCell>
+              </TableRow>
+            ) : (
+              products.map((product) => {
+                const lowStock = product.inventory <= product.lowStockThreshold
+                return (
+                  <TableRow key={product.id}>
+                    <TableCell>
                       <div className="flex items-center gap-3">
                         {product.featuredImage && (
-                          <div className="relative h-10 w-10 flex-shrink-0">
+                          <div className="relative size-10 shrink-0">
                             <Image
                               src={product.featuredImage}
                               alt={product.name}
@@ -250,100 +264,102 @@ export default async function ProductsPage({
                         <div>
                           <Link
                             href={`/admin/products/${product.id}`}
-                            className="font-medium text-blue-600 hover:underline"
+                            className="font-medium text-primary hover:underline"
                           >
                             {product.name}
                           </Link>
-                          <p className="text-xs text-slate-500">SKU: {product.sku}</p>
+                          <p className="text-xs text-muted-foreground">
+                            SKU: {product.sku}
+                          </p>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {product.category.name}
-                    </td>
-                    <td className="px-6 py-4">
+                    </TableCell>
+                    <TableCell>
                       <Badge
-                        className={
-                          heatLevelColors[product.heatLevel as keyof typeof heatLevelColors]
-                        }
+                        variant="outline"
+                        className={getHeatLevelClass(product.heatLevel)}
                       >
-                        {product.heatLevel}
+                        {formatHeatLevel(product.heatLevel)}
                       </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium">
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
                       ${Number(product.price).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <span
-                        className={
-                          product.inventory <= product.lowStockThreshold
-                            ? 'text-red-600'
-                            : ''
-                        }
-                      >
-                        {product.inventory}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge
-                        className={
-                          product.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }
-                      >
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        'text-right tabular-nums',
+                        lowStock && 'font-medium text-destructive'
+                      )}
+                    >
+                      {product.inventory}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={product.isActive ? 'default' : 'outline'}>
                         {product.isActive ? 'Active' : 'Inactive'}
                       </Badge>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/products/${product.slug}`} target="_blank">
-                            <Eye className="h-4 w-4" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link
+                            href={`/products/${product.slug}`}
+                            target="_blank"
+                            aria-label={`View ${product.name} on storefront`}
+                          >
+                            <Eye className="size-4" />
                           </Link>
                         </Button>
                         {canWrite && (
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/admin/products/${product.id}/edit`}>
-                              <Edit className="h-4 w-4" />
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link
+                              href={`/admin/products/${product.id}/edit`}
+                              aria-label={`Edit ${product.name}`}
+                            >
+                              <Edit className="size-4" />
                             </Link>
                           </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t px-6 py-4">
-            <p className="text-sm text-slate-600">
-              Showing {(page - 1) * 50 + 1} to {Math.min(page * 50, total)} of{' '}
-              {total} products
-            </p>
-            <div className="flex gap-2">
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {(page - 1) * 50 + 1} to {Math.min(page * 50, total)} of{' '}
+            {total} products
+          </p>
+          <Pagination className="mx-0 w-auto justify-end">
+            <PaginationContent>
               {page > 1 && (
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/admin/products?page=${page - 1}`}>
-                    Previous
-                  </Link>
-                </Button>
+                <PaginationItem>
+                  <PaginationPrevious href={buildPageHref(page - 1)} />
+                </PaginationItem>
               )}
+              <PaginationItem>
+                <PaginationLink href="#" isActive>
+                  {page}
+                </PaginationLink>
+              </PaginationItem>
               {page < totalPages && (
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/admin/products?page=${page + 1}`}>
-                    Next
-                  </Link>
-                </Button>
+                <PaginationItem>
+                  <PaginationNext href={buildPageHref(page + 1)} />
+                </PaginationItem>
               )}
-            </div>
-          </div>
-        )}
-      </Card>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
   )
 }

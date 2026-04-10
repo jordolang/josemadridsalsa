@@ -4,14 +4,13 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 export function ImportOrdersDialog() {
   const [open, setOpen] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState<any>(null)
-  const { toast } = useToast()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -42,16 +41,11 @@ export function ImportOrdersDialog() {
       }
 
       setResult(data)
-      toast({
-        title: 'Import Complete',
+      toast.success('Import Complete', {
         description: `Successfully imported ${data.successCount} orders. ${data.errorCount} errors.`,
       })
     } catch (error) {
-      toast({
-        title: 'Import Failed',
-        description: String(error),
-        variant: 'destructive',
-      })
+      toast.error('Import Failed', { description: String(error) })
     } finally {
       setUploading(false)
     }

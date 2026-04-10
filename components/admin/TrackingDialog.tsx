@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Truck, ExternalLink } from 'lucide-react'
+import { ExternalLink, Info, Truck } from 'lucide-react'
+import { toast } from 'sonner'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -81,6 +83,9 @@ export default function TrackingDialog({
         throw new Error(result.error || 'Failed to save tracking info')
       }
 
+      toast.success('Tracking saved', {
+        description: `Tracking attached to ${orderNumber}.`,
+      })
       setOpen(false)
       router.refresh()
     } catch (err: any) {
@@ -94,7 +99,7 @@ export default function TrackingDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full">
-          <Truck className="mr-2 h-4 w-4" />
+          <Truck className="mr-2 size-4" />
           {currentTrackingNumber ? 'Update Tracking' : 'Add Tracking'}
         </Button>
       </DialogTrigger>
@@ -125,7 +130,7 @@ export default function TrackingDialog({
 
             <div className="space-y-2">
               <Label htmlFor="trackingNumber">
-                Tracking Number <span className="text-red-500">*</span>
+                Tracking Number <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="trackingNumber"
@@ -141,22 +146,28 @@ export default function TrackingDialog({
                 href={previewUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                className="flex items-center gap-2 text-sm text-primary hover:underline"
               >
-                <ExternalLink className="h-3.5 w-3.5" />
+                <ExternalLink className="size-3.5" />
                 Preview live tracking link
               </a>
             )}
 
             {currentStatus !== 'SHIPPED' && currentStatus !== 'DELIVERED' && (
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                <p className="text-sm text-blue-800">
-                  Order status will automatically be updated to <strong>Shipped</strong>.
-                </p>
-              </div>
+              <Alert>
+                <Info className="size-4" />
+                <AlertDescription>
+                  Order status will automatically update to{' '}
+                  <strong>Shipped</strong>.
+                </AlertDescription>
+              </Alert>
             )}
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
           </div>
           <DialogFooter>
             <Button

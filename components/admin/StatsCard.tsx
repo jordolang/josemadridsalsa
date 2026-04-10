@@ -1,5 +1,24 @@
-import { LucideIcon } from 'lucide-react'
-import { Card } from '@/components/ui/card'
+import type { LucideIcon } from 'lucide-react'
+
+import { Badge } from '@/components/ui/badge'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
+
+type StatsCardColor =
+  | 'blue'
+  | 'green'
+  | 'purple'
+  | 'orange'
+  | 'red'
+  | 'teal'
 
 interface StatsCardProps {
   title: string
@@ -10,54 +29,18 @@ interface StatsCardProps {
   }
   icon?: LucideIcon
   loading?: boolean
-  color?: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'teal'
+  color?: StatsCardColor
   subtitle?: string
   progress?: number
 }
 
-const colorMap = {
-  blue: {
-    bg: 'bg-blue-500',
-    light: 'bg-blue-50',
-    text: 'text-blue-600',
-    progressBg: 'bg-blue-100',
-    progressFill: 'bg-blue-500',
-  },
-  green: {
-    bg: 'bg-emerald-500',
-    light: 'bg-emerald-50',
-    text: 'text-emerald-600',
-    progressBg: 'bg-emerald-100',
-    progressFill: 'bg-emerald-500',
-  },
-  purple: {
-    bg: 'bg-purple-500',
-    light: 'bg-purple-50',
-    text: 'text-purple-600',
-    progressBg: 'bg-purple-100',
-    progressFill: 'bg-purple-500',
-  },
-  orange: {
-    bg: 'bg-orange-500',
-    light: 'bg-orange-50',
-    text: 'text-orange-600',
-    progressBg: 'bg-orange-100',
-    progressFill: 'bg-orange-500',
-  },
-  red: {
-    bg: 'bg-red-500',
-    light: 'bg-red-50',
-    text: 'text-red-600',
-    progressBg: 'bg-red-100',
-    progressFill: 'bg-red-500',
-  },
-  teal: {
-    bg: 'bg-teal-500',
-    light: 'bg-teal-50',
-    text: 'text-teal-600',
-    progressBg: 'bg-teal-100',
-    progressFill: 'bg-teal-500',
-  },
+const iconAccentMap: Record<StatsCardColor, string> = {
+  blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  green: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  purple: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
+  orange: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+  red: 'bg-red-500/10 text-red-600 dark:text-red-400',
+  teal: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
 }
 
 export function StatsCard({
@@ -70,66 +53,70 @@ export function StatsCard({
   subtitle,
   progress,
 }: StatsCardProps) {
-  const colors = colorMap[color]
-
   if (loading) {
     return (
-      <Card className="p-6">
-        <div className="animate-pulse space-y-3">
-          <div className="h-4 w-24 bg-slate-200 rounded" />
-          <div className="h-8 w-32 bg-slate-200 rounded" />
-          <div className="h-3 w-20 bg-slate-200 rounded" />
-        </div>
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="mt-2 h-8 w-32" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-3 w-20" />
+        </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card className="p-6 relative overflow-hidden">
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="mt-2 text-3xl font-bold text-foreground">{value}</p>
-          {change && (
-            <p className="mt-2 flex items-center text-sm">
-              <span
-                className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold ${
-                  change.trend === 'up'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'bg-red-50 text-red-700'
-                }`}
-              >
-                {change.trend === 'up' ? '↑' : '↓'} {Math.abs(change.value)}%
-              </span>
-              <span className="ml-2 text-muted-foreground">
-                {subtitle || 'vs last period'}
-              </span>
-            </p>
-          )}
-          {!change && subtitle && (
-            <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
-          )}
+    <Card className="relative overflow-hidden">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-2">
+        <div className="min-w-0 flex-1">
+          <CardDescription className="text-xs font-medium uppercase tracking-wide">
+            {title}
+          </CardDescription>
+          <CardTitle className="mt-2 text-3xl font-bold tabular-nums">
+            {value}
+          </CardTitle>
         </div>
         {Icon && (
-          <div className={`rounded-xl ${colors.bg} p-3 shadow-lg`}>
-            <Icon className="h-6 w-6 text-white" />
+          <div
+            className={cn(
+              'flex size-10 shrink-0 items-center justify-center rounded-xl',
+              iconAccentMap[color]
+            )}
+          >
+            <Icon className="size-5" />
           </div>
         )}
-      </div>
-      {progress !== undefined && (
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-            <span>Progress</span>
-            <span>{progress}%</span>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {change ? (
+          <div className="flex items-center gap-2 text-sm">
+            <Badge
+              variant={change.trend === 'up' ? 'default' : 'destructive'}
+              className="px-1.5 py-0 text-[11px] font-semibold"
+            >
+              {change.trend === 'up' ? '↑' : '↓'} {Math.abs(change.value)}%
+            </Badge>
+            <span className="text-muted-foreground">
+              {subtitle ?? 'vs last period'}
+            </span>
           </div>
-          <div className={`h-1.5 w-full rounded-full ${colors.progressBg}`}>
-            <div
-              className={`h-1.5 rounded-full ${colors.progressFill} transition-all`}
-              style={{ width: `${Math.min(progress, 100)}%` }}
-            />
+        ) : (
+          subtitle && (
+            <p className="text-sm text-muted-foreground">{subtitle}</p>
+          )
+        )}
+        {progress !== undefined && (
+          <div className="mt-4 space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Progress</span>
+              <span className="tabular-nums">{progress}%</span>
+            </div>
+            <Progress value={Math.min(progress, 100)} className="h-1.5" />
           </div>
-        </div>
-      )}
+        )}
+      </CardContent>
     </Card>
   )
 }

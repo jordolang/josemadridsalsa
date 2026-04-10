@@ -43,7 +43,7 @@ import {
   AlertTriangle,
   X,
 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import CredentialFormDialog from './CredentialFormDialog'
 import PasswordRevealDialog from './PasswordRevealDialog'
 import CredentialAccessManager from './CredentialAccessManager'
@@ -109,7 +109,6 @@ export default function CredentialsPageClient({
   providers: initialProviders,
 }: CredentialsPageClientProps) {
   const router = useRouter()
-  const { toast } = useToast()
   const [credentials, setCredentials] = useState<Credential[]>(initialCredentials)
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, string>>({})
   const [revealCountdowns, setRevealCountdowns] = useState<Record<string, number>>({})
@@ -212,11 +211,11 @@ export default function CredentialsPageClient({
   const handleCopyToClipboard = useCallback(async (text: string, label: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      toast({ title: 'Copied', description: `${label} copied to clipboard` })
+      toast.success('Copied', { description: `${label} copied to clipboard` })
     } catch {
-      toast({ title: 'Failed', description: 'Could not copy to clipboard', variant: 'destructive' })
+      toast.error('Failed', { description: 'Could not copy to clipboard' })
     }
-  }, [toast])
+  }, [])
 
   const handleReveal = (credential: Credential) => {
     setRevealCredentialId(credential.id)
@@ -281,12 +280,12 @@ export default function CredentialsPageClient({
         const result = await response.json()
         throw new Error(result.error || 'Failed to delete credential')
       }
-      toast({ title: 'Deleted', description: 'Credential deleted successfully' })
+      toast.success('Deleted', { description: 'Credential deleted successfully' })
       setDeleteDialogOpen(false)
       setDeletingCredential(null)
       fetchCredentials()
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' })
+      toast.error('Error', { description: err.message })
     } finally {
       setIsDeleting(false)
     }

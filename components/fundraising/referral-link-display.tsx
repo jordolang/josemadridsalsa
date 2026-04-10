@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 interface ReferralLinkDisplayProps {
   url: string
@@ -52,27 +52,16 @@ export function ReferralLinkDisplay({
       } catch (error) {
         // User cancelled share or share failed
         if (error instanceof Error && error.name !== 'AbortError') {
-          toast({
-            title: 'Share failed',
-            description: 'Unable to share link',
-            variant: 'destructive',
-          })
+          toast.error('Share failed', { description: 'Unable to share link' })
         }
       }
     } else {
       // Fallback to copy
       try {
         await navigator.clipboard.writeText(url)
-        toast({
-          title: 'Link copied!',
-          description: 'Referral link copied to clipboard',
-        })
+        toast.success('Link copied!', { description: 'Referral link copied to clipboard' })
       } catch (error) {
-        toast({
-          title: 'Failed to copy',
-          description: 'Please copy manually',
-          variant: 'destructive',
-        })
+        toast.error('Failed to copy', { description: 'Please copy manually' })
       }
     }
   }

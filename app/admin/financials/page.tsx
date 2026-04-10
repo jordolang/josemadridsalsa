@@ -4,7 +4,13 @@ import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client'
 import { DollarSign, Link2, Receipt, TrendingUp, Wallet } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
-import { Card } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { StatsCard } from '@/components/admin/StatsCard'
 import { formatPrice } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -317,24 +323,27 @@ export default async function FinancialsPage({ searchParams }: { searchParams: P
     <div className="space-y-6">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Financial Overview</h1>
-          <p className="text-slate-600">
+          <h1 className="text-2xl font-bold tracking-tight">
+            Financial Overview
+          </h1>
+          <p className="text-sm text-muted-foreground">
             Revenue, cash flow, and outstanding balances across the business.
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg bg-white p-1 shadow-sm">
+        <div className="flex items-center gap-1 rounded-lg border bg-card p-1">
           {RANGE_OPTIONS.map((option) => {
             const isActive = option.value === activeRange
             return (
-              <Link
+              <Button
                 key={option.value}
-                href={`/admin/financials?range=${option.value}`}
-                className={`rounded-md px-3 py-1 text-sm font-medium ${
-                  isActive ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-200'
-                }`}
+                asChild
+                variant={isActive ? 'default' : 'ghost'}
+                size="sm"
               >
-                {option.label}
-              </Link>
+                <Link href={`/admin/financials?range=${option.value}`}>
+                  {option.label}
+                </Link>
+              </Button>
             )
           })}
         </div>
@@ -357,54 +366,66 @@ export default async function FinancialsPage({ searchParams }: { searchParams: P
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
         <FinancialUploadPanel acceptedExtensions={supportedUploadFormats} />
-        <Card className="space-y-4 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase text-slate-500">Integrations</p>
-              <h2 className="text-xl font-semibold text-slate-900">Financial system connections</h2>
-              <p className="text-sm text-slate-600">
-                Connect QuickBooks, Quicken, Xero, or ADP to automate sync and reconciliation.
-              </p>
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardDescription className="text-xs font-medium uppercase tracking-wide">
+                  Integrations
+                </CardDescription>
+                <CardTitle>Financial system connections</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Connect QuickBooks, Quicken, Xero, or ADP to automate sync
+                  and reconciliation.
+                </p>
+              </div>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/admin/settings/integrations">Manage keys</Link>
+              </Button>
             </div>
-            <Button asChild size="sm" variant="outline">
-              <Link href="/admin/settings/integrations">Manage keys</Link>
-            </Button>
-          </div>
-
-          <div className="space-y-3">
+          </CardHeader>
+          <CardContent className="space-y-3">
             {integrationStatus.map((integration) => (
               <div
                 key={integration.id}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                className="rounded-lg border p-4"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">{integration.label}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-sm font-semibold">
+                      {integration.label}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
                       {integration.isConnected
-                        ? `Last synced ${integration.lastSyncedAt ? new Date(integration.lastSyncedAt).toLocaleString() : 'recently'}`
+                        ? `Last synced ${
+                            integration.lastSyncedAt
+                              ? new Date(
+                                  integration.lastSyncedAt
+                                ).toLocaleString()
+                              : 'recently'
+                          }`
                         : 'Not connected'}
                     </p>
                   </div>
                   <Badge
-                    className={`text-xs ${integration.isConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}
+                    variant={integration.isConnected ? 'default' : 'warning'}
                   >
                     {integration.isConnected ? 'Connected' : 'Needs setup'}
                   </Badge>
                 </div>
-                <ul className="mt-3 space-y-1 text-xs text-slate-500">
+                <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
                   {integration.features.map((feature) => (
                     <li key={feature}>• {feature}</li>
                   ))}
                 </ul>
-                <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                <div className="mt-3 flex items-center justify-between text-xs">
                   <a
                     href={integration.docUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-salsa-600 hover:underline"
+                    className="inline-flex items-center gap-1 text-primary hover:underline"
                   >
-                    <Link2 className="h-3.5 w-3.5" />
+                    <Link2 className="size-3.5" />
                     Docs
                   </a>
                   <Button
@@ -412,318 +433,399 @@ export default async function FinancialsPage({ searchParams }: { searchParams: P
                     size="sm"
                     variant={integration.isConnected ? 'outline' : 'default'}
                   >
-                    <Link href={`/admin/settings/integrations?service=${integration.id}`}>
+                    <Link
+                      href={`/admin/settings/integrations?service=${integration.id}`}
+                    >
                       {integration.isConnected ? 'View settings' : 'Connect'}
                     </Link>
                   </Button>
                 </div>
               </div>
             ))}
-          </div>
+          </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold">Monthly revenue trend</h2>
-          <p className="text-sm text-slate-600">Last 12 months of collected payments</p>
-          {data.monthlyTrends.every((item) => item.revenue === 0) ? (
-            <div className="py-12 text-center text-sm text-slate-500">
-              No revenue recorded yet.
-            </div>
-          ) : (
-            <div className="mt-4 grid grid-cols-12 gap-3">
-              {data.monthlyTrends.map((month) => {
-                const percent = maxRevenue === 0 ? 0 : Math.round((month.revenue / maxRevenue) * 100)
-                return (
-                  <div key={month.month} className="flex flex-col items-center gap-2">
-                    <div className="flex h-32 w-full items-end justify-center rounded bg-slate-100">
-                      <div
-                        className="w-3 rounded bg-emerald-500 transition-all"
-                        style={{
-                          height: `${percent}%`,
-                        }}
-                      />
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly revenue trend</CardTitle>
+            <CardDescription>
+              Last 12 months of collected payments
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {data.monthlyTrends.every((item) => item.revenue === 0) ? (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                No revenue recorded yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-12 gap-3">
+                {data.monthlyTrends.map((month) => {
+                  const percent =
+                    maxRevenue === 0
+                      ? 0
+                      : Math.round((month.revenue / maxRevenue) * 100)
+                  return (
+                    <div
+                      key={month.month}
+                      className="flex flex-col items-center gap-2"
+                    >
+                      <div className="flex h-32 w-full items-end justify-center rounded bg-muted">
+                        <div
+                          className="w-3 rounded bg-primary transition-all"
+                          style={{ height: `${percent}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {month.label}
+                      </p>
+                      <p className="text-xs font-medium tabular-nums">
+                        {formatPrice(month.revenue)}
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-500">{month.label}</p>
-                    <p className="text-xs font-medium text-slate-700">
-                      {formatPrice(month.revenue)}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
         </Card>
 
-        <Card className="space-y-4 p-6">
-          <div>
-            <h2 className="text-xl font-semibold">Tax & shipping</h2>
-            <div className="mt-3 space-y-2 text-sm text-slate-600">
+        <Card>
+          <CardHeader>
+            <CardTitle>Tax & shipping</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2 text-sm text-muted-foreground">
               <p>
                 Tax collected:{' '}
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-foreground tabular-nums">
                   {formatPrice(data.summary.taxCollected)}
                 </span>
               </p>
               <p>
                 Shipping collected:{' '}
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-foreground tabular-nums">
                   {formatPrice(data.summary.shippingCollected)}
                 </span>
               </p>
               <p>
                 Discounts granted:{' '}
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-foreground tabular-nums">
                   {formatPrice(data.summary.discounts)}
                 </span>
               </p>
             </div>
-          </div>
-          <div className="rounded-lg bg-slate-50 p-4 text-xs text-slate-500">
-            Tax and shipping are calculated from paid orders during the selected range. Discounts show the total coupon and promo value applied.
-          </div>
+            <div className="rounded-lg bg-muted p-4 text-xs text-muted-foreground">
+              Tax and shipping are calculated from paid orders during the
+              selected range. Discounts show the total coupon and promo value
+              applied.
+            </div>
+          </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card className="space-y-4 p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase text-slate-500">Payroll</p>
-              <h2 className="text-xl font-semibold text-slate-900">Upcoming pay run</h2>
-              <p className="text-sm text-slate-600">
-                Review hours, taxes, and net pay before exporting to ADP or QuickBooks Payroll.
-              </p>
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardDescription className="text-xs font-medium uppercase tracking-wide">
+                  Payroll
+                </CardDescription>
+                <CardTitle>Upcoming pay run</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Review hours, taxes, and net pay before exporting to ADP or
+                  QuickBooks Payroll.
+                </p>
+              </div>
+              <Badge variant="outline">
+                {nextPayroll ? nextPayroll.status : 'No runs'}
+              </Badge>
             </div>
-            <Badge className="bg-slate-100 text-slate-600">
-              {nextPayroll ? nextPayroll.status : 'No runs'}
-            </Badge>
-          </div>
-          {nextPayroll ? (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-900">{nextPayroll.period}</p>
-              <p className="text-xs text-slate-500">Pay date {new Date(nextPayroll.payDate).toLocaleDateString()}</p>
-              <div className="mt-3 grid grid-cols-3 gap-3 text-xs text-slate-500">
-                <div>
-                  <p className="font-semibold text-slate-900">{formatPrice(nextPayroll.grossPay)}</p>
-                  <p>Gross</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-900">{formatPrice(nextPayroll.taxesWithheld)}</p>
-                  <p>Taxes</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-900">{formatPrice(nextPayroll.netPay)}</p>
-                  <p>Net</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {nextPayroll ? (
+              <div className="rounded-lg border bg-muted/50 p-4">
+                <p className="text-sm font-semibold">{nextPayroll.period}</p>
+                <p className="text-xs text-muted-foreground">
+                  Pay date{' '}
+                  {new Date(nextPayroll.payDate).toLocaleDateString()}
+                </p>
+                <div className="mt-3 grid grid-cols-3 gap-3 text-xs text-muted-foreground">
+                  <div>
+                    <p className="font-semibold text-foreground tabular-nums">
+                      {formatPrice(nextPayroll.grossPay)}
+                    </p>
+                    <p>Gross</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground tabular-nums">
+                      {formatPrice(nextPayroll.taxesWithheld)}
+                    </p>
+                    <p>Taxes</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground tabular-nums">
+                      {formatPrice(nextPayroll.netPay)}
+                    </p>
+                    <p>Net</p>
+                  </div>
                 </div>
               </div>
+            ) : (
+              <div className="rounded-lg border border-dashed bg-muted/50 p-6 text-center text-sm text-muted-foreground">
+                No pay runs are scheduled. Generate one or import from your
+                POS.
+              </div>
+            )}
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Top earners this period
+              </p>
+              <ul className="mt-2 space-y-2 text-sm">
+                {payrollEmployees.slice(0, 3).map((employee) => (
+                  <li
+                    key={employee.id}
+                    className="flex items-center justify-between"
+                  >
+                    <span>{employee.name}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {formatPrice(employee.netPay)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
-              No pay runs are scheduled. Generate one or import from your POS.
-            </div>
-          )}
-          <div>
-            <p className="text-xs uppercase text-slate-500">Top earners this period</p>
-            <ul className="mt-2 space-y-2 text-sm text-slate-600">
-              {payrollEmployees.slice(0, 3).map((employee) => (
-                <li key={employee.id} className="flex items-center justify-between">
-                  <span>{employee.name}</span>
-                  <span className="text-xs text-slate-500">{formatPrice(employee.netPay)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/financials/payroll">Open payroll workspace</Link>
-          </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/financials/payroll">
+                Open payroll workspace
+              </Link>
+            </Button>
+          </CardContent>
         </Card>
 
-        <Card className="space-y-4 p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase text-slate-500">Expenses</p>
-              <h2 className="text-xl font-semibold text-slate-900">Expense approvals</h2>
-              <p className="text-sm text-slate-600">
-                Approve reimbursements and sync approved spend to your accounting platform.
-              </p>
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardDescription className="text-xs font-medium uppercase tracking-wide">
+                  Expenses
+                </CardDescription>
+                <CardTitle>Expense approvals</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Approve reimbursements and sync approved spend to your
+                  accounting platform.
+                </p>
+              </div>
+              <Badge variant="outline">
+                {
+                  expenseQueue.filter(
+                    (expense) => expense.status === 'submitted'
+                  ).length
+                }{' '}
+                awaiting
+              </Badge>
             </div>
-            <Badge className="bg-slate-100 text-slate-600">
-              {expenseQueue.filter((expense) => expense.status === 'submitted').length} awaiting
-            </Badge>
-          </div>
-          <div className="space-y-3">
+          </CardHeader>
+          <CardContent className="space-y-3">
             {expenseQueue.map((expense) => (
-              <div
-                key={expense.id}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-              >
+              <div key={expense.id} className="rounded-lg border p-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-slate-900">{expense.vendor}</p>
-                  <span className="text-sm font-semibold text-slate-900">{formatPrice(expense.amount)}</span>
+                  <p className="text-sm font-semibold">{expense.vendor}</p>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {formatPrice(expense.amount)}
+                  </span>
                 </div>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {expense.category} • Submitted by {expense.submittedBy} on{' '}
                   {new Date(expense.submittedAt).toLocaleDateString()}
                 </p>
                 <Badge
-                  className={`mt-3 text-xs ${
+                  variant={
                     expense.status === 'reimbursed'
-                      ? 'bg-emerald-100 text-emerald-700'
+                      ? 'default'
                       : expense.status === 'approved'
-                        ? 'bg-sky-100 text-sky-700'
-                        : 'bg-amber-100 text-amber-700'
-                  }`}
+                        ? 'secondary'
+                        : 'warning'
+                  }
+                  className="mt-3"
                 >
                   {expense.status}
                 </Badge>
               </div>
             ))}
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/financials/expenses">Review expenses</Link>
-          </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/financials/expenses">Review expenses</Link>
+            </Button>
+          </CardContent>
         </Card>
 
-        <Card className="space-y-4 p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase text-slate-500">Tax prep</p>
-              <h2 className="text-xl font-semibold text-slate-900">Upcoming filings</h2>
-              <p className="text-sm text-slate-600">
-                Track compliance tasks, owners, and due dates for state and federal filings.
-              </p>
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardDescription className="text-xs font-medium uppercase tracking-wide">
+                  Tax prep
+                </CardDescription>
+                <CardTitle>Upcoming filings</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Track compliance tasks, owners, and due dates for state and
+                  federal filings.
+                </p>
+              </div>
+              <Badge variant="outline">{openTaxTasks.length} open</Badge>
             </div>
-            <Badge className="bg-slate-100 text-slate-600">
-              {openTaxTasks.length} open
-            </Badge>
-          </div>
-          <div className="space-y-3">
+          </CardHeader>
+          <CardContent className="space-y-3">
             {taxPreparationTasks.map((task) => (
-              <div
-                key={task.id}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-              >
+              <div key={task.id} className="rounded-lg border p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-slate-900">{task.label}</p>
+                  <p className="text-sm font-semibold">{task.label}</p>
                   <Badge
-                    className={`text-xs ${
+                    variant={
                       task.status === 'completed'
-                        ? 'bg-emerald-100 text-emerald-700'
+                        ? 'default'
                         : task.status === 'overdue'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-amber-100 text-amber-700'
-                    }`}
+                          ? 'destructive'
+                          : 'warning'
+                    }
                   >
                     {task.status}
                   </Badge>
                 </div>
-                <p className="text-xs text-slate-500">
-                  Due {new Date(task.dueDate).toLocaleDateString()} • Owner {task.owner}
+                <p className="text-xs text-muted-foreground">
+                  Due {new Date(task.dueDate).toLocaleDateString()} • Owner{' '}
+                  {task.owner}
                 </p>
                 {task.notes ? (
-                  <p className="mt-2 text-xs text-slate-600">{task.notes}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {task.notes}
+                  </p>
                 ) : null}
               </div>
             ))}
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/financials/taxes">Manage tasks</Link>
-          </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/financials/taxes">Manage tasks</Link>
+            </Button>
+          </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Outstanding invoices</h2>
-              <p className="text-sm text-slate-600">
-                Track sent and overdue invoices requiring follow-up.
-              </p>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Outstanding invoices</CardTitle>
+                <CardDescription>
+                  Track sent and overdue invoices requiring follow-up.
+                </CardDescription>
+              </div>
+              <div className="text-right text-sm text-muted-foreground">
+                <p className="tabular-nums">
+                  Balance: {formatPrice(data.outstanding.total)}
+                </p>
+                <p>
+                  Overdue:{' '}
+                  <span className="font-semibold text-destructive tabular-nums">
+                    {formatPrice(data.outstanding.overdueTotal)}
+                  </span>
+                </p>
+              </div>
             </div>
-            <div className="text-right text-sm text-slate-500">
-              <p>Balance: {formatPrice(data.outstanding.total)}</p>
-              <p>
-                Overdue:{' '}
-                <span className="font-semibold text-red-600">
-                  {formatPrice(data.outstanding.overdueTotal)}
-                </span>
-              </p>
+          </CardHeader>
+          <CardContent>
+            {data.upcomingInvoices.length === 0 ? (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                No invoices outstanding. Great job!
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {data.upcomingInvoices.map((invoice) => (
+                  <Link
+                    key={invoice.id}
+                    href={`/admin/invoices/${invoice.id}`}
+                    className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-accent"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold">{invoice.number}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Due {invoice.dueDate.toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold tabular-nums">
+                        {formatPrice(invoice.total)}
+                      </p>
+                      <Badge
+                        variant={
+                          invoice.status === 'OVERDUE'
+                            ? 'destructive'
+                            : 'outline'
+                        }
+                        className="text-xs"
+                      >
+                        {invoice.status}
+                      </Badge>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+            <div className="mt-4 flex gap-3 text-xs text-muted-foreground">
+              <span>
+                Invoices outstanding:{' '}
+                {data.outstanding.count.toLocaleString()}
+              </span>
+              <span>
+                Overdue: {data.outstanding.overdueCount.toLocaleString()}
+              </span>
+              <span>
+                Drafts: {data.outstanding.draftCount.toLocaleString()}
+              </span>
             </div>
-          </div>
-          {data.upcomingInvoices.length === 0 ? (
-            <div className="py-12 text-center text-sm text-slate-500">
-              No invoices outstanding. Great job!
-            </div>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {data.upcomingInvoices.map((invoice) => (
-                <Link
-                  key={invoice.id}
-                  href={`/admin/invoices/${invoice.id}`}
-                  className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4 hover:border-blue-300 hover:text-blue-600"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{invoice.number}</p>
-                    <p className="text-xs text-slate-500">
-                      Due {invoice.dueDate.toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-slate-800">
-                      {formatPrice(invoice.total)}
-                    </p>
-                    <p
-                      className={`text-xs ${
-                        invoice.status === 'OVERDUE' ? 'text-red-600' : 'text-slate-500'
-                      }`}
-                    >
-                      {invoice.status}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-          <div className="mt-4 flex gap-3 text-xs text-slate-500">
-            <span>Invoices outstanding: {data.outstanding.count.toLocaleString()}</span>
-            <span>Overdue: {data.outstanding.overdueCount.toLocaleString()}</span>
-            <span>Drafts: {data.outstanding.draftCount.toLocaleString()}</span>
-          </div>
+          </CardContent>
         </Card>
 
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold">Recent orders</h2>
-          {data.recentOrders.length === 0 ? (
-            <div className="py-12 text-center text-sm text-slate-500">
-              No transactions recorded in this range.
-            </div>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {data.recentOrders.map((order) => (
-                <Link
-                  key={order.id}
-                  href={`/admin/orders/${order.id}`}
-                  className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 hover:border-blue-300 hover:text-blue-600"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">#{order.orderNumber}</p>
-                    <p className="text-xs text-slate-500">
-                      {order.createdAt.toLocaleString()} • {order.status}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-slate-800">
-                      {formatPrice(order.total)}
-                    </p>
-                    <p className="text-xs text-slate-500">{order.paymentStatus}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.recentOrders.length === 0 ? (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                No transactions recorded in this range.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {data.recentOrders.map((order) => (
+                  <Link
+                    key={order.id}
+                    href={`/admin/orders/${order.id}`}
+                    className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-accent"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">
+                        #{order.orderNumber}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {order.createdAt.toLocaleString()} • {order.status}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold tabular-nums">
+                        {formatPrice(order.total)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {order.paymentStatus}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
         </Card>
       </div>
     </div>

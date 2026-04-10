@@ -462,7 +462,7 @@ function ChartVisualization({ chart }: { chart: GoogleAnalyticsChartResult }) {
 
   if (chart.points.length === 0) {
     return (
-      <p className="mt-4 text-sm text-slate-500">
+      <p className="mt-4 text-sm text-muted-foreground">
         No Google Analytics data returned for this metric and dimension within the selected range.
       </p>
     )
@@ -502,10 +502,10 @@ function renderLineChart(
         <path d={areaPath} className={`${color.lineFill} opacity-70`} />
         <path d={path} className={`${color.lineStroke} fill-none`} strokeWidth={2.2} strokeLinecap="round" />
       </svg>
-      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
         {points.map((point) => (
           <div key={point.label}>
-            <p className="font-semibold text-slate-700">{point.label}</p>
+            <p className="font-semibold text-foreground">{point.label}</p>
             <p>{point.value.toLocaleString()}</p>
           </div>
         ))}
@@ -526,14 +526,14 @@ function renderBarChart(
       <div className="flex h-40 items-end gap-4">
         {points.map((point) => (
           <div key={point.label} className="flex flex-1 flex-col items-center gap-2 text-xs">
-            <div className="flex h-full w-full items-end rounded-t-lg bg-slate-100">
+            <div className="flex h-full w-full items-end rounded-t-lg bg-muted">
               <div
                 className={`mx-auto w-3/4 rounded-t-lg ${color.barClass}`}
                 style={{ height: `${(point.value / safeMax) * 100}%` }}
               />
             </div>
-            <span className="text-slate-600">{point.label}</span>
-            <span className="font-semibold text-slate-900">{point.value.toLocaleString()}</span>
+            <span className="text-muted-foreground">{point.label}</span>
+            <span className="font-semibold text-foreground">{point.value.toLocaleString()}</span>
           </div>
         ))}
       </div>
@@ -573,9 +573,9 @@ function renderPieChart(points: GoogleAnalyticsChartResult['points']) {
                 className="inline-block h-3 w-3 rounded-full"
                 style={{ backgroundColor: PIE_SEGMENT_COLORS[index % PIE_SEGMENT_COLORS.length] }}
               />
-              <span className="text-slate-700">{point.label}</span>
+              <span className="text-foreground">{point.label}</span>
             </div>
-            <span className="font-semibold text-slate-900">
+            <span className="font-semibold text-foreground">
               {((point.value / safeTotal) * 100).toFixed(1)}%
             </span>
           </li>
@@ -628,7 +628,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Analytics</h1>
-            <p className="text-slate-600">Store performance overview and key trends</p>
+            <p className="text-muted-foreground">Store performance overview and key trends</p>
           </div>
           <div className="flex items-center gap-2 rounded-lg bg-white p-1 shadow-sm">
             {RANGE_OPTIONS.map((option) => {
@@ -638,7 +638,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                   key={option.value}
                   href={`/admin/analytics?range=${option.value}`}
                   className={`rounded-md px-3 py-1 text-sm font-medium ${
-                    isActive ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-200'
+                    isActive ? 'bg-slate-900 text-white' : 'text-muted-foreground hover:bg-slate-200'
                   }`}
                 >
                   {option.label}
@@ -653,7 +653,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="text-xl font-semibold">Google Analytics configuration</h2>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               Manage your GA4 property connection, Google Tag, and default chart definitions.
             </p>
           </div>
@@ -663,7 +663,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         </div>
         <form action={canManageGa ? saveGaSettingsAction : undefined} className="grid gap-4 md:grid-cols-3">
           <div className="space-y-1.5">
-            <label htmlFor="measurementId" className="text-sm font-medium text-slate-700">
+            <label htmlFor="measurementId" className="text-sm font-medium text-foreground">
               Google Tag (Measurement ID)
             </label>
             <Input
@@ -673,10 +673,10 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
               defaultValue={gaSettings.measurementId ?? ''}
               disabled={!canManageGa}
             />
-            <p className="text-xs text-slate-500">Used by the storefront to load the gtag snippet.</p>
+            <p className="text-xs text-muted-foreground">Used by the storefront to load the gtag snippet.</p>
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="propertyId" className="text-sm font-medium text-slate-700">
+            <label htmlFor="propertyId" className="text-sm font-medium text-foreground">
               GA4 Property ID
             </label>
             <Input
@@ -686,10 +686,10 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
               defaultValue={gaSettings.propertyId ?? ''}
               disabled={!canManageGa}
             />
-            <p className="text-xs text-slate-500">Only numbers or the `properties/123` syntax are accepted.</p>
+            <p className="text-xs text-muted-foreground">Only numbers or the `properties/123` syntax are accepted.</p>
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="dataStreamId" className="text-sm font-medium text-slate-700">
+            <label htmlFor="dataStreamId" className="text-sm font-medium text-foreground">
               Data stream ID (optional)
             </label>
             <Input
@@ -699,7 +699,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
               defaultValue={gaSettings.dataStreamId ?? ''}
               disabled={!canManageGa}
             />
-            <p className="text-xs text-slate-500">Helpful when you manage multiple storefront streams.</p>
+            <p className="text-xs text-muted-foreground">Helpful when you manage multiple storefront streams.</p>
           </div>
           <div className="md:col-span-3 flex justify-end">
             <Button type="submit" disabled={!canManageGa}>
@@ -707,22 +707,22 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
             </Button>
           </div>
         </form>
-        <div className="grid gap-2 text-sm text-slate-600 md:grid-cols-2">
+        <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
           <p>
-            <span className="font-semibold text-slate-700">Service account:</span>{' '}
+            <span className="font-semibold text-foreground">Service account:</span>{' '}
             {serviceAccountConfigured ? (
               <span className="text-emerald-700">Connected</span>
             ) : (
               <span>
-                Missing — add <code className="rounded bg-slate-100 px-1">google_analytics / service_account</code> in{' '}
-                <Link href="/admin/settings/integrations" className="text-slate-900 underline">
+                Missing — add <code className="rounded bg-muted px-1">google_analytics / service_account</code> in{' '}
+                <Link href="/admin/settings/integrations" className="text-foreground underline">
                   Integrations
                 </Link>
               </span>
             )}
           </p>
           <p>
-            <span className="font-semibold text-slate-700">Custom charts saved:</span>{' '}
+            <span className="font-semibold text-foreground">Custom charts saved:</span>{' '}
             {gaSettings.chartDefinitions.length}
           </p>
         </div>
@@ -740,14 +740,14 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-xl font-semibold">Google Analytics overview</h2>
-            <p className="text-sm text-slate-600">Live GA4 metrics for the selected range</p>
+            <p className="text-sm text-muted-foreground">Live GA4 metrics for the selected range</p>
           </div>
-          <Badge className={gaStatusIsReady ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}>
+          <Badge className={gaStatusIsReady ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-foreground'}>
             {gaStatusIsReady ? 'Live data' : 'Awaiting configuration'}
           </Badge>
         </div>
         {gaDashboard.summaryCards.length === 0 ? (
-          <Card className="p-6 text-sm text-slate-500">
+          <Card className="p-6 text-sm text-muted-foreground">
             No Google Analytics metrics are available for this range yet.
           </Card>
         ) : (
@@ -766,16 +766,16 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="text-xl font-semibold">Custom Google Analytics charts</h2>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               Blend any GA metric + dimension and choose the visualization that best fits your reporting workflow.
             </p>
           </div>
-          <Badge className="bg-slate-100 text-slate-700">
+          <Badge className="bg-muted text-foreground">
             {gaSettings.chartDefinitions.length} configured
           </Badge>
         </div>
         {gaSettings.chartDefinitions.length === 0 ? (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             No custom charts yet. Use the builder below to create your first dashboard widget.
           </p>
         ) : (
@@ -788,14 +788,14 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 <div key={definition.id} className="rounded-lg border bg-white p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+                      <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
                         {definition.chartType === 'line' && <LineChart className="h-4 w-4" />}
                         {definition.chartType === 'bar' && <BarChart3 className="h-4 w-4" />}
                         {definition.chartType === 'pie' && <PieChart className="h-4 w-4" />}
                         <span>{definition.chartType} chart</span>
                       </div>
-                      <h3 className="text-lg font-semibold text-slate-900">{definition.title}</h3>
-                      <p className="text-sm text-slate-500">
+                      <h3 className="text-lg font-semibold text-foreground">{definition.title}</h3>
+                      <p className="text-sm text-muted-foreground">
                         {definition.description || `${definition.metric} • ${definition.dimension}`}
                       </p>
                     </div>
@@ -816,26 +816,26 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         )}
         {canManageGa && (
           <div>
-            <h3 className="text-base font-semibold text-slate-900">Add a custom chart</h3>
-            <p className="mb-4 text-sm text-slate-500">
+            <h3 className="text-base font-semibold text-foreground">Add a custom chart</h3>
+            <p className="mb-4 text-sm text-muted-foreground">
               Pick any GA metric + dimension combination, select the visualization style, and optionally cap the number
               of rows returned.
             </p>
             <form action={addGaChartAction} className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label htmlFor="title" className="text-sm font-medium text-slate-700">
+                <label htmlFor="title" className="text-sm font-medium text-foreground">
                   Chart title
                 </label>
                 <Input id="title" name="title" placeholder="Sessions by source" required />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="description" className="text-sm font-medium text-slate-700">
+                <label htmlFor="description" className="text-sm font-medium text-foreground">
                   Description (optional)
                 </label>
                 <Input id="description" name="description" placeholder="Visible to admins only" />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="metric" className="text-sm font-medium text-slate-700">
+                <label htmlFor="metric" className="text-sm font-medium text-foreground">
                   Metric
                 </label>
                 <select
@@ -856,7 +856,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="dimension" className="text-sm font-medium text-slate-700">
+                <label htmlFor="dimension" className="text-sm font-medium text-foreground">
                   Dimension
                 </label>
                 <select
@@ -877,7 +877,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="chartType" className="text-sm font-medium text-slate-700">
+                <label htmlFor="chartType" className="text-sm font-medium text-foreground">
                   Chart type
                 </label>
                 <select
@@ -892,7 +892,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="color" className="text-sm font-medium text-slate-700">
+                <label htmlFor="color" className="text-sm font-medium text-foreground">
                   Color theme
                 </label>
                 <select
@@ -909,7 +909,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="limit" className="text-sm font-medium text-slate-700">
+                <label htmlFor="limit" className="text-sm font-medium text-foreground">
                   Row limit (optional)
                 </label>
                 <Input
@@ -920,7 +920,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                   placeholder="10"
                   className="md:col-span-1"
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Leave blank to let GA decide. Ignored for date-based line charts.
                 </p>
               </div>
@@ -969,17 +969,17 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Revenue & Orders</h2>
-              <p className="text-sm text-slate-600">Daily trends for the selected range</p>
+              <p className="text-sm text-muted-foreground">Daily trends for the selected range</p>
             </div>
           </div>
           {data.chart.length === 0 ? (
-            <div className="py-12 text-center text-sm text-slate-500">
+            <div className="py-12 text-center text-sm text-muted-foreground">
               No order activity recorded for this range.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[480px]">
-                <thead className="border-b bg-slate-50 text-sm text-slate-600">
+                <thead className="border-b bg-muted text-sm text-muted-foreground">
                   <tr>
                     <th className="px-4 py-2 text-left font-medium">Date</th>
                     <th className="px-4 py-2 text-left font-medium">Orders</th>
@@ -989,27 +989,27 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 <tbody className="text-sm">
                   {data.chart.map((point) => (
                     <tr key={point.date} className="border-b last:border-0">
-                      <td className="px-4 py-3 text-slate-700">{point.label}</td>
+                      <td className="px-4 py-3 text-foreground">{point.label}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-32 rounded-full bg-slate-100">
+                          <div className="w-32 rounded-full bg-muted">
                             <div
                               className="h-2 rounded-full bg-blue-500 transition-all"
                               style={{ width: getBarWidth(point.orders, maxOrders) }}
                             />
                           </div>
-                          <span className="font-medium text-slate-700">{point.orders}</span>
+                          <span className="font-medium text-foreground">{point.orders}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-32 rounded-full bg-slate-100">
+                          <div className="w-32 rounded-full bg-muted">
                             <div
                               className="h-2 rounded-full bg-emerald-500 transition-all"
                               style={{ width: getBarWidth(point.revenue, maxRevenue) }}
                             />
                           </div>
-                          <span className="font-medium text-slate-700">
+                          <span className="font-medium text-foreground">
                             {formatPrice(point.revenue)}
                           </span>
                         </div>
@@ -1024,31 +1024,31 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
 
         <Card className="p-6">
           <h2 className="text-xl font-semibold">Order Funnel</h2>
-          <p className="mb-4 text-sm text-slate-600">
+          <p className="mb-4 text-sm text-muted-foreground">
             Key engagement metrics for the selected period
           </p>
           <div className="space-y-4">
             <div>
-              <p className="text-xs uppercase text-slate-500">Sessions</p>
+              <p className="text-xs uppercase text-muted-foreground">Sessions</p>
               <div className="flex items-baseline justify-between">
                 <p className="text-2xl font-semibold">{data.summary.sessions.toLocaleString()}</p>
-                <Users className="h-5 w-5 text-slate-400" />
+                <Users className="h-5 w-5 text-muted-foreground" />
               </div>
             </div>
             <div>
-              <p className="text-xs uppercase text-slate-500">Add to Cart Events</p>
+              <p className="text-xs uppercase text-muted-foreground">Add to Cart Events</p>
               <div className="text-2xl font-semibold">
                 {data.summary.addToCart.toLocaleString()}
               </div>
             </div>
             <div>
-              <p className="text-xs uppercase text-slate-500">Purchase Events</p>
+              <p className="text-xs uppercase text-muted-foreground">Purchase Events</p>
               <div className="text-2xl font-semibold">
                 {data.summary.purchaseEvents.toLocaleString()}
               </div>
             </div>
             <div className="border-t pt-4">
-              <p className="text-xs uppercase text-slate-500">Cart to Purchase Rate</p>
+              <p className="text-xs uppercase text-muted-foreground">Cart to Purchase Rate</p>
               <div className="text-lg font-semibold">
                 {data.summary.addToCart === 0
                   ? '—'
@@ -1077,10 +1077,10 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Top Products Detail</h2>
-              <p className="text-sm text-slate-600">Based on revenue for this range</p>
+              <p className="text-sm text-muted-foreground">Based on revenue for this range</p>
             </div>
             {data.topProducts.length > 0 && (
-              <span className="text-sm text-slate-500">
+              <span className="text-sm text-muted-foreground">
                 {formatPrice(
                   data.topProducts.reduce((sum, product) => sum + product.revenue, 0)
                 )}{' '}
@@ -1089,13 +1089,13 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
             )}
           </div>
           {data.topProducts.length === 0 ? (
-            <div className="py-12 text-center text-sm text-slate-500">
+            <div className="py-12 text-center text-sm text-muted-foreground">
               No product sales recorded in this range.
             </div>
           ) : (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full min-w-[480px]">
-                <thead className="border-b bg-slate-50 text-sm text-slate-600">
+                <thead className="border-b bg-muted text-sm text-muted-foreground">
                   <tr>
                     <th className="px-4 py-2 text-left font-medium">Product</th>
                     <th className="px-4 py-2 text-right font-medium">Orders</th>
@@ -1106,14 +1106,14 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 <tbody className="text-sm">
                   {data.topProducts.map((product) => (
                     <tr key={product.productId} className="border-b last:border-0">
-                      <td className="px-4 py-3 font-medium text-slate-700">{product.name}</td>
-                      <td className="px-4 py-3 text-right text-slate-700">
+                      <td className="px-4 py-3 font-medium text-foreground">{product.name}</td>
+                      <td className="px-4 py-3 text-right text-foreground">
                         {product.orders.toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-right text-slate-700">
+                      <td className="px-4 py-3 text-right text-foreground">
                         {product.quantity.toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                      <td className="px-4 py-3 text-right font-semibold text-foreground">
                         {formatPrice(product.revenue)}
                       </td>
                     </tr>
@@ -1126,20 +1126,20 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
 
         <Card className="p-6">
           <h2 className="text-xl font-semibold">Order Status</h2>
-          <p className="text-sm text-slate-600">Current distribution</p>
+          <p className="text-sm text-muted-foreground">Current distribution</p>
           <div className="mt-4 space-y-3">
             {data.orderStatus.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-500">No orders in this range.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">No orders in this range.</p>
             ) : (
               data.orderStatus.map((status) => (
                 <div key={status.status} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="inline-flex h-2 w-2 rounded-full bg-slate-400" />
-                    <span className="text-sm font-medium text-slate-700">
+                    <span className="text-sm font-medium text-foreground">
                       {status.status.replace('_', ' ')}
                     </span>
                   </div>
-                  <span className="text-sm text-slate-600">
+                  <span className="text-sm text-muted-foreground">
                     {status.count.toLocaleString()}
                   </span>
                 </div>
@@ -1154,26 +1154,26 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Traffic Sources</h2>
-              <p className="text-sm text-slate-600">Top referrers for sessions</p>
+              <p className="text-sm text-muted-foreground">Top referrers for sessions</p>
             </div>
           </div>
           {data.trafficSources.length === 0 ? (
-            <div className="py-12 text-center text-sm text-slate-500">
+            <div className="py-12 text-center text-sm text-muted-foreground">
               No traffic data recorded in this range.
             </div>
           ) : (
             <ul className="mt-4 space-y-3">
               {data.trafficSources.map((source) => (
                 <li key={source.label} className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">{source.label}</span>
+                  <span className="text-sm font-medium text-foreground">{source.label}</span>
                   <div className="flex items-center gap-3">
-                    <div className="h-2 w-32 rounded-full bg-slate-100">
+                    <div className="h-2 w-32 rounded-full bg-muted">
                       <div
                         className="h-2 rounded-full bg-indigo-500 transition-all"
                         style={{ width: getBarWidth(source.count, maxTraffic) }}
                       />
                     </div>
-                    <span className="text-sm text-slate-600">
+                    <span className="text-sm text-muted-foreground">
                       {source.count.toLocaleString()}
                     </span>
                   </div>
@@ -1185,24 +1185,24 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
 
         <Card className="p-6">
           <h2 className="text-xl font-semibold">Top Countries</h2>
-          <p className="text-sm text-slate-600">Geo distribution of visitors</p>
+          <p className="text-sm text-muted-foreground">Geo distribution of visitors</p>
           {data.topCountries.length === 0 ? (
-            <div className="py-12 text-center text-sm text-slate-500">
+            <div className="py-12 text-center text-sm text-muted-foreground">
               No geo data captured for this range.
             </div>
           ) : (
             <ul className="mt-4 space-y-3">
               {data.topCountries.map((country) => (
                 <li key={country.label} className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">{country.label}</span>
+                  <span className="text-sm font-medium text-foreground">{country.label}</span>
                   <div className="flex items-center gap-3">
-                    <div className="h-2 w-32 rounded-full bg-slate-100">
+                    <div className="h-2 w-32 rounded-full bg-muted">
                       <div
                         className="h-2 rounded-full bg-emerald-500 transition-all"
                         style={{ width: getBarWidth(country.count, maxCountry) }}
                       />
                     </div>
-                    <span className="text-sm text-slate-600">
+                    <span className="text-sm text-muted-foreground">
                       {country.count.toLocaleString()}
                     </span>
                   </div>
@@ -1215,17 +1215,17 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
 
       <Card className="p-6">
         <h2 className="text-xl font-semibold">Recent Activity</h2>
-        <p className="mb-4 text-sm text-slate-600">
+        <p className="mb-4 text-sm text-muted-foreground">
           The latest analytics events recorded across the storefront
         </p>
         {data.recentEvents.length === 0 ? (
-          <div className="py-12 text-center text-sm text-slate-500">
+          <div className="py-12 text-center text-sm text-muted-foreground">
             No analytics events were captured during this range.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[480px]">
-              <thead className="border-b bg-slate-50 text-sm text-slate-600">
+              <thead className="border-b bg-muted text-sm text-muted-foreground">
                 <tr>
                   <th className="px-4 py-2 text-left font-medium">Type</th>
                   <th className="px-4 py-2 text-left font-medium">Page</th>
@@ -1236,10 +1236,10 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
               <tbody className="text-sm">
                 {data.recentEvents.map((event) => (
                   <tr key={event.id} className="border-b last:border-0">
-                    <td className="px-4 py-3 font-medium text-slate-700">{event.type}</td>
-                    <td className="px-4 py-3 text-slate-600">{event.page || '—'}</td>
-                    <td className="px-4 py-3 text-slate-600">{event.action || '—'}</td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 font-medium text-foreground">{event.type}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{event.page || '—'}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{event.action || '—'}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
                       {event.createdAt.toLocaleString()}
                     </td>
                   </tr>

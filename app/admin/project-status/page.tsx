@@ -25,19 +25,19 @@ export default async function ProjectStatusPage() {
 
   if (!analysis) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-4">
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-800">No Analysis Data</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-2xl font-bold tracking-tight">No Analysis Data</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
             Run the analyzer to generate project status data.
           </p>
         </div>
-        <div className="rounded-lg bg-blue-50 border-2 border-blue-200 p-6 max-w-md">
-          <h2 className="font-semibold text-blue-900 mb-2">How to run analyzer:</h2>
-          <pre className="bg-blue-900 text-blue-50 p-3 rounded font-mono text-sm">
+        <div className="max-w-md rounded-lg border bg-card p-6 shadow-sm">
+          <h2 className="mb-2 font-semibold">How to run analyzer:</h2>
+          <pre className="rounded bg-muted p-3 font-mono text-sm">
             npm run analyze
           </pre>
-          <p className="text-sm text-blue-700 mt-2">
+          <p className="mt-2 text-sm text-muted-foreground">
             This will scan the codebase and generate completion metrics.
           </p>
         </div>

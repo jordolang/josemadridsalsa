@@ -15,8 +15,10 @@ export default async function LeadGenerationDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Lead Generation</h1>
-          <p className="text-muted-foreground">Scrape Google Maps and find contacts for outreach campaigns.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Lead Generation</h1>
+          <p className="text-sm text-muted-foreground">
+            Scrape Google Maps and find contacts for outreach campaigns.
+          </p>
         </div>
         <CreateCampaignDialog />
       </div>
@@ -53,17 +55,21 @@ export default async function LeadGenerationDashboard() {
                 </div>
               </div>
               <div className="mt-4">
-                <Link href={`/admin/lead-generation/${campaign.id}`}>
-                  <Button className="w-full">Manage Campaign</Button>
-                </Link>
+                <Button asChild className="w-full">
+                  <Link href={`/admin/lead-generation/${campaign.id}`}>
+                    Manage Campaign
+                  </Link>
+                </Button>
               </div>
             </CardContent>
           </Card>
         ))}
         {campaigns.length === 0 && (
-          <div className="col-span-full py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg">
-            No campaigns found. Create one to start generating leads.
-          </div>
+          <Card className="col-span-full border-dashed">
+            <CardContent className="py-12 text-center text-sm text-muted-foreground">
+              No campaigns found. Create one to start generating leads.
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
