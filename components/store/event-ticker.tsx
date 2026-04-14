@@ -67,7 +67,7 @@ export function EventTicker({ initialEvents }: EventTickerProps) {
     : segments
 
   const items = [...formattedSegments, ...formattedSegments]
-  const duration = Math.max(20, segments.length * 6)
+  const duration = Math.max(60, segments.length * 20)
 
   return (
     <div style={{
