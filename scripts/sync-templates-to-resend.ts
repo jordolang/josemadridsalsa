@@ -134,6 +134,7 @@ async function createAndPublish(
   if (createError) {
     console.error(`  FAIL  ${alias}: ${createError.message}`)
     counters.failed++
+    await delay(1200)
     return
   }
 
@@ -150,7 +151,7 @@ async function createAndPublish(
   }
 
   counters.created++
-  await delay(600)
+  await delay(1200)
 }
 
 /* ── Sync code-defined templates ────────────────────────── */

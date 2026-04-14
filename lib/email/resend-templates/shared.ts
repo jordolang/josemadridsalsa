@@ -152,7 +152,7 @@ export function footer(): string {
       Questions? Email us at <a href="mailto:support@josemadrid.net" style="color:${colors.link};text-decoration:none;">support@josemadrid.net</a>
     </p>
     <p style="margin:16px 0 8px 0;font-size:12px;color:${colors.textLight};${font}line-height:1.5;text-align:center;">
-      <a href="{{{UNSUBSCRIBE_URL}}}" style="color:${colors.link};text-decoration:none;">Unsubscribe</a>
+      <a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:${colors.link};text-decoration:none;">Unsubscribe</a>
       &middot;
       <a href="https://josemadrid.net/privacy" style="color:${colors.link};text-decoration:none;">Privacy Policy</a>
       &middot;
