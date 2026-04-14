@@ -82,7 +82,7 @@ const createPrismaClient = (): PrismaClient => {
 
     // Return a basic client for build time - it will fail at runtime if used without proper config
     console.error('[Prisma] ⚠️  Returning basic client (will fail at runtime if DATABASE_URL not set)')
-    console.error('[Prisma] 📋 Run diagnostic: node scripts/diagnose-db-connection.js')
+    console.error('[Prisma] 📋 Run diagnostic: node scripts/diagnose-db-connection.cjs')
     return new PrismaClient({ log: ['error'] })
   }
 }

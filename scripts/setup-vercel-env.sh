@@ -244,7 +244,7 @@ echo -e "${BLUE}1. Wait for deployment to complete (2-3 minutes)${NC}"
 echo -e "${BLUE}2. Test your website: https://www.josemadrid.net${NC}"
 echo -e "${BLUE}3. Verify login works${NC}"
 echo -e "${BLUE}4. Check find-us page loads locations${NC}"
-echo -e "${BLUE}5. Run diagnostic: node scripts/diagnose-db-connection.js${NC}"
+echo -e "${BLUE}5. Run diagnostic: node scripts/diagnose-db-connection.cjs${NC}"
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
