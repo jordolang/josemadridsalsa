@@ -15,12 +15,21 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Separator } from '@/components/ui/separator'
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 import {
   Tooltip,
   TooltipContent,
@@ -93,9 +102,9 @@ export function AdminLayoutClient({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <SidebarProvider>
+      <SidebarProvider className="h-svh overflow-hidden">
         <AppSidebar user={user} navigation={navigation} />
-        <SidebarInset>
+        <SidebarInset className="flex h-svh min-h-0 flex-col overflow-hidden">
           <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/75">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
@@ -120,21 +129,62 @@ export function AdminLayoutClient({
             <div className="ml-auto flex items-center gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="relative size-8"
-                    aria-label="Notifications"
-                  >
-                    <Bell className="size-4" />
-                    <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-destructive" />
-                  </Button>
+                  <ThemeToggle className="size-8 rounded-md px-0" />
                 </TooltipTrigger>
-                <TooltipContent>Notifications</TooltipContent>
+                <TooltipContent>Toggle theme</TooltipContent>
               </Tooltip>
+              <DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="relative size-8"
+                        aria-label="Notifications"
+                      >
+                        <Bell className="size-4" />
+                        <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-destructive" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Notifications</TooltipContent>
+                </Tooltip>
+                <DropdownMenuContent align="end" className="w-80">
+                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/messages">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">New messages</span>
+                        <span className="text-xs text-muted-foreground">View customer messages and inquiries</span>
+                      </div>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/orders">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">Recent orders</span>
+                        <span className="text-xs text-muted-foreground">Review and fulfill open orders</span>
+                      </div>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/reviews">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">Customer reviews</span>
+                        <span className="text-xs text-muted-foreground">Moderate new product reviews</span>
+                      </div>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+          <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
+            {children}
+          </main>
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>

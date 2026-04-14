@@ -40,6 +40,7 @@ import {
   SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -138,6 +139,8 @@ export function AppSidebar({ user, navigation, ...props }: AppSidebarProps) {
                   )
                 }
 
+                const parentActive = isHrefActive(pathname, item.href)
+
                 return (
                   <Collapsible
                     key={item.href}
@@ -146,15 +149,23 @@ export function AppSidebar({ user, navigation, ...props }: AppSidebarProps) {
                     className="group/collapsible"
                   >
                     <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton
-                          tooltip={item.label}
-                          isActive={sectionActive}
-                        >
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={item.label}
+                        isActive={parentActive || sectionActive}
+                      >
+                        <Link href={item.href}>
                           {Icon && <Icon />}
                           <span>{item.label}</span>
-                          <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                        </SidebarMenuButton>
+                        </Link>
+                      </SidebarMenuButton>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuAction
+                          aria-label={`Toggle ${item.label} submenu`}
+                          className="data-[state=open]:rotate-90"
+                        >
+                          <ChevronRight />
+                        </SidebarMenuAction>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <SidebarMenuSub>
