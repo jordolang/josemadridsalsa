@@ -81,7 +81,7 @@ export async function POST(request: Request) {
       type: 'shipping-notification',
       orderId: data.orderId,
       userId: data.userId,
-      replyTo: 'orders@josemadridsalsa.com',
+      replyTo: 'mike@josemadrid.net',
     })
 
     if (!result.success) {
