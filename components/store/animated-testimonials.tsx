@@ -104,11 +104,42 @@ function ReviewCard({ review }: ReviewCardProps) {
   )
 }
 
+function LeaveReviewCard() {
+  return (
+    <Card className="flex h-full flex-col border-dashed bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+      <CardContent className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+        <div className="flex items-center gap-1">
+          {Array.from({ length: 5 }, (_, i) => (
+            <Star
+              key={i}
+              aria-hidden="true"
+              className="h-5 w-5 fill-yellow-400 text-yellow-400"
+            />
+          ))}
+        </div>
+        <p className="text-base font-semibold text-foreground">
+          Share your experience
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Tried our salsa? Let the next customer know what you thought.
+        </p>
+        <Button asChild className="bg-salsa-600 hover:bg-salsa-700">
+          <a href={googleBusinessUrl} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Leave a Review
+          </a>
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function AnimatedTestimonials({ reviewsData }: AnimatedTestimonialsProps) {
-  // Shuffle once on mount and take up to 6 reviews for the card grid.
+  // Shuffle once on mount and take up to 5 real reviews — the 6th grid
+  // cell is a "Leave a Review" CTA card rendered below.
   const [reviews] = useState<Review[]>(() => {
     const shuffled = [...reviewsData.reviews].sort(() => Math.random() - 0.5)
-    return shuffled.slice(0, 6)
+    return shuffled.slice(0, 5)
   })
 
   const { totalRating, totalReviews } = reviewsData
@@ -173,21 +204,23 @@ export function AnimatedTestimonials({ reviewsData }: AnimatedTestimonialsProps)
         {/* Card grid + leaning silhouette */}
         <div className="relative">
           {/* Decorative leaning cowboy silhouette (CC0 — OpenClipart / Firkin).
-              Sits in the reserved right padding of the grid, hidden below lg
-              to keep the mobile layout clean. `dark:invert` flips the solid
-              black fill to white in dark mode so the figure stays visible. */}
+              Sits BEHIND the card grid (z-0) so she leans against the cards
+              rather than covering them. Filter flips the black source fill:
+              - light mode → white silhouette with dark drop-shadow
+              - dark mode  → dark silhouette with bright glow */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/images/leaning-silhouette.svg"
             alt=""
             aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 right-2 z-20 hidden h-full w-auto opacity-90 drop-shadow-xl lg:block dark:invert"
+            className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden h-full w-auto opacity-95 brightness-0 invert drop-shadow-[0_10px_22px_rgba(0,0,0,0.35)] lg:block dark:invert-0 dark:drop-shadow-[0_0_28px_rgba(255,255,255,0.55)]"
           />
 
           <div className="relative z-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 lg:pr-40 xl:grid-cols-3 xl:pr-48">
             {reviews.map((review, index) => (
               <ReviewCard key={`${review.authorName}-${index}`} review={review} />
             ))}
+            <LeaveReviewCard />
           </div>
         </div>
 
