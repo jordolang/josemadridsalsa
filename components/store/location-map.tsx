@@ -29,15 +29,18 @@ export function LocationMap() {
   // Prefer place_id if provided
   const placeId = process.env.NEXT_PUBLIC_GOOGLE_PLACE_ID || process.env.GOOGLE_PLACE_ID
 
-  // Google Maps Embed URL — uses the keyless embed endpoint which works without
-  // the Maps Embed API being enabled. The Embed API v1 requires a separate billing
-  // activation; maps.google.com/maps?output=embed works for any public location.
+  // Google Maps Embed URL — the keyless `maps.google.com/maps?output=embed`
+  // endpoint silently ignores `z=` when combined with `q=place_id:`, which
+  // drops the map to the world view. Use Embed API v1 `/place` instead (same
+  // API the Street View embed below already relies on).
   const mapEmbedUrl = useMemo(() => {
+    if (!apiKey) return ''
+    const base = `https://www.google.com/maps/embed/v1/place?key=${apiKey}&zoom=17`
     if (placeId) {
-      return `https://maps.google.com/maps?q=place_id:${placeId}&output=embed&z=17`
+      return `${base}&q=place_id:${encodeURIComponent(placeId)}`
     }
-    return `https://maps.google.com/maps?q=${encodedAddress}&output=embed&z=17`
-  }, [placeId, encodedAddress])
+    return `${base}&q=${encodedAddress}`
+  }, [apiKey, placeId, encodedAddress])
 
   // Google Street View Embed URL
   // Prefer the Embed API v1 with key if available (needs Maps Embed API enabled),
