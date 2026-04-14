@@ -155,24 +155,8 @@ export function AppSidebar({ user, navigation, ...props }: AppSidebarProps) {
                   const hasChildren = (item.children?.length ?? 0) > 0
                   const isActive = activeItem?.href === item.href
 
-                  // Items with children: open the contextual panel.
-                  // Leaf items: navigate directly.
-                  if (hasChildren) {
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
-                          tooltip={{ children: item.label, hidden: false }}
-                          onClick={() => setOpen(true)}
-                          isActive={isActive}
-                          className="px-2.5 md:px-2"
-                        >
-                          {Icon && <Icon />}
-                          <span>{item.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )
-                  }
-
+                  // All items navigate to their href. Items with children also
+                  // expand the contextual panel so sub-nav becomes visible.
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
@@ -181,7 +165,10 @@ export function AppSidebar({ user, navigation, ...props }: AppSidebarProps) {
                         isActive={isActive}
                         className="px-2.5 md:px-2"
                       >
-                        <Link href={item.href} onClick={() => setOpen(false)}>
+                        <Link
+                          href={item.href}
+                          onClick={() => setOpen(hasChildren)}
+                        >
                           {Icon && <Icon />}
                           <span>{item.label}</span>
                         </Link>
