@@ -58,11 +58,11 @@ export function ProjectStatusDashboard({ analysis }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Project Status Dashboard</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Project Status Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
             José Madrid Salsa E-commerce Platform
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-muted-foreground mt-2">
             Run #{analysis.runNumber} • {new Date(analysis.timestamp).toLocaleString()}
           </p>
         </div>
@@ -116,13 +116,13 @@ export function ProjectStatusDashboard({ analysis }: Props) {
 
       {/* Work Session - Most Important */}
       {analysis.workSession && (
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 p-6">
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-border p-6">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">
+              <h2 className="text-2xl font-bold text-foreground">
                 Claude Code Work Session #{analysis.workSession.sessionNumber}
               </h2>
-              <p className="text-lg font-semibold text-blue-900 mt-1">
+              <p className="text-lg font-semibold text-foreground mt-1">
                 {analysis.workSession.focus}
               </p>
             </div>
@@ -138,7 +138,7 @@ export function ProjectStatusDashboard({ analysis }: Props) {
             </Badge>
           </div>
 
-          <div className="flex items-center gap-4 text-sm text-gray-600 mb-6">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
             <div className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
               {analysis.workSession.estimatedHours} hours
@@ -157,7 +157,7 @@ export function ProjectStatusDashboard({ analysis }: Props) {
             {analysis.workSession.tasks.map((task) => (
               <div
                 key={task.taskNumber}
-                className="bg-white rounded-lg border-2 border-blue-300 border-l-4 p-4"
+                className="bg-card rounded-lg border-2 border-border border-l-4 p-4"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -172,26 +172,26 @@ export function ProjectStatusDashboard({ analysis }: Props) {
                       >
                         {task.priority}
                       </Badge>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-muted-foreground">
                         {task.estimatedHours}h
                       </span>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                    <h3 className="text-lg font-semibold text-foreground mb-1">
                       {task.title}
                     </h3>
-                    <p className="text-gray-600 text-sm mb-3">{task.description}</p>
+                    <p className="text-muted-foreground text-sm mb-3">{task.description}</p>
 
                     {task.files.length > 0 && (
-                      <div className="text-xs text-gray-500 mb-3">
+                      <div className="text-xs text-muted-foreground mb-3">
                         <strong>Files:</strong> {task.files.join(', ')}
                       </div>
                     )}
 
                     <details className="mt-3">
-                      <summary className="cursor-pointer text-sm font-semibold text-blue-700 hover:text-blue-900">
+                      <summary className="cursor-pointer text-sm font-semibold text-primary hover:text-foreground">
                         View Instructions
                       </summary>
-                      <pre className="mt-2 whitespace-pre-wrap text-xs bg-gray-50 p-3 rounded border border-gray-200 overflow-x-auto">
+                      <pre className="mt-2 whitespace-pre-wrap text-xs bg-muted/50 p-3 rounded border border-border overflow-x-auto">
                         {task.instructions}
                       </pre>
                     </details>
@@ -231,7 +231,7 @@ export function ProjectStatusDashboard({ analysis }: Props) {
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-4">
           <AlertTriangle className="h-5 w-5 text-yellow-600" />
-          <h2 className="text-xl font-bold text-gray-800">Technical Debt</h2>
+          <h2 className="text-xl font-bold text-foreground">Technical Debt</h2>
           <Badge
             variant={analysis.technicalDebt.totalScore > 50 ? 'destructive' : 'secondary'}
           >
@@ -260,7 +260,7 @@ export function ProjectStatusDashboard({ analysis }: Props) {
 
       {/* Feature Suggestions */}
       <Card className="p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Feature Suggestions</h2>
+        <h2 className="text-xl font-bold text-foreground mb-4">Feature Suggestions</h2>
 
         <div className="space-y-4">
           {analysis.suggestions.critical.length > 0 && (
@@ -289,7 +289,7 @@ export function ProjectStatusDashboard({ analysis }: Props) {
 
       {/* Progress Breakdown */}
       <Card className="p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Progress Breakdown</h2>
+        <h2 className="text-xl font-bold text-foreground mb-4">Progress Breakdown</h2>
 
         <div className="space-y-4">
           <ProgressBar
@@ -328,9 +328,9 @@ interface StatsCardProps {
 
 function StatsCard({ title, value, subtitle, icon, color }: StatsCardProps) {
   const colors: Record<StatsCardProps['color'], string> = {
-    blue: 'bg-blue-50 border-blue-200 text-blue-700',
+    blue: 'bg-primary/5 border-border text-primary',
     purple: 'bg-purple-50 border-purple-200 text-purple-700',
-    green: 'bg-green-50 border-green-200 text-green-700',
+    green: 'bg-primary/5 border-border text-primary',
     orange: 'bg-orange-50 border-orange-200 text-orange-700',
   }
 
@@ -355,10 +355,10 @@ interface DebtStatProps {
 function DebtStat({ label, count, critical }: DebtStatProps) {
   return (
     <div className="text-center">
-      <div className={`text-2xl font-bold ${critical ? 'text-red-600' : 'text-gray-700'}`}>
+      <div className={`text-2xl font-bold ${critical ? 'text-destructive' : 'text-foreground'}`}>
         {count}
       </div>
-      <div className="text-xs text-gray-500">{label}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   )
 }
@@ -371,14 +371,14 @@ interface FeatureSectionProps {
 
 function FeatureSection({ title, features, color }: FeatureSectionProps) {
   const colors: Record<FeatureSectionProps['color'], string> = {
-    red: 'bg-red-50 border-red-200',
+    red: 'bg-destructive/10 border-destructive/30',
     yellow: 'bg-yellow-50 border-yellow-200',
-    green: 'bg-green-50 border-green-200',
+    green: 'bg-primary/5 border-border',
   }
 
   return (
     <div>
-      <h3 className="font-semibold text-gray-700 mb-2">
+      <h3 className="font-semibold text-foreground mb-2">
         {title} ({features.length})
       </h3>
       <div className="space-y-2">
@@ -386,9 +386,9 @@ function FeatureSection({ title, features, color }: FeatureSectionProps) {
           <div key={i} className={`p-3 rounded border ${colors[color]}`}>
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="font-semibold text-gray-800">{feature.title}</div>
-                <div className="text-sm text-gray-600 mt-1">{feature.description}</div>
-                <div className="text-xs text-gray-500 mt-2">
+                <div className="font-semibold text-foreground">{feature.title}</div>
+                <div className="text-sm text-muted-foreground mt-1">{feature.description}</div>
+                <div className="text-xs text-muted-foreground mt-2">
                   {feature.category} • {feature.estimatedHours}h • {feature.businessImpact} impact
                 </div>
               </div>
@@ -411,14 +411,14 @@ function ProgressBar({ label, current, total, percentage }: ProgressBarProps) {
   return (
     <div>
       <div className="flex items-center justify-between text-sm mb-1">
-        <span className="font-medium text-gray-700">{label}</span>
-        <span className="text-gray-500">
+        <span className="font-medium text-foreground">{label}</span>
+        <span className="text-muted-foreground">
           {current}/{total} ({percentage}%)
         </span>
       </div>
-      <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+      <div className="h-3 bg-muted rounded-full overflow-hidden">
         <div
-          className="h-full bg-blue-600 transition-all"
+          className="h-full bg-primary transition-all"
           style={{ width: `${percentage}%` }}
         />
       </div>

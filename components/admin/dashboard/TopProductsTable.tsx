@@ -64,8 +64,11 @@ export function TopProductsTable({ products }: TopProductsTableProps) {
               </div>
               <div className="h-1.5 w-full rounded-full bg-muted">
                 <div
-                  className="h-1.5 rounded-full bg-blue-500 transition-all"
-                  style={{ width: `${(product.sold / maxSold) * 100}%` }}
+                  className="h-1.5 rounded-full transition-all"
+                  style={{
+                    width: `${(product.sold / maxSold) * 100}%`,
+                    backgroundColor: 'hsl(var(--chart-1))',
+                  }}
                 />
               </div>
             </div>

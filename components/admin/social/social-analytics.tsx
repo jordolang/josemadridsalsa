@@ -41,8 +41,8 @@ const PLATFORM_LABELS: Record<SocialMediaPlatform, string> = {
 const PLATFORM_BG: Record<SocialMediaPlatform, string> = {
   FACEBOOK: 'from-blue-500 to-blue-600',
   INSTAGRAM: 'from-pink-500 to-purple-600',
-  TWITTER: 'from-slate-700 to-slate-900',
-  TIKTOK: 'from-slate-800 to-black',
+  TWITTER: 'from-muted-foreground to-foreground',
+  TIKTOK: 'from-muted-foreground to-black',
   GOOGLE_MY_BUSINESS: 'from-blue-400 to-blue-500',
 }
 
@@ -77,11 +77,11 @@ export function SocialAnalytics({ metrics }: Props) {
     : 0
 
   const STAT_CARDS = [
-    { label: 'Total Posts', value: totals.posts, icon: BarChart3, color: 'text-salsa-500' },
-    { label: 'Total Reach', value: formatNumber(totals.reach), icon: Users, color: 'text-blue-500' },
+    { label: 'Total Posts', value: totals.posts, icon: BarChart3, color: 'text-primary' },
+    { label: 'Total Reach', value: formatNumber(totals.reach), icon: Users, color: 'text-primary' },
     { label: 'Impressions', value: formatNumber(totals.impressions), icon: Eye, color: 'text-purple-500' },
-    { label: 'Engagement', value: `${overallEngagement.toFixed(1)}%`, icon: TrendingUp, color: 'text-emerald-500' },
-    { label: 'Likes', value: formatNumber(totals.likes), icon: Heart, color: 'text-red-500' },
+    { label: 'Engagement', value: `${overallEngagement.toFixed(1)}%`, icon: TrendingUp, color: 'text-primary' },
+    { label: 'Likes', value: formatNumber(totals.likes), icon: Heart, color: 'text-destructive' },
     { label: 'Comments', value: formatNumber(totals.comments), icon: MessageCircle, color: 'text-amber-500' },
     { label: 'Shares', value: formatNumber(totals.shares), icon: Share2, color: 'text-indigo-500' },
     { label: 'Clicks', value: formatNumber(totals.clicks), icon: MousePointerClick, color: 'text-cyan-500' },
@@ -90,9 +90,9 @@ export function SocialAnalytics({ metrics }: Props) {
   if (metrics.length === 0 || totals.posts === 0) {
     return (
       <Card className="flex flex-col items-center p-12 text-center">
-        <BarChart3 className="mb-4 h-12 w-12 text-slate-300" />
-        <h3 className="text-lg font-semibold text-slate-700">No analytics data yet</h3>
-        <p className="mt-2 max-w-md text-sm text-slate-500">
+        <BarChart3 className="mb-4 h-12 w-12 text-muted-foreground/60" />
+        <h3 className="text-lg font-semibold text-foreground">No analytics data yet</h3>
+        <p className="mt-2 max-w-md text-sm text-muted-foreground">
           Publish posts to your connected social accounts and analytics will appear here.
           Engagement metrics are pulled from each platform automatically after publishing.
         </p>
@@ -108,12 +108,12 @@ export function SocialAnalytics({ metrics }: Props) {
           const Icon = stat.icon
           return (
             <Card key={stat.label} className="flex items-center gap-4 p-5">
-              <div className={cn('rounded-xl bg-slate-100 p-3', stat.color)}>
+              <div className={cn('rounded-xl bg-muted p-3', stat.color)}>
                 <Icon className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm text-slate-500">{stat.label}</p>
-                <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+                <p className="text-sm text-muted-foreground">{stat.label}</p>
+                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
               </div>
             </Card>
           )
@@ -144,7 +144,7 @@ export function SocialAnalytics({ metrics }: Props) {
                 </div>
 
                 {/* Metrics grid */}
-                <div className="grid grid-cols-3 gap-px bg-slate-100">
+                <div className="grid grid-cols-3 gap-px bg-muted">
                   <MetricCell icon={Heart} label="Likes" value={formatNumber(m.totalLikes)} />
                   <MetricCell icon={MessageCircle} label="Comments" value={formatNumber(m.totalComments)} />
                   <MetricCell icon={Share2} label="Shares" value={formatNumber(m.totalShares)} />
@@ -164,8 +164,8 @@ export function SocialAnalytics({ metrics }: Props) {
 
       {/* Engagement comparison bar chart (CSS-only) */}
       <Card className="p-5">
-        <h3 className="font-semibold text-slate-900">Engagement Rate by Platform</h3>
-        <p className="text-sm text-slate-500">Percentage of impressions that resulted in interactions</p>
+        <h3 className="font-semibold text-foreground">Engagement Rate by Platform</h3>
+        <p className="text-sm text-muted-foreground">Percentage of impressions that resulted in interactions</p>
         <div className="mt-4 space-y-3">
           {metrics
             .filter((m) => m.totalPosts > 0)
@@ -177,13 +177,13 @@ export function SocialAnalytics({ metrics }: Props) {
               return (
                 <div key={m.platform} className="space-y-1">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2 font-medium text-slate-700">
+                    <span className="flex items-center gap-2 font-medium text-foreground">
                       <Icon className="h-4 w-4" />
                       {PLATFORM_LABELS[m.platform]}
                     </span>
-                    <span className="font-semibold text-slate-900">{m.engagementRate.toFixed(2)}%</span>
+                    <span className="font-semibold text-foreground">{m.engagementRate.toFixed(2)}%</span>
                   </div>
-                  <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-3 overflow-hidden rounded-full bg-muted">
                     <div
                       className={cn('h-full rounded-full bg-gradient-to-r transition-all', PLATFORM_BG[m.platform])}
                       style={{ width: `${pct}%` }}
@@ -210,10 +210,10 @@ function MetricCell({
   highlight?: boolean
 }) {
   return (
-    <div className={cn('bg-white p-3 text-center', highlight && 'bg-emerald-50')}>
-      <Icon className="mx-auto h-4 w-4 text-slate-400" />
-      <p className={cn('mt-1 text-lg font-bold', highlight ? 'text-emerald-700' : 'text-slate-900')}>{value}</p>
-      <p className="text-[10px] text-slate-500">{label}</p>
+    <div className={cn('bg-card p-3 text-center', highlight && 'bg-primary/5')}>
+      <Icon className="mx-auto h-4 w-4 text-muted-foreground" />
+      <p className={cn('mt-1 text-lg font-bold', highlight ? 'text-primary' : 'text-foreground')}>{value}</p>
+      <p className="text-[10px] text-muted-foreground">{label}</p>
     </div>
   )
 }

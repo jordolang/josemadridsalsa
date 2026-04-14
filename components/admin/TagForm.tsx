@@ -100,7 +100,7 @@ export default function TagForm({ tag }: TagFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -109,7 +109,7 @@ export default function TagForm({ tag }: TagFormProps) {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">
-              Tag Name <span className="text-red-500">*</span>
+              Tag Name <span className="text-destructive">*</span>
             </Label>
             <Input
               id="name"
@@ -121,23 +121,23 @@ export default function TagForm({ tag }: TagFormProps) {
               placeholder="Spicy"
             />
             {errors.name && (
-              <p className="text-sm text-red-600">{errors.name.message}</p>
+              <p className="text-sm text-destructive">{errors.name.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="slug">
-              Slug <span className="text-red-500">*</span>
+              Slug <span className="text-destructive">*</span>
             </Label>
             <Input id="slug" {...register('slug')} placeholder="spicy" />
             {errors.slug && (
-              <p className="text-sm text-red-600">{errors.slug.message}</p>
+              <p className="text-sm text-destructive">{errors.slug.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="type">
-              Tag Type <span className="text-red-500">*</span>
+              Tag Type <span className="text-destructive">*</span>
             </Label>
             <Select
               value={watch('type')}
@@ -154,7 +154,7 @@ export default function TagForm({ tag }: TagFormProps) {
                 <SelectItem value="EVENT">Event</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Tag type determines where this tag can be used
             </p>
           </div>

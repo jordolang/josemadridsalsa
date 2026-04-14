@@ -187,7 +187,7 @@ export default function LocationForm({ location }: LocationFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -198,7 +198,7 @@ export default function LocationForm({ location }: LocationFormProps) {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="businessName">
-              Business Name <span className="text-red-500">*</span>
+              Business Name <span className="text-destructive">*</span>
             </Label>
             <Input
               id="businessName"
@@ -206,13 +206,13 @@ export default function LocationForm({ location }: LocationFormProps) {
               placeholder="Campbell's Foodland"
             />
             {errors.businessName && (
-              <p className="text-sm text-red-600">{errors.businessName.message}</p>
+              <p className="text-sm text-destructive">{errors.businessName.message}</p>
             )}
           </div>
 
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="address">
-              Address <span className="text-red-500">*</span>
+              Address <span className="text-destructive">*</span>
             </Label>
             <Input
               id="address"
@@ -220,13 +220,13 @@ export default function LocationForm({ location }: LocationFormProps) {
               placeholder="3 S Maysville Ave"
             />
             {errors.address && (
-              <p className="text-sm text-red-600">{errors.address.message}</p>
+              <p className="text-sm text-destructive">{errors.address.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="city">
-              City <span className="text-red-500">*</span>
+              City <span className="text-destructive">*</span>
             </Label>
             <Input
               id="city"
@@ -234,13 +234,13 @@ export default function LocationForm({ location }: LocationFormProps) {
               placeholder="Zanesville"
             />
             {errors.city && (
-              <p className="text-sm text-red-600">{errors.city.message}</p>
+              <p className="text-sm text-destructive">{errors.city.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="state">
-              State <span className="text-red-500">*</span>
+              State <span className="text-destructive">*</span>
             </Label>
             <Select
               value={watch('state')}
@@ -258,7 +258,7 @@ export default function LocationForm({ location }: LocationFormProps) {
               </SelectContent>
             </Select>
             {errors.state && (
-              <p className="text-sm text-red-600">{errors.state.message}</p>
+              <p className="text-sm text-destructive">{errors.state.message}</p>
             )}
           </div>
 
@@ -270,7 +270,7 @@ export default function LocationForm({ location }: LocationFormProps) {
               placeholder="43701"
             />
             {errors.zipCode && (
-              <p className="text-sm text-red-600">{errors.zipCode.message}</p>
+              <p className="text-sm text-destructive">{errors.zipCode.message}</p>
             )}
           </div>
 
@@ -282,7 +282,7 @@ export default function LocationForm({ location }: LocationFormProps) {
               placeholder="Muskingum"
             />
             {errors.county && (
-              <p className="text-sm text-red-600">{errors.county.message}</p>
+              <p className="text-sm text-destructive">{errors.county.message}</p>
             )}
           </div>
         </div>
@@ -300,7 +300,7 @@ export default function LocationForm({ location }: LocationFormProps) {
               placeholder="(740) 453-3675"
             />
             {errors.phone && (
-              <p className="text-sm text-red-600">{errors.phone.message}</p>
+              <p className="text-sm text-destructive">{errors.phone.message}</p>
             )}
           </div>
 
@@ -312,7 +312,7 @@ export default function LocationForm({ location }: LocationFormProps) {
               placeholder="https://example.com"
             />
             {errors.website && (
-              <p className="text-sm text-red-600">{errors.website.message}</p>
+              <p className="text-sm text-destructive">{errors.website.message}</p>
             )}
           </div>
         </div>
@@ -351,7 +351,7 @@ export default function LocationForm({ location }: LocationFormProps) {
               placeholder="39.9403"
             />
             {errors.latitude && (
-              <p className="text-sm text-red-600">{errors.latitude.message}</p>
+              <p className="text-sm text-destructive">{errors.latitude.message}</p>
             )}
           </div>
 
@@ -363,7 +363,7 @@ export default function LocationForm({ location }: LocationFormProps) {
               placeholder="-82.0132"
             />
             {errors.longitude && (
-              <p className="text-sm text-red-600">{errors.longitude.message}</p>
+              <p className="text-sm text-destructive">{errors.longitude.message}</p>
             )}
           </div>
 
@@ -374,11 +374,11 @@ export default function LocationForm({ location }: LocationFormProps) {
               {...register('googlePlacesId')}
               placeholder="ChIJ..."
             />
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Used for fetching photos and additional data from Google Places API
             </p>
             {errors.googlePlacesId && (
-              <p className="text-sm text-red-600">{errors.googlePlacesId.message}</p>
+              <p className="text-sm text-destructive">{errors.googlePlacesId.message}</p>
             )}
           </div>
         </div>
@@ -395,11 +395,11 @@ export default function LocationForm({ location }: LocationFormProps) {
               {...register('photoUrl')}
               placeholder="https://example.com/photo.jpg"
             />
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Main photo displayed in search results
             </p>
             {errors.photoUrl && (
-              <p className="text-sm text-red-600">{errors.photoUrl.message}</p>
+              <p className="text-sm text-destructive">{errors.photoUrl.message}</p>
             )}
           </div>
 
@@ -409,7 +409,7 @@ export default function LocationForm({ location }: LocationFormProps) {
               photos={watch('photoGallery') || []}
               onChange={(photos) => setValue('photoGallery', photos)}
             />
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Additional photos for the location detail page
             </p>
           </div>
@@ -423,7 +423,7 @@ export default function LocationForm({ location }: LocationFormProps) {
           <div className="flex items-center justify-between">
             <div>
               <Label>Active</Label>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Show this location on the public Find Us page
               </p>
             </div>
@@ -440,11 +440,11 @@ export default function LocationForm({ location }: LocationFormProps) {
               type="number"
               {...register('sortOrder', { valueAsNumber: true })}
             />
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Lower numbers appear first in the list
             </p>
             {errors.sortOrder && (
-              <p className="text-sm text-red-600">{errors.sortOrder.message}</p>
+              <p className="text-sm text-destructive">{errors.sortOrder.message}</p>
             )}
           </div>
         </div>

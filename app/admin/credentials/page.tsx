@@ -30,7 +30,7 @@ function SetupRequired() {
     <div className="flex min-h-[60vh] items-center justify-center">
       <Card className="max-w-md">
         <CardContent className="p-12 text-center">
-          <AlertCircle className="mx-auto mb-4 size-16 text-amber-500 dark:text-amber-400" />
+          <AlertCircle className="mx-auto mb-4 size-16 text-amber-500 dark:text-muted-foreground" />
           <h2 className="text-2xl font-bold">Setup Required</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             The credentials vault tables have not been created yet. Please run

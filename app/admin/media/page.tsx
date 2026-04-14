@@ -88,7 +88,7 @@ export default async function MediaPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Media Library</h1>
-          <p className="text-slate-600">
+          <p className="text-muted-foreground">
             Manage images and media assets
           </p>
         </div>
@@ -100,16 +100,16 @@ export default async function MediaPage({
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex gap-4 text-sm">
             <div>
-              <span className="text-slate-600">Total Files:</span>{' '}
+              <span className="text-muted-foreground">Total Files:</span>{' '}
               <span className="font-semibold">{total}</span>
             </div>
             <div>
-              <span className="text-slate-600">Storage:</span>{' '}
+              <span className="text-muted-foreground">Storage:</span>{' '}
               <span className="font-semibold">{totalSizeMB} MB</span>
             </div>
           </div>
           <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search media..."
@@ -123,8 +123,8 @@ export default async function MediaPage({
       {/* Media Grid */}
       {media.length === 0 ? (
         <Card className="p-12">
-          <div className="text-center text-slate-500">
-            <ImageIcon className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+          <div className="text-center text-muted-foreground">
+            <ImageIcon className="mx-auto mb-4 h-12 w-12 text-muted-foreground/60" />
             <p className="text-lg font-medium">No media found</p>
             <p className="mt-1 text-sm">
               {params.search
@@ -159,7 +159,7 @@ export default async function MediaPage({
                   <span>Previous</span>
                 )}
               </Button>
-              <span className="text-sm text-slate-600">
+              <span className="text-sm text-muted-foreground">
                 Page {page} of {totalPages}
               </span>
               <Button

@@ -180,14 +180,14 @@ export default async function ConversationPage(props: PageProps) {
             <Badge
               className={
                 conversation.status === 'OPEN'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-slate-100 text-slate-600'
+                  ? 'bg-primary/10 text-primary'
+                  : 'bg-muted text-muted-foreground'
               }
             >
               {conversation.status}
             </Badge>
           </div>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             Conversation opened {conversation.createdAt.toLocaleString()}
           </p>
         </div>
@@ -206,10 +206,10 @@ export default async function ConversationPage(props: PageProps) {
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-slate-900">Message history</h2>
+          <h2 className="text-lg font-semibold text-foreground">Message history</h2>
           <div className="mt-4 space-y-4">
             {conversation.messages.length === 0 ? (
-              <p className="text-sm text-slate-500">No messages in this conversation yet.</p>
+              <p className="text-sm text-muted-foreground">No messages in this conversation yet.</p>
             ) : (
               conversation.messages.map((message) => {
                 const isAdmin = message.senderType === 'ADMIN'
@@ -217,18 +217,18 @@ export default async function ConversationPage(props: PageProps) {
                   <div
                     key={message.id}
                     className={`rounded-lg border p-4 ${
-                      isAdmin ? 'border-blue-100 bg-blue-50' : 'border-slate-200 bg-white'
+                      isAdmin ? 'border-border bg-primary/5' : 'border-border bg-card'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-slate-700">
+                      <p className="text-sm font-medium text-foreground">
                         {isAdmin ? 'Jose Madrid Salsa' : conversation.user?.name || conversation.email || 'Customer'}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         {message.createdAt.toLocaleString()}
                       </p>
                     </div>
-                    <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">
+                    <p className="mt-3 whitespace-pre-wrap text-sm text-foreground">
                       {message.body}
                     </p>
                   </div>
@@ -240,7 +240,7 @@ export default async function ConversationPage(props: PageProps) {
           {canReply ? (
             <form action={replyAction} className="mt-6 space-y-4">
               <div>
-                <label htmlFor="reply" className="text-sm font-medium text-slate-700">
+                <label htmlFor="reply" className="text-sm font-medium text-foreground">
                   Reply to customer
                 </label>
                 <Textarea
@@ -252,13 +252,13 @@ export default async function ConversationPage(props: PageProps) {
                   required
                 />
               </div>
-              <div className="flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <p>The customer will receive an email notification with your reply.</p>
                 <Button type="submit">Send reply</Button>
               </div>
             </form>
           ) : (
-            <div className="mt-6 rounded-lg bg-amber-50 p-4 text-sm text-amber-700">
+            <div className="mt-6 rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
               You have read-only access to this conversation. Contact an administrator to respond on behalf of the team.
             </div>
           )}
@@ -266,27 +266,27 @@ export default async function ConversationPage(props: PageProps) {
 
         <Card className="space-y-4 p-6">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Customer details</h2>
-            <div className="mt-3 space-y-2 text-sm text-slate-600">
+            <h2 className="text-lg font-semibold text-foreground">Customer details</h2>
+            <div className="mt-3 space-y-2 text-sm text-muted-foreground">
               <p>
-                <span className="font-medium text-slate-700">Name:</span>{' '}
+                <span className="font-medium text-foreground">Name:</span>{' '}
                 {conversation.user?.name || '—'}
               </p>
               <p>
-                <span className="font-medium text-slate-700">Email:</span>{' '}
+                <span className="font-medium text-foreground">Email:</span>{' '}
                 {conversation.user?.email || conversation.email || '—'}
               </p>
               <p>
-                <span className="font-medium text-slate-700">User ID:</span>{' '}
+                <span className="font-medium text-foreground">User ID:</span>{' '}
                 {conversation.user?.id || 'Guest'}
               </p>
               <p>
-                <span className="font-medium text-slate-700">Last updated:</span>{' '}
+                <span className="font-medium text-foreground">Last updated:</span>{' '}
                 {conversation.updatedAt.toLocaleString()}
               </p>
             </div>
           </div>
-          <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
+          <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
             <p>
               All replies are logged and tracked. Closing the conversation will hide it from the active queue but keeps the full history available.
             </p>

@@ -1,6 +1,6 @@
 'use client'
 
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   ChartContainer,
   ChartTooltip,
@@ -33,36 +33,39 @@ const defaultData: RevenueData[] = [
 const chartConfig = {
   revenue: {
     label: 'Revenue',
-    color: 'hsl(221, 83%, 53%)',
+    color: 'hsl(var(--chart-1))',
   },
   expenses: {
     label: 'Expenses',
-    color: 'hsl(0, 84%, 60%)',
+    color: 'hsl(var(--chart-2))',
   },
 } satisfies ChartConfig
 
 export function RevenueChart({ data = defaultData, loading }: RevenueChartProps) {
   if (loading) {
     return (
-      <Card className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 w-48 bg-slate-200 rounded" />
-          <div className="h-64 bg-slate-200 rounded" />
-        </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Revenue vs Expenses</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="animate-pulse space-y-4">
+            <div className="h-64 bg-muted rounded" />
+          </div>
+        </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card className="p-6">
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">Revenue vs Expenses</h2>
-          <p className="text-sm text-slate-600 mt-1">
-            Monthly revenue and expense trends
-          </p>
-        </div>
-
+    <Card>
+      <CardHeader>
+        <CardTitle>Revenue vs Expenses</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Monthly revenue and expense trends
+        </p>
+      </CardHeader>
+      <CardContent>
         <ChartContainer config={chartConfig} className="h-64 w-full">
           <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -103,7 +106,7 @@ export function RevenueChart({ data = defaultData, loading }: RevenueChartProps)
             />
           </LineChart>
         </ChartContainer>
-      </div>
+      </CardContent>
     </Card>
   )
 }

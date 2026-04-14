@@ -7,6 +7,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { cn } from '@/lib/utils'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -351,7 +360,7 @@ export default function CredentialsPageClient({
         <div className="flex flex-wrap items-center gap-3">
           {/* Search */}
           <div className="relative min-w-[280px] flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search by provider, label, email..."
@@ -437,8 +446,8 @@ export default function CredentialsPageClient({
       {/* Data Table */}
       {filteredCredentials.length === 0 ? (
         <Card className="p-12">
-          <div className="text-center text-slate-500">
-            <KeyRound className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+          <div className="text-center text-muted-foreground">
+            <KeyRound className="mx-auto mb-4 h-12 w-12 text-muted-foreground/60" />
             <p className="text-lg font-medium">No credentials found</p>
             <p className="mt-1 text-sm">
               {hasActiveFilters
@@ -456,27 +465,43 @@ export default function CredentialsPageClient({
       ) : (
         <Card>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b bg-slate-50">
-                <tr>
+            <Table>
+              <TableHeader>
+                <TableRow>
                   {/* Provider Column */}
-                  <th className="px-4 py-3 text-left">
+                  <TableHead>
                     <div className="flex items-center gap-1">
-                      <button
-                        className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto gap-1 px-0 font-medium hover:bg-transparent"
                         onClick={() => toggleSort('serviceName')}
                       >
                         Provider
                         <SortIcon field="serviceName" />
-                      </button>
+                      </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="rounded p-0.5 hover:bg-slate-200">
-                            <Filter className={`h-3 w-3 ${providerFilter.size > 0 ? 'text-blue-600' : 'text-slate-400'}`} />
-                          </button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                          >
+                            <Filter
+                              className={cn(
+                                'h-3 w-3',
+                                providerFilter.size > 0
+                                  ? 'text-primary'
+                                  : 'text-muted-foreground',
+                              )}
+                            />
+                            <span className="sr-only">Filter providers</span>
+                          </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="max-h-60 overflow-y-auto">
-                          <DropdownMenuLabel className="text-xs">Filter by Provider</DropdownMenuLabel>
+                          <DropdownMenuLabel className="text-xs">
+                            Filter by Provider
+                          </DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           {providers.map((p) => (
                             <DropdownMenuCheckboxItem
@@ -497,37 +522,55 @@ export default function CredentialsPageClient({
                           {providerFilter.size > 0 && (
                             <>
                               <DropdownMenuSeparator />
-                              <button
-                                className="w-full px-2 py-1.5 text-left text-xs text-blue-600 hover:bg-slate-50"
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-auto w-full justify-start px-2 py-1.5 text-xs text-primary"
                                 onClick={() => setProviderFilter(new Set())}
                               >
                                 Clear filter
-                              </button>
+                              </Button>
                             </>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                  </th>
+                  </TableHead>
 
                   {/* Label Column */}
-                  <th className="px-4 py-3 text-left">
+                  <TableHead>
                     <div className="flex items-center gap-1">
-                      <button
-                        className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto gap-1 px-0 font-medium hover:bg-transparent"
                         onClick={() => toggleSort('label')}
                       >
                         Label
                         <SortIcon field="label" />
-                      </button>
+                      </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="rounded p-0.5 hover:bg-slate-200">
-                            <Filter className={`h-3 w-3 ${labelFilter.size > 0 ? 'text-blue-600' : 'text-slate-400'}`} />
-                          </button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                          >
+                            <Filter
+                              className={cn(
+                                'h-3 w-3',
+                                labelFilter.size > 0
+                                  ? 'text-primary'
+                                  : 'text-muted-foreground',
+                              )}
+                            />
+                            <span className="sr-only">Filter labels</span>
+                          </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="max-h-60 overflow-y-auto">
-                          <DropdownMenuLabel className="text-xs">Filter by Label</DropdownMenuLabel>
+                          <DropdownMenuLabel className="text-xs">
+                            Filter by Label
+                          </DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           {uniqueLabels.map((l) => (
                             <DropdownMenuCheckboxItem
@@ -548,58 +591,53 @@ export default function CredentialsPageClient({
                           {labelFilter.size > 0 && (
                             <>
                               <DropdownMenuSeparator />
-                              <button
-                                className="w-full px-2 py-1.5 text-left text-xs text-blue-600 hover:bg-slate-50"
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-auto w-full justify-start px-2 py-1.5 text-xs text-primary"
                                 onClick={() => setLabelFilter(new Set())}
                               >
                                 Clear filter
-                              </button>
+                              </Button>
                             </>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                  </th>
+                  </TableHead>
 
                   {/* Username Column */}
-                  <th className="px-4 py-3 text-left">
-                    <button
-                      className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto gap-1 px-0 font-medium hover:bg-transparent"
                       onClick={() => toggleSort('username')}
                     >
                       Username / Email
                       <SortIcon field="username" />
-                    </button>
-                  </th>
+                    </Button>
+                  </TableHead>
 
-                  {/* Password Column */}
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">
-                    Password
-                  </th>
+                  <TableHead>Password</TableHead>
+                  <TableHead>URL</TableHead>
 
-                  {/* URL Column */}
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">
-                    URL
-                  </th>
-
-                  {/* Password Age Column */}
-                  <th className="px-4 py-3 text-left">
-                    <button
-                      className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto gap-1 px-0 font-medium hover:bg-transparent"
                       onClick={() => toggleSort('passwordChangedAt')}
                     >
                       Age
                       <SortIcon field="passwordChangedAt" />
-                    </button>
-                  </th>
+                    </Button>
+                  </TableHead>
 
-                  {/* Actions Column */}
-                  <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredCredentials.map((credential) => {
                   const isRevealed = !!revealedPasswords[credential.id]
                   const hasPassword = credential.hasPassword ?? true
@@ -608,18 +646,14 @@ export default function CredentialsPageClient({
                   const countdown = revealCountdowns[credential.id]
 
                   return (
-                    <tr
+                    <TableRow
                       key={credential.id}
-                      className={`transition-colors ${
-                        expired
-                          ? 'bg-red-50 hover:bg-red-100'
-                          : 'hover:bg-slate-50'
-                      }`}
+                      className={cn(expired && 'bg-destructive/10 hover:bg-destructive/10')}
                     >
                       {/* Provider */}
-                      <td className="px-4 py-3">
+                      <TableCell>
                         <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-slate-900">
+                          <span className="font-medium text-foreground">
                             {credential.serviceName}
                           </span>
                           {expired && (
@@ -627,163 +661,176 @@ export default function CredentialsPageClient({
                               title="This password has not been changed in over 90 days. It is recommended to update it for security."
                               className="cursor-help"
                             >
-                              <AlertTriangle className="h-4 w-4 text-red-500" />
+                              <AlertTriangle className="h-4 w-4 text-destructive" />
                             </span>
                           )}
                         </div>
-                      </td>
+                      </TableCell>
 
                       {/* Label */}
-                      <td className="px-4 py-3">
+                      <TableCell>
                         <Badge variant="secondary">{credential.label}</Badge>
-                      </td>
+                      </TableCell>
 
                       {/* Username */}
-                      <td className="px-4 py-3">
+                      <TableCell>
                         {credential.username ? (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm text-slate-700">
+                            <span className="text-sm text-foreground">
                               {credential.username}
                             </span>
                             <Button
                               variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
+                              size="icon"
+                              className="h-6 w-6"
                               onClick={() =>
                                 handleCopyToClipboard(credential.username!, 'Username')
                               }
                             >
                               <Copy className="h-3 w-3" />
+                              <span className="sr-only">Copy username</span>
                             </Button>
                           </div>
                         ) : (
-                          <span className="text-sm text-slate-400">-</span>
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
-                      </td>
+                      </TableCell>
 
                       {/* Password */}
-                      <td className="px-4 py-3">
+                      <TableCell>
                         {!hasPassword ? (
-                          <span className="text-sm italic text-slate-400">
+                          <span className="text-sm italic text-muted-foreground">
                             No password
                           </span>
                         ) : isRevealed ? (
                           <div className="flex items-center gap-1.5">
-                            <code className="rounded bg-slate-100 px-2 py-1 font-mono text-sm">
+                            <code className="rounded bg-muted px-2 py-1 font-mono text-sm">
                               {revealedPasswords[credential.id]}
                             </code>
                             <Button
                               variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
+                              size="icon"
+                              className="h-6 w-6"
                               onClick={() =>
                                 handleCopyToClipboard(
                                   revealedPasswords[credential.id],
-                                  'Password'
+                                  'Password',
                                 )
                               }
                             >
                               <Copy className="h-3 w-3" />
+                              <span className="sr-only">Copy password</span>
                             </Button>
                             {countdown !== undefined && (
-                              <span className="text-xs text-slate-400">{countdown}s</span>
+                              <span className="text-xs text-muted-foreground">
+                                {countdown}s
+                              </span>
                             )}
                           </div>
                         ) : (
                           <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-sm text-slate-500">
+                            <span className="font-mono text-sm text-muted-foreground">
                               ********
                             </span>
                             <Button
                               variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
+                              size="icon"
+                              className="h-6 w-6"
                               onClick={() => handleReveal(credential)}
                             >
                               <Eye className="h-3 w-3" />
+                              <span className="sr-only">Reveal password</span>
                             </Button>
                           </div>
                         )}
-                      </td>
+                      </TableCell>
 
                       {/* URL */}
-                      <td className="px-4 py-3">
+                      <TableCell>
                         {credential.url ? (
                           isSafeUrl(credential.url) ? (
                             <a
                               href={credential.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                             >
                               {truncateUrl(credential.url)}
                               <ExternalLink className="h-3 w-3" />
                             </a>
                           ) : (
-                            <span className="text-sm text-slate-700">
+                            <span className="text-sm text-foreground">
                               {truncateUrl(credential.url)}
                             </span>
                           )
                         ) : (
-                          <span className="text-sm text-slate-400">-</span>
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
-                      </td>
+                      </TableCell>
 
                       {/* Password Age */}
-                      <td className="px-4 py-3">
+                      <TableCell>
                         <span
-                          className={`text-sm ${expired ? 'font-medium text-red-600' : 'text-slate-500'}`}
+                          className={cn(
+                            'text-sm',
+                            expired
+                              ? 'font-medium text-destructive'
+                              : 'text-muted-foreground',
+                          )}
                         >
                           {ageDays}d
                         </span>
-                      </td>
+                      </TableCell>
 
                       {/* Actions */}
-                      <td className="px-4 py-3">
+                      <TableCell>
                         <div className="flex items-center gap-0.5">
                           <Button
                             variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0"
+                            size="icon"
+                            className="h-7 w-7"
                             title="Check for breaches"
                             onClick={() => handleBreachCheckSingle(credential)}
                           >
                             <ShieldAlert className="h-3.5 w-3.5" />
+                            <span className="sr-only">Check for breaches</span>
                           </Button>
                           {canEdit && (
                             <Button
                               variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0"
+                              size="icon"
+                              className="h-7 w-7"
                               onClick={() => handleEdit(credential)}
                             >
                               <Pencil className="h-3.5 w-3.5" />
+                              <span className="sr-only">Edit credential</span>
                             </Button>
                           )}
                           {canDelete && (
                             <Button
                               variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
                               onClick={() => {
                                 setDeletingCredential(credential)
                                 setDeleteDialogOpen(true)
                               }}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
+                              <span className="sr-only">Delete credential</span>
                             </Button>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Table footer with count */}
-          <div className="border-t px-4 py-2 text-sm text-slate-500">
+          <div className="border-t border-border px-4 py-2 text-sm text-muted-foreground">
             Showing {filteredCredentials.length} of {credentials.length} credentials
             {hasActiveFilters && ' (filtered)'}
           </div>
@@ -840,7 +887,7 @@ export default function CredentialsPageClient({
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90"
             >
               {isDeleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>

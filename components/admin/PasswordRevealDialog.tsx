@@ -63,21 +63,21 @@ export default function PasswordRevealDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
-            <Eye className="h-6 w-6 text-amber-600" />
+            <Eye className="h-6 w-6 text-muted-foreground" />
           </div>
           <AlertDialogTitle className="text-center">Reveal Password</AlertDialogTitle>
           <AlertDialogDescription className="text-center">
             Are you sure you want to display the password for{' '}
             <strong>{credentialLabel}</strong>?
             <br />
-            <span className="mt-1 block text-xs text-slate-500">
+            <span className="mt-1 block text-xs text-muted-foreground">
               The password will be visible for 10 seconds before automatically hiding.
             </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-            <p className="text-sm text-red-800">{error}</p>
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
         <AlertDialogFooter>

@@ -82,7 +82,7 @@ export default function FundraiserMessagesAdminPage() {
           </Link>
         </Button>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-salsa-500 to-chile-500 rounded-full flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary rounded-full flex items-center justify-center">
             <MessageSquareHeart className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -95,7 +95,7 @@ export default function FundraiserMessagesAdminPage() {
       </div>
 
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 mb-6">
+        <div className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive mb-6">
           {error}
         </div>
       )}
@@ -110,13 +110,13 @@ export default function FundraiserMessagesAdminPage() {
         </Card>
         <Card>
           <CardContent className="pt-4 pb-4 text-center">
-            <p className="text-2xl font-bold text-green-600">{visible.length}</p>
+            <p className="text-2xl font-bold text-primary">{visible.length}</p>
             <p className="text-xs text-muted-foreground">Visible</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-4 text-center">
-            <p className="text-2xl font-bold text-red-500">{hidden.length}</p>
+            <p className="text-2xl font-bold text-destructive">{hidden.length}</p>
             <p className="text-xs text-muted-foreground">Hidden</p>
           </CardContent>
         </Card>
@@ -175,7 +175,7 @@ export default function FundraiserMessagesAdminPage() {
                     size="sm"
                     disabled={toggling === msg.id}
                     onClick={() => toggleHidden(msg.id, msg.isHidden)}
-                    className={msg.isHidden ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-red-200 text-red-600 hover:bg-red-50'}
+                    className={msg.isHidden ? 'border-border text-primary hover:bg-primary/5' : 'border-destructive/30 text-destructive hover:bg-destructive/10'}
                     title={msg.isHidden ? 'Show message' : 'Hide message'}
                   >
                     {msg.isHidden ? (

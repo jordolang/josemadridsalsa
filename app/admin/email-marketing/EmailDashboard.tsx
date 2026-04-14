@@ -7,23 +7,41 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart'
 import { Mail, Users, Zap, ShieldX, Plus, ArrowRight } from 'lucide-react'
 
-const STATUS_COLORS: Record<string, string> = {
-  SENT: 'bg-green-100 text-green-800',
-  SENDING: 'bg-blue-100 text-blue-800',
-  DRAFT: 'bg-gray-100 text-gray-800',
-  SCHEDULED: 'bg-yellow-100 text-yellow-800',
-  PAUSED: 'bg-orange-100 text-orange-800',
-  CANCELLED: 'bg-red-100 text-red-800',
-  FAILED: 'bg-red-100 text-red-800',
+type StatusVariant = 'default' | 'secondary' | 'destructive' | 'outline'
+
+const STATUS_VARIANT: Record<string, StatusVariant> = {
+  SENT: 'default',
+  SENDING: 'secondary',
+  DRAFT: 'outline',
+  SCHEDULED: 'secondary',
+  PAUSED: 'outline',
+  CANCELLED: 'destructive',
+  FAILED: 'destructive',
 }
+
+const chartConfig = {
+  sent: {
+    label: 'Emails Sent',
+    color: 'hsl(var(--chart-1))',
+  },
+  openRate: {
+    label: 'Open Rate %',
+    color: 'hsl(var(--chart-2))',
+  },
+} satisfies ChartConfig
 
 interface DashboardProps {
   stats: {
@@ -43,6 +61,30 @@ interface DashboardProps {
   }[]
 }
 
+interface StatTileProps {
+  icon: React.ElementType
+  label: string
+  value: string | number
+}
+
+function StatTile({ icon: Icon, label, value }: StatTileProps) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center gap-3">
+          <div className="rounded-lg bg-muted p-2">
+            <Icon className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className="text-2xl font-bold text-foreground">{value}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function EmailDashboard({ stats, recentCampaigns }: DashboardProps) {
   const chartData = recentCampaigns.map((c) => ({
     name: c.name.length > 20 ? c.name.slice(0, 20) + '…' : c.name,
@@ -54,80 +96,44 @@ export function EmailDashboard({ stats, recentCampaigns }: DashboardProps) {
     <div className="space-y-6">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Mail className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Campaigns Sent (30d)</p>
-                <p className="text-2xl font-bold">{stats.campaigns}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Users className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Subscribers</p>
-                <p className="text-2xl font-bold">{stats.totalSubscribers.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Zap className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Active Automations</p>
-                <p className="text-2xl font-bold">{stats.automationCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <ShieldX className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Suppressed</p>
-                <p className="text-2xl font-bold">{stats.suppressionCount.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile icon={Mail} label="Campaigns Sent (30d)" value={stats.campaigns} />
+        <StatTile
+          icon={Users}
+          label="Total Subscribers"
+          value={stats.totalSubscribers.toLocaleString()}
+        />
+        <StatTile
+          icon={Zap}
+          label="Active Automations"
+          value={stats.automationCount}
+        />
+        <StatTile
+          icon={ShieldX}
+          label="Suppressed"
+          value={stats.suppressionCount.toLocaleString()}
+        />
       </div>
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
-        <Link href="/admin/email-campaigns">
-          <Button>
+        <Button asChild>
+          <Link href="/admin/email-campaigns">
             <Plus className="mr-2 h-4 w-4" />
             New Campaign
-          </Button>
-        </Link>
-        <Link href="/admin/email-marketing/automations/new">
-          <Button variant="outline">
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/admin/email-marketing/automations/new">
             <Zap className="mr-2 h-4 w-4" />
             New Automation
-          </Button>
-        </Link>
-        <Link href="/admin/communications/lists">
-          <Button variant="outline">
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/admin/communications/lists">
             <Users className="mr-2 h-4 w-4" />
             Manage Lists
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
 
       {/* Recent Campaigns Chart */}
@@ -137,16 +143,30 @@ export function EmailDashboard({ stats, recentCampaigns }: DashboardProps) {
             <CardTitle>Recent Campaign Performance</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-30} textAnchor="end" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="sent" fill="#3b82f6" name="Emails Sent" />
-                <Bar dataKey="openRate" fill="#10b981" name="Open Rate %" />
+            <ChartContainer config={chartConfig} className="h-[250px] w-full">
+              <BarChart
+                data={chartData}
+                margin={{ top: 5, right: 20, left: 0, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 11 }}
+                  angle={-30}
+                  textAnchor="end"
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis tickLine={false} axisLine={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="sent" fill="var(--color-sent)" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="openRate"
+                  fill="var(--color-openRate)"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
       )}
@@ -156,11 +176,11 @@ export function EmailDashboard({ stats, recentCampaigns }: DashboardProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Recent Campaigns</CardTitle>
-            <Link href="/admin/email-campaigns">
-              <Button variant="ghost" size="sm" className="text-muted-foreground">
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/admin/email-campaigns">
                 View all <ArrowRight className="ml-1 h-4 w-4" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -171,17 +191,24 @@ export function EmailDashboard({ stats, recentCampaigns }: DashboardProps) {
           ) : (
             <div className="space-y-2">
               {recentCampaigns.map((c) => (
-                <div key={c.id} className="flex items-center gap-4 py-2 border-b last:border-0">
+                <div
+                  key={c.id}
+                  className="flex items-center gap-4 py-2 border-b last:border-0"
+                >
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{c.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(c.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <Badge className={STATUS_COLORS[c.status] || 'bg-gray-100'}>{c.status}</Badge>
+                  <Badge variant={STATUS_VARIANT[c.status] ?? 'outline'}>
+                    {c.status}
+                  </Badge>
                   <div className="text-sm text-right">
                     <p>{c.sentCount.toLocaleString()} sent</p>
-                    <p className="text-muted-foreground">{c.openRate}% open rate</p>
+                    <p className="text-muted-foreground">
+                      {c.openRate}% open rate
+                    </p>
                   </div>
                 </div>
               ))}

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import Image from 'next/image'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Star, ExternalLink } from 'lucide-react'
+import { useState } from 'react'
+import { ExternalLink, Star } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import type { ReviewsData } from '@/lib/server/google-data'
 
 const googleBusinessUrl =
@@ -17,72 +17,113 @@ const facebookUrl =
 
 type Review = ReviewsData['reviews'][number]
 
-type AnimatedTestimonialsProps = {
+interface AnimatedTestimonialsProps {
   /** Pre-fetched reviews data passed from the server component — NO client API call needed */
   reviewsData: ReviewsData
-  autoplay?: boolean
 }
 
-export function AnimatedTestimonials({ reviewsData, autoplay = true }: AnimatedTestimonialsProps) {
-  // Shuffle once on mount (client-side randomization is fine since data is already here)
-  const [reviews] = useState<Review[]>(() => {
-    const shuffled = [...reviewsData.reviews].sort(() => Math.random() - 0.5)
-    return shuffled.slice(0, 5)
-  })
-  const [active, setActive] = useState(0)
-  const [failedImages, setFailedImages] = useState<Record<number, boolean>>({})
+interface ReviewCardProps {
+  review: Review
+}
 
-  const { totalRating, totalReviews } = reviewsData
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
 
-  const handleNext = useCallback(() => {
-    setActive((prev) => (prev + 1) % reviews.length)
-  }, [reviews.length])
-
-  const handlePrev = () => {
-    setActive((prev) => (prev - 1 + reviews.length) % reviews.length)
-  }
-
-  useEffect(() => {
-    if (!autoplay || reviews.length === 0) return
-    const interval = setInterval(handleNext, 5000)
-    return () => clearInterval(interval)
-  }, [autoplay, handleNext, reviews.length])
-
-  const handleImageError = useCallback((index: number) => {
-    setFailedImages((prev) => ({ ...prev, [index]: true }))
-  }, [])
-
-  const isActive = (index: number) => index === active
-
-  const randomRotate = () => `${Math.floor(Math.random() * 16) - 8}deg`
-
-  const renderStars = (rating: number) => (
-    <div className="flex items-center gap-0.5">
-      {[...Array(5)].map((_, i) => (
+function StarRating({ rating }: { rating: number }) {
+  const rounded = Math.round(rating)
+  return (
+    <div
+      className="flex items-center gap-0.5"
+      role="img"
+      aria-label={`${rounded} out of 5 stars`}
+    >
+      {Array.from({ length: 5 }, (_, i) => (
         <Star
           key={i}
-          className={`w-5 h-5 ${
-            i < Math.floor(rating)
+          aria-hidden="true"
+          className={`h-4 w-4 ${
+            i < rounded
               ? 'fill-yellow-400 text-yellow-400'
-              : 'fill-gray-300 text-gray-300'
+              : 'fill-muted text-muted-foreground/40'
           }`}
         />
       ))}
     </div>
   )
+}
 
-  const getInitials = (name: string) =>
-    name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+function ReviewCard({ review }: ReviewCardProps) {
+  const [imgFailed, setImgFailed] = useState(false)
+  const showPhoto = Boolean(review.profilePhotoUrl) && !imgFailed
+
+  return (
+    <Card className="flex h-full flex-col bg-card/90 backdrop-blur supports-[backdrop-filter]:bg-card/75">
+      <CardContent className="flex flex-1 flex-col gap-4 p-6">
+        {/* Avatar | First Name Last Name */}
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10 shrink-0 border border-border">
+            {showPhoto && review.profilePhotoUrl ? (
+              <AvatarImage
+                src={review.profilePhotoUrl}
+                alt={review.authorName}
+                onError={() => setImgFailed(true)}
+              />
+            ) : null}
+            <AvatarFallback className="bg-gradient-to-br from-salsa-500 to-chile-600 text-xs font-semibold text-white">
+              {getInitials(review.authorName) || '?'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-base font-semibold leading-tight text-foreground">
+              {review.authorName}
+            </p>
+            {review.relativePublishTime ? (
+              <p className="truncate text-xs text-muted-foreground">
+                {review.relativePublishTime}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Stars */}
+        <StarRating rating={review.rating} />
+
+        {/* Testimonial / review */}
+        <p className="text-sm leading-relaxed text-foreground/90">
+          &ldquo;{review.text}&rdquo;
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function AnimatedTestimonials({ reviewsData }: AnimatedTestimonialsProps) {
+  // Shuffle once on mount and take up to 6 reviews for the card grid.
+  const [reviews] = useState<Review[]>(() => {
+    const shuffled = [...reviewsData.reviews].sort(() => Math.random() - 0.5)
+    return shuffled.slice(0, 6)
+  })
+
+  const { totalRating, totalReviews } = reviewsData
 
   if (reviews.length === 0) {
     return (
-      <section className="py-20 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold font-serif text-foreground mb-4">
+      <section className="bg-background py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="mb-4 font-serif text-4xl font-bold text-foreground">
               What Our Customers Say
             </h2>
-            <p className="text-xl text-muted-foreground mb-8">No reviews available at this time.</p>
+            <p className="mb-8 text-xl text-muted-foreground">
+              No reviews available at this time.
+            </p>
             <Button asChild className="bg-salsa-500 hover:bg-salsa-600">
               <a href={googleBusinessUrl} target="_blank" rel="noopener noreferrer">
                 Leave a Review
@@ -95,37 +136,22 @@ export function AnimatedTestimonials({ reviewsData, autoplay = true }: AnimatedT
   }
 
   return (
-    <section className="py-20 bg-background relative overflow-hidden">
-      <style jsx>{`
-        @keyframes animate-grid {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 100% 50%; }
-        }
-        .animated-grid {
-          width: 200%;
-          height: 200%;
-          background-image: 
-            linear-gradient(to right, hsl(var(--muted)) 1px, transparent 1px), 
-            linear-gradient(to bottom, hsl(var(--muted)) 1px, transparent 1px);
-          background-size: 3rem 3rem;
-          animation: animate-grid 40s linear infinite alternate;
-        }
-      `}</style>
-      <div className="animated-grid absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-10" />
-
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold font-serif text-foreground mb-4">
+    <section className="relative overflow-hidden bg-background py-20">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Section header */}
+        <div className="mb-12 text-center">
+          <h2 className="mb-4 font-serif text-4xl font-bold text-foreground">
             What Our Customers Say
           </h2>
-          {totalRating > 0 && totalReviews > 0 && (
-            <div className="flex items-center justify-center gap-4 mb-6">
+          {totalRating > 0 && totalReviews > 0 ? (
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-3">
               <div className="flex items-center gap-2">
                 <div className="flex items-center">
-                  {[...Array(5)].map((_, i) => (
+                  {Array.from({ length: 5 }, (_, i) => (
                     <Star
                       key={i}
-                      className={`w-6 h-6 ${
+                      aria-hidden="true"
+                      className={`h-6 w-6 ${
                         i < Math.round(totalRating)
                           ? 'fill-yellow-400 text-yellow-400'
                           : 'fill-gray-300 text-gray-300'
@@ -141,118 +167,46 @@ export function AnimatedTestimonials({ reviewsData, autoplay = true }: AnimatedT
                 Based on {totalReviews} {totalReviews === 1 ? 'review' : 'reviews'}
               </span>
             </div>
-          )}
+          ) : null}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center max-w-5xl mx-auto">
-          {/* Avatar stack */}
-          <div className="flex items-center justify-center order-2 lg:order-1">
-            <div className="relative h-80 w-full max-w-xs">
-              <AnimatePresence>
-                {reviews.map((review, index) => {
-                  const showPhoto = Boolean(review.profilePhotoUrl) && !failedImages[index]
-                  return (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, scale: 0.9, y: 50, rotate: randomRotate() }}
-                      animate={{
-                        opacity: isActive(index) ? 1 : 0.5,
-                        scale: isActive(index) ? 1 : 0.9,
-                        y: isActive(index) ? 0 : 20,
-                        zIndex: isActive(index) ? reviews.length : reviews.length - Math.abs(index - active),
-                        rotate: isActive(index) ? '0deg' : randomRotate(),
-                      }}
-                      exit={{ opacity: 0, scale: 0.9, y: -50 }}
-                      transition={{ duration: 0.5, ease: 'easeInOut' }}
-                      className="absolute inset-0 origin-bottom"
-                    >
-                      {showPhoto && review.profilePhotoUrl ? (
-                        <Image
-                          src={review.profilePhotoUrl}
-                          alt={review.authorName}
-                          fill
-                          className="rounded-3xl object-cover shadow-2xl"
-                          sizes="(min-width: 1024px) 320px, 100vw"
-                          onError={() => handleImageError(index)}
-                          unoptimized
-                        />
-                      ) : null}
-                      <div
-                        className={`h-full w-full rounded-3xl shadow-2xl bg-gradient-to-br from-salsa-500 to-chile-600 items-center justify-center ${showPhoto ? 'hidden' : 'flex'}`}
-                      >
-                        <span className="text-white text-6xl font-bold">
-                          {getInitials(review.authorName)}
-                        </span>
-                      </div>
-                    </motion.div>
-                  )
-                })}
-              </AnimatePresence>
-            </div>
-          </div>
+        {/* Card grid + leaning silhouette */}
+        <div className="relative">
+          {/* Decorative leaning cowboy silhouette (CC0 — OpenClipart / Firkin).
+              Sits in the reserved right padding of the grid, hidden below lg
+              to keep the mobile layout clean. `dark:invert` flips the solid
+              black fill to white in dark mode so the figure stays visible. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/leaning-silhouette.svg"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-2 z-20 hidden h-full w-auto opacity-90 drop-shadow-xl lg:block dark:invert"
+          />
 
-          {/* Review text + controls */}
-          <div className="flex flex-col justify-center py-4 order-1 lg:order-2">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={active}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className="flex flex-col justify-between"
-              >
-                <div>
-                  <div className="mb-4">{renderStars(reviews[active].rating)}</div>
-                  <h3 className="text-2xl font-bold text-foreground">
-                    {reviews[active].authorName}
-                  </h3>
-                  {reviews[active].relativePublishTime && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {reviews[active].relativePublishTime}
-                    </p>
-                  )}
-                  <motion.p className="mt-6 text-lg text-foreground/90 leading-relaxed">
-                    &ldquo;{reviews[active].text}&rdquo;
-                  </motion.p>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-
-            <div className="flex gap-4 pt-12">
-              <button
-                onClick={handlePrev}
-                aria-label="Previous testimonial"
-                className="group flex h-12 w-12 items-center justify-center rounded-full bg-secondary transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              >
-                <ArrowLeft className="h-5 w-5 text-secondary-foreground transition-transform duration-300 group-hover:-translate-x-1" />
-              </button>
-              <button
-                onClick={handleNext}
-                aria-label="Next testimonial"
-                className="group flex h-12 w-12 items-center justify-center rounded-full bg-secondary transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              >
-                <ArrowRight className="h-5 w-5 text-secondary-foreground transition-transform duration-300 group-hover:translate-x-1" />
-              </button>
-            </div>
+          <div className="relative z-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 lg:pr-40 xl:grid-cols-3 xl:pr-48">
+            {reviews.map((review, index) => (
+              <ReviewCard key={`${review.authorName}-${index}`} review={review} />
+            ))}
           </div>
         </div>
 
+        {/* CTA buttons */}
         <div className="mt-16 text-center">
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button asChild className="bg-salsa-600 hover:bg-salsa-700 text-lg px-8 py-3">
+          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Button asChild className="bg-salsa-600 px-8 py-3 text-lg hover:bg-salsa-700">
               <a href={googleBusinessUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-4 h-4 mr-2" />
+                <ExternalLink className="mr-2 h-4 w-4" />
                 Write a Review
               </a>
             </Button>
             <Button
               asChild
               variant="outline"
-              className="text-salsa-600 border-salsa-600 hover:bg-salsa-50 dark:hover:bg-salsa-900/20 text-lg px-8 py-3"
+              className="border-salsa-600 px-8 py-3 text-lg text-salsa-600 hover:bg-salsa-50 dark:hover:bg-salsa-900/20"
             >
               <a href={facebookUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-4 h-4 mr-2" />
+                <ExternalLink className="mr-2 h-4 w-4" />
                 Follow on Facebook
               </a>
             </Button>

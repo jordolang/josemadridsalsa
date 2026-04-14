@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Wand2, RefreshCw } from 'lucide-react'
 
 const credentialSchema = (mode: 'create' | 'edit') =>
@@ -187,7 +188,7 @@ export default function CredentialFormDialog({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="serviceName">
-                Provider / Service Name <span className="text-red-500">*</span>
+                Provider / Service Name <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="serviceName"
@@ -195,13 +196,13 @@ export default function CredentialFormDialog({
                 {...register('serviceName')}
               />
               {errors.serviceName && (
-                <p className="text-sm text-red-600">{errors.serviceName.message}</p>
+                <p className="text-sm text-destructive">{errors.serviceName.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="label">
-                Label <span className="text-red-500">*</span>
+                Label <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="label"
@@ -209,7 +210,7 @@ export default function CredentialFormDialog({
                 {...register('label')}
               />
               {errors.label && (
-                <p className="text-sm text-red-600">{errors.label.message}</p>
+                <p className="text-sm text-destructive">{errors.label.message}</p>
               )}
             </div>
 
@@ -221,14 +222,14 @@ export default function CredentialFormDialog({
                 {...register('username')}
               />
               {errors.username && (
-                <p className="text-sm text-red-600">{errors.username.message}</p>
+                <p className="text-sm text-destructive">{errors.username.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">
-                  Password {mode === 'create' && <span className="text-red-500">*</span>}
+                  Password {mode === 'create' && <span className="text-destructive">*</span>}
                 </Label>
                 <Button
                   type="button"
@@ -248,33 +249,35 @@ export default function CredentialFormDialog({
                 {...register('password')}
               />
               {errors.password && (
-                <p className="text-sm text-red-600">{errors.password.message}</p>
+                <p className="text-sm text-destructive">{errors.password.message}</p>
               )}
               {showSuggestions && passwordSuggestions.length > 0 && (
-                <div className="mt-2 space-y-1 rounded-lg border bg-slate-50 p-3">
+                <div className="mt-2 space-y-1 rounded-lg border border-border bg-muted/50 p-3">
                   <div className="mb-1.5 flex items-center justify-between">
-                    <p className="text-xs font-medium text-slate-600">
+                    <p className="text-xs font-medium text-muted-foreground">
                       Suggested Passwords (12-15 chars, alphanumeric)
                     </p>
                     <Button
                       type="button"
                       variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
+                      size="icon"
+                      className="h-6 w-6"
                       onClick={generatePasswords}
                     >
                       <RefreshCw className="h-3 w-3" />
+                      <span className="sr-only">Regenerate suggestions</span>
                     </Button>
                   </div>
                   {passwordSuggestions.map((pw, i) => (
-                    <button
+                    <Button
                       key={i}
                       type="button"
-                      className="block w-full rounded px-2 py-1.5 text-left font-mono text-sm hover:bg-blue-50 hover:text-blue-700"
+                      variant="ghost"
+                      className="h-auto w-full justify-start px-2 py-1.5 font-mono text-sm"
                       onClick={() => selectSuggestion(pw)}
                     >
                       {pw}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               )}
@@ -288,7 +291,7 @@ export default function CredentialFormDialog({
                 {...register('url')}
               />
               {errors.url && (
-                <p className="text-sm text-red-600">{errors.url.message}</p>
+                <p className="text-sm text-destructive">{errors.url.message}</p>
               )}
             </div>
 
@@ -301,14 +304,14 @@ export default function CredentialFormDialog({
                 {...register('notes')}
               />
               {errors.notes && (
-                <p className="text-sm text-red-600">{errors.notes.message}</p>
+                <p className="text-sm text-destructive">{errors.notes.message}</p>
               )}
             </div>
 
             {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
           </div>
           <DialogFooter>

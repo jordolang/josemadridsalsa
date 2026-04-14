@@ -166,10 +166,10 @@ export function CsvImportModal({ listId, listName, open, onClose, onSuccess }: C
         {step === 'upload' && (
           <div className="space-y-4">
             <div
-              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
+              className="cursor-pointer rounded-lg border-2 border-dashed border-input p-8 text-center transition-colors hover:border-primary"
               onClick={() => fileRef.current?.click()}
             >
-              <Upload className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+              <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
               <p className="text-sm font-medium">Click to upload or drag and drop</p>
               <p className="text-xs text-muted-foreground mt-1">CSV files up to 5MB</p>
               <input
@@ -186,7 +186,7 @@ export function CsvImportModal({ listId, listName, open, onClose, onSuccess }: C
               </div>
             )}
             {error && (
-              <div className="flex items-center gap-2 text-sm text-red-600">
+              <div className="flex items-center gap-2 text-sm text-destructive">
                 <AlertCircle className="h-4 w-4" /> {error}
               </div>
             )}
@@ -233,7 +233,7 @@ export function CsvImportModal({ listId, listName, open, onClose, onSuccess }: C
               ))}
             </div>
             {error && (
-              <div className="flex items-center gap-2 text-sm text-red-600">
+              <div className="flex items-center gap-2 text-sm text-destructive">
                 <AlertCircle className="h-4 w-4" /> {error}
               </div>
             )}
@@ -257,21 +257,21 @@ export function CsvImportModal({ listId, listName, open, onClose, onSuccess }: C
 
         {step === 'result' && result && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
-              <CheckCircle2 className="h-8 w-8 text-green-600 flex-shrink-0" />
+            <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-lg border border-border">
+              <CheckCircle2 className="h-8 w-8 text-primary flex-shrink-0" />
               <div>
                 <p className="font-semibold text-green-800">Import Complete</p>
-                <p className="text-sm text-green-700">
+                <p className="text-sm text-primary">
                   {result.imported} imported · {result.skipped} skipped
                 </p>
               </div>
             </div>
             {result.errors.length > 0 && (
               <div className="space-y-1">
-                <p className="text-sm font-medium text-red-600">
+                <p className="text-sm font-medium text-destructive">
                   Errors ({result.errors.length}):
                 </p>
-                <div className="max-h-32 overflow-y-auto text-xs text-red-500 bg-red-50 rounded p-2 space-y-1">
+                <div className="max-h-32 overflow-y-auto text-xs text-destructive bg-destructive/10 rounded p-2 space-y-1">
                   {result.errors.slice(0, 20).map((e, i) => (
                     <p key={i}>{e}</p>
                   ))}

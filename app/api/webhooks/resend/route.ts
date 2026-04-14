@@ -1,66 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Resend } from 'resend'
 import { prisma } from '@/lib/prisma'
 import { addSuppression } from '@/lib/email/suppression'
-import crypto from 'crypto'
+
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.text()
+    const payload = await request.text()
 
-    // Verify webhook signature
+    // Verify webhook signature using the Resend SDK
     const webhookSecret = process.env.RESEND_WEBHOOK_SECRET
+    let event: { type: string; data: Record<string, any> }
+
     if (webhookSecret) {
-      const signature = request.headers.get('svix-signature') ?? ''
-      const timestamp = request.headers.get('svix-timestamp') ?? ''
-      const msgId = request.headers.get('svix-id') ?? ''
-
-      const signedContent = `${msgId}.${timestamp}.${body}`
-      const expectedSig = crypto
-        .createHmac('sha256', webhookSecret)
-        .update(signedContent)
-        .digest('base64')
-
-      const sigParts = signature.split(' ')
-      const isValid = sigParts.some((part) => {
-        const [, sig] = part.split(',')
-        return sig === expectedSig
-      })
-
-      if (!isValid) {
+      try {
+        event = resend.webhooks.verify({
+          payload,
+          headers: {
+            id: request.headers.get('svix-id') ?? '',
+            timestamp: request.headers.get('svix-timestamp') ?? '',
+            signature: request.headers.get('svix-signature') ?? '',
+          },
+          webhookSecret,
+        }) as { type: string; data: Record<string, any> }
+      } catch {
         return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
       }
+    } else {
+      event = JSON.parse(payload) as { type: string; data: Record<string, any> }
     }
 
-    const event = JSON.parse(body) as {
-      type: string
-      data: {
-        to?: { email: string }[]
-        email?: string
-        bounce?: { type?: string; message?: string }
-      }
-    }
     const { type, data } = event
+    const email =
+      (data?.to as { email: string }[])?.[0]?.email ??
+      (data?.email as string | undefined)
 
-    const email = data?.to?.[0]?.email ?? data?.email
     if (!email) return NextResponse.json({ ok: true })
 
     switch (type) {
       case 'email.bounced': {
-        const bounceType = data.bounce?.type === 'permanent' ? 'HARD' : 'SOFT'
-        const reason = data.bounce?.message ?? 'Unknown bounce reason'
+        const bounceType =
+          data.bounce?.type === 'permanent' ? 'HARD' : 'SOFT'
+        const reason =
+          (data.bounce?.message as string) ?? 'Unknown bounce reason'
 
-        // Record bounce
         await prisma.emailBounce.create({
           data: { email, bounceType, reason },
         })
 
-        // Update email log
         await prisma.emailLog.updateMany({
-          where: { recipientEmail: email, status: { in: ['SENT', 'PENDING', 'SENDING'] } },
+          where: {
+            recipientEmail: email,
+            status: { in: ['SENT', 'PENDING', 'SENDING'] },
+          },
           data: { status: 'BOUNCED', bouncedAt: new Date() },
         })
 
-        // Hard bounces go on suppression list
         if (bounceType === 'HARD') {
           await addSuppression(email, 'HARD_BOUNCE', 'resend_webhook')
         }
@@ -70,7 +66,6 @@ export async function POST(request: NextRequest) {
       case 'email.complained': {
         await addSuppression(email, 'SPAM_COMPLAINT', 'resend_webhook')
 
-        // Unsubscribe from all
         await prisma.unsubscribePreference.upsert({
           where: { email: email.toLowerCase().trim() },
           create: {
@@ -85,7 +80,10 @@ export async function POST(request: NextRequest) {
 
       case 'email.delivered': {
         await prisma.emailLog.updateMany({
-          where: { recipientEmail: email, status: { in: ['PENDING', 'SENDING'] } },
+          where: {
+            recipientEmail: email,
+            status: { in: ['PENDING', 'SENDING'] },
+          },
           data: { status: 'SENT', sentAt: new Date() },
         })
         break
@@ -93,7 +91,11 @@ export async function POST(request: NextRequest) {
 
       case 'email.opened': {
         await prisma.emailLog.updateMany({
-          where: { recipientEmail: email, status: 'SENT', openedAt: null },
+          where: {
+            recipientEmail: email,
+            status: 'SENT',
+            openedAt: null,
+          },
           data: { status: 'OPENED', openedAt: new Date() },
         })
         break
@@ -101,7 +103,10 @@ export async function POST(request: NextRequest) {
 
       case 'email.clicked': {
         await prisma.emailLog.updateMany({
-          where: { recipientEmail: email, status: { in: ['SENT', 'OPENED'] } },
+          where: {
+            recipientEmail: email,
+            status: { in: ['SENT', 'OPENED'] },
+          },
           data: { status: 'CLICKED', clickedAt: new Date() },
         })
         break
@@ -111,6 +116,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('Resend webhook error:', error)
-    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Webhook processing failed' },
+      { status: 500 }
+    )
   }
 }

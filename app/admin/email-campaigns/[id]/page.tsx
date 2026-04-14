@@ -17,6 +17,14 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { CampaignActions } from './_components/campaign-actions'
 
 async function getCampaign(id: string) {
@@ -71,14 +79,14 @@ function getStatusBadge(status: string) {
   switch (status) {
     case 'DRAFT':
       return (
-        <span className={`${baseClasses} bg-slate-100 text-slate-800`}>
+        <span className={`${baseClasses} bg-muted text-foreground`}>
           <Clock className="h-4 w-4" />
           Draft
         </span>
       )
     case 'SCHEDULED':
       return (
-        <span className={`${baseClasses} bg-blue-100 text-blue-800`}>
+        <span className={`${baseClasses} bg-primary/10 text-primary`}>
           <Clock className="h-4 w-4" />
           Scheduled
         </span>
@@ -92,7 +100,7 @@ function getStatusBadge(status: string) {
       )
     case 'SENT':
       return (
-        <span className={`${baseClasses} bg-green-100 text-green-800`}>
+        <span className={`${baseClasses} bg-primary/10 text-primary`}>
           <CheckCircle2 className="h-4 w-4" />
           Sent
         </span>
@@ -106,21 +114,21 @@ function getStatusBadge(status: string) {
       )
     case 'CANCELLED':
       return (
-        <span className={`${baseClasses} bg-slate-100 text-slate-800`}>
+        <span className={`${baseClasses} bg-muted text-foreground`}>
           <XCircle className="h-4 w-4" />
           Cancelled
         </span>
       )
     case 'FAILED':
       return (
-        <span className={`${baseClasses} bg-red-100 text-red-800`}>
+        <span className={`${baseClasses} bg-destructive/10 text-destructive`}>
           <XCircle className="h-4 w-4" />
           Failed
         </span>
       )
     default:
       return (
-        <span className={`${baseClasses} bg-slate-100 text-slate-800`}>
+        <span className={`${baseClasses} bg-muted text-foreground`}>
           {status}
         </span>
       )
@@ -132,17 +140,17 @@ function getRecipientStatusBadge(status: string) {
 
   switch (status) {
     case 'PENDING':
-      return <span className={`${base} bg-slate-100 text-slate-700`}>Pending</span>
+      return <span className={`${base} bg-muted text-foreground`}>Pending</span>
     case 'SENDING':
       return <span className={`${base} bg-orange-100 text-orange-700`}>Sending</span>
     case 'SENT':
-      return <span className={`${base} bg-green-100 text-green-700`}>Sent</span>
+      return <span className={`${base} bg-primary/10 text-primary`}>Sent</span>
     case 'FAILED':
-      return <span className={`${base} bg-red-100 text-red-700`}>Failed</span>
+      return <span className={`${base} bg-destructive/10 text-destructive`}>Failed</span>
     case 'BOUNCED':
       return <span className={`${base} bg-yellow-100 text-yellow-700`}>Bounced</span>
     default:
-      return <span className={`${base} bg-slate-100 text-slate-700`}>{status}</span>
+      return <span className={`${base} bg-muted text-foreground`}>{status}</span>
   }
 }
 
@@ -179,16 +187,16 @@ export default async function CampaignDetailPage({
         <div>
           <Link
             href="/admin/email-campaigns"
-            className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-2"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-2"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Campaigns
           </Link>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-slate-900">{campaign.name}</h1>
+            <h1 className="text-3xl font-bold text-foreground">{campaign.name}</h1>
             {getStatusBadge(campaign.status)}
           </div>
-          <p className="text-slate-600 mt-1">{campaign.subject}</p>
+          <p className="text-muted-foreground mt-1">{campaign.subject}</p>
         </div>
 
         {canWrite && (
@@ -203,26 +211,26 @@ export default async function CampaignDetailPage({
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4">
-          <div className="text-sm text-slate-600">Total Recipients</div>
-          <div className="text-2xl font-bold text-slate-900 mt-1">
+          <div className="text-sm text-muted-foreground">Total Recipients</div>
+          <div className="text-2xl font-bold text-foreground mt-1">
             {campaign.totalRecipients.toLocaleString()}
           </div>
         </Card>
         <Card className="p-4">
-          <div className="text-sm text-slate-600">Sent</div>
-          <div className="text-2xl font-bold text-green-600 mt-1">
+          <div className="text-sm text-muted-foreground">Sent</div>
+          <div className="text-2xl font-bold text-primary mt-1">
             {campaign.sentCount.toLocaleString()}
           </div>
         </Card>
         <Card className="p-4">
-          <div className="text-sm text-slate-600">Failed</div>
-          <div className="text-2xl font-bold text-red-600 mt-1">
+          <div className="text-sm text-muted-foreground">Failed</div>
+          <div className="text-2xl font-bold text-destructive mt-1">
             {campaign.failedCount.toLocaleString()}
           </div>
         </Card>
         <Card className="p-4">
-          <div className="text-sm text-slate-600">Pending</div>
-          <div className="text-2xl font-bold text-slate-600 mt-1">
+          <div className="text-sm text-muted-foreground">Pending</div>
+          <div className="text-2xl font-bold text-muted-foreground mt-1">
             {(statusCounts['PENDING'] || 0).toLocaleString()}
           </div>
         </Card>
@@ -232,12 +240,12 @@ export default async function CampaignDetailPage({
       {campaign.status === 'SENDING' && campaign.totalRecipients > 0 && (
         <Card className="p-4">
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-slate-600">Sending progress</span>
+            <span className="text-muted-foreground">Sending progress</span>
             <span className="font-medium">{Math.round(progress)}%</span>
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-2.5">
+          <div className="w-full bg-muted rounded-full h-2.5">
             <div
-              className="bg-blue-600 h-2.5 rounded-full transition-all"
+              className="bg-primary h-2.5 rounded-full transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -246,47 +254,47 @@ export default async function CampaignDetailPage({
 
       {/* Campaign Details */}
       <Card className="p-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Campaign Details</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4">Campaign Details</h2>
         <dl className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
-            <dt className="text-slate-500">Template</dt>
-            <dd className="font-medium text-slate-900 mt-0.5">
+            <dt className="text-muted-foreground">Template</dt>
+            <dd className="font-medium text-foreground mt-0.5">
               {campaign.template.name}{' '}
-              <span className="text-slate-500">({campaign.template.category})</span>
+              <span className="text-muted-foreground">({campaign.template.category})</span>
             </dd>
           </div>
           {campaign.list && (
             <div>
-              <dt className="text-slate-500">Mailing List</dt>
-              <dd className="font-medium text-slate-900 mt-0.5">{campaign.list.name}</dd>
+              <dt className="text-muted-foreground">Mailing List</dt>
+              <dd className="font-medium text-foreground mt-0.5">{campaign.list.name}</dd>
             </div>
           )}
           <div>
-            <dt className="text-slate-500">Created</dt>
-            <dd className="font-medium text-slate-900 mt-0.5">
+            <dt className="text-muted-foreground">Created</dt>
+            <dd className="font-medium text-foreground mt-0.5">
               {campaign.createdAt.toLocaleString()}
             </dd>
           </div>
           {campaign.startedAt && (
             <div>
-              <dt className="text-slate-500">Started</dt>
-              <dd className="font-medium text-slate-900 mt-0.5">
+              <dt className="text-muted-foreground">Started</dt>
+              <dd className="font-medium text-foreground mt-0.5">
                 {campaign.startedAt.toLocaleString()}
               </dd>
             </div>
           )}
           {campaign.completedAt && (
             <div>
-              <dt className="text-slate-500">Completed</dt>
-              <dd className="font-medium text-slate-900 mt-0.5">
+              <dt className="text-muted-foreground">Completed</dt>
+              <dd className="font-medium text-foreground mt-0.5">
                 {campaign.completedAt.toLocaleString()}
               </dd>
             </div>
           )}
           {campaign.scheduledAt && (
             <div>
-              <dt className="text-slate-500">Scheduled For</dt>
-              <dd className="font-medium text-slate-900 mt-0.5">
+              <dt className="text-muted-foreground">Scheduled For</dt>
+              <dd className="font-medium text-foreground mt-0.5">
                 {campaign.scheduledAt.toLocaleString()}
               </dd>
             </div>
@@ -297,13 +305,13 @@ export default async function CampaignDetailPage({
       {/* Recipients Table */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold text-foreground">
             Recipients{' '}
-            <span className="text-sm font-normal text-slate-500">
+            <span className="text-sm font-normal text-muted-foreground">
               (showing first 100)
             </span>
           </h2>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {Object.entries(statusCounts).map(([status, count]) => (
               <span key={status}>
                 {status}: {count}
@@ -313,39 +321,39 @@ export default async function CampaignDetailPage({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="text-left py-2 px-3 text-slate-600 font-medium">Email</th>
-                <th className="text-left py-2 px-3 text-slate-600 font-medium">Name</th>
-                <th className="text-left py-2 px-3 text-slate-600 font-medium">Status</th>
-                <th className="text-left py-2 px-3 text-slate-600 font-medium">Sent At</th>
-                <th className="text-left py-2 px-3 text-slate-600 font-medium">Error</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Sent At</TableHead>
+                <TableHead>Error</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {campaign.recipients.map((recipient) => (
-                <tr key={recipient.id} className="border-b border-slate-100">
-                  <td className="py-2 px-3 font-mono text-xs">{recipient.email}</td>
-                  <td className="py-2 px-3">{recipient.name || '-'}</td>
-                  <td className="py-2 px-3">{getRecipientStatusBadge(recipient.status)}</td>
-                  <td className="py-2 px-3 text-slate-500">
+                <TableRow key={recipient.id}>
+                  <TableCell className="font-mono text-xs">{recipient.email}</TableCell>
+                  <TableCell>{recipient.name || '-'}</TableCell>
+                  <TableCell>{getRecipientStatusBadge(recipient.status)}</TableCell>
+                  <TableCell className="text-muted-foreground">
                     {recipient.sentAt ? recipient.sentAt.toLocaleString() : '-'}
-                  </td>
-                  <td className="py-2 px-3 text-red-600 text-xs max-w-[200px] truncate">
+                  </TableCell>
+                  <TableCell className="max-w-[200px] truncate text-xs text-destructive">
                     {recipient.errorMessage || '-'}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
               {campaign.recipients.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-500">
+                <TableRow>
+                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                     No recipients found
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </Card>
     </div>

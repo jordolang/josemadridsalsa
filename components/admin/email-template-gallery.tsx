@@ -52,8 +52,8 @@ export function EmailTemplateGallery({ templates, blocks }: EmailTemplateGallery
     <div className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
       <div className="space-y-6">
         <div className="space-y-2">
-          <h2 className="font-serif text-xl font-semibold text-gray-900">Template library</h2>
-          <p className="text-sm text-gray-600">
+          <h2 className="font-serif text-xl font-semibold text-foreground">Template library</h2>
+          <p className="text-sm text-muted-foreground">
             Choose a ready-to-send template, copy the HTML, or download it for your ESP.
           </p>
         </div>
@@ -66,24 +66,24 @@ export function EmailTemplateGallery({ templates, blocks }: EmailTemplateGallery
                 type="button"
                 onClick={() => setSelectedTemplateId(template.id)}
                 className={cn(
-                  'w-full rounded-xl border px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-salsa-500',
+                  'w-full rounded-xl border px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   isActive
-                    ? 'border-salsa-200 bg-salsa-50'
-                    : 'border-gray-200 bg-white hover:border-salsa-200 hover:bg-salsa-50/40',
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border bg-card hover:border-input hover:bg-muted/50',
                 )}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium text-gray-900">{template.name}</p>
+                  <p className="font-medium text-foreground">{template.name}</p>
                   <div className="flex flex-wrap gap-1">
                     {template.tags.map((tag) => (
-                      <Badge key={`${template.id}-${tag}`} variant="outline" className="border-salsa-200 text-xs text-salsa-600">
+                      <Badge key={`${template.id}-${tag}`} variant="outline" className="text-xs">
                         {tag}
                       </Badge>
                     ))}
                   </div>
                 </div>
-                <p className="mt-1 text-xs uppercase tracking-wide text-salsa-500">{template.subject}</p>
-                <p className="mt-2 text-sm text-gray-600">{template.description}</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">{template.subject}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{template.description}</p>
               </button>
             )
           })}
@@ -95,8 +95,8 @@ export function EmailTemplateGallery({ templates, blocks }: EmailTemplateGallery
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-salsa-500">Preview</p>
-                <h3 className="font-serif text-2xl font-semibold text-gray-900">{selectedTemplate.name}</h3>
+                <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Preview</p>
+                <h3 className="font-serif text-2xl font-semibold text-foreground">{selectedTemplate.name}</h3>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={handleCopyTemplate}>
@@ -107,37 +107,37 @@ export function EmailTemplateGallery({ templates, blocks }: EmailTemplateGallery
                 </Button>
               </div>
             </div>
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
               <div
                 key={selectedTemplate.id}
-                className="max-h-[640px] overflow-auto bg-slate-100 p-4"
+                className="max-h-[640px] overflow-auto bg-muted p-4"
                 dangerouslySetInnerHTML={{ __html: selectedTemplate.html }}
               />
             </div>
           </>
         ) : null}
 
-        <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
           <div>
-            <h3 className="font-serif text-xl font-semibold text-gray-900">Drag-and-drop blocks</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="font-serif text-xl font-semibold text-foreground">Drag-and-drop blocks</h3>
+            <p className="text-sm text-muted-foreground">
               Mix and match these HTML partials inside your ESP to build new newsletters quickly.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {blocks.map((block) => (
-              <div key={block.id} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+              <div key={block.id} className="rounded-xl border border-border bg-muted/50 p-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-gray-900">{block.label}</p>
-                  <Badge variant="outline" className="border-salsa-200 text-xs capitalize text-salsa-600">
+                  <p className="text-sm font-semibold text-foreground">{block.label}</p>
+                  <Badge variant="outline" className="border-border text-xs capitalize text-primary">
                     {block.category}
                   </Badge>
                 </div>
-                <p className="mt-2 text-xs text-gray-600">{block.description}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{block.description}</p>
                 <Button
                   variant="link"
                   size="sm"
-                  className="mt-2 px-0 text-salsa-600"
+                  className="mt-2 px-0"
                   onClick={() => navigator.clipboard?.writeText(block.html).catch(() => undefined)}
                 >
                   Copy block markup

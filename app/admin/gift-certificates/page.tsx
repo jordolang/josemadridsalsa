@@ -6,6 +6,16 @@ import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 import {
   Select,
   SelectContent,
@@ -75,11 +85,11 @@ async function getGiftCertificates(searchParams: SearchParams) {
   }
 }
 
-const statusColors = {
-  ACTIVE: 'bg-green-100 text-green-800',
-  REDEEMED: 'bg-blue-100 text-blue-800',
-  EXPIRED: 'bg-gray-100 text-gray-800',
-  CANCELLED: 'bg-red-100 text-red-800',
+const statusVariants: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  ACTIVE: 'default',
+  REDEEMED: 'secondary',
+  EXPIRED: 'outline',
+  CANCELLED: 'destructive',
 }
 
 export default async function GiftCertificatesPage({
@@ -100,8 +110,8 @@ export default async function GiftCertificatesPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gift Certificates</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Gift Certificates</h1>
+          <p className="text-muted-foreground mt-1">
             Manage gift certificates, view balances, and track usage
           </p>
         </div>
@@ -112,7 +122,7 @@ export default async function GiftCertificatesPage({
           <form method="get" className="space-y-4 mb-6">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   name="search"
                   placeholder="Search by code, email, or name..."
@@ -135,9 +145,7 @@ export default async function GiftCertificatesPage({
                   <SelectItem value="CANCELLED">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
-              <Button type="submit" className="bg-salsa-500 hover:bg-salsa-600">
-                Apply Filters
-              </Button>
+              <Button type="submit">Apply Filters</Button>
             </div>
             {params.search || (params.status && params.status !== 'all') ? (
               <Button
@@ -152,99 +160,94 @@ export default async function GiftCertificatesPage({
             ) : null}
           </form>
 
-          <div className="text-sm text-gray-600 mb-4">
+          <div className="text-sm text-muted-foreground mb-4">
             Showing {giftCertificates.length} of {total} gift certificates
           </div>
 
           {giftCertificates.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-muted-foreground">
               No gift certificates found.
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Code</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Purchaser</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Recipient</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Amount</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Balance</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Theme</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Status</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Created</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Purchaser</TableHead>
+                    <TableHead>Recipient</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Balance</TableHead>
+                    <TableHead>Theme</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {giftCertificates.map((gc) => (
-                    <tr key={gc.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4">
+                    <TableRow key={gc.id}>
+                      <TableCell>
                         <span className="font-mono font-semibold text-sm">{gc.code}</span>
-                      </td>
-                      <td className="py-3 px-4">
+                      </TableCell>
+                      <TableCell>
                         <div className="text-sm">
-                          <div className="font-medium text-gray-900">{gc.purchaserName}</div>
-                          <div className="text-gray-500">{gc.purchaserEmail}</div>
+                          <div className="font-medium text-foreground">{gc.purchaserName}</div>
+                          <div className="text-muted-foreground">{gc.purchaserEmail}</div>
                         </div>
-                      </td>
-                      <td className="py-3 px-4">
+                      </TableCell>
+                      <TableCell>
                         <div className="text-sm">
-                          <div className="font-medium text-gray-900">{gc.recipientName}</div>
+                          <div className="font-medium text-foreground">{gc.recipientName}</div>
                           {gc.recipientEmail && (
-                            <div className="text-gray-500">{gc.recipientEmail}</div>
+                            <div className="text-muted-foreground">{gc.recipientEmail}</div>
                           )}
                         </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="font-semibold text-gray-900">
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-semibold text-foreground">
                           {formatPrice(Number(gc.originalAmount))}
                         </span>
-                      </td>
-                      <td className="py-3 px-4">
+                      </TableCell>
+                      <TableCell>
                         <span
-                          className={`font-semibold ${
-                            Number(gc.balance) > 0 ? 'text-green-600' : 'text-gray-500'
-                          }`}
+                          className={cn(
+                            'font-semibold',
+                            Number(gc.balance) > 0 ? 'text-foreground' : 'text-muted-foreground',
+                          )}
                         >
                           {formatPrice(Number(gc.balance))}
                         </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="text-sm text-gray-600">
-                          {getGiftCertificateThemeText(gc.theme)}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            statusColors[gc.status] || 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {getGiftCertificateThemeText(gc.theme)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariants[gc.status] || 'outline'}>
                           {gc.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
                         {new Date(gc.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="py-3 px-4">
+                      </TableCell>
+                      <TableCell>
                         <Link href={`/admin/gift-certificates/${gc.id}`}>
                           <Button variant="ghost" size="sm">
                             <Eye className="h-4 w-4 mr-1" />
                             View
                           </Button>
                         </Link>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6 pt-6 border-t">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 Page {page} of {totalPages}
               </div>
               <div className="flex gap-2">

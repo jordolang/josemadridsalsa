@@ -9,19 +9,9 @@ import React from 'react'
 import { createHash } from 'crypto'
 import { logEmailSend, checkUnsubscribed } from './logger'
 
-let resendApiKeyWarned = false
-
-function getResendClient(): Resend | null {
-  const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) {
-    if (!resendApiKeyWarned) {
-      console.warn('RESEND_API_KEY environment variable is not set')
-      resendApiKeyWarned = true
-    }
-    return null
-  }
-  return new Resend(apiKey)
-}
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null
 
 /** Hash email for safe logging */
 function hashEmail(email: string): string {
@@ -53,7 +43,7 @@ export async function sendEmail({
   to,
   subject,
   react,
-  from = process.env.FROM_EMAIL || 'orders@josemadridsalsa.com',
+  from = process.env.FROM_EMAIL || 'Jose Madrid Salsa <mike@josemadrid.net>',
   replyTo,
   type,
   orderId,
@@ -63,8 +53,6 @@ export async function sendEmail({
   const emailHash = hashEmail(recipientEmail)
 
   try {
-    const resend = getResendClient()
-
     // Check if Resend is configured
     if (!resend) {
       const errorMsg = 'Resend client not initialized - RESEND_API_KEY missing'
@@ -109,7 +97,7 @@ export async function sendEmail({
     const unsubscribeUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://josemadrid.net'}/unsubscribe?email=${encodeURIComponent(recipientEmail)}`
 
     // Send email via Resend with List-Unsubscribe header for compliance
-    const result = await resend.emails.send({
+    const { data, error: sendError } = await resend.emails.send({
       from,
       to,
       subject,
@@ -121,10 +109,9 @@ export async function sendEmail({
       },
     })
 
-    if (result.error) {
-      console.error('Resend send error:', result.error)
+    if (sendError) {
+      console.error('Resend send error:', sendError)
 
-      // Log error
       await logEmailSend({
         recipientEmail,
         recipientName: undefined,
@@ -132,7 +119,7 @@ export async function sendEmail({
         templateId: type,
         subject,
         status: 'FAILED',
-        errorMessage: result.error.message,
+        errorMessage: sendError.message,
         metadata: orderId ? { orderId } : undefined,
       }).catch((err) => {
         console.error('Failed to log email error:', err)
@@ -140,11 +127,10 @@ export async function sendEmail({
 
       return {
         success: false,
-        error: result.error.message,
+        error: sendError.message,
       }
     }
 
-    // Log successful send
     await logEmailSend({
       recipientEmail,
       recipientName: undefined,
@@ -154,7 +140,6 @@ export async function sendEmail({
       status: 'SENT',
       metadata: orderId ? { orderId } : undefined,
     }).catch((err) => {
-      // Don't fail email send if logging fails
       console.error('Failed to log email send:', err)
     })
 
@@ -162,8 +147,8 @@ export async function sendEmail({
 
     return {
       success: true,
-      messageId: result.data?.id,
-      data: result.data,
+      messageId: data?.id,
+      data,
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'

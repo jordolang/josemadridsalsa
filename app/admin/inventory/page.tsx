@@ -181,10 +181,10 @@ export default async function InventoryPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
-            <TrendingDown className="size-4 text-amber-600 dark:text-amber-400" />
+            <TrendingDown className="size-4 text-muted-foreground dark:text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold tabular-nums text-amber-600 dark:text-amber-400">
+            <div className="text-2xl font-bold tabular-nums text-muted-foreground dark:text-muted-foreground">
               {stats.lowStockCount}
             </div>
             <p className="text-xs text-muted-foreground">Below threshold</p>
@@ -271,7 +271,7 @@ export default async function InventoryPage() {
                             className={
                               isOutOfStock
                                 ? 'font-medium text-destructive'
-                                : 'font-medium text-amber-600 dark:text-amber-400'
+                                : 'font-medium text-muted-foreground dark:text-muted-foreground'
                             }
                           >
                             {product.inventory}
@@ -328,7 +328,7 @@ export default async function InventoryPage() {
                         <div
                           className={
                             isPositive
-                              ? 'font-medium tabular-nums text-emerald-600 dark:text-emerald-400'
+                              ? 'font-medium tabular-nums text-primary dark:text-emerald-400'
                               : 'font-medium tabular-nums text-destructive'
                           }
                         >

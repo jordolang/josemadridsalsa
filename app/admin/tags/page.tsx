@@ -47,11 +47,11 @@ async function getTags(searchParams: SearchParams) {
 }
 
 const tagTypeColors = {
-  PRODUCT: 'bg-blue-100 text-blue-800',
-  RECIPE: 'bg-green-100 text-green-800',
+  PRODUCT: 'bg-primary/10 text-primary',
+  RECIPE: 'bg-primary/10 text-primary',
   MEDIA: 'bg-purple-100 text-purple-800',
   EVENT: 'bg-orange-100 text-orange-800',
-  GENERAL: 'bg-slate-100 text-slate-800',
+  GENERAL: 'bg-muted text-foreground',
 }
 
 const tagTypeLabels = {
@@ -135,7 +135,7 @@ export default async function TagsPage({
       {tagsWithUsage.length === 0 ? (
         <Card className="p-12">
           <div className="text-center text-muted-foreground">
-            <TagIcon className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+            <TagIcon className="mx-auto mb-4 h-12 w-12 text-muted-foreground/60" />
             <p className="text-lg font-medium">No tags found</p>
             <p className="mt-1 text-sm">
               Create your first tag to organize your content
@@ -155,7 +155,7 @@ export default async function TagsPage({
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <TagIcon className="h-4 w-4 text-slate-400" />
+                    <TagIcon className="h-4 w-4 text-muted-foreground" />
                     <h3 className="font-semibold">{tag.name}</h3>
                   </div>
                   <div className="mt-2 flex items-center gap-2">

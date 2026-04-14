@@ -3,6 +3,14 @@
 import { useScraperStream } from '@/hooks/use-scraper-stream'
 import type { ScraperEvent } from '@/lib/scraper/event-bus'
 import { useCallback, useState } from 'react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 interface Lead {
   id: string
@@ -126,116 +134,102 @@ export function LiveLeadFeed({ campaignId }: LiveLeadFeedProps) {
   return (
     <div className="mt-8 space-y-4">
       {/* Status Bar */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <div className="rounded-lg border border-border bg-card p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div
-              className={`h-3 w-3 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`}
+              className={`h-3 w-3 rounded-full ${connected ? 'bg-green-500' : 'bg-muted/60'}`}
             />
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-foreground">
               {connected ? 'Connected' : 'Disconnected'}
             </span>
           </div>
 
           {scraperStatus.active && (
-            <div className="text-sm text-blue-600">{scraperStatus.message}</div>
+            <div className="text-sm text-primary">{scraperStatus.message}</div>
           )}
 
           {error && (
-            <div className="text-sm text-red-600">{error}</div>
+            <div className="text-sm text-destructive">{error}</div>
           )}
         </div>
 
         {/* Stats */}
         <div className="mt-3 grid grid-cols-3 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-            <div className="text-xs text-gray-500">Total Leads</div>
+            <div className="text-2xl font-bold text-foreground">{stats.total}</div>
+            <div className="text-xs text-muted-foreground">Total Leads</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">{stats.withEmail}</div>
-            <div className="text-xs text-gray-500">With Email</div>
+            <div className="text-2xl font-bold text-foreground">{stats.withEmail}</div>
+            <div className="text-xs text-muted-foreground">With Email</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">{stats.withPhone}</div>
-            <div className="text-xs text-gray-500">With Phone</div>
+            <div className="text-2xl font-bold text-foreground">{stats.withPhone}</div>
+            <div className="text-xs text-muted-foreground">With Phone</div>
           </div>
         </div>
       </div>
 
       {/* Leads Table */}
       {leads.length > 0 && (
-        <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+        <div className="rounded-lg border border-border bg-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">
-                    School Name
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">
-                    Contact Name
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">
-                    Phone
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">
-                    Sport
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>School Name</TableHead>
+                  <TableHead>Contact Name</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Sport</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {leads.map((lead, index) => (
-                  <tr
+                  <TableRow
                     key={lead.id}
-                    className={`border-b border-gray-200 ${
-                      index === 0 ? 'bg-blue-50' : ''
-                    } hover:bg-gray-50`}
+                    className={index === 0 ? 'bg-primary/5' : undefined}
                   >
-                    <td className="px-6 py-3 text-gray-900">
+                    <TableCell className="text-foreground">
                       <div className="font-medium">{lead.schoolName}</div>
-                      <div className="text-xs text-gray-500 truncate">
+                      <div className="text-xs text-muted-foreground truncate">
                         {lead.schoolUrl}
                       </div>
-                    </td>
-                    <td className="px-6 py-3 text-gray-700">
+                    </TableCell>
+                    <TableCell className="text-foreground">
                       {lead.contactName || '—'}
-                    </td>
-                    <td className="px-6 py-3 text-gray-700">{lead.title || '—'}</td>
-                    <td className="px-6 py-3">
+                    </TableCell>
+                    <TableCell className="text-foreground">{lead.title || '—'}</TableCell>
+                    <TableCell>
                       {lead.email ? (
                         <a
                           href={`mailto:${lead.email}`}
-                          className="text-blue-600 hover:underline"
+                          className="text-primary hover:underline"
                         >
                           {lead.email}
                         </a>
                       ) : (
-                        <span className="text-gray-400">—</span>
+                        <span className="text-muted-foreground">—</span>
                       )}
-                    </td>
-                    <td className="px-6 py-3 text-gray-700">
+                    </TableCell>
+                    <TableCell className="text-foreground">
                       {lead.phone || '—'}
-                    </td>
-                    <td className="px-6 py-3 text-gray-700">{lead.sport || '—'}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-foreground">{lead.sport || '—'}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}
 
       {/* Empty State */}
       {leads.length === 0 && (
-        <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-          <div className="text-gray-500">
+        <div className="rounded-lg border border-dashed border-input bg-muted/50 p-8 text-center">
+          <div className="text-muted-foreground">
             {connected ? (
               <p>Waiting for leads... Scraping will appear here in real-time</p>
             ) : (

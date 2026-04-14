@@ -50,7 +50,7 @@ export function OrderAnalyticsCharts({ chart }: OrderAnalyticsChartsProps) {
   if (chart.length === 0) {
     return (
       <Card className="p-6">
-        <p className="text-sm text-slate-500">No order data for this period.</p>
+        <p className="text-sm text-muted-foreground">No order data for this period.</p>
       </Card>
     )
   }
@@ -62,7 +62,7 @@ export function OrderAnalyticsCharts({ chart }: OrderAnalyticsChartsProps) {
     <div className="grid gap-6 lg:grid-cols-2">
       {/* Revenue Chart */}
       <Card className="p-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Revenue</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4">Revenue</h2>
         <ChartContainer config={revenueConfig} className="h-64 w-full">
           <LineChart data={chart} accessibilityLayer>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -100,7 +100,7 @@ export function OrderAnalyticsCharts({ chart }: OrderAnalyticsChartsProps) {
 
       {/* Order Count Chart */}
       <Card className="p-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Order Count</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4">Order Count</h2>
         <ChartContainer config={ordersConfig} className="h-64 w-full">
           <BarChart data={chart} accessibilityLayer>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />

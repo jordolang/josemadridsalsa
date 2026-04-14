@@ -27,6 +27,9 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
 import type { SocialComposerState, SocialAccountInfo } from '@/types/social'
 import { PLATFORM_CONFIGS } from '@/types/social'
@@ -40,11 +43,11 @@ const PLATFORM_ICONS: Record<SocialMediaPlatform, React.ElementType> = {
 }
 
 const PLATFORM_COLORS: Record<SocialMediaPlatform, string> = {
-  FACEBOOK: 'border-blue-400 bg-blue-50 text-blue-700',
+  FACEBOOK: 'border-primary bg-primary/5 text-primary',
   INSTAGRAM: 'border-pink-400 bg-pink-50 text-pink-700',
-  TWITTER: 'border-slate-400 bg-slate-50 text-slate-800',
-  TIKTOK: 'border-slate-400 bg-slate-50 text-slate-800',
-  GOOGLE_MY_BUSINESS: 'border-blue-300 bg-blue-50 text-blue-600',
+  TWITTER: 'border-muted-foreground bg-muted/50 text-foreground',
+  TIKTOK: 'border-muted-foreground bg-muted/50 text-foreground',
+  GOOGLE_MY_BUSINESS: 'border-border bg-primary/5 text-primary',
 }
 
 type Props = {
@@ -121,16 +124,16 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
   return (
     <div className="space-y-6">
       {state.status === 'success' && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-primary/5 px-4 py-3 text-sm text-primary">
           <CheckCircle2 className="h-4 w-4" />
           {state.message}
         </div>
       )}
       {state.status === 'error' && state.message && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          {state.message}
-        </div>
+          <AlertDescription>{state.message}</AlertDescription>
+        </Alert>
       )}
 
       <form action={formAction} className="space-y-6">
@@ -146,7 +149,7 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
           <div className="space-y-5">
             {/* Platform selector */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-slate-800">Post to</label>
+              <Label>Post to</Label>
               <div className="flex flex-wrap gap-2">
                 {(['FACEBOOK', 'TWITTER', 'TIKTOK', 'INSTAGRAM', 'GOOGLE_MY_BUSINESS'] as SocialMediaPlatform[]).map(
                   (platform) => {
@@ -156,43 +159,40 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
                     const isConnected = connectedPlatforms.has(platform)
 
                     return (
-                      <button
+                      <Button
                         key={platform}
                         type="button"
+                        variant={isSelected ? 'default' : 'outline'}
                         onClick={() => togglePlatform(platform)}
                         disabled={!isConnected}
                         className={cn(
-                          'flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition-all',
-                          isSelected
-                            ? PLATFORM_COLORS[platform]
-                            : isConnected
-                              ? 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                              : 'cursor-not-allowed border-dashed border-slate-200 bg-slate-50 text-slate-400',
+                          'gap-2',
+                          !isConnected && 'border-dashed',
                         )}
                       >
                         <Icon className="h-4 w-4" />
                         {config.shortLabel}
                         {!isConnected && (
-                          <span className="text-xs text-slate-400">Setup needed</span>
+                          <span className="text-xs text-muted-foreground">Setup needed</span>
                         )}
-                        {/* Hidden checkbox for form submission */}
+                        {/* Hidden input for form submission */}
                         {isSelected && (
                           <input type="hidden" name="platforms" value={platform} />
                         )}
-                      </button>
+                      </Button>
                     )
                   },
                 )}
               </div>
               {state.fieldErrors?.platforms && (
-                <p className="text-xs text-red-600">{state.fieldErrors.platforms.join(' ')}</p>
+                <p className="text-xs text-destructive">{state.fieldErrors.platforms.join(' ')}</p>
               )}
             </div>
 
             {/* Content editor */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label htmlFor="content" className="text-sm font-medium text-slate-800">
+                <label htmlFor="content" className="text-sm font-medium text-foreground">
                   Post content
                 </label>
                 <div className="flex gap-3">
@@ -205,7 +205,7 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
                         key={p}
                         className={cn(
                           'text-xs',
-                          w.over ? 'text-red-600 font-semibold' : w.count > w.max * 0.8 ? 'text-amber-600' : 'text-slate-400',
+                          w.over ? 'text-destructive font-semibold' : w.count > w.max * 0.8 ? 'text-muted-foreground' : 'text-muted-foreground',
                         )}
                       >
                         {config.shortLabel}: {w.count}/{w.max}
@@ -224,21 +224,23 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
                 className="resize-y text-[15px] leading-relaxed"
               />
               {state.fieldErrors?.content && (
-                <p className="text-xs text-red-600">{state.fieldErrors.content.join(' ')}</p>
+                <p className="text-xs text-destructive">{state.fieldErrors.content.join(' ')}</p>
               )}
             </div>
 
             {/* Platform-specific overrides */}
             {selectedPlatforms.size > 1 && (
               <div>
-                <button
+                <Button
                   type="button"
+                  variant="link"
+                  size="sm"
                   onClick={() => setShowOverrides(!showOverrides)}
-                  className="flex items-center gap-2 text-sm text-salsa-600 hover:text-salsa-700"
+                  className="h-auto gap-2 p-0"
                 >
                   <Eye className="h-4 w-4" />
                   {showOverrides ? 'Hide' : 'Customize'} per-platform content
-                </button>
+                </Button>
 
                 {showOverrides && (
                   <div className="mt-3 space-y-3">
@@ -247,10 +249,10 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
                       const config = PLATFORM_CONFIGS[platform]
                       return (
                         <div key={platform} className="space-y-1.5">
-                          <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                          <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                             <Icon className="h-3.5 w-3.5" />
                             {config.label} version
-                            <span className="text-slate-400">(optional, overrides main content)</span>
+                            <span className="text-muted-foreground">(optional, overrides main content)</span>
                           </label>
                           <Textarea
                             value={platformOverrides[platform] || ''}
@@ -275,8 +277,8 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
             {/* Extras: hashtags and link */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                  <Hash className="h-4 w-4 text-slate-400" />
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Hash className="h-4 w-4 text-muted-foreground" />
                   Hashtags
                 </label>
                 <Input
@@ -285,11 +287,11 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
                   placeholder="salsa, josemadrid, homemade"
                   className="text-sm"
                 />
-                <p className="text-xs text-slate-400">Comma-separated. Auto-prefixed with #</p>
+                <p className="text-xs text-muted-foreground">Comma-separated. Auto-prefixed with #</p>
               </div>
               <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                  <Link2 className="h-4 w-4 text-slate-400" />
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Link2 className="h-4 w-4 text-muted-foreground" />
                   Link URL
                 </label>
                 <Input
@@ -299,28 +301,31 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
                   placeholder="https://josemadrid.net/..."
                   className="text-sm"
                 />
-                <p className="text-xs text-slate-400">Attached to Facebook/X posts</p>
+                <p className="text-xs text-muted-foreground">Attached to Facebook/X posts</p>
               </div>
             </div>
 
             {/* Scheduling */}
-            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-slate-300 text-salsa-600 focus:ring-salsa-500"
+            <div className="space-y-3 rounded-xl border border-border bg-muted/50 p-4">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="schedule-enabled"
                   checked={scheduleEnabled}
-                  onChange={(e) => setScheduleEnabled(e.target.checked)}
+                  onCheckedChange={(checked) => setScheduleEnabled(checked === true)}
                   disabled={!canSchedule}
                 />
-                <span className="text-sm font-medium text-slate-800">Schedule for later</span>
+                <Label htmlFor="schedule-enabled" className="font-medium">
+                  Schedule for later
+                </Label>
                 {!canSchedule && (
-                  <span className="text-xs text-slate-400">(requires scheduling permission)</span>
+                  <span className="text-xs text-muted-foreground">
+                    (requires scheduling permission)
+                  </span>
                 )}
-              </label>
+              </div>
               {scheduleEnabled && (
                 <div className="flex items-center gap-3">
-                  <CalendarDays className="h-4 w-4 text-slate-400" />
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
                   <Input
                     type="datetime-local"
                     name="scheduledAt"
@@ -329,7 +334,7 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
                 </div>
               )}
               {state.fieldErrors?.scheduledAt && (
-                <p className="text-xs text-red-600">{state.fieldErrors.scheduledAt.join(' ')}</p>
+                <p className="text-xs text-destructive">{state.fieldErrors.scheduledAt.join(' ')}</p>
               )}
             </div>
 
@@ -364,26 +369,24 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
           {/* Preview panel */}
           <div className="space-y-4">
             <Card className="sticky top-4 overflow-hidden">
-              <div className="border-b bg-slate-50 px-4 py-3">
-                <p className="text-sm font-semibold text-slate-700">Live Preview</p>
+              <div className="border-b bg-muted/50 px-4 py-3">
+                <p className="text-sm font-semibold text-foreground">Live Preview</p>
                 {selectedPlatforms.size > 0 && (
                   <div className="mt-2 flex gap-1">
                     {Array.from(selectedPlatforms).map((p) => {
                       const Icon = PLATFORM_ICONS[p]
                       return (
-                        <button
+                        <Button
                           key={p}
                           type="button"
+                          variant={activePreviewPlatform === p ? 'secondary' : 'ghost'}
+                          size="icon"
+                          className="h-8 w-8"
                           onClick={() => setActivePreviewPlatform(p)}
-                          className={cn(
-                            'rounded-lg p-1.5 transition',
-                            activePreviewPlatform === p
-                              ? 'bg-white shadow-sm'
-                              : 'hover:bg-white/50',
-                          )}
                         >
                           <Icon className="h-4 w-4" />
-                        </button>
+                          <span className="sr-only">Preview {p}</span>
+                        </Button>
                       )
                     })}
                   </div>
@@ -391,7 +394,7 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
               </div>
               <div className="p-4">
                 {!content.trim() && selectedPlatforms.size === 0 ? (
-                  <div className="flex flex-col items-center py-10 text-center text-slate-400">
+                  <div className="flex flex-col items-center py-10 text-center text-muted-foreground">
                     <Eye className="mb-2 h-8 w-8" />
                     <p className="text-sm">Select platforms and start typing to see a preview</p>
                   </div>
@@ -444,43 +447,43 @@ function PostPreview({
         {account?.profileImageUrl ? (
           <img src={account.profileImageUrl} alt="" className="h-10 w-10 rounded-full" />
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200">
-            <Icon className="h-5 w-5 text-slate-500" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+            <Icon className="h-5 w-5 text-muted-foreground" />
           </div>
         )}
         <div>
-          <p className="text-sm font-semibold text-slate-900">
+          <p className="text-sm font-semibold text-foreground">
             {account?.accountName || 'Jose Madrid Salsa'}
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             {account?.accountHandle || `@JoseMadridSalsa`} · Just now
           </p>
         </div>
       </div>
 
       {/* Content */}
-      <div className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
-        {fullContent || <span className="italic text-slate-400">Start typing your post...</span>}
+      <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+        {fullContent || <span className="italic text-muted-foreground">Start typing your post...</span>}
       </div>
 
       {/* Link preview */}
       {linkUrl && (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <p className="truncate text-xs text-slate-500">{linkUrl}</p>
-          <p className="mt-1 text-sm font-medium text-slate-700">Link Preview</p>
+        <div className="rounded-lg border border-border bg-muted/50 p-3">
+          <p className="truncate text-xs text-muted-foreground">{linkUrl}</p>
+          <p className="mt-1 text-sm font-medium text-foreground">Link Preview</p>
         </div>
       )}
 
       {/* Character count */}
-      <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-xs">
-        <span className="text-slate-400">{config.label} preview</span>
+      <div className="flex items-center justify-between border-t border-border pt-2 text-xs">
+        <span className="text-muted-foreground">{config.label} preview</span>
         <span
           className={cn(
             fullContent.length > config.maxChars
-              ? 'font-semibold text-red-600'
+              ? 'font-semibold text-destructive'
               : fullContent.length > config.maxChars * 0.8
-                ? 'text-amber-600'
-                : 'text-slate-400',
+                ? 'text-muted-foreground'
+                : 'text-muted-foreground',
           )}
         >
           {fullContent.length} / {config.maxChars}

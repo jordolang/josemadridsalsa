@@ -123,7 +123,7 @@ export function InventoryAlertsTable({ alerts, canWrite }: InventoryAlertsTableP
                   className={
                     alert.product.inventory === 0
                       ? 'font-medium text-destructive'
-                      : 'font-medium text-amber-600 dark:text-amber-400'
+                      : 'font-medium text-muted-foreground dark:text-muted-foreground'
                   }
                 >
                   {alert.product.inventory}
@@ -152,7 +152,7 @@ export function InventoryAlertsTable({ alerts, canWrite }: InventoryAlertsTableP
                       disabled={loadingAlertId === alert.id}
                       aria-label="Resolve alert"
                     >
-                      <CheckCircle className="size-4 text-emerald-600 dark:text-emerald-400" />
+                      <CheckCircle className="size-4 text-primary dark:text-emerald-400" />
                     </Button>
                     <Button
                       variant="ghost"

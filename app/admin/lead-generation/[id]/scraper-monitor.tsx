@@ -14,9 +14,9 @@ interface LogEntry {
 }
 
 const LEVEL_COLORS: Record<LogEntry['level'], string> = {
-  info: 'text-blue-400',
+  info: 'text-primary',
   warn: 'text-yellow-400',
-  error: 'text-red-400',
+  error: 'text-destructive',
   success: 'text-green-400',
 };
 
@@ -28,10 +28,10 @@ const STAGE_LABELS: Record<LogEntry['stage'], string> = {
 };
 
 const STAGE_COLORS: Record<LogEntry['stage'], string> = {
-  search: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  search: 'bg-primary/20 text-blue-300 border-blue-500/30',
   parse: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
   email: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-  system: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
+  system: 'bg-muted text-muted-foreground border-border',
 };
 
 export function ScraperMonitor({ campaignId }: { campaignId: string }) {
@@ -104,12 +104,12 @@ export function ScraperMonitor({ campaignId }: { campaignId: string }) {
               className={
                 connected
                   ? 'border-green-500/50 bg-green-500/10 text-green-400 text-xs'
-                  : 'border-red-500/50 bg-red-500/10 text-red-400 text-xs'
+                  : 'border-destructive/50 bg-destructive/10 text-destructive text-xs'
               }
             >
               <span
                 className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${
-                  connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'
+                  connected ? 'bg-green-400 animate-pulse' : 'bg-destructive/80'
                 }`}
               />
               {connected ? 'LIVE' : 'DISCONNECTED'}

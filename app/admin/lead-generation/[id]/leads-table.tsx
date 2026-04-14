@@ -26,7 +26,7 @@ export function LeadsTable({ leads }: { leads: any[] }) {
                <TableCell>
                  <div className="font-medium truncate max-w-[200px]" title={lead.schoolName}>{lead.schoolName}</div>
                  {lead.schoolUrl && (
-                    <a href={lead.schoolUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline truncate block max-w-[200px]">
+                    <a href={lead.schoolUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline truncate block max-w-[200px]">
                       Website
                     </a>
                  )}
@@ -40,7 +40,7 @@ export function LeadsTable({ leads }: { leads: any[] }) {
                    {lead.status}
                  </Badge>
                  {lead.errorMessage && (
-                    <p className="text-xs text-red-500 mt-1 truncate max-w-[150px]" title={lead.errorMessage}>
+                    <p className="text-xs text-destructive mt-1 truncate max-w-[150px]" title={lead.errorMessage}>
                       {lead.errorMessage}
                     </p>
                  )}

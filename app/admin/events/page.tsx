@@ -70,7 +70,7 @@ export default function EventsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Events</h1>
-          <p className="text-slate-600">Manage featured events and Google Calendar sync</p>
+          <p className="text-muted-foreground">Manage featured events and Google Calendar sync</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={handleSync} disabled={syncing || !isConnected} variant="outline">
@@ -91,10 +91,10 @@ export default function EventsPage() {
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-xl font-semibold mb-2">Google Calendar Integration</h2>
-            <p className="text-sm text-slate-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Sync events from your Google Calendar to display on your website
             </p>
-            <Badge className={isConnected ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+            <Badge className={isConnected ? 'bg-primary/10 text-primary' : 'bg-yellow-100 text-yellow-800'}>
               {isConnected ? 'Connected' : 'Not Connected'}
             </Badge>
           </div>
@@ -111,12 +111,12 @@ export default function EventsPage() {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">"Where is Jose?" Events</h2>
-            <p className="text-sm text-slate-600">Special events marked for the "Where is Jose?" feature</p>
+            <p className="text-sm text-muted-foreground">Special events marked for the "Where is Jose?" feature</p>
           </div>
         </div>
         {whereIsJoseEvents.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
-            <Calendar className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+          <div className="text-center py-12 text-muted-foreground">
+            <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground/60" />
             <p>No "Where is Jose?" events scheduled</p>
           </div>
         ) : (
@@ -133,14 +133,14 @@ export default function EventsPage() {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">Featured Events</h2>
-            <p className="text-sm text-slate-600">Events displayed on your homepage</p>
+            <p className="text-sm text-muted-foreground">Events displayed on your homepage</p>
           </div>
         </div>
         {loading ? (
-          <div className="text-center py-12 text-slate-500">Loading...</div>
+          <div className="text-center py-12 text-muted-foreground">Loading...</div>
         ) : featuredEvents.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
-            <Calendar className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+          <div className="text-center py-12 text-muted-foreground">
+            <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground/60" />
             <p>No featured events</p>
           </div>
         ) : (
@@ -172,7 +172,7 @@ function EventCard({ event, onRefresh }: { event: FeaturedEvent; onRefresh: () =
   }
 
   return (
-    <div className="border rounded-lg p-4 hover:bg-slate-50">
+    <div className="border rounded-lg p-4 hover:bg-muted/50">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -184,15 +184,15 @@ function EventCard({ event, onRefresh }: { event: FeaturedEvent; onRefresh: () =
               </Badge>
             )}
             {event.manuallyModified && (
-              <Badge variant="outline" className="text-xs bg-blue-50">
+              <Badge variant="outline" className="text-xs bg-primary/5">
                 Modified
               </Badge>
             )}
           </div>
           {event.description && (
-            <p className="text-sm text-slate-600 mb-2">{event.description}</p>
+            <p className="text-sm text-muted-foreground mb-2">{event.description}</p>
           )}
-          <div className="flex items-center gap-4 text-sm text-slate-500">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
               {new Date(event.startDate).toLocaleDateString()}

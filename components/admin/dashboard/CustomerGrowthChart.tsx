@@ -39,7 +39,10 @@ export function CustomerGrowthChart({ data }: CustomerGrowthChartProps) {
 
   const points = data.map((d, i) => {
     const x = padding + (i / (data.length - 1)) * (chartWidth - 2 * padding)
-    const y = chartHeight - padding - ((d.customers / maxCustomers) * (chartHeight - 2 * padding))
+    const y =
+      chartHeight -
+      padding -
+      (d.customers / maxCustomers) * (chartHeight - 2 * padding)
     return { x, y }
   })
 
@@ -56,11 +59,17 @@ export function CustomerGrowthChart({ data }: CustomerGrowthChartProps) {
           <CardTitle className="text-base font-semibold">Customer Growth</CardTitle>
           <div className="flex items-center gap-4 text-xs">
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full bg-emerald-500" />
+              <div
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: 'hsl(var(--chart-2))' }}
+              />
               <span className="text-muted-foreground">Total: {latestTotal}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full bg-blue-500" />
+              <div
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: 'hsl(var(--chart-1))' }}
+              />
               <span className="text-muted-foreground">New: {totalNew}</span>
             </div>
           </div>
@@ -75,15 +84,23 @@ export function CustomerGrowthChart({ data }: CustomerGrowthChartProps) {
         >
           <defs>
             <linearGradient id="customerGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0.02" />
+              <stop
+                offset="0%"
+                stopColor="hsl(var(--chart-2))"
+                stopOpacity="0.3"
+              />
+              <stop
+                offset="100%"
+                stopColor="hsl(var(--chart-2))"
+                stopOpacity="0.02"
+              />
             </linearGradient>
           </defs>
           <path d={areaPath} fill="url(#customerGradient)" />
           <path
             d={linePath}
             fill="none"
-            stroke="#10b981"
+            stroke="hsl(var(--chart-2))"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -94,8 +111,8 @@ export function CustomerGrowthChart({ data }: CustomerGrowthChartProps) {
               cx={p.x}
               cy={p.y}
               r="3.5"
-              fill="white"
-              stroke="#10b981"
+              fill="hsl(var(--card))"
+              stroke="hsl(var(--chart-2))"
               strokeWidth="2"
             />
           ))}
@@ -118,12 +135,18 @@ export function CustomerGrowthChart({ data }: CustomerGrowthChartProps) {
           <div className="flex items-end gap-1.5 h-12">
             {data.map((d) => {
               const maxNew = Math.max(...data.map((dd) => dd.newCustomers))
-              const height = (d.newCustomers / maxNew) * 100
+              const height = maxNew > 0 ? (d.newCustomers / maxNew) * 100 : 0
               return (
-                <div key={d.month} className="flex-1 flex flex-col items-center gap-1">
+                <div
+                  key={d.month}
+                  className="flex-1 flex flex-col items-center gap-1"
+                >
                   <div
-                    className="w-full rounded-t bg-blue-500 hover:bg-blue-600 transition-colors"
-                    style={{ height: `${height}%` }}
+                    className="w-full rounded-t transition-colors"
+                    style={{
+                      height: `${height}%`,
+                      backgroundColor: 'hsl(var(--chart-1))',
+                    }}
                   />
                 </div>
               )

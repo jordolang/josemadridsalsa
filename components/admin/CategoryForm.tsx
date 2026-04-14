@@ -85,7 +85,7 @@ export default function CategoryForm({ category, onSuccess, onCancel }: Category
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -139,7 +139,7 @@ export default function CategoryForm({ category, onSuccess, onCancel }: Category
         <div className="flex items-center justify-between">
           <div>
             <Label>Active</Label>
-            <p className="text-sm text-slate-500">Show this category on the storefront</p>
+            <p className="text-sm text-muted-foreground">Show this category on the storefront</p>
           </div>
           <Switch checked={isActive} onCheckedChange={(checked: boolean) => setIsActive(checked)} />
         </div>

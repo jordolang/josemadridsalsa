@@ -154,8 +154,8 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-6">
       {error && (
-        <Card className="p-4 bg-red-50 border-red-200">
-          <p className="text-red-900">{error}</p>
+        <Card className="p-4 bg-destructive/10 border-destructive/30">
+          <p className="text-destructive">{error}</p>
         </Card>
       )}
 
@@ -175,7 +175,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
               className="mt-1.5"
             />
             {errors.name && (
-              <p className="text-sm text-red-600 mt-1">{errors.name.message}</p>
+              <p className="text-sm text-destructive mt-1">{errors.name.message}</p>
             )}
           </div>
 
@@ -188,9 +188,9 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
               placeholder="e.g., spring-2026-campaign"
             />
             {errors.slug && (
-              <p className="text-sm text-red-600 mt-1">{errors.slug.message}</p>
+              <p className="text-sm text-destructive mt-1">{errors.slug.message}</p>
             )}
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               URL: /fundraisers/{watch('slug') || 'slug'}
             </p>
           </div>
@@ -221,7 +221,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
               placeholder="e.g., Lincoln Elementary School"
             />
             {errors.organizationName && (
-              <p className="text-sm text-red-600 mt-1">{errors.organizationName.message}</p>
+              <p className="text-sm text-destructive mt-1">{errors.organizationName.message}</p>
             )}
           </div>
 
@@ -235,7 +235,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
               placeholder="coordinator@example.com"
             />
             {errors.contactEmail && (
-              <p className="text-sm text-red-600 mt-1">{errors.contactEmail.message}</p>
+              <p className="text-sm text-destructive mt-1">{errors.contactEmail.message}</p>
             )}
           </div>
 
@@ -259,7 +259,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
           <div>
             <Label htmlFor="subdomain">Page URL Subdomain</Label>
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-sm text-slate-500">josemadrid.net/f/</span>
+              <span className="text-sm text-muted-foreground">josemadrid.net/f/</span>
               <Input
                 id="subdomain"
                 {...register('subdomain')}
@@ -267,7 +267,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
                 className="max-w-xs"
               />
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Lowercase letters, numbers, and hyphens only. This is the public-facing link.
             </p>
           </div>
@@ -310,7 +310,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
                 className="mt-1.5"
               />
               {errors.startDate && (
-                <p className="text-sm text-red-600 mt-1">{errors.startDate.message}</p>
+                <p className="text-sm text-destructive mt-1">{errors.startDate.message}</p>
               )}
             </div>
 
@@ -323,7 +323,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
                 className="mt-1.5"
               />
               {errors.endDate && (
-                <p className="text-sm text-red-600 mt-1">{errors.endDate.message}</p>
+                <p className="text-sm text-destructive mt-1">{errors.endDate.message}</p>
               )}
             </div>
           </div>
@@ -339,7 +339,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
               className="mt-1.5"
               placeholder="e.g., 5000.00"
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Optional revenue target for the campaign
             </p>
           </div>
@@ -357,9 +357,9 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
               placeholder="e.g., 20"
             />
             {errors.commissionRate && (
-              <p className="text-sm text-red-600 mt-1">{errors.commissionRate.message}</p>
+              <p className="text-sm text-destructive mt-1">{errors.commissionRate.message}</p>
             )}
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Percentage of revenue that goes to the organization
             </p>
           </div>
@@ -391,7 +391,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
           <div className="flex items-center justify-between">
             <div>
               <Label htmlFor="isActive">Active</Label>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-muted-foreground">
                 Show on public fundraiser listings
               </p>
             </div>
@@ -402,10 +402,10 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
             />
           </div>
 
-          <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-100">
+          <div className="flex items-center justify-between mt-6 pt-6 border-t border-border">
             <div>
               <Label htmlFor="enableSocialFeatures">Interactive Social Board</Label>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-muted-foreground">
                 Allow Facebook login, live message board, and leaderboard Timeline
               </p>
             </div>

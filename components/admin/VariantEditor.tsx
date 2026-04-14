@@ -228,7 +228,7 @@ export function VariantEditor({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Product Variants</h3>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted-foreground">
             Manage size, flavor, and other product variations
           </p>
         </div>
@@ -251,7 +251,7 @@ export function VariantEditor({
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="add-name">
-                    Name <span className="text-red-500">*</span>
+                    Name <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="add-name"
@@ -267,7 +267,7 @@ export function VariantEditor({
 
                 <div className="space-y-2">
                   <Label htmlFor="add-type">
-                    Type <span className="text-red-500">*</span>
+                    Type <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={formData.type}
@@ -291,7 +291,7 @@ export function VariantEditor({
                 <div className="space-y-2">
                   <Label htmlFor="add-price">Price Override (optional)</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                       $
                     </span>
                     <Input
@@ -303,7 +303,7 @@ export function VariantEditor({
                       className="pl-7"
                     />
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     Override the base product price for this variant
                   </p>
                 </div>
@@ -319,7 +319,7 @@ export function VariantEditor({
                     }
                     placeholder="e.g., SAL-MLD-16OZ"
                   />
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     Leave empty to use parent product SKU
                   </p>
                 </div>
@@ -343,8 +343,8 @@ export function VariantEditor({
                 </div>
 
                 {error && (
-                  <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-                    <p className="text-sm text-red-800">{error}</p>
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+                    <p className="text-sm text-destructive">{error}</p>
                   </div>
                 )}
               </div>
@@ -370,8 +370,8 @@ export function VariantEditor({
       </div>
 
       {variants.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center">
-          <p className="text-sm text-slate-600">
+        <div className="rounded-lg border border-dashed border-input p-8 text-center">
+          <p className="text-sm text-muted-foreground">
             No variants yet. Click &quot;Add Variant&quot; to create one.
           </p>
         </div>
@@ -396,20 +396,20 @@ export function VariantEditor({
                   <TableCell>
                     {variant.price != null ? (
                       <span className="flex items-center gap-1">
-                        <DollarSign className="h-3 w-3 text-slate-500" />
+                        <DollarSign className="h-3 w-3 text-muted-foreground" />
                         {variant.price.toFixed(2)}
                       </span>
                     ) : (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell>
                     {variant.sku ? (
-                      <code className="rounded bg-slate-100 px-2 py-1 text-xs">
+                      <code className="rounded bg-muted px-2 py-1 text-xs">
                         {variant.sku}
                       </code>
                     ) : (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -417,7 +417,7 @@ export function VariantEditor({
                       variant={variant.inStock ? 'default' : 'destructive'}
                       className={
                         variant.inStock
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-primary/10 text-primary'
                           : undefined
                       }
                     >
@@ -438,7 +438,7 @@ export function VariantEditor({
                         size="sm"
                         onClick={() => handleDeleteClick(variant)}
                       >
-                        <Trash2 className="h-4 w-4 text-red-600" />
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </TableCell>
@@ -462,7 +462,7 @@ export function VariantEditor({
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-name">
-                  Name <span className="text-red-500">*</span>
+                  Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="edit-name"
@@ -478,7 +478,7 @@ export function VariantEditor({
 
               <div className="space-y-2">
                 <Label htmlFor="edit-type">
-                  Type <span className="text-red-500">*</span>
+                  Type <span className="text-destructive">*</span>
                 </Label>
                 <Select
                   value={formData.type}
@@ -502,7 +502,7 @@ export function VariantEditor({
               <div className="space-y-2">
                 <Label htmlFor="edit-price">Price Override (optional)</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                     $
                   </span>
                   <Input
@@ -548,8 +548,8 @@ export function VariantEditor({
               </div>
 
               {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-                  <p className="text-sm text-red-800">{error}</p>
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+                  <p className="text-sm text-destructive">{error}</p>
                 </div>
               )}
             </div>
@@ -585,8 +585,8 @@ export function VariantEditor({
             </DialogDescription>
           </DialogHeader>
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+              <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
           <DialogFooter>

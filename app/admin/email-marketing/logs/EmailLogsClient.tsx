@@ -47,14 +47,16 @@ interface LogsResponse {
   totalPages: number
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800',
-  SENDING: 'bg-blue-100 text-blue-800',
-  SENT: 'bg-green-100 text-green-800',
-  FAILED: 'bg-red-100 text-red-800',
-  BOUNCED: 'bg-orange-100 text-orange-800',
-  OPENED: 'bg-purple-100 text-purple-800',
-  CLICKED: 'bg-indigo-100 text-indigo-800',
+type StatusVariant = 'default' | 'secondary' | 'destructive' | 'outline'
+
+const STATUS_VARIANT: Record<string, StatusVariant> = {
+  PENDING: 'outline',
+  SENDING: 'secondary',
+  SENT: 'default',
+  FAILED: 'destructive',
+  BOUNCED: 'destructive',
+  OPENED: 'secondary',
+  CLICKED: 'secondary',
 }
 
 const STATUS_ICONS: Record<string, React.ReactNode> = {
@@ -214,8 +216,8 @@ export function EmailLogsClient() {
                       </TableCell>
                       <TableCell>
                         <Badge
-                          className={`gap-1 text-xs ${STATUS_COLORS[log.status] || 'bg-gray-100 text-gray-800'}`}
-                          variant="secondary"
+                          className="gap-1 text-xs"
+                          variant={STATUS_VARIANT[log.status] ?? 'outline'}
                         >
                           {STATUS_ICONS[log.status]}
                           {log.status}
@@ -232,7 +234,7 @@ export function EmailLogsClient() {
                       </TableCell>
                       <TableCell className="max-w-[160px]">
                         {log.errorMessage ? (
-                          <p className="text-xs text-red-600 truncate" title={log.errorMessage}>
+                          <p className="text-xs text-destructive truncate" title={log.errorMessage}>
                             {log.errorMessage}
                           </p>
                         ) : (

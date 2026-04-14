@@ -76,8 +76,8 @@ async function getParticipantWithDetails(participantId: string, fundraiserId: st
 }
 
 const statusColors: Record<FundraiserParticipantStatus, string> = {
-  ACTIVE: 'bg-green-100 text-green-800',
-  INACTIVE: 'bg-slate-100 text-slate-800',
+  ACTIVE: 'bg-primary/10 text-primary',
+  INACTIVE: 'bg-muted text-foreground',
 }
 
 export default async function ParticipantDetailPage({
@@ -118,7 +118,7 @@ export default async function ParticipantDetailPage({
               {participant.status}
             </Badge>
           </div>
-          <p className="mt-1 text-slate-600">
+          <p className="mt-1 text-muted-foreground">
             {participant.fundraiser.name} - {participant.fundraiser.organizationName}
           </p>
         </div>
@@ -136,18 +136,18 @@ export default async function ParticipantDetailPage({
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <DollarSign className="h-8 w-8 text-green-600" />
+            <DollarSign className="h-8 w-8 text-primary" />
             <div>
-              <p className="text-sm text-slate-600">Total Revenue</p>
+              <p className="text-sm text-muted-foreground">Total Revenue</p>
               <p className="text-2xl font-bold">${Number(participant.totalRevenue).toFixed(2)}</p>
             </div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <TrendingUp className="h-8 w-8 text-blue-600" />
+            <TrendingUp className="h-8 w-8 text-primary" />
             <div>
-              <p className="text-sm text-slate-600">Total Commission</p>
+              <p className="text-sm text-muted-foreground">Total Commission</p>
               <p className="text-2xl font-bold">${Number(participant.totalCommission).toFixed(2)}</p>
             </div>
           </div>
@@ -156,7 +156,7 @@ export default async function ParticipantDetailPage({
           <div className="flex items-center gap-3">
             <ShoppingCart className="h-8 w-8 text-purple-600" />
             <div>
-              <p className="text-sm text-slate-600">Total Orders</p>
+              <p className="text-sm text-muted-foreground">Total Orders</p>
               <p className="text-2xl font-bold">{participant.totalOrders}</p>
             </div>
           </div>
@@ -165,7 +165,7 @@ export default async function ParticipantDetailPage({
           <div className="flex items-center gap-3">
             <Package className="h-8 w-8 text-orange-600" />
             <div>
-              <p className="text-sm text-slate-600">Avg Order Value</p>
+              <p className="text-sm text-muted-foreground">Avg Order Value</p>
               <p className="text-2xl font-bold">
                 ${participant.totalOrders > 0
                   ? (Number(participant.totalRevenue) / participant.totalOrders).toFixed(2)
@@ -191,32 +191,32 @@ export default async function ParticipantDetailPage({
               <h3 className="mb-4 text-lg font-semibold">Contact Information</h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-2">
-                  <User className="mt-0.5 h-4 w-4 text-slate-400" />
+                  <User className="mt-0.5 h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-slate-600">Name</p>
+                    <p className="text-sm text-muted-foreground">Name</p>
                     <p className="font-medium">{participant.name}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
-                  <Mail className="mt-0.5 h-4 w-4 text-slate-400" />
+                  <Mail className="mt-0.5 h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-slate-600">Email</p>
+                    <p className="text-sm text-muted-foreground">Email</p>
                     <p className="font-medium">{participant.email}</p>
                   </div>
                 </div>
                 {participant.phone && (
                   <div className="flex items-start gap-2">
-                    <Phone className="mt-0.5 h-4 w-4 text-slate-400" />
+                    <Phone className="mt-0.5 h-4 w-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-slate-600">Phone</p>
+                      <p className="text-sm text-muted-foreground">Phone</p>
                       <p className="font-medium">{participant.phone}</p>
                     </div>
                   </div>
                 )}
                 <div className="flex items-start gap-2">
-                  <Calendar className="mt-0.5 h-4 w-4 text-slate-400" />
+                  <Calendar className="mt-0.5 h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-slate-600">Joined</p>
+                    <p className="text-sm text-muted-foreground">Joined</p>
                     <p className="font-medium">
                       {format(new Date(participant.createdAt), 'MMM d, yyyy')}
                     </p>
@@ -242,14 +242,14 @@ export default async function ParticipantDetailPage({
           <Card className="p-6">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold">Sales History</h3>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-muted-foreground">
                 {orders.length} {orders.length === 1 ? 'order' : 'orders'}
               </p>
             </div>
 
             {orders.length === 0 ? (
-              <div className="py-8 text-center text-slate-500">
-                <Package className="mx-auto mb-2 h-12 w-12 text-slate-300" />
+              <div className="py-8 text-center text-muted-foreground">
+                <Package className="mx-auto mb-2 h-12 w-12 text-muted-foreground/60" />
                 <p>No orders yet</p>
               </div>
             ) : (
@@ -257,7 +257,7 @@ export default async function ParticipantDetailPage({
                 {orders.map((order) => (
                   <div
                     key={order.id}
-                    className="flex items-start justify-between rounded-lg border p-4 hover:bg-slate-50"
+                    className="flex items-start justify-between rounded-lg border p-4 hover:bg-muted/50"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
@@ -271,12 +271,12 @@ export default async function ParticipantDetailPage({
                           {order.status}
                         </Badge>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {format(new Date(order.createdAt), 'MMM d, yyyy h:mm a')}
                       </p>
                       <div className="mt-2 space-y-1">
                         {order.items.map((item: { quantity: number; totalPrice: import('@prisma/client').Prisma.Decimal; product: { name: string } }, idx: number) => (
-                          <p key={idx} className="text-sm text-slate-600">
+                          <p key={idx} className="text-sm text-muted-foreground">
                             {item.quantity}x {item.product.name} @ ${Number(item.totalPrice).toFixed(2)}
                           </p>
                         ))}

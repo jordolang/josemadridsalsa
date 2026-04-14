@@ -7,6 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Trash2, Users, Upload } from 'lucide-react'
 import {
   Dialog,
@@ -111,27 +119,27 @@ export function ListsTable({ lists }: { lists: ListWithStats[] }) {
         </div>
       ) : (
         <div className="rounded-md border">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-muted/50">
-              <tr>
-                <th className="p-4 text-left font-medium">Name</th>
-                <th className="p-4 text-left font-medium">Description</th>
-                <th className="p-4 text-left font-medium">Active Subscribers</th>
-                <th className="p-4 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Active Subscribers</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {lists.map((list) => (
-                <tr key={list.id} className="border-b last:border-0 hover:bg-muted/50">
-                  <td className="p-4 font-medium">{list.name}</td>
-                  <td className="p-4 text-muted-foreground">{list.description || '-'}</td>
-                  <td className="p-4">
+                <TableRow key={list.id}>
+                  <TableCell className="font-medium">{list.name}</TableCell>
+                  <TableCell className="text-muted-foreground">{list.description || '-'}</TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
                       {list._count.subscribers}
                     </div>
-                  </td>
-                  <td className="p-4 text-right">
+                  </TableCell>
+                  <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button variant="outline" size="sm" asChild>
                         <Link href={`/admin/communications/lists/${list.id}`}>
@@ -149,11 +157,11 @@ export function ListsTable({ lists }: { lists: ListWithStats[] }) {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

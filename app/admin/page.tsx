@@ -198,19 +198,19 @@ export default async function AdminDashboard() {
 
     // Map order status data
     const statusColorMap: Record<string, { color: string; bgColor: string }> = {
-      PENDING: { color: 'bg-amber-500', bgColor: 'bg-amber-50 text-amber-700' },
-      PROCESSING: { color: 'bg-blue-500', bgColor: 'bg-blue-50 text-blue-700' },
+      PENDING: { color: 'bg-amber-500', bgColor: 'bg-muted text-muted-foreground' },
+      PROCESSING: { color: 'bg-primary', bgColor: 'bg-primary/5 text-primary' },
       SHIPPED: { color: 'bg-purple-500', bgColor: 'bg-purple-50 text-purple-700' },
-      DELIVERED: { color: 'bg-emerald-500', bgColor: 'bg-emerald-50 text-emerald-700' },
-      CANCELLED: { color: 'bg-red-500', bgColor: 'bg-red-50 text-red-700' },
-      REFUNDED: { color: 'bg-slate-500', bgColor: 'bg-slate-50 text-slate-700' },
+      DELIVERED: { color: 'bg-emerald-500', bgColor: 'bg-primary/5 text-primary' },
+      CANCELLED: { color: 'bg-destructive', bgColor: 'bg-destructive/10 text-destructive' },
+      REFUNDED: { color: 'bg-muted/500', bgColor: 'bg-muted/50 text-foreground' },
     }
 
     const orderStatusData = stats.ordersByStatus.map((s) => ({
       status: s.status.charAt(0) + s.status.slice(1).toLowerCase(),
       count: s.count,
-      color: statusColorMap[s.status]?.color ?? 'bg-slate-500',
-      bgColor: statusColorMap[s.status]?.bgColor ?? 'bg-slate-50 text-slate-700',
+      color: statusColorMap[s.status]?.color ?? 'bg-muted/500',
+      bgColor: statusColorMap[s.status]?.bgColor ?? 'bg-muted/50 text-foreground',
     }))
 
     // Map low stock inventory items

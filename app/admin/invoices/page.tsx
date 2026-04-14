@@ -6,6 +6,14 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { formatPrice } from '@/lib/utils'
 import { Search } from 'lucide-react'
 
@@ -24,12 +32,12 @@ const STATUS_OPTIONS = [
   { value: 'CANCELLED', label: 'Cancelled' },
 ]
 
-const statusClasses: Record<string, string> = {
-  DRAFT: 'bg-slate-100 text-slate-700',
-  SENT: 'bg-blue-100 text-blue-700',
-  PAID: 'bg-emerald-100 text-emerald-700',
-  OVERDUE: 'bg-red-100 text-red-700',
-  CANCELLED: 'bg-slate-200 text-slate-500',
+const statusVariants: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  DRAFT: 'outline',
+  SENT: 'secondary',
+  PAID: 'default',
+  OVERDUE: 'destructive',
+  CANCELLED: 'outline',
 }
 
 function parseLineCount(lines: any): number {
@@ -111,7 +119,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Invoices</h1>
-          <p className="text-slate-600">
+          <p className="text-muted-foreground">
             Manage billing records, outstanding balances, and payment tracking.
           </p>
         </div>
@@ -123,14 +131,14 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {STATUS_OPTIONS.filter((option) => option.value !== 'ALL').map((option) => (
           <Card key={option.value} className="px-4 py-3">
-            <p className="text-xs uppercase text-slate-500">{option.label}</p>
+            <p className="text-xs uppercase text-muted-foreground">{option.label}</p>
             <p
               className={`mt-2 text-xl font-semibold ${
                 option.value === 'PAID'
-                  ? 'text-emerald-600'
+                  ? 'text-primary'
                   : option.value === 'OVERDUE'
-                  ? 'text-red-600'
-                  : 'text-slate-800'
+                  ? 'text-destructive'
+                  : 'text-foreground'
               }`}
             >
               {(statusSummary[option.value] || 0).toLocaleString()}
@@ -142,7 +150,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       <Card className="p-4">
         <form className="flex flex-col gap-4 sm:flex-row" method="get">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               name="q"
@@ -177,8 +185,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                 href={href}
                 className={`rounded-full px-3 py-1 text-sm font-medium ${
                   isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? 'bg-primary text-white'
+                    : 'bg-muted text-muted-foreground hover:bg-muted'
                 }`}
               >
                 {option.label}
@@ -190,71 +198,68 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
 
       <Card>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px]">
-            <thead className="border-b bg-slate-50 text-sm text-slate-600">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Invoice</th>
-                <th className="px-4 py-3 text-left font-medium">Customer</th>
-                <th className="px-4 py-3 text-left font-medium">Due Date</th>
-                <th className="px-4 py-3 text-left font-medium">Items</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-right font-medium">Total</th>
-                <th className="px-4 py-3 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm">
+          <Table className="min-w-[720px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Invoice</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Due Date</TableHead>
+                <TableHead>Items</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {invoices.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                <TableRow>
+                  <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
                     No invoices found for this filter.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 invoices.map((invoice) => {
                   const lineCount = parseLineCount(invoice.lines)
                   return (
-                    <tr key={invoice.id} className="border-b last:border-0">
-                      <td className="px-4 py-4">
+                    <TableRow key={invoice.id}>
+                      <TableCell>
                         <div>
-                          <p className="font-medium text-slate-900">{invoice.number}</p>
-                          <p className="text-xs text-slate-500">
+                          <p className="font-medium text-foreground">{invoice.number}</p>
+                          <p className="text-xs text-muted-foreground">
                             Created {invoice.createdAt.toLocaleDateString()}
                           </p>
                         </div>
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {invoice.customerId || '—'}
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {invoice.dueDate.toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-4 text-slate-600">{lineCount}</td>
-                      <td className="px-4 py-4">
-                        <Badge className={statusClasses[invoice.status] || 'bg-slate-100 text-slate-600'}>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{lineCount}</TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariants[invoice.status] || 'outline'}>
                           {invoice.status}
                         </Badge>
-                      </td>
-                      <td className="px-4 py-4 text-right font-semibold text-slate-900">
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-foreground">
                         {formatPrice(Number(invoice.total || 0))}
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <Link
-                          href={`/admin/invoices/${invoice.id}`}
-                          className="text-sm font-medium text-blue-600 hover:underline"
-                        >
-                          View
-                        </Link>
-                      </td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="link" size="sm" asChild className="h-auto p-0">
+                          <Link href={`/admin/invoices/${invoice.id}`}>View</Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   )
                 })
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t px-6 py-4 text-sm text-slate-600">
+          <div className="flex items-center justify-between border-t px-6 py-4 text-sm text-muted-foreground">
             <span>
               Page {page} of {totalPages}
             </span>
@@ -265,8 +270,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                 }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
                 className={`rounded-md border px-3 py-1 ${
                   page === 1
-                    ? 'pointer-events-none border-slate-200 text-slate-300'
-                    : 'border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
+                    ? 'pointer-events-none border-border text-muted-foreground/60'
+                    : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
                 }`}
               >
                 Previous
@@ -277,8 +282,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                 }${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}
                 className={`rounded-md border px-3 py-1 ${
                   page === totalPages
-                    ? 'pointer-events-none border-slate-200 text-slate-300'
-                    : 'border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
+                    ? 'pointer-events-none border-border text-muted-foreground/60'
+                    : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
                 }`}
               >
                 Next

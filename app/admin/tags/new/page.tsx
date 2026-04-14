@@ -21,7 +21,7 @@ export default async function NewTagPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Add Tag</h1>
-        <p className="text-slate-600">Create a new tag for organizing content</p>
+        <p className="text-muted-foreground">Create a new tag for organizing content</p>
       </div>
 
       <TagForm />

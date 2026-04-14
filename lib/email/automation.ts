@@ -121,7 +121,7 @@ export async function sendOrderConfirmationEmail(orderId: string) {
     to: recipientEmail,
     subject: `Order Confirmation #${order.orderNumber}`,
     react: emailContent,
-    replyTo: 'orders@josemadridsalsa.com',
+    replyTo: 'mike@josemadrid.net',
     type: 'order-confirmation',
     orderId: order.id,
     userId: order.userId ?? undefined,

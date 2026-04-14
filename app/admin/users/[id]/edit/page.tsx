@@ -11,7 +11,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <User className="h-8 w-8 text-blue-600" />
+        <User className="h-8 w-8 text-primary" />
         <h1 className="text-3xl font-bold">Edit User</h1>
       </div>
       <UserForm user={user} />

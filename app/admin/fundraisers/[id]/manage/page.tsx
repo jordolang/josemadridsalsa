@@ -119,7 +119,7 @@ export default async function FundraiserManagePage({
   }))
 
   return (
-    <div className="p-6 min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+    <div className="p-6 min-h-screen bg-gradient-to-br from-background to-muted/40">
       <FundraiserManageClient fundraiser={fundraiser} allProducts={allProducts} />
     </div>
   )

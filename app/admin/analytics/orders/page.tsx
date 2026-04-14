@@ -132,22 +132,22 @@ export default async function OrderAnalyticsPage(props: {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Order Analytics</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-foreground">Order Analytics</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Revenue, order volume, and trends
           </p>
         </div>
         <div className="flex items-center gap-3">
           {/* Date range selector */}
-          <div className="flex rounded-lg border border-slate-200 bg-white">
+          <div className="flex rounded-lg border border-border bg-card">
             {RANGE_OPTIONS.map((option) => (
               <Link
                 key={option.value}
                 href={`/admin/analytics/orders?range=${option.value}`}
                 className={`px-3 py-1.5 text-sm font-medium transition-colors first:rounded-l-lg last:rounded-r-lg ${
                   range === option.value
-                    ? 'bg-slate-900 text-white'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'bg-foreground text-background'
+                    : 'text-muted-foreground hover:bg-muted/50'
                 }`}
               >
                 {option.label}
@@ -192,7 +192,7 @@ export default async function OrderAnalyticsPage(props: {
       {/* Order status breakdown */}
       {data.statusCounts.length > 0 && (
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">
+          <h2 className="text-lg font-semibold text-foreground mb-4">
             Order Status Breakdown
           </h2>
           <div className="space-y-3">
@@ -201,16 +201,16 @@ export default async function OrderAnalyticsPage(props: {
               const pct = total === 0 ? 0 : (item.count / total) * 100
               return (
                 <div key={item.status} className="flex items-center gap-3">
-                  <span className="w-32 text-sm font-medium text-slate-700 capitalize">
+                  <span className="w-32 text-sm font-medium text-foreground capitalize">
                     {item.status.toLowerCase().replace('_', ' ')}
                   </span>
-                  <div className="flex-1 h-2 rounded-full bg-slate-100">
+                  <div className="flex-1 h-2 rounded-full bg-muted">
                     <div
-                      className="h-2 rounded-full bg-slate-600 transition-all"
+                      className="h-2 rounded-full bg-muted-foreground transition-all"
                       style={{ width: `${Math.max(pct, item.count > 0 ? 2 : 0)}%` }}
                     />
                   </div>
-                  <span className="w-12 text-right text-sm text-slate-600">
+                  <span className="w-12 text-right text-sm text-muted-foreground">
                     {item.count}
                   </span>
                 </div>

@@ -5,6 +5,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Eye, EyeOff, CheckCircle2, AlertCircle, Shield, User, Phone, Lock } from 'lucide-react'
 
 type ProfileData = {
@@ -26,30 +30,32 @@ type FieldErrors = {
   confirmPassword?: string
 }
 
-const roleColors: Record<string, string> = {
-  ADMIN: 'bg-red-100 text-red-700',
-  DEVELOPER: 'bg-purple-100 text-purple-700',
-  STAFF: 'bg-blue-100 text-blue-700',
-  WHOLESALE: 'bg-amber-100 text-amber-700',
-  CUSTOMER: 'bg-gray-100 text-gray-700',
+const roleVariant = (
+  role: string,
+): 'default' | 'secondary' | 'outline' | 'destructive' => {
+  switch (role) {
+    case 'ADMIN':
+      return 'destructive'
+    case 'DEVELOPER':
+    case 'STAFF':
+      return 'default'
+    case 'WHOLESALE':
+      return 'secondary'
+    default:
+      return 'outline'
+  }
 }
 
 function SaveBanner({ message, isError }: { message: string; isError: boolean }) {
   return (
-    <div
-      className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
-        isError
-          ? 'bg-red-50 text-red-700'
-          : 'bg-emerald-50 text-emerald-700'
-      }`}
-    >
+    <Alert variant={isError ? 'destructive' : 'default'} className="py-2">
       {isError ? (
-        <AlertCircle className="h-4 w-4 shrink-0" />
+        <AlertCircle className="h-4 w-4" />
       ) : (
-        <CheckCircle2 className="h-4 w-4 shrink-0" />
+        <CheckCircle2 className="h-4 w-4" />
       )}
-      {message}
-    </div>
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   )
 }
 
@@ -185,17 +191,21 @@ export default function AdminProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+      <div className="max-w-3xl space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-80 w-full" />
       </div>
     )
   }
 
   if (!profile) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-slate-500">Failed to load profile.</p>
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>Failed to load profile.</AlertDescription>
+      </Alert>
     )
   }
 
@@ -219,265 +229,281 @@ export default function AdminProfilePage() {
     <div className="max-w-3xl space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">My Profile</h1>
-        <p className="mt-1 text-slate-600">
+        <h1 className="text-3xl font-bold text-foreground">My Profile</h1>
+        <p className="mt-1 text-muted-foreground">
           Manage your account information and security settings.
         </p>
       </div>
 
       {/* Account overview card */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            {/* Avatar circle */}
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-salsa-400 to-salsa-600 text-2xl font-bold text-white shadow-sm">
-              {(profile.name || profile.email).charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-slate-900">
-                {profile.name || '(no name set)'}
-              </p>
-              <p className="text-sm text-slate-500">{profile.email}</p>
-              <div className="mt-1 flex items-center gap-2">
-                <Badge className={`text-xs ${roleColors[profile.role] || 'bg-gray-100 text-gray-700'}`}>
-                  {profile.role}
-                </Badge>
-                {profile.isEmailVerified && (
-                  <Badge className="bg-emerald-100 text-xs text-emerald-700">
-                    Email verified
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarFallback className="bg-primary text-primary-foreground text-xl font-bold">
+                  {(profile.name || profile.email).charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-lg font-semibold text-foreground">
+                  {profile.name || '(no name set)'}
+                </p>
+                <p className="text-sm text-muted-foreground">{profile.email}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <Badge variant={roleVariant(profile.role)}>
+                    {profile.role}
                   </Badge>
+                  {profile.isEmailVerified && (
+                    <Badge variant="secondary">Email verified</Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-1 text-right text-xs text-muted-foreground">
+              <p>Member since {memberSince}</p>
+              <p>Last login: {lastLogin}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Personal info form */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5 text-muted-foreground" />
+            Personal Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleProfileSave} className="space-y-5">
+            <div className="grid gap-5 sm:grid-cols-2">
+              {/* Name */}
+              <div className="space-y-1.5">
+                <Label htmlFor="name">Full name</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value)
+                    setProfileErrors((prev) => ({ ...prev, name: undefined }))
+                  }}
+                  placeholder="Your full name"
+                  aria-invalid={!!profileErrors.name}
+                  className={profileErrors.name ? 'border-destructive focus-visible:ring-destructive' : ''}
+                />
+                {profileErrors.name && (
+                  <p className="text-xs text-destructive">{profileErrors.name}</p>
+                )}
+              </div>
+
+              {/* Email (read-only) */}
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email address</Label>
+                <Input
+                  id="email"
+                  value={profile.email}
+                  readOnly
+                  disabled
+                />
+                <p className="text-xs text-muted-foreground">
+                  Email changes are handled by an administrator.
+                </p>
+              </div>
+
+              {/* Phone */}
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="phone" className="flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                  Phone number
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="(555) 555-5555"
+                  className="max-w-xs"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
+              <Button type="submit" disabled={profileSaving}>
+                {profileSaving ? 'Saving…' : 'Save changes'}
+              </Button>
+              {profileMsg && <SaveBanner message={profileMsg.text} isError={profileMsg.error} />}
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Password form */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lock className="h-5 w-5 text-muted-foreground" />
+            Change Password
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handlePasswordSave} className="space-y-5">
+            <div className="max-w-sm space-y-4">
+              {/* Current password */}
+              <div className="space-y-1.5">
+                <Label htmlFor="currentPassword">Current password</Label>
+                <div className="relative">
+                  <Input
+                    id="currentPassword"
+                    type={showCurrent ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => {
+                      setCurrentPassword(e.target.value)
+                      setPasswordErrors((prev) => ({ ...prev, currentPassword: undefined }))
+                    }}
+                    placeholder="••••••••"
+                    aria-invalid={!!passwordErrors.currentPassword}
+                    className={`pr-10 ${passwordErrors.currentPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowCurrent((v) => !v)}
+                    className="absolute inset-y-0 right-0 h-full w-10 text-muted-foreground hover:bg-transparent"
+                    tabIndex={-1}
+                  >
+                    {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    <span className="sr-only">
+                      {showCurrent ? 'Hide password' : 'Show password'}
+                    </span>
+                  </Button>
+                </div>
+                {passwordErrors.currentPassword && (
+                  <p className="text-xs text-destructive">{passwordErrors.currentPassword}</p>
+                )}
+              </div>
+
+              {/* New password */}
+              <div className="space-y-1.5">
+                <Label htmlFor="newPassword">New password</Label>
+                <div className="relative">
+                  <Input
+                    id="newPassword"
+                    type={showNew ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value)
+                      setPasswordErrors((prev) => ({ ...prev, newPassword: undefined }))
+                    }}
+                    placeholder="Min 8 characters"
+                    aria-invalid={!!passwordErrors.newPassword}
+                    className={`pr-10 ${passwordErrors.newPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowNew((v) => !v)}
+                    className="absolute inset-y-0 right-0 h-full w-10 text-muted-foreground hover:bg-transparent"
+                    tabIndex={-1}
+                  >
+                    {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    <span className="sr-only">
+                      {showNew ? 'Hide password' : 'Show password'}
+                    </span>
+                  </Button>
+                </div>
+                {passwordErrors.newPassword && (
+                  <p className="text-xs text-destructive">{passwordErrors.newPassword}</p>
+                )}
+                {/* Strength hint */}
+                {newPassword.length > 0 && (
+                  <div className="flex gap-1 pt-0.5">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div
+                        key={i}
+                        className={`h-1 flex-1 rounded-full transition-colors ${
+                          newPassword.length >= i * 4 ? 'bg-primary' : 'bg-muted'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm password */}
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword">Confirm new password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirm ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value)
+                      setPasswordErrors((prev) => ({ ...prev, confirmPassword: undefined }))
+                    }}
+                    placeholder="••••••••"
+                    aria-invalid={!!passwordErrors.confirmPassword}
+                    className={`pr-10 ${passwordErrors.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    className="absolute inset-y-0 right-0 h-full w-10 text-muted-foreground hover:bg-transparent"
+                    tabIndex={-1}
+                  >
+                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    <span className="sr-only">
+                      {showConfirm ? 'Hide password' : 'Show password'}
+                    </span>
+                  </Button>
+                </div>
+                {passwordErrors.confirmPassword && (
+                  <p className="text-xs text-destructive">{passwordErrors.confirmPassword}</p>
                 )}
               </div>
             </div>
-          </div>
-          <div className="space-y-1 text-right text-xs text-slate-500">
-            <p>Member since {memberSince}</p>
-            <p>Last login: {lastLogin}</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Personal info form */}
-      <form onSubmit={handleProfileSave} className="rounded-xl border border-slate-200 bg-white p-6 space-y-5">
-        <div className="flex items-center gap-2">
-          <User className="h-5 w-5 text-slate-400" />
-          <h2 className="text-lg font-semibold text-slate-900">Personal Information</h2>
-        </div>
-
-        <div className="grid gap-5 sm:grid-cols-2">
-          {/* Name */}
-          <div className="space-y-1.5">
-            <Label htmlFor="name">Full name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value)
-                setProfileErrors((prev) => ({ ...prev, name: undefined }))
-              }}
-              placeholder="Your full name"
-              className={profileErrors.name ? 'border-red-400 focus-visible:ring-red-400' : ''}
-            />
-            {profileErrors.name && (
-              <p className="text-xs text-red-600">{profileErrors.name}</p>
-            )}
-          </div>
-
-          {/* Email (read-only) */}
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email address</Label>
-            <Input
-              id="email"
-              value={profile.email}
-              readOnly
-              disabled
-              className="bg-slate-50 text-slate-500 cursor-not-allowed"
-            />
-            <p className="text-xs text-slate-400">
-              Email changes are handled by an administrator.
-            </p>
-          </div>
-
-          {/* Phone */}
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="phone" className="flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5 text-slate-400" />
-              Phone number
-            </Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="(555) 555-5555"
-              className="max-w-xs"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 pt-1">
-          <Button
-            type="submit"
-            disabled={profileSaving}
-            className="bg-salsa-500 hover:bg-salsa-600 text-white"
-          >
-            {profileSaving ? 'Saving…' : 'Save changes'}
-          </Button>
-          {profileMsg && <SaveBanner message={profileMsg.text} isError={profileMsg.error} />}
-        </div>
-      </form>
-
-      {/* Password form */}
-      <form onSubmit={handlePasswordSave} className="rounded-xl border border-slate-200 bg-white p-6 space-y-5">
-        <div className="flex items-center gap-2">
-          <Lock className="h-5 w-5 text-slate-400" />
-          <h2 className="text-lg font-semibold text-slate-900">Change Password</h2>
-        </div>
-
-        <div className="max-w-sm space-y-4">
-          {/* Current password */}
-          <div className="space-y-1.5">
-            <Label htmlFor="currentPassword">Current password</Label>
-            <div className="relative">
-              <Input
-                id="currentPassword"
-                type={showCurrent ? 'text' : 'password'}
-                value={currentPassword}
-                onChange={(e) => {
-                  setCurrentPassword(e.target.value)
-                  setPasswordErrors((prev) => ({ ...prev, currentPassword: undefined }))
-                }}
-                placeholder="••••••••"
-                className={`pr-10 ${passwordErrors.currentPassword ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowCurrent((v) => !v)}
-                className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
-                tabIndex={-1}
-              >
-                {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+            <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
+              <Button type="submit" disabled={passwordSaving} variant="outline">
+                {passwordSaving ? 'Updating…' : 'Update password'}
+              </Button>
+              {passwordMsg && <SaveBanner message={passwordMsg.text} isError={passwordMsg.error} />}
             </div>
-            {passwordErrors.currentPassword && (
-              <p className="text-xs text-red-600">{passwordErrors.currentPassword}</p>
-            )}
-          </div>
-
-          {/* New password */}
-          <div className="space-y-1.5">
-            <Label htmlFor="newPassword">New password</Label>
-            <div className="relative">
-              <Input
-                id="newPassword"
-                type={showNew ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => {
-                  setNewPassword(e.target.value)
-                  setPasswordErrors((prev) => ({ ...prev, newPassword: undefined }))
-                }}
-                placeholder="Min 8 characters"
-                className={`pr-10 ${passwordErrors.newPassword ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowNew((v) => !v)}
-                className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
-                tabIndex={-1}
-              >
-                {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            {passwordErrors.newPassword && (
-              <p className="text-xs text-red-600">{passwordErrors.newPassword}</p>
-            )}
-            {/* Strength hint */}
-            {newPassword.length > 0 && (
-              <div className="flex gap-1 pt-0.5">
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className={`h-1 flex-1 rounded-full transition-colors ${
-                      newPassword.length >= i * 4
-                        ? i <= 1
-                          ? 'bg-red-400'
-                          : i <= 2
-                          ? 'bg-amber-400'
-                          : i <= 3
-                          ? 'bg-yellow-400'
-                          : 'bg-emerald-500'
-                        : 'bg-slate-200'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Confirm password */}
-          <div className="space-y-1.5">
-            <Label htmlFor="confirmPassword">Confirm new password</Label>
-            <div className="relative">
-              <Input
-                id="confirmPassword"
-                type={showConfirm ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => {
-                  setConfirmPassword(e.target.value)
-                  setPasswordErrors((prev) => ({ ...prev, confirmPassword: undefined }))
-                }}
-                placeholder="••••••••"
-                className={`pr-10 ${passwordErrors.confirmPassword ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirm((v) => !v)}
-                className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
-                tabIndex={-1}
-              >
-                {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            {passwordErrors.confirmPassword && (
-              <p className="text-xs text-red-600">{passwordErrors.confirmPassword}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 pt-1">
-          <Button
-            type="submit"
-            disabled={passwordSaving}
-            variant="outline"
-            className="border-slate-300"
-          >
-            {passwordSaving ? 'Updating…' : 'Update password'}
-          </Button>
-          {passwordMsg && <SaveBanner message={passwordMsg.text} isError={passwordMsg.error} />}
-        </div>
-      </form>
+          </form>
+        </CardContent>
+      </Card>
 
       {/* Security info card */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-6">
-        <div className="flex items-center gap-2 mb-3">
-          <Shield className="h-5 w-5 text-slate-400" />
-          <h2 className="text-base font-semibold text-slate-700">Security notes</h2>
-        </div>
-        <ul className="space-y-2 text-sm text-slate-600">
-          <li className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-            Your password is stored using bcrypt with a 12-round salt — never in plaintext.
-          </li>
-          <li className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-            All profile changes are recorded in the audit log.
-          </li>
-          <li className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-            Role and email changes require an administrator.
-          </li>
-        </ul>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Shield className="h-5 w-5 text-muted-foreground" />
+            Security notes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              Your password is stored using bcrypt with a 12-round salt — never in plaintext.
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              All profile changes are recorded in the audit log.
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              Role and email changes require an administrator.
+            </li>
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   )
 }

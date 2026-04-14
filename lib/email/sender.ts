@@ -8,7 +8,9 @@ import { prisma } from '@/lib/prisma'
 import nodemailer from 'nodemailer'
 import { decrypt, isEncrypted } from '@/lib/encryption'
 
-const resendApiKey = process.env.RESEND_API_KEY
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null
 
 interface SendEmailOptions {
   to: string
@@ -97,80 +99,65 @@ async function getSMTPTransporter(configId?: string) {
 }
 
 /**
- * Send a single email using Resend or SMTP
+ * Send a single email using Resend (primary) with SMTP fallback
  */
 export async function sendEmail(
   options: SendEmailOptions,
   configId?: string
 ): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  const defaultFrom =
+    process.env.FROM_EMAIL || 'Jose Madrid Salsa <mike@josemadrid.net>'
+
+  // Primary: Resend API
+  if (resend) {
+    const { data, error } = await resend.emails.send({
+      from: options.from || defaultFrom,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+      text: options.text,
+      ...(options.replyTo ? { replyTo: options.replyTo } : {}),
+    })
+
+    if (!error) {
+      return { success: true, messageId: data?.id }
+    }
+
+    console.error('Resend send failed, attempting SMTP fallback:', error.message)
+  }
+
+  // Fallback: SMTP (if configured)
   try {
-    // Try SMTP first if configured
     const smtpConfig = await getSMTPTransporter(configId)
-    
-    if (smtpConfig) {
-      const { transporter, config } = smtpConfig
-      
-      try {
-        const replyTo = options.replyTo ?? config.replyToEmail ?? undefined
-        const info = (await transporter.sendMail({
-          from: options.from || `${config.fromName || 'Jose Madrid Salsa'} <${config.fromEmail}>`,
-          to: options.to,
-          replyTo,
-          subject: options.subject,
-          html: options.html,
-          text: options.text,
-        })) as nodemailer.SentMessageInfo
-        
-        return {
-          success: true,
-          messageId: info.messageId,
-        }
-      } catch (smtpError) {
-        console.error('SMTP send failed:', smtpError)
-        
-        // Fall back to Resend if configured
-        if (config.useResend && resendApiKey) {
-          console.log('Falling back to Resend...')
-        } else {
-          throw smtpError
-        }
-      }
-    }
-    
-    // Use Resend as fallback or primary
-    if (resendApiKey) {
-      const resend = new Resend(resendApiKey)
-      
-      const result = await resend.emails.send({
-        from: options.from || process.env.FROM_EMAIL || 'no-reply@josemadridsalsa.com',
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-        text: options.text,
-      })
-      
-      if (result.error) {
-        return {
-          success: false,
-          error: result.error.message,
-        }
-      }
-      
+    if (!smtpConfig) {
       return {
-        success: true,
-        messageId: result.data?.id,
+        success: false,
+        error: resend
+          ? 'Resend send failed and no SMTP fallback configured'
+          : 'No email service configured (RESEND_API_KEY missing and no SMTP)',
       }
     }
-    
+
+    const { transporter, config } = smtpConfig
+    const replyTo = options.replyTo ?? config.replyToEmail ?? undefined
+    const info = (await transporter.sendMail({
+      from:
+        options.from ||
+        `${config.fromName || 'Jose Madrid Salsa'} <${config.fromEmail}>`,
+      to: options.to,
+      replyTo,
+      subject: options.subject,
+      html: options.html,
+      text: options.text,
+    })) as nodemailer.SentMessageInfo
+
+    return { success: true, messageId: info.messageId }
+  } catch (smtpError) {
+    console.error('SMTP fallback also failed:', smtpError)
     return {
       success: false,
-      error: 'No email service configured (SMTP or Resend)',
-    }
-  } catch (error) {
-    console.error('Email send error:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error:
+        smtpError instanceof Error ? smtpError.message : 'SMTP send failed',
     }
   }
 }

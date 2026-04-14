@@ -124,6 +124,14 @@ logs/security/
 # Integration staging files
 .integration/
 
+# Agent/skill/tool config directories (not source code)
+.agents/
+.pi/
+.qwen/
+.playwright-mcp/
+skills/
+skills-lock.json
+
 # Shipping API debug/verification logs
 shipping-api-error-handling-summary.md
 shipping-api-error-handling-verification.md

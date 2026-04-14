@@ -21,7 +21,7 @@ export default async function NewFundraiserPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Create Fundraiser</h1>
-        <p className="text-slate-600 mt-1">
+        <p className="text-muted-foreground mt-1">
           Set up a new fundraising campaign
         </p>
       </div>

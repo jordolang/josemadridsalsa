@@ -42,7 +42,7 @@ export default function MediaGrid({ media }: MediaGridProps) {
           >
             {/* Image/Thumbnail */}
             <div
-              className="relative aspect-square cursor-pointer bg-slate-100"
+              className="relative aspect-square cursor-pointer bg-muted"
               onClick={() => setSelectedMedia(item)}
             >
               {item.mimeType.startsWith('image/') ? (
@@ -55,7 +55,7 @@ export default function MediaGrid({ media }: MediaGridProps) {
                 />
               ) : (
                 <div className="flex h-full items-center justify-center">
-                  <span className="text-4xl text-slate-300">📄</span>
+                  <span className="text-4xl text-muted-foreground/60">📄</span>
                 </div>
               )}
             </div>

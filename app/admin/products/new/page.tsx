@@ -34,7 +34,7 @@ export default async function NewProductPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Add Product</h1>
-        <p className="text-slate-600">Create a new salsa product</p>
+        <p className="text-muted-foreground">Create a new salsa product</p>
       </div>
 
       <ProductForm categories={categories} />

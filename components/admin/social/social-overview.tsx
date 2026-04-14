@@ -5,6 +5,14 @@ import type { SocialMediaPlatform, SocialMediaPostStatus } from '@prisma/client'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import type { SocialAccountInfo, DashboardTab } from '@/types/social'
 
@@ -17,11 +25,11 @@ const PLATFORM_ICONS: Record<SocialMediaPlatform, React.ElementType> = {
 }
 
 const PLATFORM_COLORS: Record<SocialMediaPlatform, { bg: string; text: string; border: string }> = {
-  FACEBOOK: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200' },
+  FACEBOOK: { bg: 'bg-primary/5', text: 'text-primary', border: 'border-border' },
   INSTAGRAM: { bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-200' },
-  TWITTER: { bg: 'bg-slate-50', text: 'text-slate-800', border: 'border-slate-200' },
-  TIKTOK: { bg: 'bg-slate-50', text: 'text-slate-800', border: 'border-slate-200' },
-  GOOGLE_MY_BUSINESS: { bg: 'bg-blue-50', text: 'text-blue-500', border: 'border-blue-200' },
+  TWITTER: { bg: 'bg-muted/50', text: 'text-foreground', border: 'border-border' },
+  TIKTOK: { bg: 'bg-muted/50', text: 'text-foreground', border: 'border-border' },
+  GOOGLE_MY_BUSINESS: { bg: 'bg-primary/5', text: 'text-primary', border: 'border-border' },
 }
 
 const PLATFORM_LABELS: Record<SocialMediaPlatform, string> = {
@@ -33,10 +41,10 @@ const PLATFORM_LABELS: Record<SocialMediaPlatform, string> = {
 }
 
 const STATUS_CONFIG: Record<SocialMediaPostStatus, { icon: React.ElementType; color: string; label: string }> = {
-  DRAFT: { icon: FileText, color: 'text-slate-500', label: 'Drafts' },
-  SCHEDULED: { icon: Clock, color: 'text-blue-500', label: 'Scheduled' },
-  PUBLISHED: { icon: CheckCircle2, color: 'text-emerald-500', label: 'Published' },
-  FAILED: { icon: AlertCircle, color: 'text-red-500', label: 'Failed' },
+  DRAFT: { icon: FileText, color: 'text-muted-foreground', label: 'Drafts' },
+  SCHEDULED: { icon: Clock, color: 'text-primary', label: 'Scheduled' },
+  PUBLISHED: { icon: CheckCircle2, color: 'text-primary', label: 'Published' },
+  FAILED: { icon: AlertCircle, color: 'text-destructive', label: 'Failed' },
 }
 
 type StatusCount = { status: SocialMediaPostStatus; count: number }
@@ -84,12 +92,12 @@ export function SocialOverview({
             const Icon = config.icon
             return (
               <Card key={status} className="flex items-center gap-4 p-5">
-                <div className={cn('rounded-xl bg-slate-100 p-3', config.color)}>
+                <div className={cn('rounded-xl bg-muted p-3', config.color)}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500">{config.label}</p>
-                  <p className="text-2xl font-bold text-slate-900">{count}</p>
+                  <p className="text-sm text-muted-foreground">{config.label}</p>
+                  <p className="text-2xl font-bold text-foreground">{count}</p>
                 </div>
               </Card>
             )
@@ -101,8 +109,8 @@ export function SocialOverview({
       <Card className="p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-slate-900">Connected Accounts</h3>
-            <p className="text-sm text-slate-500">
+            <h3 className="font-semibold text-foreground">Connected Accounts</h3>
+            <p className="text-sm text-muted-foreground">
               {connectedCount} platform{connectedCount !== 1 ? 's' : ''} connected
             </p>
           </div>
@@ -123,29 +131,29 @@ export function SocialOverview({
                   key={platform}
                   className={cn(
                     'flex items-center gap-3 rounded-xl border p-3 transition',
-                    isConnected ? colors.border : 'border-dashed border-slate-300',
-                    isConnected ? colors.bg : 'bg-slate-50/50',
+                    isConnected ? colors.border : 'border-dashed border-input',
+                    isConnected ? colors.bg : 'bg-muted/50/50',
                   )}
                 >
-                  <div className={cn('rounded-lg p-2', isConnected ? colors.text : 'text-slate-400')}>
+                  <div className={cn('rounded-lg p-2', isConnected ? colors.text : 'text-muted-foreground')}>
                     <Icon className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-900">
+                    <p className="truncate text-sm font-medium text-foreground">
                       {PLATFORM_LABELS[platform]}
                     </p>
                     {isConnected ? (
-                      <p className="truncate text-xs text-slate-500">
+                      <p className="truncate text-xs text-muted-foreground">
                         {account!.accountHandle || account!.accountName}
                       </p>
                     ) : (
-                      <p className="text-xs text-slate-400">Not connected</p>
+                      <p className="text-xs text-muted-foreground">Not connected</p>
                     )}
                   </div>
                   <div
                     className={cn(
                       'h-2 w-2 rounded-full',
-                      isConnected ? 'bg-emerald-400' : 'bg-slate-300',
+                      isConnected ? 'bg-emerald-400' : 'bg-muted',
                     )}
                   />
                 </div>
@@ -160,8 +168,8 @@ export function SocialOverview({
         <Card className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-slate-900">Upcoming Posts</h3>
-              <p className="text-sm text-slate-500">Scheduled content queue</p>
+              <h3 className="font-semibold text-foreground">Upcoming Posts</h3>
+              <p className="text-sm text-muted-foreground">Scheduled content queue</p>
             </div>
             <Button variant="outline" size="sm" onClick={() => onNavigate('calendar')}>
               View calendar
@@ -169,8 +177,8 @@ export function SocialOverview({
           </div>
           {scheduledPosts.length === 0 ? (
             <div className="flex flex-col items-center py-10 text-center">
-              <Clock className="mb-3 h-10 w-10 text-slate-300" />
-              <p className="text-sm text-slate-500">No posts scheduled</p>
+              <Clock className="mb-3 h-10 w-10 text-muted-foreground/60" />
+              <p className="text-sm text-muted-foreground">No posts scheduled</p>
               <Button size="sm" className="mt-3" onClick={() => onNavigate('compose')}>
                 Create a post
               </Button>
@@ -180,13 +188,13 @@ export function SocialOverview({
               {scheduledPosts.slice(0, 5).map((post) => (
                 <div
                   key={post.id}
-                  className="flex items-start gap-3 rounded-lg border border-slate-100 bg-slate-50/50 p-3"
+                  className="flex items-start gap-3 rounded-lg border border-border bg-muted/50/50 p-3"
                 >
-                  <div className="rounded-lg bg-blue-100 p-2 text-blue-600">
+                  <div className="rounded-lg bg-blue-100 p-2 text-primary">
                     <Clock className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="line-clamp-2 text-sm text-slate-700">{post.content}</p>
+                    <p className="line-clamp-2 text-sm text-foreground">{post.content}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       {post.platforms.map((p) => {
                         const PIcon = PLATFORM_ICONS[p]
@@ -198,7 +206,7 @@ export function SocialOverview({
                         )
                       })}
                       {post.scheduledAt && (
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-muted-foreground">
                           {new Date(post.scheduledAt).toLocaleDateString(undefined, {
                             month: 'short',
                             day: 'numeric',
@@ -217,12 +225,12 @@ export function SocialOverview({
 
         {/* Platform activity */}
         <Card className="p-5">
-          <h3 className="font-semibold text-slate-900">Platform Activity</h3>
-          <p className="text-sm text-slate-500">Posts by platform</p>
+          <h3 className="font-semibold text-foreground">Platform Activity</h3>
+          <p className="text-sm text-muted-foreground">Posts by platform</p>
           {Object.keys(platformFrequency).length === 0 ? (
             <div className="flex flex-col items-center py-10 text-center">
-              <BarChart3 className="mb-3 h-10 w-10 text-slate-300" />
-              <p className="text-sm text-slate-500">No posts yet</p>
+              <BarChart3 className="mb-3 h-10 w-10 text-muted-foreground/60" />
+              <p className="text-sm text-muted-foreground">No posts yet</p>
             </div>
           ) : (
             <div className="mt-4 space-y-3">
@@ -236,15 +244,15 @@ export function SocialOverview({
                   return (
                     <div key={platform} className="space-y-1">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-2 font-medium text-slate-700">
+                        <span className="flex items-center gap-2 font-medium text-foreground">
                           {Icon && <Icon className="h-4 w-4" />}
                           {PLATFORM_LABELS[p] || platform}
                         </span>
-                        <span className="text-slate-500">{count}</span>
+                        <span className="text-muted-foreground">{count}</span>
                       </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
                         <div
-                          className="h-full rounded-full bg-salsa-500 transition-all"
+                          className="h-full rounded-full bg-primary transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -260,8 +268,8 @@ export function SocialOverview({
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div>
-            <h3 className="font-semibold text-slate-900">Recent Posts</h3>
-            <p className="text-sm text-slate-500">Latest activity across all platforms</p>
+            <h3 className="font-semibold text-foreground">Recent Posts</h3>
+            <p className="text-sm text-muted-foreground">Latest activity across all platforms</p>
           </div>
           <Button size="sm" onClick={() => onNavigate('compose')}>
             <PenSquare className="mr-2 h-4 w-4" />
@@ -269,68 +277,68 @@ export function SocialOverview({
           </Button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px]">
-            <thead className="border-b bg-slate-50 text-xs text-slate-500">
-              <tr>
-                <th className="px-5 py-3 text-left font-medium">Content</th>
-                <th className="px-5 py-3 text-left font-medium">Platforms</th>
-                <th className="px-5 py-3 text-left font-medium">Status</th>
-                <th className="px-5 py-3 text-left font-medium">Date</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm">
+          <Table className="min-w-[640px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Content</TableHead>
+                <TableHead>Platforms</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {recentPosts.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-5 py-12 text-center text-slate-400">
+                <TableRow>
+                  <TableCell colSpan={4} className="py-12 text-center text-muted-foreground">
                     No posts created yet. Start composing!
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
-                recentPosts.slice(0, 10).map((post) => (
-                  <tr key={post.id} className="border-b last:border-0 hover:bg-slate-50/50">
-                    <td className="max-w-xs px-5 py-3">
-                      <p className="line-clamp-2 text-slate-700">{post.content}</p>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex gap-1">
-                        {post.platforms.map((p) => {
-                          const PIcon = PLATFORM_ICONS[p]
-                          return (
-                            <span
-                              key={p}
-                              className={cn('rounded-md p-1.5', PLATFORM_COLORS[p].bg, PLATFORM_COLORS[p].text)}
-                              title={PLATFORM_LABELS[p]}
-                            >
-                              <PIcon className="h-3.5 w-3.5" />
-                            </span>
-                          )
-                        })}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <Badge
-                        className={cn(
-                          'text-xs',
-                          post.status === 'PUBLISHED' && 'bg-emerald-100 text-emerald-700',
-                          post.status === 'SCHEDULED' && 'bg-blue-100 text-blue-700',
-                          post.status === 'DRAFT' && 'bg-slate-100 text-slate-600',
-                          post.status === 'FAILED' && 'bg-red-100 text-red-700',
+                recentPosts.slice(0, 10).map((post) => {
+                  const statusVariant: 'default' | 'secondary' | 'outline' | 'destructive' =
+                    post.status === 'PUBLISHED'
+                      ? 'default'
+                      : post.status === 'SCHEDULED'
+                        ? 'secondary'
+                        : post.status === 'FAILED'
+                          ? 'destructive'
+                          : 'outline'
+                  return (
+                    <TableRow key={post.id}>
+                      <TableCell className="max-w-xs">
+                        <p className="line-clamp-2 text-foreground">{post.content}</p>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {post.platforms.map((p) => {
+                            const PIcon = PLATFORM_ICONS[p]
+                            return (
+                              <span
+                                key={p}
+                                className={cn('rounded-md p-1.5', PLATFORM_COLORS[p].bg, PLATFORM_COLORS[p].text)}
+                                title={PLATFORM_LABELS[p]}
+                              >
+                                <PIcon className="h-3.5 w-3.5" />
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant}>{post.status}</Badge>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {new Date(post.publishedAt || post.scheduledAt || post.createdAt).toLocaleDateString(
+                          undefined,
+                          { month: 'short', day: 'numeric', year: 'numeric' },
                         )}
-                      >
-                        {post.status}
-                      </Badge>
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3 text-slate-500">
-                      {new Date(post.publishedAt || post.scheduledAt || post.createdAt).toLocaleDateString(
-                        undefined,
-                        { month: 'short', day: 'numeric', year: 'numeric' },
-                      )}
-                    </td>
-                  </tr>
-                ))
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </Card>
     </div>

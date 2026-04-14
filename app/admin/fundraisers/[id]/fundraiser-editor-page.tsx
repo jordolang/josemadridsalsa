@@ -41,7 +41,7 @@ export default async function FundraiserEditorPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Edit Fundraiser</h1>
-        <p className="text-slate-600">Update fundraiser details</p>
+        <p className="text-muted-foreground">Update fundraiser details</p>
       </div>
 
       <FundraiserForm fundraiser={fundraiser} />

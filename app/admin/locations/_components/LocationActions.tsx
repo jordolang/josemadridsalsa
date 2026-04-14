@@ -93,7 +93,7 @@ export function LocationActions({ location }: LocationActionsProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => setShowDeleteDialog(true)}
-            className="text-red-600"
+            className="text-destructive"
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
@@ -117,7 +117,7 @@ export function LocationActions({ location }: LocationActionsProps) {
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90"
             >
               {isDeleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
