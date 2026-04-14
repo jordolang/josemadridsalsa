@@ -5,7 +5,7 @@
   - Set GOOGLE_PLACES_API_KEY in your environment (same key used by lib/google-places.ts)
 
   Usage:
-    node scripts/generate-location-photos.js
+    node scripts/generate-location-photos.cjs
 */
 
 require('dotenv/config');

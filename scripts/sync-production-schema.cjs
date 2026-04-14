@@ -6,8 +6,8 @@
  * This script syncs the Prisma schema to the production database.
  *
  * Usage:
- *   node scripts/sync-production-schema.js              # incremental push (may fail with FK/index conflicts)
- *   node scripts/sync-production-schema.js --force-reset # drops & recreates public schema first (clean slate)
+ *   node scripts/sync-production-schema.cjs              # incremental push (may fail with FK/index conflicts)
+ *   node scripts/sync-production-schema.cjs --force-reset # drops & recreates public schema first (clean slate)
  *
  * Prerequisites:
  *   - .env.vercel.production file must exist (run: vercel env pull .env.vercel.production --environment=production)
@@ -141,7 +141,7 @@ function main() {
       log('      npm run db:seed\n', 'blue');
     }
     log('   1. If this is a fresh database, seed it with data:');
-    log('      node scripts/seed-production.js\n', 'blue');
+    log('      node scripts/seed-production.cjs\n', 'blue');
     log('   2. Verify your application is working:');
     log('      https://www.josemadrid.net\n', 'blue');
 

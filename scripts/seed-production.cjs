@@ -6,7 +6,7 @@
  * This script seeds the production database with initial data.
  * 
  * Usage:
- *   node scripts/seed-production.js
+ *   node scripts/seed-production.cjs
  * 
  * Prerequisites:
  *   - .env.vercel.production file must exist (run: vercel env pull .env.vercel.production --environment=production)
