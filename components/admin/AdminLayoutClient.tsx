@@ -102,9 +102,12 @@ export function AdminLayoutClient({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <SidebarProvider className="h-svh overflow-hidden">
+      <SidebarProvider
+        style={{ height: '100svh' } as React.CSSProperties}
+        className="!min-h-0 overflow-hidden"
+      >
         <AppSidebar user={user} navigation={navigation} />
-        <SidebarInset className="flex h-svh min-h-0 flex-col overflow-hidden">
+        <SidebarInset className="flex h-svh min-h-0 min-w-0 flex-col overflow-hidden">
           <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/75">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
@@ -182,7 +185,7 @@ export function AdminLayoutClient({
               </DropdownMenu>
             </div>
           </header>
-          <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
+          <main className="flex-1 min-h-0 min-w-0 overflow-auto p-3 sm:p-4 md:p-6">
             {children}
           </main>
         </SidebarInset>
