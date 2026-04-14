@@ -7,7 +7,7 @@ struct ContentView: View {
         Group {
             if authViewModel.isCheckingSession {
                 ProgressView("Loading...")
-            } else {
+            } else if authViewModel.isAuthenticated {
                 TabView {
                     NavigationStack {
                         Text("Shop")
@@ -36,6 +36,10 @@ struct ContentView: View {
                     .tabItem {
                         Label("Account", systemImage: "person.circle")
                     }
+                }
+            } else {
+                NavigationStack {
+                    SignInView(viewModel: authViewModel)
                 }
             }
         }

@@ -77,12 +77,14 @@ actor AuthService {
         )
     }
 
-    func googleOAuthURL() async throws -> URL {
+    // MARK: - OAuth URLs
+
+    func oauthURL(provider: OAuthProvider) async throws -> URL {
         let csrfToken = try await fetchCSRFToken()
         let baseURL = await client.currentBaseURL
-        let callbackURL = "\(baseURL)/api/auth/callback/google"
+        let callbackURL = "\(baseURL)/api/auth/callback/\(provider.rawValue)"
 
-        var components = URLComponents(string: "\(baseURL)/api/auth/signin/google")!
+        var components = URLComponents(string: "\(baseURL)/api/auth/signin/\(provider.rawValue)")!
         components.queryItems = [
             URLQueryItem(name: "csrfToken", value: csrfToken),
             URLQueryItem(name: "callbackUrl", value: callbackURL),
@@ -93,6 +95,38 @@ actor AuthService {
         }
         return url
     }
+
+    func googleOAuthURL() async throws -> URL {
+        try await oauthURL(provider: .google)
+    }
+
+    // MARK: - Password Reset
+
+    func verifyResetToken(_ token: String) async throws -> Bool {
+        struct TokenResponse: Codable, Sendable {
+            let valid: Bool
+        }
+        let response: TokenResponse = try await client.request(
+            "/auth/verify-reset-token",
+            parameters: ["token": token]
+        )
+        return response.valid
+    }
+
+    func resetPassword(token: String, password: String) async throws {
+        let _: [String: Bool] = try await client.request(
+            "/auth/reset-password",
+            method: .post,
+            parameters: ["token": token, "password": password]
+        )
+    }
+}
+
+enum OAuthProvider: String, CaseIterable, Sendable {
+    case google
+    case github
+    case facebook
+    case apple
 }
 
 enum AuthError: Error, Equatable, LocalizedError {
@@ -101,6 +135,8 @@ enum AuthError: Error, Equatable, LocalizedError {
     case accountExists
     case invalidURL
     case oauthCancelled
+    case invalidToken
+    case invalidEmail
 
     var errorDescription: String? {
         switch self {
@@ -109,6 +145,8 @@ enum AuthError: Error, Equatable, LocalizedError {
         case .accountExists: "An account with this email already exists."
         case .invalidURL: "Could not build authentication URL."
         case .oauthCancelled: "Sign in was cancelled."
+        case .invalidToken: "This reset link is invalid or has expired."
+        case .invalidEmail: "Please enter a valid email address."
         }
     }
 }

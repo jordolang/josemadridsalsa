@@ -7,6 +7,7 @@ final class AuthViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var isCheckingSession = true
     @Published var errorMessage: String?
+    @Published var successMessage: String?
 
     @Published var email = ""
     @Published var password = ""
@@ -16,9 +17,15 @@ final class AuthViewModel: ObservableObject {
     @Published var registerPassword = ""
     @Published var registerConfirmPassword = ""
 
+    @Published var resetToken = ""
+    @Published var newPassword = ""
+    @Published var confirmNewPassword = ""
+
     private let authService = AuthService.shared
 
     var isAuthenticated: Bool { currentUser != nil }
+
+    private static let emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
 
     // MARK: - Session Management
 
@@ -85,14 +92,52 @@ final class AuthViewModel: ObservableObject {
         isLoading = false
     }
 
-    // MARK: - Google OAuth
+    // MARK: - OAuth Sign In
 
-    func signInWithGoogle() async {
+    func signInWithOAuth(provider: OAuthProvider) async {
+        if provider == .apple {
+            await signInWithAppleNative()
+            return
+        }
+
         isLoading = true
         errorMessage = nil
 
         do {
-            let url = try await authService.googleOAuthURL()
+            let url = try await authService.oauthURL(provider: provider)
+            let callbackURL = try await performWebAuth(url: url)
+            await handleOAuthCallback(callbackURL)
+        } catch let error as AuthError {
+            if error != .oauthCancelled {
+                errorMessage = error.localizedDescription
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isLoading = false
+    }
+
+    func signInWithGoogle() async {
+        await signInWithOAuth(provider: .google)
+    }
+
+    func signInWithGitHub() async {
+        await signInWithOAuth(provider: .github)
+    }
+
+    func signInWithFacebook() async {
+        await signInWithOAuth(provider: .facebook)
+    }
+
+    // MARK: - Apple Sign In (Native)
+
+    func signInWithAppleNative() async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let url = try await authService.oauthURL(provider: .apple)
             let callbackURL = try await performWebAuth(url: url)
             await handleOAuthCallback(callbackURL)
         } catch let error as AuthError {
@@ -126,8 +171,6 @@ final class AuthViewModel: ObservableObject {
                 }
                 continuation.resume(returning: callbackURL)
             }
-            // TODO: Test cookie propagation on physical device — simulator may not
-            // forward HTTPCookieStorage cookies into ASWebAuthenticationSession.
             session.prefersEphemeralWebBrowserSession = false
             session.start()
         }
@@ -151,7 +194,7 @@ final class AuthViewModel: ObservableObject {
         currentUser = nil
     }
 
-    // MARK: - Password Reset
+    // MARK: - Forgot Password
 
     func forgotPassword() async {
         let trimmedEmail = email.lowercased().trimmingCharacters(in: .whitespaces)
@@ -159,9 +202,14 @@ final class AuthViewModel: ObservableObject {
             errorMessage = "Please enter your email address."
             return
         }
+        guard isValidEmail(trimmedEmail) else {
+            errorMessage = AuthError.invalidEmail.localizedDescription
+            return
+        }
 
         isLoading = true
         errorMessage = nil
+        successMessage = nil
 
         do {
             try await authService.forgotPassword(email: trimmedEmail)
@@ -169,15 +217,68 @@ final class AuthViewModel: ObservableObject {
             // Don't reveal whether the email exists
         }
 
+        successMessage = "If an account exists with that email, you will receive a reset link."
+        isLoading = false
+    }
+
+    // MARK: - Reset Password
+
+    func verifyResetToken() async -> Bool {
+        guard !resetToken.isEmpty else {
+            errorMessage = AuthError.invalidToken.localizedDescription
+            return false
+        }
+
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let valid = try await authService.verifyResetToken(resetToken)
+            if !valid {
+                errorMessage = AuthError.invalidToken.localizedDescription
+            }
+            isLoading = false
+            return valid
+        } catch {
+            errorMessage = AuthError.invalidToken.localizedDescription
+            isLoading = false
+            return false
+        }
+    }
+
+    func resetPassword() async {
+        guard validateResetPasswordForm() else { return }
+        isLoading = true
+        errorMessage = nil
+        successMessage = nil
+
+        do {
+            try await authService.resetPassword(token: resetToken, password: newPassword)
+            successMessage = "Password reset successfully. You can now sign in."
+            resetToken = ""
+            newPassword = ""
+            confirmNewPassword = ""
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
         isLoading = false
     }
 
     // MARK: - Validation
 
+    private func isValidEmail(_ email: String) -> Bool {
+        email.wholeMatch(of: Self.emailRegex) != nil
+    }
+
     private func validateSignInForm() -> Bool {
         let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
         if trimmedEmail.isEmpty {
             errorMessage = "Please enter your email address."
+            return false
+        }
+        if !isValidEmail(trimmedEmail) {
+            errorMessage = AuthError.invalidEmail.localizedDescription
             return false
         }
         if password.isEmpty {
@@ -188,8 +289,13 @@ final class AuthViewModel: ObservableObject {
     }
 
     private func validateRegisterForm() -> Bool {
-        if registerEmail.trimmingCharacters(in: .whitespaces).isEmpty {
+        let trimmedEmail = registerEmail.trimmingCharacters(in: .whitespaces)
+        if trimmedEmail.isEmpty {
             errorMessage = "Please enter your email address."
+            return false
+        }
+        if !isValidEmail(trimmedEmail) {
+            errorMessage = AuthError.invalidEmail.localizedDescription
             return false
         }
         if registerPassword.count < 8 {
@@ -203,6 +309,22 @@ final class AuthViewModel: ObservableObject {
         return true
     }
 
+    private func validateResetPasswordForm() -> Bool {
+        if resetToken.isEmpty {
+            errorMessage = AuthError.invalidToken.localizedDescription
+            return false
+        }
+        if newPassword.count < 8 {
+            errorMessage = "Password must be at least 8 characters."
+            return false
+        }
+        if newPassword != confirmNewPassword {
+            errorMessage = "Passwords do not match."
+            return false
+        }
+        return true
+    }
+
     private func clearForms() {
         email = ""
         password = ""
@@ -210,5 +332,9 @@ final class AuthViewModel: ObservableObject {
         registerEmail = ""
         registerPassword = ""
         registerConfirmPassword = ""
+        resetToken = ""
+        newPassword = ""
+        confirmNewPassword = ""
+        successMessage = nil
     }
 }
