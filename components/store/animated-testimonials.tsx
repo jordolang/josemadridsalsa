@@ -213,7 +213,7 @@ export function AnimatedTestimonials({ reviewsData }: AnimatedTestimonialsProps)
             src="/images/leaning-silhouette.svg"
             alt=""
             aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden h-full w-auto opacity-95 brightness-0 invert drop-shadow-[0_10px_22px_rgba(0,0,0,0.35)] lg:block dark:invert-0 dark:drop-shadow-[0_0_28px_rgba(255,255,255,0.55)]"
+            className="pointer-events-none absolute inset-y-0 -right-[1.25in] z-0 hidden h-full w-auto opacity-95 brightness-0 invert drop-shadow-[0_10px_22px_rgba(0,0,0,0.35)] lg:block dark:invert-0 dark:drop-shadow-[0_0_28px_rgba(255,255,255,0.55)]"
           />
 
           <div className="relative z-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 lg:pr-40 xl:grid-cols-3 xl:pr-48">
