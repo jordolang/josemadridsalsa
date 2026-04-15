@@ -133,12 +133,19 @@ async function runSchoolScrape(
     queryTemplate = SEARCH_QUERY_TEMPLATES.by_district
   }
 
-  let query = campaign.searchQuery || queryTemplate
+  const templateQuery = queryTemplate
     .replace('{city}', campaign.city || '')
     .replace('{state}', campaign.state || '')
     .replace('{district}', campaign.district || '')
 
-  if (!query) {
+  let query: string
+  if (campaign.searchQuery && templateQuery) {
+    query = `${campaign.searchQuery} ${templateQuery}`
+  } else if (campaign.searchQuery) {
+    query = `${campaign.searchQuery} ${campaign.city} ${campaign.state}`
+  } else if (templateQuery) {
+    query = templateQuery
+  } else {
     query = `${campaign.city} ${campaign.state} ${campaign.schoolType} athletics`
   }
 
@@ -178,6 +185,11 @@ async function runSchoolScrape(
     })
 
     emit('info', 'search', `Found ${results.length} links on page ${pageNum + 1}`)
+
+    if (results.length === 0) {
+      const pageTitle = await page.title()
+      emit('warn', 'search', `Page title: "${pageTitle}" — Google may have shown a CAPTCHA or no results matched the query`)
+    }
 
     for (const res of results) {
       let cleanUrl = res.url
@@ -245,8 +257,10 @@ async function runBusinessScrape(
   page: Page,
   emit: EmitFn
 ) {
-  const query = campaign.searchQuery ||
-    `${campaign.businessCategory || 'business'} in ${campaign.city}, ${campaign.state}`
+  const defaultQuery = `${campaign.businessCategory || 'business'} in ${campaign.city}, ${campaign.state}`
+  const query = campaign.searchQuery
+    ? `${campaign.searchQuery} in ${campaign.city}, ${campaign.state}`
+    : defaultQuery
 
   emit('info', 'search', `Search query: "${query.trim()}"`)
 
