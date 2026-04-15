@@ -1,6 +1,7 @@
-import { chromium } from 'playwright';
 import { prisma } from '@/lib/prisma';
 import { eventBus } from './event-bus';
+import { emitScraperEvent } from './scraper-events';
+import { connectBrowser, createPage } from './browser';
 import {
   SEARCH_QUERY_TEMPLATES,
   MAX_SEARCH_PAGES,
@@ -16,7 +17,6 @@ export async function runGoogleSearchScraper(campaignId: string) {
     data: { status: 'SCRAPING' }
   });
 
-  // Emit status change
   eventBus.emit({
     type: 'campaign:status_changed',
     data: {
@@ -26,9 +26,25 @@ export async function runGoogleSearchScraper(campaignId: string) {
     }
   });
 
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
-  const page = await context.newPage();
+  emitScraperEvent(campaignId, 'info', 'system', 'Connecting to browser...');
+
+  let browser;
+  try {
+    browser = await connectBrowser();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    emitScraperEvent(campaignId, 'error', 'system', `Failed to connect to browser: ${msg}`);
+    emitScraperEvent(campaignId, 'error', 'system', process.env.BROWSERLESS_TOKEN
+      ? 'Browserless.io connection failed. Check your BROWSERLESS_TOKEN.'
+      : 'No BROWSERLESS_TOKEN set and local Chromium unavailable. Set BROWSERLESS_TOKEN in your environment variables.');
+    await prisma.leadCampaign.update({ where: { id: campaignId }, data: { status: 'FAILED' } });
+    eventBus.emit({ type: 'campaign:status_changed', data: { campaignId, status: 'FAILED', message: 'Browser connection failed' } });
+    return;
+  }
+
+  emitScraperEvent(campaignId, 'success', 'system', `Browser connected (${process.env.BROWSERLESS_TOKEN ? 'Browserless.io' : 'local Chromium'})`);
+
+  const page = await createPage(browser);
 
   try {
     // Construct query
@@ -43,11 +59,12 @@ export async function runGoogleSearchScraper(campaignId: string) {
       .replace('{city}', campaign.city || '')
       .replace('{state}', campaign.state || '')
       .replace('{district}', campaign.district || '');
-    
-    // Fallback if no specific templates fit
+
     if (!query) {
        query = `${campaign.city} ${campaign.state} ${campaign.schoolType} athletics`;
     }
+
+    emitScraperEvent(campaignId, 'info', 'search', `Search query: "${query.trim()}"`);
 
     const encodedQuery = encodeURIComponent(query.trim().replace(/\s+/g, ' '));
     let currentUrl = `https://www.google.com/search?q=${encodedQuery}&gl=us&hl=en`;
@@ -56,8 +73,9 @@ export async function runGoogleSearchScraper(campaignId: string) {
     const seenUrls = new Set<string>();
 
     for (let pageNum = 0; pageNum < MAX_SEARCH_PAGES; pageNum++) {
+      emitScraperEvent(campaignId, 'info', 'search', `Navigating to Google search page ${pageNum + 1}...`);
       await page.goto(currentUrl, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(1000 + Math.random() * 1000); // Random delay
+      await page.waitForTimeout(1000 + Math.random() * 1000);
 
       // Try to click consent buttons if they appear
       try {
@@ -84,7 +102,7 @@ export async function runGoogleSearchScraper(campaignId: string) {
         }).filter(item => item.url && item.url.startsWith('http') && !item.url.includes('google.com') && item.title);
       });
       
-      console.log(`Found ${results.length} links on page ${pageNum}`);
+      emitScraperEvent(campaignId, 'info', 'search', `Found ${results.length} links on page ${pageNum + 1}`);
 
       for (const res of results) {
         // Clean URL (remove tracking params, hash, etc.)
@@ -115,7 +133,8 @@ export async function runGoogleSearchScraper(campaignId: string) {
           }
         });
 
-        // Emit real-time event
+        emitScraperEvent(campaignId, 'success', 'search', `Lead found: ${lead.schoolName}`);
+
         eventBus.emit({
           type: 'lead:found',
           data: {
@@ -163,12 +182,13 @@ export async function runGoogleSearchScraper(campaignId: string) {
       }
     }
 
+    emitScraperEvent(campaignId, 'success', 'search', `Search complete — ${totalFound} leads found`);
+
     await prisma.leadCampaign.update({
       where: { id: campaignId },
       data: { status: 'SCRAPE_COMPLETED', totalFound }
     });
 
-    // Emit completion event
     eventBus.emit({
       type: 'campaign:status_changed',
       data: {
@@ -179,16 +199,14 @@ export async function runGoogleSearchScraper(campaignId: string) {
     });
 
   } catch (error) {
-    console.error("Google Search Scraping failed:", error);
-
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    emitScraperEvent(campaignId, 'error', 'search', `Scraping failed: ${errorMessage}`);
 
     await prisma.leadCampaign.update({
       where: { id: campaignId },
       data: { status: 'FAILED' }
     });
 
-    // Emit error event
     eventBus.emit({
       type: 'campaign:error',
       data: {
@@ -198,6 +216,8 @@ export async function runGoogleSearchScraper(campaignId: string) {
       }
     });
   } finally {
+    emitScraperEvent(campaignId, 'info', 'system', 'Closing browser connection...');
     await browser.close();
+    emitScraperEvent(campaignId, 'info', 'system', 'Browser closed.');
   }
 }

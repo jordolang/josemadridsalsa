@@ -1,6 +1,7 @@
-import { chromium } from 'playwright'
 import { prisma } from '@/lib/prisma'
 import { eventBus } from './event-bus'
+import { emitScraperEvent } from './scraper-events'
+import { connectBrowser, createPage } from './browser'
 import { EXCLUDED_DOMAINS } from './school-config'
 
 interface BusinessResult {
@@ -73,21 +74,37 @@ export async function runGoogleBusinessScraper(campaignId: string) {
     },
   })
 
-  const browser = await chromium.launch({ headless: true })
-  const context = await browser.newContext({
-    userAgent:
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  })
-  const page = await context.newPage()
+  emitScraperEvent(campaignId, 'info', 'system', 'Connecting to browser...')
+
+  let browser;
+  try {
+    browser = await connectBrowser()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    emitScraperEvent(campaignId, 'error', 'system', `Failed to connect to browser: ${msg}`)
+    emitScraperEvent(campaignId, 'error', 'system', process.env.BROWSERLESS_TOKEN
+      ? 'Browserless.io connection failed. Check your BROWSERLESS_TOKEN.'
+      : 'No BROWSERLESS_TOKEN set and local Chromium unavailable. Set BROWSERLESS_TOKEN in your environment variables.')
+    await prisma.leadCampaign.update({ where: { id: campaignId }, data: { status: 'FAILED' } })
+    eventBus.emit({ type: 'campaign:status_changed', data: { campaignId, status: 'FAILED', message: 'Browser connection failed' } })
+    return
+  }
+
+  emitScraperEvent(campaignId, 'success', 'system', `Browser connected (${process.env.BROWSERLESS_TOKEN ? 'Browserless.io' : 'local Chromium'})`)
+
+  const page = await createPage(browser)
 
   try {
     const query =
       campaign.searchQuery ||
       `${campaign.businessCategory || 'business'} in ${campaign.city}, ${campaign.state}`
 
+    emitScraperEvent(campaignId, 'info', 'search', `Search query: "${query.trim()}"`)
+
     const encodedQuery = encodeURIComponent(query.trim().replace(/\s+/g, ' '))
     const searchUrl = `https://www.google.com/search?q=${encodedQuery}&gl=us&hl=en`
 
+    emitScraperEvent(campaignId, 'info', 'search', 'Navigating to Google search...')
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(1500 + Math.random() * 1500)
 
@@ -106,8 +123,9 @@ export async function runGoogleBusinessScraper(campaignId: string) {
     let totalFound = 0
     const seenBusinesses = new Set<string>()
 
-    // Extract business listings from the local pack / maps results
+    emitScraperEvent(campaignId, 'info', 'search', 'Extracting business listings from Google local pack...')
     const businesses = await extractBusinessResults(page)
+    emitScraperEvent(campaignId, 'info', 'search', `Found ${businesses.length} businesses in local pack`)
 
     for (const biz of businesses) {
       const dedupeKey = `${biz.name}|${biz.address}`.toLowerCase()
@@ -126,8 +144,8 @@ export async function runGoogleBusinessScraper(campaignId: string) {
       if (totalFound >= limit) break
     }
 
-    // If we need more results, try Google Maps search
     if (totalFound < limit) {
+      emitScraperEvent(campaignId, 'info', 'search', `Need more results (${totalFound}/${limit}). Searching Google Maps...`)
       const mapsUrl = `https://www.google.com/maps/search/${encodedQuery}`
       await page.goto(mapsUrl, { waitUntil: 'domcontentloaded' })
       await page.waitForTimeout(3000 + Math.random() * 2000)
@@ -167,6 +185,8 @@ export async function runGoogleBusinessScraper(campaignId: string) {
       }
     }
 
+    emitScraperEvent(campaignId, 'success', 'search', `Search complete — ${totalFound} businesses found`)
+
     await prisma.leadCampaign.update({
       where: { id: campaignId },
       data: { status: 'SCRAPE_COMPLETED', totalFound },
@@ -183,6 +203,7 @@ export async function runGoogleBusinessScraper(campaignId: string) {
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error'
+    emitScraperEvent(campaignId, 'error', 'search', `Scraping failed: ${errorMessage}`)
 
     await prisma.leadCampaign.update({
       where: { id: campaignId },
@@ -194,12 +215,14 @@ export async function runGoogleBusinessScraper(campaignId: string) {
       data: { campaignId, error: errorMessage, step: 'search' },
     })
   } finally {
+    emitScraperEvent(campaignId, 'info', 'system', 'Closing browser connection...')
     await browser.close()
+    emitScraperEvent(campaignId, 'info', 'system', 'Browser closed.')
   }
 }
 
 async function extractBusinessResults(
-  page: Awaited<ReturnType<Awaited<ReturnType<typeof chromium.launch>>['newPage']>>
+  page: import('playwright').Page
 ): Promise<BusinessResult[]> {
   return page.evaluate(() => {
     const results: Array<{
@@ -276,7 +299,7 @@ async function extractBusinessResults(
 }
 
 async function extractMapsResults(
-  page: Awaited<ReturnType<Awaited<ReturnType<typeof chromium.launch>>['newPage']>>
+  page: import('playwright').Page
 ): Promise<BusinessResult[]> {
   return page.evaluate(() => {
     const results: Array<{
