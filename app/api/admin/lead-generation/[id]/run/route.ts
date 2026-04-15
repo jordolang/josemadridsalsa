@@ -159,13 +159,23 @@ async function runSchoolScrape(
 
   for (let pageNum = 0; pageNum < MAX_SEARCH_PAGES; pageNum++) {
     emit('info', 'search', `Navigating to Google search page ${pageNum + 1}...`)
-    await page.goto(currentUrl, { waitUntil: 'domcontentloaded' })
-    await page.waitForTimeout(1000 + Math.random() * 1000)
+    await page.goto(currentUrl, { waitUntil: 'networkidle', timeout: 15000 }).catch(() =>
+      page.goto(currentUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
+    )
+    await page.waitForTimeout(2000 + Math.random() * 1500)
 
     try {
-      await page.click('button#L2AGLb, button#W0wltc, button:has-text("Accept all"), button:has-text("I agree")', { timeout: 1500 })
-      await page.waitForTimeout(1000)
+      await page.click('button#L2AGLb, button#W0wltc, button:has-text("Accept all"), button:has-text("I agree"), button:has-text("Reject all")', { timeout: 3000 })
+      emit('info', 'search', 'Dismissed consent dialog')
+      await page.waitForTimeout(2000)
     } catch { /* no consent */ }
+
+    const pageUrl = page.url()
+    if (pageUrl.includes('/sorry/') || pageUrl.includes('consent.google')) {
+      emit('warn', 'search', `Google redirected to: ${pageUrl} — may be a CAPTCHA or consent page`)
+      emit('warn', 'search', 'Waiting 5s and retrying...')
+      await page.waitForTimeout(5000)
+    }
 
     const results = await page.evaluate(() => {
       const items: Array<{ url: string; title: string }> = []
@@ -271,13 +281,21 @@ async function runBusinessScrape(
   const seenBusinesses = new Set<string>()
 
   emit('info', 'search', 'Navigating to Google search...')
-  await page.goto(searchUrl, { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(1500 + Math.random() * 1500)
+  await page.goto(searchUrl, { waitUntil: 'networkidle', timeout: 15000 }).catch(() =>
+    page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
+  )
+  await page.waitForTimeout(2000 + Math.random() * 1500)
 
   try {
-    await page.click('button#L2AGLb, button#W0wltc, button:has-text("Accept all"), button:has-text("I agree")', { timeout: 2000 })
-    await page.waitForTimeout(1000)
+    await page.click('button#L2AGLb, button#W0wltc, button:has-text("Accept all"), button:has-text("I agree"), button:has-text("Reject all")', { timeout: 3000 })
+    emit('info', 'search', 'Dismissed consent dialog')
+    await page.waitForTimeout(2000)
   } catch { /* no consent */ }
+
+  const bizPageUrl = page.url()
+  if (bizPageUrl.includes('/sorry/') || bizPageUrl.includes('consent.google')) {
+    emit('warn', 'search', `Google redirected to: ${bizPageUrl} — may be a CAPTCHA or consent page`)
+  }
 
   emit('info', 'search', 'Extracting business listings from local pack...')
 
