@@ -35,11 +35,12 @@ interface ParsedContact {
 const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi
 
 const DIRECTORY_KEYWORDS = [
-  'directory', 'directories', 'staff', 'faculty', 'personnel',
-  'contact', 'contacts', 'about', 'about-us', 'team', 'our-team',
-  'administration', 'admin', 'office', 'leadership', 'management',
-  'coaches', 'coaching', 'athletics', 'athletic',
-  'owners', 'owner', 'meet-the-team', 'people',
+  'director', 'staff', 'facult', 'personnel',
+  'contact', 'about', 'team', 'our-team',
+  'administr', 'office', 'leader', 'manag',
+  'coach', 'athlet',
+  'owner', 'meet-the-team', 'people', 'employee',
+  'roster', 'phone', 'email',
 ]
 
 function safeHostname(url: string): string {
@@ -50,11 +51,23 @@ function safePathname(url: string): string {
   try { return new URL(url).pathname } catch { return url }
 }
 
+const FAKE_EMAIL_DOMAIN_EXTENSIONS = /\.(png|jpg|jpeg|gif|svg|webp|css|js|ico|woff|woff2|ttf|eot|mp4|mp3|pdf)$/i
+const URL_ENCODING_ARTIFACTS = /u002f|%2f|%40|u0040/i
+
 function extractEmails(text: string): string[] {
   const matches = text.match(EMAIL_RE) || []
-  return [...new Set(matches)].filter(
-    email => !GENERIC_EMAIL_PREFIXES.some(prefix => email.toLowerCase().startsWith(prefix + '@'))
-  )
+  return [...new Set(matches)]
+    .map(e => e.toLowerCase())
+    .filter(email => {
+      if (GENERIC_EMAIL_PREFIXES.some(prefix => email.startsWith(prefix + '@'))) return false
+      if (FAKE_EMAIL_DOMAIN_EXTENSIONS.test(email)) return false
+      if (URL_ENCODING_ARTIFACTS.test(email)) return false
+      const [local, domain] = email.split('@')
+      if (!domain || !domain.includes('.')) return false
+      if (local.length < 2 || domain.length < 4) return false
+      if (email.includes('sentry.io')) return false
+      return true
+    })
 }
 
 export async function POST(
@@ -68,6 +81,17 @@ export async function POST(
   }
 
   const { id: campaignId } = await params
+
+  let requestLeadIds: string[] | undefined
+  try {
+    const body = await request.json()
+    if (Array.isArray(body?.leadIds) && body.leadIds.length > 0) {
+      requestLeadIds = body.leadIds
+    }
+  } catch {
+    // No body or invalid JSON — parse all SCRAPED leads (backward compatible)
+  }
+
   const campaign = await prisma.leadCampaign.findUnique({ where: { id: campaignId } })
   if (!campaign) {
     return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
@@ -87,16 +111,19 @@ export async function POST(
       let browser: Browser | null = null
 
       try {
-        const leads = await prisma.lead.findMany({
-          where: {
-            campaignId,
-            status: 'SCRAPED',
-            OR: [
-              { schoolUrl: { not: null } },
-              { website: { not: null } },
-            ],
-          },
-        })
+        const leadWhere: Record<string, unknown> = {
+          campaignId,
+          status: 'SCRAPED',
+          OR: [
+            { schoolUrl: { not: null } },
+            { website: { not: null } },
+          ],
+        }
+        if (requestLeadIds) {
+          leadWhere.id = { in: requestLeadIds }
+        }
+
+        const leads = await prisma.lead.findMany({ where: leadWhere })
 
         if (leads.length === 0) {
           emit('warn', 'parse', 'No scraped leads with URLs found. Run search first.')
@@ -145,18 +172,12 @@ export async function POST(
 
         emit('success', 'system', `Browser connected (${process.env.BROWSERLESS_TOKEN ? 'Browserless.io' : 'local'})`)
 
-        const context = await browser.newContext({
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-          locale: 'en-US',
-          timezoneId: 'America/New_York',
-          viewport: { width: 1920, height: 1080 },
-        })
-        const page = await context.newPage()
-
         let totalEmailsFound = campaign.totalEmailsFound || 0
         const startTime = Date.now()
         const maxRunTime = 240000
         let domainIndex = 0
+        let consecutiveFailures = 0
+        const MAX_CONSECUTIVE_FAILURES = 5
 
         for (const [domain, domainLeads] of domainToLeads) {
           if (Date.now() - startTime > maxRunTime) {
@@ -164,17 +185,34 @@ export async function POST(
             break
           }
 
+          if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+            emit('error', 'system', `${MAX_CONSECUTIVE_FAILURES} consecutive domains failed — browser context may be dead. Stopping.`)
+            break
+          }
+
           domainIndex++
           const representativeUrl = domainLeads[0].website || domainLeads[0].schoolUrl!
           emit('info', 'parse', `[${domainIndex}/${domainToLeads.size}] Scanning ${domain} (${domainLeads.length} leads from this domain)`)
 
+          let page: Page | null = null
           try {
+            const context = await browser.newContext({
+              userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+              locale: 'en-US',
+              timezoneId: 'America/New_York',
+              viewport: { width: 1920, height: 1080 },
+            })
+            page = await context.newPage()
+
             // STEP 1: Visit the main page
             const mainNav = await page.goto(representativeUrl, { timeout: SITE_NAV_TIMEOUT, waitUntil: 'domcontentloaded' }).catch(() => null)
             if (!mainNav) {
               emit('warn', 'parse', `Could not load ${domain} — skipping`)
+              consecutiveFailures++
+              await context.close().catch(() => {})
               continue
             }
+            consecutiveFailures = 0
             await page.waitForTimeout(1500)
 
             // STEP 2: Scan the main page for ALL links and categorize them
@@ -345,6 +383,12 @@ export async function POST(
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Parse error'
             emit('error', 'parse', `Error on ${domain}: ${msg}`)
+            consecutiveFailures++
+          } finally {
+            if (page) {
+              const ctx = page.context()
+              await ctx.close().catch(() => {})
+            }
           }
         }
 

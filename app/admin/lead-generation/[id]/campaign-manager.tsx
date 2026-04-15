@@ -267,7 +267,12 @@ const ActivityLog = forwardRef<ActivityLogHandle, { campaignId: string }>(
 
 // --- Main Component ---
 
-export function CampaignManager({ campaign }: { campaign: CampaignWithTemplate }) {
+interface CampaignManagerProps {
+  campaign: CampaignWithTemplate
+  selectedLeadIds?: string[]
+}
+
+export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerProps) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const logRef = useRef<ActivityLogHandle>(null)

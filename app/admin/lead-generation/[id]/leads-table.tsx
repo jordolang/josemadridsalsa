@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Table,
@@ -46,13 +46,30 @@ interface LeadsTableProps {
   leads: Lead[]
   leadType: string
   campaignId: string
+  onSelectionChange?: (selectedIds: string[]) => void
 }
 
 const ALL_STATUSES = ['SCRAPED', 'CONTACT_FOUND', 'EMAIL_SENT', 'EMAIL_FAILED'] as const
 
-export function LeadsTable({ leads, leadType, campaignId }: LeadsTableProps) {
+export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: LeadsTableProps) {
   const router = useRouter()
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  const initialScrapedIds = useMemo(
+    () => new Set(leads.filter((l) => l.status === 'SCRAPED').map((l) => l.id)),
+    [leads]
+  )
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(initialScrapedIds)
+
+  const notifySelection = useCallback(
+    (ids: Set<string>) => {
+      onSelectionChange?.(Array.from(ids))
+    },
+    [onSelectionChange]
+  )
+
+  useEffect(() => {
+    notifySelection(selectedIds)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [hasEmailFilter, setHasEmailFilter] = useState<string>('all')
   const [sportFilter, setSportFilter] = useState('')
@@ -80,12 +97,17 @@ export function LeadsTable({ leads, leadType, campaignId }: LeadsTableProps) {
   const allSelected =
     filteredLeads.length > 0 && filteredLeads.every((l) => selectedIds.has(l.id))
 
+  const scrapedCount = leads.filter((l) => l.status === 'SCRAPED').length
+  const selectedScrapedCount = leads.filter(
+    (l) => l.status === 'SCRAPED' && selectedIds.has(l.id)
+  ).length
+
   function toggleAll() {
-    if (allSelected) {
-      setSelectedIds(new Set())
-    } else {
-      setSelectedIds(new Set(filteredLeads.map((l) => l.id)))
-    }
+    const next = allSelected
+      ? new Set<string>()
+      : new Set(filteredLeads.map((l) => l.id))
+    setSelectedIds(next)
+    notifySelection(next)
   }
 
   function toggleOne(id: string) {
@@ -96,6 +118,7 @@ export function LeadsTable({ leads, leadType, campaignId }: LeadsTableProps) {
       } else {
         next.add(id)
       }
+      notifySelection(next)
       return next
     })
   }
@@ -243,9 +266,16 @@ export function LeadsTable({ leads, leadType, campaignId }: LeadsTableProps) {
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        Showing {filteredLeads.length} of {leads.length} leads
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Showing {filteredLeads.length} of {leads.length} leads
+        </p>
+        {scrapedCount > 0 && (
+          <p className="text-sm font-medium text-primary">
+            {selectedScrapedCount} of {scrapedCount} leads selected for contact scraping
+          </p>
+        )}
+      </div>
 
       {/* Table */}
       <div className="border rounded-md overflow-x-auto">
