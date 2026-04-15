@@ -3134,6 +3134,12 @@ model GamificationAction {
 // Lead Generation & Google Scraper Models
 // =========================================================================
 
+enum LeadType {
+  SCHOOL_ATHLETICS
+  LOCAL_BUSINESS
+  LOCAL_SCHOOL
+}
+
 enum LeadCampaignStatus {
   DRAFT
   SCRAPING
@@ -3152,25 +3158,31 @@ model LeadCampaign {
   state            String
   district         String?
   schoolType       String   @default("high school")
-  
+
+  // Lead type & search
+  leadType         LeadType @default(SCHOOL_ATHLETICS)
+  searchQuery      String?
+  businessCategory String?
+  radius           String?
+
   // Settings
   limit            Int?
   skipNoEmail      Boolean  @default(true)
   autoSend         Boolean  @default(false)
-  
+
   status           LeadCampaignStatus @default(DRAFT)
-  
+
   // Stats
   totalFound       Int      @default(0)
   totalEmailsFound Int      @default(0)
   totalSent        Int      @default(0)
   totalFailed      Int      @default(0)
-  
+
   // Relations
   templateId       String?
   template         LeadEmailTemplate? @relation(fields: [templateId], references: [id])
   leads            Lead[]
-  
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -3188,25 +3200,35 @@ model Lead {
   id             String     @id @default(cuid())
   campaignId     String
   campaign       LeadCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  
+
   // School Info
   schoolName     String
   schoolUrl      String?
   district       String?
   city           String?
   state          String?
-  
+
+  // Business Info
+  businessName     String?
+  businessCategory String?
+  address          String?
+  rating           Float?
+  reviewCount      Int?
+  website          String?
+  googleMapsUrl    String?
+  placeId          String?
+
   // Contact Info
   contactName    String?
   title          String?
   sport          String?
   email          String?
   phone          String?
-  
+
   status         LeadStatus @default(SCRAPED)
   sentAt         DateTime?
   errorMessage   String?   @db.Text
-  
+
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
