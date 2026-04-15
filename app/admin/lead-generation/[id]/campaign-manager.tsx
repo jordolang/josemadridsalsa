@@ -283,6 +283,64 @@ export function CampaignManager({ campaign }: { campaign: CampaignWithTemplate }
 
   const labels = getLeadTypeLabels(campaign.leadType)
 
+  const handleStreamingScrape = async (actionLabel: string) => {
+    logRef.current?.addEntry('info', 'action', `User triggered "${actionLabel}"`)
+    logRef.current?.addEntry('info', 'action', 'Starting scrape via streaming endpoint...')
+    setLoading(true)
+
+    try {
+      const res = await fetch(`/api/admin/lead-generation/${campaign.id}/run`, {
+        method: 'POST',
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        logRef.current?.addEntry('error', 'action', `Server error ${res.status}: ${text}`)
+        setLoading(false)
+        return
+      }
+
+      logRef.current?.addEntry('success', 'action', 'Connected to scrape stream — receiving events...')
+
+      const reader = res.body?.getReader()
+      if (!reader) {
+        logRef.current?.addEntry('error', 'action', 'No response stream available')
+        setLoading(false)
+        return
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const entry = JSON.parse(line.slice(6))
+            if (entry.level && entry.stage && entry.message) {
+              logRef.current?.addEntry(entry.level, entry.stage, entry.message)
+            }
+          } catch { /* skip non-JSON lines */ }
+        }
+      }
+
+      logRef.current?.addEntry('info', 'system', 'Scrape stream ended.')
+      router.refresh()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logRef.current?.addEntry('error', 'action', `Scrape failed: ${msg}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleAction = async (
     actionFn: (id: string) => Promise<unknown>,
     actionLabel: string,
@@ -292,11 +350,6 @@ export function CampaignManager({ campaign }: { campaign: CampaignWithTemplate }
 
     logRef.current?.addEntry('info', 'action', `User triggered "${actionLabel}"`)
     logRef.current?.addEntry('info', 'action', `Calling server action...`)
-
-    const isScrapeAction = actionLabel.includes('Search') || actionLabel.includes('Scan')
-    if (isScrapeAction) {
-      logRef.current?.startScrapeTimer()
-    }
 
     setLoading(true)
     try {
@@ -401,7 +454,7 @@ export function CampaignManager({ campaign }: { campaign: CampaignWithTemplate }
             variant="outline"
             size="sm"
             onClick={() =>
-              handleAction(triggerGoogleSearchScraper, labels.searchStep.replace(/^\d+\.\s*/, ''))
+              handleStreamingScrape(labels.searchStep.replace(/^\d+\.\s*/, ''))
             }
             disabled={loading || campaign.status === 'SCRAPING'}
           >
