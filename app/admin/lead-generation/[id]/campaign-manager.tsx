@@ -341,6 +341,64 @@ export function CampaignManager({ campaign }: { campaign: CampaignWithTemplate }
     }
   }
 
+  const handleStreamingParse = async (actionLabel: string) => {
+    logRef.current?.addEntry('info', 'action', `User triggered "${actionLabel}"`)
+    logRef.current?.addEntry('info', 'action', 'Starting contact parsing via streaming endpoint...')
+    setLoading(true)
+
+    try {
+      const res = await fetch(`/api/admin/lead-generation/${campaign.id}/parse`, {
+        method: 'POST',
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        logRef.current?.addEntry('error', 'action', `Server error ${res.status}: ${text}`)
+        setLoading(false)
+        return
+      }
+
+      logRef.current?.addEntry('success', 'action', 'Connected to parse stream — receiving events...')
+
+      const reader = res.body?.getReader()
+      if (!reader) {
+        logRef.current?.addEntry('error', 'action', 'No response stream available')
+        setLoading(false)
+        return
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const entry = JSON.parse(line.slice(6))
+            if (entry.level && entry.stage && entry.message) {
+              logRef.current?.addEntry(entry.level, entry.stage, entry.message)
+            }
+          } catch { /* skip non-JSON lines */ }
+        }
+      }
+
+      logRef.current?.addEntry('info', 'system', 'Parse stream ended.')
+      router.refresh()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logRef.current?.addEntry('error', 'action', `Parse failed: ${msg}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleAction = async (
     actionFn: (id: string) => Promise<unknown>,
     actionLabel: string,
@@ -463,7 +521,7 @@ export function CampaignManager({ campaign }: { campaign: CampaignWithTemplate }
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handleAction(triggerWebsiteParser, 'Find Contacts')}
+            onClick={() => handleStreamingParse('Find Contacts')}
             disabled={
               loading ||
               campaign.status === 'PARSING_CONTACTS' ||
