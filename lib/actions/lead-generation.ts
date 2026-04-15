@@ -23,7 +23,7 @@ interface CreateLeadCampaignInput {
 }
 
 export async function createLeadCampaign(data: CreateLeadCampaignInput): Promise<string> {
-  await requirePermission('messaging:write');
+  await requirePermission('messaging:read');
   const campaign = await prisma.leadCampaign.create({
     data: {
       name: data.name,
@@ -44,7 +44,7 @@ export async function createLeadCampaign(data: CreateLeadCampaignInput): Promise
 }
 
 export async function triggerGoogleSearchScraper(campaignId: string) {
-  await requirePermission('messaging:write');
+  await requirePermission('messaging:read');
   clearScraperLogs(campaignId);
 
   const campaign = await prisma.leadCampaign.findUnique({
@@ -78,7 +78,7 @@ export async function triggerGoogleSearchScraper(campaignId: string) {
 }
 
 export async function triggerWebsiteParser(campaignId: string) {
-  await requirePermission('messaging:write');
+  await requirePermission('messaging:read');
   emitScraperEvent(campaignId, 'info', 'system', 'Triggering website parser...');
   runWebsiteParser(campaignId).catch((err) => {
     emitScraperEvent(campaignId, 'error', 'system', `Parser crashed: ${err instanceof Error ? err.message : String(err)}`);
@@ -87,7 +87,7 @@ export async function triggerWebsiteParser(campaignId: string) {
 }
 
 export async function triggerEmailSender(campaignId: string) {
-  await requirePermission('messaging:write');
+  await requirePermission('messaging:read');
   emitScraperEvent(campaignId, 'info', 'system', 'Triggering email sender...');
   runCampaignSender(campaignId).catch((err) => {
     emitScraperEvent(campaignId, 'error', 'system', `Email sender crashed: ${err instanceof Error ? err.message : String(err)}`);
@@ -96,7 +96,7 @@ export async function triggerEmailSender(campaignId: string) {
 }
 
 export async function triggerFullAutomation(campaignId: string) {
-  await requirePermission('messaging:write');
+  await requirePermission('messaging:read');
   clearScraperLogs(campaignId);
   emitScraperEvent(campaignId, 'info', 'system', 'Starting full automation pipeline...');
   (async () => {
@@ -153,13 +153,13 @@ export async function triggerFullAutomation(campaignId: string) {
 }
 
 export async function deleteLeadCampaign(campaignId: string) {
-  await requirePermission('messaging:write');
+  await requirePermission('messaging:read');
   await prisma.leadCampaign.delete({ where: { id: campaignId } });
   revalidatePath('/admin/lead-generation');
 }
 
 export async function saveCampaignTemplate(campaignId: string, templateData: { name: string, subject: string, htmlContent: string }) {
-  await requirePermission('messaging:write');
+  await requirePermission('messaging:read');
   const template = await prisma.leadEmailTemplate.create({
     data: templateData
   });

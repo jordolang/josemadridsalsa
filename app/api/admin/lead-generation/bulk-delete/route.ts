@@ -10,7 +10,7 @@ const bulkDeleteSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    await requirePermission('messaging:write')
+    await requirePermission('messaging:assign')
 
     const body: unknown = await req.json()
     const { ids } = bulkDeleteSchema.parse(body)
