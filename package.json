@@ -142,6 +142,7 @@
     "recharts": "^3.7.0",
     "rehype-sanitize": "^6.0.0",
     "resend": "^6.10.0",
+    "serpapi": "^2.2.1",
     "shebang-regex": "^4.0.0",
     "sonner": "^2.0.7",
     "square": "^43.2.1",

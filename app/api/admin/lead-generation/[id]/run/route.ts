@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
-import { connectBrowser, createPage } from '@/lib/scraper/browser'
+import { getJson } from 'serpapi'
 import { eventBus } from '@/lib/scraper/event-bus'
-import {
-  SEARCH_QUERY_TEMPLATES,
-  MAX_SEARCH_PAGES,
-  EXCLUDED_DOMAINS,
-} from '@/lib/scraper/school-config'
-import type { Browser, Page } from 'playwright'
+import { EXCLUDED_DOMAINS } from '@/lib/scraper/school-config'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const maxDuration = 120
+
+const SERPAPI_KEY = process.env.SERPAPI_KEY
 
 interface LogEntry {
   timestamp: string
@@ -54,9 +51,15 @@ export async function POST(
         }
       }
 
-      let browser: Browser | null = null
-
       try {
+        if (!SERPAPI_KEY) {
+          emit('error', 'system', 'SERPAPI_KEY environment variable is not set. Add it to your Vercel environment variables.')
+          emit('error', 'system', 'Get a free API key at https://serpapi.com (100 searches/month free)')
+          await prisma.leadCampaign.update({ where: { id: campaignId }, data: { status: 'FAILED' } })
+          controller.close()
+          return
+        }
+
         await prisma.leadCampaign.update({
           where: { id: campaignId },
           data: { status: 'SCRAPING' },
@@ -67,29 +70,12 @@ export async function POST(
           data: { campaignId, status: 'SCRAPING', message: 'Started scraping' },
         })
 
-        emit('info', 'system', 'Connecting to browser...')
-
-        try {
-          browser = await connectBrowser()
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          emit('error', 'system', `Failed to connect to browser: ${msg}`)
-          emit('error', 'system', process.env.BROWSERLESS_TOKEN
-            ? 'Browserless.io connection failed. Check your BROWSERLESS_TOKEN.'
-            : 'No BROWSERLESS_TOKEN set and local Chromium unavailable.')
-          await prisma.leadCampaign.update({ where: { id: campaignId }, data: { status: 'FAILED' } })
-          controller.close()
-          return
-        }
-
-        emit('success', 'system', `Browser connected (${process.env.BROWSERLESS_TOKEN ? 'Browserless.io' : 'local'})`)
-
-        const page = await createPage(browser)
+        emit('info', 'system', 'Using SerpAPI for Google search (no browser needed, no CAPTCHA)')
 
         if (campaign.leadType === 'LOCAL_BUSINESS') {
-          await runBusinessScrape(campaignId, campaign, page, emit)
+          await runBusinessSearch(campaignId, campaign, emit)
         } else {
-          await runSchoolScrape(campaignId, campaign, page, emit)
+          await runSchoolSearch(campaignId, campaign, emit)
         }
 
       } catch (error) {
@@ -97,11 +83,6 @@ export async function POST(
         emit('error', 'system', `Scraper crashed: ${msg}`)
         await prisma.leadCampaign.update({ where: { id: campaignId }, data: { status: 'FAILED' } }).catch(() => {})
       } finally {
-        if (browser) {
-          emit('info', 'system', 'Closing browser...')
-          await browser.close().catch(() => {})
-          emit('info', 'system', 'Browser closed.')
-        }
         emit('info', 'system', 'Scrape session ended.')
         try { controller.close() } catch { /* already closed */ }
       }
@@ -120,93 +101,95 @@ export async function POST(
 
 type EmitFn = (level: LogEntry['level'], stage: LogEntry['stage'], message: string) => void
 
-async function runSchoolScrape(
+interface SerpOrganicResult {
+  title?: string
+  link?: string
+  snippet?: string
+  displayed_link?: string
+}
+
+interface SerpLocalResult {
+  title?: string
+  address?: string
+  phone?: string
+  website?: string
+  rating?: number
+  reviews?: number
+  type?: string
+  gps_coordinates?: { latitude: number; longitude: number }
+  place_id?: string
+  links?: { directions?: string }
+  thumbnail?: string
+}
+
+interface SerpResponse {
+  organic_results?: SerpOrganicResult[]
+  local_results?: { places?: SerpLocalResult[] }
+  search_information?: { total_results?: number }
+  error?: string
+}
+
+async function serpSearch(params: Record<string, string | number>): Promise<SerpResponse> {
+  return new Promise((resolve, reject) => {
+    getJson({
+      api_key: SERPAPI_KEY!,
+      ...params,
+    }, (data: SerpResponse) => {
+      if (data.error) reject(new Error(data.error))
+      else resolve(data)
+    })
+  })
+}
+
+async function runSchoolSearch(
   campaignId: string,
   campaign: { city: string; state: string; district: string | null; schoolType: string | null; limit: number | null; searchQuery: string | null },
-  page: Page,
   emit: EmitFn
 ) {
-  let queryTemplate = SEARCH_QUERY_TEMPLATES.by_city
-  if (campaign.schoolType?.toLowerCase().includes('middle')) {
-    queryTemplate = SEARCH_QUERY_TEMPLATES.by_city_middle
-  } else if (campaign.district) {
-    queryTemplate = SEARCH_QUERY_TEMPLATES.by_district
-  }
+  const baseQuery = campaign.district
+    ? `${campaign.district} ${campaign.schoolType || 'high school'} athletics ${campaign.state}`
+    : `${campaign.city} ${campaign.state} ${campaign.schoolType || 'high school'} athletics`
 
-  const templateQuery = queryTemplate
-    .replace('{city}', campaign.city || '')
-    .replace('{state}', campaign.state || '')
-    .replace('{district}', campaign.district || '')
-
-  let query: string
-  if (campaign.searchQuery && templateQuery) {
-    query = `${campaign.searchQuery} ${templateQuery}`
-  } else if (campaign.searchQuery) {
-    query = `${campaign.searchQuery} ${campaign.city} ${campaign.state}`
-  } else if (templateQuery) {
-    query = templateQuery
-  } else {
-    query = `${campaign.city} ${campaign.state} ${campaign.schoolType} athletics`
-  }
+  const query = campaign.searchQuery
+    ? `${campaign.searchQuery} ${campaign.city} ${campaign.state}`
+    : baseQuery
 
   emit('info', 'search', `Search query: "${query.trim()}"`)
 
-  const encodedQuery = encodeURIComponent(query.trim().replace(/\s+/g, ' '))
-  let currentUrl = `https://www.google.com/search?q=${encodedQuery}&gl=us&hl=en`
   const limit = campaign.limit || 50
   let totalFound = 0
   const seenUrls = new Set<string>()
+  const maxPages = Math.min(Math.ceil(limit / 10), 5)
 
-  for (let pageNum = 0; pageNum < MAX_SEARCH_PAGES; pageNum++) {
-    emit('info', 'search', `Navigating to Google search page ${pageNum + 1}...`)
-    await page.goto(currentUrl, { waitUntil: 'networkidle', timeout: 15000 }).catch(() =>
-      page.goto(currentUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
-    )
-    await page.waitForTimeout(2000 + Math.random() * 1500)
+  for (let page = 0; page < maxPages && totalFound < limit; page++) {
+    emit('info', 'search', `Fetching Google results page ${page + 1}...`)
 
-    try {
-      await page.click('button#L2AGLb, button#W0wltc, button:has-text("Accept all"), button:has-text("I agree"), button:has-text("Reject all")', { timeout: 3000 })
-      emit('info', 'search', 'Dismissed consent dialog')
-      await page.waitForTimeout(2000)
-    } catch { /* no consent */ }
-
-    const pageUrl = page.url()
-    if (pageUrl.includes('/sorry/') || pageUrl.includes('consent.google')) {
-      emit('warn', 'search', `Google redirected to: ${pageUrl} — may be a CAPTCHA or consent page`)
-      emit('warn', 'search', 'Waiting 5s and retrying...')
-      await page.waitForTimeout(5000)
-    }
-
-    const results = await page.evaluate(() => {
-      const items: Array<{ url: string; title: string }> = []
-      document.querySelectorAll('#main a, #search a, #res a, a').forEach(el => {
-        const a = el as HTMLAnchorElement
-        let url = a.href || ''
-        if (url.includes('/url?q=')) {
-          try { url = new URL(url).searchParams.get('q') || url } catch { /* skip */ }
-        }
-        const h3 = el.querySelector('h3')
-        const title = h3 ? (h3.textContent || '') : (el.textContent || '')
-        if (url && url.startsWith('http') && !url.includes('google.com') && title) {
-          items.push({ url, title })
-        }
-      })
-      return items
+    const data = await serpSearch({
+      engine: 'google',
+      q: query.trim(),
+      location: `${campaign.city}, ${campaign.state}, United States`,
+      hl: 'en',
+      gl: 'us',
+      num: 10,
+      start: page * 10,
     })
 
-    emit('info', 'search', `Found ${results.length} links on page ${pageNum + 1}`)
+    const results = data.organic_results || []
+    emit('info', 'search', `SerpAPI returned ${results.length} organic results`)
 
     if (results.length === 0) {
-      const pageTitle = await page.title()
-      emit('warn', 'search', `Page title: "${pageTitle}" — Google may have shown a CAPTCHA or no results matched the query`)
+      emit('warn', 'search', 'No more results available from Google')
+      break
     }
 
     for (const res of results) {
-      let cleanUrl = res.url
+      if (!res.link || !res.title) continue
+
+      let cleanUrl = res.link
       try {
-        const urlObj = new URL(res.url)
+        const urlObj = new URL(res.link)
         cleanUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`
-      } catch { /* invalid url */ }
+      } catch { continue }
 
       const isExcluded = EXCLUDED_DOMAINS.some(domain => cleanUrl.includes(domain))
       if (isExcluded || seenUrls.has(cleanUrl)) continue
@@ -215,8 +198,8 @@ async function runSchoolScrape(
       const lead = await prisma.lead.create({
         data: {
           campaignId,
-          schoolName: res.title || 'Unknown School',
-          schoolUrl: res.url,
+          schoolName: res.title,
+          schoolUrl: res.link,
           city: campaign.city,
           state: campaign.state,
           district: campaign.district,
@@ -235,17 +218,7 @@ async function runSchoolScrape(
       if (totalFound >= limit) break
     }
 
-    if (totalFound >= limit) break
-
     emit('info', 'search', `Progress: ${totalFound}/${limit} leads`)
-
-    const nextButton = await page.$('a#pnnext')
-    if (nextButton) {
-      const nextHref = await nextButton.getAttribute('href')
-      if (nextHref) {
-        currentUrl = `https://www.google.com${nextHref}`
-      } else break
-    } else break
   }
 
   emit('success', 'search', `Search complete — ${totalFound} schools found`)
@@ -261,162 +234,109 @@ async function runSchoolScrape(
   })
 }
 
-async function runBusinessScrape(
+async function runBusinessSearch(
   campaignId: string,
   campaign: { city: string; state: string; businessCategory: string | null; searchQuery: string | null; limit: number | null },
-  page: Page,
   emit: EmitFn
 ) {
-  const defaultQuery = `${campaign.businessCategory || 'business'} in ${campaign.city}, ${campaign.state}`
   const query = campaign.searchQuery
     ? `${campaign.searchQuery} in ${campaign.city}, ${campaign.state}`
-    : defaultQuery
+    : `${campaign.businessCategory || 'business'} in ${campaign.city}, ${campaign.state}`
 
   emit('info', 'search', `Search query: "${query.trim()}"`)
+  emit('info', 'search', 'Using SerpAPI Google Maps engine for business data...')
 
-  const encodedQuery = encodeURIComponent(query.trim().replace(/\s+/g, ' '))
-  const searchUrl = `https://www.google.com/search?q=${encodedQuery}&gl=us&hl=en`
   const limit = campaign.limit || 50
   let totalFound = 0
   const seenBusinesses = new Set<string>()
 
-  emit('info', 'search', 'Navigating to Google search...')
-  await page.goto(searchUrl, { waitUntil: 'networkidle', timeout: 15000 }).catch(() =>
-    page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
-  )
-  await page.waitForTimeout(2000 + Math.random() * 1500)
-
-  try {
-    await page.click('button#L2AGLb, button#W0wltc, button:has-text("Accept all"), button:has-text("I agree"), button:has-text("Reject all")', { timeout: 3000 })
-    emit('info', 'search', 'Dismissed consent dialog')
-    await page.waitForTimeout(2000)
-  } catch { /* no consent */ }
-
-  const bizPageUrl = page.url()
-  if (bizPageUrl.includes('/sorry/') || bizPageUrl.includes('consent.google')) {
-    emit('warn', 'search', `Google redirected to: ${bizPageUrl} — may be a CAPTCHA or consent page`)
-  }
-
-  emit('info', 'search', 'Extracting business listings from local pack...')
-
-  const businesses = await page.evaluate(() => {
-    const results: Array<{ name: string; address: string; phone: string; website: string; rating: number | null; reviewCount: number | null; googleMapsUrl: string; category: string }> = []
-    const cards = document.querySelectorAll('[data-attrid="kc:/collection/knowledge_panels/has_phone:phone"], .VkpGBb, [data-hveid] .rllt__details, [jscontroller] .dbg0pd')
-    cards.forEach(card => {
-      const nameEl = card.querySelector('[data-attrid="title"], .dbg0pd, .OSrXXb, span.fontHeadlineSmall') || card.querySelector('a[data-cid] span, div[role="heading"]')
-      const name = nameEl?.textContent?.trim() || ''
-      if (!name) return
-      const text = card.textContent || ''
-      const phoneMatch = text.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/)
-      const ratingEl = card.querySelector('.yi40Hd, .BTtC6e, span[aria-label*="stars"], span[aria-label*="rating"]')
-      let rating: number | null = null
-      if (ratingEl) { const p = parseFloat(ratingEl.textContent || ''); if (!isNaN(p)) rating = p }
-      const reviewEl = card.querySelector('.RDApEe, .hqzQac, span[aria-label*="review"]')
-      let reviewCount: number | null = null
-      if (reviewEl) { const m = (reviewEl.textContent || '').match(/\(?([\d,]+)\)?/); if (m) reviewCount = parseInt(m[1].replace(/,/g, ''), 10) }
-      const addressEl = card.querySelector('.rllt__details div:nth-child(3), .rllt__details div:nth-child(2), .lMbq3e')
-      const linkEl = card.querySelector('a[href*="maps"], a[data-cid]') as HTMLAnchorElement | null
-      const websiteEl = card.querySelector('a[href*="http"]:not([href*="google"]):not([href*="maps"])') as HTMLAnchorElement | null
-      const categoryEl = card.querySelector('.rllt__details div:first-child span, .YhemCb')
-      results.push({ name, address: addressEl?.textContent?.trim() || '', phone: phoneMatch ? phoneMatch[0] : '', website: websiteEl?.href || '', rating, reviewCount, googleMapsUrl: linkEl?.href || '', category: categoryEl?.textContent?.trim() || '' })
-    })
-    return results
+  const data = await serpSearch({
+    engine: 'google_maps',
+    q: query.trim(),
+    ll: '', // let SerpAPI geocode from query
+    hl: 'en',
+    type: 'search',
   })
 
-  emit('info', 'search', `Found ${businesses.length} businesses in local pack`)
+  const places = data.local_results?.places || []
+  emit('info', 'search', `SerpAPI returned ${places.length} business listings`)
 
-  for (const biz of businesses) {
-    const dedupeKey = `${biz.name}|${biz.address}`.toLowerCase()
+  for (const place of places) {
+    if (!place.title) continue
+
+    const dedupeKey = `${place.title}|${place.address || ''}`.toLowerCase()
     if (seenBusinesses.has(dedupeKey)) continue
-    const isExcluded = EXCLUDED_DOMAINS.some(d => (biz.website || '').includes(d))
+
+    const isExcluded = EXCLUDED_DOMAINS.some(d => (place.website || '').includes(d))
     if (isExcluded) continue
     seenBusinesses.add(dedupeKey)
 
     await prisma.lead.create({
       data: {
         campaignId,
-        schoolName: biz.name,
-        businessName: biz.name,
-        businessCategory: biz.category || campaign.businessCategory,
-        address: biz.address,
-        phone: biz.phone || null,
-        website: biz.website || null,
-        rating: biz.rating,
-        reviewCount: biz.reviewCount,
-        googleMapsUrl: biz.googleMapsUrl || null,
+        schoolName: place.title,
+        businessName: place.title,
+        businessCategory: place.type || campaign.businessCategory,
+        address: place.address || null,
+        phone: place.phone || null,
+        website: place.website || null,
+        rating: place.rating || null,
+        reviewCount: place.reviews || null,
+        googleMapsUrl: place.links?.directions || null,
+        placeId: place.place_id || null,
         city: campaign.city,
         state: campaign.state,
         status: 'SCRAPED',
       },
     })
 
-    emit('success', 'search', `Business found: ${biz.name}${biz.rating ? ` (${biz.rating} stars)` : ''}`)
+    emit('success', 'search', `Business found: ${place.title}${place.rating ? ` (${place.rating}★ · ${place.reviews || 0} reviews)` : ''}${place.address ? ` — ${place.address}` : ''}`)
+
     totalFound++
     if (totalFound >= limit) break
   }
 
   if (totalFound < limit) {
-    emit('info', 'search', `Need more results (${totalFound}/${limit}). Searching Google Maps...`)
-    const mapsUrl = `https://www.google.com/maps/search/${encodedQuery}`
-    await page.goto(mapsUrl, { waitUntil: 'domcontentloaded' })
-    await page.waitForTimeout(3000 + Math.random() * 2000)
+    emit('info', 'search', `Need more results (${totalFound}/${limit}). Trying organic Google search...`)
 
-    for (let scroll = 0; scroll < 10 && totalFound < limit; scroll++) {
-      const mapResults = await page.evaluate(() => {
-        const results: Array<{ name: string; address: string; phone: string; website: string; rating: number | null; reviewCount: number | null; googleMapsUrl: string; category: string }> = []
-        document.querySelectorAll('[role="feed"] > div > div > a').forEach(item => {
-          const el = item as HTMLAnchorElement
-          const name = el.getAttribute('aria-label') || el.querySelector('.fontHeadlineSmall')?.textContent?.trim() || ''
-          if (!name) return
-          const text = el.textContent || ''
-          const ratingMatch = text.match(/([\d.]+)\s*\(/)
-          const reviewMatch = text.match(/\(([\d,]+)\)/)
-          const phoneMatch = text.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/)
-          const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
-          const address = lines.find(l => /\d/.test(l) && (l.includes(',') || l.includes('St') || l.includes('Ave'))) || ''
-          const category = lines.find(l => !l.includes('(') && !l.match(/\d{3}/) && l.length < 40 && l !== name) || ''
-          results.push({ name, address, phone: phoneMatch ? phoneMatch[0] : '', website: '', rating: ratingMatch ? parseFloat(ratingMatch[1]) : null, reviewCount: reviewMatch ? parseInt(reviewMatch[1].replace(/,/g, ''), 10) : null, googleMapsUrl: el.href || '', category })
-        })
-        return results
+    const organicData = await serpSearch({
+      engine: 'google',
+      q: query.trim(),
+      location: `${campaign.city}, ${campaign.state}, United States`,
+      hl: 'en',
+      gl: 'us',
+      num: 20,
+    })
+
+    const organicResults = organicData.organic_results || []
+    emit('info', 'search', `SerpAPI returned ${organicResults.length} organic results`)
+
+    for (const res of organicResults) {
+      if (!res.link || !res.title) continue
+
+      const dedupeKey = `${res.title}|${res.link}`.toLowerCase()
+      if (seenBusinesses.has(dedupeKey)) continue
+      seenBusinesses.add(dedupeKey)
+
+      const isExcluded = EXCLUDED_DOMAINS.some(d => res.link!.includes(d))
+      if (isExcluded) continue
+
+      await prisma.lead.create({
+        data: {
+          campaignId,
+          schoolName: res.title,
+          businessName: res.title,
+          businessCategory: campaign.businessCategory,
+          website: res.link,
+          city: campaign.city,
+          state: campaign.state,
+          status: 'SCRAPED',
+        },
       })
 
-      emit('info', 'search', `Google Maps scroll ${scroll + 1}: found ${mapResults.length} results`)
-
-      for (const biz of mapResults) {
-        const dedupeKey = `${biz.name}|${biz.address}`.toLowerCase()
-        if (seenBusinesses.has(dedupeKey)) continue
-        seenBusinesses.add(dedupeKey)
-
-        await prisma.lead.create({
-          data: {
-            campaignId,
-            schoolName: biz.name,
-            businessName: biz.name,
-            businessCategory: biz.category || campaign.businessCategory,
-            address: biz.address,
-            phone: biz.phone || null,
-            website: biz.website || null,
-            rating: biz.rating,
-            reviewCount: biz.reviewCount,
-            googleMapsUrl: biz.googleMapsUrl || null,
-            city: campaign.city,
-            state: campaign.state,
-            status: 'SCRAPED',
-          },
-        })
-
-        emit('success', 'search', `Business found: ${biz.name}${biz.rating ? ` (${biz.rating} stars)` : ''}`)
-        totalFound++
-        if (totalFound >= limit) break
-      }
-
+      emit('success', 'search', `Business found (web): ${res.title}`)
+      totalFound++
       if (totalFound >= limit) break
-
-      await page.evaluate(() => {
-        const feed = document.querySelector('[role="feed"]')
-        if (feed) feed.scrollTop = feed.scrollHeight
-      })
-      await page.waitForTimeout(2000 + Math.random() * 1500)
     }
   }
 
