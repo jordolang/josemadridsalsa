@@ -348,13 +348,25 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
 
   const handleStreamingParse = async (actionLabel: string) => {
     logRef.current?.addEntry('info', 'action', `User triggered "${actionLabel}"`)
+
+    const hasSelection = selectedLeadIds && selectedLeadIds.length > 0
+    if (hasSelection) {
+      logRef.current?.addEntry('info', 'action', `Parsing ${selectedLeadIds.length} selected leads (filtered from total)`)
+    } else {
+      logRef.current?.addEntry('info', 'action', 'Parsing all SCRAPED leads (no selection filter)')
+    }
+
     logRef.current?.addEntry('info', 'action', 'Starting contact parsing via streaming endpoint...')
     setLoading(true)
 
     try {
-      const res = await fetch(`/api/admin/lead-generation/${campaign.id}/parse`, {
+      const fetchOptions: RequestInit = {
         method: 'POST',
-      })
+        headers: { 'Content-Type': 'application/json' },
+        body: hasSelection ? JSON.stringify({ leadIds: selectedLeadIds }) : JSON.stringify({}),
+      }
+
+      const res = await fetch(`/api/admin/lead-generation/${campaign.id}/parse`, fetchOptions)
 
       if (!res.ok) {
         const text = await res.text()
