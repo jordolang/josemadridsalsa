@@ -85,31 +85,18 @@ class EventBus {
 
     const callbacks = this.listeners.get(campaignId)!
 
-    // Enforce listener limit to prevent memory leaks
     if (callbacks.size >= this.MAX_LISTENERS_PER_CAMPAIGN) {
-      console.warn(
-        `[EventBus] Campaign ${campaignId} has reached max listeners limit (${this.MAX_LISTENERS_PER_CAMPAIGN})`
-      )
-      // Return a no-op unsubscribe function
       return () => {}
     }
 
+    // Use the same function reference for both the Set and the EventEmitter
     callbacks.add(callback)
+    this.emitter.on(`campaign:${campaignId}`, callback)
 
-    // Auto-cleanup listener after timeout to prevent stale listeners
     const timeoutId = setTimeout(() => {
       this.unsubscribe(campaignId, callback)
     }, this.LISTENER_TIMEOUT_MS)
 
-    const originalCallback = callback
-    const wrappedCallback = (event: ScraperEvent) => {
-      clearTimeout(timeoutId)
-      originalCallback(event)
-    }
-
-    this.emitter.on(`campaign:${campaignId}`, wrappedCallback)
-
-    // Return unsubscribe function
     return () => {
       clearTimeout(timeoutId)
       this.unsubscribe(campaignId, callback)
