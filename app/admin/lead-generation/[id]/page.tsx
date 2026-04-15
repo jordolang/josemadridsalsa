@@ -12,7 +12,8 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
     include: {
       template: true,
       leads: {
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
+        take: 100
       }
     }
   });
@@ -26,7 +27,15 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">{campaign.name}</h1>
         <p className="text-muted-foreground">
-          {campaign.city}, {campaign.state} {campaign.district ? `(${campaign.district})` : ''} - {campaign.schoolType} (Limit: {campaign.limit})
+          {campaign.city}, {campaign.state}
+          {campaign.district ? ` (${campaign.district})` : ''}
+          {campaign.leadType === 'LOCAL_BUSINESS' && campaign.businessCategory
+            ? ` - ${campaign.businessCategory}`
+            : ''}
+          {campaign.leadType !== 'LOCAL_BUSINESS' && campaign.schoolType
+            ? ` - ${campaign.schoolType}`
+            : ''}
+          {' '}(Limit: {campaign.limit})
         </p>
       </div>
 
@@ -40,7 +49,7 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
 
       <div className="mt-8">
         <h2 className="text-2xl font-semibold mb-4">All Leads ({campaign.leads.length})</h2>
-        <LeadsTable leads={campaign.leads} />
+        <LeadsTable leads={campaign.leads} leadType={campaign.leadType} campaignId={campaign.id} />
       </div>
     </div>
   );

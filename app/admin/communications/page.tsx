@@ -5,6 +5,7 @@ import {
   Mail,
   MessageSquare,
   Star,
+  Target,
   Users,
 } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
@@ -28,6 +29,8 @@ async function getCommunicationOverview() {
     pendingReviews,
     mailingLists,
     recentConversations,
+    leadCampaigns,
+    leadStats,
   ] = await Promise.all([
     prisma.conversation.count({ where: { status: 'OPEN' } }),
     prisma.conversation.count({ where: { status: 'CLOSED' } }),
@@ -51,6 +54,13 @@ async function getCommunicationOverview() {
         },
       },
     }),
+    prisma.leadCampaign.count(),
+    prisma.leadCampaign.aggregate({
+      _sum: {
+        totalFound: true,
+        totalEmailsFound: true,
+      },
+    }),
   ])
 
   return {
@@ -61,6 +71,9 @@ async function getCommunicationOverview() {
     pendingReviews,
     mailingLists,
     recentConversations,
+    leadCampaigns,
+    leadTotalFound: leadStats._sum.totalFound ?? 0,
+    leadTotalEmails: leadStats._sum.totalEmailsFound ?? 0,
   }
 }
 
@@ -94,7 +107,7 @@ export default async function CommunicationsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -162,6 +175,25 @@ export default async function CommunicationsPage() {
             Awaiting moderation before appearing on the site.
           </p>
         </Card>
+
+        <Link href="/admin/lead-generation" className="block">
+          <Card className="p-6 hover:border-primary hover:shadow-sm transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Lead Generation</p>
+                <p className="mt-2 text-3xl font-bold text-foreground">
+                  {overview.leadCampaigns.toLocaleString()}
+                </p>
+              </div>
+              <div className="rounded-full bg-violet-100 p-3 dark:bg-violet-950/40">
+                <Target className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+              </div>
+            </div>
+            <p className="mt-4 text-sm text-muted-foreground">
+              {overview.leadTotalFound.toLocaleString()} leads found, {overview.leadTotalEmails.toLocaleString()} emails
+            </p>
+          </Card>
+        </Link>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
@@ -269,6 +301,12 @@ export default async function CommunicationsPage() {
                 View email campaigns
               </Link>
             )}
+            <Link
+              href="/admin/lead-generation"
+              className="block rounded-md border border-border px-4 py-3 text-sm font-medium text-foreground hover:border-primary hover:text-primary"
+            >
+              Manage lead generation campaigns
+            </Link>
             {canReply ? (
               <p className="rounded-md bg-primary/5 px-4 py-3 text-xs text-primary dark:bg-emerald-950/40 dark:text-emerald-300">
                 You have reply access. Respond directly to customer inquiries.
