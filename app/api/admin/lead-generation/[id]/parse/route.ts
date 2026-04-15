@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
-import { connectBrowser, createPage } from '@/lib/scraper/browser'
+import { connectBrowser } from '@/lib/scraper/browser'
 import { eventBus } from '@/lib/scraper/event-bus'
 import {
   ATHLETICS_PAGE_KEYWORDS,
   STAFF_TITLE_PATTERNS,
   GENERIC_EMAIL_PREFIXES,
-  PAGE_LOAD_TIMEOUT,
 } from '@/lib/scraper/school-config'
 import type { Browser, Page } from 'playwright'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const maxDuration = 300
+
+const PER_SITE_TIMEOUT = 10000
+const PER_SUBPAGE_TIMEOUT = 8000
 
 interface LogEntry {
   timestamp: string
@@ -43,6 +45,14 @@ const SCHOOL_ADMIN_KEYWORDS = [
   'staff', 'directory', 'administration', 'admin', 'office',
   'contact', 'our-team', 'leadership', 'about', 'faculty',
 ]
+
+function safeHostname(url: string): string {
+  try { return new URL(url).hostname } catch { return url }
+}
+
+function safePathname(url: string): string {
+  try { return new URL(url).pathname } catch { return url }
+}
 
 export async function POST(
   request: NextRequest,
@@ -121,31 +131,47 @@ export async function POST(
 
         emit('success', 'system', `Browser connected (${process.env.BROWSERLESS_TOKEN ? 'Browserless.io' : 'local'})`)
 
+        const context = await browser.newContext({
+          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          locale: 'en-US',
+          timezoneId: 'America/New_York',
+          viewport: { width: 1920, height: 1080 },
+        })
+        const page = await context.newPage()
+
         let totalEmailsFound = campaign.totalEmailsFound || 0
+        const startTime = Date.now()
+        const maxRunTime = 250000
 
         for (let i = 0; i < leads.length; i++) {
+          if (Date.now() - startTime > maxRunTime) {
+            emit('warn', 'system', `Time limit approaching (${Math.round((Date.now() - startTime) / 1000)}s). Stopping to save progress.`)
+            break
+          }
+
           const lead = leads[i]
           const siteUrl = lead.website || lead.schoolUrl
           if (!siteUrl) continue
 
-          emit('info', 'parse', `[${i + 1}/${leads.length}] Visiting: ${siteUrl}`)
-
-          const page = await createPage(browser)
+          emit('info', 'parse', `[${i + 1}/${leads.length}] Visiting: ${safeHostname(siteUrl)}`)
 
           try {
-            await page.goto(siteUrl, { timeout: PAGE_LOAD_TIMEOUT, waitUntil: 'domcontentloaded' }).catch(() => null)
-            await page.waitForTimeout(2000)
+            const navResult = await page.goto(siteUrl, { timeout: PER_SITE_TIMEOUT, waitUntil: 'domcontentloaded' }).catch(() => null)
+
+            if (!navResult) {
+              emit('warn', 'parse', `Could not load ${safeHostname(siteUrl)} (timeout or error)`)
+              continue
+            }
+
+            await page.waitForTimeout(1500)
 
             let contacts: ParsedContact[] = []
 
             if (campaign.leadType === 'LOCAL_BUSINESS') {
-              emit('info', 'parse', `Searching for business contacts on ${new URL(siteUrl).hostname}...`)
               contacts = await parseBusinessContacts(page, siteUrl, emit)
             } else if (campaign.leadType === 'LOCAL_SCHOOL') {
-              emit('info', 'parse', `Searching for school admin contacts on ${new URL(siteUrl).hostname}...`)
               contacts = await parseSchoolAdminContacts(page, siteUrl, emit)
             } else {
-              emit('info', 'parse', `Searching for athletics staff contacts on ${new URL(siteUrl).hostname}...`)
               contacts = await parseAthleticsContacts(page, siteUrl, emit)
             }
 
@@ -154,15 +180,16 @@ export async function POST(
               await prisma.lead.update({
                 where: { id: lead.id },
                 data: {
-                  contactName: first.name,
-                  title: first.title,
+                  contactName: first.name || null,
+                  title: first.title || null,
                   email: first.email,
-                  sport: first.sport,
+                  sport: first.sport || null,
                   status: 'CONTACT_FOUND',
                 },
               })
 
-              emit('success', 'parse', `Contact found: ${first.name} (${first.email})${first.title ? ` — ${first.title}` : ''}`)
+              const nameDisplay = first.name ? `${first.name} ` : ''
+              emit('success', 'parse', `Contact: ${nameDisplay}(${first.email})${first.title ? ` — ${first.title}` : ''}`)
               totalEmailsFound++
 
               for (let j = 1; j < contacts.length; j++) {
@@ -177,28 +204,26 @@ export async function POST(
                     city: lead.city,
                     state: lead.state,
                     district: lead.district,
-                    contactName: c.name,
-                    title: c.title,
+                    contactName: c.name || null,
+                    title: c.title || null,
                     email: c.email,
-                    sport: c.sport,
+                    sport: c.sport || null,
                     status: 'CONTACT_FOUND',
                   },
                 })
-                emit('success', 'parse', `Additional contact: ${c.name} (${c.email})`)
+                emit('success', 'parse', `Additional: ${c.name || ''} (${c.email})`)
                 totalEmailsFound++
               }
             } else {
-              emit('warn', 'parse', `No contacts found on ${new URL(siteUrl).hostname}`)
+              emit('info', 'parse', `No contacts on ${safeHostname(siteUrl)}`)
             }
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Parse error'
-            emit('error', 'parse', `Error parsing ${siteUrl}: ${msg}`)
+            emit('error', 'parse', `Error on ${safeHostname(siteUrl)}: ${msg}`)
             await prisma.lead.update({
               where: { id: lead.id },
               data: { errorMessage: msg },
-            })
-          } finally {
-            await page.close().catch(() => {})
+            }).catch(() => {})
           }
         }
 
@@ -247,7 +272,7 @@ function extractEmails(text: string): string[] {
   )
 }
 
-async function findTargetPages(page: Page, baseUrl: string, keywords: string[], emit: EmitFn): Promise<string[]> {
+async function findTargetPages(page: Page, keywords: string[], emit: EmitFn): Promise<string[]> {
   const links = await page.evaluate((kws: string[]) => {
     const results: string[] = []
     document.querySelectorAll('a[href]').forEach(el => {
@@ -260,14 +285,39 @@ async function findTargetPages(page: Page, baseUrl: string, keywords: string[], 
         results.push(href)
       }
     })
-    return [...new Set(results)].slice(0, 5)
+    return [...new Set(results)].slice(0, 3)
   }, keywords)
 
   if (links.length > 0) {
-    emit('info', 'parse', `Found ${links.length} relevant pages to check: ${links.map(l => new URL(l).pathname).join(', ')}`)
+    emit('info', 'parse', `Found ${links.length} subpages: ${links.map(l => safePathname(l)).join(', ')}`)
   }
 
   return links
+}
+
+async function visitAndExtractEmails(page: Page, url: string, seenEmails: Set<string>, emit: EmitFn): Promise<{ email: string; surrounding: string }[]> {
+  try {
+    const navResult = await page.goto(url, { timeout: PER_SUBPAGE_TIMEOUT, waitUntil: 'domcontentloaded' }).catch(() => null)
+    if (!navResult) return []
+    await page.waitForTimeout(1000)
+  } catch {
+    return []
+  }
+
+  const html = await page.content()
+  const emails = extractEmails(html)
+  const results: { email: string; surrounding: string }[] = []
+
+  for (const email of emails) {
+    if (seenEmails.has(email)) continue
+    seenEmails.add(email)
+
+    const idx = html.indexOf(email)
+    const surrounding = html.substring(Math.max(0, idx - 300), idx + email.length + 300)
+    results.push({ email, surrounding })
+  }
+
+  return results
 }
 
 async function parseAthleticsContacts(page: Page, siteUrl: string, emit: EmitFn): Promise<ParsedContact[]> {
@@ -280,48 +330,46 @@ async function parseAthleticsContacts(page: Page, siteUrl: string, emit: EmitFn)
   for (const email of mainEmails) {
     if (seenEmails.has(email)) continue
     seenEmails.add(email)
-    contacts.push({ name: '', title: '', email })
+
+    const idx = html.indexOf(email)
+    const surrounding = html.substring(Math.max(0, idx - 200), idx + email.length + 200)
+
+    let sport = ''
+    for (const [sportKey, pattern] of Object.entries(STAFF_TITLE_PATTERNS)) {
+      if (pattern.test(surrounding)) { sport = sportKey; break }
+    }
+
+    const nameMatch = surrounding.match(/(?:coach|mr\.|mrs\.|ms\.|dr\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i)
+    const titleMatch = surrounding.match(/(?:head\s+coach|assistant\s+coach|athletic\s+director|coach)/i)
+
+    contacts.push({
+      name: nameMatch ? nameMatch[1] : '',
+      title: titleMatch ? titleMatch[0] : '',
+      email,
+      sport,
+    })
   }
 
-  const athleticsLinks = await findTargetPages(page, siteUrl, ATHLETICS_PAGE_KEYWORDS, emit)
+  const subpageLinks = await findTargetPages(page, ATHLETICS_PAGE_KEYWORDS, emit)
 
-  for (const link of athleticsLinks) {
-    try {
-      await page.goto(link, { timeout: PAGE_LOAD_TIMEOUT, waitUntil: 'domcontentloaded' }).catch(() => null)
-      await page.waitForTimeout(1500)
+  for (const link of subpageLinks) {
+    const found = await visitAndExtractEmails(page, link, seenEmails, emit)
 
-      const subHtml = await page.content()
-      const subEmails = extractEmails(subHtml)
-
-      for (const email of subEmails) {
-        if (seenEmails.has(email)) continue
-        seenEmails.add(email)
-
-        const surrounding = subHtml.substring(
-          Math.max(0, subHtml.indexOf(email) - 200),
-          subHtml.indexOf(email) + email.length + 200
-        )
-
-        let name = ''
-        let title = ''
-        let sport = ''
-
-        for (const [sportKey, pattern] of Object.entries(STAFF_TITLE_PATTERNS)) {
-          if (pattern.test(surrounding)) {
-            sport = sportKey
-            break
-          }
-        }
-
-        const nameMatch = surrounding.match(/(?:coach|mr\.|mrs\.|ms\.|dr\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i)
-        if (nameMatch) name = nameMatch[1]
-
-        const titleMatch = surrounding.match(/(?:head\s+coach|assistant\s+coach|athletic\s+director|coach)/i)
-        if (titleMatch) title = titleMatch[0]
-
-        contacts.push({ name, title, email, sport })
+    for (const { email, surrounding } of found) {
+      let sport = ''
+      for (const [sportKey, pattern] of Object.entries(STAFF_TITLE_PATTERNS)) {
+        if (pattern.test(surrounding)) { sport = sportKey; break }
       }
-    } catch { /* skip failed page */ }
+      const nameMatch = surrounding.match(/(?:coach|mr\.|mrs\.|ms\.|dr\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i)
+      const titleMatch = surrounding.match(/(?:head\s+coach|assistant\s+coach|athletic\s+director|coach)/i)
+
+      contacts.push({
+        name: nameMatch ? nameMatch[1] : '',
+        title: titleMatch ? titleMatch[0] : '',
+        email,
+        sport,
+      })
+    }
   }
 
   return contacts
@@ -331,48 +379,42 @@ async function parseSchoolAdminContacts(page: Page, siteUrl: string, emit: EmitF
   const contacts: ParsedContact[] = []
   const seenEmails = new Set<string>()
 
-  const adminLinks = await findTargetPages(page, siteUrl, SCHOOL_ADMIN_KEYWORDS, emit)
+  const html = await page.content()
+  for (const email of extractEmails(html)) {
+    if (seenEmails.has(email)) continue
+    seenEmails.add(email)
+    const idx = html.indexOf(email)
+    const surrounding = html.substring(Math.max(0, idx - 300), idx + email.length + 300)
 
-  const pagesToCheck = [siteUrl, ...adminLinks]
-
-  for (const url of pagesToCheck) {
-    if (url !== siteUrl) {
-      try {
-        await page.goto(url, { timeout: PAGE_LOAD_TIMEOUT, waitUntil: 'domcontentloaded' }).catch(() => null)
-        await page.waitForTimeout(1500)
-      } catch { continue }
+    let title = ''
+    const titlePatterns: Record<string, RegExp> = {
+      Principal: /principal|head\s+of\s+school/i,
+      'Vice Principal': /vice\s+principal|assistant\s+principal|dean/i,
+      'Office Manager': /office\s+manager|school\s+secretary|administrative\s+assistant/i,
     }
+    for (const [t, p] of Object.entries(titlePatterns)) {
+      if (p.test(surrounding)) { title = t; break }
+    }
+    const nameMatch = surrounding.match(/(?:mr\.|mrs\.|ms\.|dr\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i)
+    contacts.push({ name: nameMatch ? nameMatch[1] : '', title, email })
+  }
 
-    const html = await page.content()
-    const emails = extractEmails(html)
+  const subpageLinks = await findTargetPages(page, SCHOOL_ADMIN_KEYWORDS, emit)
 
-    for (const email of emails) {
-      if (seenEmails.has(email)) continue
-      seenEmails.add(email)
-
-      const surrounding = html.substring(
-        Math.max(0, html.indexOf(email) - 300),
-        html.indexOf(email) + email.length + 300
-      )
-
+  for (const link of subpageLinks) {
+    const found = await visitAndExtractEmails(page, link, seenEmails, emit)
+    for (const { email, surrounding } of found) {
       let title = ''
       const titlePatterns: Record<string, RegExp> = {
-        Principal: /(?:principal|head\s+of\s+school)/i,
-        'Vice Principal': /(?:vice\s+principal|assistant\s+principal|dean)/i,
-        'Office Manager': /(?:office\s+manager|school\s+secretary|administrative\s+assistant)/i,
+        Principal: /principal|head\s+of\s+school/i,
+        'Vice Principal': /vice\s+principal|assistant\s+principal|dean/i,
+        'Office Manager': /office\s+manager|school\s+secretary|administrative\s+assistant/i,
       }
-
-      for (const [titleName, pattern] of Object.entries(titlePatterns)) {
-        if (pattern.test(surrounding)) {
-          title = titleName
-          break
-        }
+      for (const [t, p] of Object.entries(titlePatterns)) {
+        if (p.test(surrounding)) { title = t; break }
       }
-
       const nameMatch = surrounding.match(/(?:mr\.|mrs\.|ms\.|dr\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i)
-      const name = nameMatch ? nameMatch[1] : ''
-
-      contacts.push({ name, title, email })
+      contacts.push({ name: nameMatch ? nameMatch[1] : '', title, email })
     }
   }
 
@@ -383,38 +425,25 @@ async function parseBusinessContacts(page: Page, siteUrl: string, emit: EmitFn):
   const contacts: ParsedContact[] = []
   const seenEmails = new Set<string>()
 
-  const contactLinks = await findTargetPages(page, siteUrl, BUSINESS_CONTACT_KEYWORDS, emit)
+  const html = await page.content()
+  for (const email of extractEmails(html)) {
+    if (seenEmails.has(email)) continue
+    seenEmails.add(email)
+    const idx = html.indexOf(email)
+    const surrounding = html.substring(Math.max(0, idx - 300), idx + email.length + 300)
+    const titleMatch = surrounding.match(/(?:owner|manager|director|founder|ceo|president|partner|general\s+manager)/i)
+    const nameMatch = surrounding.match(/(?:mr\.|mrs\.|ms\.|dr\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i)
+    contacts.push({ name: nameMatch ? nameMatch[1] : '', title: titleMatch ? titleMatch[0] : '', email })
+  }
 
-  const pagesToCheck = [siteUrl, ...contactLinks]
+  const subpageLinks = await findTargetPages(page, BUSINESS_CONTACT_KEYWORDS, emit)
 
-  for (const url of pagesToCheck) {
-    if (url !== siteUrl) {
-      try {
-        await page.goto(url, { timeout: PAGE_LOAD_TIMEOUT, waitUntil: 'domcontentloaded' }).catch(() => null)
-        await page.waitForTimeout(1500)
-      } catch { continue }
-    }
-
-    const html = await page.content()
-    const emails = extractEmails(html)
-
-    for (const email of emails) {
-      if (seenEmails.has(email)) continue
-      seenEmails.add(email)
-
-      const surrounding = html.substring(
-        Math.max(0, html.indexOf(email) - 300),
-        html.indexOf(email) + email.length + 300
-      )
-
-      let title = ''
+  for (const link of subpageLinks) {
+    const found = await visitAndExtractEmails(page, link, seenEmails, emit)
+    for (const { email, surrounding } of found) {
       const titleMatch = surrounding.match(/(?:owner|manager|director|founder|ceo|president|partner|general\s+manager)/i)
-      if (titleMatch) title = titleMatch[0]
-
       const nameMatch = surrounding.match(/(?:mr\.|mrs\.|ms\.|dr\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i)
-      const name = nameMatch ? nameMatch[1] : ''
-
-      contacts.push({ name, title, email })
+      contacts.push({ name: nameMatch ? nameMatch[1] : '', title: titleMatch ? titleMatch[0] : '', email })
     }
   }
 
