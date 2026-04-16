@@ -83,3 +83,24 @@ mnt/
 /Users/
 piecesdb.json
 .claude-worktrees/
+.omc/
+.remember/
+.zenflow/
+.integration/
+.pi/
+.qwen/
+.playwright-mcp/
+.agents/
+skills/
+
+# Node / Next.js build artifacts (Vercel rebuilds these)
+node_modules/
+.next/
+.vercel/
+.ruff_cache/
+
+# iOS build artifacts
+mobile/**/.build/
+
+# Mobile projects (not part of web deploy)
+mobile/
