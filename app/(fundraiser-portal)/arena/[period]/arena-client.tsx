@@ -1,6 +1,6 @@
 'use client'
 
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, MotionConfig } from 'framer-motion'
 import type { ArenaSnapshot } from '@/lib/arena/server-state'
 import { useArenaState } from '@/lib/arena/use-arena-state'
 import { TeamCard } from '@/components/arena/team-card'
@@ -38,15 +38,15 @@ export function ArenaClient({ snapshot: initial }: { snapshot: ArenaSnapshot }) 
   const { snapshot, status, staleness } = useArenaState(initial)
 
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       <LiveBadge status={status} staleness={staleness} />
       <AnimatePresence initial>
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] justify-items-center gap-8">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] justify-items-center gap-4 sm:grid-cols-[repeat(auto-fill,minmax(240px,1fr))] sm:gap-8">
           {snapshot.teams.map((team, rank) => (
             <TeamCard key={team.id} team={team} rank={rank} />
           ))}
         </div>
       </AnimatePresence>
-    </>
+    </MotionConfig>
   )
 }
