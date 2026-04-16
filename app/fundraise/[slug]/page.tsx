@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { prisma as db } from "@/lib/prisma";
-import FundraiserBattleWrapper from "@/components/fundraiser/FundraiserBattleWrapper";
 import type { Metadata } from "next";
 
 interface Props { params: { slug: string } }
@@ -22,32 +21,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function FundraiserProfilePage({ params }: Props) {
   const team = await db.fundraiserTeam.findUnique({
     where: { slug: params.slug, status: "ACTIVE" },
-    include: { characters: true },
   });
   if (!team) notFound();
-
-  const opponents = await db.fundraiserTeam.findMany({
-    where: { status: "ACTIVE", id: { not: team.id }, activePeriod: { equals: team.activePeriod } },
-    include: { characters: true },
-    orderBy: { salesCount: "desc" },
-    take: 8,
-  });
-
-  const mapTeam = (t: typeof team) => ({
-    id: t.id, name: t.name, school: t.school,
-    color: t.teamColor, dark: t.teamColorDark,
-    goal: t.goalAmount,
-    roster: t.characters.map(c => ({
-      id: c.id, name: c.characterName, cls: c.characterClass,
-      gender: c.gender as "m"|"f", skin: c.skinColor, hair: c.hairColor,
-      quips: Array.isArray(c.quips) ? c.quips as string[] : JSON.parse(c.quips as string),
-    })),
-  });
-
-  const shieldRecord = await db.fundraiserShield.findFirst({
-    where: { teamId: team.id, expiresAt: { gt: new Date() } },
-    orderBy: { expiresAt: "desc" },
-  });
 
   return (
     <main className="min-h-screen bg-black flex flex-col items-center py-8 px-4">
@@ -63,14 +38,6 @@ export default async function FundraiserProfilePage({ params }: Props) {
           <div style={{color:"#F5C842"}}><span style={{color:"#6B4A18"}}>GOAL: </span>${team.goalAmount.toLocaleString()}</div>
           <div style={{color:"#F5C842"}}><span style={{color:"#6B4A18"}}>RAISED: </span>${(team.salesCount * team.pricePerUnit).toLocaleString()}</div>
         </div>
-      </section>
-      <section className="w-full max-w-2xl">
-        <FundraiserBattleWrapper
-          myTeamId={team.id}
-          oppTeamId={opponents[0]?.id ?? null}
-          shieldExpiresAt={shieldRecord?.expiresAt?.toISOString() ?? null}
-          shieldHPRemaining={shieldRecord?.remainingHP ?? 0}
-        />
       </section>
       <section className="w-full max-w-2xl mt-8 text-center">
         <a href={`/shop?ref=${team.slug}&team=${team.id}`}
