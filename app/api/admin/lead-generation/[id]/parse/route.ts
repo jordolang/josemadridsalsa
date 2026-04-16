@@ -83,14 +83,19 @@ export async function POST(
   const { id: campaignId } = await params
 
   let requestLeadIds: string[] | undefined
+  let skipLeadIds: string[] = []
   try {
     const body = await request.json()
     if (Array.isArray(body?.leadIds) && body.leadIds.length > 0) {
       requestLeadIds = body.leadIds
     }
+    if (Array.isArray(body?.skipLeadIds)) {
+      skipLeadIds = body.skipLeadIds.filter((id: unknown): id is string => typeof id === 'string')
+    }
   } catch {
     // No body or invalid JSON — parse all SCRAPED leads (backward compatible)
   }
+  const skipLeadSet = new Set(skipLeadIds)
 
   const campaign = await prisma.leadCampaign.findUnique({ where: { id: campaignId } })
   if (!campaign) {
@@ -108,7 +113,38 @@ export async function POST(
         } catch { /* stream closed */ }
       }
 
+      function emitErrorPause(leadName: string, domain: string, errorMessage: string) {
+        try {
+          const event = {
+            type: 'error_pause',
+            timestamp: new Date().toISOString(),
+            leadName,
+            domain,
+            errorMessage,
+          }
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
+        } catch { /* stream closed */ }
+      }
+
       let browser: Browser | null = null
+      const DOMAINS_PER_CONNECTION = 3
+
+      async function reconnectBrowser(): Promise<Browser | null> {
+        if (browser) {
+          await browser.close().catch(() => {})
+          browser = null
+        }
+        emit('info', 'system', 'Reconnecting to browser...')
+        try {
+          const b = await connectBrowser()
+          emit('success', 'system', `Browser reconnected (${process.env.BROWSERLESS_TOKEN ? 'Browserless.io' : 'local'})`)
+          return b
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          emit('error', 'system', `Failed to reconnect: ${msg}`)
+          return null
+        }
+      }
 
       try {
         const leadWhere: Record<string, unknown> = {
@@ -177,21 +213,39 @@ export async function POST(
         const maxRunTime = 240000
         let domainIndex = 0
         let consecutiveFailures = 0
-        const MAX_CONSECUTIVE_FAILURES = 5
+        const MAX_CONSECUTIVE_FAILURES = 3
 
-        for (const [domain, domainLeads] of domainToLeads) {
+        for (const [domain, allDomainLeads] of domainToLeads) {
+          // Filter out any leads the user asked to skip
+          const domainLeads = allDomainLeads.filter(l => !skipLeadSet.has(l.id))
+          if (domainLeads.length === 0) {
+            emit('info', 'parse', `Skipping ${domain} — all leads marked for skip`)
+            continue
+          }
+
           if (Date.now() - startTime > maxRunTime) {
             emit('warn', 'system', `Time limit approaching. Stopping to save progress.`)
             break
           }
 
           if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-            emit('error', 'system', `${MAX_CONSECUTIVE_FAILURES} consecutive domains failed — browser context may be dead. Stopping.`)
+            emit('error', 'system', `${MAX_CONSECUTIVE_FAILURES} consecutive domains failed — browser session may be dead. Stopping.`)
             break
+          }
+
+          // Reconnect browser every DOMAINS_PER_CONNECTION domains to avoid Browserless session death
+          if (domainIndex > 0 && domainIndex % DOMAINS_PER_CONNECTION === 0) {
+            emit('info', 'system', `Rotating browser connection after ${DOMAINS_PER_CONNECTION} domains...`)
+            browser = await reconnectBrowser()
+            if (!browser) {
+              emit('error', 'system', 'Browser reconnect failed — stopping parser')
+              break
+            }
           }
 
           domainIndex++
           const representativeUrl = domainLeads[0].website || domainLeads[0].schoolUrl!
+          const representativeName = domainLeads[0].schoolName || domainLeads[0].businessName || domain
           emit('info', 'parse', `[${domainIndex}/${domainToLeads.size}] Scanning ${domain} (${domainLeads.length} leads from this domain)`)
 
           let page: Page | null = null
@@ -205,9 +259,12 @@ export async function POST(
             page = await context.newPage()
 
             // STEP 1: Visit the main page
-            const mainNav = await page.goto(representativeUrl, { timeout: SITE_NAV_TIMEOUT, waitUntil: 'domcontentloaded' }).catch(() => null)
-            if (!mainNav) {
-              emit('warn', 'parse', `Could not load ${domain} — skipping`)
+            const mainNavError = await page.goto(representativeUrl, { timeout: SITE_NAV_TIMEOUT, waitUntil: 'domcontentloaded' })
+              .then(() => null)
+              .catch((err: unknown) => err instanceof Error ? err.message : String(err))
+            if (mainNavError) {
+              emit('warn', 'parse', `Could not load ${domain}: ${mainNavError}`)
+              emitErrorPause(representativeName, domain, mainNavError)
               consecutiveFailures++
               await context.close().catch(() => {})
               continue
@@ -383,7 +440,24 @@ export async function POST(
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Parse error'
             emit('error', 'parse', `Error on ${domain}: ${msg}`)
+            emitErrorPause(representativeName, domain, msg)
             consecutiveFailures++
+
+            // If browser/context died, force a reconnect before the next domain
+            if (/browser has been closed|target.*closed|context.*closed|websocket/i.test(msg)) {
+              emit('warn', 'system', 'Detected dead browser session — will reconnect before next domain')
+              if (browser) {
+                await browser.close().catch(() => {})
+                browser = null
+              }
+              const reconnected = await reconnectBrowser()
+              if (!reconnected) {
+                emit('error', 'system', 'Reconnect failed — stopping parser')
+                break
+              }
+              browser = reconnected
+              consecutiveFailures = 0
+            }
           } finally {
             if (page) {
               const ctx = page.context()
