@@ -37,7 +37,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import type { LeadCampaign, LeadEmailTemplate } from '@prisma/client'
+import { Checkbox } from '@/components/ui/checkbox'
+import { FileDown } from 'lucide-react'
+import type { LeadCampaign, LeadEmailTemplate, Lead } from '@prisma/client'
+import { PdfReport, DEFAULT_PDF_OPTIONS, type PdfOptions } from './pdf-report'
 
 type CampaignWithTemplate = LeadCampaign & {
   template: LeadEmailTemplate | null
@@ -283,6 +286,7 @@ const ActivityLog = forwardRef<ActivityLogHandle, { campaignId: string }>(
 interface CampaignManagerProps {
   campaign: CampaignWithTemplate
   selectedLeadIds?: string[]
+  leads?: Lead[]
 }
 
 interface PauseState {
@@ -293,14 +297,61 @@ interface PauseState {
   errorMessage?: string
 }
 
-export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerProps) {
+export function CampaignManager({ campaign, selectedLeadIds, leads = [] }: CampaignManagerProps) {
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [progressLabel, setProgressLabel] = useState<string | null>(null)
   const [pauseState, setPauseState] = useState<PauseState>({ open: false })
+  const [pdfOptions, setPdfOptions] = useState<PdfOptions>(DEFAULT_PDF_OPTIONS)
+  const [generatingPdf, setGeneratingPdf] = useState(false)
   const skippedLeadIdsRef = useRef<string[]>([])
   const router = useRouter()
   const logRef = useRef<ActivityLogHandle>(null)
+
+  const handleGeneratePdf = async () => {
+    if (leads.length === 0) {
+      toast.error('No leads to export')
+      return
+    }
+    logRef.current?.addEntry('info', 'action', 'Generating PDF report...')
+    toast.info('Generating PDF report...')
+    setGeneratingPdf(true)
+    try {
+      const { pdf } = await import('@react-pdf/renderer')
+      const doc = (
+        <PdfReport
+          campaign={{
+            name: campaign.name,
+            city: campaign.city,
+            state: campaign.state,
+            leadType: campaign.leadType,
+            businessCategory: campaign.businessCategory,
+            schoolType: campaign.schoolType,
+            createdAt: campaign.createdAt,
+            totalFound: campaign.totalFound,
+            totalEmailsFound: campaign.totalEmailsFound,
+          }}
+          leads={leads}
+          options={pdfOptions}
+        />
+      )
+      const blob = await pdf(doc).toBlob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${campaign.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-leads.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('PDF report downloaded')
+      logRef.current?.addEntry('success', 'action', 'PDF report downloaded')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error('Failed to generate PDF', { description: msg })
+      logRef.current?.addEntry('error', 'action', `PDF generation failed: ${msg}`)
+    } finally {
+      setGeneratingPdf(false)
+    }
+  }
 
   const isActive = ACTIVE_STATUSES.includes(campaign.status)
   const defaultTab = isActive ? 'activity' : 'template'
@@ -693,6 +744,15 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
           >
             3. Send Emails
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGeneratePdf}
+            disabled={generatingPdf || leads.length === 0}
+          >
+            <FileDown className="h-3.5 w-3.5 mr-1.5" />
+            {generatingPdf ? 'Generating...' : 'Export PDF'}
+          </Button>
           <div className="w-full mt-2 space-y-2">
             <Button
               variant="default"
@@ -757,6 +817,9 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
                 <TabsTrigger value="template" className="text-xs">
                   Email Template
                 </TabsTrigger>
+                <TabsTrigger value="pdf" className="text-xs">
+                  PDF Options
+                </TabsTrigger>
               </TabsList>
             </div>
           </CardHeader>
@@ -803,6 +866,68 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
                 </Button>
               </form>
             </TabsContent>
+            <TabsContent value="pdf" className="mt-0">
+              <CardDescription className="mb-4">
+                Configure the PDF report that will be generated when you click &ldquo;Export
+                PDF&rdquo;. Report includes a cover page, lead sections, and page numbers.
+              </CardDescription>
+              <div className="space-y-3">
+                <PdfOption
+                  id="pdf-emailsOnly"
+                  label="Emails only"
+                  description="Only include leads that have a discovered email address."
+                  checked={pdfOptions.emailsOnly}
+                  onChange={(v) =>
+                    setPdfOptions((o) => ({ ...o, emailsOnly: v }))
+                  }
+                />
+                <PdfOption
+                  id="pdf-groupByDomain"
+                  label="Group by domain"
+                  description="Combine contacts from the same website under one lead."
+                  checked={pdfOptions.groupByDomain}
+                  onChange={(v) =>
+                    setPdfOptions((o) => ({ ...o, groupByDomain: v }))
+                  }
+                />
+                <PdfOption
+                  id="pdf-includePhotos"
+                  label="Include website previews"
+                  description="Embed a screenshot thumbnail for each lead (slower to generate)."
+                  checked={pdfOptions.includePhotos}
+                  onChange={(v) =>
+                    setPdfOptions((o) => ({ ...o, includePhotos: v }))
+                  }
+                />
+                <PdfOption
+                  id="pdf-summaryOnly"
+                  label="Summary only"
+                  description="Hide the detailed contact table; show entity + source only."
+                  checked={pdfOptions.summaryOnly}
+                  onChange={(v) =>
+                    setPdfOptions((o) => ({ ...o, summaryOnly: v }))
+                  }
+                />
+                <PdfOption
+                  id="pdf-includeActivityLog"
+                  label="Append activity log"
+                  description="Add a final page with the most recent scraper log output."
+                  checked={pdfOptions.includeActivityLog}
+                  onChange={(v) =>
+                    setPdfOptions((o) => ({ ...o, includeActivityLog: v }))
+                  }
+                />
+                <Button
+                  type="button"
+                  onClick={handleGeneratePdf}
+                  disabled={generatingPdf || leads.length === 0}
+                  className="mt-2"
+                >
+                  <FileDown className="h-3.5 w-3.5 mr-1.5" />
+                  {generatingPdf ? 'Generating...' : `Generate PDF (${leads.length} leads)`}
+                </Button>
+              </div>
+            </TabsContent>
           </CardContent>
         </Tabs>
       </Card>
@@ -841,6 +966,33 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  )
+}
+
+interface PdfOptionProps {
+  id: string
+  label: string
+  description: string
+  checked: boolean
+  onChange: (next: boolean) => void
+}
+
+function PdfOption({ id, label, description, checked, onChange }: PdfOptionProps) {
+  return (
+    <div className="flex items-start gap-3 rounded-md border p-3">
+      <Checkbox
+        id={id}
+        checked={checked}
+        onCheckedChange={(v) => onChange(v === true)}
+        className="mt-0.5"
+      />
+      <div className="grid gap-0.5">
+        <Label htmlFor={id} className="text-sm font-medium cursor-pointer">
+          {label}
+        </Label>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
     </div>
   )
 }

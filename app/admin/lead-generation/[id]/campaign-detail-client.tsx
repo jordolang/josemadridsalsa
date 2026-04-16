@@ -26,7 +26,11 @@ export function CampaignDetailClient({ campaign }: CampaignDetailClientProps) {
 
   return (
     <>
-      <CampaignManager campaign={campaign} selectedLeadIds={selectedLeadIds} />
+      <CampaignManager
+        campaign={campaign}
+        selectedLeadIds={selectedLeadIds}
+        leads={campaign.leads}
+      />
 
       <div className="mt-8">
         <LiveLeadFeed campaignId={campaign.id} />
