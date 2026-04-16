@@ -101,10 +101,7 @@ export function AdminLayoutClient({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <SidebarProvider
-        style={{ height: '100svh' } as React.CSSProperties}
-        className="!min-h-0"
-      >
+      <SidebarProvider className="!min-h-0 h-svh">
         <AppSidebar user={user} navigation={navigation} />
         <div className="flex h-svh min-w-0 flex-1 flex-col overflow-hidden">
           <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/75">
