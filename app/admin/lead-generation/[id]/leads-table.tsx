@@ -38,7 +38,8 @@ import {
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { ChevronDown, ChevronUp, ExternalLink, Inbox } from 'lucide-react'
+import { ChevronDown, ChevronUp, ExternalLink, Inbox, Search, Play, X as XIcon } from 'lucide-react'
+import { CustomScrapeDialog } from './custom-scrape-dialog'
 
 interface Lead {
   id: string
@@ -142,6 +143,20 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
   const [minRating, setMinRating] = useState('')
   const [exporting, setExporting] = useState(false)
   const [page, setPage] = useState(1)
+
+  // Custom scrape draft row state
+  const [draftOpen, setDraftOpen] = useState(false)
+  const [draftName, setDraftName] = useState('')
+  const [draftUrl, setDraftUrl] = useState('')
+  const [creatingDraft, setCreatingDraft] = useState(false)
+
+  // Scrape progress dialog state
+  const [scrapeDialogOpen, setScrapeDialogOpen] = useState(false)
+  const [scrapeLeadId, setScrapeLeadId] = useState<string | null>(null)
+  const [scrapeContext, setScrapeContext] = useState<{ name: string; url: string }>({
+    name: '',
+    url: '',
+  })
 
   const notifySelection = useCallback(
     (ids: Set<string>) => {
@@ -261,9 +276,70 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
     }
   }
 
-  if (!leads || leads.length === 0) {
-    return <EmptyState />
+  function openDraft() {
+    setDraftName('')
+    setDraftUrl('')
+    setDraftOpen(true)
   }
+
+  function cancelDraft() {
+    if (creatingDraft) return
+    setDraftOpen(false)
+    setDraftName('')
+    setDraftUrl('')
+  }
+
+  async function handleBeginScraping() {
+    const schoolName = draftName.trim()
+    const url = draftUrl.trim()
+    if (!schoolName) {
+      alert('Please enter a school name.')
+      return
+    }
+    try {
+      // Validate URL client-side before POST
+      new URL(url)
+    } catch {
+      alert('Please enter a valid URL (including https://).')
+      return
+    }
+
+    setCreatingDraft(true)
+    try {
+      const res = await fetch(`/api/admin/lead-generation/${campaignId}/leads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schoolName, url }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        alert(body?.error || 'Failed to create custom lead.')
+        return
+      }
+      const payload = await res.json()
+      const newLeadId = payload?.data?.lead?.id ?? payload?.lead?.id
+      if (!newLeadId) {
+        alert('Lead created but response was malformed.')
+        return
+      }
+
+      setScrapeContext({ name: schoolName, url })
+      setScrapeLeadId(newLeadId)
+      setScrapeDialogOpen(true)
+      setDraftOpen(false)
+    } catch {
+      alert('Failed to start custom scrape.')
+    } finally {
+      setCreatingDraft(false)
+    }
+  }
+
+  function handleScrapeDone() {
+    // Refresh server component to pick up the new lead + any contacts found
+    router.refresh()
+  }
+
+  const isEmpty = !leads || leads.length === 0
 
   return (
     <div className="space-y-4">
@@ -348,9 +424,18 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
             variant="outline"
             size="sm"
             onClick={() => handleExport(false)}
-            disabled={exporting}
+            disabled={exporting || isEmpty}
           >
             {exporting ? 'Exporting...' : 'Export All'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={openDraft}
+            disabled={draftOpen}
+          >
+            <Search className="mr-1 h-4 w-4" />
+            Custom Scrape
           </Button>
         </div>
       </div>
@@ -388,6 +473,71 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
             </TableRow>
           </TableHeader>
           <TableBody>
+            {draftOpen && (
+              <TableRow className="bg-primary/5 hover:bg-primary/10">
+                <TableCell />
+                <TableCell>
+                  <Input
+                    value={draftName}
+                    onChange={(e) => setDraftName(e.target.value)}
+                    placeholder={isBusiness ? 'Business Name' : 'School Name'}
+                    className="h-8 max-w-[260px]"
+                    disabled={creatingDraft}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    value={draftUrl}
+                    onChange={(e) => setDraftUrl(e.target.value)}
+                    placeholder="https://staff-directory.example.edu"
+                    className="h-8"
+                    disabled={creatingDraft}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleBeginScraping()
+                      }
+                    }}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="text-xs">draft</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="text-xs">NEW</Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      size="sm"
+                      className="h-8"
+                      onClick={handleBeginScraping}
+                      disabled={creatingDraft}
+                    >
+                      <Play className="mr-1 h-3 w-3" />
+                      {creatingDraft ? 'Starting…' : 'Begin Scraping'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={cancelDraft}
+                      disabled={creatingDraft}
+                      aria-label="Cancel draft"
+                    >
+                      <XIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+            {isEmpty && !draftOpen && (
+              <TableRow>
+                <TableCell colSpan={6} className="p-0">
+                  <EmptyState />
+                </TableCell>
+              </TableRow>
+            )}
             {pagedGroups.map((group) => {
               const expanded = expandedGroups.has(group.id)
               const allInGroupSelected = group.contacts.every((c) => selectedIds.has(c.id))
@@ -515,6 +665,16 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
           </PaginationContent>
         </Pagination>
       )}
+
+      <CustomScrapeDialog
+        open={scrapeDialogOpen}
+        onOpenChange={setScrapeDialogOpen}
+        campaignId={campaignId}
+        leadId={scrapeLeadId}
+        schoolName={scrapeContext.name}
+        url={scrapeContext.url}
+        onComplete={handleScrapeDone}
+      />
     </div>
   )
 }
