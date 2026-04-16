@@ -107,7 +107,9 @@ export function AdminLayoutClient({
         className="!min-h-0 overflow-hidden"
       >
         <AppSidebar user={user} navigation={navigation} />
-        <SidebarInset className="flex h-svh min-h-0 w-0 flex-1 flex-col overflow-hidden">
+        <SidebarInset className="flex h-svh min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+          style={{ width: 0 } as React.CSSProperties}
+        >
           <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/75">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
