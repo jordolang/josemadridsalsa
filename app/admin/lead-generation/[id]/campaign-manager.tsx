@@ -24,6 +24,19 @@ import { useRouter } from 'next/navigation'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Progress } from '@/components/ui/progress'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { toast } from 'sonner'
 import type { LeadCampaign, LeadEmailTemplate } from '@prisma/client'
 
 type CampaignWithTemplate = LeadCampaign & {
@@ -272,8 +285,20 @@ interface CampaignManagerProps {
   selectedLeadIds?: string[]
 }
 
+interface PauseState {
+  open: boolean
+  leadId?: string
+  leadName?: string
+  domain?: string
+  errorMessage?: string
+}
+
 export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerProps) {
   const [loading, setLoading] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [progressLabel, setProgressLabel] = useState<string | null>(null)
+  const [pauseState, setPauseState] = useState<PauseState>({ open: false })
+  const skippedLeadIdsRef = useRef<string[]>([])
   const router = useRouter()
   const logRef = useRef<ActivityLogHandle>(null)
 
@@ -286,12 +311,22 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
     return () => clearInterval(interval)
   }, [isActive, router])
 
+  useEffect(() => {
+    if (!isActive) {
+      setProgress(0)
+      setProgressLabel(null)
+    }
+  }, [isActive])
+
   const labels = getLeadTypeLabels(campaign.leadType)
 
   const handleStreamingScrape = async (actionLabel: string) => {
     logRef.current?.addEntry('info', 'action', `User triggered "${actionLabel}"`)
     logRef.current?.addEntry('info', 'action', 'Starting scrape via streaming endpoint...')
+    toast.info(`Starting ${actionLabel.toLowerCase()}...`)
     setLoading(true)
+    setProgress(0)
+    setProgressLabel(actionLabel)
 
     try {
       const res = await fetch(`/api/admin/lead-generation/${campaign.id}/run`, {
@@ -301,7 +336,9 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
       if (!res.ok) {
         const text = await res.text()
         logRef.current?.addEntry('error', 'action', `Server error ${res.status}: ${text}`)
+        toast.error(`Search failed: ${res.status}`)
         setLoading(false)
+        setProgressLabel(null)
         return
       }
 
@@ -329,20 +366,35 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
           if (!line.startsWith('data: ')) continue
           try {
             const entry = JSON.parse(line.slice(6))
+
+            if (entry.type === 'progress' && typeof entry.current === 'number' && typeof entry.total === 'number') {
+              const pct = entry.total > 0 ? Math.round((entry.current / entry.total) * 100) : 0
+              setProgress(pct)
+              setProgressLabel(entry.label || `Found ${entry.current} of ${entry.total}`)
+              continue
+            }
+
             if (entry.level && entry.stage && entry.message) {
               logRef.current?.addEntry(entry.level, entry.stage, entry.message)
+              if (entry.level === 'error') {
+                toast.error(entry.message, { description: entry.stage })
+              }
             }
           } catch { /* skip non-JSON lines */ }
         }
       }
 
       logRef.current?.addEntry('info', 'system', 'Scrape stream ended.')
+      toast.success('Scrape complete')
+      setProgress(100)
       router.refresh()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       logRef.current?.addEntry('error', 'action', `Scrape failed: ${msg}`)
+      toast.error('Scrape failed', { description: msg })
     } finally {
       setLoading(false)
+      setTimeout(() => setProgressLabel(null), 2000)
     }
   }
 
@@ -358,12 +410,18 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
 
     logRef.current?.addEntry('info', 'action', 'Starting contact parsing via streaming endpoint...')
     setLoading(true)
+    setProgress(0)
+    setProgressLabel('Parsing contacts')
+    skippedLeadIdsRef.current = []
 
     try {
       const fetchOptions: RequestInit = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: hasSelection ? JSON.stringify({ leadIds: selectedLeadIds }) : JSON.stringify({}),
+        body: JSON.stringify({
+          leadIds: hasSelection ? selectedLeadIds : undefined,
+          skipLeadIds: skippedLeadIdsRef.current,
+        }),
       }
 
       const res = await fetch(`/api/admin/lead-generation/${campaign.id}/parse`, fetchOptions)
@@ -371,7 +429,9 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
       if (!res.ok) {
         const text = await res.text()
         logRef.current?.addEntry('error', 'action', `Server error ${res.status}: ${text}`)
+        toast.error(`Parse failed: ${res.status}`)
         setLoading(false)
+        setProgressLabel(null)
         return
       }
 
@@ -381,6 +441,7 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
       if (!reader) {
         logRef.current?.addEntry('error', 'action', 'No response stream available')
         setLoading(false)
+        setProgressLabel(null)
         return
       }
 
@@ -399,21 +460,87 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
           if (!line.startsWith('data: ')) continue
           try {
             const entry = JSON.parse(line.slice(6))
+
+            // Structured events take precedence over plain log entries
+            if (entry.type === 'error_pause') {
+              setPauseState({
+                open: true,
+                leadId: entry.leadId,
+                leadName: entry.leadName,
+                domain: entry.domain,
+                errorMessage: entry.errorMessage,
+              })
+              toast.error(`Paused: error on ${entry.domain || 'unknown domain'}`, {
+                description: entry.errorMessage,
+              })
+              continue
+            }
+
+            if (entry.type === 'progress' && typeof entry.current === 'number' && typeof entry.total === 'number') {
+              const pct = entry.total > 0 ? Math.round((entry.current / entry.total) * 100) : 0
+              setProgress(pct)
+              setProgressLabel(entry.label || `Processing ${entry.current} of ${entry.total}`)
+              if (entry.leadName) {
+                toast.info(`Processing ${entry.current} of ${entry.total}`, {
+                  description: entry.leadName,
+                })
+              }
+              continue
+            }
+
+            if (entry.type === 'lead_success' && entry.domain) {
+              toast.success(
+                `Found ${entry.contactCount ?? 0} contact${entry.contactCount === 1 ? '' : 's'} on ${entry.domain}`
+              )
+              continue
+            }
+
+            // Standard log entry passthrough
             if (entry.level && entry.stage && entry.message) {
               logRef.current?.addEntry(entry.level, entry.stage, entry.message)
+              if (entry.level === 'error') {
+                toast.error(entry.message, { description: entry.stage })
+              }
             }
           } catch { /* skip non-JSON lines */ }
         }
       }
 
       logRef.current?.addEntry('info', 'system', 'Parse stream ended.')
+      toast.success('Contact parsing complete')
+      setProgress(100)
       router.refresh()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       logRef.current?.addEntry('error', 'action', `Parse failed: ${msg}`)
+      toast.error('Parse failed', { description: msg })
     } finally {
       setLoading(false)
+      setTimeout(() => setProgressLabel(null), 2000)
     }
+  }
+
+  const handlePauseChoice = async (choice: 'continue' | 'skip' | 'cancel') => {
+    const { leadId, leadName } = pauseState
+    setPauseState({ open: false })
+
+    if (choice === 'cancel') {
+      logRef.current?.addEntry('warn', 'action', 'User cancelled parsing after error')
+      toast.warning('Parsing cancelled')
+      return
+    }
+
+    if (choice === 'skip' && leadId) {
+      skippedLeadIdsRef.current = [...skippedLeadIdsRef.current, leadId]
+      logRef.current?.addEntry('warn', 'action', `Skipped lead: ${leadName ?? leadId}`)
+      toast.info(`Skipped ${leadName ?? 'lead'} — resuming`)
+    } else if (choice === 'continue') {
+      logRef.current?.addEntry('info', 'action', 'User chose to continue after error')
+      toast.info('Continuing...')
+    }
+
+    // Resume by re-invoking the parse stream; the server can read skipLeadIds
+    await handleStreamingParse('Resume parsing')
   }
 
   const handleAction = async (
@@ -591,6 +718,25 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
             >
               Delete Campaign
             </Button>
+
+            {/* Progress bar (hidden when no task running) */}
+            {progressLabel && (
+              <div className="w-full space-y-1.5 mt-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{progressLabel}</span>
+                  <span className="font-medium tabular-nums">{progress}%</span>
+                </div>
+                <Progress value={progress} />
+              </div>
+            )}
+
+            {/* Skeleton for loading stats (shown when an action is in flight and campaign stats are stale) */}
+            {loading && !progressLabel && (
+              <div className="w-full space-y-2 mt-3">
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-3/4" />
+              </div>
+            )}
           </div>
         </CardFooter>
       </Card>
@@ -660,6 +806,41 @@ export function CampaignManager({ campaign, selectedLeadIds }: CampaignManagerPr
           </CardContent>
         </Tabs>
       </Card>
+
+      {/* Pause/resume dialog when scraper emits error_pause event */}
+      <AlertDialog open={pauseState.open}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Scraper paused on {pauseState.domain || 'unknown domain'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pauseState.leadName ? (
+                <span className="font-medium">{pauseState.leadName}</span>
+              ) : null}
+              {pauseState.errorMessage ? (
+                <span className="block mt-2 text-destructive">{pauseState.errorMessage}</span>
+              ) : null}
+              <span className="block mt-3 text-sm">
+                Choose how to proceed. &ldquo;Skip&rdquo; will mark this lead to be ignored and
+                resume with the next one.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => handlePauseChoice('cancel')}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handlePauseChoice('skip')}
+              className="bg-amber-500 text-white hover:bg-amber-600"
+            >
+              Skip this lead
+            </AlertDialogAction>
+            <AlertDialogAction onClick={() => handlePauseChoice('continue')}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
