@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { CampaignManager } from './campaign-manager'
 import { LeadsTable } from './leads-table'
+import { LiveLeadFeed } from './live-lead-feed'
 import type { LeadCampaign, LeadEmailTemplate, Lead } from '@prisma/client'
 
 type CampaignWithRelations = LeadCampaign & {
@@ -26,6 +27,10 @@ export function CampaignDetailClient({ campaign }: CampaignDetailClientProps) {
   return (
     <>
       <CampaignManager campaign={campaign} selectedLeadIds={selectedLeadIds} />
+
+      <div className="mt-8">
+        <LiveLeadFeed campaignId={campaign.id} />
+      </div>
 
       <div className="mt-8">
         <h2 className="text-2xl font-semibold mb-4">

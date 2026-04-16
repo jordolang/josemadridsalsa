@@ -14,6 +14,22 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -21,6 +37,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
+import { ChevronDown, ChevronUp, ExternalLink, Inbox } from 'lucide-react'
 
 interface Lead {
   id: string
@@ -49,16 +67,81 @@ interface LeadsTableProps {
   onSelectionChange?: (selectedIds: string[]) => void
 }
 
+interface LeadGroup {
+  id: string
+  displayName: string
+  url: string | null
+  primaryLead: Lead
+  contacts: Lead[]
+  hasAnyEmail: boolean
+  status: string
+}
+
 const ALL_STATUSES = ['SCRAPED', 'CONTACT_FOUND', 'EMAIL_SENT', 'EMAIL_FAILED'] as const
+const PAGE_SIZE = 10
+
+function getLeadName(lead: Lead, isBusiness: boolean): string {
+  return isBusiness
+    ? lead.businessName || lead.schoolName
+    : lead.schoolName || lead.businessName || 'Unnamed'
+}
+
+function getLeadUrl(lead: Lead, isBusiness: boolean): string | null {
+  const url = isBusiness ? lead.website : lead.schoolUrl
+  return url || null
+}
+
+function safeHost(url: string | null): string {
+  if (!url) return ''
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return url
+  }
+}
+
+function groupLeads(leads: Lead[], isBusiness: boolean): LeadGroup[] {
+  // Group by display name + host so multiple contacts for the same lead collapse together
+  const map = new Map<string, LeadGroup>()
+  for (const lead of leads) {
+    const name = getLeadName(lead, isBusiness)
+    const url = getLeadUrl(lead, isBusiness)
+    const key = `${name}|${safeHost(url)}`
+    const existing = map.get(key)
+    if (existing) {
+      existing.contacts.push(lead)
+      if (lead.email) existing.hasAnyEmail = true
+    } else {
+      map.set(key, {
+        id: key,
+        displayName: name,
+        url,
+        primaryLead: lead,
+        contacts: [lead],
+        hasAnyEmail: !!lead.email,
+        status: lead.status,
+      })
+    }
+  }
+  return Array.from(map.values())
+}
 
 export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: LeadsTableProps) {
   const router = useRouter()
+  const isBusiness = leadType === 'LOCAL_BUSINESS'
 
   const initialScrapedIds = useMemo(
     () => new Set(leads.filter((l) => l.status === 'SCRAPED').map((l) => l.id)),
     [leads]
   )
   const [selectedIds, setSelectedIds] = useState<Set<string>>(initialScrapedIds)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [hasEmailFilter, setHasEmailFilter] = useState<string>('all')
+  const [sportFilter, setSportFilter] = useState('')
+  const [minRating, setMinRating] = useState('')
+  const [exporting, setExporting] = useState(false)
+  const [page, setPage] = useState(1)
 
   const notifySelection = useCallback(
     (ids: Set<string>) => {
@@ -70,13 +153,6 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
   useEffect(() => {
     notifySelection(selectedIds)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [hasEmailFilter, setHasEmailFilter] = useState<string>('all')
-  const [sportFilter, setSportFilter] = useState('')
-  const [minRating, setMinRating] = useState('')
-  const [exporting, setExporting] = useState(false)
-
-  const isBusiness = leadType === 'LOCAL_BUSINESS'
 
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
@@ -94,31 +170,52 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
     })
   }, [leads, statusFilter, hasEmailFilter, sportFilter, minRating])
 
-  const allSelected =
-    filteredLeads.length > 0 && filteredLeads.every((l) => selectedIds.has(l.id))
+  const groups = useMemo(() => groupLeads(filteredLeads, isBusiness), [filteredLeads, isBusiness])
+  const totalPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const pagedGroups = useMemo(
+    () => groups.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [groups, currentPage]
+  )
 
   const scrapedCount = leads.filter((l) => l.status === 'SCRAPED').length
   const selectedScrapedCount = leads.filter(
     (l) => l.status === 'SCRAPED' && selectedIds.has(l.id)
   ).length
 
-  function toggleAll() {
-    const next = allSelected
-      ? new Set<string>()
-      : new Set(filteredLeads.map((l) => l.id))
+  const allOnPageSelected =
+    pagedGroups.length > 0 &&
+    pagedGroups.every((g) => g.contacts.every((c) => selectedIds.has(c.id)))
+
+  function toggleAllOnPage() {
+    const next = new Set(selectedIds)
+    const ids = pagedGroups.flatMap((g) => g.contacts.map((c) => c.id))
+    if (allOnPageSelected) {
+      ids.forEach((id) => next.delete(id))
+    } else {
+      ids.forEach((id) => next.add(id))
+    }
     setSelectedIds(next)
     notifySelection(next)
   }
 
-  function toggleOne(id: string) {
-    setSelectedIds((prev) => {
+  function toggleGroup(group: LeadGroup) {
+    const next = new Set(selectedIds)
+    const allInGroupSelected = group.contacts.every((c) => next.has(c.id))
+    if (allInGroupSelected) {
+      group.contacts.forEach((c) => next.delete(c.id))
+    } else {
+      group.contacts.forEach((c) => next.add(c.id))
+    }
+    setSelectedIds(next)
+    notifySelection(next)
+  }
+
+  function toggleExpand(groupId: string) {
+    setExpandedGroups((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      notifySelection(next)
+      if (next.has(groupId)) next.delete(groupId)
+      else next.add(groupId)
       return next
     })
   }
@@ -165,11 +262,7 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
   }
 
   if (!leads || leads.length === 0) {
-    return (
-      <div className="text-muted-foreground p-8 text-center border rounded">
-        No leads found yet.
-      </div>
-    )
+    return <EmptyState />
   }
 
   return (
@@ -246,11 +339,7 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
               >
                 Export Selected ({selectedIds.size})
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDeleteSelected}
-              >
+              <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
                 Delete Selected ({selectedIds.size})
               </Button>
             </>
@@ -266,9 +355,11 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
         </div>
       </div>
 
+      {/* Count bar */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Showing {filteredLeads.length} of {leads.length} leads
+          Showing {groups.length} {groups.length === 1 ? 'lead' : 'leads'} ({leads.length}{' '}
+          total records)
         </p>
         {scrapedCount > 0 && (
           <p className="text-sm font-medium text-primary">
@@ -277,120 +368,285 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
         )}
       </div>
 
-      {/* Table */}
-      <div className="border rounded-md overflow-x-auto">
+      {/* Outer table */}
+      <div className="border rounded-md overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-[40px]">
                 <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={toggleAll}
-                  aria-label="Select all"
+                  checked={allOnPageSelected}
+                  onCheckedChange={toggleAllOnPage}
+                  aria-label="Select all on page"
                 />
               </TableHead>
               <TableHead>{isBusiness ? 'Business' : 'School'}</TableHead>
-              {isBusiness && <TableHead>Address</TableHead>}
-              {isBusiness && <TableHead>Rating</TableHead>}
-              <TableHead>Contact</TableHead>
-              <TableHead>Title</TableHead>
-              {!isBusiness && <TableHead>Sport</TableHead>}
-              <TableHead>Email</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Source</TableHead>
+              <TableHead className="w-[120px]">Contacts</TableHead>
+              <TableHead className="w-[140px]">Status</TableHead>
+              <TableHead className="w-[50px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredLeads.map((lead) => (
-              <TableRow key={lead.id}>
-                <TableCell>
-                  <Checkbox
-                    checked={selectedIds.has(lead.id)}
-                    onCheckedChange={() => toggleOne(lead.id)}
-                    aria-label={`Select ${lead.schoolName || lead.businessName}`}
-                  />
-                </TableCell>
-                <TableCell>
-                  <div
-                    className="font-medium truncate max-w-[200px]"
-                    title={
-                      isBusiness
-                        ? (lead.businessName ?? '')
-                        : lead.schoolName
-                    }
-                  >
-                    {isBusiness
-                      ? (lead.businessName || lead.schoolName)
-                      : lead.schoolName}
-                  </div>
-                  {(isBusiness ? lead.website : lead.schoolUrl) && (
-                    <a
-                      href={
-                        (isBusiness ? lead.website : lead.schoolUrl) ?? undefined
-                      }
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary hover:underline truncate block max-w-[200px]"
-                    >
-                      Website
-                    </a>
-                  )}
-                </TableCell>
-                {isBusiness && (
-                  <TableCell>
-                    <span
-                      className="text-sm truncate block max-w-[180px]"
-                      title={lead.address ?? ''}
-                    >
-                      {lead.address || '-'}
-                    </span>
-                  </TableCell>
-                )}
-                {isBusiness && (
-                  <TableCell>
-                    {lead.rating != null ? (
-                      <div className="flex items-center gap-1">
-                        <span className="font-medium">
-                          {lead.rating.toFixed(1)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          ({lead.reviewCount ?? 0})
-                        </span>
-                      </div>
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                )}
-                <TableCell>{lead.contactName || '-'}</TableCell>
-                <TableCell>{lead.title || '-'}</TableCell>
-                {!isBusiness && <TableCell>{lead.sport || '-'}</TableCell>}
-                <TableCell>{lead.email || '-'}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      lead.status === 'EMAIL_SENT'
-                        ? 'default'
-                        : lead.status === 'EMAIL_FAILED'
-                          ? 'destructive'
-                          : 'outline'
-                    }
-                  >
-                    {lead.status}
-                  </Badge>
-                  {lead.errorMessage && (
-                    <p
-                      className="text-xs text-destructive mt-1 truncate max-w-[150px]"
-                      title={lead.errorMessage}
-                    >
-                      {lead.errorMessage}
-                    </p>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+            {pagedGroups.map((group) => {
+              const expanded = expandedGroups.has(group.id)
+              const allInGroupSelected = group.contacts.every((c) => selectedIds.has(c.id))
+              const someInGroupSelected = group.contacts.some((c) => selectedIds.has(c.id))
+              return (
+                <Collapsible key={group.id} asChild open={expanded}>
+                  <>
+                    <TableRow className="hover:bg-muted/50">
+                      <TableCell>
+                        <Checkbox
+                          checked={
+                            allInGroupSelected
+                              ? true
+                              : someInGroupSelected
+                                ? 'indeterminate'
+                                : false
+                          }
+                          onCheckedChange={() => toggleGroup(group)}
+                          aria-label={`Select ${group.displayName}`}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium max-w-[260px] truncate" title={group.displayName}>
+                          {group.displayName}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {group.url ? <SourceUrl url={group.url} /> : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs">
+                          {group.contacts.length}{' '}
+                          {group.contacts.length === 1 ? 'contact' : 'contacts'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={group.status} />
+                      </TableCell>
+                      <TableCell>
+                        <CollapsibleTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => toggleExpand(group.id)}
+                            aria-label={expanded ? 'Collapse' : 'Expand'}
+                          >
+                            {expanded ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </CollapsibleTrigger>
+                      </TableCell>
+                    </TableRow>
+                    <CollapsibleContent asChild>
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableCell colSpan={6} className="p-0">
+                          <ScrollArea className="max-h-[320px]">
+                            <InnerContactsTable
+                              contacts={group.contacts}
+                              isBusiness={isBusiness}
+                            />
+                          </ScrollArea>
+                        </TableCell>
+                      </TableRow>
+                    </CollapsibleContent>
+                  </>
+                </Collapsible>
+              )
+            })}
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={(e) => {
+                  e.preventDefault()
+                  setPage((p) => Math.max(1, p - 1))
+                }}
+                aria-disabled={currentPage === 1}
+                className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+              />
+            </PaginationItem>
+            {buildPageNumbers(currentPage, totalPages).map((item, i) =>
+              item === 'ellipsis' ? (
+                <PaginationItem key={`e-${i}`}>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              ) : (
+                <PaginationItem key={item}>
+                  <PaginationLink
+                    isActive={item === currentPage}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setPage(item)
+                    }}
+                    className="cursor-pointer"
+                  >
+                    {item}
+                  </PaginationLink>
+                </PaginationItem>
+              )
+            )}
+            <PaginationItem>
+              <PaginationNext
+                onClick={(e) => {
+                  e.preventDefault()
+                  setPage((p) => Math.min(totalPages, p + 1))
+                }}
+                aria-disabled={currentPage === totalPages}
+                className={
+                  currentPage === totalPages
+                    ? 'pointer-events-none opacity-50'
+                    : 'cursor-pointer'
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
+  )
+}
+
+function buildPageNumbers(current: number, total: number): Array<number | 'ellipsis'> {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: Array<number | 'ellipsis'> = [1]
+  if (current > 3) pages.push('ellipsis')
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  for (let i = start; i <= end; i++) pages.push(i)
+  if (current < total - 2) pages.push('ellipsis')
+  pages.push(total)
+  return pages
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const variant: 'default' | 'destructive' | 'outline' | 'secondary' =
+    status === 'EMAIL_SENT'
+      ? 'default'
+      : status === 'EMAIL_FAILED'
+        ? 'destructive'
+        : status === 'CONTACT_FOUND'
+          ? 'secondary'
+          : 'outline'
+  return (
+    <Badge variant={variant} className="text-xs">
+      {status.replace(/_/g, ' ')}
+    </Badge>
+  )
+}
+
+function SourceUrl({ url }: { url: string }) {
+  const host = safeHost(url)
+  const previewSrc = `https://image.thum.io/get/width/300/${encodeURIComponent(url)}`
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer noopener"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 text-sm text-primary hover:underline max-w-[200px] truncate"
+        >
+          <ExternalLink className="h-3 w-3 shrink-0" />
+          <span className="truncate">{host}</span>
+        </a>
+      </PopoverTrigger>
+      <PopoverContent side="top" className="w-[220px] p-2" sideOffset={8}>
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground truncate" title={url}>
+            {url}
+          </p>
+          <div className="relative aspect-square w-full overflow-hidden rounded border bg-muted">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewSrc}
+              alt={`Preview of ${host}`}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function InnerContactsTable({
+  contacts,
+  isBusiness,
+}: {
+  contacts: Lead[]
+  isBusiness: boolean
+}) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          {!isBusiness && <TableHead className="h-9 text-xs">Sport</TableHead>}
+          <TableHead className="h-9 text-xs">Contact</TableHead>
+          <TableHead className="h-9 text-xs">Title</TableHead>
+          <TableHead className="h-9 text-xs">Email</TableHead>
+          <TableHead className="h-9 text-xs">Phone</TableHead>
+          <TableHead className="h-9 text-xs">Status</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {contacts.map((contact) => (
+          <TableRow key={contact.id} className="hover:bg-muted/50">
+            {!isBusiness && (
+              <TableCell className="py-2 text-sm">{contact.sport || '—'}</TableCell>
+            )}
+            <TableCell className="py-2 text-sm">{contact.contactName || '—'}</TableCell>
+            <TableCell className="py-2 text-sm">{contact.title || '—'}</TableCell>
+            <TableCell className="py-2 text-sm">
+              {contact.email ? (
+                <a
+                  href={`mailto:${contact.email}`}
+                  className="text-primary hover:underline"
+                >
+                  {contact.email}
+                </a>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </TableCell>
+            <TableCell className="py-2 text-sm">{contact.phone || '—'}</TableCell>
+            <TableCell className="py-2">
+              <StatusBadge status={contact.status} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
+
+function EmptyState() {
+  return (
+    <Card className="border-dashed">
+      <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="rounded-full bg-muted p-4 mb-4">
+          <Inbox className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <h3 className="text-base font-medium">No leads yet</h3>
+        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+          Run &ldquo;Search Schools&rdquo; or &ldquo;Search Businesses&rdquo; to start
+          finding leads. Results will appear here as they&rsquo;re discovered.
+        </p>
+      </CardContent>
+    </Card>
   )
 }
