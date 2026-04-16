@@ -129,8 +129,13 @@ logs/security/
 .pi/
 .qwen/
 .playwright-mcp/
+.omc/
+.remember/
 skills/
 skills-lock.json
+
+# iOS / SwiftPM build artifacts
+mobile/**/.build/
 
 # Shipping API debug/verification logs
 shipping-api-error-handling-summary.md
@@ -142,3 +147,6 @@ shipping-api-error-handling-verification.md
 *-verification-results.txt
 *-report.md
 *.log
+
+# Sentry Config File
+.env.sentry-build-plugin
