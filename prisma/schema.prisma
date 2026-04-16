@@ -3272,6 +3272,12 @@ model FundraiserTeam {
   salesCount   Int @default(0)
   pricePerUnit Int @default(10)
 
+  // Arena combat state
+  hpCurrent         Int       @default(0)
+  hpResetAt         DateTime?
+  lastShareUserId   String?
+  consecutiveShares Int       @default(0)
+
   // Contact
   contactName  String
   contactEmail String
@@ -3290,9 +3296,10 @@ model FundraiserTeam {
   updatedAt DateTime @updatedAt
 
   // Relations
-  characters FundraiserCharacter[]
-  saleEvents FundraiserSaleEvent[]
-  shields    FundraiserShield[]
+  characters  FundraiserCharacter[]
+  saleEvents  FundraiserSaleEvent[]
+  shareEvents FundraiserShareEvent[]
+  shields     FundraiserShield[]
 
   @@index([activePeriod])
   @@index([status])
@@ -3367,12 +3374,28 @@ model FundraiserShield {
   activatedAt DateTime @default(now())
   expiresAt   DateTime
   remainingHP Int      @default(30)
+  userId      String?
 
   // Relations
   team FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([teamId, expiresAt])
   @@map("fundraiser_shields")
+}
+
+model FundraiserShareEvent {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  platform  String   @default("facebook")
+  createdAt DateTime @default(now())
+
+  // Relations
+  team FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, createdAt])
+  @@index([userId, createdAt])
+  @@map("fundraiser_share_events")
 }
 
 enum FundraiserTeamStatus {

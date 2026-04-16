@@ -19,6 +19,8 @@ export type ArenaTeam = {
   pricePerUnit: number
   activePeriod: string
   raised: number
+  hpCurrent: number
+  hpMax: number
   characters: Array<{
     id: string
     characterName: string
@@ -87,6 +89,8 @@ export async function loadArenaSnapshot(period: string): Promise<ArenaSnapshot> 
       pricePerUnit: t.pricePerUnit,
       activePeriod: t.activePeriod,
       raised: t.salesCount * t.pricePerUnit,
+      hpCurrent: t.hpCurrent,
+      hpMax: t.goalAmount,
       characters: t.characters,
       activeShield: t.shields[0] ?? null,
     })),

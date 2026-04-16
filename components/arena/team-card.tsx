@@ -108,6 +108,34 @@ export function TeamCard({
           </span>
           <span className="text-amber-400">#{rank + 1}</span>
         </div>
+
+        <div className="mb-1 flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-emerald-400/70">
+          HP
+          <span className="font-mono text-slate-400">
+            {team.hpCurrent}/{team.hpMax}
+          </span>
+        </div>
+        <div className="relative mb-2 h-2 overflow-hidden rounded-full border border-neutral-700 bg-neutral-800">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{
+              width: `${
+                team.hpMax > 0
+                  ? Math.max(
+                      0,
+                      Math.min(100, (team.hpCurrent / team.hpMax) * 100),
+                    )
+                  : 0
+              }%`,
+            }}
+            transition={{ duration: 0.7, ease: 'easeOut' }}
+            className="h-full bg-gradient-to-r from-emerald-500 to-green-400 shadow-[0_0_10px_rgba(34,197,94,0.6)]"
+          />
+        </div>
+
+        <div className="mb-1 text-[9px] font-bold uppercase tracking-widest text-amber-300/70">
+          Raised
+        </div>
         <div className="relative h-3 overflow-hidden rounded-full border border-neutral-700 bg-neutral-800">
           <motion.div
             initial={{ width: 0 }}
