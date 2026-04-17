@@ -126,10 +126,10 @@ export function DeveloperHero() {
                     </div>
                   ) : (
                     <Image
-                      src="/images/developer/jordan-profile.webp"
+                      src="/images/developer/jordan-lang.png"
                       alt="Jordan Lang — Developer of Jose Madrid Salsa"
                       fill
-                      className="object-cover"
+                      className="object-cover object-center"
                       sizes="(max-width: 1024px) 256px, 320px"
                       priority
                       onError={() => setImageError(true)}
