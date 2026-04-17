@@ -20,6 +20,8 @@ export type SupporterFeedItem = {
   recentLovers?: string[]
   /** Display-only: the organizer's reply, if any. */
   reply?: { authorName: string; body: string; createdAt: string }
+  /** Inline media attachment (still frame or poster for video). */
+  media?: { type: 'image' | 'video'; url: string; alt?: string }
 }
 
 export interface SupporterFeedProps {
@@ -117,6 +119,27 @@ export function SupporterFeed({
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
                 {item.comment}
               </p>
+            )}
+
+            {item.media && (
+              <div className="overflow-hidden rounded-md border">
+                {item.media.type === 'image' ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.media.url}
+                    alt={item.media.alt ?? ''}
+                    className="h-40 w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <video
+                    src={item.media.url}
+                    className="h-40 w-full object-cover"
+                    controls
+                    preload="metadata"
+                  />
+                )}
+              </div>
             )}
 
             <div className="flex items-center justify-around border-t pt-2 text-xs text-muted-foreground">

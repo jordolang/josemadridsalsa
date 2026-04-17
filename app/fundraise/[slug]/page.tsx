@@ -5,7 +5,8 @@ import { prisma as db } from '@/lib/prisma'
 import { FundraisingProgress } from '@/components/fundraiser/fundraising-progress'
 import { TeamMembersStrip } from '@/components/fundraiser/team-members-strip'
 import { SupporterFeed } from '@/components/fundraiser/supporter-feed'
-import { FundraiserCheckoutPanel } from './fundraiser-checkout-panel'
+import { VerifiedBadge } from '@/components/fundraiser/verified-badge'
+import { DonateActionCard } from '@/components/fundraiser/donate-action-card'
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -36,7 +37,7 @@ export default async function FundraiserProfilePage({ params }: Props) {
     db.fundraiserSaleEvent.findMany({
       where: { teamId: team.id },
       orderBy: { createdAt: 'desc' },
-      take: 10,
+      take: 12,
       select: { id: true, amount: true, createdAt: true, orderId: true },
     }),
     db.fundraiserTeam.findMany({
@@ -58,7 +59,7 @@ export default async function FundraiserProfilePage({ params }: Props) {
   ])
 
   const raised = team.salesCount * team.pricePerUnit
-  const supporterCount = recentSales.length // placeholder until a proper distinct-donor query lands
+  const supporterCount = recentSales.length
 
   const feedItems = recentSales.map((s) => ({
     id: s.id,
@@ -77,36 +78,56 @@ export default async function FundraiserProfilePage({ params }: Props) {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-6">
-        <div className="space-y-8">
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-3 lg:px-6">
+        <section className="space-y-8 lg:col-span-2">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/images/logo-image.png"
+              alt="Jose Madrid Salsa"
+              width={48}
+              height={48}
+              className="h-12 w-12 shrink-0 rounded"
+            />
+            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              Jose Madrid Salsa Fundraiser
+            </span>
+          </div>
+
           <header className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
               {team.name}
             </h1>
-            <p className="text-sm text-muted-foreground">
-              {team.school} — Fundraiser {team.activePeriod}
+            <p className="text-base text-muted-foreground">
+              Join {team.school}&apos;s {team.activePeriod} fundraiser battle.
             </p>
           </header>
 
-          <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-            <div className="relative aspect-video w-full bg-muted">
-              <Image
-                src="/images/jose-madrid-profile-1024.png"
-                alt=""
-                fill
-                priority
-                sizes="(min-width: 1024px) 720px, 100vw"
-                className="object-cover"
-              />
-            </div>
-            <div className="space-y-4 p-6">
-              <FundraisingProgress
-                raised={raised}
-                goal={team.goalAmount}
-                supporterCount={supporterCount}
-              />
-            </div>
+          <div className="relative aspect-video w-full overflow-hidden rounded-xl border bg-muted">
+            <Image
+              src="/images/jose-madrid-profile-1024.png"
+              alt=""
+              fill
+              priority
+              sizes="(min-width: 1024px) 720px, 100vw"
+              className="object-cover"
+            />
           </div>
+
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Organized by{' '}
+              <span className="font-semibold text-foreground">
+                {team.school}
+              </span>
+            </div>
+            <VerifiedBadge />
+          </div>
+
+          <FundraisingProgress
+            raised={raised}
+            goal={team.goalAmount}
+            supporterCount={supporterCount}
+          />
 
           {teamMemberCards.length > 0 && (
             <TeamMembersStrip members={teamMemberCards} />
@@ -121,16 +142,20 @@ export default async function FundraiserProfilePage({ params }: Props) {
               arena leaderboard in real time.
             </p>
           </section>
-        </div>
+        </section>
 
-        <aside className="space-y-6">
-          <FundraiserCheckoutPanel
-            teamId={team.id}
-            teamSlug={team.slug}
-            teamName={team.name}
-            pricePerUnit={team.pricePerUnit}
-          />
-          <SupporterFeed items={feedItems} />
+        <aside className="space-y-4 lg:col-span-1">
+          <div className="lg:sticky lg:top-6">
+            <DonateActionCard
+              teamId={team.id}
+              teamSlug={team.slug}
+              teamName={team.name}
+              pricePerUnit={team.pricePerUnit}
+            />
+          </div>
+          <div className="lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-1">
+            <SupporterFeed items={feedItems} />
+          </div>
         </aside>
       </div>
     </main>
