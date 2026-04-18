@@ -375,30 +375,16 @@ export async function POST(request: Request) {
 
       case 'checkout.session.completed': {
         const checkoutSession = event.data.object as Stripe.Checkout.Session
-        const fundraiserTeamId = checkoutSession.metadata?.fundraiserTeamId
+        const { extractFundraiserTeamId, resolveDonorFromStripeSession } =
+          await import('@/lib/arena/stripe-donor')
+        const fundraiserTeamId = extractFundraiserTeamId(checkoutSession)
         if (!fundraiserTeamId) {
           console.log('checkout.session.completed — no fundraiserTeamId, skipping')
           break
         }
 
         const amountTotal = (checkoutSession.amount_total ?? 0) / 100
-        const donorRaw = checkoutSession.metadata?.fundraiserDonor
-        let donor:
-          | {
-              userId?: string | null
-              name?: string | null
-              email?: string | null
-              comment?: string | null
-              isAnonymous?: boolean
-            }
-          | undefined
-        if (donorRaw) {
-          try {
-            donor = JSON.parse(donorRaw)
-          } catch (err) {
-            console.error('Failed to parse fundraiserDonor metadata:', err)
-          }
-        }
+        const donor = resolveDonorFromStripeSession(checkoutSession)
 
         try {
           const { applyPurchaseDamage } = await import('@/lib/arena/damage')
@@ -406,19 +392,7 @@ export async function POST(request: Request) {
             sellingTeamId: fundraiserTeamId,
             saleAmount: amountTotal,
             orderId: checkoutSession.id,
-            donor: donor
-              ? {
-                  userId: donor.userId ?? null,
-                  name: donor.name ?? null,
-                  email:
-                    donor.email ?? checkoutSession.customer_details?.email ?? null,
-                  comment: donor.comment ?? null,
-                  isAnonymous: donor.isAnonymous ?? false,
-                }
-              : {
-                  email: checkoutSession.customer_details?.email ?? null,
-                  name: checkoutSession.customer_details?.name ?? null,
-                },
+            donor,
           })
           console.log(
             `Fundraiser damage applied for team ${fundraiserTeamId}: $${amountTotal} dealt to ${result.damagedTeams.length} opponents${result.idempotentHit ? ' (idempotent replay)' : ''}`,
