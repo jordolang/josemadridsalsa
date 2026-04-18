@@ -7,6 +7,7 @@ import Footer from '@/components/ui/footer-column'
 import { AiChatWidget } from '@/components/chat/ai-chat-widget'
 import { GoogleAnalytics } from '@/components/analytics/google-analytics'
 import { AmplitudeAnalytics } from '@/components/analytics/amplitude-analytics'
+import { GrowthBookAnnouncementBanner } from '@/components/growthbook/announcement-banner'
 import { getPublicGoogleAnalyticsMeasurementId } from '@/lib/google-analytics-config'
 import { Analytics } from '@vercel/analytics/react'
 import { WishlistSyncProvider } from '@/components/providers/wishlist-sync-provider'
@@ -62,6 +63,7 @@ export default async function PublicLayout({
         <ComparisonURLHandler />
       </Suspense>
       <div className="flex min-h-screen flex-col">
+        <GrowthBookAnnouncementBanner />
         <Navigation />
         <EventTicker initialEvents={calendarEvents} />
         <div className="flex-1">
