@@ -76,9 +76,10 @@ export function DeveloperHero() {
                 <div className="flex items-start gap-3">
                   <Heart className="w-5 h-5 text-chile-300 mt-0.5 shrink-0" />
                   <p className="text-salsa-100 font-serif italic leading-relaxed">
-                    &ldquo;Soli Deo Gloria&rdquo; — To God alone be the glory. All work on this site
-                    is done to honor Jesus Christ of Nazareth. Every line of code, every feature,
-                    every late night — all for His glory.
+                    &ldquo;Soli Deo Gloria&rdquo; — To God alone be the glory. &ldquo;As each has
+                    received a gift, use it to serve one another, as good stewards of God&apos;s
+                    varied grace&rdquo; (1 Peter 4:10). &ldquo;Let us not grow weary of doing good…
+                    as we have opportunity, let us do good to everyone&rdquo; (Galatians 6:9–10).
                   </p>
                 </div>
               </motion.div>
