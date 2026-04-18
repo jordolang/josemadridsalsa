@@ -179,8 +179,12 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
         (!lead.sport || !lead.sport.toLowerCase().includes(sportFilter.toLowerCase()))
       )
         return false
-      if (minRating && lead.rating != null && lead.rating < parseFloat(minRating))
-        return false
+      if (minRating) {
+        const threshold = Number.parseFloat(minRating)
+        if (Number.isFinite(threshold)) {
+          if (lead.rating == null || lead.rating < threshold) return false
+        }
+      }
       return true
     })
   }, [leads, statusFilter, hasEmailFilter, sportFilter, minRating])
@@ -266,7 +270,7 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
       const response = await fetch('/api/admin/lead-generation/bulk-delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+        body: JSON.stringify({ campaignId, ids: Array.from(selectedIds) }),
       })
       if (!response.ok) throw new Error('Delete failed')
       setSelectedIds(new Set())

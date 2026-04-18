@@ -101,6 +101,7 @@ export async function runWebsiteParser(campaignId: string) {
               contactName: firstContact.name,
               title: firstContact.title,
               email: firstContact.email,
+              phone: firstContact.phone ?? null,
               sport: firstContact.sport,
               status: 'CONTACT_FOUND'
             }
@@ -114,7 +115,7 @@ export async function runWebsiteParser(campaignId: string) {
               leadId: lead.id,
               contact: {
                 email: firstContact.email,
-                phone: undefined,
+                phone: firstContact.phone,
                 contactName: firstContact.name,
                 title: firstContact.title,
                 sport: firstContact.sport
@@ -138,6 +139,7 @@ export async function runWebsiteParser(campaignId: string) {
                 contactName: contact.name,
                 title: contact.title,
                 email: contact.email,
+                phone: contact.phone ?? null,
                 sport: contact.sport,
                 status: 'CONTACT_FOUND'
               }
@@ -151,7 +153,7 @@ export async function runWebsiteParser(campaignId: string) {
                 leadId: newLead.id,
                 contact: {
                   email: contact.email,
-                  phone: undefined,
+                  phone: contact.phone,
                   contactName: contact.name,
                   title: contact.title,
                   sport: contact.sport
