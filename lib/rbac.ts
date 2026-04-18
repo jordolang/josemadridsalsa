@@ -1,18 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { fallbackPermissionsFor } from '@/lib/permissions-data'
-import { Prisma, UserRole } from '@prisma/client'
+import { UserRole } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { isMissingTableError } from '@/lib/prisma-errors'
 
 export type { UserRole }
-
-/**
- * Determine if we should fall back to the default permission map.
- * Prisma throws P2021 when a backing table has not been created yet.
- */
-function shouldFallbackToDefaultPermissions(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021'
-}
 
 function fallbackHasPermission(role: UserRole, permissionName: string): boolean {
   return fallbackPermissionsFor(role).includes(permissionName)
@@ -96,7 +89,7 @@ export async function hasPermission(
 
     return false
   } catch (error) {
-    if (shouldFallbackToDefaultPermissions(error)) {
+    if (isMissingTableError(error)) {
       console.warn(
         `[RBAC] Permission tables are missing in the database. Using fallback permissions for role ${user.role}.`
       )

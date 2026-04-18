@@ -13,7 +13,8 @@ import {
 } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { createMetadata } from '@/lib/metadata'
-import { isSuperAdmin, getGrantPermissions, isMissingTableError } from '@/lib/credentials'
+import { isSuperAdmin, type CredentialGrantPermissions } from '@/lib/credentials'
+import { isMissingTableError, logMissingTableWarning } from '@/lib/prisma-errors'
 import CredentialsPageClient from '@/components/admin/CredentialsPageClient'
 
 export const metadata: Metadata = createMetadata({
@@ -55,22 +56,43 @@ export default async function CredentialsPage() {
   const superAdmin = isSuperAdmin(user.email)
 
   // ── Access grant check ────────────────────────────────────────────────────
+  // Fetch the grant once and derive both presence and per-permission flags
+  // from the same row to avoid a second roundtrip.
   let accessGrant: { id: string } | null = null
-  let grantPermissions: Awaited<ReturnType<typeof getGrantPermissions>> = null
+  let grantPermissions: CredentialGrantPermissions | null = null
   let grantsTableMissing = false
 
   try {
-    accessGrant = await prisma.credentialAccessGrant.findFirst({
-      where: { email: user.email, revokedAt: null },
-      select: { id: true },
+    const grantRow = await prisma.credentialAccessGrant.findUnique({
+      where: { email: user.email },
+      select: {
+        id: true,
+        revokedAt: true,
+        canView: true,
+        canAdd: true,
+        canEdit: true,
+        canDelete: true,
+        canUpload: true,
+      },
     })
-    grantPermissions = await getGrantPermissions(user.email)
+
+    if (grantRow && grantRow.revokedAt === null) {
+      accessGrant = { id: grantRow.id }
+      grantPermissions = {
+        canView: grantRow.canView,
+        canAdd: grantRow.canAdd,
+        canEdit: grantRow.canEdit,
+        canDelete: grantRow.canDelete,
+        canUpload: grantRow.canUpload,
+      }
+    }
   } catch (error) {
     if (isMissingTableError(error)) {
-      console.warn('[Credentials] credential_access_grants table missing. Run prisma migrate deploy.')
+      logMissingTableWarning('Credentials', 'credential_access_grants')
       grantsTableMissing = true
     } else {
-      // Unexpected error — log it, surface setup message to protect the page
+      // Unexpected DB error — log and surface the setup state to protect the page.
+      // Non-super-admins will see the SetupRequired UI rather than a 500.
       console.error('[Credentials] Error querying access grants:', error)
       grantsTableMissing = true
     }
@@ -141,7 +163,7 @@ export default async function CredentialsPage() {
     })
   } catch (error) {
     if (isMissingTableError(error)) {
-      console.warn('[Credentials] service_credentials table missing. Run prisma migrate deploy.')
+      logMissingTableWarning('Credentials', 'service_credentials')
       if (!superAdmin) return <SetupRequired />
       // Super admin: continue with empty state so they can at least see the page
     } else {

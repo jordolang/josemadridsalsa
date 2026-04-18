@@ -6,6 +6,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [1.10.1] — 2026-04-18 — Prisma Error Utilities & Credential Vault Refactor
+
+### Added
+- **`lib/prisma-errors.ts`** — Shared module exporting `isMissingTableError` (Prisma P2021 detection, including Accelerate-wrapped errors) and `logMissingTableWarning` (greppable warning format)
+- **`tests/lib/prisma-errors.test.ts`** — 12 unit tests covering Prisma `KnownRequestError`, message-based heuristics, false-positive resistance, and standardised warning output
+
+### Changed
+- **Consolidated missing-table detection** — `lib/credentials.ts` and `lib/rbac.ts` now both call into `isMissingTableError` from `lib/prisma-errors.ts` instead of maintaining two parallel implementations (`isMissingTableError` + `shouldFallbackToDefaultPermissions`)
+- **Tightened heuristics** — Cached `error.message.toLowerCase()` and added explicit precedence parentheses around the `relation` + `does not exist` check for clarity and a small perf win
+- **Combined access-grant queries on `/admin/credentials`** — Page now performs a single `findUnique({ email })` and derives both grant existence and the per-permission flags from the result, halving DB roundtrips on every credentials-page render
+- **Standardised warning format** — All "missing table" warnings across the admin surface now follow `[<scope>] <table_name> table does not exist. Run \`prisma migrate deploy\`.` for log greppability
+
+### Removed
+- **Redundant `shouldFallbackToDefaultPermissions`** in `lib/rbac.ts` (replaced with shared helper)
+- **Closed PR #265** (`claude/beautiful-heisenberg`) and **PR #266** (`fix/credentials-page-runtime-error`) as superseded — the credential vault tables, indexes, and P2021 fallback behaviour are already in main via the `20260317000000_baseline` migration; this refactor addresses the shared reviewer feedback from both
+
+---
+
 ## [1.10.0] — 2026-04-17 — Mobile App, Lead Gen & Admin Overhaul
 
 ### Added
