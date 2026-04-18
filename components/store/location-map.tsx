@@ -26,8 +26,16 @@ export function LocationMap() {
   // Encode address for URLs
   const encodedAddress = encodeURIComponent(BUSINESS_ADDRESS)
   
-  // Prefer place_id if provided
-  const placeId = process.env.NEXT_PUBLIC_GOOGLE_PLACE_ID || process.env.GOOGLE_PLACE_ID
+  // Prefer place_id if provided. Sanitize aggressively: Google's Embed API
+  // returns "Invalid 'q' parameter" for any of these env-variable pitfalls —
+  // trailing whitespace/newlines, an accidentally included "place_id:" prefix,
+  // or wrapping quotes. Strip them before building the URL.
+  const rawPlaceId = process.env.NEXT_PUBLIC_GOOGLE_PLACE_ID || process.env.GOOGLE_PLACE_ID || ''
+  const placeId = rawPlaceId
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/^place_id:/i, '')
+    .trim()
 
   // Google Maps Embed URL — the keyless `maps.google.com/maps?output=embed`
   // endpoint silently ignores `z=` when combined with `q=place_id:`, which
