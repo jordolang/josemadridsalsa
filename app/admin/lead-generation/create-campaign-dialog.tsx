@@ -52,6 +52,7 @@ export function CreateCampaignDialog() {
   const [loading, setLoading] = useState(false)
   const [leadType, setLeadType] = useState<LeadType>('SCHOOL_ATHLETICS')
   const [businessCategory, setBusinessCategory] = useState('')
+  const [radius, setRadius] = useState('10mi')
   const router = useRouter()
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -69,7 +70,7 @@ export function CreateCampaignDialog() {
         schoolType: (fd.get('schoolType') as string) || undefined,
         businessCategory: businessCategory || undefined,
         searchQuery: (fd.get('searchQuery') as string) || undefined,
-        radius: (fd.get('radius') as string) || undefined,
+        radius: radius || undefined,
         limit: parseInt(fd.get('limit') as string) || 50,
       })
       setOpen(false)
@@ -87,6 +88,7 @@ export function CreateCampaignDialog() {
     if (!nextOpen) {
       setLeadType('SCHOOL_ATHLETICS')
       setBusinessCategory('')
+      setRadius('10mi')
     }
   }
 
@@ -208,8 +210,8 @@ export function CreateCampaignDialog() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="radius">Search Radius</Label>
-                  <Select name="radius" defaultValue="10mi">
-                    <SelectTrigger>
+                  <Select value={radius} onValueChange={setRadius}>
+                    <SelectTrigger id="radius">
                       <SelectValue placeholder="Select radius" />
                     </SelectTrigger>
                     <SelectContent>

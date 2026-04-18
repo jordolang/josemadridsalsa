@@ -5,6 +5,7 @@ import { ok, fail } from '@/lib/api'
 import { z } from 'zod'
 
 const bulkDeleteSchema = z.object({
+  campaignId: z.string().min(1),
   ids: z.array(z.string().min(1)).min(1).max(500),
 })
 
@@ -13,16 +14,20 @@ export async function POST(req: NextRequest) {
     await requirePermission('messaging:assign')
 
     const body: unknown = await req.json()
-    const { ids } = bulkDeleteSchema.parse(body)
+    const { campaignId, ids } = bulkDeleteSchema.parse(body)
 
-    await prisma.lead.deleteMany({
-      where: { id: { in: ids } },
+    const { count } = await prisma.lead.deleteMany({
+      where: { id: { in: ids }, campaignId },
     })
 
-    return ok({ success: true })
+    return ok({ success: true, deleted: count })
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
-      return fail('Invalid request: ids must be a non-empty array of strings (max 500)', 400)
+      return fail(
+        'Invalid request: campaignId and ids (non-empty string array, max 500) are required',
+        400,
+        error.issues,
+      )
     }
     console.error('[lead-generation/bulk-delete] Delete failed:', error)
     return fail('Delete failed', 500)

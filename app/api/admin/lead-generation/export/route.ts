@@ -16,14 +16,46 @@ const CSV_INJECTION_CHARS = ['=', '+', '-', '@', '\t', '\r']
 
 function escapeCsv(value: string): string {
   let safe = value
-  if (CSV_INJECTION_CHARS.some((ch) => safe.startsWith(ch))) {
+  const firstNonWs = safe.match(/\S/)?.[0]
+  if (firstNonWs && CSV_INJECTION_CHARS.includes(firstNonWs)) {
     safe = `'${safe}`
   }
-  if (safe.includes(',') || safe.includes('"') || safe.includes('\n')) {
+  if (
+    safe.includes(',') ||
+    safe.includes('"') ||
+    safe.includes('\n') ||
+    safe.includes('\r')
+  ) {
     return `"${safe.replace(/"/g, '""')}"`
   }
   return safe
 }
+
+const EXPORT_LEAD_SELECT = {
+  id: true,
+  campaignId: true,
+  schoolName: true,
+  businessName: true,
+  businessCategory: true,
+  address: true,
+  city: true,
+  state: true,
+  district: true,
+  rating: true,
+  reviewCount: true,
+  website: true,
+  schoolUrl: true,
+  googleMapsUrl: true,
+  contactName: true,
+  title: true,
+  sport: true,
+  email: true,
+  phone: true,
+  status: true,
+  sentAt: true,
+  createdAt: true,
+  updatedAt: true,
+} as const
 
 export async function GET(req: NextRequest) {
   try {
@@ -50,6 +82,7 @@ export async function GET(req: NextRequest) {
       where,
       take: MAX_EXPORT_LEADS,
       orderBy: { createdAt: 'desc' },
+      select: EXPORT_LEAD_SELECT,
     })
 
     if (params.format === 'json') {
