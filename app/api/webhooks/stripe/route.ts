@@ -452,10 +452,26 @@ export async function POST(request: Request) {
 
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice
+        // Stripe moved the subscription reference across API versions —
+        // look in every documented location before giving up.
+        const invAny = invoice as unknown as {
+          subscription?: string | Stripe.Subscription | null
+          subscription_details?:
+            | { subscription?: string | Stripe.Subscription | null }
+            | null
+          parent?: {
+            subscription_details?: {
+              subscription?: string | Stripe.Subscription | null
+            } | null
+          } | null
+        }
+        const subRef =
+          invAny.subscription ??
+          invAny.subscription_details?.subscription ??
+          invAny.parent?.subscription_details?.subscription ??
+          null
         const subscriptionId =
-          typeof invoice.subscription === 'string'
-            ? invoice.subscription
-            : invoice.subscription?.id
+          typeof subRef === 'string' ? subRef : (subRef?.id ?? null)
         if (!subscriptionId) break
 
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
