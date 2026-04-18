@@ -6,6 +6,54 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [1.10.0] — 2026-04-17 — Mobile App, Lead Gen & Admin Overhaul
+
+### Added
+- **iOS mobile app** — React Native Expo scaffold with full auth system, multi-provider payment integration, and native iOS Swift components
+- **Mobile API endpoints** — Product by ID, account profile, and addresses for mobile client
+- **Lead-generation scraper v2** — Google Business scraper with SerpAPI integration, Browserless.io remote browser, custom URL scraping with live progress dialog, and streaming `/parse` endpoint for Find Contacts step
+- **Lead-gen UI overhaul** — Live feed redesign, collapsible table, pagination, toast notifications, progress bar, pause/resume dialog, skeleton loaders, tabbed activity log, and lead-selection checkboxes
+- **PDF export for leads** with customizable options
+- **Constant Contact CSV import** for existing contact lists
+- **Resend email-template system** — Branded templates with sync pipeline; campaigns now support resume, cancel, and improved retry controls
+- **Fundraiser Battle Arena port** — Ported Battle-Arena to the fundraiser subsystem across phases 0–5: pure game rules with vitest coverage, read-only spectator arena at `/arena/[period]`, server-authoritative damage and shield endpoints, realtime polling, and mobile/reduced-motion polish with Playwright smoke tests
+- **Givebutter-style fundraiser pages** — `/fundraise/[slug]` restructured to a 2:1 layout with shadcn/ui donation UI and real donor identity on sale events (live supporter feed)
+- **Admin panel redesign** — shadcn/ui sidebar-09 block with single-rail collapsible groups, theme-token migration, theme toggle, and bell-notifications fix
+- **Sentry observability** — Error tracking and performance instrumentation wired up
+- **Reviews section redesign** — Card grid with a leaning silhouette, theme-aware shadow/glow, and a 6th CTA card
+- **Growth dashboard refactor** — Real database queries replacing placeholder data across admin dashboards
+- **Feature images** added to the developer-page timeline
+- **Developer-page profile photo** — Real photo inserted into the hero circle with flush framing
+
+### Changed
+- **Auth consolidation** — Removed Clerk; standardized on NextAuth.js with GitHub, Facebook, and Apple OAuth providers
+- **Admin UI** — Completed shadcn migration across admin theme tokens; switched to CSS Grid with explicit column widths; plain-div content area to avoid SidebarInset overflow
+- **Documentation site** — Removed fumadocs integration; public docs moved to `salsadocs.vercel.app`
+- **Email pipeline** — Switched primary transactional provider from SMTP to Resend; slower rate limit for sync; `RESEND_UNSUBSCRIBE_URL` wired into outbound mail
+- **Find-Us map** — Upgraded to Google Embed API v1 `/place` endpoint so the map zooms to the selected store
+- **Event ticker** slowed to a comfortable reading speed
+- **Dependabot** tightened to security-only npm updates and monthly GitHub Actions bumps
+- **Package type** declared as ES module; CommonJS scripts renamed to `.cjs`
+- **Developer-page faith statement** — Replaced with 1 Peter 4:10 and Galatians 6:9–10
+
+### Fixed
+- **Admin sidebar overlap** — CSS Grid layout fixes, SidebarInset bypassed for the content area, clickable parent nav with expand behavior, and single-rail collapsible groups
+- **Scraper reliability** — Browser connection rotated every 3 domains, anti-detection measures, smarter contact parser (directory scanning + domain dedup), SSE `TextEncoder` bug, and event-bus subscriber mismatch
+- **Vercel build** — TypeScript build errors resolved; `.vercelignore` patterns anchored to prevent admin-route exclusion; dead `fumadocs.config.ts` removed; `esbuild` pinning for legacy fumadocs-mdx
+- **SMTP encryption failures** hardened via config validation
+- **Rate-limit bypass** for mobile clients resolved
+- **Email campaigns** — Missing campaign detail page (404 on create) and campaign sending both fixed
+- **Google Places / Maps API key rotation** to restore Find-Us photos
+- **Reviews section** — Silhouette positioning (~1.25in right shift) and theme-aware shadow/glow
+- **Dependencies** — Next.js bumped to 16.2.3, Nodemailer to 8.0.5, `@prisma/client` aligned to 6.19.3, `defu` to 6.1.6
+
+### Security
+- **Auth surface reduced** — Removing Clerk eliminates a duplicate auth stack; NextAuth.js is now the single source of truth for OAuth
+- **Sentry instrumentation** enables production error and regression monitoring
+- **Scraper hardened** — Rotating remote browsers with anti-detection measures reduce the risk of IP-level bans and credential leakage
+
+---
+
 ## [1.9.0] — 2026-04-02 — Developer Page & Blog Platform
 
 ### Added
