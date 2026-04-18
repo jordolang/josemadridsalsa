@@ -373,6 +373,64 @@ export async function POST(request: Request) {
         break
       }
 
+      case 'checkout.session.completed': {
+        const checkoutSession = event.data.object as Stripe.Checkout.Session
+        const fundraiserTeamId = checkoutSession.metadata?.fundraiserTeamId
+        if (!fundraiserTeamId) {
+          console.log('checkout.session.completed — no fundraiserTeamId, skipping')
+          break
+        }
+
+        const amountTotal = (checkoutSession.amount_total ?? 0) / 100
+        const donorRaw = checkoutSession.metadata?.fundraiserDonor
+        let donor:
+          | {
+              userId?: string | null
+              name?: string | null
+              email?: string | null
+              comment?: string | null
+              isAnonymous?: boolean
+            }
+          | undefined
+        if (donorRaw) {
+          try {
+            donor = JSON.parse(donorRaw)
+          } catch (err) {
+            console.error('Failed to parse fundraiserDonor metadata:', err)
+          }
+        }
+
+        try {
+          const { applyPurchaseDamage } = await import('@/lib/arena/damage')
+          const result = await applyPurchaseDamage({
+            sellingTeamId: fundraiserTeamId,
+            saleAmount: amountTotal,
+            orderId: checkoutSession.id,
+            donor: donor
+              ? {
+                  userId: donor.userId ?? null,
+                  name: donor.name ?? null,
+                  email:
+                    donor.email ?? checkoutSession.customer_details?.email ?? null,
+                  comment: donor.comment ?? null,
+                  isAnonymous: donor.isAnonymous ?? false,
+                }
+              : {
+                  email: checkoutSession.customer_details?.email ?? null,
+                  name: checkoutSession.customer_details?.name ?? null,
+                },
+          })
+          console.log(
+            `Fundraiser damage applied for team ${fundraiserTeamId}: $${amountTotal} dealt to ${result.damagedTeams.length} opponents${result.idempotentHit ? ' (idempotent replay)' : ''}`,
+          )
+        } catch (err) {
+          // Do NOT rethrow — a damage engine failure must not block the
+          // rest of the webhook from marking itself processed.
+          console.error('applyPurchaseDamage failed inside webhook:', err)
+        }
+        break
+      }
+
       default:
         console.log(`Unhandled event type: ${event.type}`)
     }

@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Share2, Heart } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -29,6 +28,12 @@ export interface DonateActionCardProps {
  * button that opens the DonationForm in a shadcn Dialog, plus a Share
  * button that falls back to clipboard copy if the Web Share API is
  * unavailable.
+ *
+ * The form's Continue action POSTs to
+ * `/api/fundraiser/donate/create-session` and redirects the browser to the
+ * returned Stripe Checkout URL. The Stripe webhook's
+ * `checkout.session.completed` handler then calls `applyPurchaseDamage`
+ * with the donor metadata we set on the session.
  */
 export function DonateActionCard({
   teamId,
@@ -39,11 +44,11 @@ export function DonateActionCard({
   shareText,
   viewer,
 }: DonateActionCardProps) {
-  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'error'>(
     'idle',
   )
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   async function handleShare() {
     const url =
@@ -97,7 +102,7 @@ export function DonateActionCard({
             ]}
             className="border-0 p-0 shadow-none"
             viewer={viewer}
-            onSubmit={({
+            onSubmit={async ({
               amount,
               frequency,
               fundId,
@@ -106,24 +111,51 @@ export function DonateActionCard({
               comment,
               isAnonymous,
             }) => {
-              const params = new URLSearchParams({
-                ref: teamSlug,
-                team: teamId,
-                amount: String(amount),
-                frequency,
-              })
-              if (fundId) params.set('fund', fundId)
-              if (isAnonymous) {
-                params.set('anon', '1')
-              } else if (donorName) {
-                params.set('donor_name', donorName)
+              setCheckoutError(null)
+              try {
+                const res = await fetch(
+                  '/api/fundraiser/donate/create-session',
+                  {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                      teamId,
+                      amount,
+                      frequency,
+                      fundId: fundId ?? undefined,
+                      donor: {
+                        name: donorName,
+                        email: donorEmail,
+                        comment,
+                        isAnonymous,
+                      },
+                    }),
+                  },
+                )
+                const data = await res.json()
+                if (!res.ok || !data?.success || !data.url) {
+                  setCheckoutError(
+                    typeof data?.error === 'string'
+                      ? data.error
+                      : 'Unable to start checkout',
+                  )
+                  return
+                }
+                setOpen(false)
+                window.location.assign(data.url)
+              } catch {
+                setCheckoutError('Network error. Please try again.')
               }
-              if (donorEmail) params.set('donor_email', donorEmail)
-              if (comment) params.set('comment', comment)
-              setOpen(false)
-              router.push(`/shop?${params.toString()}`)
             }}
           />
+          {checkoutError && (
+            <p
+              role="alert"
+              className="mt-2 rounded bg-destructive/10 p-2 text-xs text-destructive"
+            >
+              {checkoutError}
+            </p>
+          )}
         </DialogContent>
       </Dialog>
 
