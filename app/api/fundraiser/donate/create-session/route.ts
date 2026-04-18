@@ -62,16 +62,6 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  if (parsed.data.frequency === 'monthly') {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Monthly donations are not yet available. Please choose One-time.',
-      },
-      { status: 422 },
-    )
-  }
-
   const team = await db.fundraiserTeam.findUnique({
     where: { id: parsed.data.teamId, status: 'ACTIVE' },
     select: { id: true, slug: true, name: true, school: true },
@@ -108,19 +98,33 @@ export async function POST(req: NextRequest) {
     isAnonymous: parsed.data.donor?.isAnonymous ?? false,
   })
 
+  const isSubscription = parsed.data.frequency === 'monthly'
+
   try {
     const stripe = getStripe()
+    const sharedMetadata = {
+      fundraiserTeamId: team.id,
+      fundraiserTeamSlug: team.slug,
+      fundraiserDonor: donorJSON,
+      fundraiserFundId: parsed.data.fundId ?? '',
+      fundraiserFrequency: parsed.data.frequency,
+    }
     const checkoutSession = await stripe.checkout.sessions.create({
-      mode: 'payment',
+      mode: isSubscription ? 'subscription' : 'payment',
       line_items: [
         {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: `Donation to ${team.name}`,
+              name: isSubscription
+                ? `Monthly donation to ${team.name}`
+                : `Donation to ${team.name}`,
               description: `Powers ${team.name} in the Jose Madrid Salsa Fundraiser.`,
             },
             unit_amount: amountCents,
+            ...(isSubscription
+              ? { recurring: { interval: 'month' as const } }
+              : {}),
           },
           quantity: 1,
         },
@@ -129,25 +133,17 @@ export async function POST(req: NextRequest) {
       success_url: `${origin}${successPath}`,
       cancel_url: `${origin}${cancelPath}`,
       allow_promotion_codes: false,
-      metadata: {
-        fundraiserTeamId: team.id,
-        fundraiserTeamSlug: team.slug,
-        fundraiserDonor: donorJSON,
-        fundraiserFundId: parsed.data.fundId ?? '',
-      },
-      payment_intent_data: {
-        metadata: {
-          fundraiserTeamId: team.id,
-          fundraiserTeamSlug: team.slug,
-          fundraiserDonor: donorJSON,
-        },
-      },
+      metadata: sharedMetadata,
+      ...(isSubscription
+        ? { subscription_data: { metadata: sharedMetadata } }
+        : { payment_intent_data: { metadata: sharedMetadata } }),
     })
 
     return NextResponse.json({
       success: true,
       url: checkoutSession.url,
       sessionId: checkoutSession.id,
+      subscription: isSubscription,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

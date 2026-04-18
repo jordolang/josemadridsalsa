@@ -383,6 +383,16 @@ export async function POST(request: Request) {
           break
         }
 
+        // Subscription-mode checkouts settle via invoice.payment_succeeded
+        // so recurring donations only trigger damage + receipts once per
+        // billing period.
+        if (checkoutSession.mode === 'subscription') {
+          console.log(
+            `checkout.session.completed — subscription mode, deferring to invoice.payment_succeeded (session=${checkoutSession.id})`,
+          )
+          break
+        }
+
         const amountCents = checkoutSession.amount_total ?? 0
         const amountDollars = amountCents / 100
         const donor = resolveDonorFromStripeSession(checkoutSession)
@@ -435,6 +445,86 @@ export async function POST(request: Request) {
             }
           } catch (err) {
             console.error('sendFundraiserDonationReceipt failed:', err)
+          }
+        }
+        break
+      }
+
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as Stripe.Invoice
+        const subscriptionId =
+          typeof invoice.subscription === 'string'
+            ? invoice.subscription
+            : invoice.subscription?.id
+        if (!subscriptionId) break
+
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+        const { extractFundraiserTeamId, resolveDonorFromStripeSession } =
+          await import('@/lib/arena/stripe-donor')
+
+        const metaSource = {
+          metadata: subscription.metadata,
+          customer_details: {
+            email: invoice.customer_email ?? null,
+            name: invoice.customer_name ?? null,
+          },
+        }
+        const fundraiserTeamId = extractFundraiserTeamId(metaSource)
+        if (!fundraiserTeamId) {
+          console.log(
+            `invoice.payment_succeeded — subscription ${subscriptionId} is not a fundraiser, skipping`,
+          )
+          break
+        }
+
+        const amountCents = invoice.amount_paid ?? 0
+        const amountDollars = amountCents / 100
+        const donor = resolveDonorFromStripeSession(metaSource)
+
+        let saleEventId: string | null = null
+        let isReplay = false
+        try {
+          const { applyPurchaseDamage } = await import('@/lib/arena/damage')
+          const result = await applyPurchaseDamage({
+            sellingTeamId: fundraiserTeamId,
+            saleAmount: amountDollars,
+            orderId: invoice.id ?? undefined,
+            donor,
+          })
+          saleEventId = result.saleEventId
+          isReplay = result.idempotentHit === true
+          console.log(
+            `Fundraiser recurring damage for team ${fundraiserTeamId} (sub=${subscriptionId}): $${amountDollars} across ${result.damagedTeams.length} opponents${isReplay ? ' (idempotent replay)' : ''}`,
+          )
+        } catch (err) {
+          console.error('applyPurchaseDamage failed inside invoice webhook:', err)
+        }
+
+        if (!isReplay && donor.email) {
+          try {
+            const { prisma: db } = await import('@/lib/prisma')
+            const team = await db.fundraiserTeam.findUnique({
+              where: { id: fundraiserTeamId },
+              select: { name: true, school: true, slug: true },
+            })
+            if (team) {
+              const { sendFundraiserDonationReceipt } = await import('@/lib/email/automation')
+              await sendFundraiserDonationReceipt({
+                donorEmail: donor.email,
+                donorName: donor.name,
+                donorUserId: donor.userId,
+                isAnonymous: donor.isAnonymous,
+                teamName: team.name,
+                teamSchool: team.school,
+                teamSlug: team.slug,
+                amountCents,
+                currency: (invoice.currency ?? 'usd').toUpperCase(),
+                receiptId: saleEventId ?? invoice.id ?? subscriptionId,
+                comment: donor.comment,
+              })
+            }
+          } catch (err) {
+            console.error('sendFundraiserDonationReceipt failed (recurring):', err)
           }
         }
         break
