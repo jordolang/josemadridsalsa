@@ -107,7 +107,7 @@ export async function runWebsiteParser(campaignId: string) {
             }
           });
 
-          // Emit contact parsed event
+          // Emit contact parsed event (phone normalized to match the lead record)
           eventBus.emit({
             type: 'lead:contact_parsed',
             data: {
@@ -115,7 +115,7 @@ export async function runWebsiteParser(campaignId: string) {
               leadId: lead.id,
               contact: {
                 email: firstContact.email,
-                phone: firstContact.phone,
+                phone: firstContact.phone || undefined,
                 contactName: firstContact.name,
                 title: firstContact.title,
                 sport: firstContact.sport
@@ -145,7 +145,7 @@ export async function runWebsiteParser(campaignId: string) {
               }
             });
 
-            // Emit contact parsed event for new lead
+            // Emit contact parsed event for new lead (phone normalized to match the lead record)
             eventBus.emit({
               type: 'lead:contact_parsed',
               data: {
@@ -153,7 +153,7 @@ export async function runWebsiteParser(campaignId: string) {
                 leadId: newLead.id,
                 contact: {
                   email: contact.email,
-                  phone: contact.phone,
+                  phone: contact.phone || undefined,
                   contactName: contact.name,
                   title: contact.title,
                   sport: contact.sport

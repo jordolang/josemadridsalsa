@@ -179,7 +179,7 @@ export function LeadsTable({ leads, leadType, campaignId, onSelectionChange }: L
         (!lead.sport || !lead.sport.toLowerCase().includes(sportFilter.toLowerCase()))
       )
         return false
-      if (minRating) {
+      if (minRating.trim() !== '') {
         const threshold = Number.parseFloat(minRating)
         if (Number.isFinite(threshold)) {
           if (lead.rating == null || lead.rating < threshold) return false

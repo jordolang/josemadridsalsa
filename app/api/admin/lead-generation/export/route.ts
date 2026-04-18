@@ -16,8 +16,14 @@ const CSV_INJECTION_CHARS = ['=', '+', '-', '@', '\t', '\r']
 
 function escapeCsv(value: string): string {
   let safe = value
-  const firstNonWs = safe.match(/\S/)?.[0]
-  if (firstNonWs && CSV_INJECTION_CHARS.includes(firstNonWs)) {
+  // Catch injection payloads whether they're at the literal first byte
+  // (e.g. `\t=1+cmd`) or after leading whitespace (e.g. `   =1+cmd`).
+  const firstChar = safe.length > 0 ? safe[0] : ''
+  const firstNonWs = safe.match(/\S/)?.[0] ?? ''
+  if (
+    (firstChar && CSV_INJECTION_CHARS.includes(firstChar)) ||
+    (firstNonWs && CSV_INJECTION_CHARS.includes(firstNonWs))
+  ) {
     safe = `'${safe}`
   }
   if (
