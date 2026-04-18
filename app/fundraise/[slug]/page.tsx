@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import type { Metadata } from 'next'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma as db } from '@/lib/prisma'
 import { FundraisingProgress } from '@/components/fundraiser/fundraising-progress'
 import { TeamMembersStrip } from '@/components/fundraiser/team-members-strip'
@@ -33,7 +35,7 @@ export default async function FundraiserProfilePage({ params }: Props) {
   })
   if (!team) notFound()
 
-  const [recentSales, teammates] = await Promise.all([
+  const [recentSales, teammates, session] = await Promise.all([
     db.fundraiserSaleEvent.findMany({
       where: { teamId: team.id },
       orderBy: { createdAt: 'desc' },
@@ -66,6 +68,7 @@ export default async function FundraiserProfilePage({ params }: Props) {
         pricePerUnit: true,
       },
     }),
+    getServerSession(authOptions),
   ])
 
   const raised = team.salesCount * team.pricePerUnit
@@ -168,6 +171,14 @@ export default async function FundraiserProfilePage({ params }: Props) {
               teamSlug={team.slug}
               teamName={team.name}
               pricePerUnit={team.pricePerUnit}
+              viewer={
+                session?.user
+                  ? {
+                      name: session.user.name ?? null,
+                      email: session.user.email ?? null,
+                    }
+                  : undefined
+              }
             />
           </div>
           <div className="lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-1">

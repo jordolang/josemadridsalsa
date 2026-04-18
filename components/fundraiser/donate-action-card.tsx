@@ -20,6 +20,8 @@ export interface DonateActionCardProps {
   pricePerUnit: number
   shareTitle?: string
   shareText?: string
+  /** Pre-fill the donation form from the NextAuth session. */
+  viewer?: { name?: string | null; email?: string | null }
 }
 
 /**
@@ -35,6 +37,7 @@ export function DonateActionCard({
   pricePerUnit,
   shareTitle,
   shareText,
+  viewer,
 }: DonateActionCardProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -93,7 +96,16 @@ export function DonateActionCard({
               { amount: 10, label: 'Every bit helps' },
             ]}
             className="border-0 p-0 shadow-none"
-            onSubmit={({ amount, frequency, fundId }) => {
+            viewer={viewer}
+            onSubmit={({
+              amount,
+              frequency,
+              fundId,
+              donorName,
+              donorEmail,
+              comment,
+              isAnonymous,
+            }) => {
               const params = new URLSearchParams({
                 ref: teamSlug,
                 team: teamId,
@@ -101,6 +113,13 @@ export function DonateActionCard({
                 frequency,
               })
               if (fundId) params.set('fund', fundId)
+              if (isAnonymous) {
+                params.set('anon', '1')
+              } else if (donorName) {
+                params.set('donor_name', donorName)
+              }
+              if (donorEmail) params.set('donor_email', donorEmail)
+              if (comment) params.set('comment', comment)
               setOpen(false)
               router.push(`/shop?${params.toString()}`)
             }}

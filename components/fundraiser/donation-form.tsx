@@ -1,10 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { ShieldCheck } from 'lucide-react'
+import { ChevronDown, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -15,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 
 export type DonationFrequency = 'one_time' | 'monthly'
 
@@ -32,6 +39,10 @@ export type DonationFormValues = {
   amount: number
   frequency: DonationFrequency
   fundId: string | null
+  donorName: string | null
+  donorEmail: string | null
+  comment: string | null
+  isAnonymous: boolean
 }
 
 export interface DonationFormProps {
@@ -42,6 +53,8 @@ export interface DonationFormProps {
   /** Default minimum when the user picks "Other". */
   minCustomAmount?: number
   currency?: string
+  /** Pre-fill donor identity (typically from NextAuth session). */
+  viewer?: { name?: string | null; email?: string | null }
   onSubmit: (values: DonationFormValues) => void | Promise<void>
   className?: string
 }
@@ -50,14 +63,16 @@ export interface DonationFormProps {
  * Givebutter-style donation form.
  *
  * One-time / Monthly toggle, 2×2 preset tiles, free-form "Other" amount,
- * optional designation Select, and a single Continue CTA. Built entirely
- * with shadcn/ui primitives.
+ * optional fund designation, collapsible "Add a personal note" section
+ * with name/email/comment + anonymity checkbox, and a single Continue
+ * CTA. Built entirely with shadcn/ui primitives.
  */
 export function DonationForm({
   tiers,
   funds,
   minCustomAmount = 1,
   currency = 'USD',
+  viewer,
   onSubmit,
   className,
 }: DonationFormProps) {
@@ -67,6 +82,11 @@ export function DonationForm({
   )
   const [customAmount, setCustomAmount] = useState('')
   const [fundId, setFundId] = useState<string | null>(null)
+  const [donorName, setDonorName] = useState(viewer?.name ?? '')
+  const [donorEmail, setDonorEmail] = useState(viewer?.email ?? '')
+  const [comment, setComment] = useState('')
+  const [isAnonymous, setIsAnonymous] = useState(false)
+  const [noteOpen, setNoteOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   const resolvedAmount: number =
@@ -87,6 +107,10 @@ export function DonationForm({
         amount: resolvedAmount,
         frequency,
         fundId,
+        donorName: isAnonymous ? null : (donorName.trim() || null),
+        donorEmail: donorEmail.trim() || null,
+        comment: comment.trim() || null,
+        isAnonymous,
       })
     } finally {
       setSubmitting(false)
@@ -187,6 +211,84 @@ export function DonationForm({
             </Select>
           </div>
         )}
+
+        <Collapsible open={noteOpen} onOpenChange={setNoteOpen}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-md py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Add a personal note
+              <ChevronDown
+                className={cn(
+                  'h-4 w-4 transition-transform',
+                  noteOpen && 'rotate-180',
+                )}
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 pt-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label htmlFor="donor-name" className="text-xs">
+                  Your name
+                </Label>
+                <Input
+                  id="donor-name"
+                  value={donorName}
+                  onChange={(e) => setDonorName(e.target.value)}
+                  placeholder="Jane Donor"
+                  maxLength={120}
+                  disabled={isAnonymous}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="donor-email" className="text-xs">
+                  Email
+                </Label>
+                <Input
+                  id="donor-email"
+                  type="email"
+                  value={donorEmail}
+                  onChange={(e) => setDonorEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  maxLength={200}
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="donor-comment" className="text-xs">
+                Message to the team
+              </Label>
+              <Textarea
+                id="donor-comment"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Rooting for you!"
+              />
+              <div className="text-right text-[10px] tabular-nums text-muted-foreground">
+                {comment.length} / 500
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="donor-anonymous"
+                checked={isAnonymous}
+                onCheckedChange={(v) => setIsAnonymous(v === true)}
+              />
+              <Label
+                htmlFor="donor-anonymous"
+                className="text-xs font-normal leading-snug text-muted-foreground"
+              >
+                Make this donation anonymous. Your name and avatar will be
+                hidden from the supporter feed; your email is still used
+                for the receipt.
+              </Label>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         <Button
           size="lg"
