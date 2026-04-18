@@ -3,7 +3,7 @@
 import { GrowthBookProvider } from '@growthbook/growthbook-react'
 import { useSession } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 
 import {
   createGrowthBookInstance,
@@ -33,6 +33,7 @@ export function GrowthBookAppProvider({ children }: GrowthBookAppProviderProps) 
   const growthbook = useMemo(() => createGrowthBookInstance(), [])
   const { data: session, status } = useSession()
   const pathname = usePathname()
+  const lastAttributesRef = useRef<string>('')
 
   useEffect(() => {
     void growthbook.init({ streaming: true })
@@ -46,7 +47,7 @@ export function GrowthBookAppProvider({ children }: GrowthBookAppProviderProps) 
     const anonId = readOrCreateAnonymousId()
     const userId = session?.user?.id ?? ''
     const role = session?.user?.role ?? 'anonymous'
-    void growthbook.setAttributes({
+    const attributes = {
       id: userId || anonId,
       anonId,
       userId,
@@ -54,7 +55,11 @@ export function GrowthBookAppProvider({ children }: GrowthBookAppProviderProps) 
       role,
       url: pathname ?? '',
       deviceType: detectDeviceType(),
-    })
+    }
+    const serialized = JSON.stringify(attributes)
+    if (serialized === lastAttributesRef.current) return
+    lastAttributesRef.current = serialized
+    void growthbook.setAttributes(attributes)
   }, [growthbook, session?.user?.id, session?.user?.role, status, pathname])
 
   return <GrowthBookProvider growthbook={growthbook}>{children}</GrowthBookProvider>
