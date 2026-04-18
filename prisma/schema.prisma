@@ -55,6 +55,7 @@ model User {
   emailLogs              EmailLog[]
   unsubscribePreferences UnsubscribePreference[]
   fundraiserMessages     FundraiserMessage[]
+  fundraiserSaleEvents   FundraiserSaleEvent[]
 
   @@map("users")
 }
@@ -3359,12 +3360,22 @@ model FundraiserSaleEvent {
   orderId String? @unique
   amount  Decimal @default(0) @db.Decimal(10, 2)
 
+  // Donor identity (optional — populated at checkout time)
+  donorUserId    String?
+  donorName      String?
+  donorAvatarUrl String?
+  donorEmail     String?
+  donorComment   String? @db.Text
+  isAnonymous    Boolean @default(false)
+
   createdAt DateTime @default(now())
 
   // Relations
-  team FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team  FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  donor User?          @relation(fields: [donorUserId], references: [id], onDelete: SetNull)
 
   @@index([teamId])
+  @@index([donorUserId])
   @@map("fundraiser_sale_events")
 }
 

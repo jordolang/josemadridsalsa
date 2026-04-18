@@ -8,6 +8,16 @@ const SaleSchema = z.object({
   apiKey: z.string().min(32),
   amount: z.number().positive(),
   orderId: z.string().optional(),
+  donor: z
+    .object({
+      userId: z.string().optional(),
+      name: z.string().max(120).optional(),
+      avatarUrl: z.string().url().max(500).optional(),
+      email: z.string().email().optional(),
+      comment: z.string().max(2000).optional(),
+      isAnonymous: z.boolean().optional(),
+    })
+    .optional(),
 })
 
 /**
@@ -55,6 +65,7 @@ export async function POST(req: NextRequest) {
       sellingTeamId: team.id,
       saleAmount: parsed.data.amount,
       orderId: parsed.data.orderId,
+      donor: parsed.data.donor,
     })
 
     if (result.idempotentHit) {

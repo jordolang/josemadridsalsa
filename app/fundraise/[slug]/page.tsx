@@ -38,7 +38,17 @@ export default async function FundraiserProfilePage({ params }: Props) {
       where: { teamId: team.id },
       orderBy: { createdAt: 'desc' },
       take: 12,
-      select: { id: true, amount: true, createdAt: true, orderId: true },
+      select: {
+        id: true,
+        amount: true,
+        createdAt: true,
+        orderId: true,
+        donorName: true,
+        donorAvatarUrl: true,
+        donorComment: true,
+        isAnonymous: true,
+        donor: { select: { name: true } },
+      },
     }),
     db.fundraiserTeam.findMany({
       where: {
@@ -59,14 +69,21 @@ export default async function FundraiserProfilePage({ params }: Props) {
   ])
 
   const raised = team.salesCount * team.pricePerUnit
-  const supporterCount = recentSales.length
+  const supporterCount = team.salesCount
 
-  const feedItems = recentSales.map((s) => ({
-    id: s.id,
-    name: 'Anonymous supporter',
-    amount: Number(s.amount),
-    createdAt: s.createdAt.toISOString(),
-  }))
+  const feedItems = recentSales.map((s) => {
+    const displayName = s.isAnonymous
+      ? 'Anonymous supporter'
+      : (s.donorName ?? s.donor?.name ?? 'Anonymous supporter')
+    return {
+      id: s.id,
+      name: displayName,
+      avatarUrl: s.isAnonymous ? null : s.donorAvatarUrl,
+      amount: Number(s.amount),
+      createdAt: s.createdAt.toISOString(),
+      comment: s.donorComment ?? undefined,
+    }
+  })
 
   const teamMemberCards = teammates.map((t) => ({
     id: t.id,

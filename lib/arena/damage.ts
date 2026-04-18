@@ -15,6 +15,15 @@ export type PurchaseDamageInput = {
    * uses the selling team's activePeriod.
    */
   period?: string
+  /** Optional donor identity — surfaced in the supporter feed. */
+  donor?: {
+    userId?: string | null
+    name?: string | null
+    avatarUrl?: string | null
+    email?: string | null
+    comment?: string | null
+    isAnonymous?: boolean
+  }
 }
 
 export type PurchaseDamageResult = {
@@ -78,6 +87,16 @@ export async function applyPurchaseDamage(
         teamId: seller.id,
         orderId: input.orderId ?? null,
         amount: input.saleAmount,
+        donorUserId: input.donor?.userId ?? null,
+        donorName: input.donor?.isAnonymous
+          ? null
+          : (input.donor?.name ?? null),
+        donorAvatarUrl: input.donor?.isAnonymous
+          ? null
+          : (input.donor?.avatarUrl ?? null),
+        donorEmail: input.donor?.email ?? null,
+        donorComment: input.donor?.comment ?? null,
+        isAnonymous: input.donor?.isAnonymous ?? false,
       },
     })
 
