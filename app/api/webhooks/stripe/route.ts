@@ -383,24 +383,59 @@ export async function POST(request: Request) {
           break
         }
 
-        const amountTotal = (checkoutSession.amount_total ?? 0) / 100
+        const amountCents = checkoutSession.amount_total ?? 0
+        const amountDollars = amountCents / 100
         const donor = resolveDonorFromStripeSession(checkoutSession)
 
+        let saleEventId: string | null = null
+        let isReplay = false
         try {
           const { applyPurchaseDamage } = await import('@/lib/arena/damage')
           const result = await applyPurchaseDamage({
             sellingTeamId: fundraiserTeamId,
-            saleAmount: amountTotal,
+            saleAmount: amountDollars,
             orderId: checkoutSession.id,
             donor,
           })
+          saleEventId = result.saleEventId
+          isReplay = result.idempotentHit === true
           console.log(
-            `Fundraiser damage applied for team ${fundraiserTeamId}: $${amountTotal} dealt to ${result.damagedTeams.length} opponents${result.idempotentHit ? ' (idempotent replay)' : ''}`,
+            `Fundraiser damage applied for team ${fundraiserTeamId}: $${amountDollars} dealt to ${result.damagedTeams.length} opponents${isReplay ? ' (idempotent replay)' : ''}`,
           )
         } catch (err) {
           // Do NOT rethrow — a damage engine failure must not block the
           // rest of the webhook from marking itself processed.
           console.error('applyPurchaseDamage failed inside webhook:', err)
+        }
+
+        // Donor receipt. Skip on replay (already sent), on missing email,
+        // and swallow any failure so it can't block the webhook ACK.
+        if (!isReplay && donor.email) {
+          try {
+            const { prisma: db } = await import('@/lib/prisma')
+            const team = await db.fundraiserTeam.findUnique({
+              where: { id: fundraiserTeamId },
+              select: { name: true, school: true, slug: true },
+            })
+            if (team) {
+              const { sendFundraiserDonationReceipt } = await import('@/lib/email/automation')
+              await sendFundraiserDonationReceipt({
+                donorEmail: donor.email,
+                donorName: donor.name,
+                donorUserId: donor.userId,
+                isAnonymous: donor.isAnonymous,
+                teamName: team.name,
+                teamSchool: team.school,
+                teamSlug: team.slug,
+                amountCents,
+                currency: (checkoutSession.currency ?? 'usd').toUpperCase(),
+                receiptId: saleEventId ?? checkoutSession.id,
+                comment: donor.comment,
+              })
+            }
+          } catch (err) {
+            console.error('sendFundraiserDonationReceipt failed:', err)
+          }
         }
         break
       }

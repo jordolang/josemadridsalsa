@@ -3,6 +3,7 @@ import React from 'react'
 import { sendEmail } from '@/lib/email/client'
 import { prisma } from '@/lib/prisma'
 import { OrderConfirmationEmail } from '@/emails/order-confirmation'
+import { FundraiserDonationReceipt } from '@/emails/fundraiser-donation-receipt'
 import { CampaignLaunchEmail } from '@/lib/email/templates/campaign-launch'
 import { ParticipantWelcomeEmail } from '@/lib/email/templates/participant-welcome'
 import { ParticipantMilestoneEmail } from '@/lib/email/templates/participant-milestone'
@@ -135,6 +136,66 @@ export async function sendOrderConfirmationEmail(orderId: string) {
   }
 
   return result
+}
+
+export async function sendFundraiserDonationReceipt(options: {
+  donorEmail: string
+  donorName?: string | null
+  donorUserId?: string | null
+  isAnonymous?: boolean
+  teamName: string
+  teamSchool: string
+  teamSlug: string
+  amountCents: number
+  currency?: string
+  receiptId: string
+  comment?: string | null
+  receiptDate?: Date
+}) {
+  const {
+    donorEmail,
+    donorName,
+    donorUserId,
+    isAnonymous = false,
+    teamName,
+    teamSchool,
+    teamSlug,
+    amountCents,
+    currency = 'USD',
+    receiptId,
+    comment,
+    receiptDate = new Date(),
+  } = options
+
+  const amountFormatted = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+  }).format(amountCents / 100)
+
+  const teamPageUrl = `${defaultAppUrl}/fundraise/${teamSlug}`
+  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+
+  const emailContent = React.createElement(FundraiserDonationReceipt, {
+    donorName,
+    isAnonymous,
+    teamName,
+    teamSchool,
+    teamPageUrl,
+    amountFormatted,
+    receiptDate: format(receiptDate, 'MMMM d, yyyy'),
+    receiptId,
+    comment,
+    unsubscribeUrl,
+  })
+
+  return sendEmail({
+    to: donorEmail,
+    subject: `Thanks for supporting ${teamName}! Receipt for ${amountFormatted}`,
+    react: emailContent,
+    replyTo: 'mike@josemadrid.net',
+    type: 'fundraiser-donation-receipt',
+    userId: donorUserId ?? undefined,
+  })
 }
 
 export async function sendNewsletterWelcomeEmail(options: {
