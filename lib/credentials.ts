@@ -1,32 +1,15 @@
 import crypto from 'crypto'
 
 import { prisma } from '@/lib/prisma'
-import { Prisma, UserRole } from '@prisma/client'
+import { UserRole } from '@prisma/client'
 import { encryptSecret, decryptSecret } from '@/lib/crypto'
 import { hasPermission } from '@/lib/rbac'
+import { isMissingTableError, logMissingTableWarning } from '@/lib/prisma-errors'
 
 const SUPER_ADMIN_EMAIL = 'jordolang@gmail.com'
 
-/**
- * Detect Prisma P2021 "missing table" errors.
- * Also handles Prisma Accelerate-wrapped errors which may not expose the code
- * directly but still reference P2021 in the message.
- */
-export function isMissingTableError(error: unknown): boolean {
-  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
-    return true
-  }
-  // Accelerate wraps errors — check message string as fallback
-  if (error instanceof Error) {
-    return (
-      error.message.includes('P2021') ||
-      error.message.includes('does not exist in the current database') ||
-      error.message.toLowerCase().includes('missing table') ||
-      error.message.toLowerCase().includes('relation') && error.message.toLowerCase().includes('does not exist')
-    )
-  }
-  return false
-}
+// Re-export for back-compat with existing imports.
+export { isMissingTableError } from '@/lib/prisma-errors'
 
 export interface CredentialGrantPermissions {
   canView: boolean
@@ -68,7 +51,7 @@ export async function checkCredentialAccess(
     return null
   } catch (error) {
     if (isMissingTableError(error)) {
-      console.warn('[Credentials] credential_access_grants table missing. Run prisma migrate deploy.')
+      logMissingTableWarning('Credentials', 'credential_access_grants')
       return null
     }
     // Unexpected error — fail closed (no access) to avoid leaking data
@@ -101,7 +84,7 @@ export async function getGrantPermissions(
     }
   } catch (error) {
     if (isMissingTableError(error)) {
-      console.warn('[Credentials] credential_access_grants table missing. Run prisma migrate deploy.')
+      logMissingTableWarning('Credentials', 'credential_access_grants')
       return null
     }
     console.error('[Credentials] getGrantPermissions error:', error)
