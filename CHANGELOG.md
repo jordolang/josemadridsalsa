@@ -6,6 +6,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Facebook + TikTok social commerce hardening** — Admin social integrations now use a verified OAuth session flow, support choosing the exact connected destination account for each export, and can create Meta catalogs from the admin panel when Business Manager access is available.
+
+### Changed
+- **Shop listings** now target a selected connected Facebook Page or TikTok account instead of blindly exporting to the first active account.
+- **Social commerce setup UX** now makes the platform boundary explicit: Facebook catalog creation can be started from the admin panel, while TikTok Shop onboarding remains a Seller Center prerequisite before API-based product export.
+
+---
+
 ## [1.10.1] — 2026-04-18 — Prisma Error Utilities & Credential Vault Refactor
 
 ### Added

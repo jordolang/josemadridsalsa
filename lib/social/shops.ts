@@ -1,6 +1,11 @@
-import type { ShopPlatform } from '@prisma/client'
+import type { ShopPlatform, SocialMediaPlatform } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { getAccountAccessToken } from './platforms'
+import {
+  getAccountAccessToken,
+  getAccountRefreshToken,
+  getExpectedAccountPlatformForShop,
+  getSocialBaseUrl,
+} from './platforms'
 
 type SyncResult = {
   success: boolean
@@ -9,12 +14,102 @@ type SyncResult = {
   error?: string
 }
 
+type CreateCatalogResult =
+  | { success: true; catalogId: string }
+  | { success: false; error: string }
+
+type ShopExportConfiguration = {
+  shopPlatform: ShopPlatform
+  socialAccountId: string | null
+  socialAccountPlatform?: SocialMediaPlatform | null
+  catalogId?: string | null
+}
+
+export function validateShopExportConfiguration(
+  config: ShopExportConfiguration,
+): { valid: true } | { valid: false; error: string } {
+  if (!config.socialAccountId) {
+    return { valid: false, error: 'Choose the connected account that should own this export.' }
+  }
+
+  const expectedPlatform = getExpectedAccountPlatformForShop(config.shopPlatform)
+  if (config.socialAccountPlatform && config.socialAccountPlatform !== expectedPlatform) {
+    return {
+      valid: false,
+      error: `Selected account must be a ${expectedPlatform === 'FACEBOOK' ? 'Facebook Page' : 'TikTok account'}.`,
+    }
+  }
+
+  if (
+    (config.shopPlatform === 'FACEBOOK_SHOP' || config.shopPlatform === 'TIKTOK_SHOP') &&
+    !config.catalogId?.trim()
+  ) {
+    return {
+      valid: false,
+      error:
+        config.shopPlatform === 'FACEBOOK_SHOP'
+          ? 'Facebook Shop exports require a catalog ID.'
+          : 'TikTok Shop exports require a TikTok Shop ID.',
+    }
+  }
+
+  return { valid: true }
+}
+
+export async function createFacebookCatalog(params: {
+  socialAccountId: string
+  businessId: string
+  name: string
+}): Promise<CreateCatalogResult> {
+  const account = await prisma.socialAccount.findUnique({
+    where: { id: params.socialAccountId },
+    select: { id: true, platform: true, isActive: true },
+  })
+
+  if (!account || !account.isActive || account.platform !== 'FACEBOOK') {
+    return { success: false, error: 'Select an active Facebook Page first.' }
+  }
+
+  const managerToken = await getAccountRefreshToken(account.id)
+  if (!managerToken) {
+    return {
+      success: false,
+      error:
+        'A Facebook user token is not available for this Page. Reconnect Facebook to enable catalog creation.',
+    }
+  }
+
+  const response = await fetch(
+    `https://graph.facebook.com/v21.0/${params.businessId}/owned_product_catalogs`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        name: params.name,
+        vertical: 'commerce',
+        access_token: managerToken,
+      }),
+    },
+  )
+
+  const payload = await response.json()
+  if (payload.error) {
+    return { success: false, error: payload.error.message || 'Facebook catalog creation failed.' }
+  }
+
+  if (!payload.id) {
+    return { success: false, error: 'Facebook did not return a catalog ID.' }
+  }
+
+  return { success: true, catalogId: payload.id as string }
+}
+
 /**
  * Get the Facebook Page access token from the connected FACEBOOK social account
  */
-async function getFacebookPageToken(): Promise<{ token: string; pageId: string } | null> {
+async function getFacebookPageToken(accountId: string): Promise<{ token: string; pageId: string } | null> {
   const account = await prisma.socialAccount.findFirst({
-    where: { platform: 'FACEBOOK', isActive: true },
+    where: { id: accountId, platform: 'FACEBOOK', isActive: true },
   })
   if (!account) return null
   const token = await getAccountAccessToken(account.id)
@@ -25,9 +120,9 @@ async function getFacebookPageToken(): Promise<{ token: string; pageId: string }
 /**
  * Get the TikTok access token from the connected TIKTOK social account
  */
-async function getTikTokToken(): Promise<string | null> {
+async function getTikTokToken(accountId: string): Promise<string | null> {
   const account = await prisma.socialAccount.findFirst({
-    where: { platform: 'TIKTOK', isActive: true },
+    where: { id: accountId, platform: 'TIKTOK', isActive: true },
   })
   if (!account) return null
   return getAccountAccessToken(account.id)
@@ -361,6 +456,12 @@ export async function syncShopListing(listingId: string): Promise<SyncResult> {
   const listing = await prisma.shopListing.findUnique({
     where: { id: listingId },
     include: {
+      socialAccount: {
+        select: {
+          id: true,
+          platform: true,
+        },
+      },
       product: {
         include: { category: true },
       },
@@ -375,7 +476,22 @@ export async function syncShopListing(listingId: string): Promise<SyncResult> {
     data: { status: 'SYNCING', syncError: null },
   })
 
-  const baseUrl = process.env.NEXTAUTH_URL || 'https://www.josemadrid.net'
+  const configValidation = validateShopExportConfiguration({
+    shopPlatform: listing.shopPlatform,
+    socialAccountId: listing.socialAccountId,
+    socialAccountPlatform: listing.socialAccount?.platform as 'FACEBOOK' | 'TIKTOK' | null,
+    catalogId: listing.catalogId,
+  })
+
+  if (!configValidation.valid) {
+    await prisma.shopListing.update({
+      where: { id: listingId },
+      data: { status: 'ERROR', syncError: configValidation.error },
+    })
+    return { success: false, error: configValidation.error }
+  }
+
+  const baseUrl = getSocialBaseUrl()
   const productUrl = `${baseUrl}/products/${listing.product.slug}`
 
   const productData = {
@@ -404,26 +520,28 @@ export async function syncShopListing(listingId: string): Promise<SyncResult> {
 
   switch (listing.shopPlatform) {
     case 'FACEBOOK_SHOP': {
-      const fb = await getFacebookPageToken()
+      const fb = await getFacebookPageToken(listing.socialAccountId!)
       if (!fb) {
-        result = { success: false, error: 'No Facebook Page connected. Connect Facebook first.' }
-        break
-      }
-      if (!listing.catalogId) {
-        result = { success: false, error: 'No catalog ID configured. Set a Facebook Commerce catalog ID.' }
+        result = {
+          success: false,
+          error: 'The selected Facebook Page is unavailable. Reconnect it before exporting.',
+        }
         break
       }
       result = await syncToFacebookCatalog(
-        { catalogId: listing.catalogId, product: productData, overrides },
+        { catalogId: listing.catalogId!, product: productData, overrides },
         fb.token,
         listing.externalId,
       )
       break
     }
     case 'FACEBOOK_MARKETPLACE': {
-      const fb = await getFacebookPageToken()
+      const fb = await getFacebookPageToken(listing.socialAccountId!)
       if (!fb) {
-        result = { success: false, error: 'No Facebook Page connected. Connect Facebook first.' }
+        result = {
+          success: false,
+          error: 'The selected Facebook Page is unavailable. Reconnect it before exporting.',
+        }
         break
       }
       result = await syncToFacebookMarketplace(
@@ -435,17 +553,16 @@ export async function syncShopListing(listingId: string): Promise<SyncResult> {
       break
     }
     case 'TIKTOK_SHOP': {
-      const token = await getTikTokToken()
+      const token = await getTikTokToken(listing.socialAccountId!)
       if (!token) {
-        result = { success: false, error: 'No TikTok account connected. Connect TikTok first.' }
-        break
-      }
-      if (!listing.catalogId) {
-        result = { success: false, error: 'No TikTok Shop ID configured.' }
+        result = {
+          success: false,
+          error: 'The selected TikTok account is unavailable. Reconnect it before exporting.',
+        }
         break
       }
       result = await syncToTikTokShop(
-        { shopId: listing.catalogId, product: productData, overrides },
+        { shopId: listing.catalogId!, product: productData, overrides },
         token,
         listing.externalId,
       )

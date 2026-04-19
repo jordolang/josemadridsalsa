@@ -289,6 +289,8 @@ model ShopListing {
   id        String  @id @default(cuid())
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  socialAccountId String?
+  socialAccount   SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
 
   // Which shop platform
   shopPlatform ShopPlatform
@@ -320,6 +322,7 @@ model ShopListing {
   @@unique([productId, shopPlatform])
   @@index([shopPlatform, status])
   @@index([productId])
+  @@index([socialAccountId])
   @@map("shop_listings")
 }
 
@@ -1424,6 +1427,7 @@ model SocialAccount {
 
   // Relations
   publishedPosts SocialPostPublish[]
+  shopListings   ShopListing[]
 
   @@unique([platform, accountId])
   @@index([platform])

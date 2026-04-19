@@ -1,8 +1,32 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import type { SocialMediaPlatform } from '@prisma/client'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
-import { upsertSocialAccount } from '@/lib/social/platforms'
+import {
+  getSocialOAuthCookieOptions,
+  parseSocialOAuthSession,
+  SOCIAL_OAUTH_COOKIE_NAME,
+} from '@/lib/social/oauth'
+import { getSocialBaseUrl, upsertSocialAccount } from '@/lib/social/platforms'
 import { logAudit } from '@/lib/audit'
+
+const FACEBOOK_SCOPES = [
+  'pages_manage_posts',
+  'pages_read_engagement',
+  'pages_show_list',
+  'pages_manage_metadata',
+  'catalog_management',
+  'business_management',
+]
+
+const INSTAGRAM_SCOPES = [
+  'instagram_basic',
+  'instagram_content_publish',
+  'instagram_manage_insights',
+]
+
+const TIKTOK_SCOPES = ['user.info.basic', 'video.publish', 'video.upload']
+const TWITTER_SCOPES = ['tweet.read', 'tweet.write', 'users.read', 'offline.access']
 
 async function exchangeFacebookToken(code: string, redirectUri: string) {
   const appId = process.env.FACEBOOK_APP_ID
@@ -10,21 +34,18 @@ async function exchangeFacebookToken(code: string, redirectUri: string) {
 
   if (!appId || !appSecret) throw new Error('Facebook app not configured')
 
-  // Exchange code for short-lived token
   const tokenRes = await fetch(
     `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&code=${code}&redirect_uri=${encodeURIComponent(redirectUri)}`,
   )
   const tokenData = await tokenRes.json()
   if (tokenData.error) throw new Error(tokenData.error.message)
 
-  // Exchange for long-lived token
   const longRes = await fetch(
     `https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${tokenData.access_token}`,
   )
   const longData = await longRes.json()
   if (longData.error) throw new Error(longData.error.message)
 
-  // Get user's pages
   const pagesRes = await fetch(
     `https://graph.facebook.com/v21.0/me/accounts?access_token=${longData.access_token}&fields=id,name,access_token,picture,username`,
   )
@@ -35,8 +56,8 @@ async function exchangeFacebookToken(code: string, redirectUri: string) {
   }
 
   return {
-    userToken: longData.access_token,
-    expiresIn: longData.expires_in ?? 5184000, // ~60 days
+    userToken: longData.access_token as string,
+    expiresIn: longData.expires_in ?? 5184000,
     pages: pagesData.data as Array<{
       id: string
       name: string
@@ -47,7 +68,7 @@ async function exchangeFacebookToken(code: string, redirectUri: string) {
   }
 }
 
-async function exchangeTwitterToken(code: string, redirectUri: string) {
+async function exchangeTwitterToken(code: string, redirectUri: string, codeVerifier: string) {
   const clientId = process.env.TWITTER_CLIENT_ID
   const clientSecret = process.env.TWITTER_CLIENT_SECRET
 
@@ -65,21 +86,23 @@ async function exchangeTwitterToken(code: string, redirectUri: string) {
       code,
       grant_type: 'authorization_code',
       redirect_uri: redirectUri,
-      code_verifier: 'challenge', // Must match PKCE
+      code_verifier: codeVerifier,
     }),
   })
   const tokenData = await tokenRes.json()
   if (tokenData.error) throw new Error(tokenData.error_description || tokenData.error)
 
-  // Get user info
-  const userRes = await fetch('https://api.x.com/2/users/me?user.fields=profile_image_url,username', {
-    headers: { Authorization: `Bearer ${tokenData.access_token}` },
-  })
+  const userRes = await fetch(
+    'https://api.x.com/2/users/me?user.fields=profile_image_url,username',
+    {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    },
+  )
   const userData = await userRes.json()
 
   return {
-    accessToken: tokenData.access_token,
-    refreshToken: tokenData.refresh_token,
+    accessToken: tokenData.access_token as string,
+    refreshToken: tokenData.refresh_token as string | undefined,
     expiresIn: tokenData.expires_in ?? 7200,
     user: userData.data as {
       id: string
@@ -110,7 +133,6 @@ async function exchangeTikTokToken(code: string, redirectUri: string) {
   const tokenData = await tokenRes.json()
   if (tokenData.error) throw new Error(tokenData.error_description || 'TikTok token exchange failed')
 
-  // Get user info
   const userRes = await fetch(
     'https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url,username',
     {
@@ -120,10 +142,10 @@ async function exchangeTikTokToken(code: string, redirectUri: string) {
   const userData = await userRes.json()
 
   return {
-    accessToken: tokenData.access_token,
-    refreshToken: tokenData.refresh_token,
+    accessToken: tokenData.access_token as string,
+    refreshToken: tokenData.refresh_token as string | undefined,
     expiresIn: tokenData.expires_in ?? 86400,
-    openId: tokenData.open_id,
+    openId: (tokenData.open_id as string | undefined) ?? userData.data?.user?.open_id,
     user: userData.data?.user as {
       open_id: string
       display_name: string
@@ -133,46 +155,69 @@ async function exchangeTikTokToken(code: string, redirectUri: string) {
   }
 }
 
+function redirectToAdmin(
+  baseUrl: string,
+  params: Record<string, string>,
+  clearCookie = true,
+) {
+  const target = new URL('/admin/social', baseUrl)
+
+  Object.entries(params).forEach(([key, value]) => {
+    target.searchParams.set(key, value)
+  })
+
+  const response = NextResponse.redirect(target)
+
+  if (clearCookie) {
+    response.cookies.set(SOCIAL_OAUTH_COOKIE_NAME, '', {
+      ...getSocialOAuthCookieOptions(),
+      maxAge: 0,
+    })
+  }
+
+  return response
+}
+
 export async function GET(request: Request) {
   const user = await getCurrentUser()
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  const baseUrl = getSocialBaseUrl()
   const redirectUri = `${baseUrl}/api/social/oauth/callback`
 
-  if (!user) {
-    return NextResponse.redirect(`${baseUrl}/admin/social?error=unauthorized`)
+  if (!user || !(await hasPermission(user, 'social_media:publish'))) {
+    return redirectToAdmin(baseUrl, { error: 'unauthorized' })
   }
 
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
-  const stateRaw = searchParams.get('state')
+  const state = searchParams.get('state')
   const error = searchParams.get('error')
+  const cookieStore = await cookies()
+  const oauthSession = parseSocialOAuthSession(
+    cookieStore.get(SOCIAL_OAUTH_COOKIE_NAME)?.value,
+  )
 
   if (error) {
-    return NextResponse.redirect(`${baseUrl}/admin/social?error=${encodeURIComponent(error)}`)
+    return redirectToAdmin(baseUrl, { error })
   }
 
-  if (!code || !stateRaw) {
-    return NextResponse.redirect(`${baseUrl}/admin/social?error=missing_params`)
+  if (!code || !state || !oauthSession) {
+    return redirectToAdmin(baseUrl, { error: 'missing_params' })
   }
 
-  let platform: SocialMediaPlatform
-  try {
-    const state = JSON.parse(stateRaw)
-    platform = state.platform
-  } catch {
-    return NextResponse.redirect(`${baseUrl}/admin/social?error=invalid_state`)
+  if (oauthSession.state !== state || oauthSession.userId !== user.id) {
+    return redirectToAdmin(baseUrl, { error: 'invalid_state' })
   }
+
+  const platform = oauthSession.platform
 
   try {
     switch (platform) {
       case 'FACEBOOK':
       case 'INSTAGRAM': {
         const fbData = await exchangeFacebookToken(code, redirectUri)
-
-        let igAccountsConnected = 0
+        let instagramAccounts = 0
 
         for (const page of fbData.pages) {
-          // Save the Facebook Page account
           await upsertSocialAccount({
             platform: 'FACEBOOK',
             accountId: page.id,
@@ -180,17 +225,12 @@ export async function GET(request: Request) {
             accountHandle: page.username ?? undefined,
             profileImageUrl: page.picture?.data?.url ?? undefined,
             accessToken: page.access_token,
+            refreshToken: fbData.userToken,
             tokenExpiresAt: new Date(Date.now() + fbData.expiresIn * 1000),
-            scopes: [
-              'pages_manage_posts',
-              'pages_read_engagement',
-              'pages_show_list',
-              'pages_read_user_content',
-            ],
+            scopes: FACEBOOK_SCOPES,
             connectedById: user.id,
           })
 
-          // Discover Instagram Business account linked to this Page
           try {
             const igRes = await fetch(
               `https://graph.facebook.com/v21.0/${page.id}?fields=instagram_business_account{id,name,username,profile_picture_url}&access_token=${page.access_token}`,
@@ -205,21 +245,19 @@ export async function GET(request: Request) {
                 accountName: igAccount.name || page.name,
                 accountHandle: igAccount.username ? `@${igAccount.username}` : undefined,
                 profileImageUrl: igAccount.profile_picture_url ?? undefined,
-                // Instagram API calls use the Page's access token
                 accessToken: page.access_token,
+                refreshToken: fbData.userToken,
                 tokenExpiresAt: new Date(Date.now() + fbData.expiresIn * 1000),
-                scopes: [
-                  'instagram_basic',
-                  'instagram_content_publish',
-                  'instagram_manage_insights',
-                ],
+                scopes: INSTAGRAM_SCOPES,
                 connectedById: user.id,
               })
-              igAccountsConnected++
+              instagramAccounts++
             }
-          } catch (igErr) {
-            // Instagram discovery is best-effort; don't fail the whole flow
-            console.warn(`[SOCIAL_OAUTH] Failed to discover IG account for page ${page.id}:`, igErr)
+          } catch (igError) {
+            console.warn(
+              `[SOCIAL_OAUTH] Failed to discover Instagram account for page ${page.id}:`,
+              igError,
+            )
           }
         }
 
@@ -230,14 +268,22 @@ export async function GET(request: Request) {
           changes: {
             platform: 'FACEBOOK',
             pages: fbData.pages.length,
-            instagramAccounts: igAccountsConnected,
+            instagramAccounts,
           },
         })
         break
       }
 
       case 'TWITTER': {
-        const twData = await exchangeTwitterToken(code, redirectUri)
+        if (!oauthSession.codeVerifier) {
+          return redirectToAdmin(baseUrl, { error: 'missing_pkce_verifier' })
+        }
+
+        const twData = await exchangeTwitterToken(
+          code,
+          redirectUri,
+          oauthSession.codeVerifier,
+        )
 
         await upsertSocialAccount({
           platform: 'TWITTER',
@@ -248,7 +294,7 @@ export async function GET(request: Request) {
           accessToken: twData.accessToken,
           refreshToken: twData.refreshToken,
           tokenExpiresAt: new Date(Date.now() + twData.expiresIn * 1000),
-          scopes: ['tweet.read', 'tweet.write', 'users.read', 'offline.access'],
+          scopes: TWITTER_SCOPES,
           connectedById: user.id,
         })
 
@@ -264,6 +310,10 @@ export async function GET(request: Request) {
       case 'TIKTOK': {
         const ttData = await exchangeTikTokToken(code, redirectUri)
 
+        if (!ttData.openId) {
+          throw new Error('TikTok did not return an account identifier.')
+        }
+
         await upsertSocialAccount({
           platform: 'TIKTOK',
           accountId: ttData.openId,
@@ -273,7 +323,7 @@ export async function GET(request: Request) {
           accessToken: ttData.accessToken,
           refreshToken: ttData.refreshToken,
           tokenExpiresAt: new Date(Date.now() + ttData.expiresIn * 1000),
-          scopes: ['user.info.basic', 'video.publish', 'video.upload'],
+          scopes: TIKTOK_SCOPES,
           connectedById: user.id,
         })
 
@@ -287,13 +337,13 @@ export async function GET(request: Request) {
       }
 
       default:
-        return NextResponse.redirect(`${baseUrl}/admin/social?error=unsupported_platform`)
+        return redirectToAdmin(baseUrl, { error: 'unsupported_platform' })
     }
 
-    return NextResponse.redirect(`${baseUrl}/admin/social?connected=${platform.toLowerCase()}`)
-  } catch (err) {
-    console.error(`[SOCIAL_OAUTH_CALLBACK] ${platform}:`, err)
-    const msg = err instanceof Error ? err.message : 'Connection failed'
-    return NextResponse.redirect(`${baseUrl}/admin/social?error=${encodeURIComponent(msg)}`)
+    return redirectToAdmin(baseUrl, { connected: platform.toLowerCase() })
+  } catch (error) {
+    console.error(`[SOCIAL_OAUTH_CALLBACK] ${platform}:`, error)
+    const message = error instanceof Error ? error.message : 'Connection failed'
+    return redirectToAdmin(baseUrl, { error: message })
   }
 }

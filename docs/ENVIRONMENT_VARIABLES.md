@@ -13,7 +13,36 @@ This document lists all required and optional environment variables for the Jose
   - Development: `http://localhost:3000`
   - Production: `https://www.josemadrid.net`
 - `NEXTAUTH_SECRET` - Secret for NextAuth.js (generate with `openssl rand -base64 32`)
-- `MASTER_KEY` - 32-character encryption key for service keys
+- `MASTER_KEY` - 64-character hex encryption key for encrypted service and OAuth tokens
+
+## Social Commerce Integrations
+
+### Meta (Facebook / Instagram)
+- `FACEBOOK_APP_ID` - Meta app ID used for Facebook Page and Instagram Business OAuth
+- `FACEBOOK_APP_SECRET` - Meta app secret used for OAuth code exchange
+
+Required app capabilities and permissions for production use:
+- `pages_show_list`
+- `pages_read_engagement`
+- `pages_manage_posts`
+- `pages_manage_metadata`
+- `catalog_management`
+- `business_management`
+- `instagram_basic`
+- `instagram_content_publish`
+- `instagram_manage_insights`
+
+Notes:
+- The admin panel can connect Facebook Pages through OAuth and create Commerce catalogs when the connected account also has the needed Meta Business Manager access.
+- Shop review / storefront activation may still require manual approval in Meta Commerce Manager.
+
+### TikTok
+- `TIKTOK_CLIENT_KEY` - TikTok developer client key for OAuth
+- `TIKTOK_CLIENT_SECRET` - TikTok developer client secret for OAuth
+
+Notes:
+- TikTok account OAuth and product export are supported after Seller Center approval.
+- TikTok Shop creation / seller onboarding is not a public OAuth flow and must be completed in TikTok Seller Center before product export can succeed.
 
 ## Google Integration
 

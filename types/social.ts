@@ -230,6 +230,10 @@ export type ShopListingInfo = {
   productImage: string | null
   productInventory: number
   shopPlatform: ShopPlatform
+  socialAccountId: string | null
+  targetAccountName: string | null
+  targetAccountHandle: string | null
+  targetAccountPlatform: SocialMediaPlatform | null
   externalId: string | null
   externalUrl: string | null
   catalogId: string | null

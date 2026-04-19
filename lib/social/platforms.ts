@@ -1,6 +1,28 @@
-import type { SocialMediaPlatform } from '@prisma/client'
+import type { ShopPlatform, SocialMediaPlatform } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { encryptSecret, decryptSecret } from '@/lib/crypto'
+
+const FACEBOOK_OAUTH_SCOPES = [
+  'pages_manage_posts',
+  'pages_read_engagement',
+  'pages_show_list',
+  'pages_manage_metadata',
+  'catalog_management',
+  'business_management',
+  'instagram_basic',
+  'instagram_content_publish',
+  'instagram_manage_insights',
+]
+
+const TIKTOK_OAUTH_SCOPES = [
+  'user.info.basic',
+  'video.publish',
+  'video.upload',
+]
+
+export function getSocialBaseUrl(): string {
+  return process.env.NEXTAUTH_URL || 'http://localhost:3000'
+}
 
 /**
  * Get a connected social account's decrypted access token
@@ -18,6 +40,26 @@ export async function getAccountAccessToken(accountId: string): Promise<string |
     await prisma.socialAccount.update({
       where: { id: accountId },
       data: { connectionError: 'Failed to decrypt access token. Please reconnect.' },
+    })
+    return null
+  }
+}
+
+export async function getAccountRefreshToken(accountId: string): Promise<string | null> {
+  const account = await prisma.socialAccount.findUnique({
+    where: { id: accountId },
+  })
+
+  if (!account || !account.isActive || !account.refreshToken || !account.refreshTokenIv) {
+    return null
+  }
+
+  try {
+    return decryptSecret(account.refreshToken, account.refreshTokenIv)
+  } catch {
+    await prisma.socialAccount.update({
+      where: { id: accountId },
+      data: { connectionError: 'Failed to decrypt refresh token. Please reconnect.' },
     })
     return null
   }
@@ -117,8 +159,11 @@ export async function disconnectAccount(accountId: string) {
 /**
  * Generate OAuth authorization URL for a platform
  */
-export function getOAuthUrl(platform: SocialMediaPlatform): string {
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+export function getOAuthUrl(
+  platform: SocialMediaPlatform,
+  options: { state: string; codeChallenge?: string },
+): string {
+  const baseUrl = getSocialBaseUrl()
   const redirectUri = `${baseUrl}/api/social/oauth/callback`
 
   switch (platform) {
@@ -126,42 +171,39 @@ export function getOAuthUrl(platform: SocialMediaPlatform): string {
     case 'INSTAGRAM': {
       const appId = process.env.FACEBOOK_APP_ID
       if (!appId) throw new Error('FACEBOOK_APP_ID not configured')
-      const scopes = [
-        'pages_manage_posts',
-        'pages_read_engagement',
-        'pages_show_list',
-        'pages_read_user_content',
-        'pages_manage_metadata',
-        'instagram_basic',
-        'instagram_content_publish',
-        'instagram_manage_insights',
-      ].join(',')
-      const state = JSON.stringify({ platform, ts: Date.now() })
-      return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}&state=${encodeURIComponent(state)}&response_type=code`
+      const scopes = FACEBOOK_OAUTH_SCOPES.join(',')
+      return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&response_type=code`
     }
     case 'TWITTER': {
       const clientId = process.env.TWITTER_CLIENT_ID
       if (!clientId) throw new Error('TWITTER_CLIENT_ID not configured')
+      if (!options.codeChallenge) throw new Error('Missing PKCE challenge')
       const scopes = 'tweet.read tweet.write users.read offline.access'
-      const state = JSON.stringify({ platform, ts: Date.now() })
-      const codeChallenge = 'challenge' // In production, use PKCE
-      return `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(state)}&code_challenge=${codeChallenge}&code_challenge_method=plain`
+      return `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&code_challenge=${options.codeChallenge}&code_challenge_method=S256`
     }
     case 'TIKTOK': {
       const clientKey = process.env.TIKTOK_CLIENT_KEY
       if (!clientKey) throw new Error('TIKTOK_CLIENT_KEY not configured')
-      const scopes = 'user.info.basic,video.publish,video.upload'
-      const state = JSON.stringify({ platform, ts: Date.now() })
-      return `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${scopes}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`
+      const scopes = TIKTOK_OAUTH_SCOPES.join(',')
+      return `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${encodeURIComponent(scopes)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(options.state)}`
     }
     case 'GOOGLE_MY_BUSINESS': {
       const clientId = process.env.GOOGLE_CLIENT_ID
       if (!clientId) throw new Error('GOOGLE_CLIENT_ID not configured')
       const scopes = 'https://www.googleapis.com/auth/business.manage'
-      const state = JSON.stringify({ platform, ts: Date.now() })
-      return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(state)}&response_type=code&access_type=offline&prompt=consent`
+      return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&response_type=code&access_type=offline&prompt=consent`
     }
     default:
       throw new Error(`OAuth not supported for platform: ${platform}`)
+  }
+}
+
+export function getExpectedAccountPlatformForShop(shopPlatform: ShopPlatform): SocialMediaPlatform {
+  switch (shopPlatform) {
+    case 'FACEBOOK_SHOP':
+    case 'FACEBOOK_MARKETPLACE':
+      return 'FACEBOOK'
+    case 'TIKTOK_SHOP':
+      return 'TIKTOK'
   }
 }
