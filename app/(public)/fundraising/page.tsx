@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { createMetadata } from '@/lib/metadata';
 import { FundraiserSignupForm } from '@/components/fundraising/fundraiser-signup-form';
+import { ActiveCampaignsGrid } from '@/components/fundraiser/active-campaigns-grid';
 
 export const metadata: Metadata = createMetadata({
   title: 'Fundraising - Jose Madrid Salsa',
@@ -80,6 +81,14 @@ export default function FundraisingPage() {
           </div>
         </div>
       </section>
+
+      {/* Active Fundraising Campaigns — team mascots */}
+      <ActiveCampaignsGrid
+        limit={9}
+        heading="Active Fundraising Teams"
+        subheading="These groups are raising money right now. Tap a team to shop their store — every jar contributes to their goal."
+        className="bg-background"
+      />
 
       {/* CTA Section */}
       <section className="py-12 bg-card">

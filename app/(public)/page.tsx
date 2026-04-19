@@ -7,6 +7,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { createMetadata } from '@/lib/metadata'
 import { LocationMapClient } from '@/components/store/location-map-client'
 import { getReviewsData, getCalendarEvents } from '@/lib/server/google-data'
+import { ActiveCampaignsGrid } from '@/components/fundraiser/active-campaigns-grid'
 
 // Lazy load heavy below-the-fold components
 const AnimatedTestimonials = dynamic(
@@ -305,6 +306,16 @@ export default async function Home() {
           </ScrollReveal>
         </div>
       </section>
+
+      {/* Active Fundraising Campaigns — team mascots */}
+      <ErrorBoundary>
+        <ActiveCampaignsGrid
+          limit={6}
+          heading="Teams Fundraising Right Now"
+          subheading="Meet the schools, clubs, and teams raising money with Jose Madrid Salsa. Back a team and every jar counts toward their goal."
+          className="bg-background"
+        />
+      </ErrorBoundary>
 
       {/* Gift Box Selector Section */}
       <GiftBoxSelector />
