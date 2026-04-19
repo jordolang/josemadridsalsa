@@ -234,7 +234,7 @@ describe('arena/damage — applyPurchaseDamage', () => {
       donorUserId: 'u_1',
       donorName: null, // suppressed by isAnonymous
       donorAvatarUrl: null, // suppressed by isAnonymous
-      donorEmail: 'alice@example.com',
+      donorEmail: null, // suppressed by isAnonymous (PII)
       donorComment: 'go team',
       isAnonymous: true,
     })
@@ -267,5 +267,55 @@ describe('arena/damage — applyPurchaseDamage', () => {
     expect(createArgs.donorName).toBe('Bob')
     expect(createArgs.donorAvatarUrl).toBe('https://example.com/b.png')
     expect(createArgs.isAnonymous).toBe(false)
+  })
+
+  it('treats a P2002 race on orderId as an idempotent replay', async () => {
+    currentTx.fundraiserTeam.findUnique.mockResolvedValue({
+      id: 'team_seller',
+      activePeriod: '2026-04',
+      status: 'ACTIVE',
+    })
+    // First findUnique (pre-create check) misses — another caller hasn't
+    // committed yet. Second findUnique (after P2002) finds the winner's row.
+    currentTx.fundraiserSaleEvent.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'sale_winner' })
+    const uniqueErr = Object.assign(new Error('Unique constraint failed'), {
+      code: 'P2002',
+    })
+    currentTx.fundraiserSaleEvent.create.mockRejectedValue(uniqueErr)
+
+    const apply = await getApply()
+    const result = await apply({
+      sellingTeamId: 'team_seller',
+      saleAmount: 50,
+      orderId: 'ord_race',
+    })
+
+    expect(result.idempotentHit).toBe(true)
+    expect(result.saleEventId).toBe('sale_winner')
+    expect(result.totalDamageDealt).toBe(0)
+    expect(result.damagedTeams).toEqual([])
+  })
+
+  it('rethrows non-P2002 create errors', async () => {
+    currentTx.fundraiserTeam.findUnique.mockResolvedValue({
+      id: 'team_seller',
+      activePeriod: '2026-04',
+      status: 'ACTIVE',
+    })
+    currentTx.fundraiserSaleEvent.findUnique.mockResolvedValue(null)
+    currentTx.fundraiserSaleEvent.create.mockRejectedValue(
+      new Error('connection reset'),
+    )
+
+    const apply = await getApply()
+    await expect(
+      apply({
+        sellingTeamId: 'team_seller',
+        saleAmount: 10,
+        orderId: 'ord_boom',
+      }),
+    ).rejects.toThrow(/connection reset/)
   })
 })

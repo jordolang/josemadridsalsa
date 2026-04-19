@@ -3,7 +3,10 @@ import {
   applyDamage,
   classifyEmote,
   computeDamage,
+  DEFAULT_RULES,
+  resolveRules,
   type EmoteClass,
+  type ResolvedRules,
 } from './rules'
 
 export type PurchaseDamageInput = {
@@ -59,13 +62,23 @@ export async function applyPurchaseDamage(
   return db.$transaction(async (tx) => {
     const seller = await tx.fundraiserTeam.findUnique({
       where: { id: input.sellingTeamId },
-      select: { id: true, activePeriod: true, status: true },
+      select: {
+        id: true,
+        activePeriod: true,
+        status: true,
+        season: { select: { rulesJson: true } },
+      },
     })
     if (!seller || seller.status !== 'ACTIVE') {
       throw new Error('selling team not found or not ACTIVE')
     }
 
     const period = input.period ?? seller.activePeriod
+    // Per-season tunables. `resolveRules(null)` returns DEFAULT_RULES, so
+    // teams without a season (back-compat rows) behave exactly as before.
+    const rules: ResolvedRules = resolveRules(
+      seller.season?.rulesJson ?? null,
+    )
 
     if (input.orderId) {
       const existing = await tx.fundraiserSaleEvent.findUnique({
@@ -82,23 +95,51 @@ export async function applyPurchaseDamage(
       }
     }
 
-    const saleEvent = await tx.fundraiserSaleEvent.create({
-      data: {
-        teamId: seller.id,
-        orderId: input.orderId ?? null,
-        amount: input.saleAmount,
-        donorUserId: input.donor?.userId ?? null,
-        donorName: input.donor?.isAnonymous
-          ? null
-          : (input.donor?.name ?? null),
-        donorAvatarUrl: input.donor?.isAnonymous
-          ? null
-          : (input.donor?.avatarUrl ?? null),
-        donorEmail: input.donor?.email ?? null,
-        donorComment: input.donor?.comment ?? null,
-        isAnonymous: input.donor?.isAnonymous ?? false,
-      },
-    })
+    const isAnonymous = input.donor?.isAnonymous ?? false
+
+    let saleEvent: { id: string }
+    try {
+      saleEvent = await tx.fundraiserSaleEvent.create({
+        data: {
+          teamId: seller.id,
+          orderId: input.orderId ?? null,
+          amount: input.saleAmount,
+          donorUserId: input.donor?.userId ?? null,
+          donorName: isAnonymous ? null : (input.donor?.name ?? null),
+          donorAvatarUrl: isAnonymous
+            ? null
+            : (input.donor?.avatarUrl ?? null),
+          donorEmail: isAnonymous ? null : (input.donor?.email ?? null),
+          donorComment: input.donor?.comment ?? null,
+          isAnonymous,
+        },
+      })
+    } catch (err) {
+      // Concurrent race on the same orderId: both callers passed the
+      // findUnique check, but the unique index rejected the loser. Re-query
+      // and treat it as the idempotent replay it actually is.
+      const isUniqueViolation =
+        input.orderId &&
+        typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
+        (err as { code?: string }).code === 'P2002'
+      if (isUniqueViolation) {
+        const existing = await tx.fundraiserSaleEvent.findUnique({
+          where: { orderId: input.orderId! },
+        })
+        if (existing) {
+          return {
+            saleEventId: existing.id,
+            sellingTeamId: seller.id,
+            totalDamageDealt: 0,
+            damagedTeams: [],
+            idempotentHit: true,
+          }
+        }
+      }
+      throw err
+    }
 
     await tx.fundraiserTeam.update({
       where: { id: seller.id },
@@ -161,6 +202,7 @@ export async function applyPurchaseDamage(
           saleAmount: input.saleAmount,
           damageToHP: damage.damageToHP,
           shieldAbsorbed: damage.shieldAbsorbed,
+          rules,
         }),
       })
     }
