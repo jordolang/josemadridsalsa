@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, DollarSign, TrendingUp, Users } from 'lucide-react'
+import { Plus, DollarSign, TrendingUp, Users, Swords } from 'lucide-react'
 import Link from 'next/link'
 import { FundraiserStatus } from '@prisma/client'
 import { createMetadata } from '@/lib/metadata'
@@ -102,14 +102,22 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
           <h1 className="text-3xl font-bold">Fundraisers</h1>
           <p className="text-muted-foreground">Manage fundraising campaigns</p>
         </div>
-        {canWrite && (
-          <Button asChild>
-            <Link href="/admin/fundraisers/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Fundraiser
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/admin/fundraisers/battle-arena">
+              <Swords className="mr-2 h-4 w-4" />
+              Battle Arena Seasons
             </Link>
           </Button>
-        )}
+          {canWrite && (
+            <Button asChild>
+              <Link href="/admin/fundraisers/new">
+                <Plus className="mr-2 h-4 w-4" />
+                New Fundraiser
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
