@@ -9,6 +9,8 @@ import { TeamMembersStrip } from '@/components/fundraiser/team-members-strip'
 import { SupporterFeed } from '@/components/fundraiser/supporter-feed'
 import { VerifiedBadge } from '@/components/fundraiser/verified-badge'
 import { DonateActionCard } from '@/components/fundraiser/donate-action-card'
+import { BattleWidget } from '@/components/arena/battle-widget'
+import type { AttackFeedItem } from '@/components/arena/attack-feed'
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -29,9 +31,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function FundraiserProfilePage({ params }: Props) {
   const { slug } = await params
+  const now = new Date()
   const team = await db.fundraiserTeam.findUnique({
     where: { slug, status: 'ACTIVE' },
-    include: { characters: { orderBy: { position: 'asc' } } },
+    include: {
+      characters: { orderBy: { position: 'asc' } },
+      shields: {
+        where: { expiresAt: { gt: now }, remainingHP: { gt: 0 } },
+        orderBy: { expiresAt: 'desc' },
+        take: 1,
+        select: {
+          id: true,
+          activatedAt: true,
+          expiresAt: true,
+          remainingHP: true,
+        },
+      },
+    },
   })
   if (!team) notFound()
 
@@ -95,6 +111,28 @@ export default async function FundraiserProfilePage({ params }: Props) {
     supporterCount: 0,
     href: `/fundraise/${t.slug}`,
   }))
+
+  const battleFeedItems: AttackFeedItem[] = recentSales.map((s) => ({
+    id: s.id,
+    actorName: s.isAnonymous
+      ? 'Anonymous supporter'
+      : (s.donorName ?? s.donor?.name ?? 'Anonymous supporter'),
+    actorAvatarUrl: s.isAnonymous ? null : s.donorAvatarUrl,
+    amount: Number(s.amount),
+    createdAt: s.createdAt.toISOString(),
+    direction: 'outgoing',
+  }))
+
+  const battleTeam = {
+    id: team.id,
+    slug: team.slug,
+    name: team.name,
+    teamColor: team.teamColor,
+    teamColorDark: team.teamColorDark,
+    hpCurrent: team.hpCurrent,
+    hpMax: team.goalAmount,
+    activeShield: team.shields[0] ?? null,
+  }
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -165,6 +203,13 @@ export default async function FundraiserProfilePage({ params }: Props) {
         </section>
 
         <aside className="space-y-4 lg:col-span-1">
+          {team.activePeriod && (
+            <BattleWidget
+              team={battleTeam}
+              period={team.activePeriod}
+              initialFeed={battleFeedItems}
+            />
+          )}
           <div className="lg:sticky lg:top-6">
             <DonateActionCard
               teamId={team.id}
