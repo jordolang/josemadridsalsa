@@ -55,6 +55,21 @@ export function extractFundraiserSeasonId(
 }
 
 /**
+ * Returns the character id attributed on the Stripe session metadata when
+ * the donor arrived via a specific teammate's share link. Null means
+ * "team-level donation" — the damage engine skips the per-character
+ * amountRaised/supporterCount bump.
+ */
+export function extractFundraiserCharacterId(
+  session: MinimalStripeSession,
+): string | null {
+  const raw = session.metadata?.fundraiserCharacterId
+  if (typeof raw !== 'string') return null
+  const trimmed = raw.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+/**
  * Parses `metadata.fundraiserDonor` (JSON) and falls back to Stripe's
  * `customer_details` when individual fields are missing.
  *

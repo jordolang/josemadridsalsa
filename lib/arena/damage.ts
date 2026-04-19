@@ -18,6 +18,13 @@ export type PurchaseDamageInput = {
    * uses the selling team's activePeriod.
    */
   period?: string
+  /**
+   * Optional character attribution. When the donor arrived via a specific
+   * teammate's share link, this character gets credited (amountRaised +=
+   * floor(saleAmount), supporterCount += 1). Unknown/mismatched ids are
+   * silently ignored — attribution is best-effort, never blocks the sale.
+   */
+  sellingCharacterId?: string | null
   /** Optional donor identity — surfaced in the supporter feed. */
   donor?: {
     userId?: string | null
@@ -97,6 +104,20 @@ export async function applyPurchaseDamage(
 
     const isAnonymous = input.donor?.isAnonymous ?? false
 
+    // Validate sellingCharacterId belongs to the seller before we store it.
+    // Mismatched/missing ids degrade gracefully — the sale still records,
+    // it just isn't attributed to any teammate.
+    let validSellingCharacterId: string | null = null
+    if (input.sellingCharacterId) {
+      const char = await tx.fundraiserCharacter.findUnique({
+        where: { id: input.sellingCharacterId },
+        select: { id: true, teamId: true },
+      })
+      if (char && char.teamId === seller.id) {
+        validSellingCharacterId = char.id
+      }
+    }
+
     let saleEvent: { id: string }
     try {
       saleEvent = await tx.fundraiserSaleEvent.create({
@@ -112,6 +133,7 @@ export async function applyPurchaseDamage(
           donorEmail: isAnonymous ? null : (input.donor?.email ?? null),
           donorComment: input.donor?.comment ?? null,
           isAnonymous,
+          sellingCharacterId: validSellingCharacterId,
         },
       })
     } catch (err) {
@@ -145,6 +167,19 @@ export async function applyPurchaseDamage(
       where: { id: seller.id },
       data: { salesCount: { increment: 1 } },
     })
+
+    if (validSellingCharacterId) {
+      // Integer amountRaised matches the existing damage-math convention
+      // (computeDamage also floors). supporterCount is a naive distinct-donor
+      // proxy today — a later iteration can dedupe by donorUserId if needed.
+      await tx.fundraiserCharacter.update({
+        where: { id: validSellingCharacterId },
+        data: {
+          amountRaised: { increment: Math.max(0, Math.floor(input.saleAmount)) },
+          supporterCount: { increment: 1 },
+        },
+      })
+    }
 
     const opponents = await tx.fundraiserTeam.findMany({
       where: {

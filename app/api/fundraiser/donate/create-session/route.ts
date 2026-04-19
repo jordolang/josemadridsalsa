@@ -14,6 +14,12 @@ const DonatePayload = z.object({
     .max(100_000, 'Donation capped at $100,000 per transaction'),
   frequency: z.enum(['one_time', 'monthly']).default('one_time'),
   fundId: z.string().max(40).nullish(),
+  /**
+   * Optional teammate attribution — when the donor arrives via a specific
+   * character's share link. Validated server-side against the target team
+   * so a malicious client can't attribute to a character on another team.
+   */
+  characterId: z.string().min(1).max(40).nullish(),
   donor: z
     .object({
       name: z.string().max(120).nullish(),
@@ -80,6 +86,26 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // Resolve optional teammate attribution. We validate scope here so the
+  // metadata stored on Stripe always reflects a character that genuinely
+  // belongs to this team — damage.ts re-checks at settlement time as
+  // defense-in-depth, but catching it early gives a clear 422 to the
+  // caller instead of silently swallowing the attribution later.
+  let attributedCharacterId: string | null = null
+  if (parsed.data.characterId) {
+    const char = await db.fundraiserCharacter.findUnique({
+      where: { id: parsed.data.characterId },
+      select: { id: true, teamId: true },
+    })
+    if (!char || char.teamId !== team.id) {
+      return NextResponse.json(
+        { success: false, error: 'characterId does not belong to this team' },
+        { status: 422 },
+      )
+    }
+    attributedCharacterId = char.id
+  }
+
   const session = await getServerSession(authOptions)
   const viewerUserId = session?.user?.id ?? null
   const viewerEmail = session?.user?.email ?? null
@@ -117,6 +143,7 @@ export async function POST(req: NextRequest) {
       fundraiserTeamSlug: team.slug,
       fundraiserSeasonId: team.seasonId ?? '',
       fundraiserSeasonPeriod: team.activePeriod,
+      fundraiserCharacterId: attributedCharacterId ?? '',
       fundraiserDonor: donorJSON,
       fundraiserFundId: parsed.data.fundId ?? '',
       fundraiserFrequency: parsed.data.frequency,

@@ -378,6 +378,7 @@ export async function POST(request: Request) {
         const {
           extractFundraiserTeamId,
           extractFundraiserSeasonId,
+          extractFundraiserCharacterId,
           resolveDonorFromStripeSession,
         } = await import('@/lib/arena/stripe-donor')
         const fundraiserTeamId = extractFundraiserTeamId(checkoutSession)
@@ -447,6 +448,7 @@ export async function POST(request: Request) {
               sellingTeamId: fundraiserTeamId,
               saleAmount: amountDollars,
               orderId: checkoutSession.id,
+              sellingCharacterId: extractFundraiserCharacterId(checkoutSession),
               donor,
             })
             saleEventId = result.saleEventId
@@ -521,6 +523,7 @@ export async function POST(request: Request) {
         const {
           extractFundraiserTeamId,
           extractFundraiserSeasonId,
+          extractFundraiserCharacterId,
           resolveDonorFromStripeSession,
         } = await import('@/lib/arena/stripe-donor')
 
@@ -579,6 +582,7 @@ export async function POST(request: Request) {
               sellingTeamId: fundraiserTeamId,
               saleAmount: amountDollars,
               orderId: invoice.id ?? undefined,
+              sellingCharacterId: extractFundraiserCharacterId(metaSource),
               donor,
             })
             saleEventId = result.saleEventId
