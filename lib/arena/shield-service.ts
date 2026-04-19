@@ -1,5 +1,5 @@
 import { prisma as db } from '@/lib/prisma'
-import { checkShareAllowed, newShield } from './rules'
+import { checkShareAllowed, newShield, resolveRules } from './rules'
 
 export type ShieldActivationInput = {
   teamId: string
@@ -52,16 +52,22 @@ export async function activateShieldForUser(
         status: true,
         lastShareUserId: true,
         consecutiveShares: true,
+        season: { select: { rulesJson: true } },
       },
     })
     if (!team || team.status !== 'ACTIVE') {
       throw new Error('team not found or not ACTIVE')
     }
 
+    // Per-season tunables. Falls back to built-in defaults when the team has
+    // no season (back-compat) or when rulesJson is missing fields.
+    const rules = resolveRules(team.season?.rulesJson ?? null)
+
     const gate = checkShareAllowed({
       lastShareUserId: team.lastShareUserId,
       consecutiveShares: team.consecutiveShares,
       incomingUserId: input.userId,
+      rules,
     })
     if (!gate.allowed) {
       return {
@@ -105,7 +111,7 @@ export async function activateShieldForUser(
       }
     }
 
-    const seed = newShield()
+    const seed = newShield(new Date(), rules)
     const shield = await tx.fundraiserShield.create({
       data: {
         teamId: team.id,

@@ -12,10 +12,65 @@ export const MAX_CONSECUTIVE_SHARES = 2
 export const CRIT_DAMAGE_THRESHOLD = 50
 export const BIG_PURCHASE_THRESHOLD = 100
 
+/**
+ * Resolved per-season rule values. Callers pass one of these into the pure
+ * damage / shield / emote functions instead of reading the module-level
+ * constants directly. A null/undefined `ResolvedRules` always means
+ * "use the built-in defaults", which matches pre-Season behavior exactly.
+ */
+export type ResolvedRules = {
+  shieldDurationMs: number
+  shieldMaxHp: number
+  maxConsecutiveShares: number
+  critDamageThreshold: number
+  bigPurchaseThreshold: number
+}
+
+export const DEFAULT_RULES: ResolvedRules = {
+  shieldDurationMs: SHIELD_DURATION_MS,
+  shieldMaxHp: SHIELD_MAX_HP,
+  maxConsecutiveShares: MAX_CONSECUTIVE_SHARES,
+  critDamageThreshold: CRIT_DAMAGE_THRESHOLD,
+  bigPurchaseThreshold: BIG_PURCHASE_THRESHOLD,
+}
+
+/**
+ * Merge a FundraiserSeason.rulesJson blob (unknown, possibly stale) onto the
+ * defaults. Unrecognized keys are ignored; non-finite or non-positive numbers
+ * fall back to the default. Safe to call with `null` / `undefined` / any
+ * shape — used on the hot path so we don't throw on bad admin input.
+ */
+export function resolveRules(rulesJson: unknown): ResolvedRules {
+  if (!rulesJson || typeof rulesJson !== 'object') return DEFAULT_RULES
+  const src = rulesJson as Record<string, unknown>
+  const pick = (key: string, fallback: number): number => {
+    const v = src[key]
+    return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : fallback
+  }
+  return {
+    shieldDurationMs: pick('shieldDurationMs', DEFAULT_RULES.shieldDurationMs),
+    shieldMaxHp: pick('shieldMaxHp', DEFAULT_RULES.shieldMaxHp),
+    maxConsecutiveShares: pick(
+      'maxConsecutiveShares',
+      DEFAULT_RULES.maxConsecutiveShares,
+    ),
+    critDamageThreshold: pick(
+      'critDamageThreshold',
+      DEFAULT_RULES.critDamageThreshold,
+    ),
+    bigPurchaseThreshold: pick(
+      'bigPurchaseThreshold',
+      DEFAULT_RULES.bigPurchaseThreshold,
+    ),
+  }
+}
+
 export type ShareCheckInput = {
   lastShareUserId: string | null
   consecutiveShares: number
   incomingUserId: string
+  /** Optional per-season rule overrides; defaults to built-in constants. */
+  rules?: ResolvedRules
 }
 
 export type ShareCheckResult =
@@ -23,15 +78,17 @@ export type ShareCheckResult =
   | { allowed: false; reason: 'consecutive_limit' }
 
 /**
- * Same user activating back-to-back shields is capped at MAX_CONSECUTIVE_SHARES.
- * A different user sharing resets the counter to 1.
+ * Same user activating back-to-back shields is capped at
+ * `rules.maxConsecutiveShares` (default MAX_CONSECUTIVE_SHARES). A different
+ * user sharing resets the counter to 1.
  */
 export function checkShareAllowed(input: ShareCheckInput): ShareCheckResult {
+  const cap = (input.rules ?? DEFAULT_RULES).maxConsecutiveShares
   const next =
     input.lastShareUserId === input.incomingUserId
       ? input.consecutiveShares + 1
       : 1
-  if (next > MAX_CONSECUTIVE_SHARES) {
+  if (next > cap) {
     return { allowed: false, reason: 'consecutive_limit' }
   }
   return { allowed: true, newConsecutive: next }
@@ -40,15 +97,18 @@ export function checkShareAllowed(input: ShareCheckInput): ShareCheckResult {
 /**
  * Deterministic shield activation payload.
  */
-export function newShield(now: Date = new Date()): {
+export function newShield(
+  now: Date = new Date(),
+  rules: ResolvedRules = DEFAULT_RULES,
+): {
   activatedAt: Date
   expiresAt: Date
   remainingHP: number
 } {
   return {
     activatedAt: now,
-    expiresAt: new Date(now.getTime() + SHIELD_DURATION_MS),
-    remainingHP: SHIELD_MAX_HP,
+    expiresAt: new Date(now.getTime() + rules.shieldDurationMs),
+    remainingHP: rules.shieldMaxHp,
   }
 }
 
@@ -113,17 +173,19 @@ export type EmoteClass = 'crit' | 'big_purchase' | 'normal' | 'blocked'
 /**
  * Picks the emote tier for an emitted event.
  *   - blocked      → shield absorbed the full hit
- *   - big_purchase → $100+ sale
- *   - crit         → $50+ landed on HP
+ *   - big_purchase → sale ≥ `rules.bigPurchaseThreshold` (default $100)
+ *   - crit         → damage landed ≥ `rules.critDamageThreshold` (default $50)
  *   - normal       → everything else
  */
 export function classifyEmote(args: {
   saleAmount: number
   damageToHP: number
   shieldAbsorbed: number
+  rules?: ResolvedRules
 }): EmoteClass {
+  const r = args.rules ?? DEFAULT_RULES
   if (args.shieldAbsorbed > 0 && args.damageToHP === 0) return 'blocked'
-  if (args.saleAmount >= BIG_PURCHASE_THRESHOLD) return 'big_purchase'
-  if (args.damageToHP >= CRIT_DAMAGE_THRESHOLD) return 'crit'
+  if (args.saleAmount >= r.bigPurchaseThreshold) return 'big_purchase'
+  if (args.damageToHP >= r.critDamageThreshold) return 'crit'
   return 'normal'
 }
