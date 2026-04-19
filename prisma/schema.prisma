@@ -954,7 +954,14 @@ model FundraiserChampionship {
   scholarshipAmount    Decimal  @db.Decimal(10, 2)
   createdAt            DateTime @default(now())
 
+  // Nullable — existing rows predate the Battle Arena season model and
+  // key off month+year. New championships created by the admin
+  // end-season endpoint populate this.
+  seasonId String?
+  season   FundraiserSeason? @relation("SeasonChampionships", fields: [seasonId], references: [id], onDelete: SetNull)
+
   @@unique([month, year])
+  @@index([seasonId])
   @@map("fundraiser_championships")
 }
 
@@ -3338,7 +3345,8 @@ model FundraiserSeason {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  teams FundraiserTeam[] @relation("SeasonTeams")
+  teams         FundraiserTeam[]         @relation("SeasonTeams")
+  championships FundraiserChampionship[] @relation("SeasonChampionships")
 
   @@index([status])
   @@map("fundraiser_seasons")

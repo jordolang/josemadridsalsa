@@ -240,3 +240,28 @@ export async function resetPeriodHP(period: string): Promise<number> {
   )
   return result.count
 }
+
+/**
+ * Season-scoped HP reset. Re-seeds every ACTIVE team linked to the given
+ * season back to its `goalAmount`. Admin-only surface — callers must gate.
+ *
+ * Returns the number of teams reset. Intended to be called by the admin
+ * reset-hp endpoint and (later) a monthly cron when a season rolls over.
+ */
+export async function resetSeasonHP(seasonId: string): Promise<number> {
+  const now = new Date()
+  const teams = await db.fundraiserTeam.findMany({
+    where: { status: 'ACTIVE', seasonId },
+    select: { id: true, goalAmount: true },
+  })
+  if (teams.length === 0) return 0
+  await db.$transaction(
+    teams.map((t) =>
+      db.fundraiserTeam.update({
+        where: { id: t.id },
+        data: { hpCurrent: t.goalAmount, hpResetAt: now },
+      }),
+    ),
+  )
+  return teams.length
+}
