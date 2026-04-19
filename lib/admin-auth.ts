@@ -1,5 +1,6 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getCurrentUser, isStaff } from "@/lib/rbac";
 
 export async function requireAdminSession(): Promise<{ id: string; email?: string }> {
   const cookieStore = await cookies();
@@ -9,7 +10,12 @@ export async function requireAdminSession(): Promise<{ id: string; email?: strin
     return { id: "admin", email: "admin@josemadrid.net" };
   }
 
-  // return { id: session.user.id };
+  const user = await getCurrentUser();
+  if (user && isStaff(user)) {
+    return { id: user.id, email: user.email };
+  }
 
-  redirect("/admin/login");
+  const headerList = await headers();
+  const path = headerList.get("x-pathname") || "/admin/fundraisers";
+  redirect(`/auth/signin?callbackUrl=${encodeURIComponent(path)}`);
 }
