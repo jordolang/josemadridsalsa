@@ -11,6 +11,7 @@ import { VerifiedBadge } from '@/components/fundraiser/verified-badge'
 import { DonateActionCard } from '@/components/fundraiser/donate-action-card'
 import { BattleWidget } from '@/components/arena/battle-widget'
 import type { AttackFeedItem } from '@/components/arena/attack-feed'
+import { ShareStatusToast } from '@/components/arena/share-status-toast'
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -136,6 +137,7 @@ export default async function FundraiserProfilePage({ params }: Props) {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <ShareStatusToast />
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-3 lg:px-6">
         <section className="space-y-8 lg:col-span-2">
           <div className="flex items-center gap-3">

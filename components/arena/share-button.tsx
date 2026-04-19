@@ -8,16 +8,19 @@ import { Button } from '@/components/ui/button'
 
 type SharePlatform = 'facebook' | 'x' | 'instagram'
 
-type ApiPlatform = 'facebook' | 'x' | 'instagram' | 'tiktok' | 'other'
-
 interface ShareButtonProps {
   teamId: string
   teamSlug: string
   teamName: string
-  /** Fully-qualified URL — defaults to `/fundraise/[slug]`. */
-  shareUrl?: string
   shareText?: string
   className?: string
+}
+
+interface IntentResponse {
+  nonce: string
+  shareUrl: string
+  teamSlug: string
+  expiresAt: string
 }
 
 function XIcon({ className }: { className?: string }) {
@@ -57,9 +60,39 @@ function buildIntentUrl(
     case 'facebook':
       return `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`
     case 'x':
-      return `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}`
+      return `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`
     case 'instagram':
       return null
+  }
+}
+
+async function requestShareIntent(
+  teamId: string,
+  platform: SharePlatform,
+): Promise<
+  | { ok: true; data: IntentResponse }
+  | { ok: false; status: number; error: string }
+> {
+  try {
+    const res = await fetch('/api/fundraiser/arena/share/intent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ teamId, platform }),
+    })
+    const data = (await res.json().catch(() => ({}))) as
+      | (IntentResponse & { error?: string })
+      | { error?: string }
+
+    if (!res.ok || !('shareUrl' in data) || !data.shareUrl) {
+      const error =
+        typeof (data as { error?: unknown }).error === 'string'
+          ? (data as { error: string }).error
+          : `HTTP ${res.status}`
+      return { ok: false, status: res.status, error }
+    }
+    return { ok: true, data: data as IntentResponse }
+  } catch {
+    return { ok: false, status: 0, error: 'Network error' }
   }
 }
 
@@ -67,81 +100,65 @@ export function ShareButton({
   teamId,
   teamSlug,
   teamName,
-  shareUrl,
   shareText,
   className,
 }: ShareButtonProps) {
   const [pending, setPending] = useState<SharePlatform | null>(null)
-
-  const url =
-    shareUrl ??
-    (typeof window !== 'undefined'
-      ? `${window.location.origin}/fundraise/${teamSlug}`
-      : `/fundraise/${teamSlug}`)
   const text =
     shareText ?? `Help ${teamName} win the JMS Fundraiser Battle Arena!`
 
-  async function notifyShare(platform: ApiPlatform): Promise<void> {
-    const res = await fetch('/api/fundraiser/arena/share', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ teamId, platform }),
-    })
-    const data = (await res.json().catch(() => ({}))) as {
-      success?: boolean
-      activated?: boolean
-      extended?: boolean
-      reason?: string
-      expiresAt?: string
-      remainingHP?: number
-      error?: string
-    }
-
-    if (res.status === 401) {
-      toast.error('Sign in to activate your team\u2019s shield.')
-      return
-    }
-    if (res.status === 429) {
-      toast.warning(
-        data.error ??
-          'Another supporter needs to share before you can activate again.',
-      )
-      return
-    }
-    if (!res.ok || !data.success) {
-      toast.error(data.error ?? 'Could not record your share. Try again.')
-      return
-    }
-    if (data.activated) {
-      toast.success('Shield activated for 30 minutes!', {
-        description: `${teamName} is now protected.`,
-      })
-    } else if (data.extended) {
-      toast.success('Share recorded \u2014 shield already active.', {
-        description: 'Your share counts toward future protection.',
-      })
-    }
-  }
-
-  async function handleShare(platform: SharePlatform) {
+  async function handleShare(platform: SharePlatform): Promise<void> {
     if (pending) return
     setPending(platform)
 
     try {
+      const intent = await requestShareIntent(teamId, platform)
+      if (!intent.ok) {
+        if (intent.status === 401) {
+          toast.error('Sign in to activate your team\u2019s shield.')
+          return
+        }
+        if (intent.status === 429) {
+          toast.warning(
+            intent.error.toLowerCase().includes('day')
+              ? 'Daily share limit hit. Try again tomorrow.'
+              : 'You\u2019re sharing too fast. Wait an hour and try again.',
+          )
+          return
+        }
+        if (intent.status === 403) {
+          toast.warning('Accounts must be 24+ hours old to activate a shield.')
+          return
+        }
+        toast.error(intent.error || 'Could not start share. Try again.')
+        return
+      }
+
+      const { shareUrl } = intent.data
+
       if (platform === 'instagram') {
         try {
-          await navigator.clipboard.writeText(`${text} ${url}`)
-          toast.info('Link copied \u2014 paste into your Instagram story.')
+          await navigator.clipboard.writeText(shareUrl)
+          toast.info(
+            'Link copied \u2014 paste into your Instagram story or bio to activate the shield.',
+          )
         } catch {
           toast.info('Copy this link and paste into Instagram:', {
-            description: url,
+            description: shareUrl,
           })
         }
-      } else {
-        const intent = buildIntentUrl(platform, url, text)
-        if (intent) openShareWindow(intent)
+        return
       }
-      await notifyShare(platform)
+
+      const intentUrl = buildIntentUrl(platform, shareUrl, text)
+      if (intentUrl) {
+        const opened = openShareWindow(intentUrl)
+        if (!opened) {
+          toast.warning(
+            'Pop-up blocked. Allow pop-ups and try again, or copy the link.',
+          )
+        }
+      }
     } catch {
       toast.error('Something went wrong. Try again.')
     } finally {
@@ -154,6 +171,7 @@ export function ShareButton({
       className={clsx('flex flex-col gap-2', className)}
       role="group"
       aria-label="Share to activate shield"
+      data-team-slug={teamSlug}
     >
       <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-cyan-300">
         <Share2 className="h-3 w-3" />
