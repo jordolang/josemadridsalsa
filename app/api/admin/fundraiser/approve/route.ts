@@ -40,28 +40,39 @@ export async function POST(req: NextRequest) {
   const { raw: apiKey, hash: apiKeyHash } = generateFundraiserApiKey();
   const dark = teamColorDark ?? darken(teamColor);
 
+  const now = new Date();
   const [team] = await db.$transaction([
     db.fundraiserTeam.create({
       data: {
         slug, name: signup.teamName, school: signup.schoolName,
         activePeriod, status: "ACTIVE",
         teamColor, teamColorDark: dark, goalAmount: signup.goalAmount,
+        // Seed HP to goal so the team starts at full health. Without this
+        // the default `hpCurrent=0` means opponents can never take damage
+        // (applyDamage floors at zero), so the arena is effectively dead.
+        hpCurrent: signup.goalAmount,
+        hpResetAt: now,
         contactName: signup.contactName, contactEmail: signup.contactEmail,
         contactPhone: signup.contactPhone ?? null,
-        apiKeyHash, apiKeyIssuedAt: new Date(),
-        approvedBy: admin.id, approvedAt: new Date(),
+        apiKeyHash, apiKeyIssuedAt: now,
+        approvedBy: admin.id, approvedAt: now,
         characters: { create: DEFAULT_CHARACTERS },
       },
     }),
     db.fundraiserSignupRequest.update({
       where: { id: signupId },
-      data: { status: "APPROVED", reviewedBy: admin.id, reviewedAt: new Date(), reviewNotes: reviewNotes ?? null, apiKeyShownAt: new Date() },
+      data: { status: "APPROVED", reviewedBy: admin.id, reviewedAt: now, reviewNotes: reviewNotes ?? null, apiKeyShownAt: now },
     }),
   ]);
 
+  const origin =
+    process.env.APP_URL ??
+    req.headers.get("origin") ??
+    new URL(req.url).origin;
+
   return NextResponse.json({
     success: true, teamId: team.id, slug: team.slug,
-    profileUrl: `https://josemadrid.net/fundraise/${team.slug}`,
+    profileUrl: `${origin}/fundraise/${team.slug}`,
     apiKey,
   });
 }
