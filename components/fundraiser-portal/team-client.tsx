@@ -28,7 +28,7 @@ export function TeamClient({ fundraiserId }: { fundraiserId: string }) {
       const res = await fetch(`/api/fundraisers/${fundraiserId}/team`)
       if (res.ok) {
         const data = await res.json()
-        setTeam(data)
+        setTeam(Array.isArray(data?.team) ? data.team : [])
       }
     } catch (e) {
       console.error(e)
