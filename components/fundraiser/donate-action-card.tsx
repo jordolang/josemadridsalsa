@@ -24,16 +24,9 @@ export interface DonateActionCardProps {
 }
 
 /**
- * Sidebar action card at the top of a fundraiser page: primary Donate
- * button that opens the DonationForm in a shadcn Dialog, plus a Share
- * button that falls back to clipboard copy if the Web Share API is
- * unavailable.
- *
- * The form's Continue action POSTs to
- * `/api/fundraiser/donate/create-session` and redirects the browser to the
- * returned Stripe Checkout URL. The Stripe webhook's
- * `checkout.session.completed` handler then calls `applyPurchaseDamage`
- * with the donor metadata we set on the session.
+ * Sidebar action card — oversized indigo Donate CTA plus a secondary Share
+ * button. Opens the DonationForm in a shadcn Dialog; share falls back to
+ * clipboard copy when Web Share API is unavailable.
  */
 export function DonateActionCard({
   teamId,
@@ -81,11 +74,14 @@ export function DonateActionCard({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border bg-card p-3 shadow-sm">
+    <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-900/5">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button size="lg" className="h-12 w-full text-base font-semibold">
-            <Heart className="mr-2 h-4 w-4" />
+          <Button
+            size="lg"
+            className="h-14 w-full rounded-2xl bg-indigo-600 text-base font-bold text-white shadow-md shadow-indigo-600/25 transition hover:bg-indigo-700 hover:shadow-lg"
+          >
+            <Heart className="mr-2 h-5 w-5" />
             Donate
           </Button>
         </DialogTrigger>
@@ -162,7 +158,7 @@ export function DonateActionCard({
       <Button
         variant="outline"
         size="lg"
-        className="h-12 w-full text-base font-semibold"
+        className="h-12 w-full rounded-2xl border-slate-200 bg-white text-base font-semibold text-slate-700 hover:bg-slate-50"
         onClick={handleShare}
       >
         <Share2 className="mr-2 h-4 w-4" />

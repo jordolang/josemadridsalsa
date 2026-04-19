@@ -1,19 +1,22 @@
 import { notFound } from 'next/navigation'
-import Image from 'next/image'
 import type { Metadata } from 'next'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma as db } from '@/lib/prisma'
-import { FundraisingProgress } from '@/components/fundraiser/fundraising-progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { CampaignHeader } from '@/components/fundraiser/campaign-header'
+import { HeroMedia } from '@/components/fundraiser/hero-media'
+import { CampaignStats } from '@/components/fundraiser/campaign-stats'
 import { TeamMembersStrip } from '@/components/fundraiser/team-members-strip'
 import { SupporterFeed } from '@/components/fundraiser/supporter-feed'
-import { VerifiedBadge } from '@/components/fundraiser/verified-badge'
 import { DonateActionCard } from '@/components/fundraiser/donate-action-card'
 import { BattleWidget } from '@/components/arena/battle-widget'
 import type { AttackFeedItem } from '@/components/arena/attack-feed'
 import { ShareStatusToast } from '@/components/arena/share-status-toast'
 
-interface Props { params: Promise<{ slug: string }> }
+interface Props {
+  params: Promise<{ slug: string }>
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
@@ -135,84 +138,77 @@ export default async function FundraiserProfilePage({ params }: Props) {
     activeShield: team.shields[0] ?? null,
   }
 
+  const campaignTitle = team.name
+  const tagline = `Join ${team.school}'s ${team.activePeriod} fundraiser. Every jar sold powers their team and keeps them in the battle arena.`
+  const storyFallback = `Every jar sold powers ${team.name}'s warrior in the Jose Madrid Salsa Fundraiser Battle Arena. Share this page to activate a 30-minute shield — then watch your team climb the arena leaderboard in real time.`
+
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-white text-foreground">
       <ShareStatusToast />
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-3 lg:px-6">
-        <section className="space-y-8 lg:col-span-2">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/images/logo-image.png"
-              alt="Jose Madrid Salsa"
-              width={48}
-              height={48}
-              className="h-12 w-12 shrink-0 rounded"
-            />
-            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Jose Madrid Salsa Fundraiser
-            </span>
-          </div>
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 lg:grid-cols-10 lg:gap-12 lg:px-6">
+        <section className="space-y-8 lg:col-span-7">
+          <CampaignHeader
+            title={campaignTitle}
+            tagline={tagline}
+            organizerName={team.school}
+          />
 
-          <header className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              {team.name}
-            </h1>
-            <p className="text-base text-muted-foreground">
-              Join {team.school}&apos;s {team.activePeriod} fundraiser battle.
-            </p>
-          </header>
+          <HeroMedia alt={`${campaignTitle} hero image`} />
 
-          <div className="relative aspect-video w-full overflow-hidden rounded-xl border bg-muted">
-            <Image
-              src="/images/jose-madrid-profile-1024.png"
-              alt=""
-              fill
-              priority
-              sizes="(min-width: 1024px) 720px, 100vw"
-              className="object-cover"
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              Organized by{' '}
-              <span className="font-semibold text-foreground">
-                {team.school}
-              </span>
-            </div>
-            <VerifiedBadge />
-          </div>
-
-          <FundraisingProgress
+          <CampaignStats
             raised={raised}
             goal={team.goalAmount}
             supporterCount={supporterCount}
+            teamColor={team.teamColor}
           />
 
           {teamMemberCards.length > 0 && (
             <TeamMembersStrip members={teamMemberCards} />
           )}
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-bold tracking-tight">Story</h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Every jar sold powers {team.name}&apos;s warrior in the Jose
-              Madrid Salsa Fundraiser Battle Arena. Share this page to
-              activate a 30-minute shield — then watch your team climb the
-              arena leaderboard in real time.
-            </p>
-          </section>
+          <Tabs defaultValue="story" className="w-full">
+            <TabsList className="h-11 rounded-full bg-slate-100 p-1">
+              <TabsTrigger
+                value="story"
+                className="rounded-full px-6 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:shadow"
+              >
+                Story
+              </TabsTrigger>
+              {team.activePeriod && (
+                <TabsTrigger
+                  value="battle"
+                  className="rounded-full px-6 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:shadow"
+                >
+                  Battle
+                </TabsTrigger>
+              )}
+            </TabsList>
+
+            <TabsContent value="story" className="mt-6">
+              <article className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8">
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+                  Story
+                </h2>
+                <p className="mt-4 whitespace-pre-wrap text-base leading-relaxed text-slate-700">
+                  {storyFallback}
+                </p>
+              </article>
+            </TabsContent>
+
+            {team.activePeriod && (
+              <TabsContent value="battle" className="mt-6">
+                <BattleWidget
+                  team={battleTeam}
+                  period={team.activePeriod}
+                  initialFeed={battleFeedItems}
+                />
+              </TabsContent>
+            )}
+          </Tabs>
         </section>
 
-        <aside className="space-y-4 lg:col-span-1">
-          {team.activePeriod && (
-            <BattleWidget
-              team={battleTeam}
-              period={team.activePeriod}
-              initialFeed={battleFeedItems}
-            />
-          )}
-          <div className="lg:sticky lg:top-6">
+        <aside className="space-y-6 lg:col-span-3">
+          <div className="lg:sticky lg:top-6 lg:space-y-6">
             <DonateActionCard
               teamId={team.id}
               teamSlug={team.slug}
@@ -227,9 +223,12 @@ export default async function FundraiserProfilePage({ params }: Props) {
                   : undefined
               }
             />
-          </div>
-          <div className="lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-1">
-            <SupporterFeed items={feedItems} />
+            <div className="max-h-[70vh] overflow-y-auto pr-1">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+                Recent supporters
+              </h2>
+              <SupporterFeed items={feedItems} />
+            </div>
           </div>
         </aside>
       </div>
