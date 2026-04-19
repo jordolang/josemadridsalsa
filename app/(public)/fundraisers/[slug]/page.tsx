@@ -1,29 +1,30 @@
-import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { Calendar, Target, Users, Clock, Heart } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { createMetadata } from '@/lib/metadata';
-import { ProductGrid } from '@/components/store/product-grid';
-import { MessageBoard } from '@/components/fundraiser/MessageBoard';
-import prisma from '@/lib/prisma';
-import { formatPrice } from '@/lib/utils';
+import { Metadata } from 'next'
+import { notFound } from 'next/navigation'
+import Image from 'next/image'
+import Link from 'next/link'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { createMetadata } from '@/lib/metadata'
+import { ProductGrid } from '@/components/store/product-grid'
+import { MessageBoard } from '@/components/fundraiser/MessageBoard'
+import { FundraisingProgress } from '@/components/fundraiser/fundraising-progress'
+import { TeamMembersStrip, type TeamMember } from '@/components/fundraiser/team-members-strip'
+import { VerifiedBadge } from '@/components/fundraiser/verified-badge'
+import { FundraiserSidebar } from '@/components/fundraiser/fundraiser-sidebar'
+import type { SupporterFeedItem } from '@/components/fundraiser/supporter-feed'
+import prisma from '@/lib/prisma'
 
 interface PageProps {
-  params: Promise<{
-    slug: string;
-  }>;
+  params: Promise<{ slug: string }>
 }
 
+const DEFAULT_COVER = '/images/Hero-Image-Mike.png'
+const DEFAULT_LOGO = '/images/fundraising-icon.png'
+
 async function getFundraiser(slug: string) {
-  const fundraiser = await prisma.fundraiser.findUnique({
-    where: {
-      slug,
-      isActive: true, // Only show active fundraisers publicly
-    },
+  return prisma.fundraiser.findUnique({
+    where: { slug, isActive: true },
     include: {
       products: {
         where: { isActive: true },
@@ -49,68 +50,92 @@ async function getFundraiser(slug: string) {
           },
         },
       },
-      _count: {
+      participants: {
+        where: { status: 'ACTIVE' },
+        orderBy: { totalRevenue: 'desc' },
+        take: 8,
         select: {
-          orders: true,
-          participants: true,
+          id: true,
+          name: true,
+          totalRevenue: true,
+          totalOrders: true,
         },
       },
+      orders: {
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+        select: {
+          id: true,
+          total: true,
+          createdAt: true,
+          user: { select: { name: true } },
+          participant: { select: { name: true } },
+        },
+      },
+      _count: {
+        select: { orders: true, participants: true },
+      },
     },
-  });
-
-  return fundraiser;
+  })
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const fundraiser = await getFundraiser(slug);
+  const { slug } = await params
+  const fundraiser = await getFundraiser(slug)
 
   if (!fundraiser) {
     return createMetadata({
       title: 'Fundraiser Not Found',
       description: 'The fundraiser you are looking for could not be found.',
-    });
+    })
   }
 
   return createMetadata({
     title: `${fundraiser.name} - Jose Madrid Salsa Fundraiser`,
-    description: fundraiser.description || `Support ${fundraiser.organizationName} by ordering delicious Jose Madrid Salsa!`,
+    description:
+      fundraiser.description ||
+      `Support ${fundraiser.organizationName} by ordering delicious Jose Madrid Salsa!`,
     pathname: `/fundraisers/${slug}`,
-  });
+  })
 }
 
 export default async function FundraiserPage({ params }: PageProps) {
-  const { slug } = await params;
-  const fundraiser = await getFundraiser(slug);
+  const { slug } = await params
+  const fundraiser = await getFundraiser(slug)
 
   if (!fundraiser) {
-    notFound();
+    notFound()
   }
 
-  // Calculate progress if goal is set
-  const progress = fundraiser.goal
-    ? Math.min((Number(fundraiser.totalRevenue) / Number(fundraiser.goal)) * 100, 100)
-    : 0;
+  const now = new Date()
+  const isActive = now >= fundraiser.startDate && now <= fundraiser.endDate
+  const isUpcoming = now < fundraiser.startDate
+  const hasEnded = now > fundraiser.endDate
 
-  // Check if fundraiser is active based on dates
-  const now = new Date();
-  const isActive = now >= fundraiser.startDate && now <= fundraiser.endDate;
-  const isUpcoming = now < fundraiser.startDate;
-  const hasEnded = now > fundraiser.endDate;
+  const cover = fundraiser.coverPhotoUrl || DEFAULT_COVER
+  const logo = fundraiser.logoUrl || DEFAULT_LOGO
 
-  // Format dates
-  const startDate = fundraiser.startDate.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-  const endDate = fundraiser.endDate.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  const raised = Number(fundraiser.totalRevenue)
+  const goal = fundraiser.goal ? Number(fundraiser.goal) : 0
+  const supporterCount = fundraiser._count.orders
 
-  // Convert products to ProductGrid format
+  const teamMembers: TeamMember[] = fundraiser.participants.map((p) => ({
+    id: p.id,
+    name: p.name,
+    amountRaised: Number(p.totalRevenue),
+    supporterCount: p.totalOrders,
+  }))
+
+  const supporters: SupporterFeedItem[] = fundraiser.orders.map((o) => ({
+    id: o.id,
+    name: o.user?.name || 'Anonymous supporter',
+    amount: Number(o.total),
+    createdAt: o.createdAt.toISOString(),
+    comment: o.participant
+      ? `Supporting ${o.participant.name}'s fundraising effort.`
+      : undefined,
+  }))
+
   const products = fundraiser.products.map((fp) => ({
     id: fp.product.id,
     name: fp.product.name,
@@ -127,252 +152,228 @@ export default async function FundraiserPage({ params }: PageProps) {
     weight: fp.product.weight ? fp.product.weight.toString() : null,
     dimensions: typeof fp.product.dimensions === 'string' ? fp.product.dimensions : null,
     nutritionalInfo: fp.product.nutritionalInfo as {
-      calories: number;
-      sodiumMg: number;
-      totalFatG: number;
-      totalCarbG: number;
-      sugarsG: number;
-      dietaryFiberG: number;
-      proteinG: number;
-      servingSize: string;
+      calories: number
+      sodiumMg: number
+      totalFatG: number
+      totalCarbG: number
+      sugarsG: number
+      dietaryFiberG: number
+      proteinG: number
+      servingSize: string
     } | null,
-  }));
+  }))
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-verde-600 via-salsa-600 to-chile-600 text-white">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative container mx-auto px-4 py-16 lg:py-24">
-          <div className="max-w-4xl mx-auto text-center">
-            {/* Status Badge */}
-            {isUpcoming && (
-              <Badge className="bg-blue-500 text-white hover:bg-blue-600 mb-4">
-                Upcoming Fundraiser
-              </Badge>
-            )}
-            {hasEnded && (
-              <Badge className="bg-gray-500 text-white hover:bg-gray-600 mb-4">
-                Fundraiser Ended
-              </Badge>
-            )}
-            {isActive && (
-              <Badge className="bg-green-500 text-white hover:bg-green-600 mb-4">
-                Active Now!
-              </Badge>
-            )}
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/40">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+          {/* Main column */}
+          <main className="min-w-0 space-y-8">
+            {/* Logo + status */}
+            <div className="flex items-center gap-4">
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white shadow ring-1 ring-border">
+                <Image
+                  src={logo}
+                  alt={`${fundraiser.organizationName} logo`}
+                  fill
+                  sizes="64px"
+                  className="object-contain p-2"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {isActive && (
+                  <Badge className="bg-green-500 text-white hover:bg-green-600">
+                    Active Now
+                  </Badge>
+                )}
+                {isUpcoming && (
+                  <Badge className="bg-blue-500 text-white hover:bg-blue-600">
+                    Upcoming
+                  </Badge>
+                )}
+                {hasEnded && (
+                  <Badge variant="secondary">Ended</Badge>
+                )}
+              </div>
+            </div>
 
-            {/* Title */}
-            <h1 className="text-4xl lg:text-5xl font-serif font-bold mb-4 text-shadow-lg">
-              {fundraiser.name}
-            </h1>
-
-            {/* Organization */}
-            <p className="text-2xl lg:text-3xl text-verde-100 mb-6">
-              Supporting {fundraiser.organizationName}
-            </p>
-
-            {/* Description */}
-            {fundraiser.description && (
-              <p className="text-lg lg:text-xl text-white/90 max-w-2xl mx-auto leading-relaxed mb-8">
-                {fundraiser.description}
+            {/* Title + tagline */}
+            <div className="space-y-3">
+              <h1 className="text-3xl font-serif font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+                {fundraiser.name}
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Join {fundraiser.organizationName} in supporting this fundraiser.
               </p>
-            )}
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-3xl mx-auto">
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
-                <Calendar className="w-6 h-6 mx-auto mb-2 text-yellow-300" />
-                <p className="text-sm text-verde-100">Start Date</p>
-                <p className="font-bold">{startDate}</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
-                <Clock className="w-6 h-6 mx-auto mb-2 text-yellow-300" />
-                <p className="text-sm text-verde-100">End Date</p>
-                <p className="font-bold">{endDate}</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
-                <Users className="w-6 h-6 mx-auto mb-2 text-yellow-300" />
-                <p className="text-sm text-verde-100">Participants</p>
-                <p className="font-bold">{fundraiser._count.participants}</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
-                <Heart className="w-6 h-6 mx-auto mb-2 text-yellow-300" />
-                <p className="text-sm text-verde-100">Orders</p>
-                <p className="font-bold">{fundraiser._count.orders}</p>
-              </div>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Progress Section */}
-      {fundraiser.goal && (
-        <section className="py-12 bg-card">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
-              <Card className="card surface-shadow">
-                <CardHeader className="text-center pb-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-salsa-500 to-chile-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Target className="w-8 h-8 text-white" />
-                  </div>
-                  <h2 className="text-2xl font-serif font-bold text-foreground mb-2">
-                    Fundraising Progress
-                  </h2>
-                  <p className="text-muted-foreground">
-                    Help us reach our goal!
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium">Raised: {formatPrice(Number(fundraiser.totalRevenue))}</span>
-                      <span className="text-muted-foreground">Goal: {formatPrice(Number(fundraiser.goal))}</span>
-                    </div>
-                    <Progress
-                      value={progress}
-                      className="h-4 bg-muted"
-                    />
-                    <p className="text-center text-sm text-muted-foreground">
-                      {progress.toFixed(1)}% of goal reached
-                    </p>
-                  </div>
-
-                  {fundraiser.commissionRate && (
-                    <div className="bg-muted rounded-lg p-4 text-center">
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Organization Earnings
-                      </p>
-                      <p className="text-3xl font-bold text-salsa-600">
-                        {formatPrice(Number(fundraiser.totalCommission))}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {Number(fundraiser.commissionRate)}% of all sales
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Products Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-7xl mx-auto">
-            {products.length > 0 ? (
-              <ProductGrid
-                products={products}
-                title="Shop & Support"
-                description={`Every purchase supports ${fundraiser.organizationName}. Choose from our delicious selection of authentic salsas!`}
-                showFilters={true}
-                showSearch={true}
-                showSort={true}
-                columns={3}
+            {/* Cover image */}
+            <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl bg-muted shadow-lg">
+              <Image
+                src={cover}
+                alt={`${fundraiser.name} cover photo`}
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 65vw"
+                className="object-cover"
               />
-            ) : (
-              <div className="text-center py-16">
-                <h2 className="text-2xl font-serif font-bold text-foreground mb-4">
-                  Products Coming Soon
-                </h2>
-                <p className="text-muted-foreground mb-8">
-                  We're setting up the product selection for this fundraiser. Check back soon!
-                </p>
-              </div>
+            </div>
+
+            {/* Organized by + verified */}
+            <div className="flex items-center justify-between gap-3 border-b pb-4">
+              <p className="text-sm text-muted-foreground">
+                Organized by{' '}
+                <span className="font-semibold text-foreground">
+                  {fundraiser.organizationName}
+                </span>
+              </p>
+              <VerifiedBadge />
+            </div>
+
+            {/* Progress */}
+            <FundraisingProgress
+              raised={raised}
+              goal={goal > 0 ? goal : Math.max(raised, 1)}
+              supporterCount={supporterCount}
+            />
+
+            {/* Team members */}
+            {teamMembers.length > 0 && (
+              <TeamMembersStrip title="Team Members" members={teamMembers} />
             )}
-          </div>
-        </div>
-      </section>
 
-      {/* Contact Section */}
-      <section className="py-12 bg-muted">
-        <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-2xl font-serif font-bold text-foreground mb-4">
-              Questions About This Fundraiser?
-            </h2>
-            <p className="text-muted-foreground mb-6">
-              Contact the fundraiser coordinator for more information.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Button asChild variant="outline">
-                <a href={`mailto:${fundraiser.contactEmail}`}>
-                  Email Coordinator
-                </a>
-              </Button>
-              {fundraiser.contactPhone && (
-                <Button asChild variant="outline">
-                  <a href={`tel:${fundraiser.contactPhone}`}>
-                    Call Coordinator
-                  </a>
-                </Button>
+            {/* Story */}
+            {fundraiser.description && (
+              <section className="space-y-3">
+                <h2 className="text-xl font-bold tracking-tight">Story</h2>
+                <p className="whitespace-pre-line text-base leading-relaxed text-foreground/90">
+                  {fundraiser.description}
+                </p>
+              </section>
+            )}
+
+            {/* Mission statement + bio when available */}
+            {(fundraiser.missionStatement || fundraiser.bio) && (
+              <section className="space-y-4">
+                {fundraiser.missionStatement && (
+                  <Card className="border-l-4 border-l-salsa-500">
+                    <CardContent className="p-4">
+                      <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Our Mission
+                      </p>
+                      <p className="text-base text-foreground/90">
+                        {fundraiser.missionStatement}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+                {fundraiser.bio && (
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                    {fundraiser.bio}
+                  </p>
+                )}
+              </section>
+            )}
+
+            {/* How it works */}
+            <section className="space-y-4">
+              <h2 className="text-xl font-bold tracking-tight">How It Works</h2>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {[
+                  {
+                    step: 1,
+                    title: 'Shop',
+                    desc: 'Browse handcrafted salsas and pick your favorites below.',
+                  },
+                  {
+                    step: 2,
+                    title: 'Support',
+                    desc: `Your purchase automatically supports ${fundraiser.organizationName}.`,
+                  },
+                  {
+                    step: 3,
+                    title: 'Enjoy',
+                    desc: 'Fresh salsa arrives at your door while helping a great cause.',
+                  },
+                ].map((item) => (
+                  <Card key={item.step} className="card surface-shadow">
+                    <CardContent className="p-4">
+                      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-salsa-500 to-chile-500 text-white font-bold">
+                        {item.step}
+                      </div>
+                      <h3 className="font-semibold text-foreground">{item.title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{item.desc}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+
+            {/* Products */}
+            <section id="shop" className="scroll-mt-24 space-y-4">
+              {products.length > 0 ? (
+                <ProductGrid
+                  products={products}
+                  title="Shop & Support"
+                  description={`Every jar goes toward ${fundraiser.organizationName}'s goal.`}
+                  showFilters={true}
+                  showSearch={true}
+                  showSort={true}
+                  columns={3}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <h2 className="text-xl font-serif font-bold text-foreground mb-2">
+                      Products coming soon
+                    </h2>
+                    <p className="text-muted-foreground">
+                      We&apos;re setting up the salsa selection for this fundraiser.
+                    </p>
+                  </CardContent>
+                </Card>
               )}
-            </div>
-          </div>
-        </div>
-      </section>
+            </section>
 
-      {/* Supporter Message Board */}
-      <section className="py-12">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <MessageBoard slug={slug} />
-        </div>
-      </section>
+            {/* Message board */}
+            <section className="space-y-4">
+              <MessageBoard slug={slug} />
+            </section>
 
-      {/* Info Section */}
-      <section className="py-12 bg-card">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-2xl font-serif font-bold text-foreground mb-6">
-              How It Works
-            </h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              <Card className="card surface-shadow">
-                <CardContent className="pt-6">
-                  <div className="w-12 h-12 bg-gradient-to-br from-verde-500 to-salsa-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-xl font-bold">
-                    1
-                  </div>
-                  <h3 className="font-bold text-foreground mb-2">Shop</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Browse our selection of delicious, authentic salsas and choose your favorites.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="card surface-shadow">
-                <CardContent className="pt-6">
-                  <div className="w-12 h-12 bg-gradient-to-br from-salsa-500 to-chile-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-xl font-bold">
-                    2
-                  </div>
-                  <h3 className="font-bold text-foreground mb-2">Support</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Your purchase automatically supports {fundraiser.organizationName}.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="card surface-shadow">
-                <CardContent className="pt-6">
-                  <div className="w-12 h-12 bg-gradient-to-br from-chile-500 to-verde-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-xl font-bold">
-                    3
-                  </div>
-                  <h3 className="font-bold text-foreground mb-2">Enjoy</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Receive fresh salsa delivered to your door while helping a great cause!
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-            <div className="mt-8">
-              <Button size="lg" className="bg-gradient-to-r from-salsa-600 to-chile-600 hover:from-salsa-700 hover:to-chile-700" asChild>
-                <Link href="/fundraising">
-                  Start Your Own Fundraiser
-                </Link>
-              </Button>
-            </div>
-          </div>
+            {/* Contact */}
+            <section className="rounded-2xl bg-muted p-6 text-center">
+              <h2 className="text-xl font-serif font-bold text-foreground">
+                Questions about this fundraiser?
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Reach out to the fundraiser coordinator.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
+                <Button asChild variant="outline">
+                  <a href={`mailto:${fundraiser.contactEmail}`}>Email</a>
+                </Button>
+                {fundraiser.contactPhone && (
+                  <Button asChild variant="outline">
+                    <a href={`tel:${fundraiser.contactPhone}`}>Call</a>
+                  </Button>
+                )}
+                <Button asChild>
+                  <Link href="/fundraising">Start your own fundraiser</Link>
+                </Button>
+              </div>
+            </section>
+          </main>
+
+          {/* Sidebar */}
+          <FundraiserSidebar
+            shareTitle={fundraiser.name}
+            shareText={`Support ${fundraiser.organizationName} by shopping José Madrid Salsa.`}
+            supporters={supporters}
+            shopAnchor="shop"
+            shopLabel="Shop & Support"
+          />
         </div>
-      </section>
+      </div>
     </div>
-  );
+  )
 }
