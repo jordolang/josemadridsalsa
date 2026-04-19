@@ -228,10 +228,10 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
 
                 <div className="mt-4 flex gap-2">
                   <Button size="sm" variant="default" className="flex-1" asChild>
-                    <Link href={`/admin/fundraisers/${fundraiser.id}`}>Manage</Link>
+                    <Link href={`/admin/fundraisers/${fundraiser.id}/manage`}>Manage</Link>
                   </Button>
                   <Button size="sm" variant="outline" asChild>
-                    <Link href={`/admin/fundraisers/${fundraiser.id}/edit`}>Edit</Link>
+                    <Link href={`/admin/fundraisers/${fundraiser.id}`}>Stats</Link>
                   </Button>
                   <Button size="sm" variant="ghost" asChild>
                     <Link href={`/fundraisers/${fundraiser.slug}`}>View</Link>

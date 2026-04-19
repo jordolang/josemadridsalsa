@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,11 +18,13 @@ import {
 import { Switch } from '@/components/ui/switch'
 import {
   DollarSign, TrendingUp, Users, Package, Save,
-  ExternalLink, CheckCircle, XCircle, Loader2
+  ExternalLink, CheckCircle, XCircle, Loader2, Swords, Upload,
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { FundraiserStatus, FundraiserParticipantStatus } from '@prisma/client'
+import { ColorPalettePicker } from '@/components/fundraising/color-palette-picker'
+import { useUploadThing } from '@/lib/uploadthing-client'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -646,32 +648,49 @@ function CommissionTab({ fundraiser, allProducts }: { fundraiser: FundraiserData
 // ─── Branding Tab ─────────────────────────────────────────────────────────────
 
 function BrandingTab({ fundraiser }: { fundraiser: FundraiserData }) {
+  const existing = (fundraiser.pageConfig ?? {}) as Record<string, unknown>
   const [form, setForm] = useState({
     subdomain: fundraiser.subdomain ?? '',
     logoUrl: fundraiser.logoUrl ?? '',
     coverPhotoUrl: fundraiser.coverPhotoUrl ?? '',
     missionStatement: fundraiser.missionStatement ?? '',
     bio: fundraiser.bio ?? '',
-    pageConfig: fundraiser.pageConfig ? JSON.stringify(fundraiser.pageConfig, null, 2) : '',
+    primaryColor: (existing.primaryColor as string | undefined) ?? '#B91C1C',
+    secondaryColor: (existing.secondaryColor as string | undefined) ?? '#F59E0B',
+    accentColor: (existing.accentColor as string | undefined) ?? '#16A34A',
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  const logoUpload = useUploadThing('adminFundraiserLogo', {
+    onClientUploadComplete: (res) => {
+      const url = res?.[0]?.url
+      if (url) setForm((f) => ({ ...f, logoUrl: url }))
+      setUploadError(null)
+    },
+    onUploadError: (e) => setUploadError(e.message || 'Upload failed'),
+  })
+  const coverUpload = useUploadThing('adminFundraiserCoverPhoto', {
+    onClientUploadComplete: (res) => {
+      const url = res?.[0]?.url
+      if (url) setForm((f) => ({ ...f, coverPhotoUrl: url }))
+      setUploadError(null)
+    },
+    onUploadError: (e) => setUploadError(e.message || 'Upload failed'),
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
     setError(null)
 
-    let pageConfig: Record<string, unknown> | null = null
-    if (form.pageConfig.trim()) {
-      try {
-        pageConfig = JSON.parse(form.pageConfig)
-      } catch {
-        setError('Invalid JSON in Page Config')
-        setSaving(false)
-        return
-      }
+    const pageConfig: Record<string, unknown> = {
+      ...existing,
+      primaryColor: form.primaryColor,
+      secondaryColor: form.secondaryColor,
+      accentColor: form.accentColor,
     }
 
     try {
@@ -701,6 +720,8 @@ function BrandingTab({ fundraiser }: { fundraiser: FundraiserData }) {
   }
 
   const publicUrl = `/fundraisers/${fundraiser.slug}`
+  const logoBusy = logoUpload.isUploading
+  const coverBusy = coverUpload.isUploading
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -723,24 +744,87 @@ function BrandingTab({ fundraiser }: { fundraiser: FundraiserData }) {
               </div>
               <p className="mt-1 text-xs text-muted-foreground">Used for custom subdomain access (e.g., my-school.josemadridsalsa.com)</p>
             </div>
-            <div>
-              <Label htmlFor="logoUrl">Logo URL</Label>
-              <Input id="logoUrl" value={form.logoUrl} onChange={e => setForm(f => ({ ...f, logoUrl: e.target.value }))} placeholder="https://..." />
-              {form.logoUrl && (
-                <div className="mt-2 h-16 w-16 overflow-hidden rounded border">
-                  <img src={form.logoUrl} alt="Logo preview" className="h-full w-full object-contain" onError={e => (e.currentTarget.style.display = 'none')} />
+            <div className="space-y-2">
+              <Label htmlFor="logoUrl">Team Logo</Label>
+              <div className="flex items-start gap-3">
+                <div className="h-20 w-20 shrink-0 overflow-hidden rounded border bg-muted">
+                  {form.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={form.logoUrl} alt="Logo preview" className="h-full w-full object-contain" onError={e => (e.currentTarget.style.display = 'none')} />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                      <Package className="h-6 w-6" />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="coverPhotoUrl">Cover Photo URL</Label>
-              <Input id="coverPhotoUrl" value={form.coverPhotoUrl} onChange={e => setForm(f => ({ ...f, coverPhotoUrl: e.target.value }))} placeholder="https://..." />
-              {form.coverPhotoUrl && (
-                <div className="mt-2 h-24 w-full overflow-hidden rounded border">
-                  <img src={form.coverPhotoUrl} alt="Cover preview" className="h-full w-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
+                <div className="flex-1 space-y-2">
+                  <Input id="logoUrl" value={form.logoUrl} onChange={e => setForm(f => ({ ...f, logoUrl: e.target.value }))} placeholder="https://... or upload below" />
+                  <div className="flex items-center gap-2">
+                    <label className="inline-flex cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={logoBusy}
+                        onChange={(e) => {
+                          const files = e.target.files ? Array.from(e.target.files) : []
+                          if (files.length > 0) logoUpload.startUpload(files)
+                          e.currentTarget.value = ''
+                        }}
+                      />
+                      <span className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:bg-accent">
+                        {logoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                        {logoBusy ? 'Uploading…' : 'Upload Logo'}
+                      </span>
+                    </label>
+                    {form.logoUrl && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setForm(f => ({ ...f, logoUrl: '' }))}>
+                        <XCircle className="mr-1 h-4 w-4" /> Clear
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">PNG/JPG/WebP up to 4MB. Shown on the fundraiser page and team card.</p>
                 </div>
-              )}
+              </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="coverPhotoUrl">Cover Photo</Label>
+              <div className="space-y-2">
+                {form.coverPhotoUrl && (
+                  <div className="h-28 w-full overflow-hidden rounded border bg-muted">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={form.coverPhotoUrl} alt="Cover preview" className="h-full w-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
+                  </div>
+                )}
+                <Input id="coverPhotoUrl" value={form.coverPhotoUrl} onChange={e => setForm(f => ({ ...f, coverPhotoUrl: e.target.value }))} placeholder="https://... or upload below" />
+                <div className="flex items-center gap-2">
+                  <label className="inline-flex cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={coverBusy}
+                      onChange={(e) => {
+                        const files = e.target.files ? Array.from(e.target.files) : []
+                        if (files.length > 0) coverUpload.startUpload(files)
+                        e.currentTarget.value = ''
+                      }}
+                    />
+                    <span className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:bg-accent">
+                      {coverBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {coverBusy ? 'Uploading…' : 'Upload Cover Photo'}
+                    </span>
+                  </label>
+                  {form.coverPhotoUrl && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setForm(f => ({ ...f, coverPhotoUrl: '' }))}>
+                      <XCircle className="mr-1 h-4 w-4" /> Clear
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">Landscape image up to 8MB. Used as the hero banner on the fundraiser page.</p>
+              </div>
+            </div>
+            {uploadError && <p className="text-sm text-destructive">{uploadError}</p>}
           </CardContent>
         </Card>
 
@@ -775,17 +859,34 @@ function BrandingTab({ fundraiser }: { fundraiser: FundraiserData }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Page Configuration (JSON)</CardTitle>
-          <CardDescription>Advanced theme colors and layout settings in JSON format</CardDescription>
+          <CardTitle>Team Color Palette</CardTitle>
+          <CardDescription>Pick three brand colors from the labeled palette or enter a custom hex. Used across the public fundraiser page and team cards.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <Textarea
-            value={form.pageConfig}
-            onChange={e => setForm(f => ({ ...f, pageConfig: e.target.value }))}
-            rows={8}
-            className="font-mono text-sm"
-            placeholder='{"primaryColor": "#22c55e", "layout": "hero"}'
+        <CardContent className="space-y-6">
+          <ColorPalettePicker
+            label="Primary Color"
+            description="Main brand color — progress bar, primary buttons, accents."
+            value={form.primaryColor}
+            onChange={(hex) => setForm(f => ({ ...f, primaryColor: hex }))}
           />
+          <ColorPalettePicker
+            label="Secondary Color"
+            description="Supporting tone — badges, secondary highlights."
+            value={form.secondaryColor}
+            onChange={(hex) => setForm(f => ({ ...f, secondaryColor: hex }))}
+          />
+          <ColorPalettePicker
+            label="Accent Color"
+            description="Optional third color — calls to action, progress milestones."
+            value={form.accentColor}
+            onChange={(hex) => setForm(f => ({ ...f, accentColor: hex }))}
+          />
+          <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 p-3">
+            <span className="text-sm font-semibold">Preview:</span>
+            <span className="inline-flex h-8 items-center gap-2 rounded-md px-3 text-white text-sm font-medium shadow" style={{ backgroundColor: form.primaryColor }}>Primary</span>
+            <span className="inline-flex h-8 items-center gap-2 rounded-md px-3 text-white text-sm font-medium shadow" style={{ backgroundColor: form.secondaryColor }}>Secondary</span>
+            <span className="inline-flex h-8 items-center gap-2 rounded-md px-3 text-white text-sm font-medium shadow" style={{ backgroundColor: form.accentColor }}>Accent</span>
+          </div>
         </CardContent>
       </Card>
 
@@ -974,6 +1075,210 @@ function OrdersTab({ fundraiser }: { fundraiser: FundraiserData }) {
   )
 }
 
+// ─── Battle Arena Tab ─────────────────────────────────────────────────────────
+
+interface ArenaTeamSummary {
+  id: string
+  slug: string
+  name: string
+  school: string
+  status: 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED'
+  teamColor: string
+  teamColorDark: string
+  goalAmount: number
+  salesCount: number
+  hpCurrent: number
+  pricePerUnit: number
+  activePeriod: string
+  seasonId: string | null
+}
+
+interface ArenaSeasonSummary {
+  id: string
+  period: string
+  startsAt: string
+  endsAt: string
+}
+
+function BattleArenaTab({ fundraiser }: { fundraiser: FundraiserData }) {
+  const [team, setTeam] = useState<ArenaTeamSummary | null>(null)
+  const [season, setSeason] = useState<ArenaSeasonSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/fundraisers/${fundraiser.id}/battle-arena`)
+      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Failed to load')
+      const data = await res.json()
+      setTeam(data.team ?? null)
+      setSeason(data.activeSeason ?? null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error loading')
+    } finally {
+      setLoading(false)
+    }
+  }, [fundraiser.id])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  const linkTeam = async () => {
+    setBusy(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const res = await fetch(`/api/admin/fundraisers/${fundraiser.id}/battle-arena`, {
+        method: 'POST',
+      })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Failed to link')
+      const data = await res.json()
+      setTeam(data.team)
+      setMessage(data.created ? 'Battle Arena team created and linked.' : 'Linked to existing Battle Arena team.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error linking')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const unlinkTeam = async () => {
+    if (!confirm('Remove this fundraiser from the Battle Arena? Season stats will be lost.')) return
+    setBusy(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const res = await fetch(`/api/admin/fundraisers/${fundraiser.id}/battle-arena`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Failed to unlink')
+      setTeam(null)
+      setMessage('Battle Arena team unlinked.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error unlinking')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading Battle Arena status…
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Swords className="h-5 w-5 text-salsa-600" />
+            <CardTitle>Battle Arena</CardTitle>
+          </div>
+          <CardDescription>
+            Promote this fundraiser to the Battle Arena so it can compete in seasons,
+            track HP, and earn share-damage bonuses. A FundraiserTeam row is created
+            matching this fundraiser&apos;s slug.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {season ? (
+            <div className="rounded-md border bg-muted/40 p-3 text-sm">
+              <p className="font-medium">Active season: <span className="font-mono">{season.period}</span></p>
+              <p className="text-muted-foreground">
+                {new Date(season.startsAt).toLocaleDateString()} → {new Date(season.endsAt).toLocaleDateString()}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No active season at the moment.</p>
+          )}
+
+          {team ? (
+            <div className="space-y-3 rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">{team.name}</p>
+                  <p className="text-sm text-muted-foreground">{team.school}</p>
+                </div>
+                <Badge className={team.status === 'ACTIVE' ? 'bg-green-500 text-white' : ''}>
+                  {team.status}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Period</p>
+                  <p className="font-mono">{team.activePeriod}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Sales</p>
+                  <p className="font-semibold">{team.salesCount}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">HP</p>
+                  <p className="font-semibold">{team.hpCurrent} / {team.goalAmount}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Price / unit</p>
+                  <p className="font-semibold">${team.pricePerUnit}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                <span className="inline-flex items-center gap-2">
+                  <span className="inline-block h-4 w-4 rounded border" style={{ backgroundColor: team.teamColor }} />
+                  Primary {team.teamColor}
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="inline-block h-4 w-4 rounded border" style={{ backgroundColor: team.teamColorDark }} />
+                  Dark {team.teamColorDark}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" asChild>
+                  <Link href={`/admin/fundraisers/battle-arena`}>Manage Seasons</Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href={`/fundraise/${team.slug}`} target="_blank">
+                    <ExternalLink className="mr-2 h-4 w-4" /> View Arena Page
+                  </Link>
+                </Button>
+                <Button variant="destructive" onClick={unlinkTeam} disabled={busy}>
+                  {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
+                  Unlink
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 rounded-lg border border-dashed p-6 text-center">
+              <Swords className="mx-auto h-10 w-10 text-muted-foreground/60" />
+              <p className="font-medium">This fundraiser is not in the Battle Arena yet.</p>
+              <p className="text-sm text-muted-foreground">
+                Link it now to unlock arena features. A PENDING team will be created — an admin can
+                approve and roster it into the active season on the Battle Arena page.
+              </p>
+              <div>
+                <Button onClick={linkTeam} disabled={busy}>
+                  {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Swords className="mr-2 h-4 w-4" />}
+                  Promote to Battle Arena
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {message && <p className="text-sm text-primary">{message}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 // ─── Main Client Component ────────────────────────────────────────────────────
 
 export default function FundraiserManageClient({ fundraiser, allProducts }: Props) {
@@ -1014,6 +1319,10 @@ export default function FundraiserManageClient({ fundraiser, allProducts }: Prop
           </TabsTrigger>
           <TabsTrigger value="commission">Commission &amp; Pricing</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
+          <TabsTrigger value="battle-arena">
+            <Swords className="mr-1.5 h-3.5 w-3.5" />
+            Battle Arena
+          </TabsTrigger>
           <TabsTrigger value="participants">
             Participants
             <span className="ml-1.5 rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-xs font-medium">
@@ -1042,6 +1351,10 @@ export default function FundraiserManageClient({ fundraiser, allProducts }: Prop
 
         <TabsContent value="branding">
           <BrandingTab fundraiser={fundraiser} />
+        </TabsContent>
+
+        <TabsContent value="battle-arena">
+          <BattleArenaTab fundraiser={fundraiser} />
         </TabsContent>
 
         <TabsContent value="participants">

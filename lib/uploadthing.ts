@@ -54,6 +54,32 @@ export const ourFileRouter = {
       return { url: file.url, uploadedBy: metadata.userId }
     }),
 
+  adminFundraiserLogo: f({ image: { maxFileSize: '4MB', maxFileCount: 1 } })
+    .middleware(async () => {
+      const session = await getServerSession(authOptions)
+      const role = (session?.user as { role?: string } | undefined)?.role
+      if (!session?.user || !role || !['ADMIN', 'DEVELOPER', 'STAFF'].includes(role)) {
+        throw new Error('Unauthorized - admin required')
+      }
+      return { userId: (session.user as any).id as string }
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      return { url: file.url, uploadedBy: metadata.userId }
+    }),
+
+  adminFundraiserCoverPhoto: f({ image: { maxFileSize: '8MB', maxFileCount: 1 } })
+    .middleware(async () => {
+      const session = await getServerSession(authOptions)
+      const role = (session?.user as { role?: string } | undefined)?.role
+      if (!session?.user || !role || !['ADMIN', 'DEVELOPER', 'STAFF'].includes(role)) {
+        throw new Error('Unauthorized - admin required')
+      }
+      return { userId: (session.user as any).id as string }
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      return { url: file.url, uploadedBy: metadata.userId }
+    }),
+
   fundraiserGallery: f({ image: { maxFileSize: '8MB', maxFileCount: 10 } })
     .middleware(async () => {
       const session = await getServerSession(authOptions)
