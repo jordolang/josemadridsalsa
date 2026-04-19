@@ -3293,6 +3293,16 @@ model FundraiserTeam {
   approvedBy String?
   approvedAt DateTime?
 
+  // Season linkage — nullable during rollout; teams backfilled by migration.
+  // `activePeriod` remains the source of truth for back-compat; `seasonId`
+  // is the forward-looking relation consumed by rule overrides + admin APIs.
+  seasonId String?
+  season   FundraiserSeason? @relation("SeasonTeams", fields: [seasonId], references: [id], onDelete: SetNull)
+
+  // Inverse of FundraiserSeason.championTeam — a team may be crowned for
+  // multiple seasons over time, so this is a list.
+  championOfSeasons FundraiserSeason[] @relation("SeasonChampion")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3304,7 +3314,41 @@ model FundraiserTeam {
 
   @@index([activePeriod])
   @@index([status])
+  @@index([seasonId])
   @@map("fundraiser_teams")
+}
+
+model FundraiserSeason {
+  id       String       @id @default(cuid())
+  period   String       @unique // "YYYY-MM"
+  startsAt DateTime
+  endsAt   DateTime
+  status   SeasonStatus @default(DRAFT)
+
+  // Free-form rule overrides consumed by lib/arena/rules.ts. Keys:
+  //   shieldDurationMs, shieldMaxHp, maxConsecutiveShares,
+  //   critDamageThreshold, bigPurchaseThreshold.
+  // Missing keys fall back to the module-level constants.
+  rulesJson Json?
+
+  championTeamId String?
+  championTeam   FundraiserTeam? @relation("SeasonChampion", fields: [championTeamId], references: [id], onDelete: SetNull)
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teams FundraiserTeam[] @relation("SeasonTeams")
+
+  @@index([status])
+  @@map("fundraiser_seasons")
+}
+
+enum SeasonStatus {
+  DRAFT
+  ACTIVE
+  ENDED
+  ARCHIVED
 }
 
 model FundraiserCharacter {
