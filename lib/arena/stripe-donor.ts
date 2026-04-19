@@ -41,6 +41,20 @@ export function extractFundraiserTeamId(
 }
 
 /**
+ * Returns the Season id pinned onto the Stripe session metadata at
+ * checkout creation, or null if the checkout predates Season linkage
+ * (in which case the webhook falls back to the team's current seasonId).
+ */
+export function extractFundraiserSeasonId(
+  session: MinimalStripeSession,
+): string | null {
+  const raw = session.metadata?.fundraiserSeasonId
+  if (typeof raw !== 'string') return null
+  const trimmed = raw.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+/**
  * Parses `metadata.fundraiserDonor` (JSON) and falls back to Stripe's
  * `customer_details` when individual fields are missing.
  *

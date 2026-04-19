@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  extractFundraiserSeasonId,
   extractFundraiserTeamId,
   resolveDonorFromStripeSession,
   type MinimalStripeSession,
@@ -35,6 +36,41 @@ describe('arena/stripe-donor — extractFundraiserTeamId', () => {
     expect(
       extractFundraiserTeamId(
         session({ metadata: { fundraiserTeamId: '   ' } }),
+      ),
+    ).toBeNull()
+  })
+})
+
+describe('arena/stripe-donor — extractFundraiserSeasonId', () => {
+  it('returns the seasonId when present', () => {
+    expect(
+      extractFundraiserSeasonId(
+        session({ metadata: { fundraiserSeasonId: 'fs_apr26' } }),
+      ),
+    ).toBe('fs_apr26')
+  })
+
+  it('returns null when metadata is null', () => {
+    expect(extractFundraiserSeasonId(session({ metadata: null }))).toBeNull()
+  })
+
+  it('returns null when seasonId is empty or whitespace', () => {
+    expect(
+      extractFundraiserSeasonId(
+        session({ metadata: { fundraiserSeasonId: '' } }),
+      ),
+    ).toBeNull()
+    expect(
+      extractFundraiserSeasonId(
+        session({ metadata: { fundraiserSeasonId: '   ' } }),
+      ),
+    ).toBeNull()
+  })
+
+  it('returns null when the field is absent (legacy checkouts)', () => {
+    expect(
+      extractFundraiserSeasonId(
+        session({ metadata: { fundraiserTeamId: 't_1' } }),
       ),
     ).toBeNull()
   })

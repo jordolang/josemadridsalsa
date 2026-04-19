@@ -375,8 +375,11 @@ export async function POST(request: Request) {
 
       case 'checkout.session.completed': {
         const checkoutSession = event.data.object as Stripe.Checkout.Session
-        const { extractFundraiserTeamId, resolveDonorFromStripeSession } =
-          await import('@/lib/arena/stripe-donor')
+        const {
+          extractFundraiserTeamId,
+          extractFundraiserSeasonId,
+          resolveDonorFromStripeSession,
+        } = await import('@/lib/arena/stripe-donor')
         const fundraiserTeamId = extractFundraiserTeamId(checkoutSession)
         if (!fundraiserTeamId) {
           console.log('checkout.session.completed — no fundraiserTeamId, skipping')
@@ -391,6 +394,35 @@ export async function POST(request: Request) {
             `checkout.session.completed — subscription mode, deferring to invoice.payment_succeeded (session=${checkoutSession.id})`,
           )
           break
+        }
+
+        // Season linkage guard — warn (don't block) when the metadata
+        // season disagrees with the team's current seasonId. A mismatch
+        // means the admin rotated the team's season after checkout started;
+        // we still apply damage but flag it for audit.
+        const metadataSeasonId = extractFundraiserSeasonId(checkoutSession)
+        if (metadataSeasonId) {
+          try {
+            const { prisma: db } = await import('@/lib/prisma')
+            const teamRow = await db.fundraiserTeam.findUnique({
+              where: { id: fundraiserTeamId },
+              select: { seasonId: true },
+            })
+            if (teamRow?.seasonId && teamRow.seasonId !== metadataSeasonId) {
+              console.warn(
+                `season mismatch for team ${fundraiserTeamId}: metadata=${metadataSeasonId} team=${teamRow.seasonId} (session=${checkoutSession.id})`,
+              )
+            }
+          } catch (err) {
+            console.error('season guard lookup failed:', err)
+          }
+        } else {
+          // Older checkouts created before season-metadata pinning still
+          // land here. Not an error — damage.ts resolves the season from
+          // team.seasonId on its own.
+          console.log(
+            `checkout.session.completed — no fundraiserSeasonId on metadata (legacy session=${checkoutSession.id}), falling back to team.seasonId`,
+          )
         }
 
         const amountCents = checkoutSession.amount_total ?? 0
@@ -475,8 +507,11 @@ export async function POST(request: Request) {
         if (!subscriptionId) break
 
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-        const { extractFundraiserTeamId, resolveDonorFromStripeSession } =
-          await import('@/lib/arena/stripe-donor')
+        const {
+          extractFundraiserTeamId,
+          extractFundraiserSeasonId,
+          resolveDonorFromStripeSession,
+        } = await import('@/lib/arena/stripe-donor')
 
         const metaSource = {
           metadata: subscription.metadata,
@@ -491,6 +526,28 @@ export async function POST(request: Request) {
             `invoice.payment_succeeded — subscription ${subscriptionId} is not a fundraiser, skipping`,
           )
           break
+        }
+
+        // Season linkage guard for recurring donations. Subscriptions span
+        // multiple seasons over time, so a mismatch is expected after a
+        // monthly rollover — we log rather than block, and the damage
+        // engine always uses the team's current seasonId.
+        const metadataSeasonId = extractFundraiserSeasonId(metaSource)
+        if (metadataSeasonId) {
+          try {
+            const { prisma: db } = await import('@/lib/prisma')
+            const teamRow = await db.fundraiserTeam.findUnique({
+              where: { id: fundraiserTeamId },
+              select: { seasonId: true },
+            })
+            if (teamRow?.seasonId && teamRow.seasonId !== metadataSeasonId) {
+              console.warn(
+                `season rolled over for recurring donation to team ${fundraiserTeamId}: metadata=${metadataSeasonId} team=${teamRow.seasonId} (sub=${subscriptionId})`,
+              )
+            }
+          } catch (err) {
+            console.error('season guard lookup failed (recurring):', err)
+          }
         }
 
         const amountCents = invoice.amount_paid ?? 0

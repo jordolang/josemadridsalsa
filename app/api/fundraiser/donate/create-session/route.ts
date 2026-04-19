@@ -64,7 +64,14 @@ export async function POST(req: NextRequest) {
 
   const team = await db.fundraiserTeam.findUnique({
     where: { id: parsed.data.teamId, status: 'ACTIVE' },
-    select: { id: true, slug: true, name: true, school: true },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      school: true,
+      seasonId: true,
+      activePeriod: true,
+    },
   })
   if (!team) {
     return NextResponse.json(
@@ -102,9 +109,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const stripe = getStripe()
+    // Season linkage: the webhook verifies `fundraiserSeasonId` matches the
+    // team's current season at settlement time, so we pin it at checkout
+    // creation to prevent attacks that mutate the team's season mid-flight.
     const sharedMetadata = {
       fundraiserTeamId: team.id,
       fundraiserTeamSlug: team.slug,
+      fundraiserSeasonId: team.seasonId ?? '',
+      fundraiserSeasonPeriod: team.activePeriod,
       fundraiserDonor: donorJSON,
       fundraiserFundId: parsed.data.fundId ?? '',
       fundraiserFrequency: parsed.data.frequency,
