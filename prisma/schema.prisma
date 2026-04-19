@@ -3461,6 +3461,45 @@ model FundraiserShareEvent {
   @@map("fundraiser_share_events")
 }
 
+/// Single-use share-intent token issued by POST /arena/share/intent
+/// and redeemed by GET /s/[nonce]. `nonce` is the HMAC-signed random
+/// identifier that appears in the share URL. Single-use is enforced
+/// via the unique constraint plus `consumedAt` set inside a tx.
+model FundraiserShareNonce {
+  id         String    @id @default(cuid())
+  nonce      String    @unique
+  userId     String
+  teamId     String
+  platform   String    @default("facebook")
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  consumedAt DateTime?
+
+  @@index([userId, createdAt])
+  @@index([teamId, createdAt])
+  @@index([expiresAt])
+  @@map("fundraiser_share_nonces")
+}
+
+/// Audit log of shield grants issued through the share flow. Used for
+/// per-user / per-team rate-limit counts at redemption time (see
+/// lib/arena/share-nonce.ts). Separate from FundraiserShareEvent which
+/// records every share (including those that only extended an active
+/// shield). A grant row is written only when a new shield is issued.
+model FundraiserShieldGrant {
+  id           String   @id @default(cuid())
+  teamId       String
+  userId       String
+  platform     String   @default("facebook")
+  diminishingN Int      @default(1)
+  grantedAt    DateTime @default(now())
+
+  @@index([userId, grantedAt])
+  @@index([userId, platform, grantedAt])
+  @@index([teamId, grantedAt])
+  @@map("fundraiser_shield_grants")
+}
+
 enum FundraiserTeamStatus {
   PENDING
   ACTIVE
