@@ -142,9 +142,13 @@ export async function applyPurchaseDamage(
         data: { hpCurrent: hpAfter },
       })
       if (shield && damage.shieldAbsorbed > 0) {
+        const nextShieldHP = Math.max(
+          0,
+          shield.remainingHP - damage.shieldAbsorbed,
+        )
         await tx.fundraiserShield.update({
           where: { id: shield.id },
-          data: { remainingHP: { decrement: damage.shieldAbsorbed } },
+          data: { remainingHP: nextShieldHP },
         })
       }
 

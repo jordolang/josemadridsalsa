@@ -171,7 +171,7 @@ describe('arena/damage — applyPurchaseDamage', () => {
 
     expect(currentTx.fundraiserShield.update).toHaveBeenCalledWith({
       where: { id: 'shield_1' },
-      data: { remainingHP: { decrement: 30 } },
+      data: { remainingHP: 0 },
     })
   })
 
