@@ -4,6 +4,7 @@ import { AnimatePresence, MotionConfig } from 'framer-motion'
 import type { ArenaSnapshot } from '@/lib/arena/server-state'
 import { useArenaState } from '@/lib/arena/use-arena-state'
 import { TeamCard } from '@/components/arena/team-card'
+import { LeaderboardTable } from '@/components/arena/leaderboard-table'
 
 function LiveBadge({ status, staleness }: { status: string; staleness: number }) {
   const healthy = status === 'ok' && staleness < 10_000
@@ -47,6 +48,7 @@ export function ArenaClient({ snapshot: initial }: { snapshot: ArenaSnapshot }) 
           ))}
         </div>
       </AnimatePresence>
+      <LeaderboardTable teams={snapshot.teams} />
     </MotionConfig>
   )
 }
