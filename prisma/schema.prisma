@@ -57,6 +57,11 @@ model User {
   fundraiserMessages     FundraiserMessage[]
   fundraiserSaleEvents   FundraiserSaleEvent[]
 
+  // Fundraise page social: character claims, reactions, replies.
+  claimedCharacters       FundraiserCharacter[]        @relation("CharacterClaimant")
+  fundraiserSaleReactions FundraiserSaleEventReaction[]
+  fundraiserSaleReplies   FundraiserSaleEventReply[]
+
   @@map("users")
 }
 
@@ -3279,6 +3284,15 @@ model FundraiserTeam {
   teamColor     String @default("#9B7FFF")
   teamColorDark String @default("#452E7F")
 
+  // Public campaign assets — all nullable; rendered only when populated
+  // by the admin edit form. Drives /fundraise/[slug] hero section.
+  logoUrl       String?
+  heroImageUrl  String?
+  heroVideoUrl  String?
+  campaignTitle String?
+  tagline       String?
+  storyHtml     String? @db.Text
+
   // Goals & tracking
   goalAmount   Int @default(1000)
   salesCount   Int @default(0)
@@ -3375,12 +3389,27 @@ model FundraiserCharacter {
   position       Int    @default(0)
   quips          Json   @default("[]") // JSON array of strings
 
+  // Per-teammate public totals — surfaced on /fundraise/[slug]'s teammate
+  // strip (ordered amountRaised DESC). Updated inside applyPurchaseDamage
+  // when the sale carries a sellingCharacterId.
+  amountRaised   Int     @default(0)
+  supporterCount Int     @default(0)
+  avatarUrl      String?
+
+  // Nullable User link — future "claim this avatar" flow. onDelete: SetNull
+  // keeps the character visible if the user account is later removed.
+  userId String?
+  user   User?   @relation("CharacterClaimant", fields: [userId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
 
   // Relations
-  team FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team  FundraiserTeam        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  sales FundraiserSaleEvent[] @relation("CharacterSales")
 
   @@index([teamId])
+  @@index([teamId, amountRaised(sort: Desc)])
+  @@index([userId])
   @@map("fundraiser_characters")
 }
 
@@ -3424,15 +3453,60 @@ model FundraiserSaleEvent {
   donorComment   String? @db.Text
   isAnonymous    Boolean @default(false)
 
+  // Character attribution (optional). When the sale originated from a
+  // specific teammate's share link, `applyPurchaseDamage` writes this
+  // and increments that character's amountRaised/supporterCount.
+  sellingCharacterId String?
+  sellingCharacter   FundraiserCharacter? @relation("CharacterSales", fields: [sellingCharacterId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
 
   // Relations
-  team  FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  donor User?          @relation(fields: [donorUserId], references: [id], onDelete: SetNull)
+  team      FundraiserTeam                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  donor     User?                         @relation(fields: [donorUserId], references: [id], onDelete: SetNull)
+  reactions FundraiserSaleEventReaction[]
+  replies   FundraiserSaleEventReply[]
 
   @@index([teamId])
   @@index([donorUserId])
+  @@index([sellingCharacterId])
   @@map("fundraiser_sale_events")
+}
+
+/// "Love" reaction on a sale-event (supporter feed item). Unique per
+/// (saleEventId, userId) so a reaction POST is naturally idempotent and
+/// DELETE lets the user toggle their own reaction.
+model FundraiserSaleEventReaction {
+  id           String   @id @default(cuid())
+  saleEventId  String
+  userId       String
+  createdAt    DateTime @default(now())
+
+  saleEvent FundraiserSaleEvent @relation(fields: [saleEventId], references: [id], onDelete: Cascade)
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([saleEventId, userId])
+  @@index([saleEventId])
+  @@index([userId])
+  @@map("fundraiser_sale_event_reactions")
+}
+
+/// Threaded reply under a supporter-feed item. Authored by admins or the
+/// owning team; the API layer gates who can POST. No edit/delete surface
+/// yet — we can add soft-delete later if needed.
+model FundraiserSaleEventReply {
+  id            String   @id @default(cuid())
+  saleEventId   String
+  authorUserId  String
+  body          String   @db.Text
+  createdAt     DateTime @default(now())
+
+  saleEvent FundraiserSaleEvent @relation(fields: [saleEventId], references: [id], onDelete: Cascade)
+  author    User                @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  @@index([saleEventId, createdAt])
+  @@index([authorUserId])
+  @@map("fundraiser_sale_event_replies")
 }
 
 model FundraiserShield {
