@@ -11,12 +11,14 @@ import { HeroMedia } from '@/components/fundraiser/hero-media'
 import { CampaignStats } from '@/components/fundraiser/campaign-stats'
 import { TeamMembersStrip } from '@/components/fundraiser/team-members-strip'
 import { TeamRosterGrid } from '@/components/fundraiser/team-roster-grid'
-import { SupporterFeed } from '@/components/fundraiser/supporter-feed'
+import { SupporterFeedInteractive } from '@/components/fundraiser/supporter-feed-interactive'
 import { DonateActionCard } from '@/components/fundraiser/donate-action-card'
 import { BattleWidget } from '@/components/arena/battle-widget'
 import type { AttackFeedItem } from '@/components/arena/attack-feed'
 import { ShareStatusToast } from '@/components/arena/share-status-toast'
 import { ShareForShieldButton } from '@/components/arena/share-for-shield-button'
+import { sanitizeStoryHtml } from '@/lib/sanitize-story'
+import { StoryBody } from '@/components/fundraiser/story-body'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -101,7 +103,8 @@ export default async function FundraiserProfilePage({ params }: Props) {
   // Two shape-only queries keep the page query simple; the full "did I
   // love this?" flag lives in the client via /api/…/love polling.
   const saleEventIds = recentSales.map((s) => s.id)
-  const [loveCounts, recentLovers] = await Promise.all([
+  const viewerId = (session?.user as { id?: string } | undefined)?.id
+  const [loveCounts, recentLovers, viewerLoves] = await Promise.all([
     saleEventIds.length === 0
       ? Promise.resolve(
           [] as Array<{ saleEventId: string; _count: { _all: number } }>,
@@ -126,7 +129,14 @@ export default async function FundraiserProfilePage({ params }: Props) {
             user: { select: { id: true, name: true } },
           },
         }),
+    !viewerId || saleEventIds.length === 0
+      ? Promise.resolve([] as Array<{ saleEventId: string }>)
+      : db.fundraiserSaleEventReaction.findMany({
+          where: { userId: viewerId, saleEventId: { in: saleEventIds } },
+          select: { saleEventId: true },
+        }),
   ])
+  const lovedIds = viewerLoves.map((r) => r.saleEventId)
 
   const loveCountBySaleId = new Map<string, number>(
     loveCounts.map((r) => [r.saleEventId, r._count._all]),
@@ -220,6 +230,7 @@ export default async function FundraiserProfilePage({ params }: Props) {
     team.tagline ??
     `Join ${team.school}'s ${team.activePeriod} fundraiser. Every jar sold powers their team and keeps them in the battle arena.`
   const storyFallback = `Every jar sold powers ${team.name}'s warrior in the Jose Madrid Salsa Fundraiser Battle Arena. Share this page to activate a 30-minute shield — then watch your team climb the arena leaderboard in real time.`
+  const sanitizedStoryHtml = sanitizeStoryHtml(team.storyHtml)
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-white text-foreground">
@@ -230,9 +241,14 @@ export default async function FundraiserProfilePage({ params }: Props) {
             title={campaignTitle}
             tagline={tagline}
             organizerName={team.school}
+            logoUrl={team.logoUrl}
           />
 
-          <HeroMedia alt={`${campaignTitle} hero image`} />
+          <HeroMedia
+            alt={`${campaignTitle} hero image`}
+            imageUrl={team.heroImageUrl}
+            videoUrl={team.heroVideoUrl}
+          />
 
           <CampaignStats
             raised={raised}
@@ -273,9 +289,16 @@ export default async function FundraiserProfilePage({ params }: Props) {
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
                   Story
                 </h2>
-                <p className="mt-4 whitespace-pre-wrap text-base leading-relaxed text-slate-700">
-                  {storyFallback}
-                </p>
+                {sanitizedStoryHtml ? (
+                  <StoryBody
+                    html={sanitizedStoryHtml}
+                    className="prose prose-slate mt-4 max-w-none text-base leading-relaxed text-slate-700"
+                  />
+                ) : (
+                  <p className="mt-4 whitespace-pre-wrap text-base leading-relaxed text-slate-700">
+                    {storyFallback}
+                  </p>
+                )}
               </article>
             </TabsContent>
 
@@ -325,7 +348,11 @@ export default async function FundraiserProfilePage({ params }: Props) {
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.15em] text-muted-foreground">
                 Recent supporters
               </h2>
-              <SupporterFeed items={feedItems} />
+              <SupporterFeedInteractive
+                items={feedItems}
+                initialLovedIds={lovedIds}
+                currentUserName={session?.user?.name ?? null}
+              />
             </div>
           </div>
         </aside>
