@@ -3,16 +3,20 @@ import type { Metadata } from 'next'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma as db } from '@/lib/prisma'
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CampaignHeader } from '@/components/fundraiser/campaign-header'
 import { HeroMedia } from '@/components/fundraiser/hero-media'
 import { CampaignStats } from '@/components/fundraiser/campaign-stats'
 import { TeamMembersStrip } from '@/components/fundraiser/team-members-strip'
+import { TeamRosterGrid } from '@/components/fundraiser/team-roster-grid'
 import { SupporterFeed } from '@/components/fundraiser/supporter-feed'
 import { DonateActionCard } from '@/components/fundraiser/donate-action-card'
 import { BattleWidget } from '@/components/arena/battle-widget'
 import type { AttackFeedItem } from '@/components/arena/attack-feed'
 import { ShareStatusToast } from '@/components/arena/share-status-toast'
+import { ShareForShieldButton } from '@/components/arena/share-for-shield-button'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -39,7 +43,12 @@ export default async function FundraiserProfilePage({ params }: Props) {
   const team = await db.fundraiserTeam.findUnique({
     where: { slug, status: 'ACTIVE' },
     include: {
-      characters: { orderBy: { position: 'asc' } },
+      // Teammates (ex-"sibling teams" bug) — ordered by contribution so
+      // the strip highlights top fundraisers. Falls back on position for
+      // pre-donation seed order.
+      characters: {
+        orderBy: [{ amountRaised: 'desc' }, { position: 'asc' }],
+      },
       shields: {
         where: { expiresAt: { gt: now }, remainingHP: { gt: 0 } },
         orderBy: { expiresAt: 'desc' },
@@ -55,7 +64,7 @@ export default async function FundraiserProfilePage({ params }: Props) {
   })
   if (!team) notFound()
 
-  const [recentSales, teammates, session] = await Promise.all([
+  const [recentSales, session] = await Promise.all([
     db.fundraiserSaleEvent.findMany({
       where: { teamId: team.id },
       orderBy: { createdAt: 'desc' },
@@ -70,26 +79,69 @@ export default async function FundraiserProfilePage({ params }: Props) {
         donorComment: true,
         isAnonymous: true,
         donor: { select: { name: true } },
-      },
-    }),
-    db.fundraiserTeam.findMany({
-      where: {
-        activePeriod: team.activePeriod,
-        status: 'ACTIVE',
-        id: { not: team.id },
-      },
-      orderBy: { salesCount: 'desc' },
-      take: 5,
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        salesCount: true,
-        pricePerUnit: true,
+        // Latest reply per sale event — `take: 1` with descending
+        // createdAt returns the most recent one. The admin UI can show
+        // more via a follow-up endpoint.
+        replies: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            body: true,
+            createdAt: true,
+            author: { select: { id: true, name: true } },
+          },
+        },
       },
     }),
     getServerSession(authOptions),
   ])
+
+  // Reaction aggregates — count + 3 most recent lovers per sale event.
+  // Two shape-only queries keep the page query simple; the full "did I
+  // love this?" flag lives in the client via /api/…/love polling.
+  const saleEventIds = recentSales.map((s) => s.id)
+  const [loveCounts, recentLovers] = await Promise.all([
+    saleEventIds.length === 0
+      ? Promise.resolve(
+          [] as Array<{ saleEventId: string; _count: { _all: number } }>,
+        )
+      : db.fundraiserSaleEventReaction.groupBy({
+          by: ['saleEventId'],
+          where: { saleEventId: { in: saleEventIds } },
+          _count: { _all: true },
+        }),
+    saleEventIds.length === 0
+      ? Promise.resolve(
+          [] as Array<{
+            saleEventId: string
+            user: { id: string; name: string | null }
+          }>,
+        )
+      : db.fundraiserSaleEventReaction.findMany({
+          where: { saleEventId: { in: saleEventIds } },
+          orderBy: { createdAt: 'desc' },
+          select: {
+            saleEventId: true,
+            user: { select: { id: true, name: true } },
+          },
+        }),
+  ])
+
+  const loveCountBySaleId = new Map<string, number>(
+    loveCounts.map((r) => [r.saleEventId, r._count._all]),
+  )
+  const loversBySaleId = new Map<
+    string,
+    Array<{ id: string; name: string | null }>
+  >()
+  for (const row of recentLovers) {
+    const bucket = loversBySaleId.get(row.saleEventId) ?? []
+    if (bucket.length < 3) {
+      bucket.push(row.user)
+      loversBySaleId.set(row.saleEventId, bucket)
+    }
+  }
 
   const raised = team.salesCount * team.pricePerUnit
   const supporterCount = team.salesCount
@@ -98,6 +150,10 @@ export default async function FundraiserProfilePage({ params }: Props) {
     const displayName = s.isAnonymous
       ? 'Anonymous supporter'
       : (s.donorName ?? s.donor?.name ?? 'Anonymous supporter')
+    const latestReply = s.replies[0]
+    const loverNames = (loversBySaleId.get(s.id) ?? [])
+      .map((u) => u.name)
+      .filter((n): n is string => !!n)
     return {
       id: s.id,
       name: displayName,
@@ -105,15 +161,32 @@ export default async function FundraiserProfilePage({ params }: Props) {
       amount: Number(s.amount),
       createdAt: s.createdAt.toISOString(),
       comment: s.donorComment ?? undefined,
+      lovesCount: loveCountBySaleId.get(s.id) ?? 0,
+      recentLovers: loverNames,
+      reply: latestReply
+        ? {
+            authorName: latestReply.author.name ?? 'Team',
+            body: latestReply.body,
+            createdAt: latestReply.createdAt.toISOString(),
+          }
+        : undefined,
     }
   })
 
-  const teamMemberCards = teammates.map((t) => ({
-    id: t.id,
-    name: t.name,
-    amountRaised: t.salesCount * t.pricePerUnit,
-    supporterCount: 0,
-    href: `/fundraise/${t.slug}`,
+  // Teammate strip + roster grid — now sourced from team.characters
+  // (ordered by amountRaised DESC), not sibling teams. Characters without
+  // an avatar fall back to the shared `TeamMember.avatarUrl: null` path
+  // (initial-based fallback rendered by the component).
+  const teamMemberCards = team.characters.map((c) => ({
+    id: c.id,
+    name: c.characterName,
+    avatarUrl: c.avatarUrl,
+    amountRaised: c.amountRaised,
+    supporterCount: c.supporterCount,
+    // No per-character public profile yet — link the whole strip item
+    // back to this team for now. Swap to /fundraise/{slug}/{charId} once
+    // that route lands.
+    href: undefined,
   }))
 
   const battleFeedItems: AttackFeedItem[] = recentSales.map((s) => ({
@@ -138,8 +211,14 @@ export default async function FundraiserProfilePage({ params }: Props) {
     activeShield: team.shields[0] ?? null,
   }
 
-  const campaignTitle = team.name
-  const tagline = `Join ${team.school}'s ${team.activePeriod} fundraiser. Every jar sold powers their team and keeps them in the battle arena.`
+  // T1 fields are nullable; fall back to the same synthetic copy the page
+  // used before the admin edit form exists. `team.storyHtml`, `logoUrl`,
+  // `heroImageUrl`, `heroVideoUrl` are available on the `team` object and
+  // will be wired into Story / Hero components by @bob.
+  const campaignTitle = team.campaignTitle ?? team.name
+  const tagline =
+    team.tagline ??
+    `Join ${team.school}'s ${team.activePeriod} fundraiser. Every jar sold powers their team and keeps them in the battle arena.`
   const storyFallback = `Every jar sold powers ${team.name}'s warrior in the Jose Madrid Salsa Fundraiser Battle Arena. Share this page to activate a 30-minute shield — then watch your team climb the arena leaderboard in real time.`
 
   return (
@@ -162,12 +241,8 @@ export default async function FundraiserProfilePage({ params }: Props) {
             teamColor={team.teamColor}
           />
 
-          {teamMemberCards.length > 0 && (
-            <TeamMembersStrip members={teamMemberCards} />
-          )}
-
           <Tabs defaultValue="story" className="w-full">
-            <TabsList className="h-11 rounded-full bg-slate-100 p-1">
+            <TabsList className="h-11 rounded-full bg-muted/60 p-1">
               <TabsTrigger
                 value="story"
                 className="rounded-full px-6 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:shadow"
@@ -182,9 +257,18 @@ export default async function FundraiserProfilePage({ params }: Props) {
                   Battle
                 </TabsTrigger>
               )}
+              <TabsTrigger
+                value="team"
+                className="rounded-full px-6 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:shadow"
+              >
+                Team
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="story" className="mt-6">
+            <TabsContent value="story" className="mt-6 space-y-6">
+              {teamMemberCards.length > 0 && (
+                <TeamMembersStrip members={teamMemberCards} />
+              )}
               <article className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8">
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900">
                   Story
@@ -196,7 +280,17 @@ export default async function FundraiserProfilePage({ params }: Props) {
             </TabsContent>
 
             {team.activePeriod && (
-              <TabsContent value="battle" className="mt-6">
+              <TabsContent value="battle" className="mt-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <ShareForShieldButton teamId={team.id} teamName={team.name} />
+                  <Link
+                    href={`/arena/${team.activePeriod}`}
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+                  >
+                    Open full arena
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
                 <BattleWidget
                   team={battleTeam}
                   period={team.activePeriod}
@@ -204,6 +298,10 @@ export default async function FundraiserProfilePage({ params }: Props) {
                 />
               </TabsContent>
             )}
+
+            <TabsContent value="team" className="mt-6">
+              <TeamRosterGrid members={teamMemberCards} />
+            </TabsContent>
           </Tabs>
         </section>
 
