@@ -2,7 +2,7 @@
 
 import { useScraperStream } from '@/hooks/use-scraper-stream'
 import type { ScraperEvent } from '@/lib/scraper/event-bus'
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -27,13 +27,20 @@ interface LiveLeadFeedProps {
 
 export function LiveLeadFeed({ campaignId }: LiveLeadFeedProps) {
   const [leads, setLeads] = useState<LiveLead[]>([])
-  const [stats, setStats] = useState({ total: 0, withEmail: 0, withPhone: 0 })
   const [scraperStatus, setScraperStatus] = useState<{
     active: boolean
     step?: string
     message?: string
   }>({ active: false })
   const [error, setError] = useState<string | null>(null)
+  const stats = useMemo(
+    () => ({
+      total: leads.length,
+      withEmail: leads.filter((lead) => Boolean(lead.email)).length,
+      withPhone: leads.filter((lead) => Boolean(lead.phone)).length,
+    }),
+    [leads]
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -60,11 +67,6 @@ export function LiveLeadFeed({ campaignId }: LiveLeadFeedProps) {
             receivedAt: new Date(l.createdAt).getTime(),
           }))
         )
-        setStats({
-          total: fetched.length,
-          withEmail: fetched.filter((l) => l.email).length,
-          withPhone: fetched.filter((l) => l.phone).length,
-        })
       } catch {
         // ignore — SSE will populate over time
       }
@@ -92,7 +94,6 @@ export function LiveLeadFeed({ campaignId }: LiveLeadFeedProps) {
             ...prev,
           ].slice(0, 50)
         })
-        setStats((prev) => ({ ...prev, total: prev.total + 1 }))
         setError(null)
         break
       }
@@ -113,11 +114,6 @@ export function LiveLeadFeed({ campaignId }: LiveLeadFeedProps) {
               : lead
           )
         )
-        setStats((prev) => ({
-          ...prev,
-          withEmail: contact.email ? prev.withEmail + 1 : prev.withEmail,
-          withPhone: contact.phone ? prev.withPhone + 1 : prev.withPhone,
-        }))
         setError(null)
         break
       }

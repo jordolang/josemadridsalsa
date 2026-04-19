@@ -357,12 +357,6 @@ export function CampaignManager({ campaign, selectedLeadIds, leads = [] }: Campa
   const defaultTab = isActive ? 'activity' : 'template'
 
   useEffect(() => {
-    if (!isActive) return
-    const interval = setInterval(() => router.refresh(), 5000)
-    return () => clearInterval(interval)
-  }, [isActive, router])
-
-  useEffect(() => {
     if (!isActive) {
       setProgress(0)
       setProgressLabel(null)
