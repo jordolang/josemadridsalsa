@@ -396,33 +396,42 @@ export async function POST(request: Request) {
           break
         }
 
-        // Season linkage guard — warn (don't block) when the metadata
-        // season disagrees with the team's current seasonId. A mismatch
-        // means the admin rotated the team's season after checkout started;
-        // we still apply damage but flag it for audit.
+        // Season linkage policy:
+        //   - metadata seasonId matches team.seasonId → apply damage.
+        //   - metadata missing, team.seasonId present → warn + fall back.
+        //   - metadata present, team.seasonId differs → warn (season rotated
+        //     mid-checkout) + fall back to team's current season.
+        //   - BOTH missing → error, skip damage entirely (team isn't in any
+        //     season). The purchase itself still settles; we just don't
+        //     apply combat.
         const metadataSeasonId = extractFundraiserSeasonId(checkoutSession)
-        if (metadataSeasonId) {
-          try {
-            const { prisma: db } = await import('@/lib/prisma')
-            const teamRow = await db.fundraiserTeam.findUnique({
-              where: { id: fundraiserTeamId },
-              select: { seasonId: true },
-            })
-            if (teamRow?.seasonId && teamRow.seasonId !== metadataSeasonId) {
-              console.warn(
-                `season mismatch for team ${fundraiserTeamId}: metadata=${metadataSeasonId} team=${teamRow.seasonId} (session=${checkoutSession.id})`,
-              )
-            }
-          } catch (err) {
-            console.error('season guard lookup failed:', err)
+        let skipDamage = false
+        try {
+          const { prisma: db } = await import('@/lib/prisma')
+          const teamRow = await db.fundraiserTeam.findUnique({
+            where: { id: fundraiserTeamId },
+            select: { seasonId: true },
+          })
+          const teamSeasonId = teamRow?.seasonId ?? null
+          if (!metadataSeasonId && !teamSeasonId) {
+            console.error(
+              `checkout.session.completed — team ${fundraiserTeamId} has no season (metadata + team both null), skipping damage (session=${checkoutSession.id})`,
+            )
+            skipDamage = true
+          } else if (!metadataSeasonId) {
+            console.warn(
+              `checkout.session.completed — legacy session without fundraiserSeasonId (session=${checkoutSession.id}), falling back to team.seasonId=${teamSeasonId}`,
+            )
+          } else if (teamSeasonId && teamSeasonId !== metadataSeasonId) {
+            console.warn(
+              `season mismatch for team ${fundraiserTeamId}: metadata=${metadataSeasonId} team=${teamSeasonId} (session=${checkoutSession.id})`,
+            )
           }
-        } else {
-          // Older checkouts created before season-metadata pinning still
-          // land here. Not an error — damage.ts resolves the season from
-          // team.seasonId on its own.
-          console.log(
-            `checkout.session.completed — no fundraiserSeasonId on metadata (legacy session=${checkoutSession.id}), falling back to team.seasonId`,
-          )
+        } catch (err) {
+          // Lookup failed — fall through and let applyPurchaseDamage try.
+          // It's its own source of truth for the damage decision; we'd
+          // rather under-log than double-block a purchase on a DB blip.
+          console.error('season guard lookup failed:', err)
         }
 
         const amountCents = checkoutSession.amount_total ?? 0
@@ -431,23 +440,25 @@ export async function POST(request: Request) {
 
         let saleEventId: string | null = null
         let isReplay = false
-        try {
-          const { applyPurchaseDamage } = await import('@/lib/arena/damage')
-          const result = await applyPurchaseDamage({
-            sellingTeamId: fundraiserTeamId,
-            saleAmount: amountDollars,
-            orderId: checkoutSession.id,
-            donor,
-          })
-          saleEventId = result.saleEventId
-          isReplay = result.idempotentHit === true
-          console.log(
-            `Fundraiser damage applied for team ${fundraiserTeamId}: $${amountDollars} dealt to ${result.damagedTeams.length} opponents${isReplay ? ' (idempotent replay)' : ''}`,
-          )
-        } catch (err) {
-          // Do NOT rethrow — a damage engine failure must not block the
-          // rest of the webhook from marking itself processed.
-          console.error('applyPurchaseDamage failed inside webhook:', err)
+        if (!skipDamage) {
+          try {
+            const { applyPurchaseDamage } = await import('@/lib/arena/damage')
+            const result = await applyPurchaseDamage({
+              sellingTeamId: fundraiserTeamId,
+              saleAmount: amountDollars,
+              orderId: checkoutSession.id,
+              donor,
+            })
+            saleEventId = result.saleEventId
+            isReplay = result.idempotentHit === true
+            console.log(
+              `Fundraiser damage applied for team ${fundraiserTeamId}: $${amountDollars} dealt to ${result.damagedTeams.length} opponents${isReplay ? ' (idempotent replay)' : ''}`,
+            )
+          } catch (err) {
+            // Do NOT rethrow — a damage engine failure must not block the
+            // rest of the webhook from marking itself processed.
+            console.error('applyPurchaseDamage failed inside webhook:', err)
+          }
         }
 
         // Donor receipt. Skip on replay (already sent), on missing email,
@@ -528,26 +539,31 @@ export async function POST(request: Request) {
           break
         }
 
-        // Season linkage guard for recurring donations. Subscriptions span
-        // multiple seasons over time, so a mismatch is expected after a
-        // monthly rollover — we log rather than block, and the damage
-        // engine always uses the team's current seasonId.
+        // Season linkage policy mirrors checkout.session.completed. For
+        // recurring donations a rollover mismatch is normal — log as info,
+        // not an audit warning. Only error-and-skip if BOTH sources lack a
+        // seasonId (team has no season at all).
         const metadataSeasonId = extractFundraiserSeasonId(metaSource)
-        if (metadataSeasonId) {
-          try {
-            const { prisma: db } = await import('@/lib/prisma')
-            const teamRow = await db.fundraiserTeam.findUnique({
-              where: { id: fundraiserTeamId },
-              select: { seasonId: true },
-            })
-            if (teamRow?.seasonId && teamRow.seasonId !== metadataSeasonId) {
-              console.warn(
-                `season rolled over for recurring donation to team ${fundraiserTeamId}: metadata=${metadataSeasonId} team=${teamRow.seasonId} (sub=${subscriptionId})`,
-              )
-            }
-          } catch (err) {
-            console.error('season guard lookup failed (recurring):', err)
+        let skipDamage = false
+        try {
+          const { prisma: db } = await import('@/lib/prisma')
+          const teamRow = await db.fundraiserTeam.findUnique({
+            where: { id: fundraiserTeamId },
+            select: { seasonId: true },
+          })
+          const teamSeasonId = teamRow?.seasonId ?? null
+          if (!metadataSeasonId && !teamSeasonId) {
+            console.error(
+              `invoice.payment_succeeded — team ${fundraiserTeamId} has no season (metadata + team both null), skipping damage (sub=${subscriptionId})`,
+            )
+            skipDamage = true
+          } else if (metadataSeasonId && teamSeasonId && teamSeasonId !== metadataSeasonId) {
+            console.log(
+              `recurring donation season rollover for team ${fundraiserTeamId}: metadata=${metadataSeasonId} team=${teamSeasonId} (sub=${subscriptionId})`,
+            )
           }
+        } catch (err) {
+          console.error('season guard lookup failed (recurring):', err)
         }
 
         const amountCents = invoice.amount_paid ?? 0
@@ -556,21 +572,23 @@ export async function POST(request: Request) {
 
         let saleEventId: string | null = null
         let isReplay = false
-        try {
-          const { applyPurchaseDamage } = await import('@/lib/arena/damage')
-          const result = await applyPurchaseDamage({
-            sellingTeamId: fundraiserTeamId,
-            saleAmount: amountDollars,
-            orderId: invoice.id ?? undefined,
-            donor,
-          })
-          saleEventId = result.saleEventId
-          isReplay = result.idempotentHit === true
-          console.log(
-            `Fundraiser recurring damage for team ${fundraiserTeamId} (sub=${subscriptionId}): $${amountDollars} across ${result.damagedTeams.length} opponents${isReplay ? ' (idempotent replay)' : ''}`,
-          )
-        } catch (err) {
-          console.error('applyPurchaseDamage failed inside invoice webhook:', err)
+        if (!skipDamage) {
+          try {
+            const { applyPurchaseDamage } = await import('@/lib/arena/damage')
+            const result = await applyPurchaseDamage({
+              sellingTeamId: fundraiserTeamId,
+              saleAmount: amountDollars,
+              orderId: invoice.id ?? undefined,
+              donor,
+            })
+            saleEventId = result.saleEventId
+            isReplay = result.idempotentHit === true
+            console.log(
+              `Fundraiser recurring damage for team ${fundraiserTeamId} (sub=${subscriptionId}): $${amountDollars} across ${result.damagedTeams.length} opponents${isReplay ? ' (idempotent replay)' : ''}`,
+            )
+          } catch (err) {
+            console.error('applyPurchaseDamage failed inside invoice webhook:', err)
+          }
         }
 
         if (!isReplay && donor.email) {
