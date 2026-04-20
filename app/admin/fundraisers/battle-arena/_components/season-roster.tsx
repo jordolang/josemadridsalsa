@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Trash2 } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -220,15 +220,29 @@ export function SeasonRoster({
                     </td>
                     {!seasonLocked && (
                       <td className="p-3 text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={pending !== null}
-                          onClick={() => handleRemove(t.id, t.name)}
-                          aria-label={`Remove ${t.name} from season`}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="inline-flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            asChild
+                            aria-label={`Edit ${t.name}`}
+                          >
+                            <Link
+                              href={`/admin/fundraisers/battle-arena/teams/${t.id}/edit`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={pending !== null}
+                            onClick={() => handleRemove(t.id, t.name)}
+                            aria-label={`Remove ${t.name} from season`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </td>
                     )}
                   </tr>
