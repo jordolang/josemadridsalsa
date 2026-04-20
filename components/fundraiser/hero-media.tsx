@@ -27,7 +27,7 @@ export function HeroMedia({
   return (
     <div
       className={cn(
-        'relative aspect-video w-full overflow-hidden rounded-3xl bg-slate-100 shadow-lg ring-1 ring-slate-200/60',
+        'relative aspect-video w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-100 shadow-sm',
         className,
       )}
     >

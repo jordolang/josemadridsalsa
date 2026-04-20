@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { MotionConfig } from 'framer-motion'
 import { Shield, Swords } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { ArenaSnapshot, ArenaTeam } from '@/lib/arena/server-state'
@@ -80,6 +81,7 @@ export function BattleWidget({
   const healthy = status === 'ok' && staleness < 10_000
 
   return (
+    <MotionConfig reducedMotion="user">
     <section
       className={clsx(
         'overflow-hidden rounded-xl border bg-gradient-to-b from-[#0a0603] via-[#140d06] to-[#05070a] text-white shadow-xl',
@@ -162,5 +164,6 @@ export function BattleWidget({
         </div>
       </div>
     </section>
+    </MotionConfig>
   )
 }

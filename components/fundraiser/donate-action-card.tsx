@@ -81,8 +81,8 @@ export function DonateActionCard({
             size="lg"
             className="h-14 w-full rounded-2xl bg-indigo-600 text-base font-bold text-white shadow-md shadow-indigo-600/25 transition hover:bg-indigo-700 hover:shadow-lg"
           >
-            <Heart className="mr-2 h-5 w-5" />
-            Donate
+            <span>Donate</span>
+            <Heart className="ml-auto h-5 w-5" />
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">

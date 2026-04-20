@@ -79,7 +79,10 @@ export function SupporterFeed({
   return (
     <div className={cn('flex w-full flex-col gap-3', className)}>
       {items.map((item) => (
-        <Card key={item.id}>
+        <Card
+          key={item.id}
+          className="rounded-2xl border-slate-200/60 bg-white shadow-sm"
+        >
           <CardContent className="space-y-3 p-4">
             <div className="flex items-start gap-3">
               <Avatar className="h-10 w-10">
