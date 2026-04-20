@@ -90,7 +90,10 @@ export async function POST(
       name: fundraiser.name,
       school: fundraiser.organizationName,
       activePeriod: currentPeriod(),
-      status: 'PENDING',
+      // Admin-initiated promotion skips the PENDING gate — the admin IS the
+      // approver, so the arena page at /fundraise/[slug] should render
+      // immediately (that page filters by status: 'ACTIVE').
+      status: 'ACTIVE',
       teamColor: primary,
       teamColorDark: secondary,
       goalAmount,
