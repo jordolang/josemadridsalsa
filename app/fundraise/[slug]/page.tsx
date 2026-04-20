@@ -248,6 +248,8 @@ export default async function FundraiserProfilePage({ params }: Props) {
             alt={`${campaignTitle} hero image`}
             imageUrl={team.heroImageUrl}
             videoUrl={team.heroVideoUrl}
+            teamColor={team.teamColor}
+            teamColorDark={team.teamColorDark}
           />
 
           <CampaignStats
@@ -257,7 +259,7 @@ export default async function FundraiserProfilePage({ params }: Props) {
             teamColor={team.teamColor}
           />
 
-          <Tabs defaultValue="story" className="w-full">
+          <Tabs defaultValue={team.activePeriod ? 'battle' : 'story'} className="w-full">
             <TabsList className="h-11 rounded-full bg-muted/60 p-1">
               <TabsTrigger
                 value="story"
