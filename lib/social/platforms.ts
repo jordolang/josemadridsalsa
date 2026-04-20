@@ -27,10 +27,24 @@ export function getSocialBaseUrl(): string {
 // Both FACEBOOK_APP_* (Graph API convention) and FACEBOOK_CLIENT_* (NextAuth
 // convention) are accepted so a single Facebook app credential pair powers
 // both NextAuth sign-in and the social publisher without duplicate secrets.
+// We MUST pair id+secret from the same convention; mixing them across two
+// different Facebook apps returns OAuth state mismatches that are confusing
+// to debug. Prefer APP_* when the full pair is set, otherwise CLIENT_*.
 function getFacebookAppCredentials() {
-  const appId = process.env.FACEBOOK_APP_ID || process.env.FACEBOOK_CLIENT_ID
-  const appSecret = process.env.FACEBOOK_APP_SECRET || process.env.FACEBOOK_CLIENT_SECRET
-  return { appId, appSecret }
+  if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
+    return {
+      appId: process.env.FACEBOOK_APP_ID,
+      appSecret: process.env.FACEBOOK_APP_SECRET,
+    }
+  }
+  if (process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET) {
+    return {
+      appId: process.env.FACEBOOK_CLIENT_ID,
+      appSecret: process.env.FACEBOOK_CLIENT_SECRET,
+    }
+  }
+  // Partial — surface as not configured so the UI shows a clear error.
+  return { appId: undefined, appSecret: undefined }
 }
 
 export function getFacebookAppId(): string | undefined {
