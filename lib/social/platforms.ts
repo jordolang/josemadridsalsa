@@ -24,6 +24,23 @@ export function getSocialBaseUrl(): string {
   return process.env.NEXTAUTH_URL || 'http://localhost:3000'
 }
 
+// Both FACEBOOK_APP_* (Graph API convention) and FACEBOOK_CLIENT_* (NextAuth
+// convention) are accepted so a single Facebook app credential pair powers
+// both NextAuth sign-in and the social publisher without duplicate secrets.
+function getFacebookAppCredentials() {
+  const appId = process.env.FACEBOOK_APP_ID || process.env.FACEBOOK_CLIENT_ID
+  const appSecret = process.env.FACEBOOK_APP_SECRET || process.env.FACEBOOK_CLIENT_SECRET
+  return { appId, appSecret }
+}
+
+export function getFacebookAppId(): string | undefined {
+  return getFacebookAppCredentials().appId
+}
+
+export function getFacebookAppSecret(): string | undefined {
+  return getFacebookAppCredentials().appSecret
+}
+
 /**
  * Get a connected social account's decrypted access token
  */
@@ -169,21 +186,21 @@ export function getOAuthUrl(
   switch (platform) {
     case 'FACEBOOK':
     case 'INSTAGRAM': {
-      const appId = process.env.FACEBOOK_APP_ID
-      if (!appId) throw new Error('FACEBOOK_APP_ID not configured')
+      const appId = getFacebookAppId()
+      if (!appId) throw new Error('Facebook is not configured. Set FACEBOOK_APP_ID (or FACEBOOK_CLIENT_ID) on the server.')
       const scopes = FACEBOOK_OAUTH_SCOPES.join(',')
       return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&response_type=code`
     }
     case 'TWITTER': {
       const clientId = process.env.TWITTER_CLIENT_ID
-      if (!clientId) throw new Error('TWITTER_CLIENT_ID not configured')
+      if (!clientId) throw new Error('X (Twitter) is not configured. Set TWITTER_CLIENT_ID and TWITTER_CLIENT_SECRET on the server.')
       if (!options.codeChallenge) throw new Error('Missing PKCE challenge')
       const scopes = 'tweet.read tweet.write users.read offline.access'
       return `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&code_challenge=${options.codeChallenge}&code_challenge_method=S256`
     }
     case 'TIKTOK': {
       const clientKey = process.env.TIKTOK_CLIENT_KEY
-      if (!clientKey) throw new Error('TIKTOK_CLIENT_KEY not configured')
+      if (!clientKey) throw new Error('TikTok is not configured. Set TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET on the server (register a TikTok developer app at developers.tiktok.com).')
       const scopes = TIKTOK_OAUTH_SCOPES.join(',')
       return `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${encodeURIComponent(scopes)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(options.state)}`
     }

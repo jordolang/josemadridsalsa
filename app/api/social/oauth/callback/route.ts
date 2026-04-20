@@ -7,7 +7,12 @@ import {
   parseSocialOAuthSession,
   SOCIAL_OAUTH_COOKIE_NAME,
 } from '@/lib/social/oauth'
-import { getSocialBaseUrl, upsertSocialAccount } from '@/lib/social/platforms'
+import {
+  getFacebookAppId,
+  getFacebookAppSecret,
+  getSocialBaseUrl,
+  upsertSocialAccount,
+} from '@/lib/social/platforms'
 import { logAudit } from '@/lib/audit'
 
 const FACEBOOK_SCOPES = [
@@ -29,10 +34,14 @@ const TIKTOK_SCOPES = ['user.info.basic', 'video.publish', 'video.upload']
 const TWITTER_SCOPES = ['tweet.read', 'tweet.write', 'users.read', 'offline.access']
 
 async function exchangeFacebookToken(code: string, redirectUri: string) {
-  const appId = process.env.FACEBOOK_APP_ID
-  const appSecret = process.env.FACEBOOK_APP_SECRET
+  const appId = getFacebookAppId()
+  const appSecret = getFacebookAppSecret()
 
-  if (!appId || !appSecret) throw new Error('Facebook app not configured')
+  if (!appId || !appSecret) {
+    throw new Error(
+      'Facebook is not configured. Set FACEBOOK_APP_ID/FACEBOOK_APP_SECRET (or FACEBOOK_CLIENT_ID/FACEBOOK_CLIENT_SECRET) on the server.',
+    )
+  }
 
   const tokenRes = await fetch(
     `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&code=${code}&redirect_uri=${encodeURIComponent(redirectUri)}`,
