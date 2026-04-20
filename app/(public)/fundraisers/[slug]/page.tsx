@@ -12,6 +12,7 @@ import { FundraisingProgress } from '@/components/fundraiser/fundraising-progres
 import { TeamMembersStrip, type TeamMember } from '@/components/fundraiser/team-members-strip'
 import { VerifiedBadge } from '@/components/fundraiser/verified-badge'
 import { FundraiserSidebar } from '@/components/fundraiser/fundraiser-sidebar'
+import { BattleArenaPanel } from '@/components/fundraiser/battle-arena-panel'
 import type { SupporterFeedItem } from '@/components/fundraiser/supporter-feed'
 import prisma from '@/lib/prisma'
 
@@ -236,6 +237,9 @@ export default async function FundraiserPage({ params }: PageProps) {
               goal={goal > 0 ? goal : Math.max(raised, 1)}
               supporterCount={supporterCount}
             />
+
+            {/* Battle Arena (only renders if a FundraiserTeam exists for this slug) */}
+            <BattleArenaPanel slug={slug} />
 
             {/* Team members */}
             {teamMembers.length > 0 && (
