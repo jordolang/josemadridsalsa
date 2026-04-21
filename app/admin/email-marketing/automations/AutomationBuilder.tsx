@@ -12,10 +12,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
-import { Plus, Trash2, Clock, Mail, ArrowDown, Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import {
+  Plus,
+  Trash2,
+  Clock,
+  Mail,
+  ArrowDown,
+  Loader2,
+  Check,
+  ChevronsUpDown,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 const TRIGGER_OPTIONS = [
@@ -262,23 +285,11 @@ export function AutomationBuilder({ templates, initialData }: AutomationBuilderP
                 )}
                 <div>
                   <Label className="text-xs">Email Template *</Label>
-                  <Select
+                  <TemplateCombobox
+                    templates={templates}
                     value={step.templateId}
-                    onValueChange={(v) => updateStep(index, 'templateId', v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select template..." />
-                    </SelectTrigger>
-                    {/* Cap height so long template lists scroll instead of
-                        getting clipped by the viewport edge. */}
-                    <SelectContent className="max-h-80">
-                      {templates.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(v) => updateStep(index, 'templateId', v)}
+                  />
                 </div>
                 <div>
                   <Label className="text-xs">Subject Override (optional)</Label>
@@ -312,5 +323,87 @@ export function AutomationBuilder({ templates, initialData }: AutomationBuilderP
         </Button>
       </div>
     </form>
+  )
+}
+
+interface TemplateComboboxProps {
+  templates: { id: string; name: string; key: string; subject: string }[]
+  value: string
+  onChange: (id: string) => void
+}
+
+/**
+ * Searchable template picker. Replaces the bare Select so a user can
+ * type-to-filter by template name, key, or subject — necessary when
+ * the template list grows past what fits in a dropdown panel.
+ */
+function TemplateCombobox({ templates, value, onChange }: TemplateComboboxProps) {
+  const [open, setOpen] = useState(false)
+  const selected = templates.find((t) => t.id === value)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            'w-full justify-between font-normal',
+            !selected && 'text-muted-foreground',
+          )}
+        >
+          <span className="truncate">
+            {selected ? selected.name : 'Select template...'}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0"
+        align="start"
+      >
+        <Command
+          filter={(itemValue, search) =>
+            // itemValue is the joined "name|key|subject" we set on each
+            // CommandItem below. Case-insensitive substring wins.
+            itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+          }
+        >
+          <CommandInput placeholder="Search templates by name or subject..." />
+          <CommandList className="max-h-80">
+            <CommandEmpty>No matching templates.</CommandEmpty>
+            <CommandGroup>
+              {templates.map((t) => (
+                <CommandItem
+                  key={t.id}
+                  value={`${t.name}|${t.key}|${t.subject}`}
+                  onSelect={() => {
+                    onChange(t.id)
+                    setOpen(false)
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      value === t.id ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate font-medium">{t.name}</span>
+                    {t.subject && (
+                      <span className="truncate text-xs text-muted-foreground">
+                        {t.subject}
+                      </span>
+                    )}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   )
 }
