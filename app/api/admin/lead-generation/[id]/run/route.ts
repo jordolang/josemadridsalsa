@@ -3,6 +3,7 @@ import { requirePermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { getJson } from 'serpapi'
 import { eventBus } from '@/lib/scraper/event-bus'
+import { emitScraperEvent } from '@/lib/scraper/scraper-events'
 import { EXCLUDED_DOMAINS } from '@/lib/scraper/school-config'
 
 export const dynamic = 'force-dynamic'
@@ -43,11 +44,21 @@ export async function POST(
   const stream = new ReadableStream({
     async start(controller) {
       function emit(level: LogEntry['level'], stage: LogEntry['stage'], message: string) {
+        // Dual-channel emit: writes to the response body stream for clients
+        // reading the POST body directly, AND publishes to the EventSource
+        // ring buffer so the ActivityLog (which connects via
+        // /api/admin/scraper-logs/[id]) sees events even when Vercel
+        // buffers the POST response.
         try {
           const entry = makeEntry(level, stage, message)
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(entry)}\n\n`))
         } catch {
-          // stream closed
+          // stream closed — EventSource path still works
+        }
+        try {
+          emitScraperEvent(campaignId, level, stage, message)
+        } catch {
+          // never let observability plumbing kill the scrape
         }
       }
 
@@ -182,6 +193,20 @@ async function runSchoolSearch(
       break
     }
 
+    // Stage rows in memory, batch-insert with createMany per page. Cuts DB
+    // round-trips from N (one per lead) to 1 per page, keeping scrape time
+    // comfortably under Vercel's 120s maxDuration. Per-row emit happens
+    // after the insert so the UI still streams lead-by-lead.
+    const pageRows: Array<{
+      campaignId: string
+      schoolName: string
+      schoolUrl: string
+      city: string
+      state: string
+      district: string | null
+      status: 'SCRAPED'
+    }> = []
+
     for (const res of results) {
       if (!res.link || !res.title) continue
 
@@ -195,27 +220,34 @@ async function runSchoolSearch(
       if (isExcluded || seenUrls.has(cleanUrl)) continue
       seenUrls.add(cleanUrl)
 
-      const lead = await prisma.lead.create({
-        data: {
-          campaignId,
-          schoolName: res.title,
-          schoolUrl: res.link,
-          city: campaign.city,
-          state: campaign.state,
-          district: campaign.district,
-          status: 'SCRAPED',
-        },
-      })
-
-      emit('success', 'search', `Lead found: ${lead.schoolName}`)
-
-      eventBus.emit({
-        type: 'lead:found',
-        data: { campaignId, lead: { id: lead.id, schoolName: lead.schoolName, schoolUrl: lead.schoolUrl ?? '', status: lead.status } },
+      pageRows.push({
+        campaignId,
+        schoolName: res.title,
+        schoolUrl: res.link,
+        city: campaign.city,
+        state: campaign.state,
+        district: campaign.district,
+        status: 'SCRAPED',
       })
 
       totalFound++
       if (totalFound >= limit) break
+    }
+
+    if (pageRows.length > 0) {
+      await prisma.lead.createMany({ data: pageRows, skipDuplicates: true })
+      for (const row of pageRows) {
+        emit('success', 'search', `Lead found: ${row.schoolName}`)
+        eventBus.emit({
+          type: 'lead:found',
+          data: {
+            campaignId,
+            // No id available from createMany — consumers should use
+            // schoolUrl as the dedupe key until a later lookup fills ids.
+            lead: { id: '', schoolName: row.schoolName, schoolUrl: row.schoolUrl, status: row.status },
+          },
+        })
+      }
     }
 
     emit('info', 'search', `Progress: ${totalFound}/${limit} leads`)
@@ -261,6 +293,24 @@ async function runBusinessSearch(
   const places = data.local_results?.places || []
   emit('info', 'search', `SerpAPI returned ${places.length} business listings`)
 
+  const mapsRows: Array<{
+    campaignId: string
+    schoolName: string
+    businessName: string
+    businessCategory: string | null
+    address: string | null
+    phone: string | null
+    website: string | null
+    rating: number | null
+    reviewCount: number | null
+    googleMapsUrl: string | null
+    placeId: string | null
+    city: string
+    state: string
+    status: 'SCRAPED'
+  }> = []
+  const mapsMessages: string[] = []
+
   for (const place of places) {
     if (!place.title) continue
 
@@ -271,29 +321,33 @@ async function runBusinessSearch(
     if (isExcluded) continue
     seenBusinesses.add(dedupeKey)
 
-    await prisma.lead.create({
-      data: {
-        campaignId,
-        schoolName: place.title,
-        businessName: place.title,
-        businessCategory: place.type || campaign.businessCategory,
-        address: place.address || null,
-        phone: place.phone || null,
-        website: place.website || null,
-        rating: place.rating || null,
-        reviewCount: place.reviews || null,
-        googleMapsUrl: place.links?.directions || null,
-        placeId: place.place_id || null,
-        city: campaign.city,
-        state: campaign.state,
-        status: 'SCRAPED',
-      },
+    mapsRows.push({
+      campaignId,
+      schoolName: place.title,
+      businessName: place.title,
+      businessCategory: place.type || campaign.businessCategory,
+      address: place.address || null,
+      phone: place.phone || null,
+      website: place.website || null,
+      rating: place.rating || null,
+      reviewCount: place.reviews || null,
+      googleMapsUrl: place.links?.directions || null,
+      placeId: place.place_id || null,
+      city: campaign.city,
+      state: campaign.state,
+      status: 'SCRAPED',
     })
-
-    emit('success', 'search', `Business found: ${place.title}${place.rating ? ` (${place.rating}★ · ${place.reviews || 0} reviews)` : ''}${place.address ? ` — ${place.address}` : ''}`)
+    mapsMessages.push(
+      `Business found: ${place.title}${place.rating ? ` (${place.rating}★ · ${place.reviews || 0} reviews)` : ''}${place.address ? ` — ${place.address}` : ''}`,
+    )
 
     totalFound++
     if (totalFound >= limit) break
+  }
+
+  if (mapsRows.length > 0) {
+    await prisma.lead.createMany({ data: mapsRows, skipDuplicates: true })
+    for (const msg of mapsMessages) emit('success', 'search', msg)
   }
 
   if (totalFound < limit) {
@@ -311,6 +365,18 @@ async function runBusinessSearch(
     const organicResults = organicData.organic_results || []
     emit('info', 'search', `SerpAPI returned ${organicResults.length} organic results`)
 
+    const organicRows: Array<{
+      campaignId: string
+      schoolName: string
+      businessName: string
+      businessCategory: string | null
+      website: string
+      city: string
+      state: string
+      status: 'SCRAPED'
+    }> = []
+    const organicMessages: string[] = []
+
     for (const res of organicResults) {
       if (!res.link || !res.title) continue
 
@@ -321,22 +387,24 @@ async function runBusinessSearch(
       const isExcluded = EXCLUDED_DOMAINS.some(d => res.link!.includes(d))
       if (isExcluded) continue
 
-      await prisma.lead.create({
-        data: {
-          campaignId,
-          schoolName: res.title,
-          businessName: res.title,
-          businessCategory: campaign.businessCategory,
-          website: res.link,
-          city: campaign.city,
-          state: campaign.state,
-          status: 'SCRAPED',
-        },
+      organicRows.push({
+        campaignId,
+        schoolName: res.title,
+        businessName: res.title,
+        businessCategory: campaign.businessCategory,
+        website: res.link,
+        city: campaign.city,
+        state: campaign.state,
+        status: 'SCRAPED',
       })
-
-      emit('success', 'search', `Business found (web): ${res.title}`)
+      organicMessages.push(`Business found (web): ${res.title}`)
       totalFound++
       if (totalFound >= limit) break
+    }
+
+    if (organicRows.length > 0) {
+      await prisma.lead.createMany({ data: organicRows, skipDuplicates: true })
+      for (const msg of organicMessages) emit('success', 'search', msg)
     }
   }
 
