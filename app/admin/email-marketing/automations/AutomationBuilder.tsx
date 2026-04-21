@@ -269,7 +269,9 @@ export function AutomationBuilder({ templates, initialData }: AutomationBuilderP
                     <SelectTrigger>
                       <SelectValue placeholder="Select template..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    {/* Cap height so long template lists scroll instead of
+                        getting clipped by the viewport edge. */}
+                    <SelectContent className="max-h-80">
                       {templates.map((t) => (
                         <SelectItem key={t.id} value={t.id}>
                           {t.name}
