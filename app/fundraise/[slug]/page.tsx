@@ -13,6 +13,7 @@ import { TeamMembersStrip } from '@/components/fundraiser/team-members-strip'
 import { TeamRosterGrid } from '@/components/fundraiser/team-roster-grid'
 import { SupporterFeedInteractive } from '@/components/fundraiser/supporter-feed-interactive'
 import { DonateActionCard } from '@/components/fundraiser/donate-action-card'
+import { TeamProductCatalog } from '@/components/fundraiser/team-product-catalog'
 import { BattleWidget } from '@/components/arena/battle-widget'
 import type { AttackFeedItem } from '@/components/arena/attack-feed'
 import { ShareStatusToast } from '@/components/arena/share-status-toast'
@@ -60,6 +61,22 @@ export default async function FundraiserProfilePage({ params }: Props) {
           activatedAt: true,
           expiresAt: true,
           remainingHP: true,
+        },
+      },
+      products: {
+        where: { isActive: true, product: { isActive: true } },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              price: true,
+              description: true,
+              featuredImage: true,
+            },
+          },
         },
       },
     },
@@ -221,6 +238,16 @@ export default async function FundraiserProfilePage({ params }: Props) {
     activeShield: team.shields[0] ?? null,
   }
 
+  const catalogProducts = team.products.map((tp) => ({
+    id: tp.id,
+    productId: tp.product.id,
+    name: tp.product.name,
+    slug: tp.product.slug,
+    price: Number(tp.price ?? tp.product.price),
+    imageUrl: tp.product.featuredImage,
+    description: tp.product.description,
+  }))
+
   // T1 fields are nullable; fall back to the same synthetic copy the page
   // used before the admin edit form exists. `team.storyHtml`, `logoUrl`,
   // `heroImageUrl`, `heroVideoUrl` are available on the `team` object and
@@ -259,7 +286,16 @@ export default async function FundraiserProfilePage({ params }: Props) {
             teamColor={team.teamColor}
           />
 
-          <Tabs defaultValue={team.activePeriod ? 'battle' : 'story'} className="w-full">
+          <Tabs
+            defaultValue={
+              catalogProducts.length > 0
+                ? 'shop'
+                : team.activePeriod
+                  ? 'battle'
+                  : 'story'
+            }
+            className="w-full"
+          >
             <TabsList className="h-11 rounded-full bg-muted/60 p-1">
               <TabsTrigger
                 value="story"
@@ -267,6 +303,14 @@ export default async function FundraiserProfilePage({ params }: Props) {
               >
                 Story
               </TabsTrigger>
+              {catalogProducts.length > 0 && (
+                <TabsTrigger
+                  value="shop"
+                  className="rounded-full px-6 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:shadow"
+                >
+                  Shop
+                </TabsTrigger>
+              )}
               {team.activePeriod && (
                 <TabsTrigger
                   value="battle"
@@ -303,6 +347,18 @@ export default async function FundraiserProfilePage({ params }: Props) {
                 )}
               </article>
             </TabsContent>
+
+            {catalogProducts.length > 0 && (
+              <TabsContent value="shop" className="mt-6">
+                <TeamProductCatalog
+                  teamId={team.id}
+                  teamSlug={team.slug}
+                  teamName={team.name}
+                  teamColor={team.teamColor}
+                  products={catalogProducts}
+                />
+              </TabsContent>
+            )}
 
             {team.activePeriod && (
               <TabsContent value="battle" className="mt-6 space-y-4">

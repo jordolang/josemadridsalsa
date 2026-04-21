@@ -176,6 +176,7 @@ model Product {
   reviews               Review[]
   wishlistItems         WishlistItem[]
   fundraiserProducts    FundraiserProduct[]
+  fundraiserTeamProducts FundraiserTeamProduct[]
   productTags           ProductTag[]
   inventoryTransactions InventoryTransaction[]
   inventoryAlerts       InventoryAlert[]
@@ -3336,11 +3337,41 @@ model FundraiserTeam {
   saleEvents  FundraiserSaleEvent[]
   shareEvents FundraiserShareEvent[]
   shields     FundraiserShield[]
+  products    FundraiserTeamProduct[]
 
   @@index([activePeriod])
   @@index([status])
   @@index([seasonId])
   @@map("fundraiser_teams")
+}
+
+/// Product catalog for a FundraiserTeam. Each row links a Product to a
+/// team with an optional price override and sort order. The public
+/// /fundraise/[slug] page renders ACTIVE rows; checkout uses this table
+/// to build Stripe line items whose metadata triggers arena damage on
+/// settlement.
+model FundraiserTeamProduct {
+  id        String @id @default(cuid())
+  teamId    String
+  productId String
+
+  /// Optional price override (dollars, 2-decimal). When null, the
+  /// Product's base price is used at checkout.
+  price     Decimal? @db.Decimal(10, 2)
+  /// Display-order on the public catalog (lower first).
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team    FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  product Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, productId])
+  @@index([teamId, isActive, sortOrder])
+  @@index([productId])
+  @@map("fundraiser_team_products")
 }
 
 model FundraiserSeason {

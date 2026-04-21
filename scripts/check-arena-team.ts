@@ -18,6 +18,12 @@ async function main() {
       salesCount: true,
       pricePerUnit: true,
       seasonId: true,
+      logoUrl: true,
+      heroImageUrl: true,
+      heroVideoUrl: true,
+      campaignTitle: true,
+      tagline: true,
+      storyHtml: true,
     },
   })
   console.log(JSON.stringify({ slug, team }, null, 2))
