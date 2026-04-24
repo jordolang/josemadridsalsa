@@ -29,6 +29,7 @@ import {
 import { createMetadata } from '@/lib/metadata'
 import { formatPrice } from '@/lib/utils'
 import { RANGE_OPTIONS, getDateRange, type AnalyticsRangeKey } from '@/lib/analytics/date-range'
+import { AnalyticsRangeSelect } from '@/components/admin/AnalyticsRangeSelect'
 
 export const metadata: Metadata = createMetadata({
   title: 'Fundraiser Analytics - Jose Madrid Salsa Admin',
@@ -144,22 +145,7 @@ export default async function FundraiserAnalyticsPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <form>
-            <select
-              name="range"
-              defaultValue={rangeKey}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-              onChange={(e) => {
-                (e.currentTarget.form as HTMLFormElement).submit()
-              }}
-            >
-              {RANGE_OPTIONS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </form>
+          <AnalyticsRangeSelect value={rangeKey} />
           <Button variant="outline" asChild>
             <Link href="/admin/analytics">← Overview</Link>
           </Button>

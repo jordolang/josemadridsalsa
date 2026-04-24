@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/table'
 import { createMetadata } from '@/lib/metadata'
 import { RANGE_OPTIONS, getDateRange, type AnalyticsRangeKey } from '@/lib/analytics/date-range'
+import { AnalyticsRangeSelect } from '@/components/admin/AnalyticsRangeSelect'
 import type { SocialMediaPlatform } from '@prisma/client'
 
 export const metadata: Metadata = createMetadata({
@@ -163,22 +164,7 @@ export default async function SocialAnalyticsPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <form>
-            <select
-              name="range"
-              defaultValue={rangeKey}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-              onChange={(e) => {
-                (e.currentTarget.form as HTMLFormElement).submit()
-              }}
-            >
-              {RANGE_OPTIONS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </form>
+          <AnalyticsRangeSelect value={rangeKey} />
           <Button variant="outline" asChild>
             <Link href="/admin/analytics">← Overview</Link>
           </Button>
