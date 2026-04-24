@@ -1702,6 +1702,11 @@ model EmailCampaign {
   notes       String? @db.Text
   createdById String?
 
+  // Per-campaign template variable mapping:
+  // { "couponCode": { source: "static", value: "SAVE10" },
+  //   "firstName":  { source: "subscriberFirstName", fallback: "friend" } }
+  variableMappings Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

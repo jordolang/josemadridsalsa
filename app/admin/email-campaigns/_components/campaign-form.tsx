@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { FileText, Mail, AlertCircle, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,12 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
 import { createCampaign } from '../actions'
+import {
+  defaultMappingsForVariables,
+  extractVariables,
+  type VariableMappings,
+} from '@/lib/email/variable-mapping'
+import { TemplateFieldMapper } from './template-field-mapper'
 
 interface MailingList {
   id: string
@@ -38,6 +44,8 @@ interface Template {
   subject: string
   category: string
   variables: unknown
+  html: string
+  text: string | null
 }
 
 interface CampaignFormProps {
@@ -70,6 +78,34 @@ export function CampaignForm({ templates, mailingLists }: CampaignFormProps) {
   const [selectedListId, setSelectedListId] = useState<string>('')
   const [fileContent, setFileContent] = useState('')
   const [fileName, setFileName] = useState('')
+  const [variableMappings, setVariableMappings] = useState<VariableMappings>({})
+  const [customSubject, setCustomSubject] = useState<string>('')
+
+  const detectedVariables = useMemo(() => {
+    if (!selectedTemplate) return [] as string[]
+    return extractVariables(
+      selectedTemplate.html,
+      selectedTemplate.subject,
+      selectedTemplate.text ?? undefined,
+      customSubject,
+    )
+  }, [selectedTemplate, customSubject])
+
+  const handleTemplateChange = (templateId: string): void => {
+    const template = templates.find((t) => t.id === templateId) ?? null
+    setSelectedTemplate(template)
+    setCustomSubject(template?.subject ?? '')
+    if (template) {
+      const vars = extractVariables(
+        template.html,
+        template.subject,
+        template.text ?? undefined,
+      )
+      setVariableMappings(defaultMappingsForVariables(vars))
+    } else {
+      setVariableMappings({})
+    }
+  }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -87,6 +123,7 @@ export function CampaignForm({ templates, mailingLists }: CampaignFormProps) {
 
     const formData = new FormData(e.currentTarget)
     formData.append('recipientsSource', recipientsSource)
+    formData.append('variableMappings', JSON.stringify(variableMappings))
     if (recipientsSource === 'list') {
       if (!selectedListId) {
         setError('Please select a mailing list')
@@ -159,14 +196,7 @@ export function CampaignForm({ templates, mailingLists }: CampaignFormProps) {
 
           <div className="space-y-1.5">
             <Label htmlFor="templateId">Email Template *</Label>
-            <Select
-              name="templateId"
-              required
-              onValueChange={(value) => {
-                const template = templates.find((t) => t.id === value)
-                setSelectedTemplate(template || null)
-              }}
-            >
+            <Select name="templateId" required onValueChange={handleTemplateChange}>
               <SelectTrigger id="templateId">
                 <SelectValue placeholder="Select a template..." />
               </SelectTrigger>
@@ -187,16 +217,35 @@ export function CampaignForm({ templates, mailingLists }: CampaignFormProps) {
                 id="subject"
                 name="subject"
                 required
-                defaultValue={selectedTemplate.subject}
+                value={customSubject}
+                onChange={(e) => setCustomSubject(e.target.value)}
                 placeholder="Subject line"
               />
               <p className="text-xs text-muted-foreground">
-                You can customize the subject or use the template default
+                You can customize the subject or use the template default.
+                Any <code className="rounded bg-muted px-1">{`{{tokens}}`}</code> you add will show up in the mapping section below.
               </p>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {selectedTemplate && detectedVariables.length > 0 && (
+        <TemplateFieldMapper
+          variables={detectedVariables}
+          mappings={variableMappings}
+          onChange={setVariableMappings}
+          csvMode={recipientsSource === 'csv'}
+        />
+      )}
+
+      {selectedTemplate && detectedVariables.length === 0 && (
+        <Alert>
+          <AlertDescription className="text-sm">
+            This template has no <code className="rounded bg-muted px-1">{`{{variables}}`}</code> — it will be sent as-is to every recipient.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>

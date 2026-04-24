@@ -1,10 +1,27 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
 import { parseCSV, parseTextList } from '@/lib/email/sender'
 import { processCampaign } from '@/lib/email/queue'
+import {
+  parseVariableMappings,
+  resolveVariablesForRecipient,
+  type SubscriberLike,
+  type VariableMappings,
+} from '@/lib/email/variable-mapping'
+
+/** Safely parse the client-supplied mappings JSON. Returns {} on malformed input. */
+function parseMappingsFromFormData(raw: FormDataEntryValue | null): VariableMappings {
+  if (typeof raw !== 'string' || raw.length === 0) return {}
+  try {
+    return parseVariableMappings(JSON.parse(raw))
+  } catch {
+    return {}
+  }
+}
 
 export async function createCampaign(formData: FormData) {
   const user = await getCurrentUser()
@@ -20,24 +37,30 @@ export async function createCampaign(formData: FormData) {
     const recipientsSource = formData.get('recipientsSource') as string // 'csv' | 'text' | 'paste' | 'list'
     const recipientsData = formData.get('recipientsData') as string
     const listId = formData.get('listId') as string | null
-    
+    const variableMappings = parseMappingsFromFormData(formData.get('variableMappings'))
+    const hasMappings = Object.keys(variableMappings).length > 0
+
     if (!name || !templateId || !subject) {
       return { error: 'Missing required fields' }
     }
-    
+
     // Verify template exists
     const template = await prisma.emailTemplate.findUnique({
       where: { id: templateId },
     })
-    
+
     if (!template) {
       return { error: 'Template not found' }
     }
-    
-    // Parse recipients
-    let recipientsList: Array<{ email: string; name?: string; variables?: Record<string, any> }> = []
+
+    type NewRecipient = {
+      email: string
+      name?: string
+      variables?: Record<string, string>
+    }
+    let recipientsList: NewRecipient[] = []
     let parseErrors: string[] = []
-    
+
     if (recipientsSource === 'list') {
       if (!listId) {
         return { error: 'Mailing list required' }
@@ -53,25 +76,61 @@ export async function createCampaign(formData: FormData) {
       if (!list) {
         return { error: 'Mailing list not found' }
       }
-      recipientsList = list.subscribers.map((s) => ({
-        email: s.email,
-        name: [s.firstName, s.lastName].filter(Boolean).join(' ') || undefined,
-        variables: {},
-      }))
+      recipientsList = list.subscribers.map((s) => {
+        const subscriber: SubscriberLike = {
+          email: s.email,
+          firstName: s.firstName,
+          lastName: s.lastName,
+          phone: s.phone,
+          customFields: (s.customFields as Record<string, unknown> | null) ?? null,
+        }
+        return {
+          email: s.email,
+          name: [s.firstName, s.lastName].filter(Boolean).join(' ') || undefined,
+          variables: hasMappings
+            ? resolveVariablesForRecipient(variableMappings, subscriber)
+            : {},
+        }
+      })
     } else if (recipientsSource === 'csv') {
       const parsed = parseCSV(recipientsData)
-      recipientsList = parsed.recipients
       parseErrors = parsed.errors
+      recipientsList = parsed.recipients.map((r) => {
+        const csvRow = (r.variables ?? {}) as Record<string, string>
+        const [first, ...rest] = (r.name ?? '').split(' ')
+        const subscriber: SubscriberLike = {
+          email: r.email,
+          firstName: first || null,
+          lastName: rest.join(' ') || null,
+          phone: csvRow.phone ?? null,
+          customFields: csvRow,
+        }
+        return {
+          email: r.email,
+          name: r.name,
+          variables: hasMappings
+            ? resolveVariablesForRecipient(variableMappings, subscriber, csvRow)
+            : csvRow,
+        }
+      })
     } else if (recipientsSource === 'text' || recipientsSource === 'paste') {
       const parsed = parseTextList(recipientsData)
-      recipientsList = parsed.recipients
       parseErrors = parsed.errors
+      recipientsList = parsed.recipients.map((r) => {
+        const subscriber: SubscriberLike = { email: r.email }
+        return {
+          email: r.email,
+          variables: hasMappings
+            ? resolveVariablesForRecipient(variableMappings, subscriber)
+            : {},
+        }
+      })
     }
-    
+
     if (recipientsList.length === 0) {
       return { error: 'No valid recipients found', parseErrors }
     }
-    
+
     // Create campaign
     const campaign = await prisma.emailCampaign.create({
       data: {
@@ -82,6 +141,9 @@ export async function createCampaign(formData: FormData) {
         listId: recipientsSource === 'list' && listId ? listId : null,
         totalRecipients: recipientsList.length,
         createdById: user.id,
+        variableMappings: hasMappings
+          ? (variableMappings as unknown as Prisma.InputJsonValue)
+          : undefined,
         recipients: {
           create: recipientsList.map((r) => ({
             email: r.email,

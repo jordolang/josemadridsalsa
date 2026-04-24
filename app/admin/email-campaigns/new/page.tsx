@@ -26,6 +26,8 @@ async function getTemplates() {
       subject: true,
       category: true,
       variables: true,
+      html: true,
+      text: true,
     },
     orderBy: { name: 'asc' },
   })
