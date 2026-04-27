@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Montserrat, Volkhov, Roboto_Mono } from 'next/font/google'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Providers } from './providers'
 import { CookieConsentBanner } from '@/components/ui/cookie-consent-banner'
 import './globals.css'
@@ -96,6 +97,7 @@ export default function RootLayout({
           {children}
         </Providers>
         <CookieConsentBanner />
+        <SpeedInsights />
       </body>
     </html>
   )
