@@ -135,6 +135,28 @@ export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectio
         </div>
       </section>
 
+      {/* Blog preview section */}
+      <section className="py-16 lg:py-24 bg-muted/50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <DeveloperScrollSection>
+              <div className="text-center mb-12">
+                <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-4">
+                  Developer Blog
+                </h2>
+                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                  Behind-the-scenes stories, technical deep-dives, and lessons learned while building this platform.
+                </p>
+              </div>
+            </DeveloperScrollSection>
+
+            <DeveloperScrollSection delay={0.2}>
+              <DeveloperBlogPreview />
+            </DeveloperScrollSection>
+          </div>
+        </div>
+      </section>
+
       {/* Feature Timeline placeholder section — populated by separate task */}
       <section id="timeline" className="py-16 lg:py-24 bg-muted/50">
         <div className="container mx-auto px-4">
@@ -195,28 +217,6 @@ export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectio
 
             <DeveloperScrollSection delay={0.2}>
               <DeveloperChangelog versions={changelogVersions} />
-            </DeveloperScrollSection>
-          </div>
-        </div>
-      </section>
-
-      {/* Blog preview section */}
-      <section className="py-16 lg:py-24 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto">
-            <DeveloperScrollSection>
-              <div className="text-center mb-12">
-                <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-4">
-                  Developer Blog
-                </h2>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  Behind-the-scenes stories, technical deep-dives, and lessons learned while building this platform.
-                </p>
-              </div>
-            </DeveloperScrollSection>
-
-            <DeveloperScrollSection delay={0.2}>
-              <DeveloperBlogPreview />
             </DeveloperScrollSection>
           </div>
         </div>
