@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { Clock, BookOpen, Wrench, FileText } from 'lucide-react'
+import { Clock, BookOpen, Wrench, FileText, BarChart3 } from 'lucide-react'
 import { DeveloperScrollSection } from './developer-scroll-section'
 import type { ChangelogVersion } from '@/lib/developer/parse-changelog'
 
@@ -9,6 +9,11 @@ import type { ChangelogVersion } from '@/lib/developer/parse-changelog'
 // Framer Motion (~30-40 KB gzipped) is only loaded when these sections scroll into view.
 const DeveloperTimeline = dynamic(
   () => import('./developer-timeline').then((mod) => ({ default: mod.DeveloperTimeline })),
+  { ssr: false, loading: () => <div className="h-[600px] animate-pulse rounded-lg bg-muted" /> }
+)
+
+const DeveloperStats = dynamic(
+  () => import('./developer-stats').then((mod) => ({ default: mod.DeveloperStats })),
   { ssr: false, loading: () => <div className="h-[600px] animate-pulse rounded-lg bg-muted" /> }
 )
 
@@ -75,10 +80,10 @@ export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectio
                   <div className="w-14 h-14 bg-gradient-to-br from-chile-500 to-chile-700 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-chile-500/20">
                     <Clock className="w-7 h-7 text-white" />
                   </div>
-                  <h3 className="text-lg font-bold text-foreground mb-2">Months of Work</h3>
+                  <h3 className="text-lg font-bold text-foreground mb-2">1,500+ Hours</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Hundreds of hours of development, testing, and refinement to deliver a
-                    production-grade e-commerce and fundraising platform.
+                    Across 200 days and 14 versioned releases — design, development, testing,
+                    and deployment of a production e-commerce, fundraising, and mobile platform.
                   </p>
                 </div>
               </DeveloperScrollSection>
@@ -90,12 +95,36 @@ export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectio
                   </div>
                   <h3 className="text-lg font-bold text-foreground mb-2">100% Free</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Built entirely free as originally promised. This project is a testament to
-                    keeping your word and serving others.
+                    Real fair-market value: $250K–$750K+ if commissioned from a US firm.
+                    Delivered at no cost — as originally promised.
                   </p>
                 </div>
               </DeveloperScrollSection>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Real-numbers stats section */}
+      <section id="stats" className="py-16 lg:py-24 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <DeveloperScrollSection>
+              <div className="text-center mb-12">
+                <div className="w-14 h-14 bg-gradient-to-br from-salsa-500 to-chile-700 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-salsa-500/20">
+                  <BarChart3 className="w-7 h-7 text-white" />
+                </div>
+                <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-4">
+                  The Real Scope of This Project
+                </h2>
+                <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                  Hard numbers from the codebase — what was built, how long it took, and what
+                  it would have cost if commissioned from a professional firm.
+                </p>
+              </div>
+            </DeveloperScrollSection>
+
+            <DeveloperStats />
           </div>
         </div>
       </section>
