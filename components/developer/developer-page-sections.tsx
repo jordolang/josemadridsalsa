@@ -56,7 +56,13 @@ export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectio
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                   This entire platform was built as a gift — no charge, no strings attached.
                   From the first line of code to the final deployment, every feature was crafted
-                  to serve Jose Madrid Salsa and its community.
+                  to serve Jose Madrid Salsa and its community. However, unfortunately after
+                  repeated events, I cannot deliver this work to a company that treats a gift from 
+                  God as less than human. 
+                  "Do not neglect to extend hospitality to strangers [especially among the family of 
+                  believers—being friendly, cordial, and gracious, sharing the comforts of your home 
+                  and doing your part generously], for by this some have entertained angels without 
+                  knowing it." - Hebrews 13:2" 
                 </p>
               </div>
             </DeveloperScrollSection>
