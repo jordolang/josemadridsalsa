@@ -93,8 +93,19 @@ export const VARIABLE_SOURCE_OPTIONS: readonly VariableSourceOption[] = [
 
 const TOKEN_REGEX = /\{\{\s*([a-zA-Z_][\w.]*)\s*\}\}/g
 
-/** Tokens the sender injects itself — skip these in the mapping UI. */
-const RESERVED_TOKENS = new Set(['UNSUBSCRIBE_URL', 'RESEND_UNSUBSCRIBE_URL'])
+/**
+ * Tokens that live in the shared email footer (or are otherwise injected by
+ * the sender) and should NOT show up as mappable rows in the campaign field
+ * mapping UI. Senders only need to map tokens they themselves placed in the
+ * visible body of the template.
+ */
+const RESERVED_TOKENS = new Set([
+  'UNSUBSCRIBE_URL',
+  'RESEND_UNSUBSCRIBE_URL',
+  'NEWSLETTER_PREFERENCES_URL',
+  'VIEW_IN_BROWSER_URL',
+  'FORWARD_TO_FRIEND_URL',
+])
 
 /**
  * Scan template strings for unique `{{variable}}` tokens.
