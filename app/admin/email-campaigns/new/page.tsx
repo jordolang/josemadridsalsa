@@ -35,6 +35,14 @@ async function getTemplates() {
   return templates
 }
 
+async function getActiveDiscountCodes() {
+  return prisma.discountCode.findMany({
+    where: { isActive: true },
+    orderBy: { code: 'asc' },
+    select: { id: true, code: true, description: true },
+  })
+}
+
 export default async function NewCampaignPage() {
   const user = await getCurrentUser()
 
@@ -42,9 +50,10 @@ export default async function NewCampaignPage() {
     redirect('/admin')
   }
 
-  const [templates, mailingLists] = await Promise.all([
+  const [templates, mailingLists, discountCodes] = await Promise.all([
     getTemplates(),
     getMailingLists(),
+    getActiveDiscountCodes(),
   ])
 
   return (
@@ -56,7 +65,11 @@ export default async function NewCampaignPage() {
         </p>
       </div>
 
-      <CampaignForm templates={templates} mailingLists={mailingLists} />
+      <CampaignForm
+        templates={templates}
+        mailingLists={mailingLists}
+        discountCodes={discountCodes}
+      />
     </div>
   )
 }
