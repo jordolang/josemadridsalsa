@@ -11,6 +11,7 @@ import {
   getFacebookAppId,
   getFacebookAppSecret,
   getSocialBaseUrl,
+  getTikTokShopAppSecret,
   upsertSocialAccount,
 } from '@/lib/social/platforms'
 import { logAudit } from '@/lib/audit'
@@ -30,7 +31,10 @@ const INSTAGRAM_SCOPES = [
   'instagram_manage_insights',
 ]
 
-const TIKTOK_SCOPES = ['user.info.basic', 'video.publish', 'video.upload']
+// Granted by the TikTok Shop authorization in partner.tiktokshop.com — recorded
+// for visibility but not enforced here. The partner app config controls the
+// actual permissions on the access token.
+const TIKTOK_SHOP_SCOPES = ['product.management', 'order.management', 'fulfillment.management']
 const TWITTER_SCOPES = ['tweet.read', 'tweet.write', 'users.read', 'offline.access']
 
 async function exchangeFacebookToken(code: string, redirectUri: string) {
@@ -122,45 +126,42 @@ async function exchangeTwitterToken(code: string, redirectUri: string, codeVerif
   }
 }
 
-async function exchangeTikTokToken(code: string, redirectUri: string) {
-  const clientKey = process.env.TIKTOK_CLIENT_KEY
-  const clientSecret = process.env.TIKTOK_CLIENT_SECRET
+async function exchangeTikTokShopToken(code: string) {
+  const appKey = (process.env.TIKTOK_SHOP_APP_KEY || process.env.TIKTOK_CLIENT_KEY)?.trim()
+  const appSecret = getTikTokShopAppSecret()
 
-  if (!clientKey || !clientSecret) throw new Error('TikTok app not configured')
+  if (!appKey || !appSecret) {
+    throw new Error(
+      'TikTok Shop app not configured. Set TIKTOK_SHOP_APP_KEY and TIKTOK_SHOP_APP_SECRET on the server.',
+    )
+  }
 
-  const tokenRes = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_key: clientKey,
-      client_secret: clientSecret,
-      code,
-      grant_type: 'authorization_code',
-      redirect_uri: redirectUri,
-    }),
-  })
-  const tokenData = await tokenRes.json()
-  if (tokenData.error) throw new Error(tokenData.error_description || 'TikTok token exchange failed')
+  // TikTok Shop's auth/v2/token/get is GET-with-query-params (per partner
+  // docs). The response wraps payload in { code, message, data }; code 0
+  // means success, anything else is an error message we surface verbatim.
+  const tokenUrl = new URL('https://auth.tiktok-shops.com/api/v2/token/get')
+  tokenUrl.searchParams.set('app_key', appKey)
+  tokenUrl.searchParams.set('app_secret', appSecret)
+  tokenUrl.searchParams.set('auth_code', code)
+  tokenUrl.searchParams.set('grant_type', 'authorized_code')
 
-  const userRes = await fetch(
-    'https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url,username',
-    {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    },
-  )
-  const userData = await userRes.json()
+  const tokenRes = await fetch(tokenUrl.toString(), { method: 'GET' })
+  const tokenJson = await tokenRes.json()
+
+  if (tokenJson.code !== 0) {
+    throw new Error(tokenJson.message || 'TikTok Shop token exchange failed')
+  }
+
+  const data = tokenJson.data ?? {}
+  const expiresIn: number = data.access_token_expire_in ?? 86400
 
   return {
-    accessToken: tokenData.access_token as string,
-    refreshToken: tokenData.refresh_token as string | undefined,
-    expiresIn: tokenData.expires_in ?? 86400,
-    openId: (tokenData.open_id as string | undefined) ?? userData.data?.user?.open_id,
-    user: userData.data?.user as {
-      open_id: string
-      display_name: string
-      avatar_url?: string
-      username?: string
-    } | undefined,
+    accessToken: data.access_token as string,
+    refreshToken: data.refresh_token as string | undefined,
+    expiresIn,
+    openId: (data.open_id as string | undefined) ?? (data.seller_name as string | undefined),
+    sellerName: (data.seller_name as string | undefined) ?? 'TikTok Shop',
+    sellerRegion: data.seller_base_region as string | undefined,
   }
 }
 
@@ -317,22 +318,21 @@ export async function GET(request: Request) {
       }
 
       case 'TIKTOK': {
-        const ttData = await exchangeTikTokToken(code, redirectUri)
+        const ttData = await exchangeTikTokShopToken(code)
 
         if (!ttData.openId) {
-          throw new Error('TikTok did not return an account identifier.')
+          throw new Error('TikTok Shop did not return a seller identifier.')
         }
 
         await upsertSocialAccount({
           platform: 'TIKTOK',
           accountId: ttData.openId,
-          accountName: ttData.user?.display_name ?? 'TikTok User',
-          accountHandle: ttData.user?.username ? `@${ttData.user.username}` : undefined,
-          profileImageUrl: ttData.user?.avatar_url ?? undefined,
+          accountName: ttData.sellerName,
+          accountHandle: ttData.sellerRegion ? `[${ttData.sellerRegion}]` : undefined,
           accessToken: ttData.accessToken,
           refreshToken: ttData.refreshToken,
           tokenExpiresAt: new Date(Date.now() + ttData.expiresIn * 1000),
-          scopes: TIKTOK_SCOPES,
+          scopes: TIKTOK_SHOP_SCOPES,
           connectedById: user.id,
         })
 
@@ -340,7 +340,7 @@ export async function GET(request: Request) {
           userId: user.id,
           action: 'social_account.connect',
           entityType: 'SocialAccount',
-          changes: { platform: 'TIKTOK' },
+          changes: { platform: 'TIKTOK', seller: ttData.sellerName, region: ttData.sellerRegion },
         })
         break
       }

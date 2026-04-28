@@ -317,11 +317,11 @@ export function SocialAccounts({ accounts }: Props) {
             </ul>
           </div>
           <div>
-            <p className="font-medium">TikTok</p>
+            <p className="font-medium">TikTok Shop</p>
             <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
-              <li>TikTok Developer App at developers.tiktok.com</li>
-              <li>Content Posting API access approved</li>
-              <li>Client Key and Secret configured</li>
+              <li>TikTok Shop Partner app at partner.tiktokshop.com</li>
+              <li>Authorized redirect URL set to /api/social/oauth/callback</li>
+              <li>App Key and App Secret configured</li>
             </ul>
           </div>
           <div>
@@ -329,7 +329,7 @@ export function SocialAccounts({ accounts }: Props) {
             <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
               <li>FACEBOOK_APP_ID, FACEBOOK_APP_SECRET</li>
               <li>TWITTER_CLIENT_ID, TWITTER_CLIENT_SECRET</li>
-              <li>TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET</li>
+              <li>TIKTOK_SHOP_APP_KEY, TIKTOK_SHOP_APP_SECRET</li>
             </ul>
           </div>
         </div>

@@ -14,11 +14,17 @@ const FACEBOOK_OAUTH_SCOPES = [
   'instagram_manage_insights',
 ]
 
-const TIKTOK_OAUTH_SCOPES = [
-  'user.info.basic',
-  'video.publish',
-  'video.upload',
-]
+// TikTok Shop OAuth uses TikTok Shop Partner credentials (services.tiktokshop.com),
+// which are distinct from TikTok for Developers / Login Kit credentials. The
+// "Connect TikTok" button below targets TikTok Shop because that's what the
+// social commerce backend syncs against.
+function getTikTokShopAppKey(): string | undefined {
+  return (process.env.TIKTOK_SHOP_APP_KEY || process.env.TIKTOK_CLIENT_KEY)?.trim() || undefined
+}
+
+export function getTikTokShopAppSecret(): string | undefined {
+  return (process.env.TIKTOK_SHOP_APP_SECRET || process.env.TIKTOK_CLIENT_SECRET)?.trim() || undefined
+}
 
 export function getSocialBaseUrl(): string {
   return process.env.NEXTAUTH_URL || 'http://localhost:3000'
@@ -213,10 +219,22 @@ export function getOAuthUrl(
       return `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&code_challenge=${options.codeChallenge}&code_challenge_method=S256`
     }
     case 'TIKTOK': {
-      const clientKey = process.env.TIKTOK_CLIENT_KEY
-      if (!clientKey) throw new Error('TikTok is not configured. Set TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET on the server (register a TikTok developer app at developers.tiktok.com).')
-      const scopes = TIKTOK_OAUTH_SCOPES.join(',')
-      return `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${encodeURIComponent(scopes)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(options.state)}`
+      const appKey = getTikTokShopAppKey()
+      if (!appKey) {
+        throw new Error(
+          'TikTok Shop is not configured. Set TIKTOK_SHOP_APP_KEY and TIKTOK_SHOP_APP_SECRET on the server (register a TikTok Shop partner app at partner.tiktokshop.com and configure the authorized redirect URL there to match this site).',
+        )
+      }
+      // TikTok Shop OAuth: services.tiktokshop.com/open/authorize accepts only
+      // app_key + state. The redirect URL is configured per-app in the partner
+      // portal — we do NOT pass redirect_uri here. Login Kit's client_key flow
+      // (tiktok.com/v2/auth/authorize/) returns "client_key" errors when the
+      // value is a TikTok Shop app_key, which is the bug this addresses.
+      const params = new URLSearchParams({
+        app_key: appKey,
+        state: options.state,
+      })
+      return `https://services.tiktokshop.com/open/authorize?${params.toString()}`
     }
     case 'GOOGLE_MY_BUSINESS': {
       const clientId = process.env.GOOGLE_CLIENT_ID
