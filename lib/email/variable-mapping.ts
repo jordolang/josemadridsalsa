@@ -16,10 +16,14 @@ export type VariableSource =
   | 'customField'
   | 'static'
   | 'csv'
+  | 'discountCode'
 
 export interface VariableMapping {
   source: VariableSource
-  /** Key used for `customField` (subscriber.customFields key) or `csv` (column name). */
+  /**
+   * Key used for `customField` (subscriber.customFields key), `csv` (column
+   * name), or `discountCode` (DiscountCode.id from the database).
+   */
   key?: string
   /** Literal value used when source = `static`. */
   value?: string
@@ -89,6 +93,12 @@ export const VARIABLE_SOURCE_OPTIONS: readonly VariableSourceOption[] = [
     help: 'Maps to a column in the uploaded CSV',
     needsKey: true,
   },
+  {
+    value: 'discountCode',
+    label: 'Discount Code',
+    help: 'Pulled from a discount code in the database',
+    needsKey: true,
+  },
 ] as const
 
 const TOKEN_REGEX = /\{\{\s*([a-zA-Z_][\w.]*)\s*\}\}/g
@@ -148,11 +158,22 @@ export function defaultMappingsForVariables(
   return out
 }
 
-/** Resolve a single mapping against subscriber data (and optional CSV row). */
+/**
+ * Map of `DiscountCode.id` → `code` string. Pre-fetched once per send so the
+ * resolver stays sync and doesn't hit the DB per-recipient.
+ */
+export type DiscountCodeMap = Record<string, string>
+
+export interface ResolveContext {
+  csvRow?: Record<string, string>
+  discountCodes?: DiscountCodeMap
+}
+
+/** Resolve a single mapping against subscriber data and optional context. */
 export function resolveMapping(
   mapping: VariableMapping,
   subscriber: SubscriberLike,
-  csvRow?: Record<string, string>,
+  context: ResolveContext = {},
 ): string {
   const fallback = mapping.fallback ?? ''
   const nonEmpty = (v: unknown): v is string =>
@@ -183,10 +204,15 @@ export function resolveMapping(
     case 'static':
       return mapping.value ?? fallback
     case 'csv': {
-      if (!mapping.key || !csvRow) return fallback
-      const raw = csvRow[mapping.key]
+      if (!mapping.key || !context.csvRow) return fallback
+      const raw = context.csvRow[mapping.key]
       if (raw === undefined || raw === '') return fallback
       return raw
+    }
+    case 'discountCode': {
+      if (!mapping.key) return fallback
+      const code = context.discountCodes?.[mapping.key]
+      return nonEmpty(code) ? code : fallback
     }
     default:
       return fallback
@@ -197,11 +223,11 @@ export function resolveMapping(
 export function resolveVariablesForRecipient(
   mappings: VariableMappings,
   subscriber: SubscriberLike,
-  csvRow?: Record<string, string>,
+  context: ResolveContext = {},
 ): Record<string, string> {
   const out: Record<string, string> = {}
   for (const [key, mapping] of Object.entries(mappings)) {
-    out[key] = resolveMapping(mapping, subscriber, csvRow)
+    out[key] = resolveMapping(mapping, subscriber, context)
   }
   return out
 }

@@ -251,6 +251,11 @@ export const adminNavigation: NavItem[] = [
         permission: 'settings:read',
       },
       {
+        label: 'Discount Codes',
+        href: '/admin/settings/discount-codes',
+        permission: 'settings:read',
+      },
+      {
         label: 'Audit Logs',
         href: '/admin/audit-logs',
         permission: 'settings:read',

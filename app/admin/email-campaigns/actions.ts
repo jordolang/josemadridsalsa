@@ -9,9 +9,43 @@ import { processCampaign } from '@/lib/email/queue'
 import {
   parseVariableMappings,
   resolveVariablesForRecipient,
+  type DiscountCodeMap,
   type SubscriberLike,
   type VariableMappings,
 } from '@/lib/email/variable-mapping'
+
+/**
+ * Load every DiscountCode referenced by a `discountCode` mapping into a
+ * { id → code } map so the resolver can run synchronously per-recipient.
+ *
+ * Only active codes are loaded. Throws if any referenced id is missing or
+ * inactive — the campaign cannot be created if it would silently embed a
+ * disabled (or forged) discount code.
+ */
+async function loadDiscountCodeMap(
+  mappings: VariableMappings,
+): Promise<DiscountCodeMap> {
+  const ids = Array.from(
+    new Set(
+      Object.values(mappings)
+        .filter((m) => m.source === 'discountCode' && typeof m.key === 'string')
+        .map((m) => m.key as string),
+    ),
+  )
+  if (ids.length === 0) return {}
+  const codes = await prisma.discountCode.findMany({
+    where: { id: { in: ids }, isActive: true },
+    select: { id: true, code: true },
+  })
+  if (codes.length !== ids.length) {
+    const found = new Set(codes.map((c) => c.id))
+    const missing = ids.filter((id) => !found.has(id))
+    throw new Error(
+      `Discount code(s) not found or inactive: ${missing.join(', ')}`,
+    )
+  }
+  return Object.fromEntries(codes.map((c) => [c.id, c.code]))
+}
 
 /** Safely parse the client-supplied mappings JSON. Returns {} on malformed input. */
 function parseMappingsFromFormData(raw: FormDataEntryValue | null): VariableMappings {
@@ -39,6 +73,7 @@ export async function createCampaign(formData: FormData) {
     const listId = formData.get('listId') as string | null
     const variableMappings = parseMappingsFromFormData(formData.get('variableMappings'))
     const hasMappings = Object.keys(variableMappings).length > 0
+    const discountCodes = hasMappings ? await loadDiscountCodeMap(variableMappings) : {}
 
     if (!name || !templateId || !subject) {
       return { error: 'Missing required fields' }
@@ -88,7 +123,7 @@ export async function createCampaign(formData: FormData) {
           email: s.email,
           name: [s.firstName, s.lastName].filter(Boolean).join(' ') || undefined,
           variables: hasMappings
-            ? resolveVariablesForRecipient(variableMappings, subscriber)
+            ? resolveVariablesForRecipient(variableMappings, subscriber, { discountCodes })
             : {},
         }
       })
@@ -109,7 +144,7 @@ export async function createCampaign(formData: FormData) {
           email: r.email,
           name: r.name,
           variables: hasMappings
-            ? resolveVariablesForRecipient(variableMappings, subscriber, csvRow)
+            ? resolveVariablesForRecipient(variableMappings, subscriber, { csvRow, discountCodes })
             : csvRow,
         }
       })
@@ -121,7 +156,7 @@ export async function createCampaign(formData: FormData) {
         return {
           email: r.email,
           variables: hasMappings
-            ? resolveVariablesForRecipient(variableMappings, subscriber)
+            ? resolveVariablesForRecipient(variableMappings, subscriber, { discountCodes })
             : {},
         }
       })
@@ -379,5 +414,75 @@ export async function getCampaignStats(campaignId: string) {
   } catch (error) {
     console.error('Error getting campaign stats:', error)
     return { error: 'Failed to get campaign stats' }
+  }
+}
+
+export interface PreviewSubscriber {
+  id: string
+  email: string
+  firstName: string | null
+  lastName: string | null
+  phone: string | null
+  customFields: Record<string, unknown> | null
+}
+
+export interface PreviewActiveDiscount {
+  id: string
+  code: string
+  description: string | null
+}
+
+const MAX_PREVIEW_SUBSCRIBERS = 25
+
+/**
+ * Sample subscribers from a mailing list (or recent subscribers if no list is
+ * given) plus all active discount codes — used by the campaign live-preview
+ * panel to render the template against real data.
+ */
+export async function getPreviewSampleData(listId: string | null): Promise<{
+  subscribers: PreviewSubscriber[]
+  discountCodes: PreviewActiveDiscount[]
+}> {
+  const user = await getCurrentUser()
+  if (!user || !(await hasAnyPermission(user, ['content:read', 'content:write']))) {
+    return { subscribers: [], discountCodes: [] }
+  }
+
+  const where = {
+    status: 'SUBSCRIBED' as const,
+    ...(listId ? { listId } : {}),
+  }
+
+  const [subscribers, discountCodes] = await Promise.all([
+    prisma.mailingListSubscriber.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }],
+      take: MAX_PREVIEW_SUBSCRIBERS,
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        customFields: true,
+      },
+    }),
+    prisma.discountCode.findMany({
+      where: { isActive: true },
+      orderBy: { code: 'asc' },
+      select: { id: true, code: true, description: true },
+    }),
+  ])
+
+  return {
+    subscribers: subscribers.map((s) => ({
+      id: s.id,
+      email: s.email,
+      firstName: s.firstName,
+      lastName: s.lastName,
+      phone: s.phone,
+      customFields: (s.customFields as Record<string, unknown> | null) ?? null,
+    })),
+    discountCodes,
   }
 }

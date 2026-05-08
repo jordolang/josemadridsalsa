@@ -28,7 +28,11 @@ import {
   extractVariables,
   type VariableMappings,
 } from '@/lib/email/variable-mapping'
-import { TemplateFieldMapper } from './template-field-mapper'
+import {
+  TemplateFieldMapper,
+  type DiscountCodeOption,
+} from './template-field-mapper'
+import { LivePreview } from './live-preview'
 
 interface MailingList {
   id: string
@@ -51,6 +55,7 @@ interface Template {
 interface CampaignFormProps {
   templates: Template[]
   mailingLists: MailingList[]
+  discountCodes: DiscountCodeOption[]
 }
 
 type RecipientsSource = 'list' | 'csv' | 'text' | 'paste'
@@ -66,7 +71,11 @@ const SOURCE_OPTIONS: {
   { value: 'paste', label: 'Paste List', icon: Mail },
 ]
 
-export function CampaignForm({ templates, mailingLists }: CampaignFormProps) {
+export function CampaignForm({
+  templates,
+  mailingLists,
+  discountCodes,
+}: CampaignFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -236,6 +245,7 @@ export function CampaignForm({ templates, mailingLists }: CampaignFormProps) {
           mappings={variableMappings}
           onChange={setVariableMappings}
           csvMode={recipientsSource === 'csv'}
+          discountCodes={discountCodes}
         />
       )}
 
@@ -246,6 +256,24 @@ export function CampaignForm({ templates, mailingLists }: CampaignFormProps) {
           </AlertDescription>
         </Alert>
       )}
+
+      {selectedTemplate &&
+        (recipientsSource === 'list' && !selectedListId ? (
+          <Alert>
+            <AlertDescription className="text-sm">
+              Select a mailing list below to preview this template against
+              real subscriber data.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <LivePreview
+            templateHtml={selectedTemplate.html}
+            templateText={selectedTemplate.text}
+            subject={customSubject || selectedTemplate.subject}
+            mappings={variableMappings}
+            listId={recipientsSource === 'list' ? selectedListId : null}
+          />
+        ))}
 
       <Card>
         <CardHeader>
