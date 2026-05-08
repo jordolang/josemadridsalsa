@@ -148,5 +148,8 @@ shipping-api-error-handling-verification.md
 *-report.md
 *.log
 
+# TikTok Shop product export artifacts
+tiktok-shop-products*.xlsx
+
 # Sentry Config File
 .env.sentry-build-plugin

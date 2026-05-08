@@ -126,7 +126,7 @@ export function Navigation() {
           >
             <div className="relative w-11 h-11 lg:w-12 lg:h-12 flex-shrink-0" suppressHydrationWarning>
               <Image
-                src="/images/logo-image.png"
+                src="/images/shared/logo-image.png"
                 alt="Jose Madrid Salsa Logo"
                 fill
                 className="object-contain"

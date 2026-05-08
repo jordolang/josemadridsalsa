@@ -210,7 +210,7 @@ export function AnimatedTestimonials({ reviewsData }: AnimatedTestimonialsProps)
               - dark mode  → dark silhouette with bright glow */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/images/leaning-silhouette.svg"
+            src="/images/shared/leaning-silhouette.svg"
             alt=""
             aria-hidden="true"
             className="pointer-events-none absolute inset-y-0 -right-[1.25in] z-0 hidden h-full w-auto opacity-95 brightness-0 invert drop-shadow-[0_10px_22px_rgba(0,0,0,0.35)] lg:block dark:invert-0 dark:drop-shadow-[0_0_28px_rgba(255,255,255,0.55)]"

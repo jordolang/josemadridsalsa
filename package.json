@@ -114,6 +114,7 @@
     "@vercel/speed-insights": "^2.0.0",
     "axios": "^1.13.5",
     "bcryptjs": "^3.0.2",
+    "botid": "^1.5.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -154,6 +155,7 @@
     "tailwindcss": "^4.2.2",
     "tailwindcss-animate": "^1.0.7",
     "uploadthing": "^7.7.4",
+    "workflow": "^4.2.4",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },

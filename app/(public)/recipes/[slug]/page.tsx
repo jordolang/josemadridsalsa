@@ -16,7 +16,7 @@ const textFallbacks = {
   difficulty: 'Easy',
 }
 
-const imageFallback = '/images/salsa-bowl.png'
+const imageFallback = '/images/shared/salsa-bowl.png'
 
 const difficultyColors: Record<string, string> = {
   Easy: 'bg-green-100 text-green-800',

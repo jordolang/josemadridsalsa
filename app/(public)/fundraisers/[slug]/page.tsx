@@ -20,8 +20,8 @@ interface PageProps {
   params: Promise<{ slug: string }>
 }
 
-const DEFAULT_COVER = '/images/Hero-Image-Mike.png'
-const DEFAULT_LOGO = '/images/fundraising-icon.png'
+const DEFAULT_COVER = '/images/shared/Hero-Image-Mike.png'
+const DEFAULT_LOGO = '/images/shared/fundraising-icon.png'
 
 async function getFundraiser(slug: string) {
   return prisma.fundraiser.findUnique({

@@ -17,7 +17,7 @@ export interface ActiveCampaignsGridProps {
   className?: string
 }
 
-const DEFAULT_MASCOT = '/images/fundraising-icon.png'
+const DEFAULT_MASCOT = '/images/shared/fundraising-icon.png'
 
 interface CampaignCard {
   id: string

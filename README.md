@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="public/images/jose-madrid-salsa-logo.png" alt="Jose Madrid Salsa Logo" width="300" />
+  <img src="public/images/shared/jose-madrid-salsa-logo.png" alt="Jose Madrid Salsa Logo" width="300" />
 
   <h1>Jose Madrid Salsa</h1>
   <p><strong>Artisan Hot Sauce &amp; E-Commerce Platform</strong></p>
@@ -385,7 +385,7 @@ This project is licensed under the **MIT License**. See [`LICENSE`](LICENSE) for
 
 <div align="center">
 
-  <img src="public/images/jose_madrid_logo_profile.png" alt="Jose Madrid" width="80" />
+  <img src="public/images/shared/jose_madrid_logo_profile.png" alt="Jose Madrid" width="80" />
 
   <p>
     <strong>Jose Madrid Salsa</strong><br/>

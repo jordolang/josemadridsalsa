@@ -283,7 +283,7 @@ If performance targets are not met after verification, consider:
 
 1. **Preload LCP Image:**
    ```tsx
-   <link rel="preload" as="image" href="/images/Hero-Image-Mike.png" />
+   <link rel="preload" as="image" href="/images/shared/Hero-Image-Mike.png" />
    ```
 
 2. **Service Worker for Caching:**

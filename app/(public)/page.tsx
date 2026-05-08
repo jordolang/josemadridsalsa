@@ -72,7 +72,7 @@ export default async function Home() {
             <div className="relative animate-slide-up animation-delay-200">
               <div className="relative w-full h-96 lg:h-[500px]">
                 <Image
-                  src="/images/Hero-Image-Mike.png"
+                  src="/images/shared/Hero-Image-Mike.png"
                   alt="Fresh salsa with chips"
                   fill
                   className="object-cover object-center rounded-2xl shadow-2xl"
@@ -204,7 +204,7 @@ export default async function Home() {
               <div className="relative">
                 <div className="relative w-full h-96 lg:h-[500px]">
                   <Image
-                    src="/images/salsa-bowl.png"
+                    src="/images/shared/salsa-bowl.png"
                     alt="Fresh ingredients for salsa"
                     fill
                     className="object-contain rounded-2xl"
@@ -251,7 +251,7 @@ export default async function Home() {
               <div className="flex justify-center lg:justify-start">
                 <div className="relative w-72 lg:w-96" style={{ aspectRatio: '1000 / 733' }}>
                   <Image
-                    src="/images/fundraising-icon.png"
+                    src="/images/shared/fundraising-icon.png"
                     alt="Jose Madrid Salsa Fundraising"
                     fill
                     className="object-contain drop-shadow-xl"

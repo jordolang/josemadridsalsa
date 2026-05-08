@@ -13,7 +13,7 @@ interface CampaignHeaderProps {
   className?: string
 }
 
-const FALLBACK_LOGO = '/images/logo-image.png'
+const FALLBACK_LOGO = '/images/shared/logo-image.png'
 
 export function CampaignHeader({
   title,

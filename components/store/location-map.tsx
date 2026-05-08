@@ -210,7 +210,7 @@ export function LocationMap() {
               <div className="relative w-full h-48">
                 {/* eslint-disable-next-line @next/next/no-img-element -- Using local static image */}
                 <img
-                  src="/images/jose-madrid-building.jpeg"
+                  src="/images/shared/jose-madrid-building.jpeg"
                   alt="Jose Madrid Salsa Store Front - 601 Putnam Ave, Zanesville, OH"
                   className="w-full h-full object-cover"
                 />
