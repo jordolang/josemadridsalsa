@@ -17,6 +17,10 @@ import {
 /**
  * Load every DiscountCode referenced by a `discountCode` mapping into a
  * { id → code } map so the resolver can run synchronously per-recipient.
+ *
+ * Only active codes are loaded. Throws if any referenced id is missing or
+ * inactive — the campaign cannot be created if it would silently embed a
+ * disabled (or forged) discount code.
  */
 async function loadDiscountCodeMap(
   mappings: VariableMappings,
@@ -30,9 +34,16 @@ async function loadDiscountCodeMap(
   )
   if (ids.length === 0) return {}
   const codes = await prisma.discountCode.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, isActive: true },
     select: { id: true, code: true },
   })
+  if (codes.length !== ids.length) {
+    const found = new Set(codes.map((c) => c.id))
+    const missing = ids.filter((id) => !found.has(id))
+    throw new Error(
+      `Discount code(s) not found or inactive: ${missing.join(', ')}`,
+    )
+  }
   return Object.fromEntries(codes.map((c) => [c.id, c.code]))
 }
 

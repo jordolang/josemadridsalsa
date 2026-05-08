@@ -138,6 +138,7 @@ export function TemplateFieldMapper({
                         <Link
                           href="/admin/settings/discount-codes"
                           target="_blank"
+                          rel="noopener noreferrer"
                           className="text-primary underline inline-flex items-center gap-0.5"
                         >
                           Create one <ExternalLink className="h-3 w-3" />

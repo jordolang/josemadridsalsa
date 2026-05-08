@@ -257,15 +257,23 @@ export function CampaignForm({
         </Alert>
       )}
 
-      {selectedTemplate && (
-        <LivePreview
-          templateHtml={selectedTemplate.html}
-          templateText={selectedTemplate.text}
-          subject={customSubject || selectedTemplate.subject}
-          mappings={variableMappings}
-          listId={recipientsSource === 'list' ? selectedListId || null : null}
-        />
-      )}
+      {selectedTemplate &&
+        (recipientsSource === 'list' && !selectedListId ? (
+          <Alert>
+            <AlertDescription className="text-sm">
+              Select a mailing list below to preview this template against
+              real subscriber data.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <LivePreview
+            templateHtml={selectedTemplate.html}
+            templateText={selectedTemplate.text}
+            subject={customSubject || selectedTemplate.subject}
+            mappings={variableMappings}
+            listId={recipientsSource === 'list' ? selectedListId : null}
+          />
+        ))}
 
       <Card>
         <CardHeader>

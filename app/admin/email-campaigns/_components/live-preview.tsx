@@ -32,10 +32,15 @@ interface LivePreviewProps {
   listId: string | null
 }
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 function substitute(template: string, vars: Record<string, string>): string {
   let out = template
   for (const [key, value] of Object.entries(vars)) {
-    out = out.replace(new RegExp(`{{\\s*${key}\\s*}}`, 'g'), value ?? '')
+    const re = new RegExp(`{{\\s*${escapeRegex(key)}\\s*}}`, 'g')
+    out = out.replace(re, () => value ?? '')
   }
   return out
 }

@@ -29,11 +29,18 @@ async function getDiscountCodes(): Promise<DiscountCodeRow[]> {
 export default async function DiscountCodesPage() {
   const user = await getCurrentUser()
 
-  if (!user || !(await hasAnyPermission(user, ['orders:read', 'orders:write']))) {
+  if (
+    !user ||
+    !(await hasAnyPermission(user, [
+      'settings:read',
+      'orders:read',
+      'orders:write',
+    ]))
+  ) {
     redirect('/admin')
   }
 
-  const canWrite = await hasAnyPermission(user, ['orders:write'])
+  const canWrite = await hasAnyPermission(user, ['orders:write', 'settings:write'])
   const codes = await getDiscountCodes()
 
   return (

@@ -1,25 +1,34 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
 import { logAudit } from '@/lib/audit'
 
-const REQUIRED_PERMS = ['orders:write']
+const REQUIRED_PERMS = ['orders:write', 'settings:write']
 
-const formSchema = z.object({
-  code: z.string().min(1).max(50),
-  description: z.string().max(255).optional(),
-  type: z.enum(['PERCENTAGE', 'FIXED_AMOUNT', 'FREE_SHIPPING']),
-  value: z.coerce.number().min(0),
-  maxUses: z.coerce.number().int().positive().optional(),
-  maxUsesPerUser: z.coerce.number().int().positive().optional(),
-  minPurchase: z.coerce.number().nonnegative().optional(),
-  startsAt: z.string().optional(),
-  expiresAt: z.string().optional(),
-  isActive: z.coerce.boolean().default(true),
-})
+const formSchema = z
+  .object({
+    code: z.string().min(1).max(50),
+    description: z.string().max(255).optional(),
+    type: z.enum(['PERCENTAGE', 'FIXED_AMOUNT', 'FREE_SHIPPING']),
+    value: z.coerce.number().min(0),
+    maxUses: z.coerce.number().int().positive().optional(),
+    maxUsesPerUser: z.coerce.number().int().positive().optional(),
+    minPurchase: z.coerce.number().nonnegative().optional(),
+    startsAt: z.coerce.date().optional(),
+    expiresAt: z.coerce.date().optional(),
+    isActive: z.coerce.boolean().default(true),
+  })
+  .refine(
+    (d) => !d.startsAt || !d.expiresAt || d.expiresAt >= d.startsAt,
+    {
+      path: ['expiresAt'],
+      message: 'Expiration date must be on or after the start date',
+    },
+  )
 
 export type DiscountCodeFormResult =
   | { success: true; id: string }
@@ -66,26 +75,29 @@ export async function createDiscountCode(
   const data = parsed.data
   const code = data.code.toUpperCase()
 
-  const existing = await prisma.discountCode.findUnique({ where: { code } })
-  if (existing) {
-    return { error: 'A discount code with that code already exists' }
+  let created
+  try {
+    created = await prisma.discountCode.create({
+      data: {
+        code,
+        description: data.description || null,
+        type: data.type,
+        value: data.value,
+        maxUses: data.maxUses ?? null,
+        maxUsesPerUser: data.maxUsesPerUser ?? null,
+        minPurchase: data.minPurchase ?? null,
+        startsAt: data.startsAt ?? null,
+        expiresAt: data.expiresAt ?? null,
+        isActive: data.isActive,
+        createdById: user.id,
+      },
+    })
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      return { error: 'A discount code with that code already exists' }
+    }
+    throw e
   }
-
-  const created = await prisma.discountCode.create({
-    data: {
-      code,
-      description: data.description || null,
-      type: data.type,
-      value: data.value,
-      maxUses: data.maxUses ?? null,
-      maxUsesPerUser: data.maxUsesPerUser ?? null,
-      minPurchase: data.minPurchase ?? null,
-      startsAt: data.startsAt ? new Date(data.startsAt) : null,
-      expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-      isActive: data.isActive,
-      createdById: user.id,
-    },
-  })
 
   await logAudit({
     userId: user.id,
@@ -120,29 +132,33 @@ export async function updateDiscountCode(
   const data = parsed.data
   const code = data.code.toUpperCase()
 
-  const conflict = await prisma.discountCode.findFirst({
-    where: { code, NOT: { id } },
-    select: { id: true },
-  })
-  if (conflict) {
-    return { error: 'Another discount code already uses that code' }
+  try {
+    await prisma.discountCode.update({
+      where: { id },
+      data: {
+        code,
+        description: data.description || null,
+        type: data.type,
+        value: data.value,
+        maxUses: data.maxUses ?? null,
+        maxUsesPerUser: data.maxUsesPerUser ?? null,
+        minPurchase: data.minPurchase ?? null,
+        startsAt: data.startsAt ?? null,
+        expiresAt: data.expiresAt ?? null,
+        isActive: data.isActive,
+      },
+    })
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError) {
+      if (e.code === 'P2002') {
+        return { error: 'Another discount code already uses that code' }
+      }
+      if (e.code === 'P2025') {
+        return { error: 'Discount code not found' }
+      }
+    }
+    throw e
   }
-
-  await prisma.discountCode.update({
-    where: { id },
-    data: {
-      code,
-      description: data.description || null,
-      type: data.type,
-      value: data.value,
-      maxUses: data.maxUses ?? null,
-      maxUsesPerUser: data.maxUsesPerUser ?? null,
-      minPurchase: data.minPurchase ?? null,
-      startsAt: data.startsAt ? new Date(data.startsAt) : null,
-      expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-      isActive: data.isActive,
-    },
-  })
 
   await logAudit({
     userId: user.id,
@@ -166,10 +182,17 @@ export async function toggleDiscountCode(
     return { error: 'Unauthorized' }
   }
 
-  await prisma.discountCode.update({
-    where: { id },
-    data: { isActive },
-  })
+  try {
+    await prisma.discountCode.update({
+      where: { id },
+      data: { isActive },
+    })
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+      return { error: 'Discount code not found' }
+    }
+    throw e
+  }
 
   await logAudit({
     userId: user.id,

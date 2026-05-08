@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -33,6 +33,8 @@ import {
 } from '../actions'
 
 type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT' | 'FREE_SHIPPING'
+
+const DISCOUNT_TYPES: DiscountType[] = ['PERCENTAGE', 'FIXED_AMOUNT', 'FREE_SHIPPING']
 
 export interface DiscountCodeRow {
   id: string
@@ -68,8 +70,14 @@ function formatValue(type: DiscountType, value: string): string {
 
 function dateInputValue(iso: string | null): string {
   if (!iso) return ''
-  // datetime-local needs YYYY-MM-DDTHH:MM
-  return iso.slice(0, 16)
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  // datetime-local expects local wall time as YYYY-MM-DDTHH:MM
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  )
 }
 
 export function DiscountCodesManager({ codes, canWrite }: Props) {
@@ -80,20 +88,37 @@ export function DiscountCodesManager({ codes, canWrite }: Props) {
     | { mode: 'create' }
     | { mode: 'edit'; code: DiscountCodeRow }
   >({ mode: 'closed' })
-  const [error, setError] = useState<string | null>(null)
+  const [rowError, setRowError] = useState<string | null>(null)
+  const [dialogError, setDialogError] = useState<string | null>(null)
+  const [dialogType, setDialogType] = useState<DiscountType>('PERCENTAGE')
+  const [dialogActive, setDialogActive] = useState<boolean>(true)
 
   const open = dialogState.mode !== 'closed'
   const editing = dialogState.mode === 'edit' ? dialogState.code : null
 
+  // Sync controlled fields when the dialog opens.
+  useEffect(() => {
+    if (dialogState.mode === 'edit') {
+      setDialogType(dialogState.code.type)
+      setDialogActive(dialogState.code.isActive)
+    } else if (dialogState.mode === 'create') {
+      setDialogType('PERCENTAGE')
+      setDialogActive(true)
+    }
+  }, [dialogState])
+
   const close = () => {
     setDialogState({ mode: 'closed' })
-    setError(null)
+    setDialogError(null)
   }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setError(null)
+    setDialogError(null)
     const formData = new FormData(e.currentTarget)
+    // Radix Select / Switch don't post values via FormData; mirror them here.
+    formData.set('type', dialogType)
+    formData.set('isActive', dialogActive ? 'true' : 'false')
 
     startTransition(async () => {
       const result = editing
@@ -101,7 +126,7 @@ export function DiscountCodesManager({ codes, canWrite }: Props) {
         : await createDiscountCode(formData)
 
       if ('error' in result) {
-        setError(result.error)
+        setDialogError(result.error)
         return
       }
       close()
@@ -110,10 +135,11 @@ export function DiscountCodesManager({ codes, canWrite }: Props) {
   }
 
   const handleToggle = (row: DiscountCodeRow, next: boolean) => {
+    setRowError(null)
     startTransition(async () => {
       const result = await toggleDiscountCode(row.id, next)
       if ('error' in result) {
-        setError(result.error)
+        setRowError(result.error)
         return
       }
       router.refresh()
@@ -128,10 +154,11 @@ export function DiscountCodesManager({ codes, canWrite }: Props) {
     ) {
       return
     }
+    setRowError(null)
     startTransition(async () => {
       const result = await deleteDiscountCode(row.id)
       if ('error' in result) {
-        setError(result.error)
+        setRowError(result.error)
         return
       }
       router.refresh()
@@ -149,9 +176,9 @@ export function DiscountCodesManager({ codes, canWrite }: Props) {
         )}
       </div>
 
-      {error && (
+      {rowError && (
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{rowError}</AlertDescription>
         </Alert>
       )}
 
@@ -266,16 +293,18 @@ export function DiscountCodesManager({ codes, canWrite }: Props) {
               <div className="space-y-1.5">
                 <Label htmlFor="type">Type *</Label>
                 <Select
-                  name="type"
-                  defaultValue={editing?.type ?? 'PERCENTAGE'}
+                  value={dialogType}
+                  onValueChange={(v) => setDialogType(v as DiscountType)}
                 >
                   <SelectTrigger id="type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PERCENTAGE">Percentage</SelectItem>
-                    <SelectItem value="FIXED_AMOUNT">Fixed amount</SelectItem>
-                    <SelectItem value="FREE_SHIPPING">Free shipping</SelectItem>
+                    {DISCOUNT_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {TYPE_LABELS[t]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -374,15 +403,15 @@ export function DiscountCodesManager({ codes, canWrite }: Props) {
             <div className="flex items-center gap-2">
               <Switch
                 id="isActive"
-                name="isActive"
-                defaultChecked={editing?.isActive ?? true}
+                checked={dialogActive}
+                onCheckedChange={setDialogActive}
               />
               <Label htmlFor="isActive">Active</Label>
             </div>
 
-            {error && (
+            {dialogError && (
               <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{dialogError}</AlertDescription>
               </Alert>
             )}
 
