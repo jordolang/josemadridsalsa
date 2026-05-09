@@ -3,22 +3,27 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission, hasPermission } from '@/lib/rbac'
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Button } from '@/components/ui/button'
 import { logAudit } from '@/lib/audit'
+import {
+  TemplateEditForm,
+  type TemplateEditState,
+} from './_components/template-edit-form'
 
 type PageProps = {
   params: Promise<{ id: string }>
 }
 
-async function updateTemplate(templateId: string, formData: FormData) {
+async function updateTemplate(
+  templateId: string,
+  _prevState: TemplateEditState,
+  formData: FormData,
+): Promise<TemplateEditState> {
   'use server'
 
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'content:write'))) {
-    throw new Error('Unauthorized')
+    return { status: 'error', message: 'You do not have permission to edit this template.' }
   }
 
   const name = formData.get('name')
@@ -27,26 +32,31 @@ async function updateTemplate(templateId: string, formData: FormData) {
   const text = formData.get('text')
 
   if (typeof name !== 'string' || name.trim().length === 0) {
-    throw new Error('Template name is required')
+    return { status: 'error', message: 'Template name is required.' }
   }
 
   if (typeof subject !== 'string' || subject.trim().length === 0) {
-    throw new Error('Subject is required')
+    return { status: 'error', message: 'Subject is required.' }
   }
 
   if (typeof html !== 'string' || html.trim().length === 0) {
-    throw new Error('HTML content is required')
+    return { status: 'error', message: 'HTML content is required.' }
   }
 
-  await prisma.emailTemplate.update({
-    where: { id: templateId },
-    data: {
-      name: name.trim(),
-      subject: subject.trim(),
-      html: html,
-      text: typeof text === 'string' && text.trim().length > 0 ? text : null,
-    },
-  })
+  try {
+    await prisma.emailTemplate.update({
+      where: { id: templateId },
+      data: {
+        name: name.trim(),
+        subject: subject.trim(),
+        html: html,
+        text: typeof text === 'string' && text.trim().length > 0 ? text : null,
+      },
+    })
+  } catch (error) {
+    console.error('[email-template/update] Failed to update template:', error)
+    return { status: 'error', message: 'Failed to save template. Please try again.' }
+  }
 
   await logAudit({
     userId: user.id,
@@ -57,6 +67,8 @@ async function updateTemplate(templateId: string, formData: FormData) {
 
   revalidatePath(`/admin/emails/${templateId}`)
   revalidatePath('/admin/emails')
+
+  return { status: 'success', message: 'Template saved.' }
 }
 
 export default async function EmailTemplateDetailPage(props: PageProps) {
@@ -95,77 +107,16 @@ export default async function EmailTemplateDetailPage(props: PageProps) {
 
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         <Card className="p-6">
-          <form action={updateAction} className="space-y-5">
-            <div>
-              <label className="text-sm font-medium text-foreground" htmlFor="name">
-                Template name
-              </label>
-              <Input
-                id="name"
-                name="name"
-                defaultValue={template.name}
-                disabled={!canEdit}
-                className="mt-2"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-foreground" htmlFor="subject">
-                Email subject
-              </label>
-              <Input
-                id="subject"
-                name="subject"
-                defaultValue={template.subject}
-                disabled={!canEdit}
-                className="mt-2"
-                required
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-foreground" htmlFor="html">
-                  HTML content
-                </label>
-                <span className="text-xs text-muted-foreground">
-                  Supports Handlebars-style variables: <code>{'{{variable}}'}</code>
-                </span>
-              </div>
-              <Textarea
-                id="html"
-                name="html"
-                defaultValue={template.html}
-                disabled={!canEdit}
-                className="mt-2 h-64 font-mono text-xs"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-foreground" htmlFor="text">
-                Plain text fallback
-              </label>
-              <Textarea
-                id="text"
-                name="text"
-                defaultValue={template.text || ''}
-                disabled={!canEdit}
-                className="mt-2 h-40 font-mono text-xs"
-              />
-            </div>
-
-            {canEdit ? (
-              <div className="flex items-center justify-end">
-                <Button type="submit">Save changes</Button>
-              </div>
-            ) : (
-              <p className="rounded-md bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-                You have read-only access to this template.
-              </p>
-            )}
-          </form>
+          <TemplateEditForm
+            action={updateAction}
+            template={{
+              name: template.name,
+              subject: template.subject,
+              html: template.html,
+              text: template.text,
+            }}
+            canEdit={canEdit}
+          />
         </Card>
 
         <Card className="space-y-4 p-6">
