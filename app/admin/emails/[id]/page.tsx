@@ -2,7 +2,6 @@ import { notFound, redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission, hasPermission } from '@/lib/rbac'
-import { Card } from '@/components/ui/card'
 import { logAudit } from '@/lib/audit'
 import {
   TemplateEditForm,
@@ -105,54 +104,21 @@ export default async function EmailTemplateDetailPage(props: PageProps) {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-        <Card className="p-6">
-          <TemplateEditForm
-            action={updateAction}
-            template={{
-              name: template.name,
-              subject: template.subject,
-              html: template.html,
-              text: template.text,
-            }}
-            canEdit={canEdit}
-          />
-        </Card>
-
-        <Card className="space-y-4 p-6">
-          <div>
-            <h2 className="text-lg font-semibold">Template Details</h2>
-            <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-              <p>
-                <span className="font-medium text-foreground">Template key:</span>{' '}
-                <span className="font-mono">{template.key}</span>
-              </p>
-              <p>
-                <span className="font-medium text-foreground">Created:</span>{' '}
-                {template.createdAt.toLocaleString()}
-              </p>
-              <p>
-                <span className="font-medium text-foreground">Last updated:</span>{' '}
-                {template.updatedAt.toLocaleString()}
-              </p>
-              <p>
-                <span className="font-medium text-foreground">Plain text version:</span>{' '}
-                {template.text ? 'Yes' : 'No'}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-lg font-semibold">HTML Preview</h2>
-            <div className="mt-3 overflow-hidden rounded-lg border border-border bg-card">
-              <div
-                className="prose max-w-none p-4"
-                dangerouslySetInnerHTML={{ __html: template.html }}
-              />
-            </div>
-          </div>
-        </Card>
-      </div>
+      <TemplateEditForm
+        action={updateAction}
+        template={{
+          name: template.name,
+          subject: template.subject,
+          html: template.html,
+          text: template.text,
+        }}
+        meta={{
+          key: template.key,
+          createdAt: template.createdAt.toLocaleString(),
+          updatedAt: template.updatedAt.toLocaleString(),
+        }}
+        canEdit={canEdit}
+      />
     </div>
   )
 }
