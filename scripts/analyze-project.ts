@@ -340,10 +340,7 @@ function printSummary(analysis: ProjectAnalysis) {
 }
 
 function watchForChanges() {
-  // Simple file watcher - re-run analysis when files change
-  const chokidar = require('fs').watch
-
-  chokidar(PROJECT_ROOT, { recursive: true }, async (eventType: string, filename: string) => {
+  fs.watch(PROJECT_ROOT, { recursive: true }, async (eventType, filename) => {
     if (
       filename &&
       (filename.endsWith('.ts') ||

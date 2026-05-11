@@ -3,6 +3,8 @@
  * José Madrid Salsa E-commerce Platform
  */
 
+import * as fs from 'fs'
+import * as path from 'path'
 import { FileScanner } from '../scanners/file-scanner'
 import type { DatabaseMetrics, DatabaseRelationship } from '../../../lib/project-analyzer/types'
 
@@ -143,9 +145,6 @@ export class DatabaseAnalyzer {
    * Check if seed data exists
    */
   private checkForSeedData(): boolean {
-    const fs = require('fs')
-    const path = require('path')
-
     const seedPaths = [
       path.join(process.cwd(), 'prisma', 'seed.ts'),
       path.join(process.cwd(), 'prisma', 'seed.js'),

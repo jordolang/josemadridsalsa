@@ -5,9 +5,8 @@
 
 import * as path from 'path'
 import * as fs from 'fs'
+import fg from 'fast-glob'
 import type { FileScanResult } from '../../../lib/project-analyzer/types'
-
-const fg = require('fast-glob')
 
 export class FileScanner {
   private projectRoot: string
