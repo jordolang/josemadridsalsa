@@ -3,6 +3,14 @@ import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
 
 let isInitialized = false;
 
+type AmplitudeProperty =
+  | number
+  | string
+  | boolean
+  | Array<string | number>
+  | { [key: string]: AmplitudeProperty }
+  | Array<{ [key: string]: AmplitudeProperty }>;
+
 /**
  * Initialize Amplitude analytics
  * Call this once when the app starts
@@ -15,8 +23,7 @@ export const initAmplitude = () => {
   const apiKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY;
 
   if (!apiKey) {
-    console.warn('Amplitude API key not found. Analytics will not be tracked.');
-    return;
+    return false;
   }
 
   amplitude.init(apiKey, {
@@ -32,6 +39,7 @@ export const initAmplitude = () => {
   amplitude.add(sessionReplayPlugin());
 
   isInitialized = true;
+  return true;
 };
 
 /**
@@ -39,7 +47,8 @@ export const initAmplitude = () => {
  * @param eventName - Name of the event
  * @param eventProperties - Optional properties for the event
  */
-export const trackEvent = (eventName: string, eventProperties?: Record<string, any>) => {
+export const trackEvent = (eventName: string, eventProperties?: Record<string, unknown>) => {
+  if (!isInitialized) return;
   amplitude.track(eventName, eventProperties);
 };
 
@@ -48,7 +57,8 @@ export const trackEvent = (eventName: string, eventProperties?: Record<string, a
  * @param userId - User ID
  * @param userProperties - Optional user properties
  */
-export const identifyUser = (userId: string, userProperties?: Record<string, any>) => {
+export const identifyUser = (userId: string, userProperties?: Record<string, AmplitudeProperty>) => {
+  if (!isInitialized) return;
   amplitude.setUserId(userId);
   if (userProperties) {
     const identifyEvent = new amplitude.Identify();
@@ -63,6 +73,7 @@ export const identifyUser = (userId: string, userProperties?: Record<string, any
  * Reset user (on logout)
  */
 export const resetUser = () => {
+  if (!isInitialized) return;
   amplitude.reset();
 };
 

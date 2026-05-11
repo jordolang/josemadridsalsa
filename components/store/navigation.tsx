@@ -26,35 +26,40 @@ const salsaCategories = [
   { name: "Merchandise", href: "/merchandise", description: "T-shirts, hats, and accessories" },
 ];
 
-const navigationItems = [
+interface NavSubItem {
+  name: string;
+  href: string;
+  description?: string;
+}
+
+interface NavItem {
+  title: string;
+  href?: string;
+  megaMenu?: NavSubItem[];
+  dropdown?: NavSubItem[];
+}
+
+const navigationItems: NavItem[] = [
   {
-    title: "Products",
+    title: "Shop",
     href: "/products",
     megaMenu: salsaCategories,
   },
   {
-    title: "Recipes",
-    href: "/recipes",
+    title: "About",
+    dropdown: [
+      { name: "Our Story", href: "/our-story", description: "Learn about Jose and his salsa journey" },
+      { name: "Find Us", href: "/find-us", description: "Where to buy our salsas near you" },
+      { name: "Recipes", href: "/recipes", description: "Cooking inspiration with our salsas" },
+    ],
   },
   {
-    title: "Our Story",
-    href: "/our-story",
-  },
-  {
-    title: "Find Us",
-    href: "/find-us",
-  },
-  {
-    title: "Fundraising",
-    href: "/fundraising",
-  },
-  {
-    title: "Wholesale",
-    href: "/wholesale",
-  },
-  {
-    title: "Where Is Jose?",
-    href: "/where-is-jose",
+    title: "For You",
+    dropdown: [
+      { name: "Fundraising", href: "/fundraising", description: "Raise money for your cause with salsa" },
+      { name: "Wholesale", href: "/wholesale", description: "Bulk orders and partnership opportunities" },
+      { name: "Where Is Jose?", href: "/where-is-jose", description: "Catch us at upcoming events and tours" },
+    ],
   },
 ];
 
@@ -130,7 +135,6 @@ export function Navigation() {
                 alt="Jose Madrid Salsa Logo"
                 fill
                 className="object-contain"
-                priority
                 sizes="(max-width: 640px) 2.75rem, 3rem"
               />
             </div>
@@ -156,7 +160,7 @@ export function Navigation() {
               <NavigationMenuList className="gap-0">
                 {navigationItems.map((item) => (
                   <NavigationMenuItem key={item.title}>
-                    {item.megaMenu ? (
+                    {item.megaMenu && item.href ? (
                       <>
                         <NavigationMenuTrigger className="h-auto min-h-[44px] px-1.5 py-1.5 text-[11px] font-medium hover:text-salsa-600 data-[state=open]:text-salsa-600">
                           {item.title}
@@ -194,7 +198,34 @@ export function Navigation() {
                           </div>
                         </NavigationMenuContent>
                       </>
-                    ) : (
+                    ) : item.dropdown ? (
+                      <>
+                        <NavigationMenuTrigger className="h-auto min-h-[44px] px-1.5 py-1.5 text-[11px] font-medium hover:text-salsa-600 data-[state=open]:text-salsa-600">
+                          {item.title}
+                        </NavigationMenuTrigger>
+                        <NavigationMenuContent>
+                          <ul className="grid w-64 gap-1 p-3">
+                            {item.dropdown.map((entry) => (
+                              <li key={entry.name}>
+                                <NavigationMenuLink asChild>
+                                  <Link
+                                    href={entry.href}
+                                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                                  >
+                                    <div className="text-sm font-medium leading-none">{entry.name}</div>
+                                    {entry.description && (
+                                      <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                                        {entry.description}
+                                      </p>
+                                    )}
+                                  </Link>
+                                </NavigationMenuLink>
+                              </li>
+                            ))}
+                          </ul>
+                        </NavigationMenuContent>
+                      </>
+                    ) : item.href ? (
                       <NavigationMenuLink asChild>
                         <Link
                           href={item.href}
@@ -203,7 +234,7 @@ export function Navigation() {
                           {item.title}
                         </Link>
                       </NavigationMenuLink>
-                    )}
+                    ) : null}
                   </NavigationMenuItem>
                 ))}
               </NavigationMenuList>
@@ -392,31 +423,40 @@ export function Navigation() {
 
                   {/* Mobile Navigation */}
                   <nav className="space-y-2">
-                    {navigationItems.map((item) => (
-                      <div key={item.title}>
-                        <Link
-                          href={item.href}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className="block py-3 px-1 text-base font-medium hover:text-salsa-600 transition-colors min-h-[44px] flex items-center"
-                        >
-                          {item.title}
-                        </Link>
-                        {item.megaMenu && (
-                          <div className="ml-4 mt-1 space-y-1">
-                            {item.megaMenu.map((category) => (
-                              <Link
-                                key={category.name}
-                                href={category.href}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className="block py-2.5 text-sm text-muted-foreground hover:text-salsa-600 transition-colors min-h-[44px] flex items-center"
-                              >
-                                {category.name}
-                              </Link>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                    {navigationItems.map((item) => {
+                      const subItems = item.megaMenu ?? item.dropdown;
+                      return (
+                        <div key={item.title}>
+                          {item.href ? (
+                            <Link
+                              href={item.href}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                              className="block py-3 px-1 text-base font-medium hover:text-salsa-600 transition-colors min-h-[44px] flex items-center"
+                            >
+                              {item.title}
+                            </Link>
+                          ) : (
+                            <div className="block py-3 px-1 text-base font-medium text-foreground min-h-[44px] flex items-center">
+                              {item.title}
+                            </div>
+                          )}
+                          {subItems && (
+                            <div className="ml-4 mt-1 space-y-1">
+                              {subItems.map((entry) => (
+                                <Link
+                                  key={entry.name}
+                                  href={entry.href}
+                                  onClick={() => setIsMobileMenuOpen(false)}
+                                  className="block py-2.5 text-sm text-muted-foreground hover:text-salsa-600 transition-colors min-h-[44px] flex items-center"
+                                >
+                                  {entry.name}
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </nav>
 
                   <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-1.5">

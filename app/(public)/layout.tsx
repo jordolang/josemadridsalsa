@@ -24,6 +24,7 @@ export default async function PublicLayout({
   // Next.js deduplicates identical fetch() calls within the same render, so
   // even if child pages also call getCalendarEvents(), only one HTTP request fires.
   const calendarEvents = await getCalendarEvents(20)
+  const enableVercelAnalytics = process.env.NEXT_PUBLIC_VERCEL_ANALYTICS_ENABLED === 'true'
 
   return (
     <>
@@ -47,7 +48,7 @@ export default async function PublicLayout({
       <Toaster />
       <AiChatWidget />
       <NewsletterPopup />
-      <Analytics />
+      {enableVercelAnalytics && <Analytics />}
     </>
   )
 }

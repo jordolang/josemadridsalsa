@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ExternalLink, Star } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -57,6 +57,17 @@ function StarRating({ rating }: { rating: number }) {
       ))}
     </div>
   )
+}
+
+function stableReviewScore(review: Review): number {
+  const input = `${review.authorName}:${review.text}:${review.rating}`
+  let hash = 0
+
+  for (let i = 0; i < input.length; i += 1) {
+    hash = (hash * 31 + input.charCodeAt(i)) >>> 0
+  }
+
+  return hash
 }
 
 function ReviewCard({ review }: ReviewCardProps) {
@@ -135,12 +146,13 @@ function LeaveReviewCard() {
 }
 
 export function AnimatedTestimonials({ reviewsData }: AnimatedTestimonialsProps) {
-  // Shuffle once on mount and take up to 5 real reviews — the 6th grid
-  // cell is a "Leave a Review" CTA card rendered below.
-  const [reviews] = useState<Review[]>(() => {
-    const shuffled = [...reviewsData.reviews].sort(() => Math.random() - 0.5)
-    return shuffled.slice(0, 5)
-  })
+  // Keep the review selection deterministic so server and client hydration match.
+  const reviews = useMemo(
+    () => [...reviewsData.reviews]
+      .sort((a, b) => stableReviewScore(a) - stableReviewScore(b))
+      .slice(0, 5),
+    [reviewsData.reviews],
+  )
 
   const { totalRating, totalReviews } = reviewsData
 

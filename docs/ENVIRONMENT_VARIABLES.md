@@ -105,6 +105,8 @@ Notes:
 
 ### Google Analytics
 - `GOOGLE_ANALYTICS_ID` - Google Analytics measurement ID (e.g., G-XXXXXXXXXX)
+- `NEXT_PUBLIC_AMPLITUDE_API_KEY` - Optional public Amplitude project key for browser analytics
+- `NEXT_PUBLIC_VERCEL_ANALYTICS_ENABLED` - Set to `true` only when Vercel Web Analytics is enabled for the deployed project
 
 ## Optional
 

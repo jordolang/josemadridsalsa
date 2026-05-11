@@ -17,6 +17,25 @@ const MAP_SCRIPT_ID = 'google-maps-sdk';
 // Module-level promise so Maps JS is only loaded once per browser session
 let googleMapsPromise: Promise<any> | null = null;
 
+function removeMarker(marker: any) {
+  if (typeof marker?.setMap === 'function') {
+    marker.setMap(null);
+    return;
+  }
+
+  if (marker && 'map' in marker) {
+    marker.map = null;
+  }
+}
+
+function positionFromMarker(marker: any): LatLngLiteral {
+  if (typeof marker?.getPosition === 'function') {
+    return marker.getPosition();
+  }
+
+  return marker.position;
+}
+
 function loadGoogleMaps(apiKey: string) {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('Google Maps can only be loaded in the browser.'));
@@ -41,7 +60,7 @@ function loadGoogleMaps(apiKey: string) {
     script.id = MAP_SCRIPT_ID;
     // Note: 'places' library removed — it's only needed for Place Search (billable).
     // Geocoder is included in the base Maps JS library at no extra charge.
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=__googleMapsCallback&loading=async&v=weekly`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=__googleMapsCallback&loading=async&v=weekly&libraries=marker`;
     script.async = true;
     script.defer = true;
     script.addEventListener('error', reject);
@@ -88,6 +107,7 @@ export function GoogleScheduleMap({ initialEvents }: GoogleScheduleMapProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapsRef = useRef<any>(null);
+  const markerLibraryRef = useRef<any>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const geocodeCacheRef = useRef<Map<string, LatLngLiteral>>(new Map());
@@ -114,7 +134,7 @@ export function GoogleScheduleMap({ initialEvents }: GoogleScheduleMapProps) {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      markersRef.current.forEach((m) => m.setMap(null));
+      markersRef.current.forEach(removeMarker);
       markersRef.current = [];
     };
   }, []);
@@ -127,12 +147,20 @@ export function GoogleScheduleMap({ initialEvents }: GoogleScheduleMapProps) {
     }
     let cancelled = false;
     loadGoogleMaps(apiKey)
-      .then((maps) => {
+      .then(async (maps) => {
         if (cancelled || !maps || !mapContainerRef.current) return;
+        const markerLibrary =
+          typeof maps.importLibrary === 'function'
+            ? await maps.importLibrary('marker').catch(() => null)
+            : null;
+
+        if (cancelled || !mapContainerRef.current) return;
         mapsRef.current = maps;
+        markerLibraryRef.current = markerLibrary;
         mapInstanceRef.current = new maps.Map(mapContainerRef.current, {
           center: DEFAULT_CENTER,
           zoom: 6,
+          mapId: '9873b6859aa7ba6a2c1fdcdf',
           mapTypeControl: false,
           fullscreenControl: false,
           streetViewControl: false,
@@ -150,6 +178,7 @@ export function GoogleScheduleMap({ initialEvents }: GoogleScheduleMapProps) {
     if (!mapReady || !mapInstanceRef.current || !mapsRef.current) return;
     let cancelled = false;
     const maps = mapsRef.current;
+    const markerLibrary = markerLibraryRef.current;
     const map = mapInstanceRef.current;
     const geocoder = new maps.Geocoder();
     const infoWindow = infoWindowRef.current || new maps.InfoWindow({ maxWidth: 240 });
@@ -188,8 +217,25 @@ export function GoogleScheduleMap({ initialEvents }: GoogleScheduleMapProps) {
         if (!event.location) continue;
         const position = await resolveLocation(event.location);
         if (cancelled || !position) continue;
-        const marker = new maps.Marker({ map, position, title: event.title });
-        marker.addListener('click', () => {
+        const pin = markerLibrary?.PinElement
+          ? new markerLibrary.PinElement({
+              background: '#dc2626',
+              borderColor: '#ffffff',
+              glyphText: 'J',
+              glyphColor: '#ffffff',
+            })
+          : null;
+        const marker = markerLibrary?.AdvancedMarkerElement
+          ? new markerLibrary.AdvancedMarkerElement({
+              map,
+              position,
+              title: event.title,
+              content: pin,
+              gmpClickable: true,
+            })
+          : new maps.Marker({ map, position, title: event.title });
+
+        const openInfoWindow = () => {
           infoWindow.setContent(`
             <div style="max-width:220px">
               <h3 style="margin:0 0 4px;font-weight:600;">${escapeHtml(event.title)}</h3>
@@ -197,18 +243,27 @@ export function GoogleScheduleMap({ initialEvents }: GoogleScheduleMapProps) {
               <p style="margin:0;font-size:13px;color:#1f2937;font-weight:500;">${escapeHtml(event.location)}</p>
             </div>`);
           infoWindow.open({ map, anchor: marker });
-        });
+        };
+
+        if (markerLibrary?.AdvancedMarkerElement && typeof marker.addEventListener === 'function') {
+          marker.addEventListener('gmp-click', openInfoWindow);
+        } else {
+          marker.addListener('click', openInfoWindow);
+        }
         nextMarkers.push(marker);
         bounds.extend(position);
         hasMarker = true;
       }
-      if (cancelled) { nextMarkers.forEach((m) => m.setMap(null)); return; }
-      markersRef.current.forEach((m) => m.setMap(null));
+      if (cancelled) { nextMarkers.forEach(removeMarker); return; }
+      markersRef.current.forEach(removeMarker);
       markersRef.current = nextMarkers;
       if (hasMarker) {
-        nextMarkers.length === 1
-          ? (map.setCenter(nextMarkers[0].getPosition()), map.setZoom(10))
-          : map.fitBounds(bounds, 64);
+        if (nextMarkers.length === 1) {
+          map.setCenter(positionFromMarker(nextMarkers[0]));
+          map.setZoom(10);
+        } else {
+          map.fitBounds(bounds, 64);
+        }
       } else {
         map.setCenter(DEFAULT_CENTER);
         map.setZoom(6);

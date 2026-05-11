@@ -14,6 +14,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 - **Shop listings** now target a selected connected Facebook Page or TikTok account instead of blindly exporting to the first active account.
 - **Social commerce setup UX** now makes the platform boundary explicit: Facebook catalog creation can be started from the admin panel, while TikTok Shop onboarding remains a Seller Center prerequisite before API-based product export.
+- **Front-page analytics loading** now stays quiet unless optional Amplitude and Vercel Analytics settings are configured.
+
+### Fixed
+- **Front-page hydration stability** — Event ticker dates and review selection no longer render with client/server-only randomness that can trigger React hydration text mismatches.
+- **Header logo preload warning** — Removed the forced priority preload for the small navigation logo.
 
 ---
 
