@@ -305,11 +305,6 @@ export async function deleteGoogleAnalyticsChartDefinition(chartId: string, upda
   })
 }
 
-export async function getPublicGoogleAnalyticsMeasurementId() {
-  const settings = await getGoogleAnalyticsSettings()
-  return settings.measurementId || process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID || null
-}
-
 export function getDefaultGoogleAnalyticsCharts() {
   return cloneDefaultCharts()
 }
