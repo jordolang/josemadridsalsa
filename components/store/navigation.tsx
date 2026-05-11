@@ -39,6 +39,9 @@ interface NavItem {
   dropdown?: NavSubItem[];
 }
 
+const navTriggerClass =
+  "inline-flex h-11 min-w-[104px] items-center justify-center gap-1 rounded-full border border-border/70 bg-background/70 px-5 py-2 font-sans text-[13px] font-bold uppercase tracking-[0.12em] text-foreground shadow-sm backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-salsa-500 hover:bg-salsa-500 hover:text-white hover:shadow-md focus:bg-salsa-500 focus:text-white data-[state=open]:border-salsa-500 data-[state=open]:bg-salsa-500 data-[state=open]:text-white data-[state=open]:shadow-md dark:border-border/60 dark:bg-background/50 dark:text-foreground dark:hover:bg-salsa-500 dark:hover:text-white dark:data-[state=open]:bg-salsa-500 dark:data-[state=open]:text-white";
+
 const navigationItems: NavItem[] = [
   {
     title: "Shop",
@@ -157,12 +160,12 @@ export function Navigation() {
               </div>
             </form>
             <NavigationMenu>
-              <NavigationMenuList className="gap-0">
+              <NavigationMenuList className="gap-3">
                 {navigationItems.map((item) => (
                   <NavigationMenuItem key={item.title}>
                     {item.megaMenu && item.href ? (
                       <>
-                        <NavigationMenuTrigger className="h-auto min-h-[44px] px-1.5 py-1.5 text-[11px] font-medium hover:text-salsa-600 data-[state=open]:text-salsa-600">
+                        <NavigationMenuTrigger className={navTriggerClass}>
                           {item.title}
                         </NavigationMenuTrigger>
                         <NavigationMenuContent>
@@ -200,7 +203,7 @@ export function Navigation() {
                       </>
                     ) : item.dropdown ? (
                       <>
-                        <NavigationMenuTrigger className="h-auto min-h-[44px] px-1.5 py-1.5 text-[11px] font-medium hover:text-salsa-600 data-[state=open]:text-salsa-600">
+                        <NavigationMenuTrigger className={navTriggerClass}>
                           {item.title}
                         </NavigationMenuTrigger>
                         <NavigationMenuContent>
@@ -227,10 +230,7 @@ export function Navigation() {
                       </>
                     ) : item.href ? (
                       <NavigationMenuLink asChild>
-                        <Link
-                          href={item.href}
-                          className="group inline-flex h-auto min-h-[44px] w-max items-center justify-center whitespace-nowrap rounded-md px-1.5 py-1.5 text-[11px] font-medium transition-colors hover:text-salsa-600 focus:text-salsa-600 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
-                        >
+                        <Link href={item.href} className={navTriggerClass}>
                           {item.title}
                         </Link>
                       </NavigationMenuLink>
