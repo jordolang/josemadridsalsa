@@ -1,5 +1,6 @@
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
 import type { protos } from '@google-analytics/data'
+import { UserRefreshClient } from 'google-auth-library'
 import type { AnalyticsRangeKey } from '@/lib/analytics/date-range'
 import { getDateRange, formatDateForAnalytics } from '@/lib/analytics/date-range'
 import { getGoogleAnalyticsSettings } from '@/lib/google-analytics-config'
@@ -11,10 +12,13 @@ import type {
   GoogleAnalyticsSummaryCard,
 } from '@/types/analytics'
 
-type GaServiceAccountSecret = {
+type GaCredentialSecret = {
+  type?: 'service_account' | 'authorized_user'
   client_email?: string
   private_key?: string
-  impersonated_user?: string
+  client_id?: string
+  client_secret?: string
+  refresh_token?: string
 }
 
 const SUMMARY_METRICS: Array<{
@@ -38,24 +42,35 @@ async function getAnalyticsClient(): Promise<BetaAnalyticsDataClient | null> {
     return null
   }
 
-  let parsed: GaServiceAccountSecret
+  let parsed: GaCredentialSecret
   try {
     parsed = JSON.parse(secret)
   } catch (error) {
-    console.error('[google-analytics] Unable to parse service account secret', error)
+    console.error('[google-analytics] Unable to parse credential secret', error)
     return null
+  }
+
+  if (parsed.type === 'authorized_user') {
+    if (!parsed.client_id || !parsed.client_secret || !parsed.refresh_token) {
+      console.warn('[google-analytics] OAuth user credential missing required fields')
+      return null
+    }
+    const authClient = new UserRefreshClient(
+      parsed.client_id,
+      parsed.client_secret,
+      parsed.refresh_token,
+    )
+    return new BetaAnalyticsDataClient({ authClient })
   }
 
   const clientEmail = parsed.client_email
   const privateKey = parsed.private_key?.replace(/\\n/g, '\n')
 
   if (!clientEmail || !privateKey) {
-    console.warn('[google-analytics] Service account secret missing required fields')
+    console.warn('[google-analytics] Service account credential missing required fields')
     return null
   }
 
-  // Impersonation and custom scopes are not needed for the current use case;
-  // service account credentials with GA4 Data API access are sufficient.
   return new BetaAnalyticsDataClient({
     credentials: {
       client_email: clientEmail,
