@@ -15,11 +15,12 @@ import RefundDialog from '@/components/admin/RefundDialog'
 import SendEmailDialog from '@/components/admin/SendEmailDialog'
 import BuyShippingLabelDialog from '@/components/admin/BuyShippingLabelDialog'
 import PackingSlipButton from '@/components/admin/PackingSlipButton'
+import type { OrderStatus } from '@/lib/admin/order-primary-cta'
 
 export interface OrderActionContext {
   id: string
   orderNumber: string
-  status: string
+  status: OrderStatus
   paymentStatus: string
   trackingNumber: string | null
   customerEmail: string

@@ -5,17 +5,14 @@ import { useRouter } from 'next/navigation'
 import { MoreHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import {
-  getOrderPrimaryCta,
-  type OrderStatus,
-} from '@/lib/admin/order-primary-cta'
+import { getOrderPrimaryCta } from '@/lib/admin/order-primary-cta'
 import {
   OrderActionsDrawer,
   type OrderActionContext,
 } from './OrderActionsDrawer'
 
 interface OrderActionBarProps {
-  order: OrderActionContext & { status: OrderStatus }
+  order: OrderActionContext
 }
 
 export function OrderActionBar({ order }: OrderActionBarProps) {
