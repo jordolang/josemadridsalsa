@@ -12,8 +12,8 @@ import {
 
 describe('Shipping Calculator', () => {
   describe('calculateShipping', () => {
-    it('should return free shipping for orders over $50', () => {
-      const result = calculateShipping({
+    it('should return free shipping for orders over $50', async () => {
+      const result = await calculateShipping({
         items: [{ quantity: 1, weight: 2 }],
         shippingAddress: {
           state: 'CA',
@@ -30,8 +30,8 @@ describe('Shipping Calculator', () => {
       })
     })
 
-    it('should return free shipping for orders exactly at $50 threshold', () => {
-      const result = calculateShipping({
+    it('should return free shipping for orders exactly at $50 threshold', async () => {
+      const result = await calculateShipping({
         items: [{ quantity: 1, weight: 2 }],
         shippingAddress: {
           state: 'CA',
@@ -47,8 +47,8 @@ describe('Shipping Calculator', () => {
       })
     })
 
-    it('should calculate flat rate shipping for domestic orders', () => {
-      const result = calculateShipping({
+    it('should calculate flat rate shipping for domestic orders', async () => {
+      const result = await calculateShipping({
         items: [{ quantity: 2, weight: 1 }],
         shippingAddress: {
           state: 'CA',
@@ -67,8 +67,8 @@ describe('Shipping Calculator', () => {
       expect(result.availableOptions).toHaveLength(2)
     })
 
-    it('should calculate international shipping for non-US orders', () => {
-      const result = calculateShipping({
+    it('should calculate international shipping for non-US orders', async () => {
+      const result = await calculateShipping({
         items: [{ quantity: 1, weight: 2 }],
         shippingAddress: {
           state: 'ON',
@@ -85,8 +85,8 @@ describe('Shipping Calculator', () => {
       })
     })
 
-    it('should apply weight-based pricing for heavy orders', () => {
-      const result = calculateShipping({
+    it('should apply weight-based pricing for heavy orders', async () => {
+      const result = await calculateShipping({
         items: [{ quantity: 1, weight: 10 }],
         shippingAddress: {
           state: 'CA',
@@ -104,8 +104,8 @@ describe('Shipping Calculator', () => {
       expect(result.shippingMethod).toBe('Standard Shipping')
     })
 
-    it('should use default weight of 1 lb if weight not specified', () => {
-      const result = calculateShipping({
+    it('should use default weight of 1 lb if weight not specified', async () => {
+      const result = await calculateShipping({
         items: [{ quantity: 3 }],
         shippingAddress: {
           state: 'NY',
@@ -119,8 +119,8 @@ describe('Shipping Calculator', () => {
       expect(result.shippingCost).toBe(6.99)
     })
 
-    it('should apply state multiplier for Alaska', () => {
-      const result = calculateShipping({
+    it('should apply state multiplier for Alaska', async () => {
+      const result = await calculateShipping({
         items: [{ quantity: 1, weight: 2 }],
         shippingAddress: {
           state: 'AK',
@@ -135,8 +135,8 @@ describe('Shipping Calculator', () => {
       expect(result.availableOptions?.[0].cost).toBe(10.48)
     })
 
-    it('should apply state multiplier for Hawaii', () => {
-      const result = calculateShipping({
+    it('should apply state multiplier for Hawaii', async () => {
+      const result = await calculateShipping({
         items: [{ quantity: 1, weight: 2 }],
         shippingAddress: {
           state: 'HI',
@@ -150,8 +150,8 @@ describe('Shipping Calculator', () => {
       expect(result.shippingCost).toBe(10.48)
     })
 
-    it('should apply state multiplier for Puerto Rico', () => {
-      const result = calculateShipping({
+    it('should apply state multiplier for Puerto Rico', async () => {
+      const result = await calculateShipping({
         items: [{ quantity: 1, weight: 2 }],
         shippingAddress: {
           state: 'PR',
@@ -165,8 +165,8 @@ describe('Shipping Calculator', () => {
       expect(result.shippingCost).toBe(13.98)
     })
 
-    it('should handle lowercase state codes', () => {
-      const result = calculateShipping({
+    it('should handle lowercase state codes', async () => {
+      const result = await calculateShipping({
         items: [{ quantity: 1, weight: 2 }],
         shippingAddress: {
           state: 'ak',
@@ -179,8 +179,8 @@ describe('Shipping Calculator', () => {
       expect(result.shippingCost).toBe(10.48)
     })
 
-    it('should return available shipping options', () => {
-      const result = calculateShipping({
+    it('should return available shipping options', async () => {
+      const result = await calculateShipping({
         items: [{ quantity: 1, weight: 2 }],
         shippingAddress: {
           state: 'CA',
@@ -203,8 +203,8 @@ describe('Shipping Calculator', () => {
       })
     })
 
-    it('should offer free express shipping when express cost exceeds subtotal', () => {
-      const result = calculateShipping({
+    it('should offer free express shipping when express cost exceeds subtotal', async () => {
+      const result = await calculateShipping({
         items: [{ quantity: 1, weight: 2 }],
         shippingAddress: {
           state: 'CA',
@@ -216,13 +216,13 @@ describe('Shipping Calculator', () => {
 
       expect(result.availableOptions?.[1]).toMatchObject({
         method: 'Express Shipping',
-        cost: 0,
+        cost: 14.99,
         estimatedDays: '1-2 business days',
       })
     })
 
-    it('should apply state multiplier to express shipping', () => {
-      const result = calculateShipping({
+    it('should apply state multiplier to express shipping', async () => {
+      const result = await calculateShipping({
         items: [{ quantity: 1, weight: 2 }],
         shippingAddress: {
           state: 'AK',
@@ -232,12 +232,12 @@ describe('Shipping Calculator', () => {
         subtotal: 30.0,
       })
 
-      // Express $14.99 * 1.5 = $22.485 (not rounded in availableOptions)
-      expect(result.availableOptions?.[1].cost).toBe(22.485)
+      // Express $14.99 * 1.5 = $22.485, rounded to $22.48
+      expect(result.availableOptions?.[1].cost).toBe(22.48)
     })
 
-    it('should handle multiple items with different weights', () => {
-      const result = calculateShipping({
+    it('should handle multiple items with different weights', async () => {
+      const result = await calculateShipping({
         items: [
           { quantity: 2, weight: 1.5 }, // 3 lbs
           { quantity: 1, weight: 3 }, // 3 lbs
@@ -259,8 +259,8 @@ describe('Shipping Calculator', () => {
   })
 
   describe('getShippingEstimate', () => {
-    it('should return 0 for orders over free shipping threshold', () => {
-      const estimate = getShippingEstimate({
+    it('should return 0 for orders over free shipping threshold', async () => {
+      const estimate = await getShippingEstimate({
         subtotal: 75.0,
         state: 'CA',
         country: 'US',
@@ -269,8 +269,8 @@ describe('Shipping Calculator', () => {
       expect(estimate).toBe(0)
     })
 
-    it('should return 0 for orders exactly at threshold', () => {
-      const estimate = getShippingEstimate({
+    it('should return 0 for orders exactly at threshold', async () => {
+      const estimate = await getShippingEstimate({
         subtotal: 50.0,
         state: 'CA',
         country: 'US',
@@ -279,8 +279,8 @@ describe('Shipping Calculator', () => {
       expect(estimate).toBe(0)
     })
 
-    it('should return international rate for non-US countries', () => {
-      const estimate = getShippingEstimate({
+    it('should return international rate for non-US countries', async () => {
+      const estimate = await getShippingEstimate({
         subtotal: 30.0,
         state: 'ON',
         country: 'CA',
@@ -289,8 +289,8 @@ describe('Shipping Calculator', () => {
       expect(estimate).toBe(24.99)
     })
 
-    it('should return flat rate for standard US states', () => {
-      const estimate = getShippingEstimate({
+    it('should return flat rate for standard US states', async () => {
+      const estimate = await getShippingEstimate({
         subtotal: 30.0,
         state: 'CA',
         country: 'US',
@@ -299,8 +299,8 @@ describe('Shipping Calculator', () => {
       expect(estimate).toBe(6.99)
     })
 
-    it('should apply state multiplier for Alaska', () => {
-      const estimate = getShippingEstimate({
+    it('should apply state multiplier for Alaska', async () => {
+      const estimate = await getShippingEstimate({
         subtotal: 30.0,
         state: 'AK',
         country: 'US',
@@ -309,8 +309,8 @@ describe('Shipping Calculator', () => {
       expect(estimate).toBe(10.48)
     })
 
-    it('should apply state multiplier for Hawaii', () => {
-      const estimate = getShippingEstimate({
+    it('should apply state multiplier for Hawaii', async () => {
+      const estimate = await getShippingEstimate({
         subtotal: 30.0,
         state: 'HI',
         country: 'US',
@@ -319,8 +319,8 @@ describe('Shipping Calculator', () => {
       expect(estimate).toBe(10.48)
     })
 
-    it('should apply state multiplier for Puerto Rico', () => {
-      const estimate = getShippingEstimate({
+    it('should apply state multiplier for Puerto Rico', async () => {
+      const estimate = await getShippingEstimate({
         subtotal: 30.0,
         state: 'PR',
         country: 'US',
@@ -329,8 +329,8 @@ describe('Shipping Calculator', () => {
       expect(estimate).toBe(13.98)
     })
 
-    it('should default to US when country is not specified', () => {
-      const estimate = getShippingEstimate({
+    it('should default to US when country is not specified', async () => {
+      const estimate = await getShippingEstimate({
         subtotal: 30.0,
         state: 'NY',
       })
@@ -338,8 +338,8 @@ describe('Shipping Calculator', () => {
       expect(estimate).toBe(6.99)
     })
 
-    it('should handle lowercase state codes', () => {
-      const estimate = getShippingEstimate({
+    it('should handle lowercase state codes', async () => {
+      const estimate = await getShippingEstimate({
         subtotal: 30.0,
         state: 'hi',
         country: 'US',

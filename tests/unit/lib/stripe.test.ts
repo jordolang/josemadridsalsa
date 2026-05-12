@@ -59,6 +59,8 @@ describe('Stripe Client', () => {
       expect(stripe).toBeDefined()
       expect(constructorSpy).toHaveBeenCalledWith('sk_test_123456', {
         apiVersion: '2025-10-29.clover',
+        maxNetworkRetries: 2,
+        timeout: 30000,
       })
       expect(constructorSpy).toHaveBeenCalledTimes(1)
     })
@@ -73,6 +75,8 @@ describe('Stripe Client', () => {
       expect(stripe).toBeDefined()
       expect(constructorSpy).toHaveBeenCalledWith('sk_test_fallback', {
         apiVersion: '2025-10-29.clover',
+        maxNetworkRetries: 2,
+        timeout: 30000,
       })
     })
 
@@ -87,6 +91,8 @@ describe('Stripe Client', () => {
       expect(stripe).toBeDefined()
       expect(constructorSpy).toHaveBeenCalledWith('sk_test_next_public', {
         apiVersion: '2025-10-29.clover',
+        maxNetworkRetries: 2,
+        timeout: 30000,
       })
     })
 
@@ -128,6 +134,8 @@ describe('Stripe Client', () => {
       expect(stripe).toBeDefined()
       expect(constructorSpy).toHaveBeenCalledWith('sk_test_primary', {
         apiVersion: '2025-10-29.clover',
+        maxNetworkRetries: 2,
+        timeout: 30000,
       })
     })
   })
