@@ -49,6 +49,9 @@ dashboard-integration.js
 # Vercel
 .vercel
 
+# Lighthouse reports (large HTML/JSON files)
+.auto-claude/specs/*/lighthouse-reports/
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
