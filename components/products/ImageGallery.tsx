@@ -53,6 +53,8 @@ export function ImageGallery({ images, productName, featuredImage }: ImageGaller
                   className="object-contain"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   priority={index === 0}
+                  loading={index === 0 ? undefined : 'lazy'}
+                  fetchPriority={index === 1 ? 'high' : undefined}
                   onError={() => setImageError(true)}
                 />
               </div>
@@ -85,6 +87,7 @@ export function ImageGallery({ images, productName, featuredImage }: ImageGaller
                   fill
                   className="object-contain"
                   sizes="(max-width: 768px) 25vw, 100px"
+                  loading="lazy"
                   onError={() => setImageError(true)}
                 />
               </div>
