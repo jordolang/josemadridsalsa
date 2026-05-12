@@ -742,6 +742,7 @@ function CheckoutForm() {
                         id="email"
                         name="email"
                         type="email"
+                        inputMode="email"
                         value={formState.email}
                         onChange={handleInputChange}
                         autoComplete="email"
@@ -755,6 +756,7 @@ function CheckoutForm() {
                         id="phone"
                         name="phone"
                         type="tel"
+                        inputMode="tel"
                         value={formState.phone}
                         onChange={handleInputChange}
                         autoComplete="tel"
@@ -821,6 +823,7 @@ function CheckoutForm() {
                           <Input
                             id="postalCode"
                             name="postalCode"
+                            inputMode="numeric"
                             value={formState.postalCode}
                             onChange={handleInputChange}
                             autoComplete="postal-code"
