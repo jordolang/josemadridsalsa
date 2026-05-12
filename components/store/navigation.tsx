@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -94,14 +94,14 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-const googleBusinessUrl =
+const GOOGLE_BUSINESS_URL =
   process.env.NEXT_PUBLIC_GOOGLE_BUSINESS_URL ??
   "https://g.page/jose-madrid-salsa/review";
 
-const socialLinks = [
+const SOCIAL_LINKS = [
   { name: "Facebook", href: "https://www.facebook.com/josemadridsalsa", icon: Facebook },
   { name: "X (Twitter)", href: "https://twitter.com/josemadridsalsa", icon: Twitter },
-  { name: "Google Business", href: googleBusinessUrl, icon: Store },
+  { name: "Google Business", href: GOOGLE_BUSINESS_URL, icon: Store },
 ];
 
 function isGroupActive(group: NavGroup, pathname: string): boolean {
@@ -112,7 +112,28 @@ function isGroupActive(group: NavGroup, pathname: string): boolean {
   });
 }
 
+/**
+ * Skeleton shown while Suspense waits for useSearchParams() to resolve during
+ * static prerender. Matches the masthead height so there's no layout shift.
+ */
+function NavigationFallback() {
+  return (
+    <header
+      aria-hidden
+      className="sticky top-0 z-50 h-[72px] w-full border-b border-border/60 bg-background/90 backdrop-blur-sm"
+    />
+  );
+}
+
 export function Navigation() {
+  return (
+    <Suspense fallback={<NavigationFallback />}>
+      <NavigationContent />
+    </Suspense>
+  );
+}
+
+function NavigationContent() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -120,6 +141,16 @@ export function Navigation() {
   const [openGroupId, setOpenGroupId] = useState<NavGroup["id"] | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const triggerRefs = useRef<Record<NavGroup["id"], HTMLButtonElement | null>>({
+    shop: null,
+    about: null,
+    "for-you": null,
+  });
+  const panelRefs = useRef<Record<NavGroup["id"], HTMLDivElement | null>>({
+    shop: null,
+    about: null,
+    "for-you": null,
+  });
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -140,10 +171,21 @@ export function Navigation() {
     if (searchOpen) searchRef.current?.focus();
   }, [searchOpen]);
 
-  // Close dropdowns whenever the route changes.
+  // Close dropdowns AND the mobile sheet on route change.
   useEffect(() => {
     setOpenGroupId(null);
+    setIsMobileMenuOpen(false);
   }, [pathname, searchParams]);
+
+  // Prevent a pending close timer from firing after unmount.
+  useEffect(() => {
+    return () => {
+      if (closeTimer.current) {
+        clearTimeout(closeTimer.current);
+        closeTimer.current = null;
+      }
+    };
+  }, []);
 
   const openGroup = (id: NavGroup["id"]) => {
     if (closeTimer.current) {
@@ -156,6 +198,65 @@ export function Navigation() {
   const scheduleClose = () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
     closeTimer.current = setTimeout(() => setOpenGroupId(null), 140);
+  };
+
+  const focusPanelItem = (groupId: NavGroup["id"], direction: "first" | "last") => {
+    // Defer until after the panel is rendered/visible.
+    requestAnimationFrame(() => {
+      const panel = panelRefs.current[groupId];
+      if (!panel) return;
+      const items = panel.querySelectorAll<HTMLElement>("[role='menuitem']");
+      if (items.length === 0) return;
+      const target = direction === "first" ? items[0] : items[items.length - 1];
+      target.focus();
+    });
+  };
+
+  const closeAndRefocusTrigger = (groupId: NavGroup["id"]) => {
+    setOpenGroupId(null);
+    triggerRefs.current[groupId]?.focus();
+  };
+
+  const handleTriggerKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    groupId: NavGroup["id"],
+  ) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      openGroup(groupId);
+      focusPanelItem(groupId, "first");
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      openGroup(groupId);
+      focusPanelItem(groupId, "last");
+    } else if (event.key === "Escape" && openGroupId === groupId) {
+      event.preventDefault();
+      setOpenGroupId(null);
+    }
+  };
+
+  const handlePanelKeyDown = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+    groupId: NavGroup["id"],
+  ) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeAndRefocusTrigger(groupId);
+      return;
+    }
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    const panel = panelRefs.current[groupId];
+    if (!panel) return;
+    const items = Array.from(
+      panel.querySelectorAll<HTMLElement>("[role='menuitem']"),
+    );
+    if (items.length === 0) return;
+    event.preventDefault();
+    const active = document.activeElement as HTMLElement | null;
+    const currentIndex = active ? items.indexOf(active) : -1;
+    const offset = event.key === "ArrowDown" ? 1 : -1;
+    const nextIndex = (currentIndex + offset + items.length) % items.length;
+    items[nextIndex].focus();
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -217,11 +318,16 @@ export function Navigation() {
                   onMouseEnter={() => openGroup(group.id)}
                 >
                   <button
+                    ref={(node) => {
+                      triggerRefs.current[group.id] = node;
+                    }}
                     type="button"
                     aria-haspopup="menu"
                     aria-expanded={isOpen}
+                    aria-controls={`nav-panel-${group.id}`}
                     onClick={() => setOpenGroupId(isOpen ? null : group.id)}
                     onFocus={() => openGroup(group.id)}
+                    onKeyDown={(e) => handleTriggerKeyDown(e, group.id)}
                     className="group relative px-5 py-3"
                   >
                     <span
@@ -236,8 +342,10 @@ export function Navigation() {
                     </span>
                     <span
                       aria-hidden
-                      className="pointer-events-none absolute bottom-1.5 left-1/2 h-[1.5px] -translate-x-1/2 bg-salsa-600 transition-all duration-300 ease-out"
-                      style={{ width: isActive || isOpen ? "22px" : "0px" }}
+                      className={cn(
+                        "pointer-events-none absolute bottom-1.5 left-1/2 h-[1.5px] -translate-x-1/2 bg-salsa-600 transition-all duration-300 ease-out",
+                        isActive || isOpen ? "w-[22px]" : "w-0",
+                      )}
                     />
                   </button>
                 </div>
@@ -250,6 +358,8 @@ export function Navigation() {
             {/* Inline collapsible search (desktop) */}
             <form
               onSubmit={handleSearch}
+              aria-hidden={!searchOpen}
+              inert={!searchOpen}
               className={cn(
                 "hidden lg:flex items-center overflow-hidden transition-[width] duration-300",
                 searchOpen ? "w-56 mr-1" : "w-0",
@@ -262,6 +372,12 @@ export function Navigation() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onBlur={() => !searchQuery && setSearchOpen(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setSearchOpen(false);
+                  }
+                }}
                 className="h-9 w-full rounded-md border-border bg-muted/60 px-3 text-sm focus:border-salsa-500 focus:bg-background focus:ring-1 focus:ring-salsa-500"
               />
             </form>
@@ -443,7 +559,7 @@ export function Navigation() {
                       Connect with us
                     </p>
                     <div className="flex items-center gap-2">
-                      {socialLinks.map((social) => (
+                      {SOCIAL_LINKS.map((social) => (
                         <Button
                           key={social.name}
                           variant="outline"
@@ -553,9 +669,17 @@ export function Navigation() {
         return (
           <div
             key={group.id}
+            ref={(node) => {
+              panelRefs.current[group.id] = node;
+            }}
+            id={`nav-panel-${group.id}`}
+            role="menu"
+            aria-label={group.title}
             onMouseEnter={() => openGroup(group.id)}
             onMouseLeave={scheduleClose}
+            onKeyDown={(e) => handlePanelKeyDown(e, group.id)}
             aria-hidden={!isOpen}
+            inert={!isOpen}
             className={cn(
               "absolute left-0 right-0 top-full transition-all duration-200 ease-out",
               isOpen
@@ -614,6 +738,7 @@ function ShopPanel({ group, pathname, searchParams }: ShopPanelProps) {
     <div className="grid grid-cols-1 md:grid-cols-[280px_1fr]">
       <Link
         href={group.featured.href}
+        role="menuitem"
         className={cn(
           "group flex min-h-[260px] flex-col justify-between border-b border-border p-6 transition-colors md:border-b-0 md:border-r",
           "bg-gradient-to-br from-salsa-50 to-chile-50 hover:from-salsa-100 hover:to-chile-100",
@@ -640,6 +765,7 @@ function ShopPanel({ group, pathname, searchParams }: ShopPanelProps) {
             <Link
               key={item.href}
               href={item.href}
+              role="menuitem"
               className={cn(
                 "group rounded-lg px-4 py-3 transition-colors",
                 active ? "bg-salsa-50" : "hover:bg-muted/70",
@@ -673,6 +799,7 @@ function SimplePanel({ group, pathname }: PanelProps) {
           <Link
             key={item.href}
             href={item.href}
+            role="menuitem"
             className={cn(
               "group rounded-lg px-5 py-4 transition-colors",
               active ? "bg-salsa-50" : "hover:bg-muted/70",

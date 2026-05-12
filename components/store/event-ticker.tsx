@@ -56,21 +56,27 @@ export function EventTicker({ initialEvents }: EventTickerProps) {
   const duration = Math.max(60, segments.length * 18)
 
   return (
-    <div className="jms-ticker-band">
+    <div className="relative overflow-hidden bg-salsa-900 text-white">
       <div className="mx-auto max-w-[1400px] flex items-stretch">
         <Link
           href="/where-is-jose"
-          className="jms-ticker-anchor"
+          className="z-[2] inline-flex flex-shrink-0 items-center gap-1.5 bg-salsa-950 px-5 text-[10.5px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-black"
           aria-label="See where Jose Madrid Salsa is appearing next"
         >
           <MapPin className="h-3 w-3 text-chile-400" />
           <span>Find Us</span>
         </Link>
         <div className="relative flex-1 overflow-hidden">
-          <span className="jms-ticker-fade-left" aria-hidden />
-          <span className="jms-ticker-fade-right" aria-hidden />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-12 bg-gradient-to-r from-salsa-900 to-transparent"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-12 bg-gradient-to-l from-salsa-900 to-transparent"
+          />
           <div
-            className="jms-ticker-track flex items-center gap-12 whitespace-nowrap py-2"
+            className="flex w-max items-center gap-12 whitespace-nowrap py-2 will-change-transform animate-marquee hover:[animation-play-state:paused] motion-reduce:animate-none"
             style={{ animationDuration: `${duration}s` }}
           >
             {items.map((seg, i) => (
@@ -82,66 +88,6 @@ export function EventTicker({ initialEvents }: EventTickerProps) {
           </div>
         </div>
       </div>
-      <style jsx>{`
-        .jms-ticker-band {
-          background: #7f1d1d;
-          color: white;
-          position: relative;
-          overflow: hidden;
-        }
-        .jms-ticker-anchor {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.375rem;
-          padding: 0 1.25rem;
-          background: #450a0a;
-          color: white;
-          font-size: 10.5px;
-          font-weight: 700;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          flex-shrink: 0;
-          z-index: 2;
-          transition: background-color 200ms ease;
-        }
-        .jms-ticker-anchor:hover {
-          background: #000;
-        }
-        .jms-ticker-fade-left,
-        .jms-ticker-fade-right {
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          width: 3rem;
-          pointer-events: none;
-          z-index: 1;
-        }
-        .jms-ticker-fade-left {
-          left: 0;
-          background: linear-gradient(to right, #7f1d1d, transparent);
-        }
-        .jms-ticker-fade-right {
-          right: 0;
-          background: linear-gradient(to left, #7f1d1d, transparent);
-        }
-        .jms-ticker-track {
-          width: max-content;
-          animation: jms-ticker linear infinite;
-          will-change: transform;
-        }
-        .jms-ticker-track:hover {
-          animation-play-state: paused;
-        }
-        @keyframes jms-ticker {
-          from { transform: translateX(0); }
-          to { transform: translateX(-50%); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .jms-ticker-track {
-            animation: none;
-          }
-        }
-      `}</style>
     </div>
   )
 }

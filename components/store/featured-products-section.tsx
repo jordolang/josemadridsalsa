@@ -25,7 +25,9 @@ function toCardProduct(row: DbProduct): Product {
     price: row.price,
     compareAtPrice: row.compareAtPrice ?? null,
     featuredImage: row.featuredImage ?? null,
-    heatLevel: row.heatLevel as unknown as string,
+    // Prisma enums serialize as strings at runtime, but defend against null
+    // so downstream `.toUpperCase()` calls don't blow up on bad data.
+    heatLevel: row.heatLevel == null ? "" : String(row.heatLevel),
     sku: row.sku,
     inventory: row.inventory,
     isFeatured: row.isFeatured,
@@ -43,8 +45,11 @@ export async function FeaturedProductsSection({
   try {
     const rows = await getProducts({ featured: true, inStock: true, take: limit });
     products = rows.map(toCardProduct);
-  } catch {
+  } catch (err) {
     // Database errors here shouldn't break the home page; just hide the section.
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Failed to load featured products", err);
+    }
     return null;
   }
 

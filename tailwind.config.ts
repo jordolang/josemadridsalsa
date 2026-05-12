@@ -117,7 +117,8 @@ const config: Config = {
   			'wiggle': 'wiggle 1s ease-in-out',
   			'pulse-slow': 'pulseSlow 3s ease-in-out infinite',
   			'spin-slow': 'spinSlow 3s linear infinite',
-  			'swing': 'swing 1s ease-in-out'
+  			'swing': 'swing 1s ease-in-out',
+  			'marquee': 'marquee linear infinite'
   		},
   		keyframes: {
   			fadeIn: {
@@ -208,6 +209,14 @@ const config: Config = {
   				},
   				'80%': {
   					transform: 'rotate(-5deg)'
+  				}
+  			},
+  			marquee: {
+  				'0%': {
+  					transform: 'translateX(0)'
+  				},
+  				'100%': {
+  					transform: 'translateX(-50%)'
   				}
   			}
   		},
