@@ -493,30 +493,47 @@ function NavigationContent() {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="flex w-80 flex-col">
-                <SheetHeader className="flex-shrink-0">
+              <SheetContent
+                side="right"
+                className="flex w-80 flex-col will-change-transform"
+              >
+                <SheetHeader className="flex-shrink-0 animate-in fade-in-0 slide-in-from-right-2 duration-300">
                   <SheetTitle className="text-left font-serif text-gradient">
                     Jose Madrid Salsa
                   </SheetTitle>
                 </SheetHeader>
 
-                <div className="mt-4 flex-1 space-y-4 overflow-y-auto pr-2">
-                  <form onSubmit={handleSearch} className="space-y-2">
+                <div className="mt-4 flex-1 space-y-4 overflow-y-auto pr-2 animate-in fade-in-0 slide-in-from-right-3 duration-300 delay-75">
+                  <form
+                    onSubmit={handleSearch}
+                    className="space-y-2 animate-in fade-in-0 slide-in-from-right-2 duration-300"
+                    style={{
+                      animationDelay: "100ms",
+                      animationFillMode: "both",
+                    }}
+                  >
                     <Input
                       type="search"
                       placeholder="Search products..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full min-h-[44px] focus:border-salsa-500 focus:ring-salsa-500"
+                      className="w-full min-h-[44px] focus:border-salsa-500 focus:ring-salsa-500 transition-all duration-200"
                     />
-                    <Button type="submit" className="w-full min-h-[44px] bg-salsa-500 hover:bg-salsa-600">
+                    <Button type="submit" className="w-full min-h-[44px] bg-salsa-500 hover:bg-salsa-600 transition-all duration-200 active:scale-[0.98]">
                       Search
                     </Button>
                   </form>
 
                   <nav className="space-y-3">
-                    {NAV_GROUPS.map((group) => (
-                      <div key={group.id}>
+                    {NAV_GROUPS.map((group, groupIndex) => (
+                      <div
+                        key={group.id}
+                        className="animate-in fade-in-0 slide-in-from-right-2 duration-300"
+                        style={{
+                          animationDelay: `${150 + groupIndex * 50}ms`,
+                          animationFillMode: "both",
+                        }}
+                      >
                         <p className="px-1 pb-1 text-[11px] font-bold uppercase tracking-[0.22em] text-salsa-600">
                           {group.title}
                         </p>
@@ -525,10 +542,10 @@ function NavigationContent() {
                             <Link
                               href={group.featured.href}
                               onClick={() => setIsMobileMenuOpen(false)}
-                              className="flex min-h-[44px] items-center justify-between rounded-md bg-salsa-50 px-3 py-2 text-sm font-semibold text-salsa-700 hover:bg-salsa-100"
+                              className="flex min-h-[44px] items-center justify-between rounded-md bg-salsa-50 px-3 py-2 text-sm font-semibold text-salsa-700 transition-all duration-200 hover:bg-salsa-100 active:scale-[0.98]"
                             >
                               {group.featured.label}
-                              <ArrowRight className="h-4 w-4" />
+                              <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                             </Link>
                           )}
                           {group.items.map((item) => (
@@ -536,7 +553,7 @@ function NavigationContent() {
                               key={item.href}
                               href={item.href}
                               onClick={() => setIsMobileMenuOpen(false)}
-                              className="flex min-h-[44px] items-center rounded-md px-3 py-2 text-sm text-foreground hover:bg-accent"
+                              className="flex min-h-[44px] items-center rounded-md px-3 py-2 text-sm text-foreground transition-all duration-200 hover:bg-accent active:scale-[0.98]"
                             >
                               {item.name}
                             </Link>
@@ -546,7 +563,13 @@ function NavigationContent() {
                     ))}
                   </nav>
 
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-1.5">
+                  <div
+                    className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-1.5 animate-in fade-in-0 slide-in-from-right-2 duration-300"
+                    style={{
+                      animationDelay: "300ms",
+                      animationFillMode: "both",
+                    }}
+                  >
                     <div>
                       <p className="text-sm font-medium text-foreground">Appearance</p>
                       <p className="text-xs text-muted-foreground">Toggle theme</p>
@@ -554,7 +577,13 @@ function NavigationContent() {
                     <ThemeToggle className="h-11 w-11 min-h-[44px] min-w-[44px] p-0" />
                   </div>
 
-                  <div className="border-t border-border pt-3">
+                  <div
+                    className="border-t border-border pt-3 animate-in fade-in-0 slide-in-from-right-2 duration-300"
+                    style={{
+                      animationDelay: "350ms",
+                      animationFillMode: "both",
+                    }}
+                  >
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Connect with us
                     </p>
@@ -564,7 +593,7 @@ function NavigationContent() {
                           key={social.name}
                           variant="outline"
                           asChild
-                          className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full p-0 text-muted-foreground"
+                          className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full p-0 text-muted-foreground transition-all duration-200 hover:scale-110 active:scale-95"
                         >
                           <a
                             href={social.href}
@@ -579,7 +608,7 @@ function NavigationContent() {
                       <Button
                         variant="outline"
                         asChild
-                        className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full p-0 text-muted-foreground"
+                        className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full p-0 text-muted-foreground transition-all duration-200 hover:scale-110 active:scale-95"
                       >
                         <a
                           href="https://salsadocs.vercel.app"
@@ -593,24 +622,30 @@ function NavigationContent() {
                     </div>
                   </div>
 
-                  <div className="space-y-1.5 border-t border-border pt-3">
+                  <div
+                    className="space-y-1.5 border-t border-border pt-3 animate-in fade-in-0 slide-in-from-right-2 duration-300"
+                    style={{
+                      animationDelay: "400ms",
+                      animationFillMode: "both",
+                    }}
+                  >
                     {isSignedIn ? (
                       <>
                         <div className="rounded-lg bg-muted p-2">
                           <p className="text-sm font-medium text-foreground">{user?.name}</p>
                           <p className="text-xs text-muted-foreground">{user?.email}</p>
                         </div>
-                        <Button variant="outline" className="w-full min-h-[44px] justify-start" asChild>
+                        <Button variant="outline" className="w-full min-h-[44px] justify-start transition-all duration-200 active:scale-[0.98]" asChild>
                           <Link href="/account" onClick={() => setIsMobileMenuOpen(false)}>
                             <User className="mr-2 h-4 w-4" /> My Account
                           </Link>
                         </Button>
-                        <Button variant="outline" className="w-full min-h-[44px] justify-start" asChild>
+                        <Button variant="outline" className="w-full min-h-[44px] justify-start transition-all duration-200 active:scale-[0.98]" asChild>
                           <Link href="/account/orders" onClick={() => setIsMobileMenuOpen(false)}>
                             <ShoppingCart className="mr-2 h-4 w-4" /> Order History
                           </Link>
                         </Button>
-                        <Button variant="outline" className="w-full min-h-[44px] justify-start" asChild>
+                        <Button variant="outline" className="w-full min-h-[44px] justify-start transition-all duration-200 active:scale-[0.98]" asChild>
                           <Link href="/wishlist" onClick={() => setIsMobileMenuOpen(false)}>
                             <Heart className="mr-2 h-4 w-4" /> Wishlist
                             {wishlistCount > 0 && (
@@ -620,14 +655,14 @@ function NavigationContent() {
                             )}
                           </Link>
                         </Button>
-                        <Button variant="outline" className="w-full min-h-[44px] justify-start" asChild>
+                        <Button variant="outline" className="w-full min-h-[44px] justify-start transition-all duration-200 active:scale-[0.98]" asChild>
                           <Link href="/gift-certificates/purchase" onClick={() => setIsMobileMenuOpen(false)}>
                             <Gift className="mr-2 h-4 w-4" /> Gift Certificates
                           </Link>
                         </Button>
                         <Button
                           variant="outline"
-                          className="w-full min-h-[44px] justify-start border-salsa-200 text-salsa-600 hover:bg-salsa-50"
+                          className="w-full min-h-[44px] justify-start border-salsa-200 text-salsa-600 hover:bg-salsa-50 transition-all duration-200 active:scale-[0.98]"
                           onClick={() => {
                             setIsMobileMenuOpen(false);
                             signOut({ callbackUrl: "/" });
@@ -638,13 +673,13 @@ function NavigationContent() {
                       </>
                     ) : (
                       <>
-                        <Button className="w-full min-h-[44px] bg-salsa-500 hover:bg-salsa-600" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                        <Button className="w-full min-h-[44px] bg-salsa-500 hover:bg-salsa-600 transition-all duration-200 active:scale-[0.98]" asChild onClick={() => setIsMobileMenuOpen(false)}>
                           <Link href="/auth/signup">Sign Up</Link>
                         </Button>
-                        <Button variant="outline" className="w-full min-h-[44px]" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                        <Button variant="outline" className="w-full min-h-[44px] transition-all duration-200 active:scale-[0.98]" asChild onClick={() => setIsMobileMenuOpen(false)}>
                           <Link href="/auth/signin">Sign In</Link>
                         </Button>
-                        <Button variant="outline" className="w-full min-h-[44px] justify-start" asChild>
+                        <Button variant="outline" className="w-full min-h-[44px] justify-start transition-all duration-200 active:scale-[0.98]" asChild>
                           <Link href="/gift-certificates/purchase" onClick={() => setIsMobileMenuOpen(false)}>
                             <Gift className="mr-2 h-4 w-4" /> Gift Certificates
                           </Link>
