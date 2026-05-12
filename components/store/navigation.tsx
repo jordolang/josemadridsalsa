@@ -488,7 +488,7 @@ function NavigationContent() {
                 <Button
                   variant="ghost"
                   aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-                  className="lg:hidden h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-foreground"
+                  className="lg:hidden h-11 w-11 min-h-[44px] min-w-[44px] p-0 text-foreground"
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
@@ -507,9 +507,9 @@ function NavigationContent() {
                       placeholder="Search products..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full focus:border-salsa-500 focus:ring-salsa-500"
+                      className="w-full min-h-[44px] focus:border-salsa-500 focus:ring-salsa-500"
                     />
-                    <Button type="submit" className="w-full bg-salsa-500 hover:bg-salsa-600">
+                    <Button type="submit" className="w-full min-h-[44px] bg-salsa-500 hover:bg-salsa-600">
                       Search
                     </Button>
                   </form>
