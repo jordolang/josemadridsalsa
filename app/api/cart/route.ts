@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
-import { getCurrentUser } from '@/lib/rbac'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma as db } from '@/lib/prisma'
+import { rateLimit } from '@/lib/rateLimit'
 import { logAuditWithRequest } from '@/lib/audit'
-import { withRateLimit } from '@/lib/middleware/api-helpers'
 import { AddCartItemSchema } from '@/lib/validations/cart'
-import { RATE_LIMITS } from '@/lib/rate-limiter'
 
 async function handleGet(request: NextRequest) {
   try {
     // Require authentication
-    const user = await getCurrentUser()
+    const session = await getServerSession(authOptions)
 
-    if (!user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized - authentication required' },
         { status: 401 }
@@ -19,9 +19,9 @@ async function handleGet(request: NextRequest) {
     }
 
     // Fetch all cart items for the user
-    const cartItems = await prisma.cartItem.findMany({
+    const cartItems = await db.cartItem.findMany({
       where: {
-        userId: user.id,
+        userId: session.user.id,
       },
       include: {
         product: true,
@@ -74,32 +74,48 @@ async function handleGet(request: NextRequest) {
   }
 }
 
+/**
+ * POST /api/cart
+ *
+ * Adds a product to the user's cart. If the product already exists in the cart,
+ * the quantity is incremented. Rate limited and requires authentication.
+ */
 async function handlePost(request: NextRequest) {
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const rl = rateLimit(`cart:${ip}`, 10, 60_000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
+    )
+  }
+
+  const parsed = AddCartItemSchema.safeParse(await request.json().catch(() => ({})))
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid request' },
+      { status: 422 }
+    )
+  }
+
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: 'Unauthorized - authentication required' },
+      { status: 401 }
+    )
+  }
+
   try {
-    // Require authentication
-    const user = await getCurrentUser()
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized - authentication required' },
-        { status: 401 }
-      )
-    }
-
-    const json = await request.json()
-    const parsed = AddCartItemSchema.safeParse(json)
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid request payload', details: parsed.error.flatten() },
-        { status: 400 }
-      )
-    }
 
     const { productId, quantity } = parsed.data
 
     // Look up the product to verify it exists and check inventory
-    const product = await prisma.product.findUnique({
+    const product = await db.product.findUnique({
       where: { id: productId },
     })
 
@@ -111,9 +127,9 @@ async function handlePost(request: NextRequest) {
     }
 
     // Check if user already has this product in their cart
-    const existingItem = await prisma.cartItem.findFirst({
+    const existingItem = await db.cartItem.findFirst({
       where: {
-        userId: user.id,
+        userId: session.user.id,
         productId,
       },
     })
@@ -133,7 +149,7 @@ async function handlePost(request: NextRequest) {
 
     if (existingItem) {
       // Update quantity if item already in cart
-      cartItem = await prisma.cartItem.update({
+      cartItem = await db.cartItem.update({
         where: { id: existingItem.id },
         data: {
           quantity: accumulatedQuantity,
@@ -144,9 +160,9 @@ async function handlePost(request: NextRequest) {
       })
     } else {
       // Create new cart item
-      cartItem = await prisma.cartItem.create({
+      cartItem = await db.cartItem.create({
         data: {
-          userId: user.id,
+          userId: session.user.id,
           productId,
           quantity,
         },
@@ -159,7 +175,7 @@ async function handlePost(request: NextRequest) {
     // Log audit event
     await logAuditWithRequest(
       {
-        userId: user.id,
+        userId: session.user.id,
         action: existingItem ? 'update' : 'create',
         entityType: 'CartItem',
         entityId: cartItem.id,
@@ -197,5 +213,5 @@ async function handlePost(request: NextRequest) {
   }
 }
 
-export const GET = withRateLimit(handleGet, RATE_LIMITS.API_GENERAL)
-export const POST = withRateLimit(handlePost, RATE_LIMITS.API_GENERAL)
+export const GET = handleGet
+export const POST = handlePost
