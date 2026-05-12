@@ -1,12 +1,16 @@
 'use client'
 
+import { useState } from 'react'
 import dynamic from 'next/dynamic'
 import { FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
+// @react-pdf/renderer is heavy and has known failures on mobile Safari when
+// loaded eagerly. Gate it behind a user click so the order detail page always
+// renders, and only pay the bundle/runtime cost when an invoice is requested.
 const PDFDownloadLink = dynamic(
   () => import('@react-pdf/renderer').then((mod) => mod.PDFDownloadLink),
-  { ssr: false }
+  { ssr: false, loading: () => null }
 )
 
 const InvoicePDF = dynamic(() => import('@/components/admin/InvoicePDF'), {
@@ -72,10 +76,24 @@ function mapAddress(addr: PrintInvoiceButtonProps['order']['shippingAddress']) {
 }
 
 export default function PrintInvoiceButton({ order }: PrintInvoiceButtonProps) {
+  const [armed, setArmed] = useState(false)
   const invoiceOrder = {
     ...order,
     shippingAddress: mapAddress(order.shippingAddress),
     billingAddress: mapAddress(order.billingAddress),
+  }
+
+  if (!armed) {
+    return (
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={() => setArmed(true)}
+      >
+        <FileText className="mr-2 h-4 w-4" />
+        Print Invoice
+      </Button>
+    )
   }
 
   return (
@@ -87,7 +105,7 @@ export default function PrintInvoiceButton({ order }: PrintInvoiceButtonProps) {
       {({ loading }) => (
         <Button variant="outline" className="w-full" disabled={loading}>
           <FileText className="mr-2 h-4 w-4" />
-          {loading ? 'Generating...' : 'Print Invoice'}
+          {loading ? 'Generating...' : 'Download Invoice'}
         </Button>
       )}
     </PDFDownloadLink>

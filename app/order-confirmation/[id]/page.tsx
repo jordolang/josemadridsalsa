@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -154,13 +155,13 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
         </Card>
 
         {/* Actions */}
-        <div className="flex gap-4">
-          <Link href="/" className="text-sm hover:underline">
-            Continue Shopping
-          </Link>
-          <Link href="/account/orders" className="text-sm hover:underline">
-            View All Orders
-          </Link>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/">Continue Shopping</Link>
+          </Button>
+          <Button asChild className="w-full sm:w-auto">
+            <Link href="/account/orders">View All Orders</Link>
+          </Button>
         </div>
       </div>
     </div>
