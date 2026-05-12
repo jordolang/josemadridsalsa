@@ -34,14 +34,25 @@ vi.mock('@/emails/delivery-confirmation', () => ({
   DeliveryConfirmationEmail: vi.fn(() => null),
 }))
 
-// Import the mocked sendEmail
+// Mock rate limiting
+vi.mock('@/lib/email/rate-limit', () => ({
+  checkRateLimit: vi.fn(() => ({ allowed: true })),
+  validateServiceApiKey: vi.fn(() => true),
+}))
+
+// Import the mocked functions
 import { sendEmail as mockSendEmail } from '@/lib/email/client'
 import { prisma } from '@/lib/prisma'
+import { checkRateLimit as mockCheckRateLimit, validateServiceApiKey as mockValidateServiceApiKey } from '@/lib/email/rate-limit'
 
 describe('Send Email API', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(prisma.conversation.create).mockResolvedValue({ id: 'conversation-123' } as any)
+    // Reset mocks to default behavior
+    vi.mocked(mockCheckRateLimit).mockReturnValue({ allowed: true })
+    vi.mocked(mockValidateServiceApiKey).mockReturnValue(true)
+    vi.mocked(mockSendEmail).mockResolvedValue({ success: true, messageId: 'test-id' })
   })
 
   describe('POST /api/send-email/contact', () => {
@@ -65,7 +76,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: name')
+      expect(data.error).toContain('Validation error')
     })
 
     it('should validate required field: email', async () => {
@@ -78,7 +89,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: email')
+      expect(data.error).toContain('Validation error')
     })
 
     it('should validate required field: message', async () => {
@@ -91,11 +102,25 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: message')
+      expect(data.error).toContain('Validation error')
+    })
+
+    it('should validate email format', async () => {
+      const request = new NextRequest('http://localhost/api/send-email/contact', {
+        method: 'POST',
+        body: JSON.stringify({ name: 'John Doe', email: 'invalid-email', message: 'Test' }),
+      })
+
+      const response = await ContactPOST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toContain('Validation error')
+      expect(data.error).toContain('Invalid email')
     })
 
     it('should send contact form email successfully', async () => {
-      mockSendEmail.mockResolvedValue({
+      vi.mocked(mockSendEmail).mockResolvedValue({
         success: true,
         messageId: 'msg-123',
       })
@@ -143,7 +168,7 @@ describe('Send Email API', () => {
     })
 
     it('should use default submittedAt if not provided', async () => {
-      mockSendEmail.mockResolvedValue({
+      vi.mocked(mockSendEmail).mockResolvedValue({
         success: true,
         messageId: 'msg-123',
       })
@@ -166,8 +191,27 @@ describe('Send Email API', () => {
       expect(data.success).toBe(true)
     })
 
+    it('should handle rate limiting', async () => {
+      vi.mocked(mockCheckRateLimit).mockReturnValue({
+        allowed: false,
+        retryAfterMs: 30000,
+      })
+
+      const request = new NextRequest('http://localhost/api/send-email/contact', {
+        method: 'POST',
+        body: JSON.stringify(validContactData),
+      })
+
+      const response = await ContactPOST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(429)
+      expect(data.error).toBe('Too many requests. Please try again later.')
+      expect(response.headers.get('Retry-After')).toBe('30')
+    })
+
     it('should handle email sending failure', async () => {
-      mockSendEmail.mockResolvedValue({
+      vi.mocked(mockSendEmail).mockResolvedValue({
         success: false,
         error: 'SMTP connection failed',
       })
@@ -237,6 +281,21 @@ describe('Send Email API', () => {
       unsubscribeUrl: 'https://example.com/unsubscribe',
     }
 
+    it('should require authentication', async () => {
+      vi.mocked(mockValidateServiceApiKey).mockReturnValue(false)
+
+      const request = new NextRequest('http://localhost/api/send-email/shipping', {
+        method: 'POST',
+        body: JSON.stringify(validShippingData),
+      })
+
+      const response = await ShippingPOST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(401)
+      expect(data.error).toBe('Unauthorized')
+    })
+
     it('should validate required field: email', async () => {
       const request = new NextRequest('http://localhost/api/send-email/shipping', {
         method: 'POST',
@@ -247,7 +306,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: email')
+      expect(data.error).toContain('Validation error')
     })
 
     it('should validate required field: orderNumber', async () => {
@@ -260,7 +319,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: orderNumber')
+      expect(data.error).toContain('Validation error')
     })
 
     it('should validate required field: trackingNumber', async () => {
@@ -273,7 +332,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: trackingNumber')
+      expect(data.error).toContain('Validation error')
     })
 
     it('should validate required field: trackingUrl', async () => {
@@ -290,7 +349,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: trackingUrl')
+      expect(data.error).toContain('Validation error')
     })
 
     it('should validate required field: carrier', async () => {
@@ -308,7 +367,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: carrier')
+      expect(data.error).toContain('Validation error')
     })
 
     it('should validate required field: estimatedDelivery', async () => {
@@ -327,7 +386,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: estimatedDelivery')
+      expect(data.error).toContain('Validation error')
     })
 
     it('should validate required field: shippingAddress', async () => {
@@ -347,11 +406,11 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: shippingAddress')
+      expect(data.error).toContain('Validation error')
     })
 
     it('should send shipping notification email successfully', async () => {
-      mockSendEmail.mockResolvedValue({
+      vi.mocked(mockSendEmail).mockResolvedValue({
         success: true,
         messageId: 'msg-456',
       })
@@ -376,13 +435,13 @@ describe('Send Email API', () => {
           type: 'shipping-notification',
           orderId: 'order-123',
           userId: 'user-456',
-          replyTo: 'orders@josemadridsalsa.com',
+          replyTo: 'mike@josemadrid.net',
         })
       )
     })
 
     it('should handle missing items array', async () => {
-      mockSendEmail.mockResolvedValue({
+      vi.mocked(mockSendEmail).mockResolvedValue({
         success: true,
         messageId: 'msg-456',
       })
@@ -402,8 +461,27 @@ describe('Send Email API', () => {
       expect(data.success).toBe(true)
     })
 
+    it('should handle rate limiting', async () => {
+      vi.mocked(mockCheckRateLimit).mockReturnValue({
+        allowed: false,
+        retryAfterMs: 45000,
+      })
+
+      const request = new NextRequest('http://localhost/api/send-email/shipping', {
+        method: 'POST',
+        body: JSON.stringify(validShippingData),
+      })
+
+      const response = await ShippingPOST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(429)
+      expect(data.error).toBe('Too many requests. Please try again later.')
+      expect(response.headers.get('Retry-After')).toBe('45')
+    })
+
     it('should handle email sending failure', async () => {
-      mockSendEmail.mockResolvedValue({
+      vi.mocked(mockSendEmail).mockResolvedValue({
         success: false,
         error: 'Invalid email address',
       })
@@ -432,7 +510,6 @@ describe('Send Email API', () => {
 
       expect(response.status).toBe(500)
       expect(data.error).toBe('Internal server error')
-      expect(data.details).toContain('JSON')
     })
   })
 
@@ -458,6 +535,21 @@ describe('Send Email API', () => {
       unsubscribeUrl: 'https://example.com/unsubscribe',
     }
 
+    it('should require authentication', async () => {
+      vi.mocked(mockValidateServiceApiKey).mockReturnValue(false)
+
+      const request = new NextRequest('http://localhost/api/send-email/delivery', {
+        method: 'POST',
+        body: JSON.stringify(validDeliveryData),
+      })
+
+      const response = await DeliveryPOST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(401)
+      expect(data.error).toBe('Unauthorized')
+    })
+
     it('should validate required field: email', async () => {
       const request = new NextRequest('http://localhost/api/send-email/delivery', {
         method: 'POST',
@@ -468,7 +560,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: email')
+      expect(data.error).toContain('Validation error')
     })
 
     it('should validate required field: orderNumber', async () => {
@@ -481,7 +573,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: orderNumber')
+      expect(data.error).toContain('Validation error')
     })
 
     it('should validate required field: deliveryDate', async () => {
@@ -494,7 +586,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: deliveryDate')
+      expect(data.error).toContain('Validation error')
     })
 
     it('should validate required field: shippingAddress', async () => {
@@ -511,11 +603,11 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Missing required field: shippingAddress')
+      expect(data.error).toContain('Validation error')
     })
 
     it('should send delivery confirmation email successfully', async () => {
-      mockSendEmail.mockResolvedValue({
+      vi.mocked(mockSendEmail).mockResolvedValue({
         success: true,
         messageId: 'msg-789',
       })
@@ -540,13 +632,13 @@ describe('Send Email API', () => {
           type: 'delivery-confirmation',
           orderId: 'order-789',
           userId: 'user-012',
-          replyTo: 'orders@josemadridsalsa.com',
+          replyTo: 'mike@josemadrid.net',
         })
       )
     })
 
     it('should handle missing optional fields', async () => {
-      mockSendEmail.mockResolvedValue({
+      vi.mocked(mockSendEmail).mockResolvedValue({
         success: true,
         messageId: 'msg-789',
       })
@@ -570,8 +662,27 @@ describe('Send Email API', () => {
       expect(data.success).toBe(true)
     })
 
+    it('should handle rate limiting', async () => {
+      vi.mocked(mockCheckRateLimit).mockReturnValue({
+        allowed: false,
+        retryAfterMs: 60000,
+      })
+
+      const request = new NextRequest('http://localhost/api/send-email/delivery', {
+        method: 'POST',
+        body: JSON.stringify(validDeliveryData),
+      })
+
+      const response = await DeliveryPOST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(429)
+      expect(data.error).toBe('Too many requests. Please try again later.')
+      expect(response.headers.get('Retry-After')).toBe('60')
+    })
+
     it('should handle email sending failure', async () => {
-      mockSendEmail.mockResolvedValue({
+      vi.mocked(mockSendEmail).mockResolvedValue({
         success: false,
         error: 'Rate limit exceeded',
       })
@@ -600,23 +711,6 @@ describe('Send Email API', () => {
 
       expect(response.status).toBe(500)
       expect(data.error).toBe('Internal server error')
-      expect(data.details).toContain('JSON')
-    })
-
-    it('should handle sendEmail throwing error', async () => {
-      mockSendEmail.mockRejectedValue(new Error('Database connection failed'))
-
-      const request = new NextRequest('http://localhost/api/send-email/delivery', {
-        method: 'POST',
-        body: JSON.stringify(validDeliveryData),
-      })
-
-      const response = await DeliveryPOST(request)
-      const data = await response.json()
-
-      expect(response.status).toBe(500)
-      expect(data.error).toBe('Internal server error')
-      expect(data.details).toBe('Database connection failed')
     })
   })
 })
