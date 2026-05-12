@@ -2,15 +2,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import type { Metadata } from 'next'
-import { ArrowRight } from 'lucide-react'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { createMetadata } from '@/lib/metadata'
 import { LocationMapClient } from '@/components/store/location-map-client'
 import { getReviewsData, getCalendarEvents } from '@/lib/server/google-data'
 import { ActiveCampaignsGrid } from '@/components/fundraiser/active-campaigns-grid'
-import { HomeHero } from '@/components/store/home-hero'
-import { FeaturedProductsSection } from '@/components/store/featured-products-section'
 
 // Lazy load heavy below-the-fold components
 const AnimatedTestimonials = dynamic(
@@ -31,48 +28,9 @@ const ScheduleMapWrapper = dynamic(
 export const metadata: Metadata = createMetadata({
   title: 'Jose Madrid Salsa - Premium Gourmet Salsa',
   description:
-    'Premium handcrafted salsa from Zanesville, Ohio — 25+ small-batch flavors from mild to fiery hot, family-owned since 1987.',
+    'Discover artisan small-batch salsas crafted in Ohio. Shop mild to extra hot varieties, find fundraising programs, or explore wholesale partnerships.',
   pathname: '/',
 })
-
-const CATEGORY_TILES = [
-  {
-    href: '/products?heat=mild',
-    eyebrow: 'Mild & Sweet',
-    title: 'Mild',
-    body: 'Perfect for those who enjoy flavor without the heat. Great for kids and mild palates.',
-    icon: '🌿',
-    tone: 'verde' as const,
-  },
-  {
-    href: '/products?heat=medium',
-    eyebrow: 'Medium Heat',
-    title: 'Medium',
-    body: 'The perfect balance of flavor and heat. Our most popular choice for everyday enjoyment.',
-    icon: '🌶️',
-    tone: 'chile' as const,
-  },
-  {
-    href: '/products?heat=hot',
-    eyebrow: 'Hot & Spicy',
-    title: 'Hot',
-    body: 'For those who love the heat — bold flavors with a serious kick that builds with each bite.',
-    icon: '🔥',
-    tone: 'salsa' as const,
-  },
-]
-
-const TONE_BG = {
-  verde: 'bg-verde-100 dark:bg-verde-900/40',
-  chile: 'bg-chile-100 dark:bg-chile-900/40',
-  salsa: 'bg-salsa-100 dark:bg-salsa-900/30',
-}
-
-const FUNDRAISING_STATS = [
-  { value: '50%', label: 'Profit per jar' },
-  { value: '96+', label: 'Jar minimum' },
-  { value: '10 days', label: 'Ship time' },
-] as const
 
 // This is an async server component — it fetches ONCE on the server at render time.
 // Next.js ISR caches the result (reviews: 2h, calendar: 5min).
@@ -88,284 +46,301 @@ export default async function Home() {
   return (
     <ErrorBoundary>
       <main className="min-h-screen">
-        {/* Hero */}
-        <HomeHero />
+      {/* Hero Section */}
+      <section className="hero-gradient relative overflow-hidden">
+        <div className="absolute inset-0 bg-black opacity-20"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="text-white animate-slide-up">
+              <h1 className="text-5xl lg:text-6xl font-bold font-serif mb-6">
+                Premium Gourmet 
+                <span className="block text-chile-200">Salsa</span>
+              </h1>
+              <p className="text-xl lg:text-2xl mb-8 text-gray-100 leading-relaxed">
+                Made with the finest ingredients in Ohio. From mild to fiery hot, 
+                discover the perfect salsa for every taste.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link href="/salsas" className="btn-primary text-lg px-8 py-4">
+                  Shop Now
+                </Link>
+                <Link href="/about" className="btn-secondary text-lg px-8 py-4 bg-white/10 border-white/20 text-white hover:bg-white/20">
+                  Our Story
+                </Link>
+              </div>
+            </div>
+            <div className="relative animate-slide-up animation-delay-200">
+              <div className="relative w-full h-96 lg:h-[500px]">
+                <Image
+                  src="/images/shared/Hero-Image-Mike.png"
+                  alt="Fresh salsa with chips"
+                  fill
+                  className="object-cover object-center rounded-2xl shadow-2xl"
+                  priority
+                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 45vw"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        {/* Featured Products — pulled from Prisma (isFeatured=true, inStock=true) */}
-        <ErrorBoundary>
-          <FeaturedProductsSection />
-        </ErrorBoundary>
+      {/* Product Categories */}
+      <section className="py-20 bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold font-serif text-foreground mb-4">
+                Find Your Perfect <span className="text-gradient">Heat Level</span>
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                From those who like it mild to the heat seekers, we have the perfect salsa for everyone.
+              </p>
+            </div>
+          </ScrollReveal>
 
-        {/* Heat-Level Categories */}
-        <section className="bg-muted/30 py-20">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <ScrollReveal>
-              <div className="mb-16 text-center">
-                <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-salsa-600">
-                  Heat Levels
-                </span>
-                <h2 className="mb-4 font-serif text-4xl font-bold tracking-[-0.02em] text-foreground md:text-5xl">
-                  Built for Every <span className="text-gradient">Palate</span>
-                </h2>
-                <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-                  From those who like it mild to the heat seekers — we have the perfect salsa for everyone.
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Mild Salsa */}
+            <ScrollReveal delay={100}>
+              <div className="card p-8 text-center group hover:scale-105 transition-transform duration-300">
+                <div className="w-20 h-20 bg-verde-100 dark:bg-verde-900/40 rounded-full mx-auto mb-6 flex items-center justify-center">
+                  <span className="text-3xl">🌿</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-4 text-foreground">Mild</h3>
+                <p className="text-muted-foreground mb-6">
+                  Perfect for those who enjoy flavor without the heat. Great for kids and mild palates.
                 </p>
+                <Link href="/salsas?heat=mild" className="btn-secondary w-full">
+                  Shop Mild
+                </Link>
               </div>
             </ScrollReveal>
 
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-              {CATEGORY_TILES.map((tile, idx) => (
-                <ScrollReveal key={tile.href} delay={100 * (idx + 1)}>
-                  <Link
-                    href={tile.href}
-                    className="interactive-card group block rounded-xl border border-border bg-card p-8 text-center"
-                  >
-                    <div
-                      className={`mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full ${TONE_BG[tile.tone]} transition-transform duration-300 group-hover:scale-110`}
-                    >
-                      <span className="text-3xl" aria-hidden>
-                        {tile.icon}
-                      </span>
-                    </div>
-                    <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.22em] text-salsa-600">
-                      {tile.eyebrow}
-                    </span>
-                    <h3 className="mb-4 font-serif text-2xl font-bold text-foreground">
-                      {tile.title}
-                    </h3>
-                    <p className="mb-6 text-muted-foreground">{tile.body}</p>
-                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-salsa-600 transition-all duration-200 group-hover:gap-3">
-                      Shop {tile.title}
-                      <ArrowRight className="h-4 w-4" />
-                    </span>
-                  </Link>
-                </ScrollReveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* What Sets Us Apart */}
-        <section className="py-20">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
-              <ScrollReveal className="scroll-reveal-left">
-                <div>
-                  <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-salsa-600">
-                    What Sets Us Apart
-                  </span>
-                  <h2 className="mb-6 font-serif text-4xl font-bold tracking-[-0.02em] text-foreground">
-                    More Than Just <span className="text-gradient">Great Taste</span>
-                  </h2>
-                  <div className="space-y-8">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-salsa-100 dark:bg-salsa-900/30">
-                        <span className="text-xl text-salsa-600" aria-hidden>🏪</span>
-                      </div>
-                      <div>
-                        <h3 className="mb-2 text-xl font-semibold text-foreground">Fundraising Made Easy</h3>
-                        <p className="text-muted-foreground">
-                          Perfect for schools, churches, and organizations. High-profit margins and products people actually want.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-verde-100 dark:bg-verde-900/30">
-                        <span className="text-xl text-verde-600" aria-hidden>🏭</span>
-                      </div>
-                      <div>
-                        <h3 className="mb-2 text-xl font-semibold text-foreground">Wholesale Options</h3>
-                        <p className="text-muted-foreground">
-                          Stock our premium salsas in your store. Competitive pricing with excellent support.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-chile-100 dark:bg-chile-900/30">
-                        <span className="text-xl text-chile-600" aria-hidden>📍</span>
-                      </div>
-                      <div>
-                        <h3 className="mb-2 text-xl font-semibold text-foreground">Local Presence</h3>
-                        <p className="text-muted-foreground">
-                          Find us at local stores throughout Ohio, or order online for delivery anywhere.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+            {/* Medium Salsa */}
+            <ScrollReveal delay={200}>
+              <div className="card p-8 text-center group hover:scale-105 transition-transform duration-300">
+                <div className="w-20 h-20 bg-chile-100 dark:bg-chile-900/40 rounded-full mx-auto mb-6 flex items-center justify-center">
+                  <span className="text-3xl">🌶️</span>
                 </div>
-              </ScrollReveal>
-
-              <ScrollReveal className="scroll-reveal-right">
-                <div className="relative">
-                  <div className="relative h-96 w-full lg:h-[500px]">
-                    <Image
-                      src="/images/shared/salsa-bowl.png"
-                      alt="Fresh ingredients for salsa"
-                      fill
-                      className="rounded-2xl object-contain"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1280px) 45vw, 40vw"
-                    />
-                  </div>
-                </div>
-              </ScrollReveal>
-            </div>
-          </div>
-        </section>
-
-        {/* Where Is Jose — Live Schedule Map */}
-        <section className="py-16">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <ScrollReveal>
-              <div className="mx-auto mb-10 max-w-3xl text-center">
-                <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-salsa-600">
-                  On the Move
-                </span>
-                <h2 className="mb-4 font-serif text-4xl font-bold tracking-[-0.02em] text-foreground">
-                  Where Is <span className="text-gradient">Jose?</span>
-                </h2>
-                <p className="text-lg text-muted-foreground">
-                  Follow Jose Madrid Salsa to farmers markets, retail demos, and special events — updated live from our calendar.
+                <h3 className="text-2xl font-bold mb-4 text-foreground">Medium</h3>
+                <p className="text-muted-foreground mb-6">
+                  The perfect balance of flavor and heat. Our most popular choice for everyday enjoyment.
                 </p>
+                <Link href="/salsas?heat=medium" className="btn-secondary w-full">
+                  Shop Medium
+                </Link>
               </div>
-              <ScheduleMapWrapper initialEvents={calendarEvents} />
-              <div className="mt-6 text-center">
-                <Link
-                  href="/where-is-jose"
-                  className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-6 py-2 text-sm font-semibold text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:border-salsa-300 hover:shadow-md"
-                >
-                  View Full Schedule
-                  <ArrowRight className="h-4 w-4" />
+            </ScrollReveal>
+
+            {/* Hot Salsa */}
+            <ScrollReveal delay={300}>
+              <div className="card p-8 text-center group hover:scale-105 transition-transform duration-300">
+                <div className="w-20 h-20 bg-salsa-100 dark:bg-salsa-900/30 rounded-full mx-auto mb-6 flex items-center justify-center">
+                  <span className="text-3xl">🔥</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-4 text-foreground">Hot</h3>
+                <p className="text-muted-foreground mb-6">
+                  For those who love the heat! Bold flavors with a serious kick that builds with each bite.
+                </p>
+                <Link href="/salsas?heat=hot" className="btn-secondary w-full">
+                  Shop Hot
                 </Link>
               </div>
             </ScrollReveal>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Fundraising */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-verde-50 to-salsa-50 py-20 dark:from-verde-950/20 dark:to-salsa-950/20">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <ScrollReveal>
-              <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
-                <div>
-                  <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-salsa-600">
-                    Earn 50% Profit
-                  </span>
-                  <h2 className="mb-4 font-serif text-4xl font-bold leading-tight tracking-[-0.02em] text-foreground md:text-5xl">
-                    Fundraise With <span className="text-gradient">Jose!</span>
-                  </h2>
-                  <p className="mb-6 max-w-md text-lg leading-relaxed text-muted-foreground">
-                    Looking for a fundraiser people actually want to buy? Our premium handcrafted salsas
-                    sell themselves — trusted by 500+ schools, teams, and nonprofits.
-                  </p>
-
-                  {/* Punchy 3-up stat blocks with Volkhov numerals */}
-                  <dl className="mb-7 grid grid-cols-3 gap-4">
-                    {FUNDRAISING_STATS.map((stat) => (
-                      <div
-                        key={stat.label}
-                        className="rounded-xl border border-border bg-card p-4 text-center surface-shadow"
-                      >
-                        <dt className="sr-only">{stat.label}</dt>
-                        <dd className="font-serif text-2xl font-bold text-salsa-600">{stat.value}</dd>
-                        <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          {stat.label}
-                        </p>
-                      </div>
-                    ))}
-                  </dl>
-
-                  <div className="flex flex-wrap gap-3">
-                    <Link
-                      href="/fundraising"
-                      className="inline-flex items-center gap-2 rounded-full bg-salsa-500 px-7 py-3.5 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:bg-salsa-600 hover:shadow-[0_4px_12px_rgba(229,62,62,0.4)]"
-                    >
-                      Start Your Fundraiser
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                    <Link
-                      href="/auth/fundraiser-signup"
-                      className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-7 py-3.5 text-base font-semibold text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:border-salsa-300 hover:shadow-md"
-                    >
-                      Download Brochure
-                    </Link>
+      {/* Features Section */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <ScrollReveal className="scroll-reveal-left">
+              <div>
+                <h2 className="text-4xl font-bold font-serif text-foreground mb-6">
+                  More Than Just Great Taste
+                </h2>
+                <div className="space-y-8">
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-salsa-100 dark:bg-salsa-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <span className="text-salsa-600 text-xl">🏪</span>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-foreground mb-2">Fundraising Made Easy</h3>
+                      <p className="text-muted-foreground">
+                        Perfect for schools, churches, and organizations. High-profit margins and products people actually want.
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="relative flex justify-center lg:justify-start">
-                  <div className="relative w-72 lg:w-96" style={{ aspectRatio: '1000 / 733' }}>
-                    <Image
-                      src="/images/shared/fundraising-icon.png"
-                      alt="Jose Madrid Salsa Fundraising"
-                      fill
-                      className="object-contain drop-shadow-xl"
-                      sizes="(max-width: 768px) 288px, 384px"
-                    />
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-verde-100 dark:bg-verde-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <span className="text-verde-600 text-xl">🏭</span>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-foreground mb-2">Wholesale Options</h3>
+                      <p className="text-muted-foreground">
+                        Stock our premium salsas in your store. Competitive pricing with excellent support.
+                      </p>
+                    </div>
                   </div>
-                  {/* Floating "average raised" badge — signature kit element */}
-                  <div className="absolute -right-2 -top-4 rotate-3 rounded-2xl bg-salsa-500 p-4 text-white shadow-xl lg:-right-4">
-                    <div className="font-serif text-2xl font-bold leading-tight">$3,500+</div>
-                    <div className="text-xs">average raised</div>
+
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-chile-100 dark:bg-chile-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <span className="text-chile-600 text-xl">📍</span>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-foreground mb-2">Local Presence</h3>
+                      <p className="text-muted-foreground">
+                        Find us at local stores throughout Ohio, or order online for delivery anywhere.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             </ScrollReveal>
+
+            <ScrollReveal className="scroll-reveal-right">
+              <div className="relative">
+                <div className="relative w-full h-96 lg:h-[500px]">
+                  <Image
+                    src="/images/shared/salsa-bowl.png"
+                    alt="Fresh ingredients for salsa"
+                    fill
+                    className="object-contain rounded-2xl"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 45vw, 40vw"
+                  />
+                </div>
+              </div>
+            </ScrollReveal>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Active Fundraising Campaigns — team mascots */}
-        <ErrorBoundary>
-          <ActiveCampaignsGrid
-            limit={6}
-            heading="Teams Fundraising Right Now"
-            subheading="Meet the schools, clubs, and teams raising money with Jose Madrid Salsa. Back a team and every jar counts toward their goal."
-            className="bg-background"
-          />
-        </ErrorBoundary>
+      {/* Where Is Jose — Live Schedule Map */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollReveal>
+            <div className="mx-auto max-w-3xl text-center mb-10">
+              <span className="inline-block text-sm font-semibold uppercase tracking-widest text-salsa-600 mb-3">
+                On the Move
+              </span>
+              <h2 className="text-4xl font-bold font-serif text-foreground mb-4">
+                Where Is <span className="text-gradient">Jose?</span>
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Follow Jose Madrid Salsa to farmers markets, retail demos, and special events — updated live from our calendar.
+              </p>
+            </div>
+            <ScheduleMapWrapper initialEvents={calendarEvents} />
+            <div className="mt-6 text-center">
+              <Link href="/where-is-jose" className="btn-secondary text-sm px-6 py-2">
+                View Full Schedule →
+              </Link>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
 
-        {/* Gift Box Selector Section */}
-        <GiftBoxSelector />
+      {/* Fundraising Section */}
+      <section className="py-20 bg-gradient-to-br from-verde-50 to-salsa-50 dark:from-verde-950/20 dark:to-salsa-950/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollReveal>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              {/* Image */}
+              <div className="flex justify-center lg:justify-start">
+                <div className="relative w-72 lg:w-96" style={{ aspectRatio: '1000 / 733' }}>
+                  <Image
+                    src="/images/shared/fundraising-icon.png"
+                    alt="Jose Madrid Salsa Fundraising"
+                    fill
+                    className="object-contain drop-shadow-xl"
+                    sizes="(max-width: 768px) 288px, 384px"
+                  />
+                </div>
+              </div>
+              {/* Content */}
+              <div>
+                <span className="inline-block text-sm font-semibold uppercase tracking-widest text-salsa-600 mb-3">
+                  Earn 50% Profit
+                </span>
+                <h2 className="text-4xl font-bold font-serif text-foreground mb-6">
+                  Fundraise With <span className="text-gradient">Jose!</span>
+                </h2>
+                <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
+                  Looking for a fundraiser people actually want to buy? Our premium handcrafted salsas sell themselves — over 25 unique flavors, free shipping on bulk orders, and a <strong className="text-foreground">50% profit margin</strong> for your school, team, or organization.
+                </p>
+                <ul className="space-y-3 mb-8">
+                  {[
+                    '50% profit on every jar sold',
+                    'Pre-sell & online fundraising options',
+                    'Free shipping on 96+ jar orders',
+                    'Ships within 10 days of order',
+                  ].map((item) => (
+                    <li key={item} className="flex items-center gap-3 text-foreground">
+                      <span className="w-5 h-5 rounded-full bg-verde-500 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Link
+                    href="/fundraising"
+                    className="btn-primary text-base px-8 py-3 text-center"
+                  >
+                    Learn More
+                  </Link>
+                  <Link
+                    href="/auth/fundraiser-signup"
+                    className="btn-secondary text-base px-8 py-3 text-center"
+                  >
+                    Start Your Fundraiser
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
 
-        {/* Location Map Section */}
-        <LocationMapClient />
+      {/* Active Fundraising Campaigns — team mascots */}
+      <ErrorBoundary>
+        <ActiveCampaignsGrid
+          limit={6}
+          heading="Teams Fundraising Right Now"
+          subheading="Meet the schools, clubs, and teams raising money with Jose Madrid Salsa. Back a team and every jar counts toward their goal."
+          className="bg-background"
+        />
+      </ErrorBoundary>
 
-        {/* Reviews Section — data pre-fetched server-side, zero client API calls */}
-        <AnimatedTestimonials reviewsData={reviewsData} />
+      {/* Gift Box Selector Section */}
+      <GiftBoxSelector />
 
-        {/* CTA — hero gradient, eyebrow, serif + text-gradient accent */}
-        <section className="hero-gradient relative overflow-hidden py-20 text-white">
-          <div aria-hidden className="absolute inset-0 bg-black/15" />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-20 top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -left-10 bottom-0 h-32 w-32 rounded-full bg-white/10 blur-2xl"
-          />
-          <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
-            <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-chile-200">
-              Made With Love, Served With Pride
-            </span>
-            <h2 className="mb-5 font-serif text-4xl font-bold leading-tight tracking-[-0.02em] md:text-5xl">
-              Ready to Taste the
-              <span className="block italic text-chile-200">Difference?</span>
-            </h2>
-            <p className="mx-auto mb-8 max-w-xl text-lg text-white/90 leading-relaxed">
-              Join thousands of families who made Jose Madrid Salsa their go-to jar.
-              From Mike&apos;s kitchen in Zanesville, Ohio — straight to your table.
-            </p>
-            <Link
-              href="/products"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 text-base font-semibold text-salsa-600 shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:bg-stone-100 hover:shadow-xl"
-            >
-              Shop All Salsas
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </section>
-      </main>
+      {/* Location Map Section */}
+      <LocationMapClient />
+
+      {/* Reviews Section — data pre-fetched server-side, zero client API calls */}
+      <AnimatedTestimonials reviewsData={reviewsData} />
+
+      {/* CTA Section */}
+      <section className="py-20 bg-salsa-600">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-4xl font-bold text-white mb-6">
+            Ready to Taste the Difference?
+          </h2>
+          <p className="text-xl text-salsa-100 mb-8 max-w-2xl mx-auto">
+            Join thousands of satisfied customers who have made Jose Madrid Salsa their go-to choice.
+          </p>
+          <Link href="/salsas" className="btn-secondary text-lg px-8 py-4 bg-white text-salsa-600 hover:bg-gray-100">
+            Shop All Salsas
+          </Link>
+        </div>
+      </section>
+    </main>
     </ErrorBoundary>
   )
 }
