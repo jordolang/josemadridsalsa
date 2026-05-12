@@ -1,25 +1,23 @@
 name: Claude Code Review
 
 on:
-  pull_request:
-    types: [opened, synchronize]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+  # Automatic PR reviews are disabled because the stored
+  # CLAUDE_CODE_OAUTH_TOKEN currently returns 401 Invalid bearer token.
+  # Re-enable pull_request after rotating that repository secret.
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to review after CLAUDE_CODE_OAUTH_TOKEN is fixed
+        required: true
+        type: string
 
 jobs:
   claude-review:
-    # Skip Dependabot PRs — they are automated and don't need AI code review
-    if: github.event.pull_request.user.login != 'dependabot[bot]'
-
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write
+      issues: write
       id-token: write
 
     steps:
@@ -35,7 +33,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
             REPO: ${{ github.repository }}
-            PR NUMBER: ${{ github.event.pull_request.number }}
+            PR NUMBER: ${{ inputs.pr_number }}
 
             Please review this pull request and provide feedback on:
             - Code quality and best practices
@@ -51,4 +49,3 @@ jobs:
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
           claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
-

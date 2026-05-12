@@ -213,7 +213,6 @@
   "overrides": {
     "tar": ">=7.5.10",
     "@tootallnate/once": ">=3.0.1",
-    "minimatch": ">=10.2.3",
     "effect": "3.21.0",
     "smol-toml": "1.6.1",
     "srvx": "0.11.13",

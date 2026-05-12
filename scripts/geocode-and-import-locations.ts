@@ -6,7 +6,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import { PrismaClient } from '@prisma/client'
 
-const API_KEY = process.env.GOOGLE_PLACES_API_KEY || 'AIzaSyCaAF9EVxRyUQtMKy8Z7gfzL-NVEnjA1Xw'
+const API_KEY = process.env.GOOGLE_PLACES_API_KEY
 const DATA_PATH = path.join(process.cwd(), 'lib/locations/locations-data.json')
 const DELAY_MS = 300
 
@@ -58,6 +58,10 @@ async function geocodeLocation(loc: RawLocation) {
 }
 
 async function main() {
+  if (!API_KEY) {
+    throw new Error('GOOGLE_PLACES_API_KEY must be set before running this script')
+  }
+
   const raw = JSON.parse(await fs.readFile(DATA_PATH, 'utf-8')) as RawLocation[]
   console.log(`Processing ${raw.length} locations...\n`)
   let ok = 0, geo = 0, fail = 0
