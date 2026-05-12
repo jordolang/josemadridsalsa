@@ -26,43 +26,40 @@ export function formatPrice(price: number): string {
 }
 
 /**
- * Brand-tinted color classes for heat-level badges.
- * Verde (mild) → Chile (medium) → Salsa (hot/extra-hot) → Verde (fruit, fresh).
- * Pairs with the emoji prefix returned by getHeatLevelText.
+ * Returns the appropriate color classes for heat level badges
  */
 export function getHeatLevelColor(heatLevel: string): string {
   switch (heatLevel.toUpperCase()) {
     case 'MILD':
-      return 'bg-verde-100 text-verde-800 border-verde-200'
+      return 'bg-green-100 text-green-800 border-green-200'
     case 'MEDIUM':
-      return 'bg-chile-100 text-chile-800 border-chile-200'
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200'
     case 'HOT':
-      return 'bg-salsa-100 text-salsa-800 border-salsa-200'
+      return 'bg-orange-100 text-orange-800 border-orange-200'
     case 'EXTRA_HOT':
-      return 'bg-salsa-900 text-white border-salsa-900'
+      return 'bg-red-100 text-red-800 border-red-200'
     case 'FRUIT':
-      return 'bg-verde-50 text-verde-700 border-verde-200'
+      return 'bg-purple-100 text-purple-800 border-purple-200'
     default:
-      return 'bg-muted text-muted-foreground border-border'
+      return 'bg-gray-100 text-gray-800 border-gray-200'
   }
 }
 
 /**
- * Display text for heat levels, prefixed with the category emoji.
- * Matches the UI kit's HeatBadge convention: 🌿 mild · 🌶️ medium · 🔥 hot.
+ * Returns the display text for heat levels
  */
 export function getHeatLevelText(heatLevel: string): string {
   switch (heatLevel.toUpperCase()) {
     case 'MILD':
-      return '🌿 Mild'
+      return 'Mild'
     case 'MEDIUM':
-      return '🌶️ Medium'
+      return 'Medium'
     case 'HOT':
-      return '🔥 Hot'
+      return 'Hot'
     case 'EXTRA_HOT':
-      return '🔥 Extra Hot'
+      return 'Extra Hot'
     case 'FRUIT':
-      return '🌿 Gourmet Fruit'
+      return 'Fruit'
     default:
       return 'Unknown'
   }
