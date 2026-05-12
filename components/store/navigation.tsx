@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useWishlistStore } from "@/lib/store/wishlist";
 import { cn } from "@/lib/utils";
-import { CartIcon } from "@/components/store/cart-icon";
+import { CartButton } from "@/components/cart/cart-button";
 
 const salsaCategories = [
   { name: "Mild & Sweet", href: "/products?heat=mild", description: "Perfect for beginners and families" },
@@ -390,7 +390,7 @@ export function Navigation() {
 
             {/* Cart */}
             <div className="flex-shrink-0">
-              <CartIcon />
+              <CartButton />
             </div>
 
             {/* Mobile Menu */}
