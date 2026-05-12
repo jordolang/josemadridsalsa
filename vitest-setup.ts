@@ -6,6 +6,11 @@
  * and Mock Service Worker (MSW) for API mocking
  */
 
+// Set test environment variables BEFORE any imports
+process.env.RESEND_API_KEY = 'test_resend_api_key_12345'
+process.env.FROM_EMAIL = 'Jose Madrid Salsa <mike@josemadrid.net>'
+process.env.NEXT_PUBLIC_BASE_URL = 'https://josemadrid.net'
+
 import '@testing-library/jest-dom/vitest' // Note: /vitest sub-export, not main export
 import { cleanup } from '@testing-library/react'
 import { afterEach, beforeAll, afterAll } from 'vitest'
