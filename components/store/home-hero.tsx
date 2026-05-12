@@ -38,20 +38,20 @@ export function HomeHero() {
         className="pointer-events-none absolute left-1/3 top-1/3 h-16 w-16 rounded-full bg-white/10 blur-lg animate-bounce-gentle animation-delay-600"
       />
 
-      <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:py-28 lg:px-8">
+      <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-8 sm:gap-12 px-4 py-12 sm:py-16 md:py-20 sm:px-6 lg:grid-cols-2 lg:py-28 lg:px-8">
         {/* Copy */}
         <div className="animate-slide-up">
-          <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold backdrop-blur">
+          <span className="mb-4 sm:mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold backdrop-blur">
             <Star className="h-3 w-3 fill-current" />
             Award-Winning Since 1987
           </span>
           <h1
-            className="mb-5 font-serif text-5xl font-bold leading-[0.95] tracking-[-0.02em] md:text-6xl lg:text-7xl"
+            className="mb-4 sm:mb-5 font-serif text-4xl sm:text-5xl font-bold leading-[0.95] tracking-[-0.02em] md:text-6xl lg:text-7xl"
           >
             Premium Gourmet
             <span className="block italic text-chile-200">Salsa</span>
           </h1>
-          <p className="mb-7 max-w-md text-lg leading-relaxed text-white/90 md:text-xl">
+          <p className="mb-6 sm:mb-7 max-w-md text-base sm:text-lg leading-relaxed text-white/90 md:text-xl">
             Made with the finest ingredients in Ohio. From mild to fiery hot,
             discover the perfect salsa for every taste — handcrafted in small batches.
           </p>
@@ -72,12 +72,12 @@ export function HomeHero() {
           </div>
 
           {/* Stat strip — Volkhov numerals, hairline divider */}
-          <dl className="mt-10 flex gap-8 border-t border-white/20 pt-6">
+          <dl className="mt-8 sm:mt-10 flex gap-4 sm:gap-6 md:gap-8 border-t border-white/20 pt-5 sm:pt-6">
             {STATS.map((stat) => (
               <div key={stat.label}>
                 <dt className="sr-only">{stat.label}</dt>
-                <dd className="font-serif text-3xl font-bold">{stat.value}</dd>
-                <p className="mt-0.5 text-xs uppercase tracking-wider text-white/80">
+                <dd className="font-serif text-2xl sm:text-3xl font-bold">{stat.value}</dd>
+                <p className="mt-0.5 text-[10px] sm:text-xs uppercase tracking-wider text-white/80">
                   {stat.label}
                 </p>
               </div>
@@ -98,13 +98,13 @@ export function HomeHero() {
               onError={() => setImageError(true)}
             />
           </div>
-          <div className="absolute -bottom-3 -left-3 flex items-center gap-2.5 rounded-2xl bg-white p-3 text-foreground shadow-xl">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-chile-100 text-xl">
+          <div className="absolute -bottom-2 -left-2 sm:-bottom-3 sm:-left-3 flex items-center gap-2 sm:gap-2.5 rounded-xl sm:rounded-2xl bg-white p-2 sm:p-3 text-foreground shadow-xl">
+            <span className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-chile-100 text-lg sm:text-xl">
               🌶️
             </span>
             <div className="leading-tight">
-              <div className="text-xs font-semibold">Mike Zakany</div>
-              <div className="text-[10px] text-muted-foreground">Founder &amp; Chef</div>
+              <div className="text-[11px] sm:text-xs font-semibold">Mike Zakany</div>
+              <div className="text-[9px] sm:text-[10px] text-muted-foreground">Founder &amp; Chef</div>
             </div>
           </div>
         </div>
