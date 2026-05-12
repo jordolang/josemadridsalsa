@@ -153,3 +153,6 @@ tiktok-shop-products*.xlsx
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Codex CLI working directory
+.codex/
