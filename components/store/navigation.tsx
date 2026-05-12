@@ -1,67 +1,95 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useSession, signIn, signOut } from "next-auth/react";
-import { Search, ShoppingCart, Menu, X, User, Gift, LogOut, Settings, Facebook, Twitter, Store, Heart, BookOpen } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
+import {
+  Search,
+  ShoppingCart,
+  Menu,
+  User,
+  Gift,
+  LogOut,
+  Settings,
+  Facebook,
+  Twitter,
+  Store,
+  Heart,
+  BookOpen,
+  ArrowRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuLink, NavigationMenuContent, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useWishlistStore } from "@/lib/store/wishlist";
 import { cn } from "@/lib/utils";
 import { CartIcon } from "@/components/store/cart-icon";
 
-const salsaCategories = [
-  { name: "Mild & Sweet", href: "/products?heat=mild", description: "Perfect for beginners and families" },
-  { name: "Medium Heat", href: "/products?heat=medium", description: "Just the right kick" },
-  { name: "Hot & Spicy", href: "/products?heat=hot", description: "For the brave souls" },
-  { name: "Gourmet Fruit", href: "/products?heat=fruit", description: "Unique fruit-infused flavors" },
-  { name: "Bundle Deals", href: "/bundles", description: "Mix & match your favorites" },
-  { name: "Merchandise", href: "/merchandise", description: "T-shirts, hats, and accessories" },
-];
-
 interface NavSubItem {
   name: string;
   href: string;
-  description?: string;
+  description: string;
 }
 
-interface NavItem {
+interface NavGroup {
+  id: "shop" | "about" | "for-you";
   title: string;
-  href?: string;
-  megaMenu?: NavSubItem[];
-  dropdown?: NavSubItem[];
+  featured?: { href: string; label: string; hint: string };
+  items: NavSubItem[];
 }
 
-const navTriggerClass =
-  "inline-flex h-11 min-w-[104px] items-center justify-center gap-1 rounded-full border border-border/70 bg-background/70 px-5 py-2 font-sans text-[13px] font-bold uppercase tracking-[0.12em] text-foreground shadow-sm backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-salsa-500 hover:bg-salsa-500 hover:text-white hover:shadow-md focus:bg-salsa-500 focus:text-white data-[state=open]:border-salsa-500 data-[state=open]:bg-salsa-500 data-[state=open]:text-white data-[state=open]:shadow-md dark:border-border/60 dark:bg-background/50 dark:text-foreground dark:hover:bg-salsa-500 dark:hover:text-white dark:data-[state=open]:bg-salsa-500 dark:data-[state=open]:text-white";
-
-const navigationItems: NavItem[] = [
+const NAV_GROUPS: NavGroup[] = [
   {
+    id: "shop",
     title: "Shop",
-    href: "/products",
-    megaMenu: salsaCategories,
-  },
-  {
-    title: "About",
-    dropdown: [
-      { name: "Our Story", href: "/our-story", description: "Learn about Jose and his salsa journey" },
-      { name: "Find Us", href: "/find-us", description: "Where to buy our salsas near you" },
-      { name: "Recipes", href: "/recipes", description: "Cooking inspiration with our salsas" },
+    featured: {
+      href: "/products",
+      label: "All Products",
+      hint: "Browse our complete collection of handcrafted salsas",
+    },
+    items: [
+      { name: "Mild & Sweet", href: "/products?heat=mild", description: "Perfect for beginners and families" },
+      { name: "Medium Heat", href: "/products?heat=medium", description: "Just the right kick" },
+      { name: "Hot & Spicy", href: "/products?heat=hot", description: "For the brave souls" },
+      { name: "Gourmet Fruit", href: "/products?heat=fruit", description: "Unique fruit-infused flavors" },
+      { name: "Bundle Deals", href: "/bundles", description: "Mix & match your favorites" },
+      { name: "Merchandise", href: "/merchandise", description: "T-shirts, hats, and accessories" },
     ],
   },
   {
+    id: "about",
+    title: "About",
+    items: [
+      { name: "Our Story", href: "/our-story", description: "From Clovis, NM to Zanesville, OH" },
+      { name: "Recipes", href: "/recipes", description: "Cooking with our salsas" },
+      { name: "Find Us", href: "/find-us", description: "Retailers near you" },
+    ],
+  },
+  {
+    id: "for-you",
     title: "For You",
-    dropdown: [
-      { name: "Fundraising", href: "/fundraising", description: "Raise money for your cause with salsa" },
-      { name: "Wholesale", href: "/wholesale", description: "Bulk orders and partnership opportunities" },
-      { name: "Where Is Jose?", href: "/where-is-jose", description: "Catch us at upcoming events and tours" },
+    items: [
+      { name: "Fundraising", href: "/fundraising", description: "Earn 50% profit" },
+      { name: "Wholesale", href: "/wholesale", description: "Stock our jars" },
+      { name: "Where Is Jose?", href: "/where-is-jose", description: "Catch us at events and markets" },
     ],
   },
 ];
@@ -71,259 +99,203 @@ const googleBusinessUrl =
   "https://g.page/jose-madrid-salsa/review";
 
 const socialLinks = [
-  {
-    name: "Facebook",
-    href: "https://www.facebook.com/josemadridsalsa",
-    icon: Facebook,
-  },
-  {
-    name: "X (Twitter)",
-    href: "https://twitter.com/josemadridsalsa",
-    icon: Twitter,
-  },
-  {
-    name: "Google Business",
-    href: googleBusinessUrl,
-    icon: Store,
-  },
+  { name: "Facebook", href: "https://www.facebook.com/josemadridsalsa", icon: Facebook },
+  { name: "X (Twitter)", href: "https://twitter.com/josemadridsalsa", icon: Twitter },
+  { name: "Google Business", href: googleBusinessUrl, icon: Store },
 ];
+
+function isGroupActive(group: NavGroup, pathname: string): boolean {
+  if (group.featured && pathname.startsWith(group.featured.href)) return true;
+  return group.items.some((item) => {
+    const base = item.href.split("?")[0];
+    return base !== "/" && pathname.startsWith(base);
+  });
+}
 
 export function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [openGroupId, setOpenGroupId] = useState<NavGroup["id"] | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const isSignedIn = status === "authenticated";
   const user = session?.user;
   const { totalItems } = useWishlistStore();
-
   const wishlistCount = totalItems();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-
-    window.addEventListener("scroll", handleScroll);
+    const handleScroll = () => setIsScrolled(window.scrollY > 8);
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (searchOpen) searchRef.current?.focus();
+  }, [searchOpen]);
+
+  // Close dropdowns whenever the route changes.
+  useEffect(() => {
+    setOpenGroupId(null);
+  }, [pathname, searchParams]);
+
+  const openGroup = (id: NavGroup["id"]) => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+    setOpenGroupId(id);
+  };
+
+  const scheduleClose = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setOpenGroupId(null), 140);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery("");
+      setSearchOpen(false);
     }
   };
 
   return (
     <header
+      onMouseLeave={scheduleClose}
       className={cn(
-        "sticky top-0 z-50 w-full border-b border-transparent bg-background/70 backdrop-blur-sm transition-[background-color,box-shadow,border-color] duration-300 text-foreground",
-        isScrolled &&
-          "border-border bg-background/90 shadow-[0_12px_32px_rgba(15,23,42,0.08)] dark:shadow-[0_0_30px_rgba(229,62,62,0.35)]"
+        "sticky top-0 z-50 w-full text-foreground transition-[background-color,box-shadow,border-color] duration-300",
+        isScrolled
+          ? "bg-background/95 backdrop-blur-md shadow-[0_1px_0_rgba(15,23,42,0.05),0_12px_28px_rgba(15,23,42,0.06)] dark:shadow-[0_0_30px_rgba(229,62,62,0.25)]"
+          : "bg-background/90 backdrop-blur-sm",
       )}
     >
-      <div className="container mx-auto px-2 sm:px-4 max-w-[1400px]">
-        <div className="flex h-16 items-center gap-1">
-          {/* Logo */}
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6">
+        <div className="grid h-[72px] grid-cols-[auto_1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
+          {/* Wordmark */}
           <Link
             href="/"
-            className="flex items-center space-x-2 font-serif font-bold text-base lg:text-xl flex-shrink-0 min-h-[44px]"
+            className="group flex items-center gap-3 justify-self-start"
+            onClick={() => setOpenGroupId(null)}
           >
-            <div className="relative w-11 h-11 lg:w-12 lg:h-12 flex-shrink-0" suppressHydrationWarning>
+            <span className="relative h-11 w-11 flex-shrink-0">
               <Image
                 src="/images/shared/logo-image.png"
-                alt="Jose Madrid Salsa Logo"
+                alt="Jose Madrid Salsa"
                 fill
-                className="object-contain"
-                sizes="(max-width: 640px) 2.75rem, 3rem"
+                sizes="44px"
+                className="object-contain transition-transform duration-300 group-hover:-rotate-[4deg]"
+                priority
               />
-            </div>
-            <span className="hidden sm:inline text-gradient whitespace-nowrap">Jose Madrid Salsa</span>
+            </span>
+            <span className="leading-[1.02] text-left hidden sm:flex sm:flex-col">
+              <span className="font-serif text-[20px] font-bold tracking-[-0.01em] text-foreground">
+                Jose Madrid
+              </span>
+              <span className="mt-[2px] text-[10px] font-semibold uppercase tracking-[0.24em] text-salsa-600">
+                Salsa · Est. 1987
+              </span>
+            </span>
           </Link>
 
-          {/* Desktop Navigation + Search — fills center */}
-          <div className="hidden lg:flex lg:items-center lg:justify-center lg:gap-2 flex-1 min-w-0">
-            {/* Search inline with nav */}
-            <form onSubmit={handleSearch} className="flex">
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground opacity-70" />
-                <input
-                  type="search"
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-7 pr-2 h-8 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-salsa-500 w-[120px]"
-                />
-              </div>
-            </form>
-            <NavigationMenu>
-              <NavigationMenuList className="gap-3">
-                {navigationItems.map((item) => (
-                  <NavigationMenuItem key={item.title}>
-                    {item.megaMenu && item.href ? (
-                      <>
-                        <NavigationMenuTrigger className={navTriggerClass}>
-                          {item.title}
-                        </NavigationMenuTrigger>
-                        <NavigationMenuContent>
-                          <div className="grid w-96 gap-3 p-6">
-                            <div className="row-span-3">
-                              <NavigationMenuLink asChild>
-                                <Link
-                                  href={item.href}
-                                  className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-salsa-50 to-chile-50 p-6 no-underline outline-none focus:shadow-md"
-                                >
-                                  <div className="mb-2 mt-4 text-lg font-medium text-salsa-700">
-                                    All Products
-                                  </div>
-                                  <p className="text-sm leading-tight text-muted-foreground">
-                                    Browse our complete collection of handcrafted salsas
-                                  </p>
-                                </Link>
-                              </NavigationMenuLink>
-                            </div>
-                            {item.megaMenu.map((category) => (
-                              <NavigationMenuLink key={category.name} asChild>
-                                <Link
-                                  href={category.href}
-                                  className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                                >
-                                  <div className="text-sm font-medium leading-none">{category.name}</div>
-                                  <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                                    {category.description}
-                                  </p>
-                                </Link>
-                              </NavigationMenuLink>
-                            ))}
-                          </div>
-                        </NavigationMenuContent>
-                      </>
-                    ) : item.dropdown ? (
-                      <>
-                        <NavigationMenuTrigger className={navTriggerClass}>
-                          {item.title}
-                        </NavigationMenuTrigger>
-                        <NavigationMenuContent>
-                          <ul className="grid w-64 gap-1 p-3">
-                            {item.dropdown.map((entry) => (
-                              <li key={entry.name}>
-                                <NavigationMenuLink asChild>
-                                  <Link
-                                    href={entry.href}
-                                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                                  >
-                                    <div className="text-sm font-medium leading-none">{entry.name}</div>
-                                    {entry.description && (
-                                      <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                                        {entry.description}
-                                      </p>
-                                    )}
-                                  </Link>
-                                </NavigationMenuLink>
-                              </li>
-                            ))}
-                          </ul>
-                        </NavigationMenuContent>
-                      </>
-                    ) : item.href ? (
-                      <NavigationMenuLink asChild>
-                        <Link href={item.href} className={navTriggerClass}>
-                          {item.title}
-                        </Link>
-                      </NavigationMenuLink>
-                    ) : null}
-                  </NavigationMenuItem>
-                ))}
-              </NavigationMenuList>
-            </NavigationMenu>
-
-            {/* Social Links — inline with nav, always visible regardless of auth state */}
-            <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.name}
-                  href={social.href}
-                  aria-label={`Visit our ${social.name} profile`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-salsa-500 dark:hover:text-salsa-300"
+          {/* Center nav — editorial labels with underline-on-active */}
+          <nav className="hidden lg:flex items-center gap-1 justify-self-center">
+            {NAV_GROUPS.map((group) => {
+              const isOpen = openGroupId === group.id;
+              const isActive = isGroupActive(group, pathname || "");
+              return (
+                <div
+                  key={group.id}
+                  className="relative"
+                  onMouseEnter={() => openGroup(group.id)}
                 >
-                  <social.icon className="w-4 h-4" />
-                </a>
-              ))}
-            </div>
-          </div>
+                  <button
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={isOpen}
+                    onClick={() => setOpenGroupId(isOpen ? null : group.id)}
+                    onFocus={() => openGroup(group.id)}
+                    className="group relative px-5 py-3"
+                  >
+                    <span
+                      className={cn(
+                        "text-[12.5px] font-semibold uppercase tracking-[0.22em] transition-colors duration-200",
+                        isActive || isOpen
+                          ? "text-salsa-600"
+                          : "text-foreground group-hover:text-salsa-600",
+                      )}
+                    >
+                      {group.title}
+                    </span>
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute bottom-1.5 left-1/2 h-[1.5px] -translate-x-1/2 bg-salsa-600 transition-all duration-300 ease-out"
+                      style={{ width: isActive || isOpen ? "22px" : "0px" }}
+                    />
+                  </button>
+                </div>
+              );
+            })}
+          </nav>
 
-          {/* Search Bar — part of the 50% center block, hidden on lg since it's inside nav block */}
-          <div className="hidden md:flex lg:hidden flex-1 max-w-[160px] mx-1">
-            <form onSubmit={handleSearch} className="flex w-full">
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground opacity-70" />
-                <Input
-                  type="search"
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-2 h-11 text-sm rounded-l-lg rounded-r-none border-r-0 focus:ring-salsa-500 focus:border-salsa-500"
-                />
-              </div>
-              <Button
-                type="submit"
-                className="rounded-l-none rounded-r-lg h-11 px-3 text-xs bg-salsa-500 hover:bg-salsa-600"
-              >
-                Search
-              </Button>
-            </form>
-          </div>
-
-          {/* Actions — right */}
-          <div className="flex items-center justify-end gap-1 lg:gap-1.5 flex-shrink-0">
-            {/* Docs link — desktop only */}
-            <Button
-              variant="ghost"
-              asChild
-              className="hidden lg:flex min-h-[44px] min-w-[44px] p-0 flex-shrink-0 text-muted-foreground hover:text-salsa-500 dark:hover:text-salsa-300"
+          {/* Right utilities — search, theme, account, cart, menu */}
+          <div className="flex items-center justify-end gap-0.5 justify-self-end">
+            {/* Inline collapsible search (desktop) */}
+            <form
+              onSubmit={handleSearch}
+              className={cn(
+                "hidden lg:flex items-center overflow-hidden transition-[width] duration-300",
+                searchOpen ? "w-56 mr-1" : "w-0",
+              )}
             >
-              <a
-                href="https://salsadocs.vercel.app"
-                aria-label="Developer Documentation"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <BookOpen className="w-5 h-5" />
-              </a>
+              <Input
+                ref={searchRef}
+                type="search"
+                placeholder="Search salsas, recipes…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onBlur={() => !searchQuery && setSearchOpen(false)}
+                className="h-9 w-full rounded-md border-border bg-muted/60 px-3 text-sm focus:border-salsa-500 focus:bg-background focus:ring-1 focus:ring-salsa-500"
+              />
+            </form>
+
+            <Button
+              type="button"
+              variant="ghost"
+              aria-label="Search"
+              onClick={() => setSearchOpen((open) => !open)}
+              className={cn(
+                "h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-salsa-600",
+                searchOpen && "bg-muted text-salsa-600",
+              )}
+            >
+              <Search className="h-[17px] w-[17px]" />
             </Button>
 
-            <ThemeToggle className="min-h-[44px] min-w-[44px] p-0 flex-shrink-0" />
-
-            {/* Search Icon (Mobile) */}
-            <Button variant="ghost" aria-label="Search" className="md:hidden min-h-[44px] min-w-[44px] p-0 flex-shrink-0">
-              <Search className="h-5 w-5 text-muted-foreground" />
-            </Button>
-
-            {/* Account (Mobile) */}
-            {!isSignedIn && (
-              <Button variant="ghost" asChild className="lg:hidden min-h-[44px] min-w-[44px] p-0 flex-shrink-0">
-                <Link href="/auth/signin" aria-label="Sign in to your account">
-                  <User className="w-5 h-5" />
-                </Link>
-              </Button>
-            )}
+            <ThemeToggle className="h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600" />
 
             {/* Account */}
             {isSignedIn ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" aria-label="Account menu" className="hidden lg:flex min-h-[44px] min-w-[44px] p-0 relative flex-shrink-0">
-                    <User className="w-5 h-5" />
+                  <Button
+                    variant="ghost"
+                    aria-label="Account menu"
+                    className="hidden lg:flex h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600"
+                  >
+                    <User className="h-[17px] w-[17px]" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
+                    <div className="flex flex-col gap-1">
                       <p className="text-sm font-medium">{user?.name}</p>
                       <p className="text-xs text-muted-foreground">{user?.email}</p>
                     </div>
@@ -331,132 +303,131 @@ export function Navigation() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/account">
-                      <User className="mr-2 h-4 w-4" />
-                      My Account
+                      <User className="mr-2 h-4 w-4" /> My Account
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/account/orders">
-                      <ShoppingCart className="mr-2 h-4 w-4" />
-                      Order History
+                      <ShoppingCart className="mr-2 h-4 w-4" /> Order History
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/wishlist">
-                      <Heart className="mr-2 h-4 w-4" />
-                      Wishlist
+                      <Heart className="mr-2 h-4 w-4" /> Wishlist
                       {wishlistCount > 0 && (
-                        <Badge className="ml-auto" variant="secondary">{wishlistCount}</Badge>
+                        <Badge className="ml-auto" variant="secondary">
+                          {wishlistCount}
+                        </Badge>
                       )}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/account/settings">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
+                      <Settings className="mr-2 h-4 w-4" /> Settings
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => signOut({ callbackUrl: '/' })}
-                    className="text-red-600 focus:text-red-600"
+                    onClick={() => signOut({ callbackUrl: "/" })}
+                    className="text-salsa-600 focus:text-salsa-700"
                   >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
+                    <LogOut className="mr-2 h-4 w-4" /> Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="hidden lg:flex gap-1 flex-shrink-0">
-                <Button variant="ghost" asChild className="min-h-[44px] px-2.5 text-xs whitespace-nowrap flex-shrink-0">
-                  <Link href="/auth/signin">
-                    <User className="w-4 h-4 mr-1" />
-                    Sign In
-                  </Link>
-                </Button>
-                <Button asChild className="min-h-[44px] px-2.5 text-xs whitespace-nowrap flex-shrink-0 bg-salsa-600 hover:bg-salsa-700">
-                  <Link href="/auth/signup">Sign Up</Link>
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                asChild
+                aria-label="Sign in"
+                className="h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600"
+              >
+                <Link href="/auth/signin">
+                  <User className="h-[17px] w-[17px]" />
+                </Link>
+              </Button>
             )}
 
-            {/* Gift Certificates */}
-            <Button variant="ghost" asChild className="hidden lg:flex min-h-[44px] min-w-[44px] p-0 relative flex-shrink-0">
+            {/* Gift Certificates (desktop only) */}
+            <Button
+              variant="ghost"
+              asChild
+              className="hidden lg:flex h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600"
+            >
               <Link href="/gift-certificates/purchase" aria-label="Purchase Gift Certificate">
-                <Gift className="w-5 h-5" />
+                <Gift className="h-[17px] w-[17px]" />
               </Link>
             </Button>
+
+            <span aria-hidden className="mx-1 hidden h-5 w-px bg-border lg:block" />
 
             {/* Cart */}
             <div className="flex-shrink-0">
               <CartIcon />
             </div>
 
-            {/* Mobile Menu */}
+            {/* Mobile menu */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"} className="lg:hidden min-h-[44px] min-w-[44px] p-0 flex-shrink-0">
-                  <Menu className="w-5 h-5" />
+                <Button
+                  variant="ghost"
+                  aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+                  className="lg:hidden h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-foreground"
+                >
+                  <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80 flex flex-col">
+              <SheetContent side="right" className="flex w-80 flex-col">
                 <SheetHeader className="flex-shrink-0">
                   <SheetTitle className="text-left font-serif text-gradient">
                     Jose Madrid Salsa
                   </SheetTitle>
                 </SheetHeader>
 
-                <div className="mt-4 space-y-4 overflow-y-auto flex-1 pr-2">
-                  {/* Mobile Search */}
-                  <form onSubmit={handleSearch} className="space-y-2 flex-shrink-0">
+                <div className="mt-4 flex-1 space-y-4 overflow-y-auto pr-2">
+                  <form onSubmit={handleSearch} className="space-y-2">
                     <Input
                       type="search"
                       placeholder="Search products..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full focus:ring-salsa-500 focus:border-salsa-500"
+                      className="w-full focus:border-salsa-500 focus:ring-salsa-500"
                     />
                     <Button type="submit" className="w-full bg-salsa-500 hover:bg-salsa-600">
                       Search
                     </Button>
                   </form>
 
-                  {/* Mobile Navigation */}
-                  <nav className="space-y-2">
-                    {navigationItems.map((item) => {
-                      const subItems = item.megaMenu ?? item.dropdown;
-                      return (
-                        <div key={item.title}>
-                          {item.href ? (
+                  <nav className="space-y-3">
+                    {NAV_GROUPS.map((group) => (
+                      <div key={group.id}>
+                        <p className="px-1 pb-1 text-[11px] font-bold uppercase tracking-[0.22em] text-salsa-600">
+                          {group.title}
+                        </p>
+                        <div className="space-y-0.5">
+                          {group.featured && (
                             <Link
+                              href={group.featured.href}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                              className="flex min-h-[44px] items-center justify-between rounded-md bg-salsa-50 px-3 py-2 text-sm font-semibold text-salsa-700 hover:bg-salsa-100"
+                            >
+                              {group.featured.label}
+                              <ArrowRight className="h-4 w-4" />
+                            </Link>
+                          )}
+                          {group.items.map((item) => (
+                            <Link
+                              key={item.href}
                               href={item.href}
                               onClick={() => setIsMobileMenuOpen(false)}
-                              className="block py-3 px-1 text-base font-medium hover:text-salsa-600 transition-colors min-h-[44px] flex items-center"
+                              className="flex min-h-[44px] items-center rounded-md px-3 py-2 text-sm text-foreground hover:bg-accent"
                             >
-                              {item.title}
+                              {item.name}
                             </Link>
-                          ) : (
-                            <div className="block py-3 px-1 text-base font-medium text-foreground min-h-[44px] flex items-center">
-                              {item.title}
-                            </div>
-                          )}
-                          {subItems && (
-                            <div className="ml-4 mt-1 space-y-1">
-                              {subItems.map((entry) => (
-                                <Link
-                                  key={entry.name}
-                                  href={entry.href}
-                                  onClick={() => setIsMobileMenuOpen(false)}
-                                  className="block py-2.5 text-sm text-muted-foreground hover:text-salsa-600 transition-colors min-h-[44px] flex items-center"
-                                >
-                                  {entry.name}
-                                </Link>
-                              ))}
-                            </div>
-                          )}
+                          ))}
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </nav>
 
                   <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-1.5">
@@ -464,12 +435,11 @@ export function Navigation() {
                       <p className="text-sm font-medium text-foreground">Appearance</p>
                       <p className="text-xs text-muted-foreground">Toggle theme</p>
                     </div>
-                    <ThemeToggle className="min-h-[44px] min-w-[44px] p-0" />
+                    <ThemeToggle className="h-11 w-11 min-h-[44px] min-w-[44px] p-0" />
                   </div>
 
-                  {/* Mobile Social Links */}
-                  <div className="pt-3 border-t border-border">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  <div className="border-t border-border pt-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Connect with us
                     </p>
                     <div className="flex items-center gap-2">
@@ -478,7 +448,7 @@ export function Navigation() {
                           key={social.name}
                           variant="outline"
                           asChild
-                          className="min-h-[44px] min-w-[44px] rounded-full p-0 text-muted-foreground"
+                          className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full p-0 text-muted-foreground"
                         >
                           <a
                             href={social.href}
@@ -493,7 +463,7 @@ export function Navigation() {
                       <Button
                         variant="outline"
                         asChild
-                        className="min-h-[44px] min-w-[44px] rounded-full p-0 text-muted-foreground"
+                        className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full p-0 text-muted-foreground"
                       >
                         <a
                           href="https://salsadocs.vercel.app"
@@ -507,68 +477,63 @@ export function Navigation() {
                     </div>
                   </div>
 
-                  {/* Mobile Account Actions */}
-                  <div className="pt-3 border-t border-border space-y-1.5">
+                  <div className="space-y-1.5 border-t border-border pt-3">
                     {isSignedIn ? (
-                      <div className="space-y-1.5">
+                      <>
                         <div className="rounded-lg bg-muted p-2">
                           <p className="text-sm font-medium text-foreground">{user?.name}</p>
                           <p className="text-xs text-muted-foreground">{user?.email}</p>
                         </div>
-                        <Button variant="outline" className="w-full justify-start min-h-[44px]" asChild>
+                        <Button variant="outline" className="w-full min-h-[44px] justify-start" asChild>
                           <Link href="/account" onClick={() => setIsMobileMenuOpen(false)}>
-                            <User className="w-4 h-4 mr-2" />
-                            My Account
+                            <User className="mr-2 h-4 w-4" /> My Account
                           </Link>
                         </Button>
-                        <Button variant="outline" className="w-full justify-start min-h-[44px]" asChild>
+                        <Button variant="outline" className="w-full min-h-[44px] justify-start" asChild>
                           <Link href="/account/orders" onClick={() => setIsMobileMenuOpen(false)}>
-                            <ShoppingCart className="w-4 h-4 mr-2" />
-                            Order History
+                            <ShoppingCart className="mr-2 h-4 w-4" /> Order History
                           </Link>
                         </Button>
-                        <Button variant="outline" className="w-full justify-start min-h-[44px]" asChild>
+                        <Button variant="outline" className="w-full min-h-[44px] justify-start" asChild>
                           <Link href="/wishlist" onClick={() => setIsMobileMenuOpen(false)}>
-                            <Heart className="w-4 h-4 mr-2" />
-                            Wishlist
+                            <Heart className="mr-2 h-4 w-4" /> Wishlist
                             {wishlistCount > 0 && (
-                              <Badge className="ml-2" variant="secondary">{wishlistCount}</Badge>
+                              <Badge className="ml-2" variant="secondary">
+                                {wishlistCount}
+                              </Badge>
                             )}
                           </Link>
                         </Button>
-                        <Button variant="outline" className="w-full justify-start min-h-[44px]" asChild>
+                        <Button variant="outline" className="w-full min-h-[44px] justify-start" asChild>
                           <Link href="/gift-certificates/purchase" onClick={() => setIsMobileMenuOpen(false)}>
-                            <Gift className="w-4 h-4 mr-2" />
-                            Gift Certificates
+                            <Gift className="mr-2 h-4 w-4" /> Gift Certificates
                           </Link>
                         </Button>
                         <Button
                           variant="outline"
-                          className="w-full justify-start min-h-[44px] text-red-600 border-red-200 hover:bg-red-50"
+                          className="w-full min-h-[44px] justify-start border-salsa-200 text-salsa-600 hover:bg-salsa-50"
                           onClick={() => {
                             setIsMobileMenuOpen(false);
-                            signOut({ callbackUrl: '/' });
+                            signOut({ callbackUrl: "/" });
                           }}
                         >
-                          <LogOut className="w-4 h-4 mr-2" />
-                          Sign Out
+                          <LogOut className="mr-2 h-4 w-4" /> Sign Out
                         </Button>
-                      </div>
+                      </>
                     ) : (
-                      <div className="space-y-1.5">
-                        <Button className="w-full min-h-[44px]" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                      <>
+                        <Button className="w-full min-h-[44px] bg-salsa-500 hover:bg-salsa-600" asChild onClick={() => setIsMobileMenuOpen(false)}>
                           <Link href="/auth/signup">Sign Up</Link>
                         </Button>
                         <Button variant="outline" className="w-full min-h-[44px]" asChild onClick={() => setIsMobileMenuOpen(false)}>
                           <Link href="/auth/signin">Sign In</Link>
                         </Button>
-                        <Button variant="outline" className="w-full justify-start min-h-[44px]" asChild>
+                        <Button variant="outline" className="w-full min-h-[44px] justify-start" asChild>
                           <Link href="/gift-certificates/purchase" onClick={() => setIsMobileMenuOpen(false)}>
-                            <Gift className="w-4 h-4 mr-2" />
-                            Gift Certificates
+                            <Gift className="mr-2 h-4 w-4" /> Gift Certificates
                           </Link>
                         </Button>
-                      </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -576,7 +541,160 @@ export function Navigation() {
             </Sheet>
           </div>
         </div>
+
+        {/* Hairline below the masthead row */}
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       </div>
+
+      {/* Dropdown panels — positioned absolutely so they overlay content */}
+      {NAV_GROUPS.map((group) => {
+        const isOpen = openGroupId === group.id;
+        const isShop = group.id === "shop";
+        return (
+          <div
+            key={group.id}
+            onMouseEnter={() => openGroup(group.id)}
+            onMouseLeave={scheduleClose}
+            aria-hidden={!isOpen}
+            className={cn(
+              "absolute left-0 right-0 top-full transition-all duration-200 ease-out",
+              isOpen
+                ? "pointer-events-auto translate-y-0 opacity-100"
+                : "pointer-events-none -translate-y-1 opacity-0",
+            )}
+          >
+            <div className={cn("mx-auto px-6 pb-3 pt-2", isShop ? "max-w-5xl" : "max-w-3xl")}>
+              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-[0_20px_50px_rgba(15,23,42,0.10),0_8px_18px_rgba(15,23,42,0.04)]">
+                {isShop ? (
+                  <ShopPanel
+                    group={group}
+                    pathname={pathname || ""}
+                    searchParams={searchParams}
+                  />
+                ) : (
+                  <SimplePanel group={group} pathname={pathname || ""} />
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </header>
+  );
+}
+
+interface PanelProps {
+  group: NavGroup;
+  pathname: string;
+}
+
+interface ShopPanelProps extends PanelProps {
+  searchParams: ReturnType<typeof useSearchParams>;
+}
+
+function isShopItemActive(
+  itemHref: string,
+  pathname: string,
+  searchParams: ReturnType<typeof useSearchParams>,
+): boolean {
+  const [base, query] = itemHref.split("?");
+  if (!pathname.startsWith(base)) return false;
+  if (!query) return pathname === base;
+  // Match every key=value pair against the current URL search params.
+  const target = new URLSearchParams(query);
+  for (const [key, value] of target.entries()) {
+    if (searchParams?.get(key) !== value) return false;
+  }
+  return true;
+}
+
+function ShopPanel({ group, pathname, searchParams }: ShopPanelProps) {
+  if (!group.featured) return null;
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-[280px_1fr]">
+      <Link
+        href={group.featured.href}
+        className={cn(
+          "group flex min-h-[260px] flex-col justify-between border-b border-border p-6 transition-colors md:border-b-0 md:border-r",
+          "bg-gradient-to-br from-salsa-50 to-chile-50 hover:from-salsa-100 hover:to-chile-100",
+        )}
+      >
+        <div>
+          <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-salsa-600">
+            Featured
+          </div>
+          <div className="mb-2 font-serif text-[26px] font-bold leading-tight text-salsa-700">
+            {group.featured.label}
+          </div>
+          <p className="text-[13px] leading-relaxed text-foreground/80">{group.featured.hint}</p>
+        </div>
+        <div className="mt-6 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-salsa-600 transition-all group-hover:gap-3">
+          Shop the collection
+          <ArrowRight className="h-3.5 w-3.5" />
+        </div>
+      </Link>
+      <div className="grid grid-cols-1 gap-0.5 p-2 sm:grid-cols-2">
+        {group.items.map((item) => {
+          const active = isShopItemActive(item.href, pathname, searchParams);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "group rounded-lg px-4 py-3 transition-colors",
+                active ? "bg-salsa-50" : "hover:bg-muted/70",
+              )}
+            >
+              <div
+                className={cn(
+                  "text-[14.5px] font-semibold leading-tight transition-colors",
+                  active ? "text-salsa-600" : "text-foreground group-hover:text-salsa-600",
+                )}
+              >
+                {item.name}
+              </div>
+              <div className="mt-0.5 text-[11.5px] leading-snug text-muted-foreground">
+                {item.description}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SimplePanel({ group, pathname }: PanelProps) {
+  return (
+    <div className="grid grid-cols-1 gap-1 p-3 sm:grid-cols-3">
+      {group.items.map((item) => {
+        const active = pathname.startsWith(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+              "group rounded-lg px-5 py-4 transition-colors",
+              active ? "bg-salsa-50" : "hover:bg-muted/70",
+            )}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <div
+                className={cn(
+                  "font-serif text-[18px] font-bold leading-tight transition-colors",
+                  active ? "text-salsa-600" : "text-foreground group-hover:text-salsa-600",
+                )}
+              >
+                {item.name}
+              </div>
+              <ArrowRight className="h-3.5 w-3.5 -translate-x-1 text-salsa-600 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100" />
+            </div>
+            <div className="mt-1 text-[12px] leading-snug text-muted-foreground">
+              {item.description}
+            </div>
+          </Link>
+        );
+      })}
+    </div>
   );
 }
