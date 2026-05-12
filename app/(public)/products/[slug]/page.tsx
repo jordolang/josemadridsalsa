@@ -6,6 +6,7 @@ import { ImageGallery } from '@/components/products/ImageGallery'
 import { VariantSelector } from '@/components/products/VariantSelector'
 import { NutritionalInfo } from '@/components/products/NutritionalInfo'
 import { ProductReviews } from '@/components/reviews/product-reviews'
+import { AddToCartButton } from '@/components/store/add-to-cart-button'
 import { buildProductSchema } from '@/lib/seo/schema-generator'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
@@ -82,6 +83,7 @@ export default async function ProductDetailPage({ params }: Props) {
   ])
 
   const isOutOfStock = product.inventory <= 0
+  const isLowStock = !isOutOfStock && product.inventory <= product.lowStockThreshold
   const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price
   const discountPercentage = hasDiscount
     ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
@@ -144,6 +146,9 @@ export default async function ProductDetailPage({ params }: Props) {
                   <Badge className="bg-green-500 text-white">
                     {discountPercentage}% OFF
                   </Badge>
+                )}
+                {isLowStock && (
+                  <Badge className="bg-orange-500 text-white">Low Stock</Badge>
                 )}
                 {isOutOfStock && (
                   <Badge variant="destructive">Out of Stock</Badge>
@@ -225,8 +230,24 @@ export default async function ProductDetailPage({ params }: Props) {
               </div>
             )}
 
+            {/* Add to Cart Button */}
+            <AddToCartButton
+              product={{
+                id: product.id,
+                name: product.name,
+                slug: product.slug,
+                price: product.price,
+                featuredImage: product.featuredImage,
+                sku: product.sku,
+                heatLevel: product.heatLevel,
+                inventory: product.inventory,
+              }}
+              size="lg"
+              className="w-full"
+            />
+
             {/* Low stock warning */}
-            {!isOutOfStock && product.inventory <= 5 && (
+            {isLowStock && (
               <div className="text-orange-600 text-sm font-medium">
                 ⚠️ Only {product.inventory} left in stock!
               </div>
