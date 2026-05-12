@@ -58,8 +58,9 @@ export async function PUT(
     context as { params: Promise<{ id: string }> }
   ).params
 
-  // Find cart item with product details
-  const cartItem = await db.cartItem.findUnique({
+  try {
+    // Find cart item with product details
+    const cartItem = await db.cartItem.findUnique({
     where: { id: cartItemId },
     include: {
       product: true,
@@ -119,20 +120,27 @@ export async function PUT(
     request,
   )
 
-  return NextResponse.json({
-    success: true,
-    cartItem: {
-      id: updatedCartItem.id,
-      productId: updatedCartItem.productId,
-      quantity: updatedCartItem.quantity,
-      product: {
-        id: updatedCartItem.product.id,
-        name: updatedCartItem.product.name,
-        price: parseFloat(String(updatedCartItem.product.price)),
-        featuredImage: updatedCartItem.product.featuredImage,
+    return NextResponse.json({
+      success: true,
+      cartItem: {
+        id: updatedCartItem.id,
+        productId: updatedCartItem.productId,
+        quantity: updatedCartItem.quantity,
+        product: {
+          id: updatedCartItem.product.id,
+          name: updatedCartItem.product.name,
+          price: parseFloat(String(updatedCartItem.product.price)),
+          featuredImage: updatedCartItem.product.featuredImage,
+        },
       },
-    },
-  })
+    })
+  } catch (error) {
+    console.error('[Cart API] Error updating cart item:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
 }
 
 /**
@@ -175,8 +183,9 @@ export async function DELETE(
     context as { params: Promise<{ id: string }> }
   ).params
 
-  // Find cart item with product details
-  const cartItem = await db.cartItem.findUnique({
+  try {
+    // Find cart item with product details
+    const cartItem = await db.cartItem.findUnique({
     where: { id: cartItemId },
     include: {
       product: true,
@@ -219,8 +228,15 @@ export async function DELETE(
     request,
   )
 
-  return NextResponse.json({
-    success: true,
-    message: 'Cart item removed successfully',
-  })
+    return NextResponse.json({
+      success: true,
+      message: 'Cart item removed successfully',
+    })
+  } catch (error) {
+    console.error('[Cart API] Error deleting cart item:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
 }

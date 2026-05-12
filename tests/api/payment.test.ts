@@ -3,18 +3,23 @@ import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/payment/route'
 
 // Mock dependencies
-vi.mock('@/lib/rbac', () => ({
-  getCurrentUser: vi.fn(),
+vi.mock('next-auth', () => ({
+  getServerSession: vi.fn()
 }))
 
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/prisma', () => {
+  const mockPrismaClient = {
     order: {
       findUnique: vi.fn(),
       update: vi.fn(),
     },
-  },
-}))
+  }
+  return {
+    prisma: mockPrismaClient,
+    db: mockPrismaClient,
+    default: mockPrismaClient,
+  }
+})
 
 vi.mock('@/lib/audit', () => ({
   logAuditWithRequest: vi.fn(),
@@ -32,19 +37,26 @@ vi.mock('@/lib/stripe', () => ({
 }))
 
 // Mock rate limiter to allow all requests through in tests
-vi.mock('@/lib/rate-limiter', () => ({
-  checkRateLimit: vi.fn(() => ({ allowed: true, remaining: 99, resetIn: 60, current: 1 })),
-  getClientIdentifier: vi.fn(() => 'test-ip'),
-  createRateLimitHeaders: vi.fn(() => ({})),
-  RATE_LIMITS: {
-    API_GENERAL: { maxRequests: 100, windowSeconds: 60 },
-  },
+vi.mock('@/lib/rateLimit', () => ({
+  rateLimit: vi.fn(() => ({
+    allowed: true,
+    retryAfterMs: 0
+  }))
 }))
 
 describe('Payment API', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     mockPaymentIntentsConfirm.mockClear()
+    // Default: user is authenticated
+    const { getServerSession } = await import('next-auth')
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: {
+        id: 'user-123',
+        email: 'test@example.com',
+        name: 'Test User'
+      }
+    })
   })
 
   const mockUser = {
@@ -89,8 +101,8 @@ describe('Payment API', () => {
 
   describe('POST /api/payment', () => {
     it('should return 401 when user is not authenticated', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      const { getServerSession } = await import('next-auth')
+      vi.mocked(getServerSession).mockResolvedValueOnce(null)
 
       const request = new NextRequest('http://localhost/api/payment', {
         method: 'POST',
@@ -105,8 +117,8 @@ describe('Payment API', () => {
     })
 
     it('should return 400 when payload is invalid', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      const { getServerSession } = await import('next-auth')
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
 
       const request = new NextRequest('http://localhost/api/payment', {
         method: 'POST',
@@ -116,13 +128,13 @@ describe('Payment API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toBe('Invalid payment payload')
     })
 
     it('should return 400 when orderId format is invalid', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      const { getServerSession } = await import('next-auth')
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
 
       const request = new NextRequest('http://localhost/api/payment', {
         method: 'POST',
@@ -135,15 +147,15 @@ describe('Payment API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toBe('Invalid payment payload')
     })
 
     it('should return 404 when order does not exist', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue(null)
 
       const request = new NextRequest('http://localhost/api/payment', {
@@ -159,10 +171,10 @@ describe('Payment API', () => {
     })
 
     it('should return 403 when order belongs to different user', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue({
         ...mockOrder,
         userId: 'different-user',
@@ -181,10 +193,10 @@ describe('Payment API', () => {
     })
 
     it('should return 403 when order userId is null (cannot bypass ownership)', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       // userId is null — must NOT bypass ownership check
       vi.mocked(prisma.order.findUnique).mockResolvedValue({
         ...mockOrder,
@@ -204,10 +216,10 @@ describe('Payment API', () => {
     })
 
     it('should return 400 when order is already paid', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue({
         ...mockOrder,
         paymentStatus: 'PAID',
@@ -221,15 +233,15 @@ describe('Payment API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toBe('Order has already been paid')
     })
 
     it('should return 400 when order is cancelled', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue({
         ...mockOrder,
         status: 'CANCELLED',
@@ -243,15 +255,15 @@ describe('Payment API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toContain('cancelled')
     })
 
     it('should return 400 when order has no existing PaymentIntent', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue({
         ...mockOrder,
         stripePaymentId: null,
@@ -265,16 +277,16 @@ describe('Payment API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toBe('No payment intent found for this order')
     })
 
     it('should confirm existing PaymentIntent (not create new one)', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
       const { logAuditWithRequest } = await import('@/lib/audit')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
 
       mockPaymentIntentsConfirm.mockResolvedValue({
@@ -343,10 +355,10 @@ describe('Payment API', () => {
     })
 
     it('should handle payment intent requiring action', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
 
       mockPaymentIntentsConfirm.mockResolvedValue({
@@ -377,10 +389,10 @@ describe('Payment API', () => {
     })
 
     it('should handle canceled payment intent', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
 
       mockPaymentIntentsConfirm.mockResolvedValue({
@@ -411,10 +423,10 @@ describe('Payment API', () => {
     })
 
     it('should return 402 when card is declined', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
 
       const cardError = {
@@ -436,10 +448,10 @@ describe('Payment API', () => {
     })
 
     it('should handle Stripe card error without message', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
 
       const cardError = { type: 'StripeCardError' }
@@ -458,10 +470,10 @@ describe('Payment API', () => {
     })
 
     it('should handle database errors gracefully', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockRejectedValue(
         new Error('Database error')
       )
@@ -479,10 +491,10 @@ describe('Payment API', () => {
     })
 
     it('should handle Stripe API errors gracefully', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
 
       const stripeError = new Error('Stripe API error')

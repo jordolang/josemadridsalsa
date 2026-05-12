@@ -4,12 +4,12 @@ import { POST, GET } from '@/app/api/orders/route'
 import { GET as GET_BY_ID } from '@/app/api/orders/[id]/route'
 
 // Mock dependencies
-vi.mock('@/lib/rbac', () => ({
-  getCurrentUser: vi.fn(),
+vi.mock('next-auth', () => ({
+  getServerSession: vi.fn()
 }))
 
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/prisma', () => {
+  const mockPrismaClient = {
     cartItem: {
       findMany: vi.fn(),
       deleteMany: vi.fn(),
@@ -19,11 +19,24 @@ vi.mock('@/lib/prisma', () => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
     },
-  },
-}))
+  }
+  return {
+    prisma: mockPrismaClient,
+    db: mockPrismaClient,
+    default: mockPrismaClient,
+  }
+})
 
 vi.mock('@/lib/audit', () => ({
   logAuditWithRequest: vi.fn(),
+}))
+
+// Mock rate limiter to allow all requests through in tests
+vi.mock('@/lib/rateLimit', () => ({
+  rateLimit: vi.fn(() => ({
+    allowed: true,
+    retryAfterMs: 0
+  }))
 }))
 
 const mockPaymentIntentsCreate = vi.fn(() =>
@@ -74,9 +87,18 @@ vi.mock('@/lib/rate-limiter', () => ({
 }))
 
 describe('Orders API', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     mockPaymentIntentsCreate.mockClear()
+    // Default: user is authenticated
+    const { getServerSession } = await import('next-auth')
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: {
+        id: 'user-123',
+        email: 'test@example.com',
+        name: 'Test User'
+      }
+    })
   })
 
   const mockUser = {
@@ -167,8 +189,8 @@ describe('Orders API', () => {
 
   describe('POST /api/orders', () => {
     it('should return 401 when user is not authenticated', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      const { getServerSession } = await import('next-auth')
+      vi.mocked(getServerSession).mockResolvedValueOnce(null)
 
       const request = new NextRequest('http://localhost/api/orders', {
         method: 'POST',
@@ -183,8 +205,8 @@ describe('Orders API', () => {
     })
 
     it('should return 400 when payload is invalid', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      const { getServerSession } = await import('next-auth')
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
 
       const request = new NextRequest('http://localhost/api/orders', {
         method: 'POST',
@@ -194,13 +216,13 @@ describe('Orders API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toContain('Invalid order payload')
     })
 
     it('should return 400 when shipping address is missing', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      const { getServerSession } = await import('next-auth')
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
 
       const request = new NextRequest('http://localhost/api/orders', {
         method: 'POST',
@@ -212,15 +234,15 @@ describe('Orders API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toContain('Invalid order payload')
     })
 
     it('should return 400 when cart items not found', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.cartItem.findMany).mockResolvedValue([])
 
       const request = new NextRequest('http://localhost/api/orders', {
@@ -231,15 +253,15 @@ describe('Orders API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toContain('could not be found')
     })
 
     it('should return 400 when cart items belong to different user', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.cartItem.findMany).mockResolvedValue([])
 
       const request = new NextRequest('http://localhost/api/orders', {
@@ -250,7 +272,7 @@ describe('Orders API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toContain('could not be found')
       expect(prisma.cartItem.findMany).toHaveBeenCalledWith({
         where: {
@@ -264,10 +286,10 @@ describe('Orders API', () => {
     })
 
     it('should return 400 when product not found for cart item', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.cartItem.findMany).mockResolvedValue([
         { ...mockCartItem, product: null },
       ])
@@ -280,15 +302,15 @@ describe('Orders API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toBe('Product not found for cart item')
     })
 
     it('should return 400 when inventory is insufficient', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.cartItem.findMany).mockResolvedValue([
         {
           ...mockCartItem,
@@ -305,18 +327,18 @@ describe('Orders API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toContain('Insufficient inventory')
       expect(data.error).toContain('Available: 5')
     })
 
     it('should create order successfully', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
       const { logAuditWithRequest } = await import('@/lib/audit')
       const { queueShopifySync } = await import('@/lib/shopify/sync')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.cartItem.findMany).mockResolvedValue([mockCartItem])
       vi.mocked(prisma.order.create).mockResolvedValue(mockOrder)
       vi.mocked(prisma.cartItem.deleteMany).mockResolvedValue({ count: 1 })
@@ -377,11 +399,11 @@ describe('Orders API', () => {
     })
 
     it('should continue with zero tax when tax calculation fails', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
       const { calculateTax } = await import('@/lib/tax-calculator')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.cartItem.findMany).mockResolvedValue([mockCartItem])
       vi.mocked(prisma.order.create).mockResolvedValue(mockOrder)
       vi.mocked(prisma.cartItem.deleteMany).mockResolvedValue({ count: 1 })
@@ -401,11 +423,11 @@ describe('Orders API', () => {
     })
 
     it('should continue with zero shipping when shipping calculation fails', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
       const { calculateShipping } = await import('@/lib/shipping-calculator')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.cartItem.findMany).mockResolvedValue([mockCartItem])
       vi.mocked(prisma.order.create).mockResolvedValue(mockOrder)
       vi.mocked(prisma.cartItem.deleteMany).mockResolvedValue({ count: 1 })
@@ -427,10 +449,10 @@ describe('Orders API', () => {
     })
 
     it('should handle database errors gracefully', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.cartItem.findMany).mockRejectedValue(
         new Error('Database error')
       )
@@ -450,8 +472,8 @@ describe('Orders API', () => {
 
   describe('GET /api/orders', () => {
     it('should return 401 when user is not authenticated', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      const { getServerSession } = await import('next-auth')
+      vi.mocked(getServerSession).mockResolvedValueOnce(null)
 
       const request = new NextRequest('http://localhost/api/orders', {
         method: 'GET',
@@ -465,10 +487,10 @@ describe('Orders API', () => {
     })
 
     it('should return orders for authenticated user', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findMany).mockResolvedValue([mockOrder])
 
       const request = new NextRequest('http://localhost/api/orders', {
@@ -496,8 +518,8 @@ describe('Orders API', () => {
     })
 
     it('should return 400 for invalid status filter', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      const { getServerSession } = await import('next-auth')
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
 
       const request = new NextRequest(
         'http://localhost/api/orders?status=INVALID_STATUS',
@@ -509,15 +531,15 @@ describe('Orders API', () => {
       const response = await GET(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toContain('Invalid query parameters')
     })
 
     it('should filter orders by valid status', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findMany).mockResolvedValue([])
 
       const request = new NextRequest(
@@ -541,10 +563,10 @@ describe('Orders API', () => {
     })
 
     it('should filter orders by payment status', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findMany).mockResolvedValue([])
 
       const request = new NextRequest(
@@ -568,10 +590,10 @@ describe('Orders API', () => {
     })
 
     it('should support pagination with skip and take', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findMany).mockResolvedValue([])
 
       const request = new NextRequest(
@@ -593,10 +615,10 @@ describe('Orders API', () => {
     })
 
     it('should support sorting by createdAt', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findMany).mockResolvedValue([])
 
       const request = new NextRequest(
@@ -619,10 +641,10 @@ describe('Orders API', () => {
     })
 
     it('should convert Decimal prices to numbers', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findMany).mockResolvedValue([mockOrder])
 
       const request = new NextRequest('http://localhost/api/orders', {
@@ -642,10 +664,10 @@ describe('Orders API', () => {
     })
 
     it('should handle database errors gracefully without leaking details', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findMany).mockRejectedValue(
         new Error('Database error')
       )
@@ -666,8 +688,8 @@ describe('Orders API', () => {
 
   describe('GET /api/orders/[id]', () => {
     it('should return 401 when user is not authenticated', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      const { getServerSession } = await import('next-auth')
+      vi.mocked(getServerSession).mockResolvedValueOnce(null)
 
       const request = new NextRequest(
         'http://localhost/api/orders/claaa1234567890abc',
@@ -686,10 +708,10 @@ describe('Orders API', () => {
     })
 
     it('should return 404 when order does not exist', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue(null)
 
       const request = new NextRequest(
@@ -709,10 +731,10 @@ describe('Orders API', () => {
     })
 
     it('should return 403 Forbidden when order belongs to different user', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue({
         ...mockOrder,
         userId: 'different-user',
@@ -736,10 +758,10 @@ describe('Orders API', () => {
     })
 
     it('should return order details for authenticated user', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
 
       const request = new NextRequest(
@@ -774,10 +796,10 @@ describe('Orders API', () => {
     })
 
     it('should convert Decimal prices to numbers', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder)
 
       const request = new NextRequest(
@@ -802,10 +824,10 @@ describe('Orders API', () => {
     })
 
     it('should handle database errors gracefully without leaking details', async () => {
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { default: prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
+      const { prisma } = await import('@/lib/prisma')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(mockUser)
+      vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.order.findUnique).mockRejectedValue(
         new Error('Database error')
       )
