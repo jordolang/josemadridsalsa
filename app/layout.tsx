@@ -4,6 +4,7 @@ import Script from 'next/script'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Providers } from './providers'
 import { CookieConsentBanner } from '@/components/ui/cookie-consent-banner'
+import { CartDrawer } from '@/components/cart/cart-drawer'
 import './globals.css'
 
 // Optimize font loading with next/font/google
@@ -116,6 +117,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <Providers>
           {children}
         </Providers>
+        <CartDrawer />
         <CookieConsentBanner />
         <SpeedInsights />
       </body>
