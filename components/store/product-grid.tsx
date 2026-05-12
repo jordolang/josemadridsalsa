@@ -266,25 +266,57 @@ export function ProductGrid({
           {searchQuery && (
             <Badge variant="secondary" className="flex items-center gap-1">
               Search: "{searchQuery}"
-              <X className="w-3 h-3 cursor-pointer" onClick={() => setSearchQuery("")} />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchQuery("")}
+                className="h-6 w-6 p-0 hover:bg-gray-300/50 ml-1"
+                aria-label="Clear search filter"
+              >
+                <X className="w-3 h-3" />
+              </Button>
             </Badge>
           )}
           {selectedCategory !== "all" && (
             <Badge variant="secondary" className="flex items-center gap-1">
               {categoryFilters.find(f => f.value === selectedCategory)?.label}
-              <X className="w-3 h-3 cursor-pointer" onClick={() => setSelectedCategory("all")} />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedCategory("all")}
+                className="h-6 w-6 p-0 hover:bg-gray-300/50 ml-1"
+                aria-label="Clear category filter"
+              >
+                <X className="w-3 h-3" />
+              </Button>
             </Badge>
           )}
           {selectedHeatLevel !== "all" && (
             <Badge variant="secondary" className="flex items-center gap-1">
               {heatLevelFilters.find(f => f.value === selectedHeatLevel)?.label}
-              <X className="w-3 h-3 cursor-pointer" onClick={() => setSelectedHeatLevel("all")} />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedHeatLevel("all")}
+                className="h-6 w-6 p-0 hover:bg-gray-300/50 ml-1"
+                aria-label="Clear heat level filter"
+              >
+                <X className="w-3 h-3" />
+              </Button>
             </Badge>
           )}
           {showOnlyInStock && (
             <Badge variant="secondary" className="flex items-center gap-1">
               In Stock Only
-              <X className="w-3 h-3 cursor-pointer" onClick={() => setShowOnlyInStock(false)} />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowOnlyInStock(false)}
+                className="h-6 w-6 p-0 hover:bg-gray-300/50 ml-1"
+                aria-label="Clear in stock filter"
+              >
+                <X className="w-3 h-3" />
+              </Button>
             </Badge>
           )}
           <Button
