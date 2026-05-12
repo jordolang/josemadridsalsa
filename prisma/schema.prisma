@@ -609,6 +609,28 @@ model Review {
   @@map("reviews")
 }
 
+model SiteReview {
+  id          String       @id @default(cuid())
+  rating      Int
+  comment     String?
+  name        String?
+  email       String?
+  source      String?
+  forwardedToGoogle Boolean @default(false)
+  status      ReviewStatus @default(PENDING)
+  moderatedAt DateTime?
+  moderatedBy String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+  @@map("site_reviews")
+}
+
 model Fundraiser {
   id                   String                  @id @default(cuid())
   name                 String

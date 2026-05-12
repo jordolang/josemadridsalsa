@@ -4,6 +4,7 @@ import { Heart, Award, Users, Leaf, Calendar, Target, Star, CheckCircle } from '
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { createMetadata } from '@/lib/metadata'
+import { LeaveAReview } from '@/components/reviews/leave-a-review'
 
 export const metadata: Metadata = createMetadata({
   title: 'Our Story - Jose Madrid Salsa',
@@ -291,6 +292,15 @@ export default function OurStoryPage() {
                   <p className="text-muted-foreground text-sm">Keeping family traditions alive for future generations</p>
                 </CardContent>
               </Card>
+            </div>
+
+            <div className="mb-8">
+              <LeaveAReview
+                source="our-story"
+                title="Have a Jose Madrid Salsa story of your own?"
+                description="Share what you love (or what could be better) — rate us and we'll send you to Google to post it on our business page."
+                triggerLabel="Leave a Google review"
+              />
             </div>
 
             <div className="bg-gradient-to-r from-salsa-600 to-chile-600 rounded-2xl text-white p-8">

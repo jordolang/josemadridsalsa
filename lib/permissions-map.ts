@@ -87,11 +87,6 @@ export const adminNavigation: NavItem[] = [
         href: '/admin/seo',
         permission: 'content:write',
       },
-      {
-        label: 'AI Training',
-        href: '/admin/training-data',
-        permission: 'content:write',
-      },
     ],
   },
   {
@@ -137,12 +132,6 @@ export const adminNavigation: NavItem[] = [
     permission: 'analytics:read',
   },
   {
-    label: 'Project Status',
-    href: '/admin/project-status',
-    icon: 'Activity',
-    permission: 'analytics:read',
-  },
-  {
     label: 'Email Marketing',
     href: '/admin/email-marketing',
     icon: 'Mail',
@@ -167,6 +156,7 @@ export const adminNavigation: NavItem[] = [
       { label: 'Messages', href: '/admin/messages', permission: 'messaging:read' },
       { label: 'Lead Generation', href: '/admin/lead-generation', permission: 'messaging:read' },
       { label: 'Reviews', href: '/admin/reviews', permission: 'content:read' },
+      { label: 'AI Training', href: '/admin/training-data', permission: 'content:write' },
     ],
   },
   {
