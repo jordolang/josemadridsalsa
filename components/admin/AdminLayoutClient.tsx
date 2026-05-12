@@ -91,19 +91,21 @@ function AdminLayoutInner({
   children,
   breadcrumbs,
 }: AdminLayoutClientProps & { breadcrumbs: Crumb[] }) {
-  const { state, isMobile } = useSidebar()
+  const { state } = useSidebar()
 
-  // Compute sidebar width based on state. On mobile, sidebar is off-canvas (0 width in layout).
-  const sidebarWidth = isMobile
-    ? '0px'
-    : state === 'collapsed'
+  // Desktop sidebar width depends on collapsed state. On mobile (<md) the
+  // sidebar renders as an off-canvas Sheet, so the grid column is forced to
+  // 0 via CSS — independent of JS hydration to avoid layout breakage in
+  // mobile portrait before useIsMobile resolves.
+  const desktopSidebarWidth =
+    state === 'collapsed'
       ? 'calc(3rem + 1rem)' // icon width + inset padding
       : '16rem'
 
   return (
     <div
-      className="grid h-svh w-screen overflow-hidden"
-      style={{ gridTemplateColumns: `${sidebarWidth} minmax(0, 1fr)` }}
+      className="grid h-svh w-screen overflow-hidden [grid-template-columns:0_minmax(0,1fr)] md:[grid-template-columns:var(--admin-sidebar-w)_minmax(0,1fr)]"
+      style={{ '--admin-sidebar-w': desktopSidebarWidth } as React.CSSProperties}
     >
       <AppSidebar user={user} navigation={navigation} />
       <div className="flex h-svh min-w-0 flex-col overflow-hidden">
