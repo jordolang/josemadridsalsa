@@ -1,176 +1,121 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getStripe } from '@/lib/stripe'
-import prisma from '@/lib/prisma'
+import { prisma as db } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
-import { logAuditWithRequest } from '@/lib/audit'
-import { withRateLimit } from '@/lib/middleware/api-helpers'
-import { RATE_LIMITS } from '@/lib/rate-limiter'
+import { rateLimit } from '@/lib/rateLimit'
 
-const PaymentSchema = z.object({
+const PaymentPayload = z.object({
   orderId: z.string().cuid(),
-  paymentMethodId: z.string().min(1),
 })
 
-async function handlePost(request: NextRequest) {
-  try {
-    // Payment processing requires authentication
-    const user = await getCurrentUser()
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required to process payment' },
-        { status: 401 }
-      )
-    }
-
-    const json = await request.json()
-    const parsed = PaymentSchema.safeParse(json)
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid payment payload', details: parsed.error.flatten() },
-        { status: 400 }
-      )
-    }
-
-    const { orderId, paymentMethodId } = parsed.data
-
-    // Look up the order
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        items: true,
-      },
-    })
-
-    if (!order) {
-      return NextResponse.json(
-        { error: 'Order not found' },
-        { status: 404 }
-      )
-    }
-
-    // Verify order belongs to user - null/undefined userId does NOT bypass ownership
-    if (order.userId !== user.id) {
-      return NextResponse.json(
-        { error: 'You do not have permission to pay for this order' },
-        { status: 403 }
-      )
-    }
-
-    // Check if order is already paid
-    if (order.paymentStatus === 'PAID') {
-      return NextResponse.json(
-        { error: 'Order has already been paid' },
-        { status: 400 }
-      )
-    }
-
-    // Check if order is in a payable status
-    if (order.status === 'CANCELLED' || order.status === 'REFUNDED') {
-      return NextResponse.json(
-        { error: `Cannot process payment for ${order.status.toLowerCase()} order` },
-        { status: 400 }
-      )
-    }
-
-    if (!order.stripePaymentId) {
-      return NextResponse.json(
-        { error: 'No payment intent found for this order' },
-        { status: 400 }
-      )
-    }
-
-    const stripe = getStripe()
-
-    // Confirm the existing PaymentIntent instead of creating a new one
-    // This prevents double-charging: POST /api/orders already created the intent
-    const paymentIntent = await stripe.paymentIntents.confirm(
-      order.stripePaymentId,
+/**
+ * POST /api/payment
+ *
+ * Retrieves the PaymentIntent client secret for an existing order.
+ * The client uses this secret to confirm payment with Stripe.js.
+ * Order status updates are handled by the Stripe webhook.
+ */
+export async function POST(req: NextRequest) {
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const rl = rateLimit(`payment:${ip}`, 10, 60_000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { success: false, error: 'Too many requests' },
       {
-        payment_method: paymentMethodId,
-        return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/orders/${order.id}`,
-      }
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
     )
+  }
 
-    // Update order status based on payment intent status
-    let paymentStatus: 'PENDING' | 'PAID' | 'FAILED' = 'PENDING'
-    let orderStatus = order.status
+  const parsed = PaymentPayload.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) {
+    return NextResponse.json(
+      { success: false, error: 'Invalid request' },
+      { status: 422 },
+    )
+  }
 
-    if (paymentIntent.status === 'succeeded') {
-      paymentStatus = 'PAID'
-      orderStatus = 'CONFIRMED'
-    } else if (
-      paymentIntent.status === 'requires_action' ||
-      paymentIntent.status === 'requires_payment_method'
-    ) {
-      paymentStatus = 'PENDING'
-    } else if (paymentIntent.status === 'canceled') {
-      paymentStatus = 'FAILED'
-    }
+  const user = await getCurrentUser()
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: 'Authentication required' },
+      { status: 401 },
+    )
+  }
 
-    // Update order in database
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        paymentStatus,
-        status: orderStatus,
-        stripePaymentId: paymentIntent.id,
-      },
-    })
+  const { orderId } = parsed.data
 
-    // Log payment processing audit event
-    await logAuditWithRequest(
-      {
-        userId: user.id,
-        action: 'update',
-        entityType: 'Order',
-        entityId: order.id,
-        changes: {
-          paymentStatus,
-          status: orderStatus,
-          stripePaymentId: paymentIntent.id,
-          orderNumber: order.orderNumber,
-          amount: Number(order.total),
-        },
-      },
-      request
+  const order = await db.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      userId: true,
+      orderNumber: true,
+      status: true,
+      paymentStatus: true,
+      stripePaymentId: true,
+    },
+  })
+
+  if (!order) {
+    return NextResponse.json(
+      { success: false, error: 'Order not found' },
+      { status: 404 },
+    )
+  }
+
+  if (order.userId !== user.id) {
+    return NextResponse.json(
+      { success: false, error: 'You do not have permission to pay for this order' },
+      { status: 403 },
+    )
+  }
+
+  if (order.paymentStatus === 'PAID') {
+    return NextResponse.json(
+      { success: false, error: 'Order has already been paid' },
+      { status: 400 },
+    )
+  }
+
+  if (order.status === 'CANCELLED' || order.status === 'REFUNDED') {
+    return NextResponse.json(
+      { success: false, error: `Cannot process payment for ${order.status.toLowerCase()} order` },
+      { status: 400 },
+    )
+  }
+
+  if (!order.stripePaymentId) {
+    return NextResponse.json(
+      { success: false, error: 'No payment intent found for this order' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    const stripe = getStripe()
+    const paymentIntent = await stripe.paymentIntents.retrieve(
+      order.stripePaymentId,
     )
 
     return NextResponse.json({
       success: true,
-      paymentIntent: {
-        id: paymentIntent.id,
-        status: paymentIntent.status,
-        clientSecret: paymentIntent.client_secret,
-      },
+      clientSecret: paymentIntent.client_secret,
       order: {
-        id: updatedOrder.id,
-        orderNumber: updatedOrder.orderNumber,
-        paymentStatus: updatedOrder.paymentStatus,
-        status: updatedOrder.status,
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
       },
     })
-  } catch (error) {
-    console.error('[Payment] Payment processing error:', error)
-
-    // Handle Stripe-specific errors
-    if (error && typeof error === 'object' && 'type' in error) {
-      const stripeError = error as { type: string; message?: string }
-      if (stripeError.type === 'StripeCardError') {
-        return NextResponse.json(
-          { error: stripeError.message || 'Your card was declined' },
-          { status: 402 }
-        )
-      }
-    }
-
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json(
-      { error: 'Unable to process payment. Please try again.' },
-      { status: 500 }
+      { success: false, error: 'Unable to retrieve payment intent' },
+      { status: 500 },
     )
   }
 }
-
-export const POST = withRateLimit(handlePost, RATE_LIMITS.API_GENERAL)
