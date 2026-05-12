@@ -28,72 +28,69 @@ export async function getFrequentlyBoughtTogether(
   limit: number = 4
 ): Promise<RecommendedProduct[]> {
   try {
-    // Find orders containing this product
-    const ordersWithProduct = await prisma.orderItem.findMany({
-      where: { productId },
-      select: { orderId: true },
-      distinct: ['orderId'],
-      take: 100, // Analyze last 100 orders
-    })
+    const results = await prisma.$queryRaw<
+      Array<{
+        id: string
+        name: string
+        slug: string
+        price: number
+        featuredImage: string | null
+        heatLevel: string | null
+        sku: string
+        inventory: number
+        co_occurrence_count: number
+        max_count: number
+      }>
+    >`
+      WITH orders_with_product AS (
+        SELECT DISTINCT "orderId"
+        FROM order_items
+        WHERE "productId" = ${productId}
+        ORDER BY "orderId" DESC
+        LIMIT 100
+      ),
+      co_occurrences AS (
+        SELECT
+          oi."productId",
+          COUNT(DISTINCT oi."orderId")::int AS co_occurrence_count,
+          MAX(COUNT(DISTINCT oi."orderId")) OVER ()::int AS max_count
+        FROM order_items oi
+        INNER JOIN orders_with_product owp ON owp."orderId" = oi."orderId"
+        WHERE oi."productId" != ${productId}
+        GROUP BY oi."productId"
+        ORDER BY co_occurrence_count DESC
+        LIMIT ${limit * 2}
+      )
+      SELECT
+        p.id,
+        p.name,
+        p.slug,
+        p.price::float AS price,
+        p."featuredImage",
+        p."heatLevel",
+        p.sku,
+        p.inventory,
+        co.co_occurrence_count,
+        co.max_count
+      FROM co_occurrences co
+      INNER JOIN products p ON p.id = co."productId"
+      WHERE p."isActive" = true AND p.inventory > 0
+      ORDER BY co.co_occurrence_count DESC
+      LIMIT ${limit}
+    `
 
-    const orderIds = ordersWithProduct.map(item => item.orderId)
-
-    if (orderIds.length === 0) {
-      return []
-    }
-
-    // Find other products in those orders
-    const coOccurrences = await prisma.orderItem.groupBy({
-      by: ['productId'],
-      where: {
-        orderId: { in: orderIds },
-        productId: { not: productId }, // Exclude the target product
-      },
-      _count: {
-        orderId: true,
-      },
-      orderBy: {
-        _count: {
-          orderId: 'desc',
-        },
-      },
-      take: limit * 2, // Get more than needed in case some are out of stock
-    })
-
-    // Get product details
-    const productIds = coOccurrences.map(item => item.productId)
-    const products = await prisma.product.findMany({
-      where: {
-        id: { in: productIds },
-        isActive: true,
-        inventory: { gt: 0 },
-      },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        price: true,
-        featuredImage: true,
-        heatLevel: true,
-        sku: true,
-        inventory: true,
-      },
-      take: limit,
-    })
-
-    // Calculate recommendation scores
-    const maxCount = coOccurrences[0]?._count.orderId || 1
-    return products.map(product => {
-      const occurrence = coOccurrences.find(co => co.productId === product.id)
-      const count = occurrence?._count.orderId || 0
-      const score = count / maxCount // Normalized score 0-1
-
-      return {
-        ...product,
-        price: Number(product.price),
-        score,
-      }
-    })
+    // Calculate normalized scores
+    return results.map(product => ({
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      price: Number(product.price),
+      featuredImage: product.featuredImage,
+      heatLevel: product.heatLevel,
+      sku: product.sku,
+      inventory: product.inventory,
+      score: product.max_count > 0 ? product.co_occurrence_count / product.max_count : 0,
+    }))
   } catch (error) {
     console.error('Error getting frequently bought together:', error)
     return []
