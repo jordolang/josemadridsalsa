@@ -1,29 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
-import { getCurrentUser } from '@/lib/rbac'
-import { withRateLimit } from '@/lib/middleware/api-helpers'
-import { RATE_LIMITS } from '@/lib/rate-limiter'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma as db } from '@/lib/prisma'
+import { rateLimit } from '@/lib/rateLimit'
 
-async function handleGet(
-  request: NextRequest,
+/**
+ * GET /api/orders/:id
+ *
+ * Fetches a single order with items and product details.
+ * Requires authentication and ownership verification.
+ */
+export async function GET(
+  req: NextRequest,
   context: unknown
 ) {
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const rl = rateLimit(`orders-get:${ip}`, 30, 60_000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { success: false, error: 'Too many requests' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
+    )
+  }
+
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { success: false, error: 'Authentication required' },
+      { status: 401 }
+    )
+  }
+
   try {
-    // Require authentication for viewing order details
-    const user = await getCurrentUser()
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
-
     // Await params in Next.js 15+
     const { id } = await (context as { params: Promise<{ id: string }> }).params
 
     // Fetch order with items and product details
-    const order = await prisma.order.findUnique({
+    const order = await db.order.findUnique({
       where: {
         id,
       },
@@ -38,16 +55,16 @@ async function handleGet(
 
     if (!order) {
       return NextResponse.json(
-        { error: 'Order not found' },
+        { success: false, error: 'Order not found' },
         { status: 404 }
       )
     }
 
     // Verify that the order belongs to the authenticated user
     // Returns 403 Forbidden (not 401) when authenticated but not the owner
-    if (order.userId !== user.id) {
+    if (order.userId !== session.user.id) {
       return NextResponse.json(
-        { error: 'Forbidden' },
+        { success: false, error: 'Forbidden' },
         { status: 403 }
       )
     }
@@ -92,12 +109,9 @@ async function handleGet(
 
     return NextResponse.json(parsedOrder)
   } catch (error) {
-    console.error('[Orders API] Error fetching order:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch order' },
+      { success: false, error: 'Failed to fetch order' },
       { status: 500 }
     )
   }
 }
-
-export const GET = withRateLimit(handleGet, RATE_LIMITS.API_GENERAL)
