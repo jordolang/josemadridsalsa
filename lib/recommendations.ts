@@ -27,7 +27,13 @@ export async function getFrequentlyBoughtTogether(
   productId: string,
   limit: number = 4
 ): Promise<RecommendedProduct[]> {
+  const isDev = process.env.NODE_ENV === 'development'
   try {
+    const startTime = isDev ? Date.now() : 0
+    if (isDev) {
+      console.log('[Recommendations] getFrequentlyBoughtTogether: Starting query for productId:', productId)
+    }
+
     const results = await prisma.$queryRaw<
       Array<{
         id: string
@@ -79,6 +85,11 @@ export async function getFrequentlyBoughtTogether(
       LIMIT ${limit}
     `
 
+    if (isDev) {
+      const duration = Date.now() - startTime
+      console.log(`[Recommendations] getFrequentlyBoughtTogether: Query completed in ${duration}ms (${results.length} results)`)
+    }
+
     // Calculate normalized scores
     return results.map(product => ({
       id: product.id,
@@ -113,7 +124,13 @@ export async function getYouMayAlsoLike(
   productId: string,
   limit: number = 8
 ): Promise<RecommendedProduct[]> {
+  const isDev = process.env.NODE_ENV === 'development'
   try {
+    const startTime = isDev ? Date.now() : 0
+    if (isDev) {
+      console.log('[Recommendations] getYouMayAlsoLike: Starting query for productId:', productId)
+    }
+
     const product = await prisma.product.findUnique({
       where: { id: productId },
       select: {
@@ -123,11 +140,17 @@ export async function getYouMayAlsoLike(
       },
     })
 
+    if (isDev) {
+      const duration = Date.now() - startTime
+      console.log(`[Recommendations] getYouMayAlsoLike: Product lookup completed in ${duration}ms`)
+    }
+
     if (!product) {
       return []
     }
 
     // Find similar products
+    const similarStartTime = isDev ? Date.now() : 0
     const similarProducts = await prisma.product.findMany({
       where: {
         id: { not: productId },
@@ -151,6 +174,13 @@ export async function getYouMayAlsoLike(
       },
       take: limit * 2,
     })
+
+    if (isDev) {
+      const similarDuration = Date.now() - similarStartTime
+      const totalDuration = Date.now() - startTime
+      console.log(`[Recommendations] getYouMayAlsoLike: Similar products query completed in ${similarDuration}ms (${similarProducts.length} results)`)
+      console.log(`[Recommendations] getYouMayAlsoLike: Total execution time ${totalDuration}ms`)
+    }
 
     // Calculate similarity scores
     return similarProducts
@@ -203,7 +233,13 @@ export async function getPersonalizedRecommendations(
   userId: string,
   limit: number = 8
 ): Promise<RecommendedProduct[]> {
+  const isDev = process.env.NODE_ENV === 'development'
   try {
+    const startTime = isDev ? Date.now() : 0
+    if (isDev) {
+      console.log('[Recommendations] getPersonalizedRecommendations: Starting query for userId:', userId)
+    }
+
     // Get user's order history
     const userOrders = await prisma.order.findMany({
       where: {
@@ -226,6 +262,11 @@ export async function getPersonalizedRecommendations(
       orderBy: { createdAt: 'desc' },
       take: 10, // Last 10 orders
     })
+
+    if (isDev) {
+      const duration = Date.now() - startTime
+      console.log(`[Recommendations] getPersonalizedRecommendations: Order history query completed in ${duration}ms (${userOrders.length} orders)`)
+    }
 
     // Extract user preferences
     const purchasedProductIds = new Set<string>()
@@ -257,6 +298,7 @@ export async function getPersonalizedRecommendations(
     const topHeatLevel = Array.from(heatLevels.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
 
     // Find products matching preferences
+    const recommendationsStartTime = isDev ? Date.now() : 0
     const recommendations = await prisma.product.findMany({
       where: {
         id: { notIn: Array.from(purchasedProductIds) }, // Exclude already purchased
@@ -280,6 +322,13 @@ export async function getPersonalizedRecommendations(
       },
       take: limit,
     })
+
+    if (isDev) {
+      const recommendationsDuration = Date.now() - recommendationsStartTime
+      const totalDuration = Date.now() - startTime
+      console.log(`[Recommendations] getPersonalizedRecommendations: Products query completed in ${recommendationsDuration}ms (${recommendations.length} results)`)
+      console.log(`[Recommendations] getPersonalizedRecommendations: Total execution time ${totalDuration}ms`)
+    }
 
     return recommendations.map(p => ({
       ...p,
