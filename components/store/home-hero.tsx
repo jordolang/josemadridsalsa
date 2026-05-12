@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Star } from "lucide-react";
@@ -14,6 +17,8 @@ const STATS: HomeHeroStat[] = [
 ];
 
 export function HomeHero() {
+  const [imageError, setImageError] = useState(false);
+
   return (
     <section className="hero-gradient relative overflow-hidden text-white">
       {/* Legibility overlay */}
@@ -84,12 +89,13 @@ export function HomeHero() {
         <div className="relative animate-slide-up animation-delay-200">
           <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl shadow-2xl">
             <Image
-              src="/images/shared/Hero-Image-Mike.png"
+              src={imageError ? "/images/placeholder-salsa.jpg" : "/images/shared/Hero-Image-Mike.png"}
               alt="Mike Zakany, founder of Jose Madrid Salsa"
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 45vw"
               className="object-cover object-center"
+              onError={() => setImageError(true)}
             />
           </div>
           <div className="absolute -bottom-3 -left-3 flex items-center gap-2.5 rounded-2xl bg-white p-3 text-foreground shadow-xl">
