@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
 import { z } from 'zod'
+import { authOptions } from '@/lib/auth'
 import { getStripe } from '@/lib/stripe'
 import { prisma as db } from '@/lib/prisma'
-import { getCurrentUser } from '@/lib/rbac'
 import { rateLimit } from '@/lib/rateLimit'
 
 const PaymentPayload = z.object({
@@ -38,8 +39,8 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const user = await getCurrentUser()
-  if (!user) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
     return NextResponse.json(
       { success: false, error: 'Authentication required' },
       { status: 401 },
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { orderId } = parsed.data
+  const userId = session.user.id
 
   const order = await db.order.findUnique({
     where: { id: orderId },
@@ -67,7 +69,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  if (order.userId !== user.id) {
+  if (order.userId !== userId) {
     return NextResponse.json(
       { success: false, error: 'You do not have permission to pay for this order' },
       { status: 403 },

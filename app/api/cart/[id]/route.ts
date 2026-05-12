@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma as db } from '@/lib/prisma'
-import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
 import { rateLimit } from '@/lib/rateLimit'
 import { UpdateCartItemSchema } from '@/lib/validations/cart'
@@ -30,13 +31,15 @@ export async function PUT(
   }
 
   // Authentication check
-  const user = await getCurrentUser()
-  if (!user) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized - authentication required' },
       { status: 401 },
     )
   }
+
+  const userId = session.user.id
 
   // Validate request payload
   const parsed = UpdateCartItemSchema.safeParse(
@@ -71,7 +74,7 @@ export async function PUT(
   }
 
   // Ownership check
-  if (cartItem.userId !== user.id) {
+  if (cartItem.userId !== userId) {
     return NextResponse.json(
       { success: false, error: "Cannot update another user's cart" },
       { status: 403 },
@@ -101,7 +104,7 @@ export async function PUT(
   // Log audit event
   await logAuditWithRequest(
     {
-      userId: user.id,
+      userId,
       action: 'update',
       entityType: 'CartItem',
       entityId: updatedCartItem.id,
@@ -157,13 +160,15 @@ export async function DELETE(
   }
 
   // Authentication check
-  const user = await getCurrentUser()
-  if (!user) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized - authentication required' },
       { status: 401 },
     )
   }
+
+  const userId = session.user.id
 
   // Await params per Next.js 15 pattern
   const { id: cartItemId } = await (
@@ -186,7 +191,7 @@ export async function DELETE(
   }
 
   // Ownership check
-  if (cartItem.userId !== user.id) {
+  if (cartItem.userId !== userId) {
     return NextResponse.json(
       { success: false, error: "Cannot delete another user's cart item" },
       { status: 403 },
@@ -201,7 +206,7 @@ export async function DELETE(
   // Log audit event
   await logAuditWithRequest(
     {
-      userId: user.id,
+      userId,
       action: 'delete',
       entityType: 'CartItem',
       entityId: cartItem.id,
