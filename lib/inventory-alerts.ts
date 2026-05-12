@@ -186,7 +186,7 @@ export async function sendLowStockAlert(productId: string): Promise<{ success: b
 
     for (const admin of admins) {
       try {
-        const emailHtml = render(
+        const emailHtml = await render(
           LowStockAlertEmail({
             recipientName: admin.name || admin.email.split('@')[0],
             products: [productInfo],
@@ -309,7 +309,7 @@ export async function sendConsolidatedLowStockAlert(): Promise<{ success: boolea
 
     for (const admin of admins) {
       try {
-        const emailHtml = render(
+        const emailHtml = await render(
           LowStockAlertEmail({
             recipientName: admin.name || admin.email.split('@')[0],
             products: productInfoList,
