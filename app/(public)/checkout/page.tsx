@@ -698,44 +698,46 @@ function CheckoutForm() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div className="grid gap-6 lg:gap-8 lg:grid-cols-[2fr_1fr]">
         <div>
           <Card>
-            <CardHeader>
+            <CardHeader className="px-4 sm:px-6">
               <CardTitle>Checkout</CardTitle>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-8">
+            <CardContent className="px-4 sm:px-6">
+              <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
                 <section className="space-y-4">
                   <h2 className="text-xl font-semibold text-gray-900">Contact information</h2>
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <Label htmlFor="firstName">First name</Label>
+                      <Label htmlFor="firstName" className="text-base">First name</Label>
                       <Input
                         id="firstName"
                         name="firstName"
                         value={formState.firstName}
                         onChange={handleInputChange}
                         autoComplete="given-name"
+                        className="h-12 text-base"
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="lastName">Last name</Label>
+                      <Label htmlFor="lastName" className="text-base">Last name</Label>
                       <Input
                         id="lastName"
                         name="lastName"
                         value={formState.lastName}
                         onChange={handleInputChange}
                         autoComplete="family-name"
+                        className="h-12 text-base"
                         required
                       />
                     </div>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email" className="text-base">Email</Label>
                       <Input
                         id="email"
                         name="email"
@@ -743,11 +745,12 @@ function CheckoutForm() {
                         value={formState.email}
                         onChange={handleInputChange}
                         autoComplete="email"
+                        className="h-12 text-base"
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="phone">Phone (optional)</Label>
+                      <Label htmlFor="phone" className="text-base">Phone (optional)</Label>
                       <Input
                         id="phone"
                         name="phone"
@@ -755,6 +758,7 @@ function CheckoutForm() {
                         value={formState.phone}
                         onChange={handleInputChange}
                         autoComplete="tel"
+                        className="h-12 text-base"
                       />
                     </div>
                   </div>
@@ -764,71 +768,77 @@ function CheckoutForm() {
                   <h2 className="text-xl font-semibold text-gray-900">Shipping address</h2>
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="address1">Address</Label>
+                      <Label htmlFor="address1" className="text-base">Address</Label>
                       <Input
                         id="address1"
                         name="address1"
                         value={formState.address1}
                         onChange={handleInputChange}
                         autoComplete="address-line1"
+                        className="h-12 text-base"
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="address2">Apartment, suite, etc. (optional)</Label>
+                      <Label htmlFor="address2" className="text-base">Apartment, suite, etc. (optional)</Label>
                       <Input
                         id="address2"
                         name="address2"
                         value={formState.address2}
                         onChange={handleInputChange}
                         autoComplete="address-line2"
+                        className="h-12 text-base"
                       />
                     </div>
-                    <div className="grid gap-4 md:grid-cols-3">
-                      <div className="md:col-span-2">
-                        <Label htmlFor="city">City</Label>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor="city" className="text-base">City</Label>
                         <Input
                           id="city"
                           name="city"
                           value={formState.city}
                           onChange={handleInputChange}
                           autoComplete="address-level2"
+                          className="h-12 text-base"
                           required
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="state">State</Label>
-                        <Input
-                          id="state"
-                          name="state"
-                          value={formState.state}
-                          onChange={handleInputChange}
-                          autoComplete="address-level1"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <Label htmlFor="postalCode">ZIP code</Label>
-                        <Input
-                          id="postalCode"
-                          name="postalCode"
-                          value={formState.postalCode}
-                          onChange={handleInputChange}
-                          autoComplete="postal-code"
-                          required
-                        />
+                      <div className="grid gap-4 grid-cols-2">
+                        <div>
+                          <Label htmlFor="state" className="text-base">State</Label>
+                          <Input
+                            id="state"
+                            name="state"
+                            value={formState.state}
+                            onChange={handleInputChange}
+                            autoComplete="address-level1"
+                            className="h-12 text-base"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="postalCode" className="text-base">ZIP code</Label>
+                          <Input
+                            id="postalCode"
+                            name="postalCode"
+                            value={formState.postalCode}
+                            onChange={handleInputChange}
+                            autoComplete="postal-code"
+                            className="h-12 text-base"
+                            required
+                          />
+                        </div>
                       </div>
                     </div>
                     <div>
-                      <Label htmlFor="notes">Order notes (optional)</Label>
+                      <Label htmlFor="notes" className="text-base">Order notes (optional)</Label>
                       <Textarea
                         id="notes"
                         name="notes"
                         value={formState.notes}
                         onChange={handleInputChange}
                         placeholder="Add any special requests or delivery instructions."
+                        className="min-h-24 text-base"
                       />
                     </div>
                   </div>
@@ -853,11 +863,11 @@ function CheckoutForm() {
                           <label
                             key={index}
                             className={`
-                              flex items-start gap-4 rounded-lg border-2 p-4 cursor-pointer transition-colors
+                              flex items-start gap-4 rounded-lg border-2 p-4 min-h-[60px] cursor-pointer transition-colors
                               ${
                                 selectedShippingOption?.method === option.method
                                   ? 'border-salsa-500 bg-salsa-50'
-                                  : 'border-gray-200 hover:border-gray-300'
+                                  : 'border-gray-200 hover:border-gray-300 active:border-gray-400'
                               }
                             `}
                           >
@@ -867,12 +877,12 @@ function CheckoutForm() {
                               value={option.method}
                               checked={selectedShippingOption?.method === option.method}
                               onChange={() => handleShippingOptionChange(option)}
-                              className="mt-1 h-4 w-4 text-salsa-500 focus:ring-salsa-500"
+                              className="mt-1 h-5 w-5 text-salsa-500 focus:ring-salsa-500"
                             />
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-gray-900">{option.method}</span>
-                                <span className="font-semibold text-gray-900">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                                <span className="font-medium text-gray-900 text-base">{option.method}</span>
+                                <span className="font-semibold text-gray-900 text-base">
                                   {option.cost === 0 ? 'FREE' : formatPrice(option.cost)}
                                 </span>
                               </div>
@@ -1050,11 +1060,11 @@ function CheckoutForm() {
                   </div>
                 )}
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-4">
                   {(selectedPaymentMethod === 'card' || selectedPaymentMethod === 'link') && (
                   <Button
                     type="submit"
-                    className="bg-salsa-500 hover:bg-salsa-600"
+                    className="w-full sm:w-auto bg-salsa-500 hover:bg-salsa-600 h-12 text-base font-semibold"
                     disabled={isProcessing || !stripe || (selectedPaymentMethod === 'link' && !linkComplete)}
                   >
                     {isProcessing
@@ -1064,7 +1074,7 @@ function CheckoutForm() {
                         : 'Pay now'}
                   </Button>
                   )}
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 text-center sm:text-left">
                     Your payment is secure and encrypted. You&apos;ll receive a confirmation email
                     after checkout.
                   </p>
@@ -1076,10 +1086,10 @@ function CheckoutForm() {
 
         <aside>
           <Card>
-            <CardHeader>
+            <CardHeader className="px-4 sm:px-6">
               <CardTitle>Order summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="px-4 sm:px-6 space-y-4">
               <div className="space-y-3">
                 {items.map((item) => (
                   <div
@@ -1123,7 +1133,7 @@ function CheckoutForm() {
                 )}
               </div>
             </CardContent>
-            <CardFooter className="flex items-center justify-between border-t text-lg font-semibold">
+            <CardFooter className="flex items-center justify-between border-t text-base sm:text-lg font-semibold px-4 sm:px-6">
               <span>Total due now</span>
               <span>{formatPrice(subtotal + shippingCost + taxAmount)}</span>
             </CardFooter>
