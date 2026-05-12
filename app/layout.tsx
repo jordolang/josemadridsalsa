@@ -92,6 +92,15 @@ export default function RootLayout({
     <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
       <head>
         <meta name="google-site-verification" content="E6ciztQzSgCnoZxkfE5GvfLE349LWqzal-VezMq3nRQ" />
+
+        {/* Resource hints for external services */}
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://js.stripe.com" />
+        <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+        <link rel="dns-prefetch" href="https://vitals.vercel-insights.com" />
+
         <Script
           id="gtm-script"
           strategy="beforeInteractive"
