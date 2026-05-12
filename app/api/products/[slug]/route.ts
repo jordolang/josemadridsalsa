@@ -3,10 +3,11 @@ import { getProductBySlug } from '@/lib/db/products'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const product = await getProductBySlug(params.slug)
+    const { slug } = await params
+    const product = await getProductBySlug(slug)
 
     if (!product) {
       return NextResponse.json(
