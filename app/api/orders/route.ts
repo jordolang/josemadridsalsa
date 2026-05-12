@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const parsed = CreateOrderSchema.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) {
     return NextResponse.json(
-      { success: false, error: 'Invalid request' },
+      { success: false, error: 'Invalid order payload' },
       { status: 422 },
     )
   }
@@ -60,7 +60,8 @@ export async function POST(req: NextRequest) {
   const userEmail = session.user.email ?? ''
   const userName = session.user.name ?? userEmail
 
-  const cartItems = await db.cartItem.findMany({
+  try {
+    const cartItems = await db.cartItem.findMany({
     where: {
       id: { in: cartItemIds },
       userId,
@@ -254,15 +255,23 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  queueShopifySync(order.id)
+    queueShopifySync(order.id)
 
-  return NextResponse.json({
-    success: true,
-    clientSecret: paymentIntent.client_secret,
-    orderId: order.id,
-    orderNumber: order.orderNumber,
-    amount: total,
-  })
+    return NextResponse.json({
+      success: true,
+      clientSecret: paymentIntent.client_secret,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      amount: total,
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('Order creation failed:', message)
+    return NextResponse.json(
+      { success: false, error: 'Unable to create order. Please try again.' },
+      { status: 500 },
+    )
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -307,74 +316,83 @@ export async function GET(req: NextRequest) {
   const { status, paymentStatus, take, skip, sortOrder } = parsed.data
   const userId = session.user.id
 
-  const where: {
-    userId: string
-    status?: import('@prisma/client').OrderStatus
-    paymentStatus?: import('@prisma/client').PaymentStatus
-  } = {
-    userId,
-  }
+  try {
+    const where: {
+      userId: string
+      status?: import('@prisma/client').OrderStatus
+      paymentStatus?: import('@prisma/client').PaymentStatus
+    } = {
+      userId,
+    }
 
-  if (status) {
-    where.status = status
-  }
+    if (status) {
+      where.status = status
+    }
 
-  if (paymentStatus) {
-    where.paymentStatus = paymentStatus
-  }
+    if (paymentStatus) {
+      where.paymentStatus = paymentStatus
+    }
 
-  const orders = await db.order.findMany({
-    where,
-    orderBy: {
-      createdAt: sortOrder,
-    },
-    skip,
-    take,
-    include: {
-      items: {
-        include: {
-          product: true,
+    const orders = await db.order.findMany({
+      where,
+      orderBy: {
+        createdAt: sortOrder,
+      },
+      skip,
+      take,
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
         },
       },
-    },
-  })
+    })
 
-  const parsedOrders = orders.map((order) => ({
-    id: order.id,
-    orderNumber: order.orderNumber,
-    status: order.status,
-    paymentStatus: order.paymentStatus,
-    subtotal: parseFloat(String(order.subtotal)),
-    shippingCost: parseFloat(String(order.shippingCost)),
-    tax: parseFloat(String(order.tax)),
-    discountAmount: parseFloat(String(order.discountAmount)),
-    total: parseFloat(String(order.total)),
-    shippingMethod: order.shippingMethod,
-    trackingNumber: order.trackingNumber,
-    customerNotes: order.customerNotes,
-    stripePaymentId: order.stripePaymentId,
-    createdAt: order.createdAt,
-    updatedAt: order.updatedAt,
-    items: order.items.map((item) => ({
-      id: item.id,
-      productId: item.productId,
-      productName: item.productName,
-      productSku: item.productSku,
-      productImage: item.productImage,
-      quantity: item.quantity,
-      unitPrice: parseFloat(String(item.unitPrice)),
-      totalPrice: parseFloat(String(item.totalPrice)),
-      product: item.product
-        ? {
-            id: item.product.id,
-            name: item.product.name,
-            slug: item.product.slug,
-            featuredImage: item.product.featuredImage,
-            heatLevel: item.product.heatLevel,
-          }
-        : null,
-    })),
-  }))
+    const parsedOrders = orders.map((order) => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      subtotal: parseFloat(String(order.subtotal)),
+      shippingCost: parseFloat(String(order.shippingCost)),
+      tax: parseFloat(String(order.tax)),
+      discountAmount: parseFloat(String(order.discountAmount)),
+      total: parseFloat(String(order.total)),
+      shippingMethod: order.shippingMethod,
+      trackingNumber: order.trackingNumber,
+      customerNotes: order.customerNotes,
+      stripePaymentId: order.stripePaymentId,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      items: order.items.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        productName: item.productName,
+        productSku: item.productSku,
+        productImage: item.productImage,
+        quantity: item.quantity,
+        unitPrice: parseFloat(String(item.unitPrice)),
+        totalPrice: parseFloat(String(item.totalPrice)),
+        product: item.product
+          ? {
+              id: item.product.id,
+              name: item.product.name,
+              slug: item.product.slug,
+              featuredImage: item.product.featuredImage,
+              heatLevel: item.product.heatLevel,
+            }
+          : null,
+      })),
+    }))
 
-  return NextResponse.json(parsedOrders)
+    return NextResponse.json(parsedOrders)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('Failed to fetch orders:', message)
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch orders' },
+      { status: 500 },
+    )
+  }
 }
