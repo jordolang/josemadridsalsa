@@ -75,8 +75,6 @@ export type Product = {
   isFeatured: boolean
   ingredients: string[]
   searchKeywords: string[]
-  productType: string
-  packSize?: number | null
   weight?: string | null
   dimensions?: string | null
   nutritionalInfo?: NutritionalInfoData | null
@@ -162,8 +160,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     title: product.name,
     description: product.description,
     url: productUrl,
-    imageUrl: product.featuredImage,
-    hashtags: generateHashtags(product.name, product.description, [product.heatLevel]),
+    image: product.featuredImage,
+    contentType: 'product',
+    hashtags: generateHashtags('product'),
   }
 
   const formattedIngredients = product.productIngredients
@@ -263,7 +262,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   <span className="text-sm font-medium text-foreground">Heat Level</span>
                   <Badge className={getHeatLevelColor(product.heatLevel)}>{getHeatLevelText(product.heatLevel)}</Badge>
                 </div>
-                <HeatGauge level={heatRating} />
+                <HeatGauge value={heatRating.value} heatLevel={product.heatLevel} />
               </div>
 
               {/* Inventory Status */}
@@ -302,7 +301,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     name: product.name,
                     slug: product.slug,
                     price: product.price,
-                    image: product.featuredImage,
+                    featuredImage: product.featuredImage,
+                    sku: product.sku,
                     heatLevel: product.heatLevel,
                     inventory: product.inventory,
                   }}
@@ -333,7 +333,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           {product.nutritionalInfo && (
             <div className="bg-card surface-shadow rounded-2xl p-6">
               <h2 className="text-xl font-semibold mb-4 text-foreground">Nutritional Information</h2>
-              <NutritionalInfo data={product.nutritionalInfo} />
+              <NutritionalInfo
+                nutritionalInfo={product.nutritionalInfo}
+                productIngredients={product.productIngredients}
+                ingredients={product.ingredients}
+              />
             </div>
           )}
 
@@ -349,12 +353,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 <div>
                   <dt className="font-medium text-muted-foreground mb-1">Weight</dt>
                   <dd className="text-foreground">{product.weight}</dd>
-                </div>
-              )}
-              {product.packSize && (
-                <div>
-                  <dt className="font-medium text-muted-foreground mb-1">Pack Size</dt>
-                  <dd className="text-foreground">{product.packSize}</dd>
                 </div>
               )}
               {product.dimensions && (
