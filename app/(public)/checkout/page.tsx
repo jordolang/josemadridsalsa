@@ -269,6 +269,10 @@ function ExpressCheckout({ items, formState, total, onSuccess, onError }: Expres
       applePay: 'buy' as const,
       googlePay: 'buy' as const,
     },
+    wallets: {
+      applePay: 'auto' as const,
+      googlePay: 'auto' as const,
+    },
   }
 
   if (items.length === 0 || total === 0) {
