@@ -1,71 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
-import { ok, serverError } from '@/lib/api'
-
-// Fallback data to keep the homepage stable even if the database is down
-const mockProducts = [
-  {
-    id: '1',
-    name: 'Original Mild',
-    slug: 'original-mild',
-    description: 'Our signature mild salsa made with fresh tomatoes and spices.',
-    price: 8.99,
-    compareAtPrice: 10.99,
-    featuredImage: '/images/new-products/mild.png',
-    images: ['/images/new-products/mild.png'],
-    heatLevel: 'MILD',
-    sku: 'JMS-MILD-001',
-    inventory: 150,
-    isFeatured: true,
-    ingredients: [],
-    searchKeywords: [],
-  },
-  {
-    id: '2',
-    name: 'Garden Fresh Cilantro',
-    slug: 'garden-fresh-cilantro',
-    description: 'Bright cilantro meets a balanced, medium heat finish.',
-    price: 8.99,
-    compareAtPrice: 10.99,
-    featuredImage: '/images/new-products/garden-cilantro-salsa-mild.png',
-    images: ['/images/new-products/garden-cilantro-salsa-mild.png'],
-    heatLevel: 'MEDIUM',
-    sku: 'JMS-MEDIUM-001',
-    inventory: 200,
-    isFeatured: true,
-    ingredients: [],
-    searchKeywords: [],
-  },
-  {
-    id: '3',
-    name: 'Ghost of Clovis',
-    slug: 'ghost-of-clovis',
-    description: 'Smoky ghost peppers for heat lovers who want a serious kick.',
-    price: 9.49,
-    compareAtPrice: 11.49,
-    featuredImage: '/images/new-products/ghost-clovis.png',
-    images: ['/images/new-products/ghost-clovis.png'],
-    heatLevel: 'HOT',
-    sku: 'JMS-HOT-001',
-    inventory: 80,
-    isFeatured: true,
-    ingredients: [],
-    searchKeywords: [],
-  },
-]
+import { prisma } from '@/lib/prisma'
+import { rateLimit } from '@/lib/rateLimit'
 
 export async function GET(request: NextRequest) {
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const rl = rateLimit(`products:${ip}`, 60, 60_000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { success: false, error: 'Too many requests' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
+    )
+  }
   // Normalize query params coming from the storefront filters
   const { searchParams } = new URL(request.url)
   const heatLevel = searchParams.get('heatLevel')
   const search = searchParams.get('search')
   const featured = searchParams.get('featured')
 
+  // Support both page/limit and skip/take for pagination
+  const rawPage = Number(searchParams.get('page'))
+  const rawLimit = Number(searchParams.get('limit'))
   const rawTake = Number(searchParams.get('take'))
-  const take = Number.isFinite(rawTake) && rawTake > 0 ? rawTake : undefined
-
   const rawSkip = Number(searchParams.get('skip'))
-  const skip = Number.isFinite(rawSkip) && rawSkip >= 0 ? rawSkip : 0
+
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit > 0
+      ? rawLimit
+      : Number.isFinite(rawTake) && rawTake > 0
+        ? rawTake
+        : 10
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1
+  const skip = Number.isFinite(rawSkip) && rawSkip >= 0 ? rawSkip : (page - 1) * limit
 
   const sortOrder = searchParams.get('sortOrder') === 'desc' ? 'desc' : 'asc'
   const inStock = searchParams.get('inStock')
@@ -93,15 +62,15 @@ export async function GET(request: NextRequest) {
         {
           name: {
             contains: search,
-            mode: 'insensitive'
-          }
+            mode: 'insensitive',
+          },
         },
         {
           description: {
             contains: search,
-            mode: 'insensitive'
-          }
-        }
+            mode: 'insensitive',
+          },
+        },
       ]
     }
 
@@ -129,41 +98,42 @@ export async function GET(request: NextRequest) {
       where.inventory = { gt: 0 }
     }
 
-    const products = await prisma.product.findMany({
-      where,
-      orderBy: [
-        { isFeatured: 'desc' },
-        { sortOrder },
-        { name: 'asc' }
-      ],
-      skip,
-      take,
-      include: {
-        productTags: {
-          include: {
-            tag: true,
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        orderBy: [{ isFeatured: 'desc' }, { sortOrder }, { name: 'asc' }],
+        skip,
+        take: limit,
+        include: {
+          productTags: {
+            include: {
+              tag: true,
+            },
+          },
+          nutritionalInfo: true,
+          productIngredients: {
+            include: {
+              ingredient: true,
+            },
+            orderBy: {
+              sortOrder: 'asc',
+            },
           },
         },
-        nutritionalInfo: true,
-        productIngredients: {
-          include: {
-            ingredient: true,
-          },
-          orderBy: {
-            sortOrder: 'asc',
-          },
-        },
-      },
-    })
+      }),
+      prisma.product.count({ where }),
+    ])
 
     // Convert Decimal prices to numbers and format response
-    const parsedProducts = products.map(product => ({
+    const parsedProducts = products.map((product) => ({
       id: product.id,
       name: product.name,
       slug: product.slug,
       description: product.description,
       price: parseFloat(String(product.price)),
-      compareAtPrice: product.compareAtPrice ? parseFloat(String(product.compareAtPrice)) : undefined,
+      compareAtPrice: product.compareAtPrice
+        ? parseFloat(String(product.compareAtPrice))
+        : undefined,
       featuredImage: product.featuredImage,
       images: product.images || [],
       heatLevel: product.heatLevel,
@@ -177,8 +147,11 @@ export async function GET(request: NextRequest) {
       productIngredients: product.productIngredients || [],
     }))
 
-    return ok(parsedProducts)
+    return NextResponse.json(parsedProducts)
   } catch (error: unknown) {
-    return serverError('Failed to fetch products', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch products' },
+      { status: 500 },
+    )
   }
 }
