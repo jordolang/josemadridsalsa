@@ -28,6 +28,7 @@ import SendEmailDialog from '@/components/admin/SendEmailDialog'
 import PrintInvoiceButton from '@/components/admin/PrintInvoiceButton'
 import PackingSlipButton from '@/components/admin/PackingSlipButton'
 import BuyShippingLabelDialog from '@/components/admin/BuyShippingLabelDialog'
+import { MobileOrderDetail } from '@/components/admin/mobile/MobileOrderDetail'
 import { getStripe } from '@/lib/stripe'
 import { Decimal } from '@prisma/client/runtime/library'
 
@@ -147,8 +148,69 @@ export default async function OrderDetailPage({
       ? `${normalizedShopifyAdminBase}/orders/${order.shopifyOrderId}`
       : null
 
+  const actionContext = {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    trackingNumber: order.trackingNumber,
+    customerEmail: order.user?.email ?? order.guestEmail ?? '',
+    total: Number(order.total),
+    refundableAmount,
+    hasShippingAddress: Boolean(order.shippingAddress),
+  }
+
+  const mobileOrder = {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    createdAt: order.createdAt.toISOString(),
+    total: Number(order.total),
+    subtotal: Number(order.subtotal),
+    tax: Number(order.tax),
+    shippingCost: Number(order.shippingCost),
+    discountAmount: Number(order.discountAmount),
+    customerName: order.user?.name ?? order.guestEmail ?? 'Guest',
+    customerEmail: order.user?.email ?? order.guestEmail ?? '',
+    customerPhone: order.user?.phone ?? order.guestPhone ?? null,
+    customerId: order.user?.id ?? null,
+    trackingNumber: order.trackingNumber,
+    shippingLabelUrl: order.shippingLabelUrl,
+    shippingAddress: order.shippingAddress
+      ? {
+          firstName: order.shippingAddress.firstName,
+          lastName: order.shippingAddress.lastName,
+          street: order.shippingAddress.street,
+          city: order.shippingAddress.city,
+          state: order.shippingAddress.state,
+          zipCode: order.shippingAddress.zipCode,
+          country: order.shippingAddress.country,
+          company: order.shippingAddress.company,
+          phone: order.shippingAddress.phone,
+        }
+      : null,
+    items: order.items.map((item) => ({
+      id: item.id,
+      productName: item.productName,
+      productSku: item.productSku,
+      productImage: item.productImage,
+      quantity: item.quantity,
+      unitPrice: Number(item.unitPrice),
+      totalPrice: Number(item.totalPrice),
+    })),
+    customerNotes: order.customerNotes,
+  }
+
   return (
-    <div className="space-y-6">
+    <>
+    <MobileOrderDetail
+      className="md:hidden"
+      order={mobileOrder}
+      actionContext={actionContext}
+      canWrite={canWrite}
+    />
+    <div className="hidden md:block space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -494,5 +556,6 @@ export default async function OrderDetailPage({
         </div>
       </div>
     </div>
+    </>
   )
 }

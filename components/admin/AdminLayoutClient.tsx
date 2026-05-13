@@ -36,6 +36,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 import type { NavItem } from '@/lib/permissions-map'
 
 interface AdminLayoutClientProps {
@@ -45,6 +46,7 @@ interface AdminLayoutClientProps {
     role: string
   }
   navigation: NavItem[]
+  className?: string
   children: React.ReactNode
 }
 
@@ -90,6 +92,7 @@ function AdminLayoutInner({
   navigation,
   children,
   breadcrumbs,
+  className,
 }: AdminLayoutClientProps & { breadcrumbs: Crumb[] }) {
   const { state } = useSidebar()
 
@@ -104,7 +107,10 @@ function AdminLayoutInner({
 
   return (
     <div
-      className="grid h-svh w-screen overflow-hidden [grid-template-columns:0_minmax(0,1fr)] md:[grid-template-columns:var(--admin-sidebar-w)_minmax(0,1fr)]"
+      className={cn(
+        'grid h-svh w-screen overflow-hidden [grid-template-columns:0_minmax(0,1fr)] md:[grid-template-columns:var(--admin-sidebar-w)_minmax(0,1fr)]',
+        className,
+      )}
       style={{ '--admin-sidebar-w': desktopSidebarWidth } as React.CSSProperties}
     >
       <AppSidebar user={user} navigation={navigation} />
@@ -197,6 +203,7 @@ function AdminLayoutInner({
 export function AdminLayoutClient({
   user,
   navigation,
+  className,
   children,
 }: AdminLayoutClientProps) {
   const pathname = usePathname()
@@ -212,6 +219,7 @@ export function AdminLayoutClient({
           user={user}
           navigation={navigation}
           breadcrumbs={breadcrumbs}
+          className={className}
         >
           {children}
         </AdminLayoutInner>
