@@ -51,7 +51,7 @@ export async function GET(request: Request, { params }: Params) {
     // OK — anonymous customer w/ thread id can read their own thread.
   }
 
-  const messages = await prisma.chatMessage.findMany({
+  const messages = await prisma.chatHandoffMessage.findMany({
     where: {
       threadId,
       ...(since ? { createdAt: { gt: new Date(since) } } : {}),
@@ -131,7 +131,7 @@ export async function POST(request: Request, { params }: Params) {
   const senderLabel = isStaff ? viewer?.name ?? viewer?.email ?? 'Team' : null
 
   const [message] = await prisma.$transaction([
-    prisma.chatMessage.create({
+    prisma.chatHandoffMessage.create({
       data: {
         threadId,
         senderType,

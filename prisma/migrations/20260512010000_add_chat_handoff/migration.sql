@@ -1,4 +1,6 @@
 -- Live chat handoff: customer threads (WAITING/ACTIVE/CLOSED/OFFLINE) + per-message rows.
+-- NOTE: messages live in `chat_handoff_messages` to avoid colliding with the existing
+-- `chat_messages` table used by the AI chat (ChatMessage / ChatConversation models).
 CREATE TYPE "ChatThreadStatus" AS ENUM ('WAITING', 'ACTIVE', 'CLOSED', 'OFFLINE');
 CREATE TYPE "ChatMessageSender" AS ENUM ('CUSTOMER', 'AI', 'ADMIN', 'SYSTEM');
 
@@ -28,7 +30,7 @@ CREATE INDEX "chat_threads_assignedAdminId_idx" ON "chat_threads"("assignedAdmin
 CREATE INDEX "chat_threads_lastMessageAt_idx" ON "chat_threads"("lastMessageAt");
 CREATE INDEX "chat_threads_startedAt_idx" ON "chat_threads"("startedAt");
 
-CREATE TABLE "chat_messages" (
+CREATE TABLE "chat_handoff_messages" (
   "id" TEXT NOT NULL,
   "threadId" TEXT NOT NULL,
   "senderType" "ChatMessageSender" NOT NULL,
@@ -37,11 +39,11 @@ CREATE TABLE "chat_messages" (
   "content" TEXT NOT NULL,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-  CONSTRAINT "chat_messages_pkey" PRIMARY KEY ("id")
+  CONSTRAINT "chat_handoff_messages_pkey" PRIMARY KEY ("id")
 );
 
-CREATE INDEX "chat_messages_threadId_createdAt_idx" ON "chat_messages"("threadId", "createdAt");
+CREATE INDEX "chat_handoff_messages_threadId_createdAt_idx" ON "chat_handoff_messages"("threadId", "createdAt");
 
-ALTER TABLE "chat_messages"
-  ADD CONSTRAINT "chat_messages_threadId_fkey"
+ALTER TABLE "chat_handoff_messages"
+  ADD CONSTRAINT "chat_handoff_messages_threadId_fkey"
   FOREIGN KEY ("threadId") REFERENCES "chat_threads"("id") ON DELETE CASCADE ON UPDATE CASCADE;

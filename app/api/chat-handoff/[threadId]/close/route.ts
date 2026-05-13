@@ -26,7 +26,7 @@ export async function POST(_request: Request, { params }: Params) {
       where: { id: threadId },
       data: { status: 'CLOSED', closedAt: new Date(), closedReason: 'admin_closed' },
     }),
-    prisma.chatMessage.create({
+    prisma.chatHandoffMessage.create({
       data: {
         threadId,
         senderType: 'SYSTEM',

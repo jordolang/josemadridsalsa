@@ -116,7 +116,7 @@ export async function POST(request: Request) {
   })
 
   if (seedMessages.length > 0) {
-    await prisma.chatMessage.createMany({
+    await prisma.chatHandoffMessage.createMany({
       data: seedMessages.map((m) => ({
         threadId: thread.id,
         senderType: m.senderType,

@@ -648,7 +648,7 @@ model ChatThread {
   metadata        Json?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
-  messages        ChatMessage[]
+  messages        ChatHandoffMessage[]
 
   @@index([status])
   @@index([assignedAdminId])
@@ -657,7 +657,7 @@ model ChatThread {
   @@map("chat_threads")
 }
 
-model ChatMessage {
+model ChatHandoffMessage {
   id          String              @id @default(cuid())
   threadId    String
   senderType  ChatMessageSender
@@ -668,7 +668,7 @@ model ChatMessage {
   thread      ChatThread          @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   @@index([threadId, createdAt])
-  @@map("chat_messages")
+  @@map("chat_handoff_messages")
 }
 
 model Fundraiser {

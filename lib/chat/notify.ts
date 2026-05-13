@@ -14,7 +14,7 @@ const SUBJECT_PREFIX = 'Jose Madrid Salsa'
 
 export async function notifyAdminsOfHandoff(input: HandoffNotifyInput): Promise<void> {
   const admins = await prisma.user.findMany({
-    where: { role: { in: ['ADMIN', 'STAFF', 'DEVELOPER'] }, isActive: true },
+    where: { role: { in: ['ADMIN', 'STAFF', 'DEVELOPER'] } },
     select: { email: true, name: true },
   })
 
