@@ -7,6 +7,7 @@ import { Resend } from 'resend'
 import { prisma } from '@/lib/prisma'
 import nodemailer from 'nodemailer'
 import { decrypt, isEncrypted } from '@/lib/encryption'
+import { getErrorMessage } from '@/lib/errors'
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -25,7 +26,7 @@ interface EmailRecipientData {
   id: string
   email: string
   name?: string
-  variables?: Record<string, any>
+  variables?: Record<string, unknown>
 }
 
 interface CampaignSendOptions {
@@ -39,17 +40,17 @@ interface CampaignSendOptions {
  */
 export function substituteVariables(
   template: string,
-  variables: Record<string, any>
+  variables: Record<string, unknown>
 ): string {
   let result = template
-  
+
   // Replace {{variable}} patterns
   Object.keys(variables).forEach((key) => {
     const value = variables[key] ?? ''
     const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g')
     result = result.replace(regex, String(value))
   })
-  
+
   return result
 }
 
@@ -152,12 +153,11 @@ export async function sendEmail(
     })) as nodemailer.SentMessageInfo
 
     return { success: true, messageId: info.messageId }
-  } catch (smtpError) {
+  } catch (smtpError: unknown) {
     console.error('SMTP fallback also failed:', smtpError)
     return {
       success: false,
-      error:
-        smtpError instanceof Error ? smtpError.message : 'SMTP send failed',
+      error: getErrorMessage(smtpError),
     }
   }
 }
@@ -226,8 +226,8 @@ export async function sendCampaign({
           })
           
           // Prepare variables
-          const variables = {
-            ...(recipient.variables as Record<string, any> || {}),
+          const variables: Record<string, unknown> = {
+            ...(typeof recipient.variables === 'object' && recipient.variables !== null ? recipient.variables : {}),
             name: recipient.name || recipient.email.split('@')[0],
             email: recipient.email,
           }
@@ -274,24 +274,26 @@ export async function sendCampaign({
               error: result.error || 'Unknown error',
             })
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(`Error sending to ${recipient.email}:`, error)
-          
+
+          const errorMsg = getErrorMessage(error)
+
           // Mark as failed
           await prisma.emailRecipient.update({
             where: { id: recipient.id },
             data: {
               status: 'FAILED',
               failedAt: new Date(),
-              errorMessage: error instanceof Error ? error.message : 'Unknown error',
+              errorMessage: errorMsg,
               retryCount: recipient.retryCount + 1,
             },
           })
-          
+
           failed++
           errors.push({
             recipientId: recipient.id,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: errorMsg,
           })
         }
       })
@@ -415,7 +417,7 @@ export function isValidEmail(email: string): boolean {
  * Parse CSV content into recipient list
  */
 export function parseCSV(csvContent: string): {
-  recipients: Array<{ email: string; name?: string; variables?: Record<string, any> }>
+  recipients: Array<{ email: string; name?: string; variables?: Record<string, unknown> }>
   errors: string[]
 } {
   const lines = csvContent.trim().split('\n')
@@ -453,15 +455,15 @@ export function parseCSV(csvContent: string): {
       errors.push(`Row ${i + 1}: Invalid email: ${email}`)
       continue
     }
-    
-    const recipient: any = { email }
-    
+
+    const recipient: { email: string; name?: string; variables?: Record<string, unknown> } = { email }
+
     if (nameIndex !== -1 && values[nameIndex]) {
       recipient.name = values[nameIndex]
     }
     
     // Add other columns as variables
-    const variables: Record<string, any> = {}
+    const variables: Record<string, unknown> = {}
     headers.forEach((header, idx) => {
       if (idx !== emailIndex && idx !== nameIndex && values[idx]) {
         variables[header] = values[idx]

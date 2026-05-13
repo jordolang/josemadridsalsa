@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getErrorMessage } from '@/lib/errors'
 
 /**
  * Standard success response
@@ -11,7 +12,7 @@ export function ok<T>(data: T, status = 200) {
 /**
  * Standard error response
  */
-export function fail(message: string, status = 400, details?: any) {
+export function fail(message: string, status = 400, details?: unknown) {
   return NextResponse.json(
     {
       error: message,
@@ -24,7 +25,7 @@ export function fail(message: string, status = 400, details?: any) {
 /**
  * Internal server error response
  */
-export function serverError(message = 'Internal server error', error?: any) {
+export function serverError(message = 'Internal server error', error?: unknown) {
   console.error('Server error:', error)
   return NextResponse.json(
     {
@@ -163,7 +164,7 @@ export function paginated<T>(
  * Validate required fields
  */
 export function validateRequired(
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   fields: string[]
 ): boolean {
   const missing = fields.filter((field) => !data[field])
@@ -184,19 +185,21 @@ export async function tryCatch<T>(
 ) {
   try {
     return await handler()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API Error:', error)
 
-    if (error.message.includes('Unauthorized')) {
-      return unauthorized(error.message)
+    const message = getErrorMessage(error)
+
+    if (message.includes('Unauthorized')) {
+      return unauthorized(message)
     }
 
-    if (error.message.includes('Forbidden')) {
-      return forbidden(error.message)
+    if (message.includes('Forbidden')) {
+      return forbidden(message)
     }
 
-    if (error.message.includes('Not found')) {
-      return notFound(error.message)
+    if (message.includes('Not found')) {
+      return notFound(message)
     }
 
     return serverError(errorMessage, error)
