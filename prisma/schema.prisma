@@ -112,6 +112,9 @@ model Product {
   images                 String[]
   featuredImage          String?
   weight                 Decimal?                @db.Decimal(8, 2)
+  lengthInches           Decimal?                @db.Decimal(8, 2)
+  widthInches            Decimal?                @db.Decimal(8, 2)
+  heightInches           Decimal?                @db.Decimal(8, 2)
   dimensions             Json?
   metaTitle              String?
   metaDescription        String?
