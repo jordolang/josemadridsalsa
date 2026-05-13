@@ -4,7 +4,7 @@
  */
 
 import { PrismaClient } from '@prisma/client'
-import { emailTemplates } from '../lib/email/template-library'
+import { emailTemplates } from '../lib/email/templates/index'
 
 const prisma = new PrismaClient()
 
