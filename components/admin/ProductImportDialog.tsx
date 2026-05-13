@@ -207,7 +207,7 @@ export function ProductImportDialog({
             <Label htmlFor="fileType">File Type</Label>
             <Select
               value={fileType}
-              onValueChange={(value: any) => setFileType(value)}
+              onValueChange={(value) => setFileType(value as 'json' | 'csv' | 'excel')}
               disabled={isUploading}
             >
               <SelectTrigger id="fileType">

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Plus, Edit, Trash2, DollarSign } from 'lucide-react'
+import { getErrorMessage } from '@/lib/errors'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -173,8 +174,8 @@ export function VariantEditor({
       if (onUpdate) {
         onUpdate()
       }
-    } catch (error: any) {
-      setError(error.message)
+    } catch (error: unknown) {
+      setError(getErrorMessage(error))
     } finally {
       setIsProcessing(false)
     }
@@ -207,8 +208,8 @@ export function VariantEditor({
       if (onUpdate) {
         onUpdate()
       }
-    } catch (error: any) {
-      setError(error.message)
+    } catch (error: unknown) {
+      setError(getErrorMessage(error))
     } finally {
       setIsProcessing(false)
     }
