@@ -3,7 +3,7 @@
  * Transactional email sent after successful purchase
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const orderConfirmationTemplate: EmailTemplateDefinition = {

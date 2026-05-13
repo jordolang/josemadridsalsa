@@ -3,7 +3,7 @@
  * Transactional email sent when order ships with tracking information
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const shippingNotificationTemplate: EmailTemplateDefinition = {

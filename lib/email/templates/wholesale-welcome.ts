@@ -3,7 +3,7 @@
  * Transactional email sent to new B2B wholesale partners
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const wholesaleWelcomeTemplate: EmailTemplateDefinition = {

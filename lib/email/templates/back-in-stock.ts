@@ -3,7 +3,7 @@
  * Marketing email sent when a requested product is back in stock
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const backInStockTemplate: EmailTemplateDefinition = {

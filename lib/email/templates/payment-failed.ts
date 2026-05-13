@@ -3,7 +3,7 @@
  * Transactional email for failed payment notification with retry link
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const paymentFailedTemplate: EmailTemplateDefinition = {

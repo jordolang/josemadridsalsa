@@ -3,7 +3,7 @@
  * Transactional email sent with automated progress updates for fundraisers
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const fundraiserUpdateTemplate: EmailTemplateDefinition = {

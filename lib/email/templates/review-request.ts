@@ -3,7 +3,7 @@
  * Marketing email sent to request product reviews
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const reviewRequestTemplate: EmailTemplateDefinition = {

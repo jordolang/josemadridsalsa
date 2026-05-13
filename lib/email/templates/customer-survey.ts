@@ -3,7 +3,7 @@
  * Marketing email sent to gather customer feedback
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const customerSurveyTemplate: EmailTemplateDefinition = {

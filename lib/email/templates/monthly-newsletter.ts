@@ -3,7 +3,7 @@
  * Marketing email with monthly updates, recipes, and special offers
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const monthlyNewsletterTemplate: EmailTemplateDefinition = {

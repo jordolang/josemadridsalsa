@@ -3,7 +3,7 @@
  * Marketing email explaining the referral rewards program
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 
 function getImageBaseUrl() {
   return 'https://www.josemadrid.net/email-templates'

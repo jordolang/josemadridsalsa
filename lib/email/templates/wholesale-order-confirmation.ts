@@ -3,7 +3,7 @@
  * Transactional email sent to confirm B2B wholesale orders
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const wholesaleOrderConfirmationTemplate: EmailTemplateDefinition = {

@@ -3,7 +3,7 @@
  * Marketing email for tasting tours and special events
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const eventInvitationTemplate: EmailTemplateDefinition = {

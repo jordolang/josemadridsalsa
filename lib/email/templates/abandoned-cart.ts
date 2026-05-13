@@ -3,7 +3,7 @@
  * Marketing email sent to customers who left items in their cart
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const abandonedCartTemplate: EmailTemplateDefinition = {

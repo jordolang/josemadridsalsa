@@ -3,7 +3,7 @@
  * Transactional email for recurring order confirmation and reminder
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const subscriptionRenewalTemplate: EmailTemplateDefinition = {

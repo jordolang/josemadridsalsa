@@ -3,7 +3,7 @@
  * Transactional email sent to new customers
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const welcomeEmailTemplate: EmailTemplateDefinition = {

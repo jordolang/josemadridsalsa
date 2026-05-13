@@ -3,7 +3,7 @@
  * Marketing email sent to announce new products
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const productLaunchTemplate: EmailTemplateDefinition = {

@@ -3,7 +3,7 @@
  * Transactional email sent after purchase for appreciation
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const thankYouTemplate: EmailTemplateDefinition = {

@@ -3,7 +3,7 @@
  * Marketing email sent to announce limited-time sales
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const flashSaleTemplate: EmailTemplateDefinition = {

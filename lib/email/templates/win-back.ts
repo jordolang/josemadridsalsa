@@ -3,7 +3,7 @@
  * Marketing email sent to re-engage inactive customers
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const winBackTemplate: EmailTemplateDefinition = {

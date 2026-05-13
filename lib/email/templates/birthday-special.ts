@@ -3,7 +3,7 @@
  * Marketing email celebrating customer birthdays with a special offer
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 
 function getImageBaseUrl() {
   return 'https://www.josemadrid.net/email-templates'

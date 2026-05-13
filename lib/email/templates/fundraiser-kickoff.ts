@@ -3,7 +3,7 @@
  * Marketing email sent when a fundraising campaign launches
  */
 
-import { EmailTemplateDefinition } from '../template-library'
+import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
 
 export const fundraiserKickoffTemplate: EmailTemplateDefinition = {
