@@ -47,13 +47,11 @@ export default async function AdminLayout({
 
     return (
       <>
-        <AdminLayoutClient
-          user={user}
-          navigation={filteredNav}
-          className="hidden md:grid"
-        >
-          {children}
-        </AdminLayoutClient>
+        <div className="hidden md:contents">
+          <AdminLayoutClient user={user} navigation={filteredNav}>
+            {children}
+          </AdminLayoutClient>
+        </div>
         <MobileAdminShell
           user={user}
           primary={mobilePrimary}
