@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Loader2, Save, X } from 'lucide-react'
 import type { Category } from '@prisma/client'
+import { getErrorMessage } from '@/lib/errors'
 
 interface CategoryFormProps {
   category?: Category
@@ -76,8 +77,8 @@ export default function CategoryForm({ category, onSuccess, onCancel }: Category
 
       router.refresh()
       onSuccess?.()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err))
       setIsSubmitting(false)
     }
   }
