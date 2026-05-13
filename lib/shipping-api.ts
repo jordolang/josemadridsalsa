@@ -1,7 +1,12 @@
 /**
  * Shipping API Client - EasyPost and Shippo integration
  * José Madrid Salsa E-commerce Platform
+ *
+ * @module lib/shipping-api
  */
+
+import EasyPostClient from '@easypost/api'
+import type { Rate } from '@easypost/api'
 
 /**
  * Shipping provider configuration
@@ -14,6 +19,35 @@ function getShippingConfig() {
     apiKey: process.env.SHIPPING_API_KEY,
     testMode: process.env.SHIPPING_TEST_MODE === 'true',
   }
+}
+
+/**
+ * EasyPost client singleton
+ *
+ * Creates and caches a configured EasyPost client instance.
+ * Follows the same pattern as the Stripe integration.
+ *
+ * @returns Configured EasyPost client
+ * @throws Error if SHIPPING_API_KEY is not set
+ */
+let easyPostClientInstance: EasyPostClient | null = null
+
+function getEasyPostClient(): EasyPostClient {
+  const config = getShippingConfig()
+
+  if (!config.apiKey) {
+    throw new Error(
+      'SHIPPING_API_KEY environment variable is required for EasyPost integration'
+    )
+  }
+
+  if (!easyPostClientInstance) {
+    easyPostClientInstance = new EasyPostClient(config.apiKey, {
+      timeout: 10000, // 10 second timeout for rate requests
+    })
+  }
+
+  return easyPostClientInstance
 }
 
 /**
@@ -88,65 +122,121 @@ interface ShippingClient {
 }
 
 /**
+ * Maps an EasyPost Rate object to our ShippingRate interface
+ *
+ * @param easyPostRate - Rate object from EasyPost API
+ * @returns Normalized shipping rate
+ */
+function mapEasyPostRate(easyPostRate: Rate): ShippingRate {
+  return {
+    id: easyPostRate.id,
+    carrier: easyPostRate.carrier || 'Unknown',
+    service: easyPostRate.service || 'Standard',
+    rate: parseFloat(easyPostRate.rate || '0'),
+    currency: easyPostRate.currency || 'USD',
+    deliveryDays: easyPostRate.delivery_days || undefined,
+    deliveryDate: easyPostRate.delivery_date || undefined,
+    deliveryDateGuaranteed: easyPostRate.delivery_date_guaranteed || false,
+  }
+}
+
+/**
  * EasyPost client implementation
+ *
+ * Integrates with EasyPost API for real-time carrier rates.
+ * Follows the adapter pattern from the Stripe integration.
  */
 class EasyPostClient implements ShippingClient {
   provider = 'easypost'
   testMode: boolean
-  private apiKey: string
 
-  constructor(apiKey: string, testMode: boolean) {
-    this.apiKey = apiKey
+  constructor(testMode: boolean) {
     this.testMode = testMode
   }
 
   async getRates(request: ShipmentRequest): Promise<ShipmentRates> {
-    // EasyPost API integration
-    // For now, return mock data - will be implemented when EasyPost SDK is added
-    // TODO: Install @easypost/api and implement real API calls
+    try {
+      const client = getEasyPostClient()
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 100))
+      // Create shipment to get rates
+      const shipment = await client.Shipment.create({
+        from_address: {
+          name: request.fromAddress.name,
+          company: request.fromAddress.company,
+          street1: request.fromAddress.street1,
+          street2: request.fromAddress.street2,
+          city: request.fromAddress.city,
+          state: request.fromAddress.state,
+          zip: request.fromAddress.zip,
+          country: request.fromAddress.country,
+          phone: request.fromAddress.phone,
+          email: request.fromAddress.email,
+        },
+        to_address: {
+          name: request.toAddress.name,
+          company: request.toAddress.company,
+          street1: request.toAddress.street1,
+          street2: request.toAddress.street2,
+          city: request.toAddress.city,
+          state: request.toAddress.state,
+          zip: request.toAddress.zip,
+          country: request.toAddress.country,
+          phone: request.toAddress.phone,
+          email: request.toAddress.email,
+        },
+        parcel: {
+          length: request.parcel.length,
+          width: request.parcel.width,
+          height: request.parcel.height,
+          weight: request.parcel.weight,
+        },
+        reference: request.reference,
+      })
 
-    // Mock rates for development
-    const mockRates: ShippingRate[] = [
-      {
-        id: 'rate_usps_ground',
-        carrier: 'USPS',
-        service: 'Ground Advantage',
-        rate: 6.99,
-        currency: 'USD',
-        deliveryDays: 3,
-      },
-      {
-        id: 'rate_usps_priority',
-        carrier: 'USPS',
-        service: 'Priority Mail',
-        rate: 9.99,
-        currency: 'USD',
-        deliveryDays: 2,
-      },
-      {
-        id: 'rate_usps_express',
-        carrier: 'USPS',
-        service: 'Priority Mail Express',
-        rate: 24.99,
-        currency: 'USD',
-        deliveryDays: 1,
-        deliveryDateGuaranteed: true,
-      },
-    ]
+      // Map EasyPost rates to our format
+      const rates = (shipment.rates || []).map(mapEasyPostRate)
 
-    return {
-      rates: mockRates,
-      messages: this.testMode
-        ? [
-            {
-              type: 'info',
-              message: 'Test mode - using mock rates',
-            },
-          ]
-        : undefined,
+      // Sort by rate (lowest first)
+      rates.sort((a, b) => a.rate - b.rate)
+
+      const messages: ShipmentRates['messages'] = []
+
+      if (this.testMode) {
+        messages.push({
+          type: 'info',
+          message: 'Test mode - using EasyPost test API',
+        })
+      }
+
+      // Add warning if no rates returned
+      if (rates.length === 0) {
+        messages.push({
+          type: 'warning',
+          message: 'No shipping rates available for this destination',
+        })
+      }
+
+      return {
+        rates,
+        messages: messages.length > 0 ? messages : undefined,
+      }
+    } catch (error) {
+      // Log error details
+      console.error('[EasyPost] Error fetching rates:', error)
+
+      // Return error message
+      return {
+        rates: [],
+        messages: [
+          {
+            type: 'error',
+            message:
+              error instanceof Error
+                ? `EasyPost API error: ${error.message}`
+                : 'Failed to fetch shipping rates',
+          },
+        ],
+      }
     }
   }
 }
@@ -238,17 +328,16 @@ export const getShippingClient = (): ShippingClient => {
   }
 
   if (!shippingClient) {
-    console.warn(
-      '[Shipping API] Using mock shipping client — real carrier SDK not yet integrated. ' +
-        'Rates returned are placeholders. Install @easypost/api or shippo SDK to enable real rates.'
-    )
-
     // Create client based on provider
     switch (config.provider.toLowerCase()) {
       case 'easypost':
-        shippingClient = new EasyPostClient(config.apiKey, config.testMode)
+        shippingClient = new EasyPostClient(config.testMode)
         break
       case 'shippo':
+        console.warn(
+          '[Shipping API] Shippo provider selected but not yet integrated. ' +
+            'Install shippo SDK to enable Shippo rates.'
+        )
         shippingClient = new ShippoClient(config.apiKey, config.testMode)
         break
       default:
