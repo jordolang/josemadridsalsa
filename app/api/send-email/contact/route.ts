@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { sendEmail } from '@/lib/email/client'
 import { ContactFormEmail } from '@/emails/contact-form'
 import { checkRateLimit } from '@/lib/email/rate-limit'
+import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -31,6 +32,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
+    for (const field of ['name', 'email', 'message'] as const) {
+      if (typeof body?.[field] !== 'string' || body[field].trim().length === 0) {
+        return NextResponse.json(
+          { error: `Missing required field: ${field}` },
+          { status: 400 }
+        )
+      }
+    }
+
     const parsed = ContactFormSchema.safeParse(body)
 
     if (!parsed.success) {
@@ -42,6 +52,34 @@ export async function POST(request: Request) {
     }
 
     const { name, email, phone, message, submittedAt, userId, unsubscribeUrl } = parsed.data
+    const receivedAt = submittedAt || new Date().toISOString()
+
+    const conversation = await prisma.conversation.create({
+      data: {
+        subject: `Contact form submission from ${name}`,
+        email,
+        messages: {
+          create: [
+            {
+              senderType: 'USER',
+              body: [
+                `Name: ${name}`,
+                `Email: ${email}`,
+                phone ? `Phone: ${phone}` : null,
+                `Submitted: ${receivedAt}`,
+                '',
+                message,
+              ]
+                .filter(Boolean)
+                .join('\n'),
+            },
+          ],
+        },
+      },
+      select: {
+        id: true,
+      },
+    })
 
     // Prepare email data
     const emailProps = {
@@ -49,7 +87,7 @@ export async function POST(request: Request) {
       email,
       phone,
       message,
-      submittedAt: submittedAt || new Date().toISOString(),
+      submittedAt: receivedAt,
       unsubscribeUrl,
     }
 
@@ -73,6 +111,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       messageId: result.messageId,
+      conversationId: conversation.id,
       from: email,
     })
   } catch (error) {

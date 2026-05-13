@@ -145,18 +145,18 @@ export default async function MessagesPage({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Customer Messages
+            Contact Form Messages
           </h1>
           <p className="text-sm text-muted-foreground">
-            Track conversations from customers across the storefront
+            Review and respond to contact form submissions from the storefront
           </p>
         </div>
         <Alert className="w-fit">
           <Info className="size-4" />
           <AlertDescription>
             {unreadCount === 0
-              ? 'All caught up! No unread messages.'
-              : `${unreadCount} customer message(s) awaiting reply.`}
+              ? 'All caught up! No unread contact form messages.'
+              : `${unreadCount} contact form message(s) awaiting reply.`}
           </AlertDescription>
         </Alert>
       </div>
@@ -165,7 +165,7 @@ export default async function MessagesPage({
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="text-xs font-medium uppercase tracking-wide">
-              Total conversations
+              Total submissions
             </CardDescription>
             <CardTitle className="text-2xl font-bold tabular-nums">
               {total.toLocaleString()}
@@ -175,7 +175,7 @@ export default async function MessagesPage({
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="text-xs font-medium uppercase tracking-wide">
-              Open conversations
+              Open messages
             </CardDescription>
             <CardTitle className="text-2xl font-bold tabular-nums">
               {openCount.toLocaleString()}
@@ -185,7 +185,7 @@ export default async function MessagesPage({
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="text-xs font-medium uppercase tracking-wide">
-              Unread messages
+              Unread contact messages
             </CardDescription>
             <CardTitle className="text-2xl font-bold tabular-nums">
               {unreadCount.toLocaleString()}
@@ -267,7 +267,7 @@ export default async function MessagesPage({
                   colSpan={6}
                   className="py-12 text-center text-muted-foreground"
                 >
-                  No conversations found.
+                  No contact form messages found.
                 </TableCell>
               </TableRow>
             ) : (

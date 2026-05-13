@@ -9,6 +9,18 @@ vi.mock('@/lib/email/client', () => ({
   sendEmail: vi.fn().mockResolvedValue({ success: true, messageId: 'test-id' }),
 }))
 
+vi.mock('@/lib/prisma', () => ({
+  prisma: {
+    conversation: {
+      create: vi.fn().mockResolvedValue({ id: 'conversation-123' }),
+    },
+  },
+}))
+
+vi.mock('@/lib/email/rate-limit', () => ({
+  checkRateLimit: vi.fn(() => ({ allowed: true })),
+}))
+
 // Mock email templates
 vi.mock('@/emails/contact-form', () => ({
   ContactFormEmail: vi.fn(() => null),
@@ -24,10 +36,12 @@ vi.mock('@/emails/delivery-confirmation', () => ({
 
 // Import the mocked sendEmail
 import { sendEmail as mockSendEmail } from '@/lib/email/client'
+import { prisma } from '@/lib/prisma'
 
 describe('Send Email API', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(prisma.conversation.create).mockResolvedValue({ id: 'conversation-123' } as any)
   })
 
   describe('POST /api/send-email/contact', () => {
@@ -97,7 +111,25 @@ describe('Send Email API', () => {
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
       expect(data.messageId).toBe('msg-123')
+      expect(data.conversationId).toBe('conversation-123')
       expect(data.from).toBe('john@example.com')
+
+      expect(prisma.conversation.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            subject: 'Contact form submission from John Doe',
+            email: 'john@example.com',
+            messages: expect.objectContaining({
+              create: [
+                expect.objectContaining({
+                  senderType: 'USER',
+                  body: expect.stringContaining('I have a question about your products.'),
+                }),
+              ],
+            }),
+          }),
+        })
+      )
 
       expect(mockSendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -164,7 +196,6 @@ describe('Send Email API', () => {
 
       expect(response.status).toBe(500)
       expect(data.error).toBe('Internal server error')
-      expect(data.details).toContain('JSON')
     })
 
     it('should handle sendEmail throwing error', async () => {
@@ -180,7 +211,6 @@ describe('Send Email API', () => {
 
       expect(response.status).toBe(500)
       expect(data.error).toBe('Internal server error')
-      expect(data.details).toBe('Network error')
     })
   })
 

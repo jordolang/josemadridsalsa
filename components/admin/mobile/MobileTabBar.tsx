@@ -24,7 +24,7 @@ const TAB_CONFIG: Record<string, TabConfig> = {
   '/admin': { label: 'Home', icon: LayoutDashboard },
   '/admin/orders': { label: 'Orders', icon: ShoppingCart },
   '/admin/products': { label: 'Products', icon: Package },
-  '/admin/messages': { label: 'Inbox', icon: MessageSquare },
+  '/admin/messages': { label: 'Contact', icon: MessageSquare },
 }
 
 interface MobileTabBarProps {

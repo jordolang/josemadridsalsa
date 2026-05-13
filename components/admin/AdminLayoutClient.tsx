@@ -167,8 +167,8 @@ function AdminLayoutInner({
                 <DropdownMenuItem asChild>
                   <Link href="/admin/messages">
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium">New messages</span>
-                      <span className="text-xs text-muted-foreground">View customer messages and inquiries</span>
+                      <span className="text-sm font-medium">New contact form messages</span>
+                      <span className="text-xs text-muted-foreground">View storefront contact form submissions</span>
                     </div>
                   </Link>
                 </DropdownMenuItem>

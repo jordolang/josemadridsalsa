@@ -175,7 +175,7 @@ export default async function ConversationPage(props: PageProps) {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold">
-              {conversation.subject || 'Conversation'}
+              {conversation.subject || 'Contact Form Message'}
             </h1>
             <Badge
               className={
@@ -188,7 +188,7 @@ export default async function ConversationPage(props: PageProps) {
             </Badge>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Conversation opened {conversation.createdAt.toLocaleString()}
+            Contact form message opened {conversation.createdAt.toLocaleString()}
           </p>
         </div>
 
@@ -259,7 +259,7 @@ export default async function ConversationPage(props: PageProps) {
             </form>
           ) : (
             <div className="mt-6 rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
-              You have read-only access to this conversation. Contact an administrator to respond on behalf of the team.
+              You have read-only access to this contact form message. Contact an administrator to respond on behalf of the team.
             </div>
           )}
         </Card>
@@ -288,7 +288,7 @@ export default async function ConversationPage(props: PageProps) {
           </div>
           <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
             <p>
-              All replies are logged and tracked. Closing the conversation will hide it from the active queue but keeps the full history available.
+              All replies are logged and tracked. Closing the contact form message will hide it from the active queue but keeps the full history available.
             </p>
           </div>
         </Card>

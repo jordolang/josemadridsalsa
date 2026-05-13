@@ -153,7 +153,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'MessageSquare',
     permission: 'messaging:read',
     children: [
-      { label: 'Messages', href: '/admin/messages', permission: 'messaging:read' },
+      { label: 'Contact Form Messages', href: '/admin/messages', permission: 'messaging:read' },
       { label: 'Live Chats', href: '/admin/messages/live', permission: 'messaging:read' },
       { label: 'Lead Generation', href: '/admin/lead-generation', permission: 'messaging:read' },
       { label: 'Reviews', href: '/admin/reviews', permission: 'content:read' },

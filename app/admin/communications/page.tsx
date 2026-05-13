@@ -102,7 +102,7 @@ export default async function CommunicationsPage() {
         <div>
           <h1 className="text-3xl font-bold">Communications</h1>
           <p className="text-muted-foreground">
-            Manage customer conversations, email campaigns, mailing lists, and feedback
+            Manage contact form messages, live chats, email campaigns, mailing lists, and feedback
           </p>
         </div>
       </div>
@@ -111,7 +111,7 @@ export default async function CommunicationsPage() {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Open Conversations</p>
+              <p className="text-sm text-muted-foreground">Open Contact Messages</p>
               <p className="mt-2 text-3xl font-bold text-foreground">
                 {overview.openConversations.toLocaleString()}
               </p>
@@ -121,14 +121,14 @@ export default async function CommunicationsPage() {
             </div>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            {overview.unreadMessages} messages waiting for response
+            {overview.unreadMessages} contact form messages waiting for response
           </p>
         </Card>
 
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Archived Conversations</p>
+              <p className="text-sm text-muted-foreground">Archived Contact Messages</p>
               <p className="mt-2 text-3xl font-bold text-foreground">
                 {overview.closedConversations.toLocaleString()}
               </p>
@@ -138,7 +138,7 @@ export default async function CommunicationsPage() {
             </div>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            All closed conversations remain searchable.
+            All closed contact form messages remain searchable.
           </p>
         </Card>
 
@@ -200,9 +200,9 @@ export default async function CommunicationsPage() {
         <Card className="p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Recent Conversations</h2>
+              <h2 className="text-xl font-semibold">Recent Contact Form Messages</h2>
               <p className="text-sm text-muted-foreground">
-                Latest updates across customer support channels
+                Latest storefront contact form submissions
               </p>
             </div>
             <Link
@@ -215,7 +215,7 @@ export default async function CommunicationsPage() {
 
           {overview.recentConversations.length === 0 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">
-              No customer conversations yet.
+              No contact form messages yet.
             </div>
           ) : (
             <div className="space-y-3">
@@ -267,7 +267,7 @@ export default async function CommunicationsPage() {
               href="/admin/messages"
               className="block rounded-md border border-border px-4 py-3 text-sm font-medium text-foreground hover:border-primary hover:text-primary"
             >
-              Manage customer messages
+              Manage contact form messages
             </Link>
             {canManageEmails && (
               <Link
