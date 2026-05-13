@@ -112,7 +112,7 @@
     "@vercel/analytics": "^1.5.0",
     "@vercel/blob": "^2.3.2",
     "@vercel/speed-insights": "^2.0.0",
-    "axios": "^1.13.5",
+    "axios": "1.16.0",
     "bcryptjs": "^3.0.2",
     "botid": "^1.5.11",
     "class-variance-authority": "^0.7.1",
@@ -126,9 +126,9 @@
     "jszip": "^3.10.1",
     "lucide-react": "^0.555.0",
     "mammoth": "^1.11.0",
-    "next": "16.2.3",
+    "next": "16.2.6",
     "next-auth": "^4.24.11",
-    "next-intl": "^4.7.0",
+    "next-intl": "4.11.2",
     "next-mdx-remote": "^6.0.0",
     "next-themes": "^0.4.6",
     "nodemailer": "^8.0.5",
@@ -156,7 +156,6 @@
     "tailwindcss-animate": "^1.0.7",
     "uploadthing": "^7.7.4",
     "vaul": "^1.1.2",
-    "workflow": "^4.2.4",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },
@@ -192,14 +191,14 @@
     "lint-staged": "^15.2.0",
     "min-indent": "^1.0.1",
     "msw": "^2.12.10",
-    "postcss": "^8.5.6",
+    "postcss": "8.5.14",
     "prisma": "6.19.3",
     "react-email": "^5.2.9",
     "readdirp": "^5.0.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "vercel": "^50.28.0",
+    "vercel": "53.4.0",
     "vitest": "^4.0.6"
   },
   "lint-staged": {
@@ -214,6 +213,14 @@
   "overrides": {
     "tar": ">=7.5.10",
     "@tootallnate/once": ">=3.0.1",
+    "protobufjs": "8.2.0",
+    "@protobufjs/utf8": "1.1.1",
+    "fast-uri": "3.1.2",
+    "fast-xml-builder": "1.2.0",
+    "ip-address": "10.2.0",
+    "basic-ftp": "5.3.1",
+    "postcss@<8.5.10": "8.5.14",
+    "minimatch@>=10.0.0 <10.2.3": "10.2.5",
     "effect": "3.21.0",
     "smol-toml": "1.6.1",
     "srvx": "0.11.13",
@@ -244,7 +251,7 @@
     }
   },
   "resolutions": {
-    "next": "16.2.3",
+    "next": "16.2.6",
     "fast-xml-parser": ">=5.3.6",
     "prismjs": ">=1.30.0"
   }
