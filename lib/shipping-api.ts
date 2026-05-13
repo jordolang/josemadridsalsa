@@ -43,7 +43,7 @@ function getEasyPostClient(): EasyPostClient {
 
   if (!easyPostClientInstance) {
     easyPostClientInstance = new EasyPostClient(config.apiKey, {
-      timeout: 10000, // 10 second timeout for rate requests
+      timeout: 60000, // EasyPost recommended default timeout
     })
   }
 
