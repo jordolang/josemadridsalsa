@@ -11,13 +11,32 @@ import type { ScheduleEvent } from '@/lib/server/google-data';
 
 type LatLngLiteral = { lat: number; lng: number };
 
+// Google Maps type definitions for the specific APIs used in this component
+interface GoogleMapsMarker {
+  setMap?: (map: unknown | null) => void;
+  map?: unknown | null;
+  getPosition?: () => LatLngLiteral;
+  position?: LatLngLiteral;
+  addEventListener?: (event: string, handler: () => void) => void;
+  addListener?: (event: string, handler: () => void) => void;
+}
+
+interface GoogleMapsGeocodeResult {
+  geometry: {
+    location: {
+      lat: () => number;
+      lng: () => number;
+    };
+  };
+}
+
 const DEFAULT_CENTER: LatLngLiteral = { lat: 39.9403, lng: -82.0132 };
 const MAP_SCRIPT_ID = 'google-maps-sdk';
 
 // Module-level promise so Maps JS is only loaded once per browser session
 let googleMapsPromise: Promise<any> | null = null;
 
-function removeMarker(marker: any) {
+function removeMarker(marker: GoogleMapsMarker) {
   if (typeof marker?.setMap === 'function') {
     marker.setMap(null);
     return;
@@ -28,12 +47,12 @@ function removeMarker(marker: any) {
   }
 }
 
-function positionFromMarker(marker: any): LatLngLiteral {
+function positionFromMarker(marker: GoogleMapsMarker): LatLngLiteral {
   if (typeof marker?.getPosition === 'function') {
     return marker.getPosition();
   }
 
-  return marker.position;
+  return marker.position as LatLngLiteral;
 }
 
 function loadGoogleMaps(apiKey: string) {
@@ -183,7 +202,7 @@ export function GoogleScheduleMap({ initialEvents }: GoogleScheduleMapProps) {
     const geocoder = new maps.Geocoder();
     const infoWindow = infoWindowRef.current || new maps.InfoWindow({ maxWidth: 240 });
     infoWindowRef.current = infoWindow;
-    const nextMarkers: any[] = [];
+    const nextMarkers: GoogleMapsMarker[] = [];
     const geocodeCache = geocodeCacheRef.current;
 
     async function resolveLocation(location: string): Promise<LatLngLiteral | null> {
@@ -192,7 +211,7 @@ export function GoogleScheduleMap({ initialEvents }: GoogleScheduleMapProps) {
       const parsed = parseLatLngFromString(location);
       if (parsed) { geocodeCache.set(location, parsed); return parsed; }
       return new Promise<LatLngLiteral | null>((resolve) => {
-        geocoder.geocode({ address: location }, (results: any, status: string) => {
+        geocoder.geocode({ address: location }, (results: GoogleMapsGeocodeResult[] | null, status: string) => {
           if (status === 'OK' && results?.[0]) {
             const { lat, lng } = results[0].geometry.location;
             const pos = { lat: lat(), lng: lng() };
