@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
 import { isBusinessHours } from '@/lib/chat/business-hours'
 import { notifyAdminsOfHandoff } from '@/lib/chat/notify'
+import { getOrCreateGuestToken, guestDisplayName } from '@/lib/chat/guest-token'
 import {
   checkRateLimit,
   createRateLimitHeaders,
@@ -61,7 +62,11 @@ export async function POST(request: Request) {
 
   const open = isBusinessHours()
   const user = await getCurrentUser()
-  const name = parsed.data.name?.trim() || user?.name || null
+  const guest = user ? null : await getOrCreateGuestToken()
+  const name =
+    parsed.data.name?.trim() ||
+    user?.name ||
+    (guest ? guestDisplayName(guest.token) : null)
   const email = parsed.data.email?.trim() || user?.email || null
   const status = open ? 'WAITING' : 'OFFLINE'
 
@@ -81,6 +86,7 @@ export async function POST(request: Request) {
       customerUserId: user?.id ?? null,
       ipAddress: identifier,
       userAgent: request.headers.get('user-agent'),
+      metadata: guest ? { guestToken: guest.token } : undefined,
     },
     select: { id: true, status: true },
   })
