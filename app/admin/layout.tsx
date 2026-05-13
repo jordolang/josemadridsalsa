@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser, getUserPermissions } from '@/lib/rbac'
 import { adminNavigation, filterNavByPermissions } from '@/lib/permissions-map'
 import { AdminLayoutClient } from '@/components/admin/AdminLayoutClient'
+import { LiveChatNotifier } from '@/components/admin/LiveChatNotifier'
 import { Toaster } from '@/components/ui/sonner'
 import type { Metadata } from 'next'
 import { createMetadata } from '@/lib/metadata'
@@ -43,6 +44,7 @@ export default async function AdminLayout({
         <AdminLayoutClient user={user} navigation={filteredNav}>
           {children}
         </AdminLayoutClient>
+        <LiveChatNotifier />
         <Toaster />
       </>
     )

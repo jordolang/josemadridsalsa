@@ -631,6 +631,46 @@ model SiteReview {
   @@map("site_reviews")
 }
 
+model ChatThread {
+  id              String          @id @default(cuid())
+  status          ChatThreadStatus @default(WAITING)
+  source          String?
+  customerName    String?
+  customerEmail   String?
+  customerUserId  String?
+  ipAddress       String?
+  userAgent       String?
+  assignedAdminId String?
+  startedAt       DateTime        @default(now())
+  lastMessageAt   DateTime        @default(now())
+  closedAt        DateTime?
+  closedReason    String?
+  metadata        Json?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  messages        ChatMessage[]
+
+  @@index([status])
+  @@index([assignedAdminId])
+  @@index([lastMessageAt])
+  @@index([startedAt])
+  @@map("chat_threads")
+}
+
+model ChatMessage {
+  id          String              @id @default(cuid())
+  threadId    String
+  senderType  ChatMessageSender
+  senderUserId String?
+  senderLabel String?
+  content     String
+  createdAt   DateTime            @default(now())
+  thread      ChatThread          @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@map("chat_messages")
+}
+
 model Fundraiser {
   id                   String                  @id @default(cuid())
   name                 String
@@ -2687,6 +2727,20 @@ enum ReviewStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum ChatThreadStatus {
+  WAITING
+  ACTIVE
+  CLOSED
+  OFFLINE
+}
+
+enum ChatMessageSender {
+  CUSTOMER
+  AI
+  ADMIN
+  SYSTEM
 }
 
 enum FundraiserStatus {
