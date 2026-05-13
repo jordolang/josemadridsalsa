@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Front-page analytics loading** now stays quiet unless optional Amplitude and Vercel Analytics settings are configured.
 
 ### Security
+- Patched dependency vulnerabilities by upgrading Next.js, Axios, next-intl, PostCSS, and Vercel; removed the unused `workflow` package; and pinned vulnerable transitive packages to fixed versions.
 - Removed hard-coded database and Google API fallback credentials from maintenance scripts.
 
 ### Fixed
