@@ -87,6 +87,11 @@ export const adminNavigation: NavItem[] = [
         href: '/admin/seo',
         permission: 'content:write',
       },
+      {
+        label: 'Heat Index (Blog)',
+        href: '/admin/blog',
+        permission: 'content:read',
+      },
     ],
   },
   {

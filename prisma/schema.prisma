@@ -45,6 +45,9 @@ model User {
   unsubscribePreferences  UnsubscribePreference[]
   wholesaleAccount        WholesaleAccount?
   wishlistItems           WishlistItem[]
+  blogPosts               BlogPost[]                    @relation("BlogAuthor")
+  blogComments            BlogComment[]                 @relation("BlogCommenter")
+  blogReactions           BlogReaction[]                @relation("BlogReactor")
 
   @@map("users")
 }
@@ -610,20 +613,20 @@ model Review {
 }
 
 model SiteReview {
-  id          String       @id @default(cuid())
-  rating      Int
-  comment     String?
-  name        String?
-  email       String?
-  source      String?
-  forwardedToGoogle Boolean @default(false)
-  status      ReviewStatus @default(PENDING)
-  moderatedAt DateTime?
-  moderatedBy String?
-  ipAddress   String?
-  userAgent   String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                String       @id @default(cuid())
+  rating            Int
+  comment           String?
+  name              String?
+  email             String?
+  source            String?
+  forwardedToGoogle Boolean      @default(false)
+  status            ReviewStatus @default(PENDING)
+  moderatedAt       DateTime?
+  moderatedBy       String?
+  ipAddress         String?
+  userAgent         String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   @@index([status])
   @@index([source])
@@ -632,8 +635,8 @@ model SiteReview {
 }
 
 model ChatThread {
-  id              String          @id @default(cuid())
-  status          ChatThreadStatus @default(WAITING)
+  id              String               @id @default(cuid())
+  status          ChatThreadStatus     @default(WAITING)
   source          String?
   customerName    String?
   customerEmail   String?
@@ -641,13 +644,13 @@ model ChatThread {
   ipAddress       String?
   userAgent       String?
   assignedAdminId String?
-  startedAt       DateTime        @default(now())
-  lastMessageAt   DateTime        @default(now())
+  startedAt       DateTime             @default(now())
+  lastMessageAt   DateTime             @default(now())
   closedAt        DateTime?
   closedReason    String?
   metadata        Json?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
   messages        ChatHandoffMessage[]
 
   @@index([status])
@@ -658,14 +661,14 @@ model ChatThread {
 }
 
 model ChatHandoffMessage {
-  id          String              @id @default(cuid())
-  threadId    String
-  senderType  ChatMessageSender
+  id           String            @id @default(cuid())
+  threadId     String
+  senderType   ChatMessageSender
   senderUserId String?
-  senderLabel String?
-  content     String
-  createdAt   DateTime            @default(now())
-  thread      ChatThread          @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderLabel  String?
+  content      String
+  createdAt    DateTime          @default(now())
+  thread       ChatThread        @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   @@index([threadId, createdAt])
   @@map("chat_handoff_messages")
@@ -3055,4 +3058,134 @@ enum FundraiserSignupStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+// ─────────────────────────────────────────────────────────────
+// The Heat Index — public brand blog
+// ─────────────────────────────────────────────────────────────
+
+model BlogPost {
+  id             String         @id @default(cuid())
+  slug           String         @unique
+  title          String
+  subtitle       String?
+  excerpt        String
+  content        String
+  coverImage     String?
+  coverImageAlt  String?
+  status         BlogPostStatus @default(DRAFT)
+  publishedAt    DateTime?
+  scheduledFor   DateTime?
+  featured       Boolean        @default(false)
+  readingMinutes Int            @default(5)
+  seoTitle       String?
+  seoDescription String?
+  tags           String[]       @default([])
+
+  authorId    String?
+  author      User?         @relation("BlogAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  seriesId    String?
+  series      BlogSeries?   @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  seriesOrder Int?
+  categoryId  String?
+  category    BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  comments  BlogComment[]
+  reactions BlogReaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([seriesId, seriesOrder])
+  @@index([categoryId])
+  @@index([featured])
+  @@map("blog_posts")
+}
+
+model BlogSeries {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  name        String
+  tagline     String?
+  description String?
+  coverImage  String?
+  accentColor String?
+  sortOrder   Int        @default(0)
+  isFeatured  Boolean    @default(false)
+  posts       BlogPost[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([isFeatured, sortOrder])
+  @@map("blog_series")
+}
+
+model BlogCategory {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  name        String
+  description String?
+  accentColor String?
+  sortOrder   Int        @default(0)
+  posts       BlogPost[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("blog_categories")
+}
+
+model BlogComment {
+  id        String            @id @default(cuid())
+  postId    String
+  post      BlogPost          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User              @relation("BlogCommenter", fields: [userId], references: [id], onDelete: Cascade)
+  body      String
+  status    BlogCommentStatus @default(PENDING)
+  parentId  String?
+  parent    BlogComment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   BlogComment[]     @relation("CommentReplies")
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([postId, status, createdAt])
+  @@index([userId])
+  @@index([parentId])
+  @@map("blog_comments")
+}
+
+model BlogReaction {
+  id        String           @id @default(cuid())
+  postId    String
+  post      BlogPost         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation("BlogReactor", fields: [userId], references: [id], onDelete: Cascade)
+  kind      BlogReactionKind
+  createdAt DateTime         @default(now())
+
+  @@unique([postId, userId, kind])
+  @@index([postId, kind])
+  @@map("blog_reactions")
+}
+
+enum BlogPostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum BlogCommentStatus {
+  PENDING
+  APPROVED
+  HIDDEN
+  SPAM
+}
+
+enum BlogReactionKind {
+  FIRE
+  HEART
+  LAUGH
+  MIND_BLOWN
 }

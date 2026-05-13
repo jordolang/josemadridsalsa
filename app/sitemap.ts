@@ -135,6 +135,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.4,
     },
     {
+      url: `${baseUrl}/heat-index`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.85,
+    },
+    {
       url: `${baseUrl}/privacy`,
       lastModified: new Date(),
       changeFrequency: 'yearly',
@@ -211,6 +217,55 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   } catch (error) {
     console.error('Failed to fetch developer blog posts for sitemap:', error)
+  }
+
+  try {
+    const heatIndexPosts = await prisma.blogPost.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { slug: true, updatedAt: true },
+    })
+    heatIndexPosts.forEach((post) => {
+      urls.push({
+        url: `${baseUrl}/heat-index/${post.slug}`,
+        lastModified: post.updatedAt,
+        changeFrequency: 'weekly',
+        priority: 0.7,
+      })
+    })
+  } catch (error) {
+    console.error('Failed to fetch heat-index posts for sitemap:', error)
+  }
+
+  try {
+    const series = await prisma.blogSeries.findMany({
+      select: { slug: true, updatedAt: true },
+    })
+    series.forEach((s) => {
+      urls.push({
+        url: `${baseUrl}/heat-index/series/${s.slug}`,
+        lastModified: s.updatedAt,
+        changeFrequency: 'weekly',
+        priority: 0.6,
+      })
+    })
+  } catch (error) {
+    console.error('Failed to fetch heat-index series for sitemap:', error)
+  }
+
+  try {
+    const categories = await prisma.blogCategory.findMany({
+      select: { slug: true, updatedAt: true },
+    })
+    categories.forEach((c) => {
+      urls.push({
+        url: `${baseUrl}/heat-index/category/${c.slug}`,
+        lastModified: c.updatedAt,
+        changeFrequency: 'weekly',
+        priority: 0.5,
+      })
+    })
+  } catch (error) {
+    console.error('Failed to fetch heat-index categories for sitemap:', error)
   }
 
   try {
