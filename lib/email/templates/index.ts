@@ -3,8 +3,17 @@
  * Central export for all email templates with backward compatibility
  */
 
-// Re-export type for convenience
-export type { EmailTemplateDefinition } from '../template-library'
+// Email template definition type
+export interface EmailTemplateDefinition {
+  key: string
+  name: string
+  subject: string
+  category: 'TRANSACTIONAL' | 'MARKETING' | 'ADMINISTRATIVE'
+  description: string
+  variables: Record<string, string>
+  html: string
+  text: string
+}
 
 // Import all individual templates
 import { welcomeEmailTemplate } from './welcome-email'
