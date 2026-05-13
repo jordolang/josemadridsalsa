@@ -114,16 +114,19 @@ export function Footer() {
             <FooterColumn title="Shop" links={serviceLinks} />
             <FooterColumn title="Helpful Links" links={helpfulLinks} />
             <FooterColumn title="Policies" links={legalLinks} />
-            <ContactColumn items={contactInfo} />
-            <FooterNewsletterSignup source="footer:newsletter" />
-            <div className="text-center sm:text-left">
-              <p className="text-lg font-medium">Share your experience</p>
-              <p className="text-secondary-foreground/70 mt-3 text-sm">
-                Loved the salsa? A quick review helps other families find us.
-              </p>
-              <div className="mt-4">
-                <LeaveAReview variant="compact" source="footer:gmb" triggerLabel="Leave a Google review" />
-              </div>
+          </div>
+        </div>
+
+        <div className="mt-12 grid grid-cols-1 gap-8 border-t pt-12 md:grid-cols-3">
+          <ContactColumn items={contactInfo} />
+          <FooterNewsletterSignup source="footer:newsletter" />
+          <div className="text-center sm:text-left">
+            <p className="text-lg font-medium">Share your experience</p>
+            <p className="text-secondary-foreground/70 mt-3 text-sm">
+              Loved the salsa? A quick review helps other families find us.
+            </p>
+            <div className="mt-4">
+              <LeaveAReview variant="compact" source="footer:gmb" triggerLabel="Leave a Google review" />
             </div>
           </div>
         </div>
