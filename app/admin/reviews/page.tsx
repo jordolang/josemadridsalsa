@@ -59,6 +59,13 @@ const REVIEW_STATUS_VARIANT: Record<
   REJECTED: 'destructive',
 }
 
+/**
+ * Type guard to check if a string is a valid ReviewStatus
+ */
+function isValidReviewStatus(value: string): value is ReviewStatus {
+  return ['PENDING', 'APPROVED', 'REJECTED'].includes(value)
+}
+
 async function getReviews(searchParams: SearchParams) {
   const page = Number(searchParams.page) || 1
   const limit = 25
@@ -67,7 +74,7 @@ async function getReviews(searchParams: SearchParams) {
   const where: Prisma.ReviewWhereInput = {}
 
   const status = searchParams.status?.toUpperCase()
-  if (status && status !== 'ALL') {
+  if (status && status !== 'ALL' && isValidReviewStatus(status)) {
     where.status = status
   }
 
