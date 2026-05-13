@@ -116,7 +116,10 @@ const nextConfig = {
   },
   turbopack: {
     // Force Turbopack to resolve packages from the actual repo root.
-    root: projectRoot,
+    // WORKTREE FIX: In git worktrees, node_modules is a symlink to parent project.
+    // Turbopack doesn't allow symlinks outside filesystem root, so we point root
+    // to the parent directory. This config should NOT be merged - it's worktree-specific.
+    root: path.resolve(projectRoot, '../../../../'),
   },
 }
 
