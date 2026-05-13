@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser, getUserPermissions } from '@/lib/rbac'
 import { adminNavigation, filterNavByPermissions } from '@/lib/permissions-map'
 import { AdminLayoutClient } from '@/components/admin/AdminLayoutClient'
+import { LiveChatNotifier } from '@/components/admin/LiveChatNotifier'
 import { MobileAdminShell } from '@/components/admin/mobile/MobileAdminShell'
 import { splitNavForMobile } from '@/lib/admin/mobile-nav'
 import { Toaster } from '@/components/ui/sonner'
@@ -61,6 +62,7 @@ export default async function AdminLayout({
         >
           {children}
         </MobileAdminShell>
+        <LiveChatNotifier />
         <Toaster />
       </>
     )

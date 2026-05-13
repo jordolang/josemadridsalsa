@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { createMetadata } from "@/lib/metadata";
+import { LeaveAReview } from "@/components/reviews/leave-a-review";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -143,6 +144,14 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
             <AddressBlock addr={order.shippingAddress} />
           ) : <div className="text-sm text-muted-foreground">No shipping address on file.</div>}
         </Card>
+
+        {/* Leave a Review */}
+        <LeaveAReview
+          source="order-confirmation"
+          title="Mind sharing how it went?"
+          description="A 15-second rating helps other shoppers find Jose Madrid Salsa. We'll save your review and open Google so you can post it there too."
+          triggerLabel="Leave a Google review"
+        />
 
         {/* Next Steps */}
         <Card className="p-4 bg-slate-50">

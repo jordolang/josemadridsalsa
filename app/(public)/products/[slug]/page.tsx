@@ -5,8 +5,10 @@ import { Badge } from '@/components/ui/badge'
 import { ImageGallery } from '@/components/products/ImageGallery'
 import { VariantSelector } from '@/components/products/VariantSelector'
 import { NutritionalInfo } from '@/components/products/NutritionalInfo'
+import { ProductReviews } from '@/components/reviews/product-reviews'
 import { buildProductSchema } from '@/lib/seo/schema-generator'
 import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/rbac'
 import { Metadata } from 'next'
 
 type Props = {
@@ -70,11 +72,14 @@ export default async function ProductDetailPage({ params }: Props) {
   }
 
   // Fetch review stats for structured data (AggregateRating)
-  const reviewStats = await prisma.review.aggregate({
-    where: { productId: product.id, status: 'APPROVED' },
-    _avg: { rating: true },
-    _count: { rating: true },
-  })
+  const [reviewStats, viewer] = await Promise.all([
+    prisma.review.aggregate({
+      where: { productId: product.id, status: 'APPROVED' },
+      _avg: { rating: true },
+      _count: { rating: true },
+    }),
+    getCurrentUser(),
+  ])
 
   const isOutOfStock = product.inventory <= 0
   const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price
@@ -228,6 +233,14 @@ export default async function ProductDetailPage({ params }: Props) {
             )}
           </div>
         </div>
+
+        <ProductReviews
+          productId={product.id}
+          productName={product.name}
+          initialAverageRating={reviewStats._avg.rating ?? 0}
+          initialReviewCount={reviewStats._count.rating ?? 0}
+          isSignedIn={Boolean(viewer)}
+        />
       </div>
     </main>
   )

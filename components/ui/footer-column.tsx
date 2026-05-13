@@ -8,6 +8,8 @@ import {
   Phone,
   MapPin,
 } from 'lucide-react'
+import { FooterNewsletterSignup } from '@/components/store/footer-newsletter-signup'
+import { LeaveAReview } from '@/components/reviews/leave-a-review'
 
 const supportPhone = process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? '(740) 521-4304'
 const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? 'mike@josemadrid.net'
@@ -113,6 +115,16 @@ export function Footer() {
             <FooterColumn title="Helpful Links" links={helpfulLinks} />
             <FooterColumn title="Policies" links={legalLinks} />
             <ContactColumn items={contactInfo} />
+            <FooterNewsletterSignup source="footer:newsletter" />
+            <div className="text-center sm:text-left">
+              <p className="text-lg font-medium">Share your experience</p>
+              <p className="text-secondary-foreground/70 mt-3 text-sm">
+                Loved the salsa? A quick review helps other families find us.
+              </p>
+              <div className="mt-4">
+                <LeaveAReview variant="compact" source="footer:gmb" triggerLabel="Leave a Google review" />
+              </div>
+            </div>
           </div>
         </div>
 
