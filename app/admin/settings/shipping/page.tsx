@@ -19,7 +19,9 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { ALLOWED_CARRIERS, CARRIER_LABELS } from '@/lib/shipping-carriers'
+import { getShippingRates, type ShipmentRequest } from '@/lib/shipping-api'
 import { CheckCircle2, XCircle, Truck } from 'lucide-react'
+import { ShippingRatePreview } from './ShippingRatePreview'
 
 type ConnectionStatus = 'connected' | 'not_configured' | 'error'
 
@@ -143,6 +145,91 @@ async function saveShippingSettings(formData: FormData) {
   })
 
   revalidatePath('/admin/settings/shipping')
+}
+
+async function previewShippingRates(formData: FormData) {
+  'use server'
+
+  const user = await getCurrentUser()
+  if (!user || !(await hasPermission(user, 'settings:read'))) {
+    throw new Error('Unauthorized')
+  }
+
+  try {
+    const settings = await prisma.shippingSettings.findUnique({
+      where: { singleton: 'singleton' },
+    })
+
+    const originAddress = settings?.originAddress as {
+      street?: string
+      city?: string
+      state?: string
+      zipCode?: string
+      country?: string
+    } | null
+
+    if (!originAddress?.street || !originAddress?.city || !originAddress?.state || !originAddress?.zipCode) {
+      return {
+        success: false,
+        error: 'Origin address is not configured. Please configure the origin address in the settings above.',
+      }
+    }
+
+    const street = String(formData.get('street') || '').trim()
+    const city = String(formData.get('city') || '').trim()
+    const state = String(formData.get('state') || '').trim()
+    const zip = String(formData.get('zip') || '').trim()
+    const country = String(formData.get('country') || 'US').trim()
+
+    const length = parseFloat(String(formData.get('length') || '12'))
+    const width = parseFloat(String(formData.get('width') || '9'))
+    const height = parseFloat(String(formData.get('height') || '6'))
+    const weight = parseFloat(String(formData.get('weight') || '16'))
+
+    if (!street || !city || !state || !zip) {
+      return {
+        success: false,
+        error: 'Please fill in all required address fields.',
+      }
+    }
+
+    const request: ShipmentRequest = {
+      fromAddress: {
+        street1: originAddress.street,
+        city: originAddress.city,
+        state: originAddress.state,
+        zip: originAddress.zipCode,
+        country: originAddress.country || 'US',
+      },
+      toAddress: {
+        street1: street,
+        city,
+        state,
+        zip,
+        country,
+      },
+      parcel: {
+        length,
+        width,
+        height,
+        weight,
+      },
+      reference: 'preview-test',
+    }
+
+    const result = await getShippingRates(request)
+
+    return {
+      success: true,
+      rates: result.rates,
+      messages: result.messages,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch shipping rates',
+    }
+  }
 }
 
 export default async function ShippingSettingsPage() {
@@ -469,6 +556,11 @@ export default async function ShippingSettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ShippingRatePreview
+        previewAction={previewShippingRates}
+        defaultOrigin={originAddress || undefined}
+      />
     </div>
   )
 }
