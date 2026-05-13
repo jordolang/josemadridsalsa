@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import type { StateCreator } from 'zustand'
 
 export interface WishlistItem {
   id: string // WishlistItem.id from database
@@ -31,7 +32,7 @@ export interface WishlistStore {
   totalItems: () => number
 }
 
-const wishlistStoreConfig = (set: any, get: any): WishlistStore => ({
+const wishlistStoreConfig: StateCreator<WishlistStore> = (set, get) => ({
   items: [],
   isLoading: false,
 
@@ -94,7 +95,7 @@ const wishlistStoreConfig = (set: any, get: any): WishlistStore => ({
           .filter((item: WishlistItem) => item.productId !== productId)
           .concat(realItem),
       })
-    } catch (error: any) {
+    } catch (error) {
       // Revert optimistic update
       set({ items: currentItems.filter((item: WishlistItem) => item.productId !== productId) })
       console.error('Failed to add to wishlist:', error)
@@ -119,7 +120,7 @@ const wishlistStoreConfig = (set: any, get: any): WishlistStore => ({
       if (!response.ok) {
         throw new Error(data.error || 'Failed to remove from wishlist')
       }
-    } catch (error: any) {
+    } catch (error) {
       // Revert optimistic update
       set({ items: currentItems })
       console.error('Failed to remove from wishlist:', error)
@@ -154,7 +155,22 @@ const wishlistStoreConfig = (set: any, get: any): WishlistStore => ({
       }
 
       const data = await response.json()
-      const items: WishlistItem[] = data.items.map((item: any) => ({
+      const items: WishlistItem[] = data.items.map((item: {
+        id: string
+        product: {
+          id: string
+          name: string
+          slug: string
+          price: number
+          compareAtPrice?: number | null
+          featuredImage: string
+          heatLevel: string
+          sku: string
+          inventory: number
+          isActive: boolean
+        }
+        createdAt: string
+      }) => ({
         id: item.id,
         productId: item.product.id,
         name: item.product.name,
@@ -170,9 +186,9 @@ const wishlistStoreConfig = (set: any, get: any): WishlistStore => ({
       }))
 
       set({ items, isLoading: false })
-    } catch (error: any) {
+    } catch (error) {
       // Only log non-authentication errors
-      if (error.message && !error.message.includes('401') && !error.message.includes('403')) {
+      if (error instanceof Error && error.message && !error.message.includes('401') && !error.message.includes('403')) {
         console.error('Failed to fetch wishlist:', error)
       }
       set({ items: [], isLoading: false })
