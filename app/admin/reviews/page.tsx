@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { Search, Star } from 'lucide-react'
+import { Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
@@ -63,7 +64,7 @@ async function getReviews(searchParams: SearchParams) {
   const limit = 25
   const skip = (page - 1) * limit
 
-  const where: any = {}
+  const where: Prisma.ReviewWhereInput = {}
 
   const status = searchParams.status?.toUpperCase()
   if (status && status !== 'ALL') {
