@@ -3,7 +3,7 @@ import { requirePermission } from '@/lib/rbac';
 import { ok, fail } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import prisma from '@/lib/prisma';
-import { parseProductImport } from '@/lib/product-import';
+import { parseProductImport, type ValidationResult } from '@/lib/product-import';
 
 /**
  * POST /api/admin/products/import
