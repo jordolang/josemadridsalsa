@@ -22,6 +22,10 @@ const STATUS_FILTERS = [
 
 type StatusFilter = (typeof STATUS_FILTERS)[number]
 
+// Must match the server-side page size in app/admin/orders/page.tsx — bump both
+// if the API changes.
+const PAGE_SIZE = 50
+
 interface MobileOrdersListProps {
   orders: MobileOrderRow[]
   total: number
@@ -64,6 +68,10 @@ export function MobileOrdersList({
       })
     }, 300)
     return () => clearTimeout(handle)
+    // We intentionally depend on `search` only: this is a debounce that should
+    // fire when the user types, not when navigation re-renders the component
+    // and changes `params`/`pathname`/`router`. `initialSearch` is the SSR
+    // snapshot — re-running on its change would also defeat the debounce.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
 
@@ -86,7 +94,7 @@ export function MobileOrdersList({
   }
 
   const activeStatus = params.get('status') ?? initialStatus
-  const remaining = Math.max(0, total - page * 50)
+  const remaining = Math.max(0, total - page * PAGE_SIZE)
 
   return (
     <div className={cn('flex flex-col gap-3 p-3', className)}>

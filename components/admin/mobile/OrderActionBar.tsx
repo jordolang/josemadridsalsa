@@ -22,7 +22,6 @@ export function OrderActionBar({ order }: OrderActionBarProps) {
 
   const cta = getOrderPrimaryCta({
     status: order.status,
-    paymentStatus: order.paymentStatus,
     hasTracking: Boolean(order.trackingNumber),
   })
 

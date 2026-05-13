@@ -21,7 +21,6 @@ export interface PrimaryCta {
 
 interface CtaInput {
   status: OrderStatus
-  paymentStatus: string
   hasTracking: boolean
 }
 

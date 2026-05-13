@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { X } from 'lucide-react'
 import {
   Drawer,
@@ -82,13 +83,13 @@ export function OrderActionsDrawer({
             trackingNumber={order.trackingNumber}
           />
           <Button asChild variant="outline" className="h-11 w-full">
-            <a
+            <Link
               href={`/admin/orders/${order.id}/invoice`}
               target="_blank"
               rel="noreferrer"
             >
               View invoice (PDF)
-            </a>
+            </Link>
           </Button>
           <PackingSlipButton orderId={order.id} />
         </div>

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { MobileTabBar } from './MobileTabBar'
-import { MoreNavDrawer } from './MoreNavDrawer'
+import { MobileTabBar } from '@/components/admin/mobile/MobileTabBar'
+import { MoreNavDrawer } from '@/components/admin/mobile/MoreNavDrawer'
 import { cn } from '@/lib/utils'
 import type { NavItem } from '@/lib/permissions-map'
 
@@ -16,6 +16,7 @@ interface MobileAdminShellProps {
 
 export function MobileAdminShell({
   user,
+  primary,
   more,
   className,
   children,
@@ -35,7 +36,7 @@ export function MobileAdminShell({
       >
         {children}
       </main>
-      <MobileTabBar onMoreClick={() => setMoreOpen(true)} />
+      <MobileTabBar items={primary} onMoreClick={() => setMoreOpen(true)} />
       <MoreNavDrawer
         open={moreOpen}
         onOpenChange={setMoreOpen}

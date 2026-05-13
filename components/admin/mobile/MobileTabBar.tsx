@@ -11,21 +11,24 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { NavItem } from '@/lib/permissions-map'
 
-interface Tab {
-  href: string
+interface TabConfig {
   label: string
   icon: LucideIcon
 }
 
-const PRIMARY_TABS: readonly Tab[] = [
-  { href: '/admin', label: 'Home', icon: LayoutDashboard },
-  { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
-  { href: '/admin/products', label: 'Products', icon: Package },
-  { href: '/admin/messages', label: 'Inbox', icon: MessageSquare },
-]
+// Tabs the mobile bar can render — keyed by href. Anything not in this map is
+// ignored, so adding a new primary tab requires an explicit entry here.
+const TAB_CONFIG: Record<string, TabConfig> = {
+  '/admin': { label: 'Home', icon: LayoutDashboard },
+  '/admin/orders': { label: 'Orders', icon: ShoppingCart },
+  '/admin/products': { label: 'Products', icon: Package },
+  '/admin/messages': { label: 'Inbox', icon: MessageSquare },
+}
 
 interface MobileTabBarProps {
+  items: NavItem[]
   onMoreClick: () => void
   className?: string
 }
@@ -35,7 +38,7 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + '/')
 }
 
-export function MobileTabBar({ onMoreClick, className }: MobileTabBarProps) {
+export function MobileTabBar({ items, onMoreClick, className }: MobileTabBarProps) {
   const pathname = usePathname()
   return (
     <nav
@@ -46,12 +49,15 @@ export function MobileTabBar({ onMoreClick, className }: MobileTabBarProps) {
         className,
       )}
     >
-      {PRIMARY_TABS.map(({ href, label, icon: Icon }) => {
-        const active = isActive(pathname, href)
+      {items.map((item) => {
+        const config = TAB_CONFIG[item.href]
+        if (!config) return null
+        const { label, icon: Icon } = config
+        const active = isActive(pathname, item.href)
         return (
           <Link
-            key={href}
-            href={href}
+            key={item.href}
+            href={item.href}
             aria-current={active ? 'page' : undefined}
             aria-label={label}
             className={cn(
