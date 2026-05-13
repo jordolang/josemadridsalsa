@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { OrdersTableClient } from '@/components/admin/OrdersTableClient'
+import { MobileOrdersList } from '@/components/admin/mobile/MobileOrdersList'
 
 interface SearchParams {
   search?: string
@@ -130,7 +131,17 @@ export default async function OrdersPage({
     }
 
     return (
-    <div className="space-y-6">
+    <>
+    <MobileOrdersList
+      className="md:hidden"
+      orders={orderRows}
+      total={total}
+      page={page}
+      totalPages={totalPages}
+      initialStatus={params.status ?? 'all'}
+      initialSearch={params.search ?? ''}
+    />
+    <div className="hidden md:block space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -214,6 +225,7 @@ export default async function OrdersPage({
         </div>
       )}
     </div>
+    </>
     )
   } catch (error) {
     console.error('[Orders] Error rendering:', error)
