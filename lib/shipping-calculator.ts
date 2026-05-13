@@ -275,6 +275,8 @@ function calculateEstimateRates(
 
   if (isPoBox) {
     // PO Box - only USPS options
+    const expressCost = SHIPPING_RATES.EXPRESS.cost * stateMultiplier
+
     availableOptions.push(
       {
         method: 'USPS Ground Advantage',
@@ -288,12 +290,15 @@ function calculateEstimateRates(
       },
       {
         method: 'USPS Priority Mail Express',
-        cost: parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2)),
+        // Make express free if it exceeds the subtotal
+        cost: expressCost > subtotal ? 0 : expressCost,
         estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
       }
     )
   } else {
     // Regular address - all carriers available
+    const expressCost = SHIPPING_RATES.EXPRESS.cost * stateMultiplier
+
     availableOptions.push(
       {
         method: 'Standard Shipping',
@@ -302,7 +307,8 @@ function calculateEstimateRates(
       },
       {
         method: 'Express Shipping',
-        cost: parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2)),
+        // Make express free if it exceeds the subtotal
+        cost: expressCost > subtotal ? 0 : expressCost,
         estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
       }
     )
