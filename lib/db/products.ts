@@ -17,6 +17,13 @@ export interface ProductFilters {
 }
 
 /**
+ * Type guard to check if a string is a valid HeatLevel
+ */
+function isValidHeatLevel(value: string): value is HeatLevel {
+  return ['MILD', 'MEDIUM', 'HOT', 'EXTRA_HOT', 'FRUIT'].includes(value)
+}
+
+/**
  * Get products with filtering, pagination, and search
  */
 export async function getProducts(filters: ProductFilters = {}) {
@@ -39,8 +46,8 @@ export async function getProducts(filters: ProductFilters = {}) {
     isActive: true,
   }
 
-  if (heatLevel && heatLevel !== 'all') {
-    where.heatLevel = heatLevel as HeatLevel
+  if (heatLevel && heatLevel !== 'all' && isValidHeatLevel(heatLevel)) {
+    where.heatLevel = heatLevel
   }
 
   if (search) {
@@ -247,8 +254,8 @@ export async function getProductsCount(filters: Omit<ProductFilters, 'take' | 's
     isActive: true,
   }
 
-  if (heatLevel && heatLevel !== 'all') {
-    where.heatLevel = heatLevel as HeatLevel
+  if (heatLevel && heatLevel !== 'all' && isValidHeatLevel(heatLevel)) {
+    where.heatLevel = heatLevel
   }
 
   if (search) {
