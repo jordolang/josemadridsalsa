@@ -18,8 +18,7 @@ interface BrandKitData {
   fontFamily?: string | null
   physicalAddress?: string | null
   websiteUrl?: string | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  socialLinks?: any
+  socialLinks?: Record<string, string> | null
 }
 
 function toClientData(initialData: BrandKitData | null): BrandKitData {

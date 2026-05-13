@@ -125,14 +125,14 @@ describe('ShippingNotificationEmail', () => {
 
       for (const carrier of carriers) {
         const html = await render(
-          ShippingNotificationEmail({
-            ...baseProps,
-            carrier,
-          })
+          <ShippingNotificationEmail
+            {...baseProps}
+            carrier={carrier}
+          />
         )
 
         expect(html).toContain(carrier)
-      })
+      }
     })
 
     it('should handle different tracking number formats', async () => {
@@ -145,14 +145,14 @@ describe('ShippingNotificationEmail', () => {
 
       for (const trackingNumber of trackingNumbers) {
         const html = await render(
-          ShippingNotificationEmail({
-            ...baseProps,
-            trackingNumber,
-          })
+          <ShippingNotificationEmail
+            {...baseProps}
+            trackingNumber={trackingNumber}
+          />
         )
 
         expect(html).toContain(trackingNumber)
-      })
+      }
     })
   })
 
@@ -215,14 +215,14 @@ describe('ShippingNotificationEmail', () => {
 
       for (const estimatedDelivery of dateFormats) {
         const html = await render(
-          ShippingNotificationEmail({
-            ...baseProps,
-            estimatedDelivery,
-          })
+          <ShippingNotificationEmail
+            {...baseProps}
+            estimatedDelivery={estimatedDelivery}
+          />
         )
 
         expect(html).toContain(estimatedDelivery)
-      })
+      }
     })
 
     it('should handle many items', async () => {
@@ -293,14 +293,14 @@ describe('ShippingNotificationEmail', () => {
 
       for (const trackingUrl of urls) {
         const html = await render(
-          ShippingNotificationEmail({
-            ...baseProps,
-            trackingUrl,
-          })
+          <ShippingNotificationEmail
+            {...baseProps}
+            trackingUrl={trackingUrl}
+          />
         )
 
         expect(html).toContain(trackingUrl)
-      })
+      }
     })
 
     it('should handle tracking URLs with query parameters', async () => {

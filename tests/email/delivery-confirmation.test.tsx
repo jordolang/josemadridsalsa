@@ -234,14 +234,14 @@ describe('DeliveryConfirmationEmail', () => {
 
       for (const deliveryDate of dateFormats) {
         const html = await render(
-          DeliveryConfirmationEmail({
-            ...baseProps,
-            deliveryDate,
-          })
+          <DeliveryConfirmationEmail
+            {...baseProps}
+            deliveryDate={deliveryDate}
+          />
         )
 
         expect(html).toContain(deliveryDate)
-      })
+      }
     })
 
     it('should handle many items', async () => {
@@ -354,10 +354,10 @@ describe('DeliveryConfirmationEmail', () => {
 
       for (const orderDetailsUrl of urls) {
         const html = await render(
-          DeliveryConfirmationEmail({
-            ...baseProps,
-            orderDetailsUrl,
-          })
+          <DeliveryConfirmationEmail
+            {...baseProps}
+            orderDetailsUrl={orderDetailsUrl}
+          />
         )
 
         expect(html).toContain(orderDetailsUrl)
