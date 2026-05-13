@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { X, Mail, Tag, Gift, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { getErrorMessage } from '@/lib/errors'
 
 const SIGNED_UP_KEY = 'jms_newsletter_signed_up'
 const VISIT_COUNT_KEY = 'jms_visit_count'
@@ -74,8 +75,8 @@ export function NewsletterPopup() {
       localStorage.setItem(SIGNED_UP_KEY, '1')
       setSuccess(true)
       setTimeout(() => setVisible(false), 3500)
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong. Please try again.')
+    } catch (error: unknown) {
+      setError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }

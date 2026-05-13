@@ -13,6 +13,7 @@ import { MessageCircle, Share2, TrendingUp, Trophy, Facebook, Mail } from 'lucid
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
+import { getErrorMessage } from '@/lib/errors'
 
 export function FundraiserSocialBoard({ fundraiserSlug, currentUrl }: { fundraiserSlug: string, currentUrl: string }) {
   const { data: session } = useSession()
@@ -38,8 +39,8 @@ export function FundraiserSocialBoard({ fundraiserSlug, currentUrl }: { fundrais
       setTotalRevenue(currentTotal || 0)
       setHeavyHitters(topParticipants)
       setLoaded(true)
-    } catch (err) {
-      console.error(err)
+    } catch (error: unknown) {
+      console.error('Failed to fetch fundraiser data:', getErrorMessage(error))
     }
   }
 
@@ -62,8 +63,8 @@ export function FundraiserSocialBoard({ fundraiserSlug, currentUrl }: { fundrais
       setNewMessage('')
       toast.success('Message posted successfully!')
       fetchData() // refresh immediately
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to post message')
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error))
     } finally {
       setIsSubmitting(false)
     }
