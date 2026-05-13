@@ -22,6 +22,15 @@ import prisma from '@/lib/prisma'
  * 5. Checkout completion with fallback rates
  */
 
+/**
+ * Shipping option structure returned from API
+ */
+interface ShippingOption {
+  method: string
+  cost: number
+  estimatedDays: string
+  estimatedDeliveryDate?: string
+}
 
 describeIfE2E('E2E: Shipping API Error Handling', () => {
   let testProductId: string | null = null
@@ -228,7 +237,7 @@ describeIfE2E('E2E: Shipping API Error Handling', () => {
       expect(data.availableOptions.length).toBeGreaterThanOrEqual(2)
 
       // Verify options have required fields
-      data.availableOptions.forEach((option: any) => {
+      data.availableOptions.forEach((option: ShippingOption) => {
         expect(option).toHaveProperty('method')
         expect(option).toHaveProperty('cost')
         expect(option).toHaveProperty('estimatedDays')
@@ -238,7 +247,7 @@ describeIfE2E('E2E: Shipping API Error Handling', () => {
 
       console.log('✓ Estimate rates are reasonable:', {
         cost: data.shippingCost,
-        options: data.availableOptions.map((opt: any) => ({
+        options: data.availableOptions.map((opt: ShippingOption) => ({
           method: opt.method,
           cost: opt.cost,
         })),
@@ -406,13 +415,13 @@ describeIfE2E('E2E: Shipping API Error Handling', () => {
       expect(data.availableOptions.length).toBeGreaterThan(0)
 
       // All options should be USPS for PO Box
-      data.availableOptions.forEach((option: any) => {
+      data.availableOptions.forEach((option: ShippingOption) => {
         expect(option.method.toUpperCase()).toContain('USPS')
       })
 
       console.log('✓ PO Box handled correctly in estimate mode:', {
         optionsCount: data.availableOptions.length,
-        carriers: data.availableOptions.map((opt: any) => opt.method),
+        carriers: data.availableOptions.map((opt: ShippingOption) => opt.method),
       })
     })
   })
