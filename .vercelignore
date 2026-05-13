@@ -102,5 +102,5 @@ node_modules/
 # iOS build artifacts
 mobile/**/.build/
 
-# Mobile projects (not part of web deploy)
-mobile/
+# Mobile project (not part of web deploy)
+/mobile/

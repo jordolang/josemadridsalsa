@@ -23,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed hard-coded database and Google API fallback credentials from maintenance scripts.
 
 ### Fixed
+- **Vercel production deploys** — Scoped the mobile app ignore rule to `/mobile/` so `components/admin/mobile/*` is included in web builds.
 - **Front-page hydration stability** — Event ticker dates and review selection no longer render with client/server-only randomness that can trigger React hydration text mismatches.
 - **Header logo preload warning** — Removed the forced priority preload for the small navigation logo.
 
