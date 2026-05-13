@@ -21,29 +21,25 @@ export function AnalyticsStatsGrid({
         title="Revenue"
         value={formatPrice(revenue)}
         icon={DollarSign}
-        iconBg="bg-emerald-100"
-        iconColor="text-emerald-700"
+        color="green"
       />
       <StatsCard
         title="Orders"
         value={orders.toString()}
         icon={ShoppingBag}
-        iconBg="bg-blue-100"
-        iconColor="text-blue-700"
+        color="blue"
       />
       <StatsCard
         title="Sessions"
         value={sessions.toLocaleString()}
         icon={MousePointer2}
-        iconBg="bg-purple-100"
-        iconColor="text-purple-700"
+        color="purple"
       />
       <StatsCard
         title="Conversion"
         value={`${conversionRate.toFixed(2)}%`}
         icon={Activity}
-        iconBg="bg-amber-100"
-        iconColor="text-amber-700"
+        color="orange"
       />
     </div>
   )

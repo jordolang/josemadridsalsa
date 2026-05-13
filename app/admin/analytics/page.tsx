@@ -71,7 +71,7 @@ export default async function AnalyticsPage({
       />
 
       <GoogleAnalyticsSummary
-        summaryCards={gaDashboard.summary}
+        summaryCards={gaDashboard.summaryCards}
         isReady={gaStatusIsReady}
       />
 
