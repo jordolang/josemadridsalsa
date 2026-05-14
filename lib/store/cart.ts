@@ -28,7 +28,7 @@ interface CartStore {
   toggleCart: () => void
   setGuestEmail: (email: string) => void
 
-  // Computed values
+  // Computed
   totalItems: () => number
   totalPrice: () => number
 }
