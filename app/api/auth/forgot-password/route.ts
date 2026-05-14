@@ -3,12 +3,14 @@ import { z } from 'zod'
 import crypto from 'crypto'
 import prisma from '@/lib/prisma'
 import { sendPasswordResetEmail } from '@/lib/email'
+import { withRateLimit } from '@/lib/middleware/api-helpers'
+import { RATE_LIMITS } from '@/lib/rate-limiter'
 
 const ForgotPasswordSchema = z.object({
   email: z.string().email().trim().toLowerCase(),
 })
 
-export async function POST(request: Request) {
+async function handler(request: Request) {
   try {
     const body = await request.json()
     const parsed = ForgotPasswordSchema.safeParse(body)
@@ -76,3 +78,5 @@ export async function POST(request: Request) {
     })
   }
 }
+
+export const POST = withRateLimit(handler, RATE_LIMITS.PASSWORD_RESET)

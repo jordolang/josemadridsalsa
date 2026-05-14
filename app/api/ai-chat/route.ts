@@ -168,7 +168,7 @@ export async function POST(request: Request) {
     const rateLimitConfig = user ? RATE_LIMITS.AI_CHAT_USER : RATE_LIMITS.AI_CHAT
     const identifier = userId || getClientIdentifier(request)
 
-    const rateLimitResult = checkRateLimit({
+    const rateLimitResult = await checkRateLimit({
       ...rateLimitConfig,
       identifier: `ai-chat:${identifier}`,
     })

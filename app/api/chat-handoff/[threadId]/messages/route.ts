@@ -89,7 +89,7 @@ export async function GET(request: Request, { params }: Params) {
 export async function POST(request: Request, { params }: Params) {
   const { threadId } = await params
   const identifier = getClientIdentifier(request)
-  const rateLimit = checkRateLimit({
+  const rateLimit = await checkRateLimit({
     ...RATE_LIMITS.API_GENERAL,
     maxRequests: 30,
     windowSeconds: 60,

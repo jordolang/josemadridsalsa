@@ -1,16 +1,14 @@
 /**
- * Rate Limiter - Distributed Storage with Automatic Backend Selection
+ * Distributed Rate Limiter - Automatic Storage Selection
  * José Madrid Salsa E-commerce Platform
  *
  * Auto-selects between Vercel KV (production) and in-memory (development).
+ * Provides the same interface as lib/rate-limiter.ts but with distributed storage.
  */
 
-import type { RateLimitConfig, RateLimitResult, RateLimitStorage } from './rate-limit/types'
-import { VercelKVStorage } from './rate-limit/storage/vercel-kv'
-import { InMemoryStorage } from './rate-limit/storage/fallback'
-
-// Re-export types for backward compatibility
-export type { RateLimitConfig, RateLimitResult }
+import type { RateLimitConfig, RateLimitResult, RateLimitStorage } from './types'
+import { VercelKVStorage } from './storage/vercel-kv'
+import { InMemoryStorage } from './storage/fallback'
 
 /**
  * Detect if Vercel KV is available
@@ -53,7 +51,8 @@ function getStorageInstance(): RateLimitStorage {
 /**
  * Check if a request is allowed under rate limit
  *
- * Now returns a Promise due to distributed storage being async.
+ * This function has the same signature as lib/rate-limiter.ts checkRateLimit()
+ * but returns a Promise due to distributed storage being async.
  *
  * @param config - Rate limit configuration
  * @returns Promise resolving to rate limit result
@@ -100,71 +99,5 @@ export function getStorageInfo(): {
   return {
     type: isKVAvailable ? 'vercel-kv' : 'in-memory',
     production: isKVAvailable,
-  }
-}
-
-/**
- * Rate limit presets for different API endpoints
- */
-export const RATE_LIMITS = {
-  // AI Chat: 20 requests per minute per IP
-  AI_CHAT: {
-    maxRequests: 20,
-    windowSeconds: 60,
-  },
-
-  // AI Chat (authenticated users): 50 requests per minute
-  AI_CHAT_USER: {
-    maxRequests: 50,
-    windowSeconds: 60,
-  },
-
-  // General API: 100 requests per minute
-  API_GENERAL: {
-    maxRequests: 100,
-    windowSeconds: 60,
-  },
-
-  // Authentication: 5 login attempts per 15 minutes
-  AUTH_LOGIN: {
-    maxRequests: 5,
-    windowSeconds: 15 * 60,
-  },
-
-  // Password reset: 3 requests per hour
-  PASSWORD_RESET: {
-    maxRequests: 3,
-    windowSeconds: 60 * 60,
-  },
-}
-
-/**
- * Get client identifier from request (IP address)
- */
-export function getClientIdentifier(request: Request): string {
-  // Try to get real IP from headers (for proxies/load balancers)
-  const forwardedFor = request.headers.get('x-forwarded-for')
-  if (forwardedFor) {
-    // Take the first IP in the list
-    return forwardedFor.split(',')[0].trim()
-  }
-
-  const realIp = request.headers.get('x-real-ip')
-  if (realIp) {
-    return realIp
-  }
-
-  // Fallback to a generic identifier
-  return 'unknown-ip'
-}
-
-/**
- * Create rate limit headers for API responses
- */
-export function createRateLimitHeaders(result: RateLimitResult): HeadersInit {
-  return {
-    'X-RateLimit-Limit': result.current.toString(),
-    'X-RateLimit-Remaining': result.remaining.toString(),
-    'X-RateLimit-Reset': result.resetIn.toString(),
   }
 }

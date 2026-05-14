@@ -136,7 +136,7 @@ export function withRateLimit(
       }
 
       // Check rate limit
-      const rateLimitResult = checkRateLimit({
+      const rateLimitResult = await checkRateLimit({
         maxRequests,
         windowSeconds,
         identifier,

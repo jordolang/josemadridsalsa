@@ -3,13 +3,15 @@ import { z } from 'zod'
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
+import { withRateLimit } from '@/lib/middleware/api-helpers'
+import { RATE_LIMITS } from '@/lib/rate-limiter'
 
 const ResetPasswordSchema = z.object({
   token: z.string(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 })
 
-export async function POST(request: Request) {
+async function handler(request: Request) {
   try {
     const body = await request.json()
     const parsed = ResetPasswordSchema.safeParse(body)
@@ -66,3 +68,5 @@ export async function POST(request: Request) {
     )
   }
 }
+
+export const POST = withRateLimit(handler, RATE_LIMITS.PASSWORD_RESET)

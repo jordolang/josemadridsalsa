@@ -32,6 +32,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
+      '@vercel/kv': path.resolve(__dirname, './tests/mocks/@vercel/kv.ts'),
     },
   },
 })

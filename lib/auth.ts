@@ -6,6 +6,7 @@ import FacebookProvider from 'next-auth/providers/facebook'
 import AppleProvider from 'next-auth/providers/apple'
 import type { NextAuthOptions } from 'next-auth'
 import bcrypt from 'bcryptjs'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limiter'
 
 /** Cached Prisma client instance for lazy loading */
 let prismaClient: any = null
@@ -116,6 +117,18 @@ export const authOptions: NextAuthOptions = {
           // Normalize email to lowercase for case-insensitive matching (matches registration flow)
           const normalizedEmail = credentials.email.toLowerCase().trim()
           console.log('[Auth] Attempting login for:', normalizedEmail)
+
+          // Rate limiting: 5 login attempts per 15 minutes per email
+          const rateLimitResult = await checkRateLimit({
+            identifier: `auth:login:${normalizedEmail}`,
+            maxRequests: RATE_LIMITS.AUTH_LOGIN.maxRequests,
+            windowSeconds: RATE_LIMITS.AUTH_LOGIN.windowSeconds,
+          })
+
+          if (!rateLimitResult.allowed) {
+            console.error('[Auth] Rate limit exceeded for:', normalizedEmail, `- ${rateLimitResult.remaining} attempts remaining, resets in ${rateLimitResult.resetIn}s`)
+            return null
+          }
 
           const prisma = await getPrisma()
           const user = await prisma.user.findUnique({
