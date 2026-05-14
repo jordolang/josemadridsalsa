@@ -377,7 +377,7 @@ dig TXT default._domainkey.josemadrid.net  # Check DKIM
 
 # 4. Test Resend API key
 curl -X POST https://api.resend.com/emails \
-  -H "Authorization: Bearer YOUR_RESEND_API_KEY" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
     "from": "onboarding@resend.dev",

@@ -587,7 +587,7 @@ The system is designed to receive webhook events from Resend for:
 ### Emails Not Sending
 
 1. Check `RESEND_API_KEY` is set in environment
-2. Verify email type is not transactional or recipient hasn't unsubscribed
+2. Verify the email is transactional OR the recipient hasn't unsubscribed
 3. Check Resend dashboard for delivery errors
 4. Review EmailLog table for failure messages
 
