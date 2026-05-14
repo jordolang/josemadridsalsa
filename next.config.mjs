@@ -9,6 +9,69 @@ const nextConfig = {
   generateBuildId: async () => {
     return `build-${Date.now()}`
   },
+  // Security headers applied to all routes
+  headers: async () => {
+    const isProd = process.env.NODE_ENV === 'production'
+
+    // Content Security Policy
+    const csp = [
+      "default-src 'self'",
+      // Allow inline styles for Tailwind
+      "style-src 'self' 'unsafe-inline'",
+      // Allow eval in development only (Next.js dev mode requirement)
+      isProd ? "script-src 'self' https://maps.googleapis.com https://www.googletagmanager.com" : "script-src 'self' 'unsafe-eval' https://maps.googleapis.com https://www.googletagmanager.com",
+      // Allow Google Maps iframes and GTM noscript iframes
+      "frame-src https://www.google.com/maps/ https://www.googletagmanager.com",
+      // Images from multiple CDNs and data URIs
+      "img-src 'self' data: blob: https://utfs.io https://images.unsplash.com https://*.googleapis.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com",
+      // Allow connections to self and Sentry
+      "connect-src 'self' https://*.sentry.io",
+      "font-src 'self' data:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      "upgrade-insecure-requests",
+    ].join('; ')
+
+    const headers = [
+      {
+        key: 'Content-Security-Policy',
+        value: csp,
+      },
+      {
+        key: 'X-Frame-Options',
+        value: 'DENY',
+      },
+      {
+        key: 'X-Content-Type-Options',
+        value: 'nosniff',
+      },
+      {
+        key: 'Referrer-Policy',
+        value: 'strict-origin-when-cross-origin',
+      },
+      {
+        key: 'Permissions-Policy',
+        value: 'camera=(), microphone=(), geolocation=()',
+      },
+    ]
+
+    // Add HSTS only in production
+    if (isProd) {
+      headers.push({
+        key: 'Strict-Transport-Security',
+        value: 'max-age=31536000; includeSubDomains',
+      })
+    }
+
+    return [
+      {
+        source: '/(.*)',
+        headers,
+      },
+    ]
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
