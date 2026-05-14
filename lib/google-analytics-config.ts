@@ -1,6 +1,12 @@
-import { randomUUID } from 'node:crypto'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return Date.now().toString(36) + Math.random().toString(36).slice(2)
+}
 import type {
   GoogleAnalyticsChartDefinition,
   GoogleAnalyticsChartColor,
@@ -73,7 +79,7 @@ export const GOOGLE_ANALYTICS_CHART_COLORS: Array<{
 
 const DEFAULT_GA_CHARTS: GoogleAnalyticsChartDefinition[] = [
   {
-    id: randomUUID(),
+    id: generateId(),
     title: 'Sessions by Source / Medium',
     description: 'Top traffic sources inside the date range.',
     metric: 'sessions',
@@ -83,7 +89,7 @@ const DEFAULT_GA_CHARTS: GoogleAnalyticsChartDefinition[] = [
     color: 'indigo',
   },
   {
-    id: randomUUID(),
+    id: generateId(),
     title: 'Engaged Sessions Over Time',
     description: 'Time-series view of engaged sessions.',
     metric: 'engagedSessions',
@@ -93,7 +99,7 @@ const DEFAULT_GA_CHARTS: GoogleAnalyticsChartDefinition[] = [
     color: 'emerald',
   },
   {
-    id: randomUUID(),
+    id: generateId(),
     title: 'Users by Device Category',
     description: 'Device mix for your audience.',
     metric: 'totalUsers',
@@ -147,7 +153,7 @@ function hydrateCharts(value: unknown): GoogleAnalyticsChartDefinition[] {
       }
 
       const chart: GoogleAnalyticsChartDefinition = {
-        id: typeof raw.id === 'string' ? raw.id : randomUUID(),
+        id: typeof raw.id === 'string' ? raw.id : generateId(),
         title,
         description: (typeof raw.description === 'string' ? raw.description : null) ?? null,
         metric,
@@ -266,7 +272,7 @@ export async function addGoogleAnalyticsChartDefinition({
   const sanitizedLimit = typeof limit === 'number' && Number.isFinite(limit) ? Math.max(1, Math.min(5000, Math.round(limit))) : null
 
   const newChart: GoogleAnalyticsChartDefinition = {
-    id: randomUUID(),
+    id: generateId(),
     title: title.trim() || 'Custom chart',
     description: description?.trim() || null,
     metric,
