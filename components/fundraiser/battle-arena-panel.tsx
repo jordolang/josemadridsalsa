@@ -125,7 +125,7 @@ export async function BattleArenaPanel({ slug, className }: BattleArenaPanelProp
 
         {team.status === 'ACTIVE' ? (
           <Link
-            href={`/fundraise/${team.slug}`}
+            href={`/arena/${team.activePeriod}`}
             className="flex items-center justify-center gap-2 rounded-md bg-white/20 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/30 backdrop-blur-sm"
           >
             Enter the Arena <ArrowRight className="h-4 w-4" />
