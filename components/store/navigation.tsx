@@ -158,8 +158,7 @@ function NavigationContent() {
   const { data: session, status } = useSession();
   const isSignedIn = status === "authenticated";
   const user = session?.user;
-  const { totalItems } = useWishlistStore();
-  const wishlistCount = totalItems();
+  const wishlistCount = useWishlistStore((state) => state.items.length);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 8);
