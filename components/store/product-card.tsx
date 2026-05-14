@@ -16,7 +16,7 @@ import {
 import { useWishlistStore } from '@/lib/store/wishlist'
 import { useComparisonStore } from '@/lib/store/comparison'
 import { formatPrice, getHeatLevelColor, getHeatLevelText, cn } from '@/lib/utils'
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -53,7 +53,7 @@ interface ProductCardProps {
   product: Product
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+function ProductCardComponent({ product }: ProductCardProps) {
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore()
   const { addProduct: addToComparison, removeProduct: removeFromComparison, isInComparison, canAddMore, openPanel } = useComparisonStore()
   const { data: session } = useSession()
@@ -353,3 +353,5 @@ export function ProductCard({ product }: ProductCardProps) {
     </Dialog>
   )
 }
+
+export const ProductCard = memo(ProductCardComponent)
