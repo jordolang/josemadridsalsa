@@ -19,7 +19,9 @@ const nextConfig = {
       // Allow inline styles for Tailwind
       "style-src 'self' 'unsafe-inline'",
       // Allow eval in development only (Next.js dev mode requirement)
-      isProd ? "script-src 'self'" : "script-src 'self' 'unsafe-eval'",
+      isProd ? "script-src 'self' https://maps.googleapis.com https://www.googletagmanager.com" : "script-src 'self' 'unsafe-eval' https://maps.googleapis.com https://www.googletagmanager.com",
+      // Allow Google Maps iframes and GTM noscript iframes
+      "frame-src https://www.google.com/maps/ https://www.googletagmanager.com",
       // Images from multiple CDNs and data URIs
       "img-src 'self' data: blob: https://utfs.io https://images.unsplash.com https://*.googleapis.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com",
       // Allow connections to self and Sentry
