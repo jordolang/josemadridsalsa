@@ -127,7 +127,7 @@ export default async function OgImage({ params }: OgParams) {
             opacity: 0.85,
           }}
         >
-          <div>Heat Index</div>
+          <div>The Heat Index</div>
           <div>JoseMadrid.net</div>
         </div>
       </div>

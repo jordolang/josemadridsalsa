@@ -52,11 +52,11 @@ function renderPostEmail(post: {
   const greeting = firstName ? `Hi ${escapeHtml(firstName)},` : 'Hi there,'
   const seriesLine = post.series
     ? `New chapter in <strong>${escapeHtml(post.series.name)}</strong>`
-    : 'New on the Heat Index'
+    : 'New on The Heat Index'
 
   const subject = post.series
     ? `${post.series.name}: ${post.title}`
-    : `Heat Index: ${post.title}`
+    : `The Heat Index: ${post.title}`
 
   const html = `
 <!doctype html>
@@ -67,7 +67,7 @@ function renderPostEmail(post: {
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(69,10,10,0.08);">
           <tr><td style="padding:24px 32px;background:linear-gradient(135deg,#d53030,#7f1d1d);color:#fff;">
             <div style="font-size:11px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;opacity:0.85;">${seriesLine}</div>
-            <div style="margin-top:8px;font-size:28px;font-weight:700;line-height:1.15;">Heat Index</div>
+            <div style="margin-top:8px;font-size:28px;font-weight:700;line-height:1.15;">The Heat Index</div>
           </td></tr>
           ${post.coverImage
             ? `<tr><td><img src="${escapeHtml(post.coverImage.startsWith('http') ? post.coverImage : SITE_URL + post.coverImage)}" alt="" style="display:block;width:100%;height:auto;" /></td></tr>`
@@ -80,7 +80,7 @@ function renderPostEmail(post: {
               <a href="${url}" style="display:inline-block;padding:12px 24px;background:#d53030;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">Read the story →</a>
             </p>
             <p style="margin:32px 0 0;color:#888;font-size:12px;line-height:1.5;">
-              You're receiving this because you subscribed to the Heat Index.
+              You're receiving this because you subscribed to The Heat Index.
               <a href="${SITE_URL}/unsubscribe" style="color:#888;">Unsubscribe</a> ·
               <a href="${SITE_URL}/heat-index" style="color:#888;">Browse all stories</a>
             </p>
@@ -94,7 +94,7 @@ function renderPostEmail(post: {
   const text = [
     greeting,
     '',
-    post.series ? `New chapter in ${post.series.name}:` : 'New on the Heat Index:',
+    post.series ? `New chapter in ${post.series.name}:` : 'New on The Heat Index:',
     '',
     post.title,
     '',
@@ -103,7 +103,7 @@ function renderPostEmail(post: {
     `Read: ${url}`,
     '',
     '---',
-    'You are receiving this because you subscribed to the Heat Index.',
+    'You are receiving this because you subscribed to The Heat Index.',
     `Unsubscribe: ${SITE_URL}/unsubscribe`,
   ].join('\n')
 

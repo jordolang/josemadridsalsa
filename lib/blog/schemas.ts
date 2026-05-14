@@ -15,6 +15,7 @@ const hexColor = z
 export const blogPostStatusEnum = z.enum(['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'])
 export const blogCommentStatusEnum = z.enum(['PENDING', 'APPROVED', 'HIDDEN', 'SPAM'])
 export const blogReactionKindEnum = z.enum(['FIRE', 'HEART', 'LAUGH', 'MIND_BLOWN'])
+export const blogPostLayoutEnum = z.enum(['STANDARD', 'LONGFORM', 'GALLERY', 'VIDEO', 'MINIMAL'])
 
 export const blogPostSchema = z.object({
   title: z.string().trim().min(3).max(200),
@@ -31,6 +32,9 @@ export const blogPostSchema = z.object({
   seoTitle: z.string().trim().max(200).optional().nullable(),
   seoDescription: z.string().trim().max(500).optional().nullable(),
   tags: z.array(z.string().trim().min(1).max(50)).default([]),
+  layout: blogPostLayoutEnum.default('STANDARD'),
+  galleryImages: z.array(z.string().url()).max(24).default([]),
+  videoUrl: z.string().url().optional().nullable(),
   authorId: z.string().optional().nullable(),
   seriesId: z.string().optional().nullable(),
   seriesOrder: z.number().int().min(0).optional().nullable(),

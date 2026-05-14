@@ -3,16 +3,28 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Check, EyeOff, Trash2, AlertOctagon, ExternalLink } from 'lucide-react'
+import {
+  Check,
+  EyeOff,
+  Trash2,
+  AlertOctagon,
+  ExternalLink,
+  Reply,
+  Loader2,
+  Send,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 
 type Status = 'PENDING' | 'APPROVED' | 'HIDDEN' | 'SPAM'
 
 interface CommentRow {
   id: string
+  postId: string
   body: string
   status: Status
+  parentId: string | null
   createdAt: string
   user: { name: string | null; email: string }
   post: { slug: string; title: string }
@@ -25,6 +37,9 @@ interface CommentsModeratorProps {
 export function CommentsModerator({ initial }: CommentsModeratorProps) {
   const router = useRouter()
   const [working, setWorking] = useState<string | null>(null)
+  const [replyOpen, setReplyOpen] = useState<string | null>(null)
+  const [replyBody, setReplyBody] = useState('')
+  const [replying, setReplying] = useState(false)
 
   async function setStatus(id: string, status: Status) {
     setWorking(id)
@@ -65,6 +80,32 @@ export function CommentsModerator({ initial }: CommentsModeratorProps) {
     }
   }
 
+  async function sendReply(parent: CommentRow) {
+    if (!replyBody.trim()) return
+    setReplying(true)
+    try {
+      const res = await fetch('/api/admin/heat-index/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId: parent.postId,
+          parentId: parent.parentId ? null : parent.id,
+          body: replyBody.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Reply failed')
+      toast.success('Reply posted')
+      setReplyOpen(null)
+      setReplyBody('')
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Reply failed')
+    } finally {
+      setReplying(false)
+    }
+  }
+
   if (initial.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-border bg-card/50 p-12 text-center">
@@ -89,6 +130,11 @@ export function CommentsModerator({ initial }: CommentsModeratorProps) {
                 minute: '2-digit',
               })}
             </span>
+            {c.parentId && (
+              <span className="text-[10px] font-bold uppercase tracking-widest rounded-full px-2 py-0.5 bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300">
+                Reply
+              </span>
+            )}
             <span
               className={`ml-auto text-[10px] font-bold uppercase tracking-widest rounded-full px-2 py-0.5 ${
                 c.status === 'PENDING'
@@ -112,7 +158,7 @@ export function CommentsModerator({ initial }: CommentsModeratorProps) {
               <ExternalLink className="w-3.5 h-3.5" />
               {c.post.title}
             </Link>
-            <div className="ml-auto flex gap-1.5">
+            <div className="ml-auto flex flex-wrap gap-1.5">
               {c.status !== 'APPROVED' && (
                 <Button
                   size="sm"
@@ -122,6 +168,20 @@ export function CommentsModerator({ initial }: CommentsModeratorProps) {
                 >
                   <Check className="w-3.5 h-3.5 mr-1.5" />
                   Approve
+                </Button>
+              )}
+              {c.status === 'APPROVED' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setReplyOpen(replyOpen === c.id ? null : c.id)
+                    setReplyBody('')
+                  }}
+                  disabled={working === c.id}
+                >
+                  <Reply className="w-3.5 h-3.5 mr-1.5" />
+                  {replyOpen === c.id ? 'Cancel' : 'Reply'}
                 </Button>
               )}
               {c.status !== 'HIDDEN' && (
@@ -157,6 +217,49 @@ export function CommentsModerator({ initial }: CommentsModeratorProps) {
               </Button>
             </div>
           </div>
+
+          {replyOpen === c.id && (
+            <div className="mt-4 rounded-xl border border-salsa-200 bg-salsa-50/50 dark:border-salsa-900/40 dark:bg-salsa-950/20 p-4">
+              <p className="text-xs text-muted-foreground mb-2">
+                Replying publicly as the Jose Madrid Salsa team. Your reply will appear under this
+                comment, auto-approved.
+              </p>
+              <Textarea
+                value={replyBody}
+                onChange={(e) => setReplyBody(e.target.value)}
+                rows={3}
+                placeholder="Write a reply…"
+                disabled={replying}
+                className="mb-2"
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setReplyOpen(null)
+                    setReplyBody('')
+                  }}
+                  disabled={replying}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => sendReply(c)}
+                  disabled={replying || !replyBody.trim()}
+                  className="bg-salsa-600 hover:bg-salsa-700 text-white"
+                >
+                  {replying ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  Post reply
+                </Button>
+              </div>
+            </div>
+          )}
         </li>
       ))}
     </ul>

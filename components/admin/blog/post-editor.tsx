@@ -1,14 +1,32 @@
 'use client'
 
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { Loader2, Save, Trash2, Eye } from 'lucide-react'
+import {
+  Loader2,
+  Save,
+  Trash2,
+  Eye,
+  Image as ImageIcon,
+  Bold,
+  Italic,
+  Heading2,
+  List,
+  Quote,
+  Link2,
+  Code,
+  Youtube,
+  Film,
+  Layout,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { MediaUploader, MediaPreview } from './media-uploader'
 
 type Status = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED'
+type PostLayout = 'STANDARD' | 'LONGFORM' | 'GALLERY' | 'VIDEO' | 'MINIMAL'
 
 interface SeriesOption {
   id: string
@@ -36,6 +54,9 @@ export interface PostEditorInitial {
   seoTitle?: string | null
   seoDescription?: string | null
   tags?: string[]
+  layout?: PostLayout
+  galleryImages?: string[]
+  videoUrl?: string | null
   seriesId?: string | null
   seriesOrder?: number | null
   categoryId?: string | null
@@ -48,6 +69,14 @@ interface PostEditorProps {
   mode: 'create' | 'edit'
 }
 
+const LAYOUTS: { key: PostLayout; label: string; description: string }[] = [
+  { key: 'STANDARD', label: 'Standard', description: 'Cover image, title, prose. The default for most stories.' },
+  { key: 'LONGFORM', label: 'Longform', description: 'Larger type, drop cap, magazine-style.' },
+  { key: 'GALLERY', label: 'Gallery', description: 'Cover + photo grid above the body. Great for road notes.' },
+  { key: 'VIDEO', label: 'Video', description: 'Video hero replaces the cover image.' },
+  { key: 'MINIMAL', label: 'Minimal', description: 'No cover, just title + prose. For text-only updates.' },
+]
+
 function toLocalDatetimeInput(d: string | null | undefined): string {
   if (!d) return ''
   const date = new Date(d)
@@ -55,8 +84,41 @@ function toLocalDatetimeInput(d: string | null | undefined): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+}
+
+function extractYouTubeId(input: string): string | null {
+  const trimmed = input.trim()
+  if (/^[a-zA-Z0-9_-]{6,20}$/.test(trimmed)) return trimmed
+  const patterns = [
+    /youtu\.be\/([a-zA-Z0-9_-]{6,20})/,
+    /youtube\.com\/watch\?[^"]*v=([a-zA-Z0-9_-]{6,20})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{6,20})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{6,20})/,
+  ]
+  for (const re of patterns) {
+    const m = trimmed.match(re)
+    if (m) return m[1]
+  }
+  return null
+}
+
+function extractVimeoId(input: string): string | null {
+  const trimmed = input.trim()
+  if (/^\d{6,12}$/.test(trimmed)) return trimmed
+  const m = trimmed.match(/vimeo\.com\/(?:video\/)?(\d{6,12})/)
+  return m ? m[1] : null
+}
+
 export function PostEditor({ initial = {}, series, categories, mode }: PostEditorProps) {
   const router = useRouter()
+  const contentRef = useRef<HTMLTextAreaElement>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -75,22 +137,64 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
     seoTitle: initial.seoTitle ?? '',
     seoDescription: initial.seoDescription ?? '',
     tagsCsv: (initial.tags ?? []).join(', '),
+    layout: (initial.layout ?? 'STANDARD') as PostLayout,
+    galleryImages: initial.galleryImages ?? [],
+    videoUrl: initial.videoUrl ?? '',
     seriesId: initial.seriesId ?? '',
     seriesOrder: initial.seriesOrder ?? '',
     categoryId: initial.categoryId ?? '',
   })
 
-  function slugify(text: string): string {
-    return text
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-  }
-
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }))
+  }
+
+  function insertAtCursor(snippet: string) {
+    const ta = contentRef.current
+    if (!ta) {
+      update('content', form.content + snippet)
+      return
+    }
+    const start = ta.selectionStart
+    const end = ta.selectionEnd
+    const before = form.content.slice(0, start)
+    const selected = form.content.slice(start, end)
+    const after = form.content.slice(end)
+    const out =
+      snippet.includes('$1') && selected
+        ? snippet.replace('$1', selected)
+        : selected
+          ? `${snippet}${selected}`
+          : snippet
+    const next = `${before}${out}${after}`
+    update('content', next)
+    setTimeout(() => {
+      ta.focus()
+      const pos = before.length + out.length
+      ta.setSelectionRange(pos, pos)
+    }, 0)
+  }
+
+  function promptInsertYouTube() {
+    const input = prompt('YouTube URL or video ID')
+    if (!input) return
+    const id = extractYouTubeId(input)
+    if (!id) {
+      toast.error("Couldn't read that YouTube link")
+      return
+    }
+    insertAtCursor(`\n\n[[youtube:${id}]]\n\n`)
+  }
+
+  function promptInsertVimeo() {
+    const input = prompt('Vimeo URL or video ID')
+    if (!input) return
+    const id = extractVimeoId(input)
+    if (!id) {
+      toast.error("Couldn't read that Vimeo link")
+      return
+    }
+    insertAtCursor(`\n\n[[vimeo:${id}]]\n\n`)
   }
 
   async function save() {
@@ -114,6 +218,9 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
           .split(',')
           .map((t) => t.trim())
           .filter(Boolean),
+        layout: form.layout,
+        galleryImages: form.galleryImages,
+        videoUrl: form.videoUrl || null,
         seriesId: form.seriesId || null,
         seriesOrder: form.seriesOrder === '' ? null : Number(form.seriesOrder),
         categoryId: form.categoryId || null,
@@ -162,6 +269,9 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
       setDeleting(false)
     }
   }
+
+  const showGallery = form.layout === 'GALLERY'
+  const showVideo = form.layout === 'VIDEO'
 
   return (
     <div className="grid lg:grid-cols-[1fr_320px] gap-6">
@@ -212,23 +322,101 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
         </div>
 
         <div>
-          <label className="block text-sm font-semibold mb-1.5">Content (Markdown)</label>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+            <label className="block text-sm font-semibold">Content (Markdown)</label>
+            <div className="flex flex-wrap gap-1 text-xs">
+              <ToolbarButton title="Bold (**)" onClick={() => insertAtCursor('**$1**')}>
+                <Bold className="w-3.5 h-3.5" />
+              </ToolbarButton>
+              <ToolbarButton title="Italic (*)" onClick={() => insertAtCursor('*$1*')}>
+                <Italic className="w-3.5 h-3.5" />
+              </ToolbarButton>
+              <ToolbarButton title="Heading" onClick={() => insertAtCursor('\n## $1\n')}>
+                <Heading2 className="w-3.5 h-3.5" />
+              </ToolbarButton>
+              <ToolbarButton title="Bullet list" onClick={() => insertAtCursor('\n- $1\n')}>
+                <List className="w-3.5 h-3.5" />
+              </ToolbarButton>
+              <ToolbarButton title="Blockquote" onClick={() => insertAtCursor('\n> $1\n')}>
+                <Quote className="w-3.5 h-3.5" />
+              </ToolbarButton>
+              <ToolbarButton
+                title="Link"
+                onClick={() => {
+                  const href = prompt('URL') ?? ''
+                  if (!href) return
+                  insertAtCursor(`[$1](${href})`)
+                }}
+              >
+                <Link2 className="w-3.5 h-3.5" />
+              </ToolbarButton>
+              <ToolbarButton title="Code block" onClick={() => insertAtCursor('\n```\n$1\n```\n')}>
+                <Code className="w-3.5 h-3.5" />
+              </ToolbarButton>
+              <span className="w-px bg-border mx-1" />
+              <MediaUploader
+                variant="inline"
+                accept="image/*,video/*"
+                label="Insert media"
+                onUploaded={(r) => {
+                  const alt = r.filename.replace(/\.[^.]+$/, '')
+                  const snippet = r.isVideo
+                    ? `\n\n[[video:${r.url}]]\n\n`
+                    : `\n\n![${alt}](${r.url})\n\n`
+                  insertAtCursor(snippet)
+                }}
+              />
+              <ToolbarButton title="YouTube embed" onClick={promptInsertYouTube}>
+                <Youtube className="w-3.5 h-3.5" />
+              </ToolbarButton>
+              <ToolbarButton title="Vimeo embed" onClick={promptInsertVimeo}>
+                <Film className="w-3.5 h-3.5" />
+              </ToolbarButton>
+            </div>
+          </div>
           <Textarea
+            ref={contentRef}
             value={form.content}
             onChange={(e) => update('content', e.target.value)}
             rows={24}
             className="font-mono text-sm"
-            placeholder="# Heading&#10;&#10;Write the post in Markdown..."
+            placeholder="# Heading&#10;&#10;Write the post in Markdown. Use the toolbar above to insert images, video, and embeds."
           />
+          <p className="text-xs text-muted-foreground mt-1">
+            Embeds: <code>[[youtube:ID]]</code>, <code>[[vimeo:ID]]</code>,{' '}
+            <code>[[video:https://...]]</code>. Images and videos uploaded via the toolbar go to
+            Vercel Blob.
+          </p>
         </div>
 
         <div>
-          <label className="block text-sm font-semibold mb-1.5">Cover image URL</label>
-          <Input
-            value={form.coverImage}
-            onChange={(e) => update('coverImage', e.target.value)}
-            placeholder="https://... or /images/..."
-          />
+          <label className="block text-sm font-semibold mb-1.5">Cover image</label>
+          <div className="flex gap-2">
+            <Input
+              value={form.coverImage}
+              onChange={(e) => update('coverImage', e.target.value)}
+              placeholder="https://... or paste a URL"
+            />
+            <MediaUploader
+              accept="image/*"
+              label="Upload"
+              onUploaded={(r) => {
+                update('coverImage', r.url)
+                if (!form.coverImageAlt) {
+                  update('coverImageAlt', r.filename.replace(/\.[^.]+$/, ''))
+                }
+              }}
+            />
+          </div>
+          {form.coverImage && (
+            <div className="mt-2 max-w-sm">
+              <MediaPreview
+                url={form.coverImage}
+                alt={form.coverImageAlt}
+                onRemove={() => update('coverImage', '')}
+              />
+            </div>
+          )}
         </div>
 
         <div>
@@ -239,6 +427,82 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
             placeholder="Describe the image for screen readers"
           />
         </div>
+
+        {showGallery && (
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4" />
+                  Gallery images
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Shown as a grid above the prose. Up to 24.
+                </p>
+              </div>
+              <MediaUploader
+                accept="image/*"
+                label="Add images"
+                onUploaded={(r) => {
+                  if (form.galleryImages.length >= 24) {
+                    toast.error('Gallery is full (24 max)')
+                    return
+                  }
+                  update('galleryImages', [...form.galleryImages, r.url])
+                }}
+              />
+            </div>
+            {form.galleryImages.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic py-4 text-center">
+                No gallery images yet. Upload some.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {form.galleryImages.map((url, idx) => (
+                  <MediaPreview
+                    key={`${url}-${idx}`}
+                    url={url}
+                    onRemove={() =>
+                      update(
+                        'galleryImages',
+                        form.galleryImages.filter((_, i) => i !== idx)
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {showVideo && (
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <h3 className="font-semibold text-sm flex items-center gap-2 mb-3">
+              <Film className="w-4 h-4" />
+              Hero video
+            </h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Replaces the cover image. Use an MP4/WebM URL, or upload one.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                value={form.videoUrl}
+                onChange={(e) => update('videoUrl', e.target.value)}
+                placeholder="https://...mp4"
+              />
+              <MediaUploader
+                accept="video/*"
+                label="Upload video"
+                onUploaded={(r) => update('videoUrl', r.url)}
+              />
+            </div>
+            {form.videoUrl && (
+              <div className="mt-3 max-w-md">
+                <MediaPreview url={form.videoUrl} isVideo onRemove={() => update('videoUrl', '')} />
+              </div>
+            )}
+          </div>
+        )}
 
         <details className="rounded-2xl border border-border p-4">
           <summary className="cursor-pointer font-semibold">SEO overrides</summary>
@@ -340,6 +604,38 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
           </div>
         </div>
 
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+          <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <Layout className="w-3.5 h-3.5" />
+            Layout
+          </h3>
+          <div className="grid gap-2">
+            {LAYOUTS.map((opt) => (
+              <label
+                key={opt.key}
+                className={`cursor-pointer rounded-lg border px-3 py-2 transition ${
+                  form.layout === opt.key
+                    ? 'border-salsa-500 bg-salsa-50 dark:bg-salsa-950/30 ring-1 ring-salsa-500'
+                    : 'border-border hover:border-foreground/30'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="layout"
+                    value={opt.key}
+                    checked={form.layout === opt.key}
+                    onChange={() => update('layout', opt.key)}
+                    className="accent-salsa-600"
+                  />
+                  <span className="font-semibold text-sm">{opt.label}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1 ml-6">{opt.description}</p>
+              </label>
+            ))}
+          </div>
+        </div>
+
         <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
           <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
             Organize
@@ -405,5 +701,24 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
         </div>
       </aside>
     </div>
+  )
+}
+
+interface ToolbarButtonProps {
+  title: string
+  onClick: () => void
+  children: React.ReactNode
+}
+
+function ToolbarButton({ title, onClick, children }: ToolbarButtonProps) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className="inline-flex items-center justify-center w-7 h-7 rounded border border-border bg-background hover:bg-muted transition"
+    >
+      {children}
+    </button>
   )
 }
