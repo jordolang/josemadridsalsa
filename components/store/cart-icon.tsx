@@ -19,8 +19,8 @@ export function CartIcon({
   className,
   showBadge = true,
 }: CartIconProps) {
-  const { items, toggleCart } = useCartStore()
-  const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0)
+  const toggleCart = useCartStore((state) => state.toggleCart)
+  const cartItemCount = useCartStore((state) => state.totalItems)
 
   return (
     <Button
