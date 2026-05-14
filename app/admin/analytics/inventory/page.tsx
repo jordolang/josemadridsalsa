@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation';
 import {
-  Package,
   AlertTriangle,
-  TrendingUp,
   TrendingDown,
   DollarSign,
   Archive,
@@ -11,13 +9,7 @@ import { getCurrentUser, hasPermission } from '@/lib/rbac';
 import { prisma } from '@/lib/prisma';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
-import { InventoryTransactionType } from '@prisma/client';
+import { InventoryCharts } from './inventory-charts';
 
 interface AnalyticsData {
   stats: {
@@ -231,20 +223,6 @@ export default async function InventoryAnalyticsPage() {
 
   const data = await getAnalyticsData();
 
-  const chartConfig = {
-    count: {
-      label: 'Transactions',
-      color: 'hsl(var(--chart-1))',
-    },
-  };
-
-  const categoryChartConfig = {
-    totalValue: {
-      label: 'Inventory Value',
-      color: 'hsl(var(--chart-2))',
-    },
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -318,70 +296,10 @@ export default async function InventoryAnalyticsPage() {
       </div>
 
       {/* Charts Section */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Transaction Activity Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Transaction Activity</CardTitle>
-            <CardDescription>Last 30 days by transaction type</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {data.transactionsByType.length > 0 ? (
-              <ChartContainer config={chartConfig} className="h-[300px]">
-                <BarChart data={data.transactionsByType}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="type"
-                    tickFormatter={(value) => value.substring(0, 3)}
-                  />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ChartContainer>
-            ) : (
-              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-                No transaction data available
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Inventory Value by Category */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Inventory Value by Category</CardTitle>
-            <CardDescription>Total inventory value per category</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {data.inventoryByCategory.length > 0 ? (
-              <ChartContainer config={categoryChartConfig} className="h-[300px]">
-                <BarChart data={data.inventoryByCategory}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="category"
-                    tickFormatter={(value) => value.substring(0, 10)}
-                  />
-                  <YAxis />
-                  <ChartTooltip
-                    content={<ChartTooltipContent />}
-                    formatter={(value) => formatCurrency(Number(value))}
-                  />
-                  <Bar
-                    dataKey="totalValue"
-                    fill="var(--color-totalValue)"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ChartContainer>
-            ) : (
-              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-                No category data available
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <InventoryCharts
+        transactionsByType={data.transactionsByType}
+        inventoryByCategory={data.inventoryByCategory}
+      />
 
       {/* Low Stock Products Table */}
       {data.lowStockProducts.length > 0 && (
