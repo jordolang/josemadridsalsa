@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
 import { InventoryTransactionType, InventoryAlertType, InventoryAlertStatus, StockStatus } from '@prisma/client';
 import { sendEmail } from '@/lib/email';
+import { sendLowStockAlert } from '@/lib/inventory-alerts';
 
 export interface InventoryAdjustment {
   productId: string;
@@ -122,6 +123,18 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
       },
     }),
   ]);
+
+  // Check if we crossed the low stock threshold (only trigger email on threshold crossing)
+  const crossedThreshold = previousStock > product.lowStockThreshold && newStock <= product.lowStockThreshold;
+
+  if (crossedThreshold) {
+    try {
+      await sendLowStockAlert(productId);
+    } catch (alertError) {
+      // Don't fail the inventory adjustment if email sending fails
+      console.error(`[adjustInventory] Failed to send low stock alert for product ${productId}:`, alertError);
+    }
+  }
 
   // Check if we need to create or resolve alerts
   try {
