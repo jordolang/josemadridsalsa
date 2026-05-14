@@ -14,7 +14,7 @@ import { UpdateCartItemSchema } from '@/lib/validations/cart'
  */
 export async function PUT(
   request: NextRequest,
-  context: unknown
+  context: { params: Promise<{ id: string }> }
 ) {
   // Rate limiting
   const ip =
@@ -54,9 +54,7 @@ export async function PUT(
 
   const { quantity } = parsed.data
   // Await params per Next.js 15 pattern
-  const { id: cartItemId } = await (
-    context as { params: Promise<{ id: string }> }
-  ).params
+  const { id: cartItemId } = await context.params
 
   try {
     // Find cart item with product details
@@ -151,7 +149,7 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  context: unknown
+  context: { params: Promise<{ id: string }> }
 ) {
   // Rate limiting
   const ip =
@@ -179,9 +177,7 @@ export async function DELETE(
   const userId = session.user.id
 
   // Await params per Next.js 15 pattern
-  const { id: cartItemId } = await (
-    context as { params: Promise<{ id: string }> }
-  ).params
+  const { id: cartItemId } = await context.params
 
   try {
     // Find cart item with product details

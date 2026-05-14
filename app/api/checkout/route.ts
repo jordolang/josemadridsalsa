@@ -230,11 +230,6 @@ export async function POST(request: NextRequest) {
 
     const total = subtotal + taxAmount + finalShippingCost
 
-    const shippingSummary = [
-      `${shipping.address1}${shipping.address2 ? `, ${shipping.address2}` : ''}`,
-      `${shipping.city}, ${shipping.state} ${shipping.postalCode}`,
-    ].join('\n')
-
     // If recovery token provided, mark abandoned cart as recovered
     if (recoveryToken) {
       try {
