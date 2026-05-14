@@ -693,5 +693,259 @@ describe('Products API', () => {
       expect(response.status).toBe(500)
       expect(data.error).toBe('Failed to fetch recommendations')
     })
+
+    describe('Query Optimization Verification', () => {
+      it('should return correctly structured frequently bought together products', async () => {
+        const { getFrequentlyBoughtTogether } = await import('@/lib/recommendations')
+
+        const mockRecommendations = [
+          {
+            id: 'prod-2',
+            name: 'Medium Salsa',
+            slug: 'medium-salsa',
+            price: 8.99,
+            featuredImage: '/images/medium.jpg',
+            heatLevel: 'MEDIUM',
+            sku: 'JMS-MED-001',
+            inventory: 50,
+            score: 1.0,
+          },
+          {
+            id: 'prod-3',
+            name: 'Hot Salsa',
+            slug: 'hot-salsa',
+            price: 9.49,
+            featuredImage: '/images/hot.jpg',
+            heatLevel: 'HOT',
+            sku: 'JMS-HOT-001',
+            inventory: 30,
+            score: 0.67,
+          },
+        ]
+
+        vi.mocked(getFrequentlyBoughtTogether).mockResolvedValue(mockRecommendations)
+
+        const request = new NextRequest('http://localhost/api/products/prod-1/recommendations?type=frequently-bought')
+        const response = await getRecommendations(request, { params: Promise.resolve({ id: 'prod-1' }) })
+        const data = await response.json()
+
+        expect(response.status).toBe(200)
+        expect(data.frequentlyBoughtTogether).toHaveLength(2)
+
+        // Verify all required fields are present
+        data.frequentlyBoughtTogether.forEach((product: any) => {
+          expect(product).toHaveProperty('id')
+          expect(product).toHaveProperty('name')
+          expect(product).toHaveProperty('slug')
+          expect(product).toHaveProperty('price')
+          expect(product).toHaveProperty('featuredImage')
+          expect(product).toHaveProperty('heatLevel')
+          expect(product).toHaveProperty('sku')
+          expect(product).toHaveProperty('inventory')
+          expect(product).toHaveProperty('score')
+
+          // Verify data types
+          expect(typeof product.id).toBe('string')
+          expect(typeof product.name).toBe('string')
+          expect(typeof product.slug).toBe('string')
+          expect(typeof product.price).toBe('number')
+          expect(typeof product.sku).toBe('string')
+          expect(typeof product.inventory).toBe('number')
+          expect(typeof product.score).toBe('number')
+        })
+      })
+
+      it('should verify scores are normalized between 0 and 1', async () => {
+        const { getFrequentlyBoughtTogether } = await import('@/lib/recommendations')
+
+        const mockRecommendations = [
+          {
+            id: 'prod-2',
+            name: 'Product 2',
+            slug: 'product-2',
+            price: 10.0,
+            featuredImage: '/images/2.jpg',
+            heatLevel: 'MEDIUM',
+            sku: 'SKU-2',
+            inventory: 100,
+            score: 1.0,
+          },
+          {
+            id: 'prod-3',
+            name: 'Product 3',
+            slug: 'product-3',
+            price: 10.0,
+            featuredImage: '/images/3.jpg',
+            heatLevel: 'MILD',
+            sku: 'SKU-3',
+            inventory: 50,
+            score: 0.5,
+          },
+          {
+            id: 'prod-4',
+            name: 'Product 4',
+            slug: 'product-4',
+            price: 10.0,
+            featuredImage: '/images/4.jpg',
+            heatLevel: 'HOT',
+            sku: 'SKU-4',
+            inventory: 25,
+            score: 0.25,
+          },
+        ]
+
+        vi.mocked(getFrequentlyBoughtTogether).mockResolvedValue(mockRecommendations)
+
+        const request = new NextRequest('http://localhost/api/products/prod-1/recommendations?type=frequently-bought')
+        const response = await getRecommendations(request, { params: Promise.resolve({ id: 'prod-1' }) })
+        const data = await response.json()
+
+        expect(response.status).toBe(200)
+
+        // Verify all scores are between 0 and 1
+        data.frequentlyBoughtTogether.forEach((product: any) => {
+          expect(product.score).toBeGreaterThanOrEqual(0)
+          expect(product.score).toBeLessThanOrEqual(1)
+        })
+
+        // Verify scores are in descending order
+        for (let i = 1; i < data.frequentlyBoughtTogether.length; i++) {
+          expect(data.frequentlyBoughtTogether[i - 1].score).toBeGreaterThanOrEqual(
+            data.frequentlyBoughtTogether[i].score
+          )
+        }
+      })
+
+      it('should respect the limit parameter for frequently bought together', async () => {
+        const { getFrequentlyBoughtTogether } = await import('@/lib/recommendations')
+
+        const mockRecommendations = [
+          {
+            id: 'prod-2',
+            name: 'Product 2',
+            slug: 'product-2',
+            price: 10.0,
+            featuredImage: '/images/2.jpg',
+            heatLevel: 'MEDIUM',
+            sku: 'SKU-2',
+            inventory: 100,
+            score: 1.0,
+          },
+          {
+            id: 'prod-3',
+            name: 'Product 3',
+            slug: 'product-3',
+            price: 10.0,
+            featuredImage: '/images/3.jpg',
+            heatLevel: 'MILD',
+            sku: 'SKU-3',
+            inventory: 50,
+            score: 0.8,
+          },
+          {
+            id: 'prod-4',
+            name: 'Product 4',
+            slug: 'product-4',
+            price: 10.0,
+            featuredImage: '/images/4.jpg',
+            heatLevel: 'HOT',
+            sku: 'SKU-4',
+            inventory: 25,
+            score: 0.6,
+          },
+          {
+            id: 'prod-5',
+            name: 'Product 5',
+            slug: 'product-5',
+            price: 10.0,
+            featuredImage: '/images/5.jpg',
+            heatLevel: 'EXTRA_HOT',
+            sku: 'SKU-5',
+            inventory: 10,
+            score: 0.4,
+          },
+        ]
+
+        vi.mocked(getFrequentlyBoughtTogether).mockResolvedValue(mockRecommendations)
+
+        const request = new NextRequest('http://localhost/api/products/prod-1/recommendations?type=frequently-bought')
+        const response = await getRecommendations(request, { params: Promise.resolve({ id: 'prod-1' }) })
+        const data = await response.json()
+
+        expect(response.status).toBe(200)
+        expect(getFrequentlyBoughtTogether).toHaveBeenCalledWith('prod-1', 4)
+        expect(data.frequentlyBoughtTogether).toHaveLength(4)
+      })
+
+      it('should return empty array when no recommendations found', async () => {
+        const { getFrequentlyBoughtTogether } = await import('@/lib/recommendations')
+
+        vi.mocked(getFrequentlyBoughtTogether).mockResolvedValue([])
+
+        const request = new NextRequest('http://localhost/api/products/prod-999/recommendations?type=frequently-bought')
+        const response = await getRecommendations(request, { params: Promise.resolve({ id: 'prod-999' }) })
+        const data = await response.json()
+
+        expect(response.status).toBe(200)
+        expect(data.frequentlyBoughtTogether).toEqual([])
+        expect(Array.isArray(data.frequentlyBoughtTogether)).toBe(true)
+      })
+
+      it('should verify price values are numbers not Decimals', async () => {
+        const { getFrequentlyBoughtTogether } = await import('@/lib/recommendations')
+
+        const mockRecommendations = [
+          {
+            id: 'prod-2',
+            name: 'Product with Price',
+            slug: 'product-with-price',
+            price: 12.99,
+            featuredImage: '/images/test.jpg',
+            heatLevel: 'MEDIUM',
+            sku: 'SKU-TEST',
+            inventory: 100,
+            score: 1.0,
+          },
+        ]
+
+        vi.mocked(getFrequentlyBoughtTogether).mockResolvedValue(mockRecommendations)
+
+        const request = new NextRequest('http://localhost/api/products/prod-1/recommendations?type=frequently-bought')
+        const response = await getRecommendations(request, { params: Promise.resolve({ id: 'prod-1' }) })
+        const data = await response.json()
+
+        expect(response.status).toBe(200)
+        expect(typeof data.frequentlyBoughtTogether[0].price).toBe('number')
+        expect(data.frequentlyBoughtTogether[0].price).toBe(12.99)
+      })
+
+      it('should verify inventory values are numbers', async () => {
+        const { getFrequentlyBoughtTogether } = await import('@/lib/recommendations')
+
+        const mockRecommendations = [
+          {
+            id: 'prod-2',
+            name: 'Product with Inventory',
+            slug: 'product-with-inventory',
+            price: 10.0,
+            featuredImage: '/images/test.jpg',
+            heatLevel: 'MEDIUM',
+            sku: 'SKU-TEST',
+            inventory: 42,
+            score: 1.0,
+          },
+        ]
+
+        vi.mocked(getFrequentlyBoughtTogether).mockResolvedValue(mockRecommendations)
+
+        const request = new NextRequest('http://localhost/api/products/prod-1/recommendations?type=frequently-bought')
+        const response = await getRecommendations(request, { params: Promise.resolve({ id: 'prod-1' }) })
+        const data = await response.json()
+
+        expect(response.status).toBe(200)
+        expect(typeof data.frequentlyBoughtTogether[0].inventory).toBe('number')
+        expect(data.frequentlyBoughtTogether[0].inventory).toBe(42)
+      })
+    })
   })
 })
