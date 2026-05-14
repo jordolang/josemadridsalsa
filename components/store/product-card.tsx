@@ -21,6 +21,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AddToCartButton } from '@/components/store/add-to-cart-button'
+import { motion, useReducedMotion } from 'framer-motion'
 
 export interface Product {
   id: string
@@ -60,6 +61,7 @@ function ProductCardComponent({ product }: ProductCardProps) {
   const router = useRouter()
   const [imageError, setImageError] = useState(false)
   const [isQuickViewOpen, setQuickViewOpen] = useState(false)
+  const shouldReduceMotion = useReducedMotion()
 
   const inWishlist = isInWishlist(product.id)
   const inComparison = isInComparison(product.id)
@@ -268,7 +270,19 @@ function ProductCardComponent({ product }: ProductCardProps) {
 
           {/* Low stock warning */}
           {!isOutOfStock && product.inventory <= 5 && (
-            <div className="mt-2 text-sm text-orange-600">
+            <div className="mt-2 text-sm text-orange-600 flex items-center gap-2">
+              <motion.span
+                className="inline-block w-2 h-2 rounded-full bg-orange-600"
+                animate={{
+                  scale: [1, 1.3, 1],
+                  opacity: [1, 0.6, 1],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: shouldReduceMotion ? 0 : Infinity,
+                  ease: 'easeInOut',
+                }}
+              />
               Only {product.inventory} left in stock!
             </div>
           )}
