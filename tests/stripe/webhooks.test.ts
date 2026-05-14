@@ -24,6 +24,26 @@ vi.mock('@/lib/email/automation', () => ({
   sendOrderConfirmationEmail: vi.fn(() => Promise.resolve()),
 }))
 
+vi.mock('@/lib/inventory-manager', () => ({
+  deductReservedInventoryInTx: vi.fn(() =>
+    Promise.resolve({
+      product: {
+        id: 'prod-1',
+        name: 'Test Product',
+        sku: 'TEST-SKU',
+        inventory: 97,
+        stockReserved: 0,
+        lowStockThreshold: 10,
+        stockStatus: 'IN_STOCK',
+      },
+      transaction: { id: 'txn-1' },
+      previousInventory: 100,
+      newInventory: 97,
+    })
+  ),
+  checkAndUpdateAlerts: vi.fn(() => Promise.resolve()),
+}))
+
 describe('Stripe webhook utilities', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -127,6 +147,82 @@ describe('Stripe webhook utilities', () => {
 
       expect(result.success).toBe(true)
       expect(result.message).toBe('Order already paid')
+    })
+
+    it('deducts inventory when payment succeeds with product items', async () => {
+      const { default: prisma } = await import('@/lib/prisma')
+      const { deductReservedInventoryInTx, checkAndUpdateAlerts } = await import(
+        '@/lib/inventory-manager'
+      )
+
+      const mockOrder = {
+        id: 'order-456',
+        paymentStatus: 'PENDING',
+        items: [
+          { id: 'item-1', productId: 'prod-1', quantity: 2, name: 'Product 1', sku: 'SKU-1' },
+          { id: 'item-2', productId: 'prod-2', quantity: 1, name: 'Product 2', sku: 'SKU-2' },
+        ],
+        giftCertificates: [],
+        confirmationEmailSentAt: null,
+      }
+
+      const mockTransactionCallback = vi.fn(async (callback) => {
+        const tx = {
+          order: {
+            update: vi.fn().mockResolvedValue(mockOrder),
+          },
+        }
+        return await callback(tx)
+      })
+
+      vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+      vi.mocked(prisma.$transaction).mockImplementation(mockTransactionCallback as any)
+
+      const event: Stripe.Event = {
+        id: 'evt_test_inventory',
+        object: 'event',
+        type: 'payment_intent.succeeded',
+        data: {
+          object: {
+            id: 'pi_test_inventory',
+            object: 'payment_intent',
+            metadata: { orderId: 'order-456' },
+          } as Stripe.PaymentIntent,
+        },
+        api_version: '2023-10-16',
+        created: 1707657600,
+        livemode: false,
+        pending_webhooks: 0,
+        request: null,
+      }
+
+      const result = await processWebhookEvent(event)
+
+      expect(result.success).toBe(true)
+
+      // Verify inventory deduction was called for each item
+      expect(deductReservedInventoryInTx).toHaveBeenCalledTimes(2)
+      expect(deductReservedInventoryInTx).toHaveBeenCalledWith(
+        {
+          productId: 'prod-1',
+          quantity: 2,
+          orderId: 'order-456',
+          notes: 'Order order-456 completed via Stripe webhook',
+        },
+        expect.anything()
+      )
+      expect(deductReservedInventoryInTx).toHaveBeenCalledWith(
+        {
+          productId: 'prod-2',
+          quantity: 1,
+          orderId: 'order-456',
+          notes: 'Order order-456 completed via Stripe webhook',
+        },
+        expect.anything()
+      )
+
+      // Verify alerts were checked for each product
+      expect(checkAndUpdateAlerts).toHaveBeenCalledTimes(2)
     })
 
     it('routes payment_intent.payment_failed events to handler', async () => {
