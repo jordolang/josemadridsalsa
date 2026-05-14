@@ -58,14 +58,20 @@ export async function getFrequentlyBoughtTogether(
       co_occurrences AS (
         SELECT
           oi."productId",
-          COUNT(DISTINCT oi."orderId")::int AS co_occurrence_count,
-          MAX(COUNT(DISTINCT oi."orderId")) OVER ()::int AS max_count
+          COUNT(DISTINCT oi."orderId")::int AS co_occurrence_count
         FROM order_items oi
         INNER JOIN orders_with_product owp ON owp."orderId" = oi."orderId"
         WHERE oi."productId" != ${productId}
         GROUP BY oi."productId"
         ORDER BY co_occurrence_count DESC
         LIMIT ${limit * 2}
+      ),
+      co_occurrences_with_max AS (
+        SELECT
+          "productId",
+          co_occurrence_count,
+          MAX(co_occurrence_count) OVER ()::int AS max_count
+        FROM co_occurrences
       )
       SELECT
         p.id,
@@ -78,7 +84,7 @@ export async function getFrequentlyBoughtTogether(
         p.inventory,
         co.co_occurrence_count,
         co.max_count
-      FROM co_occurrences co
+      FROM co_occurrences_with_max co
       INNER JOIN products p ON p.id = co."productId"
       WHERE p."isActive" = true AND p.inventory > 0
       ORDER BY co.co_occurrence_count DESC
