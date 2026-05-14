@@ -270,7 +270,7 @@ export function ProductGrid({
                 variant="ghost"
                 size="sm"
                 onClick={() => setSearchQuery("")}
-                className="h-6 w-6 p-0 hover:bg-gray-300/50 ml-1"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center p-0 hover:bg-gray-300/50 ml-1"
                 aria-label="Clear search filter"
               >
                 <X className="w-3 h-3" />
@@ -284,7 +284,7 @@ export function ProductGrid({
                 variant="ghost"
                 size="sm"
                 onClick={() => setSelectedCategory("all")}
-                className="h-6 w-6 p-0 hover:bg-gray-300/50 ml-1"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center p-0 hover:bg-gray-300/50 ml-1"
                 aria-label="Clear category filter"
               >
                 <X className="w-3 h-3" />
@@ -298,7 +298,7 @@ export function ProductGrid({
                 variant="ghost"
                 size="sm"
                 onClick={() => setSelectedHeatLevel("all")}
-                className="h-6 w-6 p-0 hover:bg-gray-300/50 ml-1"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center p-0 hover:bg-gray-300/50 ml-1"
                 aria-label="Clear heat level filter"
               >
                 <X className="w-3 h-3" />
@@ -312,7 +312,7 @@ export function ProductGrid({
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowOnlyInStock(false)}
-                className="h-6 w-6 p-0 hover:bg-gray-300/50 ml-1"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center p-0 hover:bg-gray-300/50 ml-1"
                 aria-label="Clear in stock filter"
               >
                 <X className="w-3 h-3" />
