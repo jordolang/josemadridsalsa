@@ -621,7 +621,7 @@ export async function sendAdminNewOrderNotification(orderId: string) {
     return { success: false, error: 'No valid admin emails' }
   }
 
-  const customerName = order.user?.name || order.guestName || 'Guest Customer'
+  const customerName = order.user?.name || 'Guest Customer'
   const customerEmail = order.user?.email || order.guestEmail || 'N/A'
 
   const items = order.items.map((item) => ({

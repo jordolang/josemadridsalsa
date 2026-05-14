@@ -77,7 +77,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: "about",
     title: "About",
-    items: [
+    dropdown: [
       { name: "Our Story", href: "/our-story", description: "From Clovis, NM to Zanesville, OH" },
       { name: "The Heat Index", href: "/heat-index", description: "Stories, recipes, road notes, and salsa lore" },
       { name: "Recipes", href: "/recipes", description: "Cooking with our salsas" },
