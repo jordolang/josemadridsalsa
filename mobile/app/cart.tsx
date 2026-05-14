@@ -20,7 +20,12 @@ import { useCartStore } from '@/store/cartStore';
  * @returns A list of cart items with a checkout footer.
  */
 export default function CartScreen() {
-  const { items, removeItem, totalPrice, clearCart } = useCartStore();
+  const items = useCartStore((state) => state.items);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const totalPrice = useCartStore((state) =>
+    state.items.reduce((total, item) => total + item.price * item.quantity, 0)
+  );
   const router = useRouter();
 
   return (
@@ -42,7 +47,7 @@ export default function CartScreen() {
         ListEmptyComponent={<Text style={styles.emptyText}>Your cart is empty.</Text>}
       />
       <View style={styles.footer}>
-        <Text style={styles.total}>Total: ${totalPrice().toFixed(2)}</Text>
+        <Text style={styles.total}>Total: ${totalPrice.toFixed(2)}</Text>
         <TouchableOpacity
           style={[styles.checkoutBtn, items.length === 0 && { opacity: 0.5 }]}
           disabled={items.length === 0}

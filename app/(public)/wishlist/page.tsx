@@ -13,7 +13,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 export default function WishlistPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const { items, isLoading, fetchWishlist, clearWishlist, totalItems } = useWishlistStore()
+  const { items, isLoading, fetchWishlist, clearWishlist } = useWishlistStore()
+
+  // Use selector for computed value
+  const totalItems = useWishlistStore((state) => state.items.length)
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -86,13 +89,13 @@ export default function WishlistPage() {
             My Wishlist
           </h1>
           <p className="text-muted-foreground mt-2">
-            {totalItems() === 0
+            {totalItems === 0
               ? 'No items saved yet'
-              : `${totalItems()} ${totalItems() === 1 ? 'item' : 'items'} saved`}
+              : `${totalItems} ${totalItems === 1 ? 'item' : 'items'} saved`}
           </p>
         </div>
 
-        {totalItems() > 0 && (
+        {totalItems > 0 && (
           <Button
             onClick={handleClearAll}
             variant="outline"
@@ -106,7 +109,7 @@ export default function WishlistPage() {
       </div>
 
       {/* Content */}
-      {totalItems() === 0 ? (
+      {totalItems === 0 ? (
         <EmptyWishlist />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
