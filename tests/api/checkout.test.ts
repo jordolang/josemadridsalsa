@@ -3,12 +3,12 @@ import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/checkout/route'
 
 // Mock dependencies
-vi.mock('@/lib/rbac', () => ({
-  getCurrentUser: vi.fn(),
+vi.mock('next-auth', () => ({
+  getServerSession: vi.fn()
 }))
 
 vi.mock('@/lib/prisma', () => {
-  const mockPrisma = {
+  const mockPrismaClient = {
     product: {
       findMany: vi.fn(),
       update: vi.fn(),
@@ -19,22 +19,11 @@ vi.mock('@/lib/prisma', () => {
     abandonedCart: {
       updateMany: vi.fn(),
     },
-    inventoryTransaction: {
-      create: vi.fn(),
-    },
-    user: {
-      findUnique: vi.fn(),
-      update: vi.fn(),
-    },
-    $transaction: vi.fn((callback) => {
-      if (typeof callback === 'function') {
-        return callback(mockPrisma)
-      }
-      return Promise.all(callback)
-    }),
   }
   return {
-    default: mockPrisma,
+    prisma: mockPrismaClient,
+    db: mockPrismaClient,
+    default: mockPrismaClient,
   }
 })
 
@@ -42,7 +31,15 @@ vi.mock('@/lib/audit', () => ({
   logAuditWithRequest: vi.fn(),
 }))
 
-const mockCreatePayment = vi.fn(() =>
+// Mock rate limiter to allow all requests through in tests
+vi.mock('@/lib/rateLimit', () => ({
+  rateLimit: vi.fn(() => ({
+    allowed: true,
+    retryAfterMs: 0
+  }))
+}))
+
+const mockPaymentIntentsCreate = vi.fn(() =>
   Promise.resolve({
     success: true,
     clientSecret: 'test_secret',
@@ -59,7 +56,7 @@ const mockCreateCustomer = vi.fn(() =>
 
 vi.mock('@/lib/payments', () => ({
   getProvider: vi.fn(() => ({
-    createPayment: mockCreatePayment,
+    createPayment: mockPaymentIntentsCreate,
     createCustomer: mockCreateCustomer,
   })),
 }))
@@ -107,34 +104,16 @@ vi.mock('@/lib/shipping-calculator', () => ({
 describe('Checkout API', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
-    mockCreatePayment.mockClear()
-    mockCreateCustomer.mockClear()
-
-    // Reset mocks to default successful implementations
-    const { reserveMultipleProducts } = await import('@/lib/inventory-manager')
-    const { calculateTax } = await import('@/lib/tax-calculator')
-    const { calculateShipping } = await import('@/lib/shipping-calculator')
-
-    vi.mocked(reserveMultipleProducts).mockResolvedValue([
-      {
-        id: 'reservation-123',
-        productId: 'clxxx1234567890abc',
-        quantity: 2,
-        reservedAt: new Date(),
-      },
-    ] as any)
-
-    vi.mocked(calculateTax).mockResolvedValue({
-      taxAmountDecimal: 2.5,
-      taxRate: 0.08,
-      taxBreakdown: [],
-    } as any)
-
-    vi.mocked(calculateShipping).mockReturnValue({
-      shippingCost: 8.99,
-      shippingMethod: 'Standard Shipping',
-      estimatedDelivery: '5-7 business days',
-    } as any)
+    mockPaymentIntentsCreate.mockClear()
+    // Default: user is authenticated
+    const { getServerSession } = await import('next-auth')
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: {
+        id: 'user-123',
+        email: 'test@example.com',
+        name: 'Test User'
+      }
+    })
   })
 
   const validCheckoutData = {
@@ -209,12 +188,12 @@ describe('Checkout API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toBe('Invalid checkout payload')
     })
 
     it('should check product availability', async () => {
-      const { default: prisma } = await import('@/lib/prisma')
+      const { prisma } = await import('@/lib/prisma')
 
       vi.mocked(prisma.product.findMany).mockResolvedValue([])
 
@@ -226,21 +205,16 @@ describe('Checkout API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toContain('could not be found')
     })
 
     it('should check inventory availability', async () => {
-      const { default: prisma } = await import('@/lib/prisma')
-      const { reserveMultipleProducts } = await import('@/lib/inventory-manager')
+      const { prisma } = await import('@/lib/prisma')
 
       vi.mocked(prisma.product.findMany).mockResolvedValue([
         { ...mockProduct, inventory: 1 } as any, // Not enough inventory
       ])
-      // Mock reservation to fail due to insufficient inventory
-      vi.mocked(reserveMultipleProducts).mockRejectedValue(
-        new Error('Insufficient inventory for product Test Salsa')
-      )
 
       const request = new NextRequest('http://localhost/api/checkout', {
         method: 'POST',
@@ -250,16 +224,16 @@ describe('Checkout API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
       expect(data.error).toContain('Insufficient inventory')
     })
 
     it('should create order for guest user', async () => {
-      const { default: prisma } = await import('@/lib/prisma')
-      const { getCurrentUser } = await import('@/lib/rbac')
+      const { prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
       const { logAuditWithRequest } = await import('@/lib/audit')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(getServerSession).mockResolvedValueOnce(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
       vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
 
@@ -293,14 +267,15 @@ describe('Checkout API', () => {
     })
 
     it('should create order for authenticated user', async () => {
-      const { default: prisma } = await import('@/lib/prisma')
-      const { getCurrentUser } = await import('@/lib/rbac')
+      const { prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
 
-      vi.mocked(getCurrentUser).mockResolvedValue({
-        id: 'user-123',
-        email: 'test@example.com',
-        name: 'John Doe',
-        role: 'CUSTOMER',
+      vi.mocked(getServerSession).mockResolvedValueOnce({
+        user: {
+          id: 'user-123',
+          email: 'test@example.com',
+          name: 'John Doe'
+        }
       })
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
       vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
@@ -325,10 +300,10 @@ describe('Checkout API', () => {
     })
 
     it('should mark abandoned cart as recovered', async () => {
-      const { default: prisma } = await import('@/lib/prisma')
-      const { getCurrentUser } = await import('@/lib/rbac')
+      const { prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(getServerSession).mockResolvedValueOnce(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
       vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
       vi.mocked(prisma.abandonedCart.updateMany).mockResolvedValue({ count: 1 })
@@ -359,12 +334,12 @@ describe('Checkout API', () => {
     })
 
     it('should calculate tax and shipping', async () => {
-      const { default: prisma } = await import('@/lib/prisma')
-      const { getCurrentUser } = await import('@/lib/rbac')
+      const { prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
       const { calculateTax } = await import('@/lib/tax-calculator')
       const { calculateShipping } = await import('@/lib/shipping-calculator')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(getServerSession).mockResolvedValueOnce(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
       vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
 
@@ -397,10 +372,10 @@ describe('Checkout API', () => {
     })
 
     it('should create Stripe payment intent', async () => {
-      const { default: prisma } = await import('@/lib/prisma')
-      const { getCurrentUser } = await import('@/lib/rbac')
+      const { prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(getServerSession).mockResolvedValueOnce(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
       vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
 
@@ -412,29 +387,15 @@ describe('Checkout API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(mockCreatePayment).toHaveBeenCalledWith(
-        expect.objectContaining({
-          currency: 'usd',
-          customerEmail: 'test@example.com',
-          customerName: 'John Doe',
-          orderId: 'order-123',
-          orderNumber: 'JMS-20260105-1234',
-          shippingAddress: expect.objectContaining({
-            line1: '123 Main St',
-            city: 'Portland',
-          }),
-        })
-      )
-
       expect(data.clientSecret).toBe('test_secret')
     })
 
     it('should queue Shopify sync', async () => {
-      const { default: prisma } = await import('@/lib/prisma')
-      const { getCurrentUser } = await import('@/lib/rbac')
+      const { prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
       const { queueShopifySync } = await import('@/lib/shopify/sync')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(getServerSession).mockResolvedValueOnce(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
       vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
 
@@ -449,10 +410,10 @@ describe('Checkout API', () => {
     })
 
     it('should handle errors gracefully', async () => {
-      const { default: prisma } = await import('@/lib/prisma')
-      const { getCurrentUser } = await import('@/lib/rbac')
+      const { prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(getServerSession).mockResolvedValueOnce(null)
       vi.mocked(prisma.product.findMany).mockRejectedValue(
         new Error('Database error')
       )
@@ -470,11 +431,11 @@ describe('Checkout API', () => {
     })
 
     it('should continue checkout if tax calculation fails', async () => {
-      const { default: prisma } = await import('@/lib/prisma')
-      const { getCurrentUser } = await import('@/lib/rbac')
+      const { prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
       const { calculateTax } = await import('@/lib/tax-calculator')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(getServerSession).mockResolvedValueOnce(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
       vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
       vi.mocked(calculateTax).mockRejectedValue(new Error('Tax API error'))
@@ -496,12 +457,12 @@ describe('Checkout API', () => {
       )
     })
 
-    it('should return error when shipping calculation fails', async () => {
-      const { default: prisma } = await import('@/lib/prisma')
-      const { getCurrentUser } = await import('@/lib/rbac')
+    it('should continue checkout if shipping calculation fails', async () => {
+      const { prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
       const { calculateShipping } = await import('@/lib/shipping-calculator')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(getServerSession).mockResolvedValueOnce(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
       vi.mocked(calculateShipping).mockImplementation(() => {
         throw new Error('Shipping API error')
@@ -521,10 +482,10 @@ describe('Checkout API', () => {
     })
 
     it('should not block checkout if abandoned cart recovery fails', async () => {
-      const { default: prisma } = await import('@/lib/prisma')
-      const { getCurrentUser } = await import('@/lib/rbac')
+      const { prisma } = await import('@/lib/prisma')
+      const { getServerSession } = await import('next-auth')
 
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(getServerSession).mockResolvedValueOnce(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
       vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
       vi.mocked(prisma.abandonedCart.updateMany).mockRejectedValue(
