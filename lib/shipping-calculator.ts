@@ -230,6 +230,12 @@ function calculateParcelDimensions(
     maxItemHeight = Math.max(maxItemHeight, height)
   }
 
+  // Calculate total stacked height (sum of all item heights) for per-dimension check
+  const totalStackedHeight = items.reduce((sum, item) => {
+    const height = item.dimensions?.height || 2
+    return sum + height * item.quantity
+  }, 0)
+
   // Find the smallest standard box that can fit all items
   for (const box of STANDARD_BOXES) {
     // Check if total volume fits
@@ -247,12 +253,17 @@ function calculateParcelDimensions(
         itemDimensions[1] <= boxDimensions[1] &&
         itemDimensions[2] <= boxDimensions[2]
       ) {
-        // Found a suitable standard box
-        return {
-          length: box.length,
-          width: box.width,
-          height: box.height,
-          weight: totalWeight,
+        // Also verify all units physically stack within the box's shortest dimension.
+        // Volume alone doesn't guarantee fit (e.g. two flat items may not stack in a
+        // shallow box). Use the smallest box dimension as the stacking axis.
+        if (totalStackedHeight <= boxDimensions[2]) {
+          // Found a suitable standard box
+          return {
+            length: box.length,
+            width: box.width,
+            height: box.height,
+            weight: totalWeight,
+          }
         }
       }
     }
@@ -364,7 +375,7 @@ function calculateEstimateRates(
     )
   } else {
     // Regular address - all carriers available
-    const expressCost = SHIPPING_RATES.EXPRESS.cost * stateMultiplier
+    const expressCost = parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2))
 
     availableOptions.push(
       {
