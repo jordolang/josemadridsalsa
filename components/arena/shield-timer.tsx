@@ -14,18 +14,21 @@ function formatRemaining(ms: number): string {
  * the shield expires to avoid needless renders.
  */
 export function ShieldTimer({ expiresAt }: { expiresAt: Date | string }) {
-  const target =
-    typeof expiresAt === 'string' ? new Date(expiresAt) : expiresAt
-  const [remaining, setRemaining] = useState(() =>
-    target.getTime() - Date.now(),
-  )
+  // Convert to a primitive timestamp so the effect dependency is stable even
+  // when the parent passes a freshly-constructed Date on every poll cycle.
+  const targetMs =
+    typeof expiresAt === 'string'
+      ? new Date(expiresAt).getTime()
+      : expiresAt.getTime()
+
+  const [remaining, setRemaining] = useState(() => targetMs - Date.now())
 
   useEffect(() => {
-    const tick = () => setRemaining(target.getTime() - Date.now())
+    const tick = () => setRemaining(targetMs - Date.now())
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
-  }, [target])
+  }, [targetMs])
 
   return (
     <span className="ml-1.5 font-mono tabular-nums opacity-90">

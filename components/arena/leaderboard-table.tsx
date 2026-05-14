@@ -46,7 +46,7 @@ function compareRows(
   const mult = dir === 'asc' ? 1 : -1
   switch (key) {
     case 'rank':
-      return mult * (b.team.salesCount - a.team.salesCount)
+      return mult * (a.team.salesCount - b.team.salesCount)
     case 'name':
       return mult * a.team.name.localeCompare(b.team.name)
     case 'raised':
