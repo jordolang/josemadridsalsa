@@ -15,14 +15,17 @@ export function CartSidebar() {
     closeCart,
     removeItem,
     updateQuantity,
-    totalItems,
-    totalPrice,
   } = useCartStore()
 
-  if (!isOpen) return null
+  // Use selectors for computed values
+  const itemsCount = useCartStore((state) =>
+    state.items.reduce((total, item) => total + item.quantity, 0)
+  )
+  const total = useCartStore((state) =>
+    state.items.reduce((total, item) => total + item.price * item.quantity, 0)
+  )
 
-  const itemsCount = totalItems()
-  const total = totalPrice()
+  if (!isOpen) return null
 
   return (
     <>
