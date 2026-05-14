@@ -764,6 +764,249 @@ async function notifyLowStock(alert: any) {
 }
 
 /**
+ * Send low stock email notification (exported for testing)
+ */
+export async function sendLowStockEmail(
+  to: string,
+  productName: string,
+  sku: string,
+  productId: string,
+  stockLevel: number,
+  alertType: string,
+  threshold: number
+) {
+  if (!process.env.RESEND_API_KEY) {
+    return { skipped: true };
+  }
+
+  try {
+    const subject = alertType === 'OUT_OF_STOCK'
+      ? `🚨 OUT OF STOCK: ${productName}`
+      : `⚠️ LOW STOCK ALERT: ${productName}`;
+
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: ${alertType === 'OUT_OF_STOCK' ? '#dc2626' : '#f59e0b'};">
+          ${alertType === 'OUT_OF_STOCK' ? 'Out of Stock Alert' : 'Low Stock Alert'}
+        </h2>
+        <p>The following product needs attention:</p>
+        <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+          <p><strong>Product:</strong> ${productName}</p>
+          <p><strong>SKU:</strong> ${sku}</p>
+          <p><strong>Current Stock:</strong> <span style="color: ${alertType === 'OUT_OF_STOCK' ? '#dc2626' : '#f59e0b'}; font-weight: bold;">${stockLevel}</span></p>
+          ${alertType === 'LOW_STOCK' ? `<p><strong>Threshold:</strong> ${threshold}</p>` : ''}
+        </div>
+        <p>Please restock this product as soon as possible.</p>
+        <a href="${process.env.NEXTAUTH_URL}/admin/products/${productId}"
+           style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px;">
+          View Product
+        </a>
+      </div>
+    `;
+
+    await sendEmail({
+      to,
+      subject,
+      html: htmlContent,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send low stock email:', error);
+    return { error: true };
+  }
+}
+
+/**
+ * Check and create alert if needed (exported for testing)
+ */
+export async function checkAndCreateAlert(
+  productId: string,
+  stockLevel: number,
+  threshold: number
+) {
+  // Don't create alert if stock is above threshold
+  if (stockLevel > threshold) {
+    return null;
+  }
+
+  const alertType = stockLevel === 0
+    ? InventoryAlertType.OUT_OF_STOCK
+    : InventoryAlertType.LOW_STOCK;
+
+  // Check if active or acknowledged alert already exists
+  const existingAlert = await prisma.inventoryAlert.findFirst({
+    where: {
+      productId,
+      status: {
+        in: [InventoryAlertStatus.ACTIVE, InventoryAlertStatus.ACKNOWLEDGED],
+      },
+    },
+    include: {
+      product: {
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          inventory: true,
+        },
+      },
+    },
+  });
+
+  // Return existing alert if found
+  if (existingAlert) {
+    return existingAlert;
+  }
+
+  // Create new alert
+  const alert = await prisma.inventoryAlert.create({
+    data: {
+      productId,
+      type: alertType,
+      stockLevel,
+      threshold,
+      status: InventoryAlertStatus.ACTIVE,
+    },
+    include: {
+      product: {
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          inventory: true,
+        },
+      },
+    },
+  });
+
+  return alert;
+}
+
+/**
+ * Create restock notification and send emails
+ */
+export async function createRestockNotification(
+  productId: string,
+  productName: string,
+  sku: string,
+  currentStock: number,
+  threshold: number,
+  avgDailySales?: number
+) {
+  // Check if API key is configured
+  if (!process.env.RESEND_API_KEY) {
+    return { skipped: true };
+  }
+
+  // Check if admin emails are configured
+  const adminEmails = process.env.INVENTORY_ALERT_EMAILS?.split(',').map(e => e.trim()) || [];
+  if (adminEmails.length === 0) {
+    return { skipped: true, reason: 'No admin emails configured' };
+  }
+
+  // Calculate restock quantity
+  let recommendedStock: number;
+  if (avgDailySales) {
+    // 30 days of sales
+    recommendedStock = Math.ceil(avgDailySales * 30);
+  } else {
+    // 3x threshold as default
+    recommendedStock = threshold * 3;
+  }
+
+  // If we have sales data, use higher of the two
+  if (avgDailySales) {
+    const thresholdBasedStock = threshold * 3;
+    recommendedStock = Math.max(recommendedStock, thresholdBasedStock);
+  }
+
+  const restockQuantity = Math.max(0, recommendedStock - currentStock);
+
+  // Determine urgency
+  let urgency: 'critical' | 'high' | 'medium';
+  if (currentStock === 0) {
+    urgency = 'critical';
+  } else if (currentStock <= threshold * 0.5) {
+    urgency = 'high';
+  } else {
+    urgency = 'medium';
+  }
+
+  // Calculate days remaining if we have sales data
+  const daysRemaining = avgDailySales && avgDailySales > 0
+    ? Math.floor(currentStock / avgDailySales)
+    : undefined;
+
+  // Build email content
+  const urgencyEmoji = urgency === 'critical' ? '🔴' : urgency === 'high' ? '🟠' : '🟡';
+  const urgencyText = urgency === 'critical'
+    ? 'CRITICAL - Out of Stock'
+    : urgency === 'high'
+    ? 'HIGH - Critically Low Stock'
+    : 'MEDIUM - Low Stock';
+
+  const subject = `${urgencyEmoji} ${urgency.toUpperCase()} RESTOCK NEEDED: ${productName}`;
+
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: ${urgency === 'critical' ? '#dc2626' : urgency === 'high' ? '#f59e0b' : '#fbbf24'};">
+        ${urgencyText}
+      </h2>
+      <p>The following product needs restocking:</p>
+      <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+        <p><strong>Product:</strong> ${productName}</p>
+        <p><strong>SKU:</strong> ${sku}</p>
+        <p><strong>Current Stock:</strong> <span style="color: ${urgency === 'critical' ? '#dc2626' : '#f59e0b'}; font-weight: bold;">${currentStock}</span></p>
+        ${daysRemaining !== undefined ? `<p><strong>Days of Stock Remaining:</strong> ${daysRemaining} days</p>` : ''}
+        <p><strong>Recommended Restock Quantity:</strong> ${restockQuantity} units</p>
+        <p><em>This will bring inventory to approximately ${recommendedStock} units (30 days of sales)</em></p>
+      </div>
+      <a href="${process.env.NEXTAUTH_URL}/admin/products/${productId}"
+         style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px;">
+        View Product & Restock
+      </a>
+    </div>
+  `;
+
+  try {
+    // Send emails to all admin addresses
+    let emailsSent = 0;
+    for (const email of adminEmails) {
+      await sendEmail({
+        to: email,
+        subject,
+        html: htmlContent,
+      });
+      emailsSent++;
+    }
+
+    // Create database record
+    const notification = await prisma.restockNotification.create({
+      data: {
+        productId,
+        stockLevel: currentStock,
+        recommendedQty: restockQuantity,
+        sentAt: new Date(),
+        sentTo: adminEmails,
+      },
+    });
+
+    return {
+      success: true,
+      urgency,
+      restockQuantity,
+      recommendedStock,
+      emailsSent,
+      notification,
+    };
+  } catch (error) {
+    console.error('Failed to create restock notification:', error);
+    return { error: true };
+  }
+}
+
+/**
  * Get inventory status for a product
  */
 export async function getInventoryStatus(productId: string): Promise<InventoryCheckResult> {
