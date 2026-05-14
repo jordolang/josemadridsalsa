@@ -27,10 +27,6 @@ interface CartStore {
   closeCart: () => void
   toggleCart: () => void
   setGuestEmail: (email: string) => void
-
-  // Computed
-  totalItems: () => number
-  totalPrice: () => number
 }
 
 // Debounced cart tracking
@@ -143,14 +139,6 @@ const cartStoreConfig = (set: any, get: any): CartStore => ({
 
   toggleCart: () => {
     set({ isOpen: !get().isOpen })
-  },
-
-  totalItems: () => {
-    return get().items.reduce((total: number, item: CartItem) => total + item.quantity, 0)
-  },
-
-  totalPrice: () => {
-    return get().items.reduce((total: number, item: CartItem) => total + item.price * item.quantity, 0)
   },
 })
 
