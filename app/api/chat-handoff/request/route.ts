@@ -32,7 +32,7 @@ const Schema = z.object({
 
 export async function POST(request: Request) {
   const identifier = getClientIdentifier(request)
-  const rateLimit = checkRateLimit({
+  const rateLimit = await checkRateLimit({
     ...RATE_LIMITS.API_GENERAL,
     maxRequests: 5,
     windowSeconds: 60,
