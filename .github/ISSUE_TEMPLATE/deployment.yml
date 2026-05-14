@@ -1,0 +1,218 @@
+name: Deployment Request
+description: Track a deployment to staging or production
+title: "[DEPLOY] "
+labels: ["deployment", "ops"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Deployment Request
+
+        Use this template to track deployments to staging or production environments. Complete all checklist items before proceeding with deployment.
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Target Environment
+      description: Select the environment for this deployment
+      options:
+        - Staging
+        - Production
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version/Tag
+      description: Version number, git tag, or commit SHA for this deployment
+      placeholder: "v1.0.0 or main@abc123"
+    validations:
+      required: true
+
+  - type: input
+    id: pr_link
+    attributes:
+      label: Pull Request
+      description: Link to the merged PR(s) for this deployment
+      placeholder: "https://github.com/org/repo/pull/123"
+    validations:
+      required: false
+
+  - type: textarea
+    id: changes
+    attributes:
+      label: Changes Included
+      description: Brief summary of changes being deployed
+      placeholder: "- Feature: Added new payment integration\n- Fix: Resolved cart calculation bug\n- Update: Improved checkout performance"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## Pre-Deployment Checklist
+
+  - type: checkboxes
+    id: code_quality
+    attributes:
+      label: Code Quality
+      description: Verify all code quality checks pass
+      options:
+        - label: All unit tests passing (`npm test`)
+          required: true
+        - label: All E2E tests passing (`npm run test:e2e` or `npx playwright test`)
+          required: true
+        - label: No linting errors (`npm run lint`)
+          required: true
+        - label: Type checking passes (`npm run type-check`)
+          required: true
+        - label: Build succeeds (`npm run build`)
+          required: true
+
+  - type: checkboxes
+    id: branch_status
+    attributes:
+      label: Branch Status
+      description: Verify branch and PR status
+      options:
+        - label: PR approved by required reviewers
+          required: true
+        - label: All CI checks passing (GitHub Actions)
+          required: true
+        - label: Branch up to date with base branch
+          required: true
+        - label: No merge conflicts
+          required: true
+
+  - type: checkboxes
+    id: environment_config
+    attributes:
+      label: Environment Configuration
+      description: Verify environment variables and secrets
+      options:
+        - label: Environment variables verified in Vercel dashboard
+          required: true
+        - label: "`DATABASE_URL` configured correctly"
+          required: true
+        - label: "`NEXTAUTH_SECRET` set for target environment"
+          required: true
+        - label: "`NEXTAUTH_URL` matches target environment URL"
+          required: true
+        - label: All required API keys and secrets configured
+          required: false
+
+  - type: checkboxes
+    id: database
+    attributes:
+      label: Database
+      description: Database migration and schema checks
+      options:
+        - label: Database migrations reviewed (if any)
+          required: false
+        - label: Prisma schema changes validated
+          required: false
+        - label: Migration rollback plan documented (if applicable)
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## Deployment Process
+
+  - type: checkboxes
+    id: deployment_steps
+    attributes:
+      label: Deployment Steps
+      description: Steps to execute the deployment
+      options:
+        - label: Merge PR to target branch (main for production, develop for staging)
+          required: false
+        - label: Verify Vercel automatic deployment triggered
+          required: false
+        - label: Monitor deployment progress in Vercel dashboard
+          required: false
+        - label: Wait for deployment to complete successfully
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## Post-Deployment Validation
+
+  - type: checkboxes
+    id: smoke_tests
+    attributes:
+      label: Smoke Tests
+      description: Verify core functionality works
+      options:
+        - label: Application loads without errors
+          required: false
+        - label: Homepage renders correctly
+          required: false
+        - label: User authentication works (sign in/sign out)
+          required: false
+        - label: Core user flows functional (cart, checkout, etc.)
+          required: false
+        - label: Database connectivity verified
+          required: false
+
+  - type: checkboxes
+    id: monitoring
+    attributes:
+      label: Monitoring & Observability
+      description: Verify monitoring and error tracking
+      options:
+        - label: No new errors in Vercel logs
+          required: false
+        - label: Application performance within acceptable range
+          required: false
+        - label: Analytics tracking operational (if applicable)
+          required: false
+        - label: Error monitoring active (check error rates)
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## Rollback Procedure
+
+  - type: textarea
+    id: rollback_plan
+    attributes:
+      label: Rollback Plan
+      description: Document the rollback procedure if deployment fails
+      value: |
+        If deployment fails or critical issues are discovered:
+
+        1. **Immediate Rollback via Vercel Dashboard:**
+           - Go to Vercel project dashboard
+           - Navigate to Deployments tab
+           - Find last known good deployment
+           - Click "..." menu → "Promote to Production"
+
+        2. **Or via Vercel CLI:**
+           ```bash
+           vercel rollback [deployment-url]
+           ```
+
+        3. **Post-Rollback:**
+           - Verify application is functioning correctly
+           - Document issue and root cause
+           - Create hotfix PR if needed
+           - Notify team of rollback in Slack/communication channel
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Notes
+      description: Any additional information about this deployment
+      placeholder: "Special considerations, dependencies, or team notifications needed"
+    validations:
+      required: false
