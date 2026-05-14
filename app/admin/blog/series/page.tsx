@@ -31,7 +31,7 @@ export default async function AdminBlogSeriesPage() {
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Heat Index dashboard
+        Back to The Heat Index dashboard
       </Link>
       <h1 className="text-2xl font-bold mb-6">Series</h1>
       <SeriesManager initial={initial} />

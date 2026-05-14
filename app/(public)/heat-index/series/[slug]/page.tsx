@@ -23,11 +23,11 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
   const series = await getSeriesBySlug(slug)
-  if (!series) return { title: 'Series Not Found | Heat Index' }
+  if (!series) return { title: 'Series Not Found | The Heat Index' }
   return {
     ...createMetadata({
-      title: `${series.name} | Heat Index`,
-      description: series.description ?? series.tagline ?? `An ongoing series in the Heat Index.`,
+      title: `${series.name} | The Heat Index`,
+      description: series.description ?? series.tagline ?? `An ongoing series in The Heat Index.`,
       pathname: `/heat-index/series/${series.slug}`,
     }),
     alternates: {
@@ -59,7 +59,7 @@ export default async function SeriesPage({ params }: PageProps) {
             className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm mb-8 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Heat Index
+            Back to The Heat Index
           </Link>
 
           <div className="grid lg:grid-cols-[1.4fr_1fr] gap-12 items-center">

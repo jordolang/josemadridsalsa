@@ -3084,6 +3084,9 @@ model BlogPost {
   seoTitle       String?
   seoDescription String?
   tags           String[]       @default([])
+  layout         BlogPostLayout @default(STANDARD)
+  galleryImages  String[]       @default([])
+  videoUrl       String?
 
   authorId    String?
   author      User?         @relation("BlogAuthor", fields: [authorId], references: [id], onDelete: SetNull)
@@ -3191,4 +3194,12 @@ enum BlogReactionKind {
   HEART
   LAUGH
   MIND_BLOWN
+}
+
+enum BlogPostLayout {
+  STANDARD
+  LONGFORM
+  GALLERY
+  VIDEO
+  MINIMAL
 }

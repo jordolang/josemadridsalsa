@@ -17,7 +17,7 @@ export function SubscribeForm({
   seriesSlug,
   source = 'heat-index',
   variant = 'card',
-  heading = 'Get the Heat Index in your inbox',
+  heading = 'Get The Heat Index in your inbox',
   description = "Stories, recipes, and road notes — straight from the kettle. No spam, ever.",
 }: SubscribeFormProps) {
   const [email, setEmail] = useState('')

@@ -97,7 +97,7 @@ export default async function AdminBlogHome() {
       <div className="rounded-2xl border border-border bg-card p-5">
         <h2 className="font-semibold mb-3">Quick links</h2>
         <ul className="grid sm:grid-cols-2 gap-2 text-sm">
-          <li><Link href="/heat-index" className="text-salsa-600 hover:underline" target="_blank" rel="noopener noreferrer">→ View public Heat Index</Link></li>
+          <li><Link href="/heat-index" className="text-salsa-600 hover:underline" target="_blank" rel="noopener noreferrer">→ View The Heat Index (public)</Link></li>
           <li><Link href="/heat-index/rss.xml" className="text-salsa-600 hover:underline" target="_blank" rel="noopener noreferrer">→ View RSS feed</Link></li>
           <li><Link href="/admin/communications/lists" className="text-salsa-600 hover:underline">→ Subscriber lists</Link></li>
           <li><Link href="/admin/email-campaigns" className="text-salsa-600 hover:underline">→ Email campaigns</Link></li>

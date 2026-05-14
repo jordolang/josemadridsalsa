@@ -39,6 +39,8 @@ export default async function AdminCommentsPage({ searchParams }: PageProps) {
 
   const initial = rows.map((r) => ({
     id: r.id,
+    postId: r.postId,
+    parentId: r.parentId,
     body: r.body,
     status: r.status,
     createdAt: r.createdAt.toISOString(),
@@ -53,7 +55,7 @@ export default async function AdminCommentsPage({ searchParams }: PageProps) {
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Heat Index dashboard
+        Back to The Heat Index dashboard
       </Link>
       <h1 className="text-2xl font-bold mb-2">Comment moderation</h1>
       <p className="text-sm text-muted-foreground mb-6">

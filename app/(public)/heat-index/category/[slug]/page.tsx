@@ -22,12 +22,12 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
   const cat = await getCategoryBySlug(slug)
-  if (!cat) return { title: 'Category Not Found | Heat Index' }
+  if (!cat) return { title: 'Category Not Found | The Heat Index' }
   return {
     ...createMetadata({
-      title: `${cat.name} | Heat Index`,
+      title: `${cat.name} | The Heat Index`,
       description:
-        cat.description ?? `Stories in the ${cat.name} category from the Heat Index.`,
+        cat.description ?? `Stories in the ${cat.name} category from The Heat Index.`,
       pathname: `/heat-index/category/${cat.slug}`,
     }),
     alternates: {
@@ -65,7 +65,7 @@ export default async function CategoryPage({ params }: PageProps) {
             className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm mb-8 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Heat Index
+            Back to The Heat Index
           </Link>
           <div
             className="inline-flex items-center gap-2 mb-4 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-widest text-white"

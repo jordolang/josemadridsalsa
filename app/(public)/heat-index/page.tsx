@@ -17,7 +17,7 @@ export const revalidate = 300
 
 export const metadata: Metadata = {
   ...createMetadata({
-    title: 'Heat Index | Jose Madrid Salsa',
+    title: 'The Heat Index | Jose Madrid Salsa',
     description:
       'The Jose Madrid Salsa magazine: stories, recipes, road notes, and salsa lore. Updated regularly.',
     pathname: '/heat-index',
@@ -71,7 +71,7 @@ function BentoStoryCard({ post, className, accentFrom, accentTo }: BentoPost) {
       <div className="relative z-10 flex h-full min-h-[320px] flex-col justify-between p-6 sm:p-7">
         <div className="flex items-start justify-between gap-4">
           <span className="rounded-sm border border-white/40 bg-white/18 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white backdrop-blur-md">
-            {post.category?.name ?? post.series?.name ?? 'Heat Index'}
+            {post.category?.name ?? post.series?.name ?? 'The Heat Index'}
           </span>
           <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/35 bg-white/16 backdrop-blur-md">
             <Flame className="h-4 w-4" />
@@ -130,7 +130,7 @@ export default async function HeatIndexPage() {
               Jose Madrid Magazine
             </div>
             <h1 className="font-serif text-6xl font-bold tracking-[-0.04em] text-salsa-950 sm:text-7xl lg:text-8xl dark:text-white">
-              Heat Index
+              The Heat Index
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-stone-700 dark:text-stone-200">
               Stories, recipes, road notes, and salsa lore from the team behind Jose Madrid Salsa.
@@ -287,7 +287,7 @@ export default async function HeatIndexPage() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-salsa-700 dark:text-salsa-300">
                   <Tag className="inline w-3 h-3 mr-1" />
-                  More from the Heat Index
+                  More from The Heat Index
                 </p>
                 <h2 className="mt-2 font-serif text-3xl lg:text-4xl font-bold tracking-[-0.03em]">
                   Keep reading.

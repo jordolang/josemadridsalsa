@@ -38,9 +38,9 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
   const post = await getPostBySlug(slug)
-  if (!post) return { title: 'Post Not Found | Heat Index' }
+  if (!post) return { title: 'Post Not Found | The Heat Index' }
 
-  const title = post.seoTitle ?? `${post.title} | Heat Index`
+  const title = post.seoTitle ?? `${post.title} | The Heat Index`
   const description = post.seoDescription ?? post.excerpt
   const url = `${SITE_URL}/heat-index/${post.slug}`
 
@@ -200,7 +200,7 @@ export default async function PostDetailPage({ params }: PageProps) {
             className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm mb-8 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Heat Index
+            Back to The Heat Index
           </Link>
 
           <header className="mb-10">
@@ -254,20 +254,62 @@ export default async function PostDetailPage({ params }: PageProps) {
             </div>
           </header>
 
-          {post.coverImage && (
-            <div className="relative aspect-[16/9] rounded-2xl overflow-hidden mb-10 shadow-md">
+          {post.layout === 'VIDEO' && post.videoUrl ? (
+            <div className="relative aspect-video rounded-2xl overflow-hidden mb-10 shadow-md bg-black">
+              <video
+                src={post.videoUrl}
+                poster={post.coverImage ?? undefined}
+                controls
+                playsInline
+                preload="metadata"
+                className="w-full h-full"
+              />
+            </div>
+          ) : post.layout === 'MINIMAL' ? null : post.coverImage ? (
+            <div
+              className={`relative ${
+                post.layout === 'LONGFORM' ? 'aspect-[2/1]' : 'aspect-[16/9]'
+              } rounded-2xl overflow-hidden mb-10 shadow-md`}
+            >
               <Image
                 src={post.coverImage}
                 alt={post.coverImageAlt ?? post.title}
                 fill
-                sizes="(max-width: 768px) 100vw, 768px"
+                sizes="(max-width: 768px) 100vw, 1024px"
                 className="object-cover"
                 priority
               />
             </div>
+          ) : null}
+
+          {post.layout === 'GALLERY' && post.galleryImages.length > 0 && (
+            <div className="mb-10 grid grid-cols-2 md:grid-cols-3 gap-3">
+              {post.galleryImages.map((url, i) => (
+                <div
+                  key={`${url}-${i}`}
+                  className="relative aspect-square rounded-lg overflow-hidden bg-muted shadow-sm"
+                >
+                  <Image
+                    src={url}
+                    alt=""
+                    fill
+                    sizes="(max-width: 768px) 50vw, 33vw"
+                    className="object-cover"
+                  />
+                </div>
+              ))}
+            </div>
           )}
 
-          <BlogContent content={post.content} />
+          <div
+            className={
+              post.layout === 'LONGFORM'
+                ? 'prose-xl first-letter:text-7xl first-letter:font-serif first-letter:font-bold first-letter:float-left first-letter:mr-3 first-letter:leading-[0.85] first-letter:text-salsa-700'
+                : ''
+            }
+          >
+            <BlogContent content={post.content} />
+          </div>
 
           {post.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-10 pt-6 border-t border-border">
@@ -346,7 +388,7 @@ export default async function PostDetailPage({ params }: PageProps) {
             heading={
               post.series
                 ? `Follow "${post.series.name}"`
-                : 'Get the Heat Index in your inbox'
+                : 'Get The Heat Index in your inbox'
             }
             description={
               post.series
