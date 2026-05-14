@@ -27,9 +27,11 @@ export function fail(message: string, status = 400, details?: unknown) {
  */
 export function serverError(message = 'Internal server error', error?: unknown) {
   console.error('Server error:', error)
+  const details = error instanceof Error ? error.message : error !== undefined ? String(error) : undefined
   return NextResponse.json(
     {
       error: message,
+      ...(details !== undefined && { details }),
     },
     { status: 500 }
   )
