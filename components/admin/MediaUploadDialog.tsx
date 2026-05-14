@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useUploadThing } from '@/lib/uploadthing-client'
+import { getErrorMessage } from '@/lib/errors'
 
 interface MediaUploadDialogProps {
   children?: ReactNode
@@ -76,8 +77,8 @@ export default function MediaUploadDialog({ children }: MediaUploadDialogProps) 
     setIsSubmittingUrl(true)
     try {
       await saveMediaRecord(url, urlFilename || url.split('/').pop() || 'untitled', urlAlt)
-    } catch (error: any) {
-      alert(error.message)
+    } catch (error: unknown) {
+      alert(getErrorMessage(error))
     } finally {
       setIsSubmittingUrl(false)
     }

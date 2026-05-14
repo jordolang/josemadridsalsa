@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { getErrorMessage } from '@/lib/errors'
 
 interface PasswordRevealDialogProps {
   credentialId: string
@@ -51,8 +52,8 @@ export default function PasswordRevealDialog({
 
       onOpenChange(false)
       onReveal(result.password)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err))
     } finally {
       setIsRevealing(false)
     }

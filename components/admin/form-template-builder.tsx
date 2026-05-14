@@ -189,41 +189,48 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
     return 'Unknown author'
   }
 
-  const normalizeHistoryEntries = (history?: any[]): TemplateHistoryEntry[] => {
+  const normalizeHistoryEntries = (history?: unknown[]): TemplateHistoryEntry[] => {
     if (!Array.isArray(history)) {
       return []
     }
-    return history.map((entry) => ({
-      version: Number(entry.version) || 1,
-      createdAt:
-        typeof entry.createdAt === 'string'
-          ? entry.createdAt
-          : entry.createdAt instanceof Date
-            ? entry.createdAt.toISOString()
-            : new Date(entry.createdAt ?? Date.now()).toISOString(),
-      changelogNotes: entry.changelogNotes ?? null,
-      authorName: entry.authorName ?? null,
-      authorEmail: entry.authorEmail ?? null,
-      authorId: entry.authorId ?? entry.createdById ?? null,
-    }))
+    return history.map((entry: unknown) => {
+      const record = entry as Record<string, unknown>
+      return {
+        version: Number(record.version) || 1,
+        createdAt:
+          typeof record.createdAt === 'string'
+            ? record.createdAt
+            : record.createdAt instanceof Date
+              ? record.createdAt.toISOString()
+              : new Date((record.createdAt as string | number | undefined) ?? Date.now()).toISOString(),
+        changelogNotes: (record.changelogNotes as string | null | undefined) ?? null,
+        authorName: (record.authorName as string | null | undefined) ?? null,
+        authorEmail: (record.authorEmail as string | null | undefined) ?? null,
+        authorId: (record.authorId ?? (record as { createdById?: unknown }).createdById) as string | null | undefined ?? null,
+      }
+    })
   }
 
-  const transformTemplateFromServer = (template: any): BuilderTemplate => ({
-    id: template.id,
-    name: template.name,
-    categoryId: template.category,
-    description: template.description ?? '',
-    tags: template.tags ?? [],
-    estimatedCompletion: template.estimatedCompletion ?? '',
-    recommendedUses: template.recommendedUses ?? [],
-    sections: Array.isArray(template.structure?.sections) ? template.structure.sections : [],
-    publicSlug: template.slug,
-    status: template.status,
-    version: template.version,
-    source: 'saved',
-    updatedAt: template.updatedAt ?? new Date().toISOString(),
-    history: normalizeHistoryEntries(template.history ?? template.versions),
-  })
+  const transformTemplateFromServer = (template: unknown): BuilderTemplate => {
+    const t = template as Record<string, unknown>
+    const structure = t.structure as { sections?: unknown[] } | undefined
+    return {
+      id: t.id as string,
+      name: t.name as string,
+      categoryId: t.category as string,
+      description: (t.description as string | undefined) ?? '',
+      tags: Array.isArray(t.tags) ? t.tags as string[] : [],
+      estimatedCompletion: (t.estimatedCompletion as string | undefined) ?? '',
+      recommendedUses: Array.isArray(t.recommendedUses) ? t.recommendedUses as string[] : [],
+      sections: Array.isArray(structure?.sections) ? structure.sections as BusinessFormSection[] : [],
+      publicSlug: (t.slug as string | undefined) ?? '',
+      status: t.status as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | undefined,
+      version: t.version as number | undefined,
+      source: 'saved',
+      updatedAt: (t.updatedAt as string | undefined) ?? new Date().toISOString(),
+      history: normalizeHistoryEntries((t.history ?? (t as { versions?: unknown[] }).versions) as unknown[]),
+    }
+  }
 
   const persistTemplate = (status: 'DRAFT' | 'PUBLISHED') => {
     if (!selectedTemplate) {

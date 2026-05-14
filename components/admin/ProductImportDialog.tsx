@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getErrorMessage } from '@/lib/errors';
 
 interface ProductImportDialogProps {
   open: boolean;
@@ -108,10 +109,10 @@ export function ProductImportDialog({
           handleClose();
         }, 2000);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setResult({
         success: false,
-        errors: [error.message || 'An error occurred during upload'],
+        errors: [getErrorMessage(error)],
       });
     } finally {
       setIsUploading(false);
@@ -206,7 +207,7 @@ export function ProductImportDialog({
             <Label htmlFor="fileType">File Type</Label>
             <Select
               value={fileType}
-              onValueChange={(value: any) => setFileType(value)}
+              onValueChange={(value) => setFileType(value as 'json' | 'csv' | 'excel')}
               disabled={isUploading}
             >
               <SelectTrigger id="fileType">

@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
+import { Prisma, HeatLevel } from '@prisma/client'
+import { getErrorMessage } from '@/lib/errors'
 
 export interface ProductFilters {
   category?: string
@@ -13,6 +14,13 @@ export interface ProductFilters {
   take?: number
   skip?: number
   sortOrder?: 'asc' | 'desc'
+}
+
+/**
+ * Type guard to check if a string is a valid HeatLevel
+ */
+function isValidHeatLevel(value: string): value is HeatLevel {
+  return ['MILD', 'MEDIUM', 'HOT', 'EXTRA_HOT', 'FRUIT'].includes(value)
 }
 
 /**
@@ -38,8 +46,8 @@ export async function getProducts(filters: ProductFilters = {}) {
     isActive: true,
   }
 
-  if (heatLevel && heatLevel !== 'all') {
-    where.heatLevel = heatLevel as any
+  if (heatLevel && heatLevel !== 'all' && isValidHeatLevel(heatLevel)) {
+    where.heatLevel = heatLevel
   }
 
   if (search) {
@@ -140,9 +148,9 @@ export async function getProducts(filters: ProductFilters = {}) {
         price: variant.price ? parseFloat(String(variant.price)) : null,
       })),
     }))
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching products:', error)
-    throw new Error(`Failed to fetch products: ${error.message}`)
+    throw new Error(`Failed to fetch products: ${getErrorMessage(error)}`)
   }
 }
 
@@ -187,9 +195,9 @@ export async function getProductBySlug(slug: string) {
         price: variant.price ? parseFloat(String(variant.price)) : null,
       })),
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching product by slug:', error)
-    throw new Error(`Failed to fetch product: ${error.message}`)
+    throw new Error(`Failed to fetch product: ${getErrorMessage(error)}`)
   }
 }
 
@@ -220,9 +228,9 @@ export async function getCategories() {
 
     // Only return categories that have products
     return categories.filter((category) => category._count.products > 0)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching categories:', error)
-    throw new Error(`Failed to fetch categories: ${error.message}`)
+    throw new Error(`Failed to fetch categories: ${getErrorMessage(error)}`)
   }
 }
 
@@ -246,8 +254,8 @@ export async function getProductsCount(filters: Omit<ProductFilters, 'take' | 's
     isActive: true,
   }
 
-  if (heatLevel && heatLevel !== 'all') {
-    where.heatLevel = heatLevel as any
+  if (heatLevel && heatLevel !== 'all' && isValidHeatLevel(heatLevel)) {
+    where.heatLevel = heatLevel
   }
 
   if (search) {
@@ -314,8 +322,8 @@ export async function getProductsCount(filters: Omit<ProductFilters, 'take' | 's
 
   try {
     return await prisma.product.count({ where })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error counting products:', error)
-    throw new Error(`Failed to count products: ${error.message}`)
+    throw new Error(`Failed to count products: ${getErrorMessage(error)}`)
   }
 }

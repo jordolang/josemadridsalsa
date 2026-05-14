@@ -4,6 +4,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import type {
   RetailLocationRecord,
   LocationFilters,
@@ -11,6 +12,13 @@ import type {
   LocationsQueryResult,
 } from './shared'
 import { normalizeFilters } from './shared'
+
+// Type for location with photos included
+type LocationWithPhotos = Prisma.RetailLocationGetPayload<{
+  include: {
+    photos: true
+  }
+}>
 
 // Haversine distance formula (miles)
 function haversineMiles(
@@ -35,7 +43,7 @@ function haversineMiles(
 
 // Transform database location to RetailLocationRecord
 function transformLocation(
-  loc: any,
+  loc: LocationWithPhotos,
   userLat?: number,
   userLng?: number
 ): RetailLocationRecord {
@@ -64,7 +72,7 @@ function transformLocation(
 
   // Transform photos array to photoGallery
   const photoGallery = loc.photos
-    ? loc.photos.map((p: any) => p.url).sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+    ? loc.photos.sort((a, b) => a.sortOrder - b.sortOrder).map((p) => p.url)
     : []
 
   return {
@@ -145,7 +153,7 @@ export async function filterLocationsFromDB(
   const normalized = normalizeFilters(filters)
 
   // Build where clause
-  const where: any = {
+  const where: Prisma.RetailLocationWhereInput = {
     isActive: true,
   }
 

@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Wand2, RefreshCw } from 'lucide-react'
+import { getErrorMessage } from '@/lib/errors'
 
 const credentialSchema = (mode: 'create' | 'edit') =>
   z.object({
@@ -164,8 +165,8 @@ export default function CredentialFormDialog({
       onOpenChange(false)
       router.refresh()
       onSuccess()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err))
     } finally {
       setIsSubmitting(false)
     }

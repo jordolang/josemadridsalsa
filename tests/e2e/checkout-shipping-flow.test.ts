@@ -17,6 +17,15 @@ import prisma from '@/lib/prisma'
  * - Next.js development server running on http://localhost:3000
  */
 
+/**
+ * Shipping option structure returned from API
+ */
+interface ShippingOption {
+  method: string
+  cost: number
+  estimatedDays: string
+  estimatedDeliveryDate?: string
+}
 
 describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
   let testProductId: string | null = null
@@ -125,7 +134,7 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
 
       if (data.availableOptions && data.availableOptions.length > 0) {
         // Verify each option has required fields
-        data.availableOptions.forEach((option: any) => {
+        data.availableOptions.forEach((option: ShippingOption) => {
           expect(option).toHaveProperty('method')
           expect(option).toHaveProperty('cost')
           expect(option).toHaveProperty('estimatedDays')
@@ -135,7 +144,7 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
         })
 
         console.log('✓ Available shipping options:')
-        data.availableOptions.forEach((option: any, index: number) => {
+        data.availableOptions.forEach((option: ShippingOption, index: number) => {
           console.log(`  ${index + 1}. ${option.method}: $${option.cost.toFixed(2)} (${option.estimatedDays})`)
         })
 
@@ -177,7 +186,7 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
 
       if (data.availableOptions && data.availableOptions.length > 0) {
         // Check each option is within realistic bounds
-        data.availableOptions.forEach((option: any) => {
+        data.availableOptions.forEach((option: ShippingOption) => {
           expect(option.cost).toBeGreaterThanOrEqual(0) // Can be 0 for free shipping
           expect(option.cost).toBeLessThan(50) // Should not exceed $50 for domestic
         })
@@ -231,7 +240,7 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
 
       if (subtotal >= 50) {
         // Should have at least one free shipping option
-        const hasFreeOption = data.availableOptions?.some((opt: any) => opt.cost === 0)
+        const hasFreeOption = data.availableOptions?.some((opt: ShippingOption) => opt.cost === 0)
 
         if (hasFreeOption) {
           console.log('✓ Free shipping option available for orders over $50')
@@ -534,19 +543,19 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
 
         if (data.availableOptions && data.availableOptions.length > 0) {
           // Verify all options are USPS only
-          const allOptionsAreUSPS = data.availableOptions.every((option: any) =>
+          const allOptionsAreUSPS = data.availableOptions.every((option: ShippingOption) =>
             option.method.toUpperCase().includes('USPS')
           )
 
           console.log(`  "${poBoxAddress}": ${data.availableOptions.length} options, USPS only: ${allOptionsAreUSPS}`)
 
           if (!allOptionsAreUSPS) {
-            console.log('  Options returned:', data.availableOptions.map((o: any) => o.method))
+            console.log('  Options returned:', data.availableOptions.map((o: ShippingOption) => o.method))
             console.log('  ⚠️  Non-USPS carriers detected for PO Box address')
           }
 
           // Log options for verification
-          data.availableOptions.forEach((option: any) => {
+          data.availableOptions.forEach((option: ShippingOption) => {
             console.log(`    - ${option.method}: $${option.cost.toFixed(2)}`)
           })
 
@@ -585,7 +594,7 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
 
       if (data.availableOptions && data.availableOptions.length > 0) {
         const carriers = new Set(
-          data.availableOptions.map((option: any) => {
+          data.availableOptions.map((option: ShippingOption) => {
             const carrier = option.method.split(' ')[0]
             return carrier
           })
@@ -594,7 +603,7 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
         console.log(`  Carriers available: ${Array.from(carriers).join(', ')}`)
         console.log(`  Total options: ${data.availableOptions.length}`)
 
-        data.availableOptions.forEach((option: any) => {
+        data.availableOptions.forEach((option: ShippingOption) => {
           console.log(`    - ${option.method}: $${option.cost.toFixed(2)}`)
         })
 
@@ -632,12 +641,12 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
       console.log('✓ PO Box in address line 2:')
 
       if (data.availableOptions && data.availableOptions.length > 0) {
-        const allOptionsAreUSPS = data.availableOptions.every((option: any) =>
+        const allOptionsAreUSPS = data.availableOptions.every((option: ShippingOption) =>
           option.method.toUpperCase().includes('USPS')
         )
 
         console.log(`  All options USPS: ${allOptionsAreUSPS}`)
-        data.availableOptions.forEach((option: any) => {
+        data.availableOptions.forEach((option: ShippingOption) => {
           console.log(`    - ${option.method}: $${option.cost.toFixed(2)}`)
         })
 
@@ -698,7 +707,7 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
 
       // Verify both are USPS only
       if (akPoBoxData.availableOptions && akPoBoxData.availableOptions.length > 0) {
-        const akAllUSPS = akPoBoxData.availableOptions.every((opt: any) =>
+        const akAllUSPS = akPoBoxData.availableOptions.every((opt: ShippingOption) =>
           opt.method.toUpperCase().includes('USPS')
         )
         expect(akAllUSPS).toBe(true)
@@ -706,7 +715,7 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
       }
 
       if (caPoBoxData.availableOptions && caPoBoxData.availableOptions.length > 0) {
-        const caAllUSPS = caPoBoxData.availableOptions.every((opt: any) =>
+        const caAllUSPS = caPoBoxData.availableOptions.every((opt: ShippingOption) =>
           opt.method.toUpperCase().includes('USPS')
         )
         expect(caAllUSPS).toBe(true)

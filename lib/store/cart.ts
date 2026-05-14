@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import type { StateCreator } from 'zustand'
 
 export interface CartItem {
   id: string
@@ -58,12 +59,12 @@ async function trackCartChanges(items: CartItem[], guestEmail?: string) {
   }, 2000)
 }
 
-const cartStoreConfig = (set: any, get: any): CartStore => ({
+const cartStoreConfig: StateCreator<CartStore> = (set, get) => ({
   items: [],
   isOpen: false,
   guestEmail: undefined,
 
-  addItem: (newItem: any) => {
+  addItem: (newItem: Omit<CartItem, 'quantity'> & { quantity?: number }) => {
     const items = get().items
     const existingItem = items.find((item: CartItem) => item.id === newItem.id)
 

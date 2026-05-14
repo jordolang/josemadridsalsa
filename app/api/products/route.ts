@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { ok, serverError } from '@/lib/api'
 
 // Fallback data to keep the homepage stable even if the database is down
 const mockProducts = [
@@ -176,12 +177,8 @@ export async function GET(request: NextRequest) {
       productIngredients: product.productIngredients || [],
     }))
 
-    return NextResponse.json(parsedProducts)
-  } catch (error: any) {
-    console.error('Error fetching products:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch products', details: error.message },
-      { status: 500 }
-    )
+    return ok(parsedProducts)
+  } catch (error: unknown) {
+    return serverError('Failed to fetch products', error)
   }
 }

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -76,19 +76,15 @@ async function main() {
 
   for (const mapping of photoMappings) {
     // Build where clause
-    const where: any = {
+    const where: Prisma.RetailLocationWhereInput = {
       isActive: true,
       businessName: mapping.businessName,
-    }
-
-    if (mapping.city) {
-      where.city = mapping.city
-    }
-
-    if (mapping.addressContains) {
-      where.address = {
-        contains: mapping.addressContains,
-      }
+      ...(mapping.city && { city: mapping.city }),
+      ...(mapping.addressContains && {
+        address: {
+          contains: mapping.addressContains,
+        },
+      }),
     }
 
     const location = await prisma.retailLocation.findFirst({ where })
@@ -125,7 +121,7 @@ async function main() {
 }
 
 main()
-  .catch((e) => {
+  .catch((e: unknown) => {
     console.error('❌ Error:', e)
     process.exit(1)
   })

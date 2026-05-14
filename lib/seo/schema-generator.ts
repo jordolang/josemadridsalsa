@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { StructuredDataType } from '@prisma/client'
+import { StructuredDataType, Prisma } from '@prisma/client'
 
 export interface OrganizationSchema {
   '@context': 'https://schema.org'
@@ -273,7 +273,7 @@ export async function saveStructuredData(
   entityType: StructuredDataType,
   entityId: string,
   schemaType: string,
-  jsonLd: any
+  jsonLd: unknown
 ): Promise<void> {
   await prisma.structuredData.upsert({
     where: {
@@ -286,10 +286,10 @@ export async function saveStructuredData(
       entityType,
       entityId,
       schemaType,
-      jsonLd,
+      jsonLd: jsonLd as Prisma.InputJsonValue,
     },
     update: {
-      jsonLd,
+      jsonLd: jsonLd as Prisma.InputJsonValue,
     },
   })
 }

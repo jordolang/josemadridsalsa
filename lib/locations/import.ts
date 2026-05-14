@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import Papa from 'papaparse'
+import { getErrorMessage } from '@/lib/errors'
 
 export const LocationImportSchema = z.object({
   businessName: z.string().min(1),
@@ -19,7 +20,7 @@ export const LocationImportSchema = z.object({
 
 export type LocationImportRow = z.infer<typeof LocationImportSchema>
 
-export async function importLocations(rows: any[], updateExisting = true): Promise<{
+export async function importLocations(rows: unknown[], updateExisting = true): Promise<{
   created: number
   updated: number
   errors: Array<{ row: number; message: string }>
@@ -46,19 +47,19 @@ export async function importLocations(rows: any[], updateExisting = true): Promi
       if (existing && updateExisting) {
         await prisma.retailLocation.update({
           where: { id: existing.id },
-          data: validated as any,
+          data: validated,
         })
         result.updated++
       } else if (!existing) {
         await prisma.retailLocation.create({
-          data: validated as any,
+          data: validated,
         })
         result.created++
       }
-    } catch (error) {
+    } catch (error: unknown) {
       result.errors.push({
         row: i + 2,
-        message: String(error),
+        message: getErrorMessage(error),
       })
     }
   }

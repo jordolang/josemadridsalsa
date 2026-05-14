@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { Search, Star } from 'lucide-react'
+import { Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
@@ -58,15 +59,22 @@ const REVIEW_STATUS_VARIANT: Record<
   REJECTED: 'destructive',
 }
 
+/**
+ * Type guard to check if a string is a valid ReviewStatus
+ */
+function isValidReviewStatus(value: string): value is ReviewStatus {
+  return ['PENDING', 'APPROVED', 'REJECTED'].includes(value)
+}
+
 async function getReviews(searchParams: SearchParams) {
   const page = Number(searchParams.page) || 1
   const limit = 25
   const skip = (page - 1) * limit
 
-  const where: any = {}
+  const where: Prisma.ReviewWhereInput = {}
 
   const status = searchParams.status?.toUpperCase()
-  if (status && status !== 'ALL') {
+  if (status && status !== 'ALL' && isValidReviewStatus(status)) {
     where.status = status
   }
 

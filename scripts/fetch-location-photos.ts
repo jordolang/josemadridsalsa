@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, RetailLocation } from '@prisma/client';
 import pLimit from 'p-limit';
 import * as fs from 'fs';
 import {
@@ -6,6 +6,7 @@ import {
   getBestPhotoUrlForPlace,
   getCompanyLogoFromWebsite,
 } from '../lib/google-places';
+import { getErrorMessage } from '../lib/errors';
 
 const prisma = new PrismaClient();
 
@@ -22,7 +23,7 @@ const missingPhotos: MissingPhoto[] = [];
 const args = process.argv.slice(2);
 const forceRefetch = args.includes('--force');
 
-async function fetchPhotoForLocation(location: any) {
+async function fetchPhotoForLocation(location: RetailLocation) {
   const { id, businessName, address, city, state, website, photoUrl } = location;
   
   // Skip if already has photo and not forcing
@@ -94,20 +95,20 @@ async function fetchPhotoForLocation(location: any) {
       reason: placeResult ? 'No photos in Google Places' : 'No Google Places match',
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`   ✗ Error processing ${businessName}:`, error);
-    
+
     // Set placeholder on error
     await prisma.retailLocation.update({
       where: { id },
       data: { photoUrl: '/images/store-placeholder.png' },
     });
-    
+
     missingPhotos.push({
       businessName,
       city,
       state,
-      reason: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      reason: `Error: ${getErrorMessage(error)}`,
     });
   }
 }
@@ -179,7 +180,7 @@ async function main() {
 }
 
 main()
-  .catch((e) => {
+  .catch((e: unknown) => {
     console.error('❌ Error:', e);
     process.exit(1);
   })

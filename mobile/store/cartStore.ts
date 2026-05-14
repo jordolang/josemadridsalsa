@@ -12,6 +12,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import type { StateCreator } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
@@ -62,6 +63,29 @@ interface CartState {
   totalPrice: () => number;
 }
 
+const cartStoreConfig: StateCreator<CartState> = (set, get) => ({
+  items: [],
+  addItem: (product) => set((state) => {
+    const index = state.items.findIndex((i) => i.id === product.id);
+    if (index >= 0) {
+      return {
+        items: state.items.map((item, i) =>
+          i === index ? { ...item, quantity: item.quantity + 1 } : item
+        ),
+      };
+    }
+    return {
+      items: [...state.items, { id: product.id, name: product.name, price: product.price, quantity: 1 }]
+    };
+  }),
+  removeItem: (id) => set((state) => ({
+    items: state.items.filter((i) => i.id !== id)
+  })),
+  clearCart: () => set({ items: [] }),
+  totalQuantity: () => get().items.reduce((total, item) => total + item.quantity, 0),
+  totalPrice: () => get().items.reduce((total, item) => total + (item.price * item.quantity), 0)
+});
+
 /**
  * Zustand hook for shopping cart state.
  *
@@ -80,32 +104,8 @@ interface CartState {
  * ```
  */
 export const useCartStore = create<CartState>()(
-  persist(
-    (set, get) => ({
-      items: [],
-      addItem: (product) => set((state) => {
-        const index = state.items.findIndex(i => i.id === product.id);
-        if (index >= 0) {
-          return {
-            items: state.items.map((item, i) =>
-              i === index ? { ...item, quantity: item.quantity + 1 } : item
-            ),
-          };
-        }
-        return {
-          items: [...state.items, { id: product.id, name: product.name, price: product.price, quantity: 1 }]
-        };
-      }),
-      removeItem: (id) => set((state) => ({
-        items: state.items.filter(i => i.id !== id)
-      })),
-      clearCart: () => set({ items: [] }),
-      totalQuantity: () => get().items.reduce((total, item) => total + item.quantity, 0),
-      totalPrice: () => get().items.reduce((total, item) => total + (item.price * item.quantity), 0)
-    }),
-    {
-      name: 'cart-storage',
-      storage: createJSONStorage(() => AsyncStorage),
-    }
-  )
+  persist(cartStoreConfig, {
+    name: 'cart-storage',
+    storage: createJSONStorage(() => AsyncStorage),
+  })
 );
