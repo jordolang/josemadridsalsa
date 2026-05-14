@@ -68,6 +68,7 @@
     "@amplitude/plugin-session-replay-browser": "^1.25.5",
     "@anthropic-ai/sdk": "^0.71.2",
     "@auth/prisma-adapter": "^2.11.0",
+    "@easypost/api": "^8.0.0",
     "@google-analytics/data": "^5.2.1",
     "@googleapis/calendar": "^14.2.0",
     "@growthbook/growthbook-react": "^1.6.5",

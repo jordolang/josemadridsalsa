@@ -304,23 +304,33 @@ export async function POST(request: NextRequest) {
     })
 
     // Log order creation audit event
-    await logAuditWithRequest(
-      {
-        userId: user?.id,
-        action: 'create',
-        entityType: 'Order',
-        entityId: order.id,
-        changes: {
-          orderNumber: order.orderNumber,
-          total: Number(order.total),
-          items: orderItems.length,
-          customer: user ? user.email : customer.email,
+    try {
+      await logAuditWithRequest(
+        {
+          userId: user?.id,
+          action: 'create',
+          entityType: 'Order',
+          entityId: order.id,
+          changes: {
+            orderNumber: order.orderNumber,
+            total: Number(order.total),
+            items: orderItems.length,
+            customer: user ? user.email : customer.email,
+          },
         },
-      },
-      request
-    )
+        request
+      )
+    } catch (error) {
+      console.error('[Checkout] Failed to log audit:', error)
+      // Don't block checkout if audit logging fails
+    }
 
-    queueShopifySync(order.id)
+    try {
+      queueShopifySync(order.id)
+    } catch (error) {
+      console.error('[Checkout] Failed to queue Shopify sync:', error)
+      // Don't block checkout if Shopify sync fails
+    }
 
     const paymentAdapter = getProvider('STRIPE')
 

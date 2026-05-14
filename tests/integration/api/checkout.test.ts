@@ -111,6 +111,21 @@ vi.mock('@/lib/shipping-calculator', () => ({
   })),
 }))
 
+vi.mock('@/lib/inventory-manager', () => ({
+  reserveMultipleProducts: vi.fn(() => Promise.resolve([
+    {
+      productId: 'clxxx1234567890abc',
+      quantity: 2,
+      reservedAt: new Date(),
+    },
+  ])),
+  releaseInventory: vi.fn(() => Promise.resolve()),
+}))
+
+vi.mock('@/lib/fundraising/referral-tracker', () => ({
+  getReferralFromCode: vi.fn(() => Promise.resolve(null)),
+}))
+
 describe('Checkout API Integration Tests', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -579,6 +594,11 @@ describe('Checkout API Integration Tests', () => {
         new Error('Insufficient inventory for product Test Salsa')
       )
 
+      // Mock reservation failure due to insufficient inventory
+      vi.mocked(reserveMultipleProducts).mockRejectedValue(
+        new Error('Insufficient inventory for product Test Salsa')
+      )
+
       const request = new NextRequest('http://localhost/api/checkout', {
         method: 'POST',
         body: JSON.stringify(validCheckoutData),
@@ -672,6 +692,409 @@ describe('Checkout API Integration Tests', () => {
 
       expect(response.status).toBe(500)
       expect(data.error).toBe('Unable to initiate checkout. Please try again.')
+    })
+
+    it('should handle products without weight using default', async () => {
+      const { default: prisma } = await import('@/lib/prisma')
+      const { getCurrentUser } = await import('@/lib/rbac')
+      const { calculateShipping } = await import('@/lib/shipping-calculator')
+
+      const productNoWeight = {
+        ...mockProduct,
+        weight: null,
+      }
+
+      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(prisma.product.findMany).mockResolvedValue([productNoWeight] as any)
+      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify(validCheckoutData),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.clientSecret).toBeDefined()
+
+      // Verify shipping was calculated with default weight of 1.0 lb
+      expect(calculateShipping).toHaveBeenCalledWith(
+        expect.objectContaining({
+          items: expect.arrayContaining([
+            expect.objectContaining({
+              weight: 1.0, // Default weight
+              quantity: 2,
+            }),
+          ]),
+        })
+      )
+    })
+
+    it('should handle payment creation failure', async () => {
+      const { default: prisma } = await import('@/lib/prisma')
+      const { getCurrentUser } = await import('@/lib/rbac')
+      const { calculateTax } = await import('@/lib/tax-calculator')
+      const { calculateShipping } = await import('@/lib/shipping-calculator')
+
+      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
+      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
+
+      // Ensure tax and shipping calculations succeed
+      vi.mocked(calculateTax).mockResolvedValue({
+        taxAmountDecimal: 2.5,
+        taxRate: 0.08,
+        taxBreakdown: [{ jurisdiction: 'Oregon', rate: 0.08, amount: 2.5 }],
+      })
+      vi.mocked(calculateShipping).mockReturnValue({
+        shippingCost: 8.99,
+        shippingMethod: 'Standard Shipping',
+        estimatedDelivery: '5-7 business days',
+      })
+
+      // Mock payment creation failure
+      mockCreatePayment.mockResolvedValue({
+        success: false,
+        error: 'Stripe API error',
+      })
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify(validCheckoutData),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(500)
+      expect(data.error).toBe('Unable to initiate checkout. Please try again.')
+    })
+
+    it('should handle Shopify sync failure gracefully', async () => {
+      const { default: prisma } = await import('@/lib/prisma')
+      const { getCurrentUser } = await import('@/lib/rbac')
+      const { queueShopifySync } = await import('@/lib/shopify/sync')
+
+      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
+      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
+
+      // Mock Shopify sync failure (synchronous throw)
+      vi.mocked(queueShopifySync).mockImplementation(() => {
+        throw new Error('Shopify sync error')
+      })
+
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify(validCheckoutData),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      // Should still succeed despite Shopify sync failure
+      expect(response.status).toBe(200)
+      expect(data.clientSecret).toBeDefined()
+
+      // Verify error was logged
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[Checkout] Failed to queue Shopify sync:',
+        expect.any(Error)
+      )
+
+      consoleErrorSpy.mockRestore()
+    })
+
+    it('should handle audit logging failure gracefully', async () => {
+      const { default: prisma } = await import('@/lib/prisma')
+      const { getCurrentUser } = await import('@/lib/rbac')
+      const { logAuditWithRequest } = await import('@/lib/audit')
+
+      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
+      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
+
+      // Mock audit logging failure
+      vi.mocked(logAuditWithRequest).mockRejectedValue(new Error('Audit log error'))
+
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify(validCheckoutData),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      // Should still succeed despite audit logging failure
+      expect(response.status).toBe(200)
+      expect(data.clientSecret).toBeDefined()
+
+      // Verify error was logged
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[Checkout] Failed to log audit:',
+        expect.any(Error)
+      )
+
+      consoleErrorSpy.mockRestore()
+    })
+
+    it('should handle different shipping states correctly', async () => {
+      const { default: prisma } = await import('@/lib/prisma')
+      const { getCurrentUser } = await import('@/lib/rbac')
+      const { calculateTax } = await import('@/lib/tax-calculator')
+      const { calculateShipping } = await import('@/lib/shipping-calculator')
+
+      const californiaCheckout = {
+        ...validCheckoutData,
+        shipping: {
+          address1: '456 Oak Ave',
+          city: 'Los Angeles',
+          state: 'CA',
+          postalCode: '90001',
+        },
+      }
+
+      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
+      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
+
+      // Mock higher tax rate for California
+      vi.mocked(calculateTax).mockResolvedValue({
+        taxAmountDecimal: 1.8,
+        taxRate: 0.1,
+        taxBreakdown: [
+          {
+            jurisdiction: 'California',
+            rate: 0.1,
+            amount: 1.8,
+          },
+        ],
+      })
+
+      // Mock different shipping cost for California
+      vi.mocked(calculateShipping).mockReturnValue({
+        shippingCost: 12.99,
+        shippingMethod: 'Standard Shipping',
+        estimatedDelivery: '5-7 business days',
+      })
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify(californiaCheckout),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.clientSecret).toBeDefined()
+
+      // Verify tax calculator was called with CA address
+      expect(calculateTax).toHaveBeenCalledWith(
+        expect.objectContaining({
+          shippingAddress: expect.objectContaining({
+            line1: '456 Oak Ave',
+            city: 'Los Angeles',
+            state: 'CA',
+            postalCode: '90001',
+          }),
+        })
+      )
+
+      // Verify shipping calculator was called with CA address
+      expect(calculateShipping).toHaveBeenCalledWith(
+        expect.objectContaining({
+          shippingAddress: expect.objectContaining({
+            state: 'CA',
+            postalCode: '90001',
+          }),
+        })
+      )
+    })
+
+    it('should handle Alaska shipping addresses', async () => {
+      const { default: prisma } = await import('@/lib/prisma')
+      const { getCurrentUser } = await import('@/lib/rbac')
+      const { calculateShipping } = await import('@/lib/shipping-calculator')
+
+      const alaskaCheckout = {
+        ...validCheckoutData,
+        shipping: {
+          address1: '123 Main St',
+          city: 'Anchorage',
+          state: 'AK',
+          postalCode: '99501',
+        },
+      }
+
+      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
+      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
+
+      // Mock Alaska shipping with higher cost
+      vi.mocked(calculateShipping).mockReturnValue({
+        shippingCost: 19.99,
+        shippingMethod: 'Standard Shipping',
+        estimatedDelivery: '7-10 business days',
+      })
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify(alaskaCheckout),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.clientSecret).toBeDefined()
+
+      // Verify shipping calculator was called with Alaska address
+      expect(calculateShipping).toHaveBeenCalledWith(
+        expect.objectContaining({
+          shippingAddress: expect.objectContaining({
+            state: 'AK',
+            postalCode: '99501',
+          }),
+        })
+      )
+
+      // Verify payment includes Alaska shipping address
+      expect(mockCreatePayment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          shippingAddress: expect.objectContaining({
+            line1: '123 Main St',
+            city: 'Anchorage',
+            state: 'AK',
+            postalCode: '99501',
+          }),
+        })
+      )
+    })
+
+    it('should validate quantity is positive', async () => {
+      const invalidQuantityData = {
+        ...validCheckoutData,
+        items: [
+          {
+            productId: 'clxxx1234567890abc',
+            quantity: -1, // Invalid negative quantity
+          },
+        ],
+      }
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify(invalidQuantityData),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toBe('Invalid checkout payload')
+      expect(data.details).toBeDefined()
+    })
+
+    it('should validate postal code is required', async () => {
+      const invalidPostalCodeData = {
+        ...validCheckoutData,
+        shipping: {
+          ...validCheckoutData.shipping,
+          postalCode: '', // Empty postal code
+        },
+      }
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify(invalidPostalCodeData),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toBe('Invalid checkout payload')
+      expect(data.details).toBeDefined()
+    })
+
+    it('should validate state is required', async () => {
+      const invalidStateData = {
+        ...validCheckoutData,
+        shipping: {
+          ...validCheckoutData.shipping,
+          state: '', // Empty state
+        },
+      }
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify(invalidStateData),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toBe('Invalid checkout payload')
+      expect(data.details).toBeDefined()
+    })
+
+    it('should handle combined weight calculation for multiple items', async () => {
+      const { default: prisma } = await import('@/lib/prisma')
+      const { getCurrentUser } = await import('@/lib/rbac')
+      const { calculateShipping } = await import('@/lib/shipping-calculator')
+
+      const mockProduct2 = {
+        ...mockProduct,
+        id: 'clxxx0987654321xyz',
+        weight: 2.0,
+      }
+
+      const multiItemCheckout = {
+        ...validCheckoutData,
+        items: [
+          { productId: 'clxxx1234567890abc', quantity: 2 }, // 1.5 lb each
+          { productId: 'clxxx0987654321xyz', quantity: 1 }, // 2.0 lb each
+        ],
+      }
+
+      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct, mockProduct2] as any)
+      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify(multiItemCheckout),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.clientSecret).toBeDefined()
+
+      // Verify shipping was calculated with combined weights
+      expect(calculateShipping).toHaveBeenCalledWith(
+        expect.objectContaining({
+          items: expect.arrayContaining([
+            expect.objectContaining({
+              weight: 1.5,
+              quantity: 2,
+            }),
+            expect.objectContaining({
+              weight: 2.0,
+              quantity: 1,
+            }),
+          ]),
+        })
+      )
     })
   })
 })

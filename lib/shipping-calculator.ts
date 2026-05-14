@@ -176,19 +176,39 @@ async function getFreeShippingThreshold(): Promise<number> {
 }
 
 /**
- * Calculate parcel dimensions from order items
+ * Standard shipping box sizes (USPS/UPS/FedEx common sizes)
+ * Dimensions in inches: length x width x height
+ * Sorted by volume (smallest to largest) for optimal box selection
+ */
+const STANDARD_BOXES = [
+  { name: 'Small', length: 8, width: 6, height: 4, volume: 192 },
+  { name: 'Medium Flat', length: 12, width: 9, height: 3, volume: 324 },
+  { name: 'Medium', length: 11, width: 8.5, height: 5.5, volume: 514 },
+  { name: 'Large Flat', length: 15, width: 12, height: 3, volume: 540 },
+  { name: 'Large', length: 16, width: 12, height: 8, volume: 1536 },
+  { name: 'Extra Large', length: 18, width: 14, height: 12, volume: 3024 },
+  { name: 'Oversized', length: 24, width: 18, height: 12, volume: 5184 },
+] as const
+
+/**
+ * Calculate parcel dimensions from order items using bin packing
  *
- * Simple aggregation strategy for MVP - sums dimensions
- * Future: Implement bin packing algorithm for optimal box selection
+ * Strategy:
+ * 1. Calculate total volume of all items
+ * 2. Find smallest standard box that can fit the volume
+ * 3. Verify largest item dimensions fit within selected box
+ * 4. Fall back to custom dimensions if no standard box fits
  */
 function calculateParcelDimensions(
   items: ShippingCalculationInput['items']
 ): Parcel {
   let totalWeight = 0
-  let maxLength = 0
-  let maxWidth = 0
-  let totalHeight = 0
+  let totalVolume = 0
+  let maxItemLength = 0
+  let maxItemWidth = 0
+  let maxItemHeight = 0
 
+  // Collect item dimensions and calculate totals
   for (const item of items) {
     // Weight in pounds -> convert to ounces
     const itemWeight = (item.weight || 1.0) * 16 // Default 1 lb = 16 oz
@@ -196,17 +216,75 @@ function calculateParcelDimensions(
 
     // Dimensions - use defaults if not provided
     const dims = item.dimensions || { length: 10, width: 8, height: 2 }
+    const length = dims.length || 10
+    const width = dims.width || 8
+    const height = dims.height || 2
 
-    // Simple box aggregation: max length/width, sum heights
-    maxLength = Math.max(maxLength, dims.length || 10)
-    maxWidth = Math.max(maxWidth, dims.width || 8)
-    totalHeight += (dims.height || 2) * item.quantity
+    // Calculate volume for each item instance
+    const itemVolume = length * width * height
+    totalVolume += itemVolume * item.quantity
+
+    // Track largest individual item dimensions (for fit check)
+    maxItemLength = Math.max(maxItemLength, length)
+    maxItemWidth = Math.max(maxItemWidth, width)
+    maxItemHeight = Math.max(maxItemHeight, height)
   }
 
+  // Calculate total stacked height (sum of all item heights) for per-dimension check
+  const totalStackedHeight = items.reduce((sum, item) => {
+    const height = item.dimensions?.height || 2
+    return sum + height * item.quantity
+  }, 0)
+
+  // Find the smallest standard box that can fit all items
+  for (const box of STANDARD_BOXES) {
+    // Check if total volume fits
+    if (totalVolume <= box.volume) {
+      // Verify largest item dimensions fit within box
+      // Items can be rotated, so check if dimensions fit in any orientation
+      const itemDimensions = [maxItemLength, maxItemWidth, maxItemHeight].sort(
+        (a, b) => b - a
+      )
+      const boxDimensions = [box.length, box.width, box.height].sort((a, b) => b - a)
+
+      // Check if each item dimension fits within corresponding box dimension
+      if (
+        itemDimensions[0] <= boxDimensions[0] &&
+        itemDimensions[1] <= boxDimensions[1] &&
+        itemDimensions[2] <= boxDimensions[2]
+      ) {
+        // Also verify all units physically stack within the box's shortest dimension.
+        // Volume alone doesn't guarantee fit (e.g. two flat items may not stack in a
+        // shallow box). Use the smallest box dimension as the stacking axis.
+        if (totalStackedHeight <= boxDimensions[2]) {
+          // Found a suitable standard box
+          return {
+            length: box.length,
+            width: box.width,
+            height: box.height,
+            weight: totalWeight,
+          }
+        }
+      }
+    }
+  }
+
+  // Fallback: No standard box fits, use custom dimensions
+  // Use max dimensions approach with height stacking
+  const maxLength = maxItemLength
+  const maxWidth = maxItemWidth
+  const stackedHeight = Math.min(
+    items.reduce((sum, item) => {
+      const height = item.dimensions?.height || 2
+      return sum + height * item.quantity
+    }, 0),
+    24 // Cap at 24 inches for carrier limits
+  )
+
   return {
-    length: maxLength,
-    width: maxWidth,
-    height: Math.min(totalHeight, 24), // Cap at 24 inches
+    length: Math.max(maxLength, 10), // Minimum 10 inches
+    width: Math.max(maxWidth, 8), // Minimum 8 inches
+    height: Math.max(stackedHeight, 2), // Minimum 2 inches
     weight: totalWeight,
   }
 }
@@ -275,6 +353,8 @@ function calculateEstimateRates(
 
   if (isPoBox) {
     // PO Box - only USPS options
+    const expressCost = SHIPPING_RATES.EXPRESS.cost * stateMultiplier
+
     availableOptions.push(
       {
         method: 'USPS Ground Advantage',
@@ -288,12 +368,15 @@ function calculateEstimateRates(
       },
       {
         method: 'USPS Priority Mail Express',
-        cost: parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2)),
+        // Make express free if it exceeds the subtotal
+        cost: expressCost > subtotal ? 0 : expressCost,
         estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
       }
     )
   } else {
     // Regular address - all carriers available
+    const expressCost = parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2))
+
     availableOptions.push(
       {
         method: 'Standard Shipping',
@@ -302,7 +385,8 @@ function calculateEstimateRates(
       },
       {
         method: 'Express Shipping',
-        cost: parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2)),
+        // Make express free if it exceeds the subtotal
+        cost: expressCost > subtotal ? 0 : expressCost,
         estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
       }
     )
