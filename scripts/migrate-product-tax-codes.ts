@@ -10,6 +10,16 @@
  */
 
 import prisma from '../lib/prisma'
+import { getErrorMessage, isErrorWithMessage } from '../lib/errors'
+
+/**
+ * Product for tax code determination
+ */
+interface ProductForTaxCode {
+  id: string
+  name: string
+  sku: string
+}
 
 /**
  * Stripe Tax Codes for different product types
@@ -29,7 +39,7 @@ const TAX_CODES = {
 /**
  * Determine the appropriate tax code for a product
  */
-function getTaxCodeForProduct(product: any): string {
+function getTaxCodeForProduct(product: ProductForTaxCode): string {
   // For now, assume all products are packaged salsa (food products)
   // You can add logic here to determine the tax code based on product category
 
@@ -74,7 +84,7 @@ async function main() {
     }
 
     // Group products by tax code
-    const taxCodeGroups: Record<string, any[]> = {}
+    const taxCodeGroups: Record<string, ProductForTaxCode[]> = {}
 
     for (const product of products) {
       const taxCode = getTaxCodeForProduct(product)
@@ -157,10 +167,11 @@ async function main() {
     console.log('  2. Test checkout with tax calculation')
     console.log('  3. Update product creation forms to include tax code field')
     console.log('')
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('\n❌ Migration failed:', error)
 
-    if ((error as any).message?.includes('Unknown field')) {
+    const errorMessage = getErrorMessage(error)
+    if (errorMessage.includes('Unknown field')) {
       console.log('\n⚠️  The taxCode field does not exist in the Prisma schema.')
       console.log('   You need to add it first:\n')
       console.log('   1. Add to prisma/schema.prisma:')

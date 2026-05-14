@@ -19,6 +19,7 @@ import {
 import { Card } from '@/components/ui/card'
 import { Loader2, Save, X } from 'lucide-react'
 import type { Tag } from '@prisma/client'
+import { getErrorMessage } from '@/lib/errors'
 
 const tagSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -79,8 +80,8 @@ export default function TagForm({ tag }: TagFormProps) {
       // Redirect to tags list
       router.push('/admin/tags')
       router.refresh()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err))
       setIsSubmitting(false)
     }
   }

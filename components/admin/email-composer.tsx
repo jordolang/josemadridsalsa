@@ -19,7 +19,7 @@ import type { EmailBlock } from '@/lib/email/blocks'
 
 interface EmailComposerProps {
   templateId: string
-  onSave?: (composition: any) => void
+  onSave?: (composition: EmailBlock[]) => void
 }
 
 export function EmailComposer({ templateId, onSave }: EmailComposerProps) {

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import type { StateCreator } from 'zustand'
 
 export interface RecentlyViewedProduct {
   id: string
@@ -22,7 +23,7 @@ interface RecentlyViewedStore {
 
 const MAX_RECENTLY_VIEWED = 20
 
-const recentlyViewedStoreConfig = (set: any, get: any): RecentlyViewedStore => ({
+const recentlyViewedStoreConfig: StateCreator<RecentlyViewedStore> = (set, get) => ({
   products: [],
 
   addProduct: (product: Omit<RecentlyViewedProduct, 'viewedAt'>) => {

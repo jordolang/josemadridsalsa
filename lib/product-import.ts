@@ -1,6 +1,7 @@
 import Papa from 'papaparse';
 import ExcelJS from 'exceljs';
 import { z } from 'zod';
+import { getErrorMessage } from '@/lib/errors';
 
 // Product import schema for validation
 export const ProductImportSchema = z.object({
@@ -38,9 +39,47 @@ export const ProductImportSchema = z.object({
 
 export type ProductImportData = z.infer<typeof ProductImportSchema>;
 
+/**
+ * Type for validated product data ready for database insertion
+ */
+export interface ValidatedProductData {
+  name: string;
+  slug: string;
+  sku: string;
+  description: string | null;
+  price: number;
+  compareAtPrice: number | null;
+  costPrice: number | null;
+  inventory: number;
+  lowStockThreshold: number;
+  heatLevel: 'MILD' | 'MEDIUM' | 'HOT' | 'EXTRA_HOT' | 'FRUIT';
+  ingredients: string[];
+  images: string[];
+  searchKeywords: string[];
+  categoryId: string;
+  barcode: string | null;
+  weight: number | null;
+  featuredImage: string | null;
+  isActive: boolean;
+  isFeatured: boolean;
+  sortOrder: number;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  ogImage: string | null;
+}
+
 export interface ImportResult {
   success: boolean;
-  data?: any[];
+  data?: unknown[];
+  errors?: string[];
+  validationErrors?: Array<{ row: number; errors: string[] }>;
+  totalRows?: number;
+  validRows?: number;
+}
+
+export interface ValidationResult {
+  success: boolean;
+  data?: ValidatedProductData[];
   errors?: string[];
   validationErrors?: Array<{ row: number; errors: string[] }>;
   totalRows?: number;
@@ -70,10 +109,10 @@ export async function parseJSON(buffer: Buffer): Promise<ImportResult> {
       data: products,
       totalRows: products.length,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      errors: [`JSON parsing error: ${error.message}`],
+      errors: [`JSON parsing error: ${getErrorMessage(error)}`],
     };
   }
 }
@@ -114,10 +153,10 @@ export async function parseCSV(buffer: Buffer): Promise<ImportResult> {
         },
       });
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      errors: [`CSV parsing error: ${error.message}`],
+      errors: [`CSV parsing error: ${getErrorMessage(error)}`],
     };
   }
 }
@@ -139,26 +178,26 @@ export async function parseExcel(buffer: Buffer): Promise<ImportResult> {
       };
     }
 
-    const data: any[] = [];
+    const data: Record<string, unknown>[] = [];
     const headers: string[] = [];
-    
+
     // Get headers from first row
     worksheet.getRow(1).eachCell((cell) => {
       headers.push(cell.value?.toString() || '');
     });
-    
+
     // Process data rows
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return; // Skip header row
-      
-      const rowData: any = {};
+
+      const rowData: Record<string, unknown> = {};
       row.eachCell((cell, colNumber) => {
         const header = headers[colNumber - 1];
         if (header) {
           rowData[header] = cell.value !== null && cell.value !== undefined ? cell.value.toString() : null;
         }
       });
-      
+
       data.push(rowData);
     });
 
@@ -167,10 +206,10 @@ export async function parseExcel(buffer: Buffer): Promise<ImportResult> {
       data,
       totalRows: data.length,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      errors: [`Excel parsing error: ${error.message}`],
+      errors: [`Excel parsing error: ${getErrorMessage(error)}`],
     };
   }
 }
@@ -179,19 +218,58 @@ export async function parseExcel(buffer: Buffer): Promise<ImportResult> {
  * Validate and transform product data
  */
 export function validateProducts(
-  rawData: any[],
+  rawData: unknown[],
   categories: Map<string, string> // Map of category name to ID
-): ImportResult {
+): ValidationResult {
   const validationErrors: Array<{ row: number; errors: string[] }> = [];
-  const validProducts: any[] = [];
+  const validProducts: ValidatedProductData[] = [];
 
   rawData.forEach((row, index) => {
     try {
       // Parse and validate with Zod
       const parsed = ProductImportSchema.parse(row);
-      
-      // Transform data
-      const product: any = {
+
+      // Handle ingredients (convert string to array)
+      const ingredients = parsed.ingredients
+        ? parsed.ingredients
+            .split(',')
+            .map(i => i.trim())
+            .filter(i => i.length > 0)
+        : [];
+
+      // Handle images (convert string to array)
+      const images = parsed.images
+        ? parsed.images
+            .split(',')
+            .map(i => i.trim())
+            .filter(i => i.length > 0)
+        : [];
+
+      // Handle search keywords
+      const searchKeywords = parsed.searchKeywords
+        ? parsed.searchKeywords
+            .split(',')
+            .map(k => k.trim())
+            .filter(k => k.length > 0)
+        : [];
+
+      // Handle category - prefer categoryId, fallback to categoryName lookup
+      let categoryId: string;
+      if (parsed.categoryId) {
+        categoryId = parsed.categoryId;
+      } else if (parsed.categoryName) {
+        const lookupId = categories.get(parsed.categoryName.toLowerCase());
+        if (lookupId) {
+          categoryId = lookupId;
+        } else {
+          throw new Error(`Category "${parsed.categoryName}" not found`);
+        }
+      } else {
+        throw new Error('Either categoryId or categoryName is required');
+      }
+
+      // Transform data with all required fields
+      const product: ValidatedProductData = {
         name: parsed.name,
         slug: parsed.slug,
         sku: parsed.sku,
@@ -211,60 +289,20 @@ export function validateProducts(
         metaTitle: parsed.metaTitle || null,
         metaDescription: parsed.metaDescription || null,
         ogImage: parsed.ogImage || null,
+        ingredients,
+        images,
+        searchKeywords,
+        categoryId,
       };
 
-      // Handle ingredients (convert string to array)
-      if (parsed.ingredients) {
-        product.ingredients = parsed.ingredients
-          .split(',')
-          .map(i => i.trim())
-          .filter(i => i.length > 0);
-      } else {
-        product.ingredients = [];
-      }
-
-      // Handle images (convert string to array)
-      if (parsed.images) {
-        product.images = parsed.images
-          .split(',')
-          .map(i => i.trim())
-          .filter(i => i.length > 0);
-      } else {
-        product.images = [];
-      }
-
-      // Handle search keywords
-      if (parsed.searchKeywords) {
-        product.searchKeywords = parsed.searchKeywords
-          .split(',')
-          .map(k => k.trim())
-          .filter(k => k.length > 0);
-      } else {
-        product.searchKeywords = [];
-      }
-
-      // Handle category - prefer categoryId, fallback to categoryName lookup
-      if (parsed.categoryId) {
-        product.categoryId = parsed.categoryId;
-      } else if (parsed.categoryName) {
-        const categoryId = categories.get(parsed.categoryName.toLowerCase());
-        if (categoryId) {
-          product.categoryId = categoryId;
-        } else {
-          throw new Error(`Category "${parsed.categoryName}" not found`);
-        }
-      } else {
-        throw new Error('Either categoryId or categoryName is required');
-      }
-
       validProducts.push(product);
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errors: string[] = [];
-      
+
       if (error instanceof z.ZodError) {
         errors.push(...error.issues.map(e => `${e.path.join('.')}: ${e.message}`));
       } else {
-        errors.push(error.message);
+        errors.push(getErrorMessage(error));
       }
 
       validationErrors.push({
@@ -290,13 +328,14 @@ export async function parseProductImport(
   file: File | Buffer,
   fileType: 'json' | 'csv' | 'excel',
   categories: Map<string, string>
-): Promise<ImportResult> {
+): Promise<ValidationResult> {
   // Convert File to Buffer if needed
   let buffer: Buffer;
   if (file instanceof Buffer) {
     buffer = file;
   } else {
-    const arrayBuffer = await (file as any).arrayBuffer();
+    // File API - convert to Buffer
+    const arrayBuffer = await (file as File).arrayBuffer();
     buffer = Buffer.from(arrayBuffer);
   }
 
@@ -320,7 +359,13 @@ export async function parseProductImport(
   }
 
   if (!parseResult.success || !parseResult.data) {
-    return parseResult;
+    return {
+      success: false,
+      errors: parseResult.errors,
+      validationErrors: parseResult.validationErrors,
+      totalRows: parseResult.totalRows,
+      validRows: parseResult.validRows,
+    };
   }
 
   // Validate and transform

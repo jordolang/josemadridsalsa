@@ -90,7 +90,7 @@ describe('E2E: Checkout Session Flow', () => {
     })
   }
 
-  const createRequest = (body: any, method = 'POST') => {
+  const createRequest = (body: unknown, method = 'POST') => {
     return {
       method,
       json: () => Promise.resolve(body),

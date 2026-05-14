@@ -10,6 +10,7 @@ import {
   ACCEPTED_MIME_TYPES,
   TRAINING_MAX_CHARACTERS,
 } from './constants'
+import { getErrorMessage } from '@/lib/errors'
 
 const FETCH_TIMEOUT_MS = 15_000
 const ALLOWED_URL_PROTOCOLS = new Set(['http:', 'https:'])
@@ -128,9 +129,9 @@ export async function extractTextFromUpload({
       status = 'needs_review'
       warnings.push('File type not fully supported. Stored raw text as a fallback.')
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     status = 'failed'
-    warnings.push(`Extraction failed: ${error.message}`)
+    warnings.push(`Extraction failed: ${getErrorMessage(error)}`)
     text = null
   }
 
@@ -232,11 +233,11 @@ export async function extractTextFromUrl(rawUrl: string): Promise<ExtractionResu
       warnings,
       status: text.trim() ? 'ready' : 'needs_review',
     }
-  } catch (error: any) {
-    if (error?.name === 'AbortError') {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'AbortError') {
       warnings.push(`Request timed out after ${FETCH_TIMEOUT_MS / 1000} seconds.`)
     } else {
-      warnings.push(`Failed to scrape URL: ${error?.message ?? 'Unknown error.'}`)
+      warnings.push(`Failed to scrape URL: ${getErrorMessage(error)}`)
     }
 
     return {

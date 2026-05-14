@@ -4,19 +4,32 @@ import { TrainingDocumentSourceType, TrainingDocumentStatus } from '@prisma/clie
 
 const requirePermissionMock = vi.fn()
 vi.mock('@/lib/rbac', () => ({
-  requirePermission: (...args: any[]) => requirePermissionMock(...args),
+  requirePermission: (permissionName: string) => requirePermissionMock(permissionName),
 }))
 
 const createMock = vi.fn()
 const findUniqueMock = vi.fn()
+
+interface PrismaCreateArgs {
+  data: {
+    sourceType: TrainingDocumentSourceType
+    status: TrainingDocumentStatus
+    content: string | null
+    title?: string | null
+    notes?: string | null
+    sourceUrl?: string | null
+    warnings?: string[]
+    contentHash?: string | null
+  }
+}
 
 vi.mock('@/lib/prisma', () => ({
   __esModule: true,
   default: {
     trainingDocument: {
       findMany: vi.fn(),
-      findUnique: (...args: any[]) => findUniqueMock(...args),
-      create: (...args: any[]) => createMock(...args),
+      findUnique: (args: { where: { contentHash: string } }) => findUniqueMock(args),
+      create: (args: PrismaCreateArgs) => createMock(args),
     },
   },
 }))
@@ -26,11 +39,17 @@ const extractUrlMock = vi.fn()
 const normalizeMock = vi.fn()
 const hashMock = vi.fn()
 
+interface ExtractUploadParams {
+  buffer: Buffer
+  fileName?: string | null
+  mimeType?: string | null
+}
+
 vi.mock('@/lib/training-data/extractor', () => ({
-  extractTextFromUpload: (...args: any[]) => extractUploadMock(...args),
-  extractTextFromUrl: (...args: any[]) => extractUrlMock(...args),
-  normalizeTrainingText: (...args: any[]) => normalizeMock(...args),
-  buildContentHash: (...args: any[]) => hashMock(...args),
+  extractTextFromUpload: (params: ExtractUploadParams) => extractUploadMock(params),
+  extractTextFromUrl: (rawUrl: string) => extractUrlMock(rawUrl),
+  normalizeTrainingText: (raw: string) => normalizeMock(raw),
+  buildContentHash: (content: string) => hashMock(content),
 }))
 
 const invalidateCacheMock = vi.fn()
@@ -42,7 +61,7 @@ describe('admin training data API', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     requirePermissionMock.mockResolvedValue({ id: 'user-1' })
-    createMock.mockImplementation(async ({ data }: any) => ({
+    createMock.mockImplementation(async ({ data }: PrismaCreateArgs) => ({
       id: 'doc-id',
       ...data,
     }))
@@ -76,7 +95,7 @@ describe('admin training data API', () => {
     )
 
     expect(response.status).toBe(200)
-    const payload = (await response.json()) as any
+    const payload = await response.json() as { document: { status: TrainingDocumentStatus } }
     expect(payload.document.status).toBe(TrainingDocumentStatus.READY)
     expect(createMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -137,7 +156,7 @@ describe('admin training data API', () => {
     )
 
     expect(response.status).toBe(200)
-    const payload = (await response.json()) as any
+    const payload = await response.json() as { document: { status: TrainingDocumentStatus } }
     expect(payload.document.status).toBe(TrainingDocumentStatus.NEEDS_REVIEW)
     expect(normalizeMock).not.toHaveBeenCalled()
     expect(hashMock).not.toHaveBeenCalled()

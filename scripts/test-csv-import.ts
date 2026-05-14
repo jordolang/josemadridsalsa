@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { parseCSV, validateProducts } from '../lib/product-import';
+import { getErrorMessage } from '../lib/errors';
 
 async function testImport() {
   try {
@@ -51,9 +52,11 @@ async function testImport() {
     console.log('\nFirst validated product:');
     console.log(JSON.stringify(validationResult.data![0], null, 2));
     
-  } catch (error: any) {
-    console.error('❌ Error:', error.message);
-    console.error(error.stack);
+  } catch (error: unknown) {
+    console.error('❌ Error:', getErrorMessage(error));
+    if (error instanceof Error && error.stack) {
+      console.error(error.stack);
+    }
     process.exit(1);
   }
 }

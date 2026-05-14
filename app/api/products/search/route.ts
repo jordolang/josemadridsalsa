@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { z } from 'zod'
+import { ok, fail, serverError } from '@/lib/api'
 
 // Validation schema for search params
 const searchParamsSchema = z.object({
@@ -33,10 +34,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!params.success) {
-      return NextResponse.json(
-        { error: 'Invalid search parameters', details: params.error.issues },
-        { status: 400 }
-      )
+      return fail('Invalid search parameters', 400, params.error.issues)
     }
 
     const {
@@ -178,7 +176,7 @@ export async function GET(request: NextRequest) {
     }))
 
     // Return results with pagination info
-    return NextResponse.json({
+    return ok({
       products: formattedProducts,
       pagination: {
         total: totalCount,
@@ -198,15 +196,8 @@ export async function GET(request: NextRequest) {
         sortBy,
       },
     })
-  } catch (error: any) {
-    console.error('Error searching products:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to search products',
-        details: error.message,
-      },
-      { status: 500 }
-    )
+  } catch (error: unknown) {
+    return serverError('Failed to search products', error)
   }
 }
 
@@ -217,7 +208,7 @@ export async function POST(request: NextRequest) {
     const { query } = body
 
     if (!query || query.length < 2) {
-      return NextResponse.json({ suggestions: [] })
+      return ok({ suggestions: [] })
     }
 
     // Get product name suggestions
@@ -256,15 +247,8 @@ export async function POST(request: NextRequest) {
       heatLevel: product.heatLevel,
     }))
 
-    return NextResponse.json({ suggestions })
-  } catch (error: any) {
-    console.error('Error getting autocomplete suggestions:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to get suggestions',
-        details: error.message,
-      },
-      { status: 500 }
-    )
+    return ok({ suggestions })
+  } catch (error: unknown) {
+    return serverError('Failed to get suggestions', error)
   }
 }

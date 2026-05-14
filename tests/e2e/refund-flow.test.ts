@@ -90,7 +90,7 @@ describe('E2E: Refund Flow', () => {
     })
   }
 
-  const createRequest = (body: any, method = 'POST') => {
+  const createRequest = (body: unknown, method = 'POST') => {
     return {
       method,
       json: () => Promise.resolve(body),

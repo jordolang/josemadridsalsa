@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import type { StateCreator } from 'zustand'
 
 export interface ComparisonNutrition {
   calories: number
@@ -45,7 +46,7 @@ interface ComparisonStore {
 
 const MAX_COMPARISON = 4
 
-const comparisonStoreConfig = (set: any, get: any): ComparisonStore => ({
+const comparisonStoreConfig: StateCreator<ComparisonStore> = (set, get) => ({
   products: [],
   isOpen: false,
 

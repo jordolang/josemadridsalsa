@@ -118,7 +118,10 @@ const config: Config = {
   			'pulse-slow': 'pulseSlow 3s ease-in-out infinite',
   			'spin-slow': 'spinSlow 3s linear infinite',
   			'swing': 'swing 1s ease-in-out',
-  			'marquee': 'marquee linear infinite'
+  			'marquee': 'marquee linear infinite',
+  			'progress-fill': 'progressFill 0.3s ease-out',
+  			'progress-pulse': 'progressPulse 1.5s ease-in-out infinite',
+  			'progress-shimmer': 'progressShimmer 2s linear infinite'
   		},
   		keyframes: {
   			fadeIn: {
@@ -217,6 +220,32 @@ const config: Config = {
   				},
   				'100%': {
   					transform: 'translateX(-50%)'
+  				}
+  			},
+  			progressFill: {
+  				'0%': {
+  					transform: 'scaleX(0)',
+  					transformOrigin: 'left'
+  				},
+  				'100%': {
+  					transform: 'scaleX(1)',
+  					transformOrigin: 'left'
+  				}
+  			},
+  			progressPulse: {
+  				'0%, 100%': {
+  					opacity: '1'
+  				},
+  				'50%': {
+  					opacity: '0.5'
+  				}
+  			},
+  			progressShimmer: {
+  				'0%': {
+  					transform: 'translateX(-100%)'
+  				},
+  				'100%': {
+  					transform: 'translateX(100%)'
   				}
   			}
   		},

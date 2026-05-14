@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { MapPin } from 'lucide-react'
-import Link from 'next/link'
 import type { ScheduleEvent } from '@/lib/server/google-data'
 
 type TickerEvent = Pick<ScheduleEvent, 'id' | 'title' | 'location' | 'start' | 'isAllDay'>
@@ -10,7 +9,7 @@ type TickerEvent = Pick<ScheduleEvent, 'id' | 'title' | 'location' | 'start' | '
 function buildTickerContent(events: TickerEvent[], todayStr: string, tomorrowStr: string): string[] {
   return events
     .filter(e => e.location && e.start)
-    .slice(0, 5)
+    .slice(0, 3)
     .map(e => {
       const eventDate = e.start!.slice(0, 10)
       let dateLabel: string
@@ -28,11 +27,11 @@ function buildTickerContent(events: TickerEvent[], todayStr: string, tomorrowStr
           dateLabel = eventDate
         }
       }
-      return `${dateLabel} · ${e.title.toUpperCase()} · ${e.location!.toUpperCase()}`
+      return `📍 ${dateLabel}  ·  ${e.title.toUpperCase()}  ·  ${e.location!.toUpperCase()}`
     })
 }
 
-interface EventTickerProps {
+type EventTickerProps = {
   /** Pre-fetched events from the server layout — zero client fetch needed */
   initialEvents: TickerEvent[]
 }
@@ -43,49 +42,98 @@ export function EventTicker({ initialEvents }: EventTickerProps) {
   useEffect(() => {
     const now = new Date()
     const pad = (n: number) => String(n).padStart(2, '0')
-    const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+    const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
     const todayStr = toDateStr(now)
-    const tomorrow = new Date(now)
-    tomorrow.setDate(now.getDate() + 1)
+    const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1)
     setSegments(buildTickerContent(initialEvents, todayStr, toDateStr(tomorrow)))
   }, [initialEvents])
 
+  useEffect(() => {
+    if (typeof document !== 'undefined' && !document.getElementById('jms-ticker-style')) {
+      const style = document.createElement('style')
+      style.id = 'jms-ticker-style'
+      style.textContent = `
+        @keyframes jms-ticker {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `
+      document.head.appendChild(style)
+    }
+  }, [])
+
   if (segments.length === 0) return null
 
-  const items = [...segments, ...segments]
-  const duration = Math.max(60, segments.length * 18)
+  const formattedSegments = segments.length > 1
+    ? segments.flatMap((seg, i) => i < segments.length - 1 ? [seg, `━━━━━━  UPCOMING  ━━━━━━`] : [seg])
+    : segments
+
+  const items = [...formattedSegments, ...formattedSegments]
+  const duration = Math.max(60, segments.length * 20)
 
   return (
-    <div className="relative overflow-hidden bg-salsa-900 text-white">
-      <div className="mx-auto max-w-[1400px] flex items-stretch">
-        <Link
-          href="/where-is-jose"
-          className="z-[2] inline-flex flex-shrink-0 items-center gap-1.5 bg-salsa-950 px-5 text-[10.5px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-black"
-          aria-label="See where Jose Madrid Salsa is appearing next"
-        >
-          <MapPin className="h-3 w-3 text-chile-400" />
-          <span>Find Us</span>
-        </Link>
-        <div className="relative flex-1 overflow-hidden">
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-12 bg-gradient-to-r from-salsa-900 to-transparent"
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-12 bg-gradient-to-l from-salsa-900 to-transparent"
-          />
-          <div
-            className="flex w-max items-center gap-12 whitespace-nowrap py-2 will-change-transform animate-marquee hover:[animation-play-state:paused] motion-reduce:animate-none"
-            style={{ animationDuration: `${duration}s` }}
-          >
-            {items.map((seg, i) => (
-              <span key={i} className="flex items-center gap-3 text-[11px] uppercase tracking-[0.18em] font-medium text-white/90">
-                <span className="text-chile-400">●</span>
-                {seg}
-              </span>
-            ))}
-          </div>
+    <div style={{
+      background: 'linear-gradient(90deg, #b91c1c 0%, #9a1515 100%)',
+      height: '44px',
+      overflow: 'hidden',
+      width: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      borderBottom: '2px solid #7f1d1d',
+      position: 'relative',
+    }}>
+      <div style={{
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '0 20px',
+        background: '#7f1d1d',
+        height: '100%',
+        borderRight: '2px solid #991b1b',
+        zIndex: 2,
+      }}>
+        <MapPin style={{ width: '15px', height: '15px', color: '#fde047', flexShrink: 0 }} />
+        <span style={{
+          color: '#fde047',
+          fontWeight: 900,
+          fontSize: '13px',
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+        }}>
+          Find Us
+        </span>
+      </div>
+
+      <div style={{ flex: 1, overflow: 'hidden', height: '100%', position: 'relative' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          height: '100%',
+          width: 'max-content',
+          animation: `jms-ticker ${duration}s linear infinite`,
+          willChange: 'transform',
+        }}>
+          {items.map((seg, i) => (
+            <span key={i} style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '0 48px',
+              color: seg.includes('COMING UP') ? '#fde047' : '#fef9c3',
+              fontWeight: 900,
+              fontSize: seg.includes('COMING UP') ? '12px' : '13px',
+              letterSpacing: seg.includes('COMING UP') ? '0.2em' : '0.1em',
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              opacity: seg.includes('COMING UP') ? 0.8 : 1,
+            }}>
+              {seg}
+            </span>
+          ))}
         </div>
       </div>
     </div>

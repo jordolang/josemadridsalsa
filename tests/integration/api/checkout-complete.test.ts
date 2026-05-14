@@ -2,46 +2,57 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { POST } from '@/app/api/checkout/complete/route'
 
 // Mock dependencies
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/prisma', () => {
+  const createMockPrisma = () => ({
     order: {
       findUnique: vi.fn(),
       update: vi.fn(),
     },
     product: {
+      findUnique: vi.fn(),
       update: vi.fn(),
     },
     abandonedCart: {
       updateMany: vi.fn(),
     },
-    $transaction: vi.fn((callback) => callback({
-      order: {
-        update: vi.fn(),
-      },
-      product: {
-        update: vi.fn(),
-      },
-      abandonedCart: {
-        updateMany: vi.fn(),
-      },
-    })),
-  },
+    inventoryTransaction: {
+      create: vi.fn(),
+    },
+  })
+
+  return {
+    default: {
+      ...createMockPrisma(),
+      $transaction: vi.fn((callback) => {
+        if (typeof callback === 'function') {
+          return callback(createMockPrisma())
+        }
+        return Promise.all(callback)
+      }),
+    },
+  }
+})
+
+const mockRetrievePayment = vi.fn()
+const mockConfirmPayment = vi.fn(() => Promise.resolve({ success: true }))
+
+vi.mock('@/lib/payments', () => ({
+  getProvider: vi.fn(() => ({
+    retrievePayment: mockRetrievePayment,
+    confirmPayment: mockConfirmPayment,
+  })),
 }))
 
-const mockPaymentIntentRetrieve = vi.fn()
-
-vi.mock('@/lib/stripe', () => ({
-  getStripe: vi.fn(() => ({
-    paymentIntents: {
-      retrieve: mockPaymentIntentRetrieve,
-    },
-  })),
+vi.mock('@/lib/inventory-manager', () => ({
+  releaseInventory: vi.fn(() => Promise.resolve()),
+  confirmReservation: vi.fn(() => Promise.resolve()),
 }))
 
 describe('Checkout Complete API Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockPaymentIntentRetrieve.mockClear()
+    mockRetrievePayment.mockClear()
+    mockConfirmPayment.mockClear()
   })
 
   const mockOrder = {
@@ -74,18 +85,19 @@ describe('Checkout Complete API Integration Tests', () => {
     ],
   }
 
-  const mockPaymentIntent = {
-    id: 'pi_test123',
+  const mockPaymentResult = {
+    success: true,
     status: 'succeeded',
     amount: 2947,
     currency: 'usd',
+    paymentIntentId: 'pi_test123',
   }
 
   describe('Payment Completion Flow', () => {
     it('should complete payment and update order status', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
-      mockPaymentIntentRetrieve.mockResolvedValue(mockPaymentIntent)
+      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
       const mockTx = {
@@ -117,7 +129,7 @@ describe('Checkout Complete API Integration Tests', () => {
       expect(data.success).toBe(true)
 
       // Verify payment intent was retrieved
-      expect(mockPaymentIntentRetrieve).toHaveBeenCalledWith('pi_test123')
+      expect(mockRetrievePayment).toHaveBeenCalledWith('pi_test123')
 
       // Verify order was found
       expect(prisma.order.findUnique).toHaveBeenCalledWith({
@@ -175,7 +187,7 @@ describe('Checkout Complete API Integration Tests', () => {
         guestEmail: null,
       }
 
-      mockPaymentIntentRetrieve.mockResolvedValue(mockPaymentIntent)
+      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(authenticatedOrder as any)
 
       const mockTx = {
@@ -227,7 +239,7 @@ describe('Checkout Complete API Integration Tests', () => {
         status: 'CONFIRMED',
       }
 
-      mockPaymentIntentRetrieve.mockResolvedValue(mockPaymentIntent)
+      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(paidOrder as any)
 
       const request = new Request('http://localhost/api/checkout/complete', {
@@ -274,7 +286,7 @@ describe('Checkout Complete API Integration Tests', () => {
     it('should handle order not found', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
-      mockPaymentIntentRetrieve.mockResolvedValue(mockPaymentIntent)
+      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(null)
 
       const request = new Request('http://localhost/api/checkout/complete', {
@@ -295,12 +307,12 @@ describe('Checkout Complete API Integration Tests', () => {
     it('should handle payment not succeeded', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
-      const pendingPaymentIntent = {
-        ...mockPaymentIntent,
+      const pendingPaymentResult = {
+        ...mockPaymentResult,
         status: 'processing',
       }
 
-      mockPaymentIntentRetrieve.mockResolvedValue(pendingPaymentIntent)
+      mockRetrievePayment.mockResolvedValue(pendingPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
       const request = new Request('http://localhost/api/checkout/complete', {
@@ -321,7 +333,7 @@ describe('Checkout Complete API Integration Tests', () => {
     it('should handle payment intent not found', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
-      mockPaymentIntentRetrieve.mockResolvedValue(null)
+      mockRetrievePayment.mockResolvedValue(null)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
       const request = new Request('http://localhost/api/checkout/complete', {
@@ -342,7 +354,7 @@ describe('Checkout Complete API Integration Tests', () => {
     it('should handle Stripe API errors', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
-      mockPaymentIntentRetrieve.mockRejectedValue(new Error('Stripe API error'))
+      mockRetrievePayment.mockRejectedValue(new Error('Stripe API error'))
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
       const request = new Request('http://localhost/api/checkout/complete', {
@@ -363,7 +375,7 @@ describe('Checkout Complete API Integration Tests', () => {
     it('should handle database transaction errors', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
-      mockPaymentIntentRetrieve.mockResolvedValue(mockPaymentIntent)
+      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
       vi.mocked(prisma.$transaction).mockRejectedValue(new Error('Database error'))
 
@@ -395,7 +407,7 @@ describe('Checkout Complete API Integration Tests', () => {
         ],
       }
 
-      mockPaymentIntentRetrieve.mockResolvedValue(mockPaymentIntent)
+      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(largeQuantityOrder as any)
 
       const mockTx = {
@@ -446,7 +458,7 @@ describe('Checkout Complete API Integration Tests', () => {
         guestEmail: null, // No email to match abandoned carts
       }
 
-      mockPaymentIntentRetrieve.mockResolvedValue(mockPaymentIntent)
+      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(orderNoRecovery as any)
 
       const mockTx = {

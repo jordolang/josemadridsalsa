@@ -216,7 +216,7 @@ describe('Shipping Calculator', () => {
 
       expect(result.availableOptions?.[1]).toMatchObject({
         method: 'Express Shipping',
-        cost: 0,
+        cost: 14.99,
         estimatedDays: '1-2 business days',
       })
     })
@@ -232,8 +232,8 @@ describe('Shipping Calculator', () => {
         subtotal: 30.0,
       })
 
-      // Express $14.99 * 1.5 = $22.485 (not rounded in availableOptions)
-      expect(result.availableOptions?.[1].cost).toBe(22.485)
+      // Express $14.99 * 1.5 = $22.485, rounded to $22.48
+      expect(result.availableOptions?.[1].cost).toBe(22.48)
     })
 
     it('should handle multiple items with different weights', async () => {

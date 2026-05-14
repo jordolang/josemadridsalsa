@@ -1,6 +1,5 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import { clsx } from 'clsx'
 
 interface HpBarProps {
@@ -49,10 +48,7 @@ export function HpBar({
             : 'border-neutral-700',
         )}
       >
-        <motion.div
-          initial={false}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.7, ease: 'easeOut' }}
+        <div
           className={clsx(
             'h-full',
             critical
@@ -62,6 +58,8 @@ export function HpBar({
                 : 'bg-gradient-to-r from-emerald-500 to-green-400',
           )}
           style={{
+            width: `${pct}%`,
+            transition: 'width 0.7s ease-out',
             boxShadow: critical
               ? '0 0 12px rgba(239, 68, 68, 0.6)'
               : `0 0 10px ${teamColor}55`,

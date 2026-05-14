@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { Decimal } from '@prisma/client/runtime/library'
+import { Prisma, Decimal } from '@prisma/client/runtime/library'
 
 // Mock Prisma
 vi.mock('@/lib/prisma', () => ({
@@ -283,7 +283,7 @@ describe('E2E: Complete Fundraising Campaign Workflow', () => {
     vi.mocked(prisma.$transaction).mockImplementation(mockTransaction as any)
 
     // Execute transaction to update order and participant
-    await prisma.$transaction(async (tx: any) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Update order to PAID
       await tx.order.update({
         where: { id: orderData.id },

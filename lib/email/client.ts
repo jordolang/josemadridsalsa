@@ -8,6 +8,7 @@ import { render } from '@react-email/render'
 import React from 'react'
 import { createHash } from 'crypto'
 import { logEmailSend, checkUnsubscribed } from './logger'
+import { getErrorMessage } from '@/lib/errors'
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -33,7 +34,7 @@ interface EmailSendResult {
   success: boolean
   error?: string
   messageId?: string
-  data?: any
+  data?: unknown
 }
 
 /**
@@ -150,8 +151,8 @@ export async function sendEmail({
       messageId: data?.id,
       data,
     }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+  } catch (error: unknown) {
+    const errorMessage = getErrorMessage(error)
     console.error('Email send error:', error)
 
     // Log error

@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import Papa from 'papaparse';
+import { getErrorMessage } from '../lib/errors';
 
 /**
  * Transform old BigCommerce CSV export to new import format
@@ -97,8 +98,8 @@ async function transformCSV() {
         process.exit(1);
       },
     });
-  } catch (error: any) {
-    console.error('❌ Error:', error.message);
+  } catch (error: unknown) {
+    console.error('❌ Error:', getErrorMessage(error));
     process.exit(1);
   }
 }

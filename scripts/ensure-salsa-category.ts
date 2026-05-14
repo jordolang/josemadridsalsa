@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { getErrorMessage } from '../lib/errors';
 
 const prisma = new PrismaClient();
 
@@ -26,8 +27,8 @@ async function ensureSalsaCategory() {
     }
 
     console.log(`Category ID: ${salsaCategory.id}`);
-  } catch (error: any) {
-    console.error('❌ Error:', error.message);
+  } catch (error: unknown) {
+    console.error('❌ Error:', getErrorMessage(error));
     process.exit(1);
   } finally {
     await prisma.$disconnect();

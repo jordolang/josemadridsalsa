@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,7 +29,7 @@ async function getMedia(searchParams: SearchParams) {
   const limit = 24
   const skip = (page - 1) * limit
 
-  const where: any = {}
+  const where: Prisma.MediaWhereInput = {}
 
   // Search filter
   if (searchParams.search) {

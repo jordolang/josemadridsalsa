@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { ok, serverError } from '@/lib/api'
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 const PLACES_API_BASE = 'https://places.googleapis.com/v1'
@@ -17,10 +18,7 @@ export const runtime = 'nodejs' // Required for environment variable access
 
 export async function GET() {
   if (!API_KEY) {
-    return NextResponse.json(
-      { error: 'Google Places API key not configured. Please set GOOGLE_PLACES_API_KEY or NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.' },
-      { status: 500 }
-    )
+    return serverError('Google Places API key not configured. Please set GOOGLE_PLACES_API_KEY or NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.')
   }
 
   // If no Place ID, try to find it by name
@@ -55,15 +53,12 @@ export async function GET() {
   }
 
   if (!placeId) {
-    return NextResponse.json(
-      { 
-        error: 'Google Place ID not found. Please set GOOGLE_PLACE_ID environment variable or ensure GOOGLE_PLACE_NAME matches your business name.',
-        reviews: [],
-        totalRating: 0,
-        totalReviews: 0
-      },
-      { status: 200 } // Return 200 with empty data instead of error
-    )
+    return ok({
+      error: 'Google Place ID not found. Please set GOOGLE_PLACE_ID environment variable or ensure GOOGLE_PLACE_NAME matches your business name.',
+      reviews: [],
+      totalRating: 0,
+      totalReviews: 0
+    })
   }
 
   try {
@@ -83,7 +78,7 @@ export async function GET() {
       const errorText = await apiResponse.text()
       console.error('Google Places API error:', apiResponse.status, errorText)
       // Return empty data instead of error to prevent UI breakage
-      return NextResponse.json({
+      return ok({
         reviews: [],
         totalRating: 0,
         totalReviews: 0,
@@ -127,7 +122,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching Google reviews:', error)
     // Return empty data instead of error to prevent UI breakage
-    return NextResponse.json({
+    return ok({
       reviews: [],
       totalRating: 0,
       totalReviews: 0,

@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { ProductCard, type Product } from "@/components/store/product-card";
 import { getProducts } from "@/lib/db/products";
+import { logger } from "@/lib/logger";
 
 interface FeaturedProductsSectionProps {
   /** Maximum number of featured products to surface. Defaults to 4. */
@@ -47,9 +48,7 @@ export async function FeaturedProductsSection({
     products = rows.map(toCardProduct);
   } catch (err) {
     // Database errors here shouldn't break the home page; just hide the section.
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Failed to load featured products", err);
-    }
+    logger.error("Failed to load featured products", { error: err });
     return null;
   }
 
