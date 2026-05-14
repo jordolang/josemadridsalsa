@@ -34,12 +34,14 @@ import {
 import { ProductImportButton } from '@/components/admin/ProductImportButton'
 import { formatHeatLevel, getHeatLevelClass } from '@/lib/heat-level'
 import { cn } from '@/lib/utils'
+import { LowStockAlert } from '@/components/admin/low-stock-alert'
 
 interface SearchParams {
   search?: string
   category?: string
   heatLevel?: string
   active?: string
+  lowStock?: string
   page?: string
 }
 
@@ -74,11 +76,10 @@ async function getProducts(searchParams: SearchParams) {
     where.isActive = searchParams.active === 'true'
   }
 
-  const [products, total, categories] = await Promise.all([
+  // Fetch products - low stock filter requires post-processing
+  const [allProducts, categories] = await Promise.all([
     prisma.product.findMany({
       where,
-      skip,
-      take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
         category: {
@@ -88,12 +89,23 @@ async function getProducts(searchParams: SearchParams) {
         },
       },
     }),
-    prisma.product.count({ where }),
     prisma.category.findMany({
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
   ])
+
+  // Apply low stock filter if needed
+  let filteredProducts = allProducts
+  if (searchParams.lowStock === 'true') {
+    filteredProducts = allProducts.filter(
+      (p) => p.inventory <= p.lowStockThreshold
+    )
+  }
+
+  // Apply pagination to filtered results
+  const total = filteredProducts.length
+  const products = filteredProducts.slice(skip, skip + limit)
 
   return {
     products,
@@ -131,6 +143,7 @@ export default async function ProductsPage({
     if (params.category) qs.set('category', params.category)
     if (params.heatLevel) qs.set('heatLevel', params.heatLevel)
     if (params.active) qs.set('active', params.active)
+    if (params.lowStock) qs.set('lowStock', params.lowStock)
     return `/admin/products?${qs.toString()}`
   }
 
@@ -169,7 +182,7 @@ export default async function ProductsPage({
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-5">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -213,6 +226,15 @@ export default async function ProductsPage({
                 <SelectItem value="all">All Products</SelectItem>
                 <SelectItem value="true">Active Only</SelectItem>
                 <SelectItem value="false">Inactive Only</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select defaultValue={params.lowStock || 'all'}>
+              <SelectTrigger>
+                <SelectValue placeholder="Stock level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stock Levels</SelectItem>
+                <SelectItem value="true">Low Stock Only</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -261,13 +283,19 @@ export default async function ProductsPage({
                             />
                           </div>
                         )}
-                        <div>
-                          <Link
-                            href={`/admin/products/${product.id}`}
-                            className="font-medium text-primary hover:underline"
-                          >
-                            {product.name}
-                          </Link>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`/admin/products/${product.id}`}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {product.name}
+                            </Link>
+                            <LowStockAlert
+                              inventory={product.inventory}
+                              threshold={product.lowStockThreshold}
+                            />
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             SKU: {product.sku}
                           </p>
