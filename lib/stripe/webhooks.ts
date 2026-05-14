@@ -1,6 +1,6 @@
 import Stripe from 'stripe'
 import prisma from '@/lib/prisma'
-import { sendOrderConfirmationEmail } from '@/lib/email/automation'
+import { sendOrderConfirmationEmail, sendAdminNewOrderNotification } from '@/lib/email/automation'
 import { deductReservedInventoryInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 
 /**
@@ -102,6 +102,11 @@ export async function handlePaymentIntentSucceeded(
       console.error('Failed to send confirmation email', { orderId, error })
     })
   }
+
+  // Send admin notification email
+  sendAdminNewOrderNotification(order.id).catch((error) => {
+    console.error('Failed to send admin notification email', { orderId, error })
+  })
 
   return { success: true, message: 'Payment processed successfully' }
 }

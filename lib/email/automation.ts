@@ -592,3 +592,86 @@ export async function sendCampaignSummaryEmail(fundraiserId: string) {
     type: 'campaign-summary',
   })
 }
+
+export async function sendAdminNewOrderNotification(orderId: string) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      items: true,
+      user: { select: { name: true, email: true } },
+      fundraiser: { select: { name: true } },
+    },
+  })
+
+  if (!order) {
+    console.warn(`[EmailAutomation] Order ${orderId} not found for admin notification`)
+    return { success: false, error: 'Order not found' }
+  }
+
+  // Get admin email addresses from environment variable
+  const adminEmailsStr = process.env.ORDER_NOTIFICATION_EMAILS || process.env.INVENTORY_ALERT_EMAILS
+  if (!adminEmailsStr) {
+    console.warn('[EmailAutomation] No admin email addresses configured for order notifications')
+    return { success: false, error: 'No admin emails configured' }
+  }
+
+  const adminEmails = adminEmailsStr.split(',').map((e) => e.trim()).filter(Boolean)
+  if (adminEmails.length === 0) {
+    console.warn('[EmailAutomation] No valid admin email addresses found')
+    return { success: false, error: 'No valid admin emails' }
+  }
+
+  const customerName = order.user?.name || order.guestName || 'Guest Customer'
+  const customerEmail = order.user?.email || order.guestEmail || 'N/A'
+
+  const items = order.items.map((item) => ({
+    productName: item.productName,
+    productSku: item.productSku,
+    totalPrice: `$${Number(item.totalPrice).toFixed(2)}`,
+    quantity: item.quantity,
+  }))
+
+  const shippingAddress =
+    order.shippingMethod ||
+    order.fundraiser?.name ||
+    'Digital fulfillment'
+
+  const adminPanelUrl = `${defaultAppUrl}/admin/orders/${order.id}`
+
+  const { AdminNewOrderEmail } = await import('@/emails/admin-new-order')
+
+  const emailContent = React.createElement(AdminNewOrderEmail, {
+    orderNumber: order.orderNumber,
+    orderDate: format(order.createdAt, 'MMMM d, yyyy'),
+    orderTotal: `$${Number(order.total).toFixed(2)}`,
+    customerName,
+    customerEmail,
+    items,
+    shippingAddress,
+    adminPanelUrl,
+  })
+
+  // Send to all admin emails
+  const results = await Promise.allSettled(
+    adminEmails.map((adminEmail) =>
+      sendEmail({
+        to: adminEmail,
+        subject: `New Order #${order.orderNumber} - ${customerName}`,
+        react: emailContent,
+        replyTo: 'orders@josemadridsalsa.com',
+        type: 'admin-order-notification',
+        orderId: order.id,
+      })
+    )
+  )
+
+  // Check if at least one email succeeded
+  const anySuccess = results.some((result) => result.status === 'fulfilled' && result.value.success)
+
+  if (!anySuccess) {
+    console.error('[EmailAutomation] Failed to send admin notification to any recipient')
+    return { success: false, error: 'All admin notifications failed' }
+  }
+
+  return { success: true, message: 'Admin notification sent' }
+}
