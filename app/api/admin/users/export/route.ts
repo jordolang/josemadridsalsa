@@ -4,6 +4,10 @@ import { fail } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import prisma from '@/lib/prisma';
 
+function sanitizeCsvCell(v: string): string {
+  return /^[=+\-@\t\r]/.test(v) ? `\t${v}` : v;
+}
+
 /**
  * GET /api/admin/users/export
  * Export users as CSV
@@ -70,11 +74,11 @@ export async function GET(req: NextRequest) {
 
     const rows = users.map((user) => [
       user.id,
-      `"${user.email.replace(/"/g, '""')}"`,
-      user.name ? `"${user.name.replace(/"/g, '""')}"` : '',
+      `"${sanitizeCsvCell(user.email).replace(/"/g, '""')}"`,
+      user.name ? `"${sanitizeCsvCell(user.name).replace(/"/g, '""')}"` : '',
       user.role,
       user.isEmailVerified ? 'Yes' : 'No',
-      user.phone ? `"${user.phone.replace(/"/g, '""')}"` : '',
+      user.phone ? `"${sanitizeCsvCell(user.phone).replace(/"/g, '""')}"` : '',
       user.createdAt.toISOString(),
       user.lastLoginAt?.toISOString() || '',
     ]);
@@ -90,6 +94,14 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error exporting users:', error);
-    return fail(error.message, error.status || 500);
+    const msg: string = error.message || '';
+    const status = error.status
+      ? error.status
+      : /unauthorized/i.test(msg)
+        ? 401
+        : /forbidden/i.test(msg)
+          ? 403
+          : 500;
+    return fail(msg, status);
   }
 }
