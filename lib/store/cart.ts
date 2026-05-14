@@ -19,6 +19,10 @@ interface CartStore {
   isOpen: boolean
   guestEmail?: string
 
+  // Computed
+  totalItems: () => number
+  totalPrice: () => number
+
   // Actions
   addItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void
   removeItem: (id: string) => void
@@ -141,6 +145,9 @@ const cartStoreConfig: StateCreator<CartStore> = (set, get) => ({
   toggleCart: () => {
     set({ isOpen: !get().isOpen })
   },
+
+  totalItems: () => get().items.reduce((sum, item) => sum + item.quantity, 0),
+  totalPrice: () => get().items.reduce((sum, item) => sum + item.price * item.quantity, 0),
 })
 
 export const useCartStore = typeof window !== 'undefined'
