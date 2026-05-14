@@ -21,7 +21,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AddToCartButton } from '@/components/store/add-to-cart-button'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 
 export interface Product {
   id: string
@@ -61,6 +61,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const router = useRouter()
   const [imageError, setImageError] = useState(false)
   const [isQuickViewOpen, setQuickViewOpen] = useState(false)
+  const shouldReduceMotion = useReducedMotion()
 
   const inWishlist = isInWishlist(product.id)
   const inComparison = isInComparison(product.id)
@@ -278,7 +279,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 }}
                 transition={{
                   duration: 3,
-                  repeat: Infinity,
+                  repeat: shouldReduceMotion ? 0 : Infinity,
                   ease: 'easeInOut',
                 }}
               />
