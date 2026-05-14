@@ -1,6 +1,7 @@
 import Stripe from 'stripe'
 import prisma from '@/lib/prisma'
-import { sendOrderConfirmationEmail } from '@/lib/email/automation'
+import { sendOrderConfirmationEmail, sendAdminNewOrderNotification } from '@/lib/email/automation'
+import { deductReservedInventoryInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 
 /**
  * Webhook Event Handler Types
@@ -44,8 +45,8 @@ export async function handlePaymentIntentSucceeded(
     return { success: true, message: 'Order already paid' }
   }
 
-  // Update order status in a transaction
-  await prisma.$transaction(async (tx) => {
+  // Update order status and deduct inventory in a transaction
+  const inventoryResults = await prisma.$transaction(async (tx) => {
     await tx.order.update({
       where: { id: order.id },
       data: {
@@ -55,22 +56,43 @@ export async function handlePaymentIntentSucceeded(
       },
     })
 
-    // Update inventory for product orders (not gift certificates)
+    // Deduct reserved inventory for product orders (not gift certificates)
+    // This creates proper inventory transaction logs and updates stock status
+    const results = []
     if (order.items.length > 0) {
-      await Promise.all(
-        order.items.map((item) =>
-          tx.product.update({
-            where: { id: item.productId },
-            data: {
-              inventory: { decrement: item.quantity },
-            },
-          })
+      for (const item of order.items) {
+        const result = await deductReservedInventoryInTx(
+          {
+            productId: item.productId,
+            quantity: item.quantity,
+            orderId: order.id,
+            notes: `Order ${order.id} completed via Stripe webhook`,
+          },
+          tx
         )
-      )
+        results.push(result)
+      }
     }
 
     // Gift certificates are already created, no additional action needed
+    return results
   })
+
+  // Check and update alerts for all affected products (after transaction commits)
+  for (const result of inventoryResults) {
+    try {
+      await checkAndUpdateAlerts(
+        result.product.id,
+        result.newInventory,
+        result.product.lowStockThreshold
+      )
+    } catch (alertError) {
+      console.error(
+        `[handlePaymentIntentSucceeded] Alert sync failed for product ${result.product.id}:`,
+        alertError
+      )
+    }
+  }
 
   console.log('Order payment confirmed via webhook:', orderId)
 
@@ -80,6 +102,11 @@ export async function handlePaymentIntentSucceeded(
       console.error('Failed to send confirmation email', { orderId, error })
     })
   }
+
+  // Send admin notification email
+  sendAdminNewOrderNotification(order.id).catch((error) => {
+    console.error('Failed to send admin notification email', { orderId, error })
+  })
 
   return { success: true, message: 'Payment processed successfully' }
 }
