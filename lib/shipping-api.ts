@@ -30,9 +30,9 @@ function getShippingConfig() {
  * @returns Configured EasyPost client
  * @throws Error if SHIPPING_API_KEY is not set
  */
-let easyPostClientInstance: EasyPostClient | null = null
+let easyPostClientInstance: InstanceType<typeof EasyPostClient> | null = null
 
-function getEasyPostClient(): EasyPostClient {
+function getEasyPostClient(): InstanceType<typeof EasyPostClient> {
   const config = getShippingConfig()
 
   if (!config.apiKey) {
