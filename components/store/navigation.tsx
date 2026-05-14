@@ -77,7 +77,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: "about",
     title: "About",
-    dropdown: [
+    items: [
       { name: "Our Story", href: "/our-story", description: "From Clovis, NM to Zanesville, OH" },
       { name: "The Heat Index", href: "/heat-index", description: "Stories, recipes, road notes, and salsa lore" },
       { name: "Recipes", href: "/recipes", description: "Cooking with our salsas" },
@@ -187,6 +187,21 @@ function NavigationContent() {
     };
   }, []);
 
+  // When a panel closes, move focus to its trigger if a descendant had focus.
+  // This prevents aria-hidden being applied to an ancestor of the focused element.
+  useEffect(() => {
+    if (openGroupId !== null) return;
+    const active = document.activeElement as HTMLElement | null;
+    if (!active) return;
+    for (const id of Object.keys(panelRefs.current) as NavGroup["id"][]) {
+      const panel = panelRefs.current[id];
+      if (panel?.contains(active)) {
+        triggerRefs.current[id]?.focus();
+        break;
+      }
+    }
+  }, [openGroupId]);
+
   const openGroup = (id: NavGroup["id"]) => {
     if (closeTimer.current) {
       clearTimeout(closeTimer.current);
@@ -293,7 +308,6 @@ function NavigationContent() {
                 fill
                 sizes="44px"
                 className="object-contain transition-transform duration-300 group-hover:-rotate-[4deg]"
-                priority
               />
             </span>
             <span className="leading-[1.02] text-left hidden sm:flex sm:flex-col">

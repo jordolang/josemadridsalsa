@@ -35,31 +35,33 @@ export async function GET(
     )
   }
 
-  const product = await db.product.findUnique({
-    where: { id },
-    include: {
-      category: true,
-      variants: {
-        orderBy: { createdAt: 'asc' },
-      },
-      reviews: {
-        where: { status: 'APPROVED' },
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          rating: true,
-          title: true,
-          comment: true,
-          isVerified: true,
-          createdAt: true,
-          user: {
-            select: { name: true },
-          },
+  const include = {
+    category: true,
+    variants: {
+      orderBy: { createdAt: 'asc' as const },
+    },
+    reviews: {
+      where: { status: 'APPROVED' as const },
+      orderBy: { createdAt: 'desc' as const },
+      select: {
+        id: true,
+        rating: true,
+        title: true,
+        comment: true,
+        isVerified: true,
+        createdAt: true,
+        user: {
+          select: { name: true },
         },
       },
-      nutritionalInfo: true,
     },
-  })
+    nutritionalInfo: true,
+  }
+
+  // Support both numeric ID and slug lookups.
+  const product =
+    (await db.product.findUnique({ where: { id }, include })) ??
+    (await db.product.findUnique({ where: { slug: id }, include }))
 
   if (!product || !product.isActive) {
     return NextResponse.json(
