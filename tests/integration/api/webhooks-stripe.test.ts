@@ -5,12 +5,28 @@ import Stripe from 'stripe'
 // Mock dependencies
 vi.mock('@/lib/prisma', () => ({
   default: {
+    webhookEvent: {
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+      update: vi.fn(),
+    },
     order: {
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    payment: {
+      findFirst: vi.fn(),
+      update: vi.fn(),
+    },
+    refund: {
+      upsert: vi.fn(),
+    },
     product: {
       update: vi.fn(),
+    },
+    inventoryTransaction: {
+      findFirst: vi.fn(),
+      create: vi.fn(),
     },
     auditLog: {
       findFirst: vi.fn(),
@@ -22,6 +38,26 @@ vi.mock('@/lib/prisma', () => ({
 
 vi.mock('@/lib/email/automation', () => ({
   sendOrderConfirmationEmail: vi.fn(() => Promise.resolve()),
+}))
+
+vi.mock('@/lib/inventory-manager', () => ({
+  deductReservedInventoryInTx: vi.fn(() =>
+    Promise.resolve({
+      product: {
+        id: 'prod-1',
+        name: 'Test Product',
+        sku: 'TEST-SKU',
+        inventory: 97,
+        stockReserved: 0,
+        lowStockThreshold: 10,
+        stockStatus: 'IN_STOCK',
+      },
+      transaction: { id: 'txn-1' },
+      previousInventory: 100,
+      newInventory: 97,
+    })
+  ),
+  checkAndUpdateAlerts: vi.fn(() => Promise.resolve()),
 }))
 
 const mockHeadersGet = vi.fn()
@@ -43,13 +79,36 @@ vi.mock('@/lib/stripe', () => ({
 }))
 
 describe('Stripe Webhook Integration Tests', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     mockWebhooksConstructEvent.mockClear()
     mockHeadersGet.mockClear()
 
     // Set env variable for webhook secret
     process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret'
+
+    // Default webhook event mocks (can be overridden in individual tests)
+    const { default: prisma } = await import('@/lib/prisma')
+    vi.mocked(prisma.webhookEvent.findUnique).mockResolvedValue(null)
+    vi.mocked(prisma.webhookEvent.upsert).mockResolvedValue({
+      id: 'webhook-event-1',
+      stripeEventId: 'evt_test',
+      type: 'test.event',
+      processed: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
+
+    // Default payment mock
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue({
+      id: 'payment-123',
+      orderId: 'order-123',
+      stripePaymentIntentId: 'pi_test123',
+      amount: 100,
+      status: 'SUCCEEDED',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
   })
 
   const mockHeaders = (signature: string | null) => {
@@ -128,7 +187,10 @@ describe('Stripe Webhook Integration Tests', () => {
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
         order: { update: mockOrderUpdate },
+        payment: { update: vi.fn(), upsert: vi.fn() },
+        refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
+        inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
         auditLog: {
           findFirst: mockAuditLogFindFirst,
           create: mockAuditLogCreate,
@@ -147,17 +209,6 @@ describe('Stripe Webhook Integration Tests', () => {
     expect(prisma.order.findUnique).toHaveBeenCalledWith({
       where: { id: 'order-123' },
       include: { items: true },
-    })
-
-    expect(mockAuditLogFindFirst).toHaveBeenCalledWith({
-      where: {
-        action: 'webhook.refund',
-        entityId: 'order-123',
-        changes: {
-          path: ['refundId'],
-          equals: 're_test123',
-        },
-      },
     })
 
     expect(mockOrderUpdate).toHaveBeenCalledWith({
@@ -252,7 +303,10 @@ describe('Stripe Webhook Integration Tests', () => {
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
         order: { update: mockOrderUpdate },
+        payment: { update: vi.fn(), upsert: vi.fn() },
+        refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
+        inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
         auditLog: {
           findFirst: mockAuditLogFindFirst,
           create: mockAuditLogCreate,
@@ -357,19 +411,16 @@ describe('Stripe Webhook Integration Tests', () => {
 
     mockHeaders('valid_signature')
     mockWebhooksConstructEvent.mockReturnValue(chargeRefundedEvent)
-    vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
-    vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
-      const txContext = {
-        order: { update: mockOrderUpdate },
-        product: { update: mockProductUpdate },
-        auditLog: {
-          findFirst: mockAuditLogFindFirst,
-          create: mockAuditLogCreate,
-        },
-      }
-      return callback(txContext)
-    })
+    // Mock webhookEvent as already processed (idempotency check)
+    vi.mocked(prisma.webhookEvent.findUnique).mockResolvedValue({
+      id: 'webhook-1',
+      stripeEventId: 'evt_duplicate',
+      type: 'charge.refunded',
+      processed: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
 
     const request = createRequest(JSON.stringify(chargeRefundedEvent))
     const response = await POST(request)
@@ -378,26 +429,18 @@ describe('Stripe Webhook Integration Tests', () => {
     expect(response.status).toBe(200)
     expect(data.received).toBe(true)
 
-    expect(mockAuditLogFindFirst).toHaveBeenCalledWith({
-      where: {
-        action: 'webhook.refund',
-        entityId: 'order-789',
-        changes: {
-          path: ['refundId'],
-          equals: 're_duplicate',
-        },
-      },
+    // Verify idempotency check was done
+    expect(prisma.webhookEvent.findUnique).toHaveBeenCalledWith({
+      where: { stripeEventId: 'evt_duplicate' },
     })
 
-    expect(mockOrderUpdate).not.toHaveBeenCalled()
-    expect(mockProductUpdate).not.toHaveBeenCalled()
-    expect(mockAuditLogCreate).not.toHaveBeenCalled()
+    // Should not process order or call any transaction updates
+    expect(prisma.order.findUnique).not.toHaveBeenCalled()
+    expect(prisma.$transaction).not.toHaveBeenCalled()
 
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      'Refund already processed, skipping:',
-      're_duplicate',
-      'for order:',
-      'order-789'
+      'Webhook event already processed, skipping:',
+      'evt_duplicate'
     )
 
     consoleLogSpy.mockRestore()
@@ -446,7 +489,7 @@ describe('Stripe Webhook Integration Tests', () => {
     expect(data.received).toBe(true)
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Skipping refund processing: no refund ID found in charge:',
+      'Skipping refund processing: no refund found in charge:',
       'ch_no_refund'
     )
 
@@ -628,7 +671,10 @@ describe('Stripe Webhook Integration Tests', () => {
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
         order: { update: mockOrderUpdate },
+        payment: { update: vi.fn(), upsert: vi.fn() },
+        refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
+        inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
         auditLog: {
           findFirst: mockAuditLogFindFirst,
           create: mockAuditLogCreate,
@@ -691,7 +737,7 @@ describe('Stripe Webhook Integration Tests', () => {
     }
 
     const mockOrderUpdate = vi.fn()
-    const mockProductUpdate = vi.fn()
+    const mockProductUpdate = vi.fn()  // Not called directly; inventory manager handles product updates
 
     const paymentSucceededEvent: Stripe.Event = {
       id: 'evt_payment_success',
@@ -720,7 +766,10 @@ describe('Stripe Webhook Integration Tests', () => {
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
         order: { update: mockOrderUpdate },
+        payment: { update: vi.fn(), upsert: vi.fn() },
+        refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
+        inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
       }
       return callback(txContext)
     })
@@ -743,21 +792,16 @@ describe('Stripe Webhook Integration Tests', () => {
     expect(mockOrderUpdate).toHaveBeenCalledWith({
       where: { id: 'order-payment' },
       data: {
-        paymentStatus: 'PAID',
+        paymentStatus: 'SUCCEEDED',
         status: 'CONFIRMED',
         stripePaymentId: 'pi_payment',
       },
     })
 
-    expect(mockProductUpdate).toHaveBeenCalledTimes(2)
-    expect(mockProductUpdate).toHaveBeenCalledWith({
-      where: { id: 'prod-1' },
-      data: { inventory: { decrement: 3 } },
-    })
-    expect(mockProductUpdate).toHaveBeenCalledWith({
-      where: { id: 'prod-2' },
-      data: { inventory: { decrement: 1 } },
-    })
+    // Note: product updates are handled internally by deductReservedInventoryInTx,
+    // which is mocked at the global level. Testing product.update calls would
+    // require unmocking the inventory manager, but that's tested in its own unit tests.
+    // This test verifies the webhook correctly processes payment and calls the email service.
 
     expect(sendOrderConfirmationEmail).toHaveBeenCalledWith('order-payment')
   })
@@ -807,7 +851,10 @@ describe('Stripe Webhook Integration Tests', () => {
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
         order: { update: mockOrderUpdate },
+        payment: { update: vi.fn(), upsert: vi.fn() },
+        refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
+        inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
       }
       return callback(txContext)
     })
@@ -828,7 +875,7 @@ describe('Stripe Webhook Integration Tests', () => {
 
     const mockOrder = {
       id: 'order-already-paid',
-      paymentStatus: 'PAID',
+      paymentStatus: 'SUCCEEDED',
       status: 'CONFIRMED',
       items: [
         { id: 'item-1', productId: 'prod-1', quantity: 1 },
@@ -922,7 +969,10 @@ describe('Stripe Webhook Integration Tests', () => {
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
         order: { update: mockOrderUpdate },
+        payment: { update: vi.fn(), upsert: vi.fn() },
+        refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
+        inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
       }
       return callback(txContext)
     })
@@ -978,7 +1028,10 @@ describe('Stripe Webhook Integration Tests', () => {
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
         order: { update: mockOrderUpdate },
+        payment: { update: vi.fn(), upsert: vi.fn() },
+        refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
+        inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
       }
       return callback(txContext)
     })
@@ -1173,7 +1226,10 @@ describe('Stripe Webhook Integration Tests', () => {
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
         order: { update: mockOrderUpdate },
+        payment: { update: vi.fn(), upsert: vi.fn() },
+        refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
+        inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
         auditLog: {
           findFirst: mockAuditLogFindFirst,
           create: mockAuditLogCreate,
@@ -1236,7 +1292,10 @@ describe('Stripe Webhook Integration Tests', () => {
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
         order: { update: mockOrderUpdate },
+        payment: { update: vi.fn(), upsert: vi.fn() },
+        refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
+        inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
       }
       return callback(txContext)
     })
@@ -1349,6 +1408,9 @@ describe('Stripe Webhook Integration Tests', () => {
     const { default: prisma } = await import('@/lib/prisma')
     const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
 
+    const mockOrderUpdate = vi.fn()
+    const mockPaymentUpsert = vi.fn()
+
     const paymentFailedEvent: Stripe.Event = {
       id: 'evt_payment_failed',
       object: 'event',
@@ -1372,6 +1434,15 @@ describe('Stripe Webhook Integration Tests', () => {
     mockHeaders('valid_signature')
     mockWebhooksConstructEvent.mockReturnValue(paymentFailedEvent)
 
+    // Mock the transaction to capture order.update and payment.upsert calls
+    vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+      const txContext = {
+        order: { update: mockOrderUpdate },
+        payment: { upsert: mockPaymentUpsert },
+      }
+      return callback(txContext)
+    })
+
     const request = createRequest(JSON.stringify(paymentFailedEvent))
     const response = await POST(request)
     const data = await response.json()
@@ -1379,7 +1450,7 @@ describe('Stripe Webhook Integration Tests', () => {
     expect(response.status).toBe(200)
     expect(data.received).toBe(true)
 
-    expect(prisma.order.update).toHaveBeenCalledWith({
+    expect(mockOrderUpdate).toHaveBeenCalledWith({
       where: { id: 'order-failed' },
       data: {
         paymentStatus: 'FAILED',
@@ -1421,6 +1492,18 @@ describe('Stripe Webhook Integration Tests', () => {
     mockHeaders('valid_signature')
     mockWebhooksConstructEvent.mockReturnValue(paymentCanceledEvent)
 
+    const mockOrderUpdate = vi.fn()
+    const mockPaymentUpsert = vi.fn()
+
+    // Mock the transaction to capture order.update and payment.upsert calls
+    vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+      const txContext = {
+        order: { update: mockOrderUpdate },
+        payment: { upsert: mockPaymentUpsert },
+      }
+      return callback(txContext)
+    })
+
     const request = createRequest(JSON.stringify(paymentCanceledEvent))
     const response = await POST(request)
     const data = await response.json()
@@ -1428,7 +1511,7 @@ describe('Stripe Webhook Integration Tests', () => {
     expect(response.status).toBe(200)
     expect(data.received).toBe(true)
 
-    expect(prisma.order.update).toHaveBeenCalledWith({
+    expect(mockOrderUpdate).toHaveBeenCalledWith({
       where: { id: 'order-canceled' },
       data: {
         paymentStatus: 'FAILED',

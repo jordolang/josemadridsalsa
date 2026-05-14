@@ -7,10 +7,11 @@ vi.mock('@/lib/rbac', () => ({
   getCurrentUser: vi.fn(),
 }))
 
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/prisma', () => {
+  const mockPrisma = {
     product: {
       findMany: vi.fn(),
+      update: vi.fn(),
     },
     order: {
       create: vi.fn(),
@@ -18,30 +19,72 @@ vi.mock('@/lib/prisma', () => ({
     abandonedCart: {
       updateMany: vi.fn(),
     },
-  },
-}))
+    inventoryTransaction: {
+      create: vi.fn(),
+    },
+    user: {
+      findUnique: vi.fn(),
+      update: vi.fn(),
+    },
+    $transaction: vi.fn((callback) => {
+      if (typeof callback === 'function') {
+        return callback(mockPrisma)
+      }
+      // Handle array form: prisma.$transaction([query1, query2])
+      return Promise.all(callback)
+    }),
+  }
+  return {
+    default: mockPrisma,
+  }
+})
 
 vi.mock('@/lib/audit', () => ({
   logAuditWithRequest: vi.fn(),
 }))
 
-const mockPaymentIntentsCreate = vi.fn(() =>
+const mockCreatePayment = vi.fn(() =>
   Promise.resolve({
-    client_secret: 'test_secret_pi_test123',
-    id: 'pi_test123',
+    success: true,
+    clientSecret: 'test_secret_pi_test123',
+    paymentIntentId: 'pi_test123',
   })
 )
 
-vi.mock('@/lib/stripe', () => ({
-  getStripe: vi.fn(() => ({
-    paymentIntents: {
-      create: mockPaymentIntentsCreate,
-    },
+const mockCreateCustomer = vi.fn(() =>
+  Promise.resolve({
+    success: true,
+    providerId: 'cus_test123',
+  })
+)
+
+vi.mock('@/lib/payments', () => ({
+  getProvider: vi.fn(() => ({
+    createPayment: mockCreatePayment,
+    createCustomer: mockCreateCustomer,
   })),
 }))
 
 vi.mock('@/lib/shopify/sync', () => ({
   queueShopifySync: vi.fn(),
+}))
+
+vi.mock('@/lib/inventory-manager', () => ({
+  reserveMultipleProducts: vi.fn(() =>
+    Promise.resolve([
+      {
+        id: 'reservation-123',
+        productId: 'clxxx1234567890abc',
+        quantity: 2,
+        reservedAt: new Date(),
+      },
+    ])
+  ),
+  releaseInventory: vi.fn(),
+}))
+
+vi.mock('@/lib/fundraising/referral-tracker', () => ({
+  getReferralFromCode: vi.fn(() => Promise.resolve(null)),
 }))
 
 vi.mock('@/lib/tax-calculator', () => ({
@@ -69,9 +112,42 @@ vi.mock('@/lib/shipping-calculator', () => ({
 }))
 
 describe('Checkout API Integration Tests', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
-    mockPaymentIntentsCreate.mockClear()
+    mockCreatePayment.mockClear()
+    mockCreateCustomer.mockClear()
+
+    // Reset mocks to default successful implementations
+    const { reserveMultipleProducts } = await import('@/lib/inventory-manager')
+    const { calculateTax } = await import('@/lib/tax-calculator')
+    const { calculateShipping } = await import('@/lib/shipping-calculator')
+
+    vi.mocked(reserveMultipleProducts).mockResolvedValue([
+      {
+        id: 'reservation-123',
+        productId: 'clxxx1234567890abc',
+        quantity: 2,
+        reservedAt: new Date(),
+      },
+    ] as any)
+
+    vi.mocked(calculateTax).mockResolvedValue({
+      taxAmountDecimal: 2.5,
+      taxRate: 0.08,
+      taxBreakdown: [
+        {
+          jurisdiction: 'Oregon',
+          rate: 0.08,
+          amount: 2.5,
+        },
+      ],
+    } as any)
+
+    vi.mocked(calculateShipping).mockReturnValue({
+      shippingCost: 8.99,
+      shippingMethod: 'Standard Shipping',
+      estimatedDelivery: '5-7 business days',
+    } as any)
   })
 
   const validCheckoutData = {
@@ -226,30 +302,28 @@ describe('Checkout API Integration Tests', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             guestEmail: 'test@example.com',
-            shippingMethod: expect.stringContaining('Portland'),
+            shippingMethod: 'Standard Shipping',
             paymentStatus: 'PENDING',
             status: 'PENDING',
           }),
         })
       )
 
-      // Verify payment intent was created
-      expect(mockPaymentIntentsCreate).toHaveBeenCalledWith(
+      // Verify payment was created via payment adapter
+      expect(mockCreatePayment).toHaveBeenCalledWith(
         expect.objectContaining({
           amount: expect.any(Number),
           currency: 'usd',
-          receipt_email: 'test@example.com',
-          metadata: expect.objectContaining({
-            orderId: 'order-123',
-            customerName: 'John Doe',
-          }),
-          shipping: expect.objectContaining({
-            name: 'John Doe',
-            address: expect.objectContaining({
-              line1: '123 Main St',
-              city: 'Portland',
-              state: 'OR',
-            }),
+          orderId: 'order-123',
+          orderNumber: expect.stringContaining('JMS-'),
+          customerEmail: 'test@example.com',
+          customerName: 'John Doe',
+          customerPhone: '555-1234',
+          shippingAddress: expect.objectContaining({
+            line1: '123 Main St',
+            city: 'Portland',
+            state: 'OR',
+            postalCode: '97201',
           }),
         })
       )
@@ -419,14 +493,13 @@ describe('Checkout API Integration Tests', () => {
       )
     })
 
-    it('should handle shipping calculation failure gracefully', async () => {
+    it('should return error when shipping calculation fails', async () => {
       const { default: prisma } = await import('@/lib/prisma')
       const { getCurrentUser } = await import('@/lib/rbac')
       const { calculateShipping } = await import('@/lib/shipping-calculator')
 
       vi.mocked(getCurrentUser).mockResolvedValue(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
-      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
       vi.mocked(calculateShipping).mockImplementation(() => {
         throw new Error('Shipping service unavailable')
       })
@@ -439,18 +512,9 @@ describe('Checkout API Integration Tests', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      // Should still succeed with $0 shipping
-      expect(response.status).toBe(200)
-      expect(data.clientSecret).toBeDefined()
-
-      // Order should be created with 0 shipping cost
-      expect(prisma.order.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            shippingCost: expect.any(Object), // Prisma Decimal with value 0
-          }),
-        })
-      )
+      // Should return error when shipping calculation fails
+      expect(response.status).toBe(500)
+      expect(data.error).toContain('Unable to calculate shipping cost')
     })
 
     it('should validate required fields', async () => {
@@ -504,11 +568,16 @@ describe('Checkout API Integration Tests', () => {
     it('should check inventory availability', async () => {
       const { default: prisma } = await import('@/lib/prisma')
       const { getCurrentUser } = await import('@/lib/rbac')
+      const { reserveMultipleProducts } = await import('@/lib/inventory-manager')
 
       vi.mocked(getCurrentUser).mockResolvedValue(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([
         { ...mockProduct, inventory: 1 } as any, // Not enough inventory
       ])
+      // Mock reservation to fail due to insufficient inventory
+      vi.mocked(reserveMultipleProducts).mockRejectedValue(
+        new Error('Insufficient inventory for product Test Salsa')
+      )
 
       const request = new NextRequest('http://localhost/api/checkout', {
         method: 'POST',
