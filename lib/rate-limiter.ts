@@ -1,79 +1,105 @@
 /**
- * Rate Limiter - Prevent API abuse
+ * Rate Limiter - Distributed Storage with Automatic Backend Selection
  * José Madrid Salsa E-commerce Platform
+ *
+ * Auto-selects between Vercel KV (production) and in-memory (development).
  */
 
-interface RateLimitRecord {
-  count: number
-  resetTime: number
+import type { RateLimitConfig, RateLimitResult, RateLimitStorage } from './rate-limit/types'
+import { VercelKVStorage } from './rate-limit/storage/vercel-kv'
+import { InMemoryStorage } from './rate-limit/storage/fallback'
+
+// Re-export types for backward compatibility
+export type { RateLimitConfig, RateLimitResult }
+
+/**
+ * Detect if Vercel KV is available
+ */
+function isVercelKVAvailable(): boolean {
+  return !!(
+    process.env.KV_REST_API_URL &&
+    process.env.KV_REST_API_TOKEN
+  )
 }
 
-// In-memory store for rate limiting
-// For production with multiple servers, use Redis or database
-const rateLimitStore = new Map<string, RateLimitRecord>()
-
-// Cleanup old entries every 5 minutes
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, record] of rateLimitStore.entries()) {
-    if (now > record.resetTime) {
-      rateLimitStore.delete(key)
-    }
+/**
+ * Get the appropriate storage backend
+ *
+ * - Production (Vercel with KV): Use Vercel KV storage
+ * - Development (local): Use in-memory storage
+ */
+function getStorage(): RateLimitStorage {
+  if (isVercelKVAvailable()) {
+    return new VercelKVStorage()
   }
-}, 5 * 60 * 1000)
 
-export interface RateLimitConfig {
-  /** Maximum number of requests allowed in the window */
-  maxRequests: number
-  /** Window duration in seconds */
-  windowSeconds: number
-  /** Unique identifier (IP address, user ID, etc.) */
-  identifier: string
+  return new InMemoryStorage()
 }
 
-export interface RateLimitResult {
-  /** Whether the request is allowed */
-  allowed: boolean
-  /** Number of requests remaining */
-  remaining: number
-  /** Time until rate limit resets (seconds) */
-  resetIn: number
-  /** Current request count */
-  current: number
+// Singleton storage instance
+let storageInstance: RateLimitStorage | null = null
+
+/**
+ * Get or create the storage instance
+ */
+function getStorageInstance(): RateLimitStorage {
+  if (!storageInstance) {
+    storageInstance = getStorage()
+  }
+
+  return storageInstance
 }
 
 /**
  * Check if a request is allowed under rate limit
+ *
+ * Now returns a Promise due to distributed storage being async.
+ *
+ * @param config - Rate limit configuration
+ * @returns Promise resolving to rate limit result
  */
-export function checkRateLimit(config: RateLimitConfig): RateLimitResult {
-  const { maxRequests, windowSeconds, identifier } = config
-  const now = Date.now()
-  const windowMs = windowSeconds * 1000
+export async function checkRateLimit(
+  config: RateLimitConfig
+): Promise<RateLimitResult> {
+  const storage = getStorageInstance()
+  return storage.check(config)
+}
 
-  // Get or create rate limit record
-  let record = rateLimitStore.get(identifier)
+/**
+ * Reset rate limit for a specific identifier
+ *
+ * @param identifier - Unique identifier to reset
+ * @returns Promise resolving when reset is complete
+ */
+export async function resetRateLimit(identifier: string): Promise<void> {
+  const storage = getStorageInstance()
+  return storage.reset(identifier)
+}
 
-  if (!record || now > record.resetTime) {
-    // Create new record or reset expired one
-    record = {
-      count: 0,
-      resetTime: now + windowMs,
-    }
-    rateLimitStore.set(identifier, record)
-  }
+/**
+ * Clean up expired rate limit entries
+ *
+ * @returns Promise resolving when cleanup is complete
+ */
+export async function cleanupRateLimits(): Promise<void> {
+  const storage = getStorageInstance()
+  return storage.cleanup()
+}
 
-  // Increment request count
-  record.count++
-
-  const allowed = record.count <= maxRequests
-  const remaining = Math.max(0, maxRequests - record.count)
-  const resetIn = Math.ceil((record.resetTime - now) / 1000)
+/**
+ * Get information about the current storage backend
+ *
+ * Useful for debugging and monitoring
+ */
+export function getStorageInfo(): {
+  type: 'vercel-kv' | 'in-memory'
+  production: boolean
+} {
+  const isKVAvailable = isVercelKVAvailable()
 
   return {
-    allowed,
-    remaining,
-    resetIn,
-    current: record.count,
+    type: isKVAvailable ? 'vercel-kv' : 'in-memory',
+    production: isKVAvailable,
   }
 }
 
