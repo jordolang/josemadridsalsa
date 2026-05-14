@@ -146,7 +146,7 @@ function mapEasyPostRate(easyPostRate: Rate): ShippingRate {
  * Integrates with EasyPost API for real-time carrier rates.
  * Follows the adapter pattern from the Stripe integration.
  */
-class EasyPostClient implements ShippingClient {
+class EasyPostShippingClient implements ShippingClient {
   provider = 'easypost'
   testMode: boolean
 
@@ -331,7 +331,7 @@ export const getShippingClient = (): ShippingClient => {
     // Create client based on provider
     switch (config.provider.toLowerCase()) {
       case 'easypost':
-        shippingClient = new EasyPostClient(config.testMode)
+        shippingClient = new EasyPostShippingClient(config.testMode)
         break
       case 'shippo':
         console.warn(
