@@ -68,15 +68,22 @@ export default function OrderConfirmationPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    const controller = new AbortController()
+    let active = true
+
     async function fetchOrder() {
       if (!orderId) {
-        setError('Order ID is missing')
-        setLoading(false)
+        if (active) {
+          setError('Order ID is missing')
+          setLoading(false)
+        }
         return
       }
 
       try {
-        const response = await fetch(`/api/orders/${orderId}`)
+        const response = await fetch(`/api/orders/${orderId}`, {
+          signal: controller.signal,
+        })
 
         if (!response.ok) {
           if (response.status === 401) {
@@ -92,18 +99,26 @@ export default function OrderConfirmationPage() {
         }
 
         const data = await response.json()
-        setOrder(data)
-
-        // Clear cart on successful order load
-        clearCart()
+        if (active) {
+          setOrder(data)
+          setLoading(false)
+          // Clear cart on successful order load
+          clearCart()
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load order')
-      } finally {
-        setLoading(false)
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Failed to load order')
+          setLoading(false)
+        }
       }
     }
 
     fetchOrder()
+
+    return () => {
+      active = false
+      controller.abort()
+    }
   }, [orderId, clearCart])
 
   if (loading) {
