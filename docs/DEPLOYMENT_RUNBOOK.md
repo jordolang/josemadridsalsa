@@ -375,11 +375,7 @@ psql $DATABASE_URL -c "SELECT COUNT(*) FROM users;"
 curl -I https://www.josemadrid.net
 # Expected: HTTP/2 200
 
-# 2. Check API health endpoint
-curl https://www.josemadrid.net/api/health
-# Expected: {"status": "ok"}
-
-# 3. Verify build ID updated
+# 2. Verify build ID updated
 curl -s https://www.josemadrid.net | grep "buildId"
 ```
 

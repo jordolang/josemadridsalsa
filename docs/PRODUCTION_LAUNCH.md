@@ -24,7 +24,7 @@ Before launching to production, ensure:
   ```
 - [ ] All E2E tests passing
   ```bash
-  npm run test:e2e
+  npx playwright test
   ```
 - [ ] No linting errors
   ```bash
