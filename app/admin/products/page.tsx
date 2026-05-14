@@ -34,7 +34,7 @@ import {
 import { ProductImportButton } from '@/components/admin/ProductImportButton'
 import { formatHeatLevel, getHeatLevelClass } from '@/lib/heat-level'
 import { cn } from '@/lib/utils'
-import { LowStockAlert } from '@/components/admin/low-stock-alert'
+import { LowStockAlert } from '@/components/admin/LowStockAlert'
 
 interface SearchParams {
   search?: string
@@ -76,36 +76,44 @@ async function getProducts(searchParams: SearchParams) {
     where.isActive = searchParams.active === 'true'
   }
 
-  // Fetch products - low stock filter requires post-processing
-  const [allProducts, categories] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        category: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    }),
+  const [allForFilter, categories] = await Promise.all([
+    // Low-stock filter requires comparing two columns; fetch all matching rows so
+    // in-memory filtering can determine the true total before slicing.
+    searchParams.lowStock === 'true'
+      ? prisma.product.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          include: { category: { select: { name: true } } },
+        })
+      : Promise.resolve(null),
     prisma.category.findMany({
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
   ])
 
-  // Apply low stock filter if needed
-  let filteredProducts = allProducts
-  if (searchParams.lowStock === 'true') {
-    filteredProducts = allProducts.filter(
-      (p) => p.inventory <= p.lowStockThreshold
-    )
-  }
+  let products, total: number
 
-  // Apply pagination to filtered results
-  const total = filteredProducts.length
-  const products = filteredProducts.slice(skip, skip + limit)
+  if (searchParams.lowStock === 'true' && allForFilter) {
+    // In-memory filter then slice — acceptable because low-stock sets are small
+    const filtered = allForFilter.filter((p) => p.inventory <= p.lowStockThreshold)
+    total = filtered.length
+    products = filtered.slice(skip, skip + limit)
+  } else {
+    // Normal path: delegate pagination to the database
+    const [rows, count] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: { category: { select: { name: true } } },
+      }),
+      prisma.product.count({ where }),
+    ])
+    products = rows
+    total = count
+  }
 
   return {
     products,

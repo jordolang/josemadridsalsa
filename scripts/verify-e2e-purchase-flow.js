@@ -231,7 +231,7 @@ async function verifyInventoryDecrement(order) {
 
     info(`\n  Product: ${product.name}`)
     info(`    Current Inventory: ${product.inventory}`)
-    info(`    Reserved Inventory: ${product.reservedInventory}`)
+    info(`    Reserved Inventory: ${product.stockReserved}`)
     info(`    Low Stock Threshold: ${product.lowStockThreshold}`)
 
     // We can't verify the exact decrement without knowing the previous inventory
@@ -243,10 +243,10 @@ async function verifyInventoryDecrement(order) {
       allDecrementCorrect = false
     }
 
-    if (product.reservedInventory >= 0) {
+    if (product.stockReserved >= 0) {
       success('    Reserved inventory is non-negative')
     } else {
-      fail(`    Reserved inventory is negative: ${product.reservedInventory}`)
+      fail(`    Reserved inventory is negative: ${product.stockReserved}`)
       allDecrementCorrect = false
     }
 
@@ -287,22 +287,22 @@ async function verifyLowStockAlerts(order) {
 
   for (const alert of alerts) {
     info(`\n  Alert for ${alert.product.name}:`)
-    info(`    Type: ${alert.alertType}`)
+    info(`    Type: ${alert.type}`)
     info(`    Status: ${alert.status}`)
-    info(`    Current Stock: ${alert.currentStock}`)
+    info(`    Current Stock: ${alert.stockLevel}`)
     info(`    Threshold: ${alert.threshold}`)
     info(`    Created: ${alert.createdAt.toISOString()}`)
 
-    if (alert.currentStock <= alert.threshold) {
+    if (alert.stockLevel <= alert.threshold) {
       success('    Alert correctly triggered (stock ≤ threshold)')
     } else {
-      warn(`    Alert exists but stock (${alert.currentStock}) > threshold (${alert.threshold})`)
+      warn(`    Alert exists but stock (${alert.stockLevel}) > threshold (${alert.threshold})`)
     }
 
-    if (alert.alertType === 'LOW_STOCK' || alert.alertType === 'OUT_OF_STOCK') {
-      success(`    Alert type is ${alert.alertType}`)
+    if (alert.type === 'LOW_STOCK' || alert.type === 'OUT_OF_STOCK') {
+      success(`    Alert type is ${alert.type}`)
     } else {
-      warn(`    Unexpected alert type: ${alert.alertType}`)
+      warn(`    Unexpected alert type: ${alert.type}`)
     }
   }
 

@@ -3,6 +3,9 @@ import { handlePaymentIntentSucceeded } from '@/lib/stripe/webhooks'
 import prisma from '@/lib/prisma'
 import type Stripe from 'stripe'
 import { InventoryTransactionType, StockStatus } from '@prisma/client'
+import type { Product, Order, OrderItem } from '@prisma/client'
+
+type TestOrder = Order & { items: (OrderItem & { product: Product })[] }
 
 /**
  * Integration tests for inventory decrement on order completion
@@ -23,8 +26,8 @@ vi.mock('@/lib/inventory-alerts', () => ({
 }))
 
 describe('Inventory Decrement on Order Completion', () => {
-  let testProduct: any
-  let testOrder: any
+  let testProduct: Product
+  let testOrder: TestOrder
 
   beforeEach(async () => {
     // Clean up any existing test data

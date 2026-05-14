@@ -16,9 +16,9 @@ declare module '@easypost/api' {
   }
 
   export default class EasyPostClient {
-    constructor(apiKey: string)
+    constructor(apiKey: string, options?: { timeout?: number })
     Shipment: {
-      create(params: any): Promise<Shipment>
+      create(params: unknown): Promise<Shipment>
     }
   }
 }

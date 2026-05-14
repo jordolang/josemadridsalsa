@@ -905,21 +905,10 @@ export async function createRestockNotification(
     return { skipped: true, reason: 'No admin emails configured' };
   }
 
-  // Calculate restock quantity
-  let recommendedStock: number;
-  if (avgDailySales) {
-    // 30 days of sales
-    recommendedStock = Math.ceil(avgDailySales * 30);
-  } else {
-    // 3x threshold as default
-    recommendedStock = threshold * 3;
-  }
-
-  // If we have sales data, use higher of the two
-  if (avgDailySales) {
-    const thresholdBasedStock = threshold * 3;
-    recommendedStock = Math.max(recommendedStock, thresholdBasedStock);
-  }
+  // Calculate restock quantity: use higher of 30-day sales or 3x threshold
+  const recommendedStock = avgDailySales
+    ? Math.max(Math.ceil(avgDailySales * 30), threshold * 3)
+    : threshold * 3;
 
   const restockQuantity = Math.max(0, recommendedStock - currentStock);
 

@@ -11,7 +11,7 @@ echo ""
 # Check 1: RESEND_API_KEY
 echo "1. Checking RESEND_API_KEY..."
 if [ -n "$RESEND_API_KEY" ]; then
-  echo "   ✓ RESEND_API_KEY is configured (${RESEND_API_KEY:0:10}...)"
+  echo "   ✓ RESEND_API_KEY is configured"
 else
   echo "   ✗ RESEND_API_KEY is NOT configured"
   echo "   Set in .env or .env.local:"
