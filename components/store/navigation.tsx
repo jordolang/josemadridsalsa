@@ -159,6 +159,7 @@ function NavigationContent() {
   const isSignedIn = status === "authenticated";
   const user = session?.user;
   const wishlistCount = useWishlistStore((state) => state.items.length);
+  const isHome = pathname === "/";
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 8);
@@ -287,34 +288,54 @@ function NavigationContent() {
     <header
       onMouseLeave={scheduleClose}
       className={cn(
-        "sticky top-0 z-50 w-full text-foreground transition-[background-color,box-shadow,border-color] duration-300",
-        isScrolled
-          ? "bg-background/95 backdrop-blur-md shadow-[0_1px_0_rgba(15,23,42,0.05),0_12px_28px_rgba(15,23,42,0.06)] dark:shadow-[0_0_30px_rgba(229,62,62,0.25)]"
-          : "bg-background/90 backdrop-blur-sm",
+        "sticky top-0 z-50 w-full transition-[background-color,box-shadow,border-color] duration-300",
+        isHome
+          ? "border-b border-[#8a5616]/70 bg-[#050505] text-white shadow-[0_1px_0_rgba(218,154,48,0.18)]"
+          : cn(
+              "text-foreground",
+              isScrolled
+                ? "bg-background/95 backdrop-blur-md shadow-[0_1px_0_rgba(15,23,42,0.05),0_12px_28px_rgba(15,23,42,0.06)] dark:shadow-[0_0_30px_rgba(229,62,62,0.25)]"
+                : "bg-background/90 backdrop-blur-sm",
+            ),
       )}
     >
-      <div className="mx-auto max-w-[1400px] px-4 sm:px-6">
-        <div className="grid h-[72px] grid-cols-[auto_1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
+      <div className={cn("mx-auto px-4 sm:px-6", isHome ? "max-w-none lg:px-12" : "max-w-[1400px]")}>
+        <div
+          className={cn(
+            "grid grid-cols-[auto_1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]",
+            isHome ? "h-[103px]" : "h-[72px]",
+          )}
+        >
           {/* Wordmark */}
           <Link
             href="/"
-            className="group flex items-center gap-3 justify-self-start"
+            className={cn("group flex items-center justify-self-start", isHome ? "gap-4" : "gap-3")}
             onClick={() => setOpenGroupId(null)}
           >
-            <span className="relative h-11 w-11 flex-shrink-0">
+            <span className={cn("relative flex-shrink-0", isHome ? "h-[66px] w-[66px]" : "h-11 w-11")}>
               <Image
                 src="/images/shared/logo-image.png"
                 alt="Jose Madrid Salsa"
                 fill
-                sizes="44px"
+                sizes={isHome ? "66px" : "44px"}
                 className="object-contain transition-transform duration-300 group-hover:-rotate-[4deg]"
               />
             </span>
             <span className="leading-[1.02] text-left hidden sm:flex sm:flex-col">
-              <span className="font-serif text-[20px] font-bold tracking-[-0.01em] text-foreground">
+              <span
+                className={cn(
+                  "font-serif font-bold tracking-[-0.01em]",
+                  isHome ? "text-[32px] text-white" : "text-[20px] text-foreground",
+                )}
+              >
                 Jose Madrid
               </span>
-              <span className="mt-[2px] text-[10px] font-semibold uppercase tracking-[0.24em] text-salsa-600">
+              <span
+                className={cn(
+                  "mt-[2px] font-semibold uppercase text-[#d9a235]",
+                  isHome ? "text-[13px] tracking-[0.33em]" : "text-[10px] tracking-[0.24em] text-salsa-600",
+                )}
+              >
                 Salsa · Est. 1987
               </span>
             </span>
@@ -342,12 +363,14 @@ function NavigationContent() {
                     onClick={() => setOpenGroupId(isOpen ? null : group.id)}
                     onFocus={() => openGroup(group.id)}
                     onKeyDown={(e) => handleTriggerKeyDown(e, group.id)}
-                    className="group relative px-5 py-3"
+                    className={cn("group relative py-3", isHome ? "px-8" : "px-5")}
                   >
                     <span
                       className={cn(
                         "text-[12.5px] font-semibold uppercase tracking-[0.22em] transition-colors duration-200",
-                        isActive || isOpen
+                        isHome
+                          ? "text-white group-hover:text-[#d9a235]"
+                          : isActive || isOpen
                           ? "text-salsa-600"
                           : "text-foreground group-hover:text-salsa-600",
                       )}
@@ -358,6 +381,7 @@ function NavigationContent() {
                       aria-hidden
                       className={cn(
                         "pointer-events-none absolute bottom-1.5 left-1/2 h-[1.5px] -translate-x-1/2 bg-salsa-600 transition-all duration-300 ease-out",
+                        isHome ? "bg-[#d9a235]" : "bg-salsa-600",
                         isActive || isOpen ? "w-[22px]" : "w-0",
                       )}
                     />
@@ -401,15 +425,21 @@ function NavigationContent() {
               variant="ghost"
               aria-label="Search"
               onClick={() => setSearchOpen((open) => !open)}
-              className={cn(
-                "h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-salsa-600",
-                searchOpen && "bg-muted text-salsa-600",
-              )}
+                className={cn(
+                  "h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-salsa-600",
+                  isHome && "text-white hover:bg-white/10 hover:text-[#d9a235]",
+                  searchOpen && "bg-muted text-salsa-600",
+                )}
             >
               <Search className="h-[17px] w-[17px]" />
             </Button>
 
-            <ThemeToggle className="h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600" />
+            <ThemeToggle
+              className={cn(
+                "h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600",
+                isHome && "text-white hover:bg-white/10 hover:text-[#d9a235]",
+              )}
+            />
 
             {/* Account */}
             {isSignedIn ? (
@@ -418,7 +448,10 @@ function NavigationContent() {
                   <Button
                     variant="ghost"
                     aria-label="Account menu"
-                    className="hidden lg:flex h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600"
+                    className={cn(
+                      "hidden lg:flex h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600",
+                      isHome && "text-white hover:bg-white/10 hover:text-[#d9a235]",
+                    )}
                   >
                     <User className="h-[17px] w-[17px]" />
                   </Button>
@@ -470,7 +503,10 @@ function NavigationContent() {
                 variant="ghost"
                 asChild
                 aria-label="Sign in"
-                className="h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600"
+                className={cn(
+                  "h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600",
+                  isHome && "text-white hover:bg-white/10 hover:text-[#d9a235]",
+                )}
               >
                 <Link href="/auth/signin">
                   <User className="h-[17px] w-[17px]" />
@@ -482,18 +518,24 @@ function NavigationContent() {
             <Button
               variant="ghost"
               asChild
-              className="hidden lg:flex h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600"
+              className={cn(
+                "hidden lg:flex h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600",
+                isHome && "text-white hover:bg-white/10 hover:text-[#d9a235]",
+              )}
             >
               <Link href="/gift-certificates/purchase" aria-label="Purchase Gift Certificate">
                 <Gift className="h-[17px] w-[17px]" />
               </Link>
             </Button>
 
-            <span aria-hidden className="mx-1 hidden h-5 w-px bg-border lg:block" />
+            <span
+              aria-hidden
+              className={cn("mx-1 hidden h-5 w-px bg-border lg:block", isHome && "bg-white/25")}
+            />
 
             {/* Cart */}
             <div className="flex-shrink-0">
-              <CartIcon />
+              <CartIcon className={cn(isHome && "text-white hover:bg-white/10 hover:text-[#d9a235]")} />
             </div>
 
             {/* Mobile menu */}
@@ -502,7 +544,7 @@ function NavigationContent() {
                 <Button
                   variant="ghost"
                   aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-                  className="lg:hidden h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-foreground"
+                  className={cn("lg:hidden h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-foreground", isHome && "text-white")}
                 >
                   <Menu className="h-5 w-5" />
                 </Button>

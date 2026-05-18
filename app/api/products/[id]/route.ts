@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/products/[id]
- * Public endpoint — fetch a single product by ID with variants, reviews, and category.
+ * Public endpoint — fetch a single product by ID or slug with variants, reviews, and category.
  */
 export async function GET(
   req: NextRequest,
@@ -30,7 +30,7 @@ export async function GET(
 
   if (!id || typeof id !== 'string') {
     return NextResponse.json(
-      { success: false, error: 'Invalid product ID' },
+      { success: false, error: 'Invalid product identifier' },
       { status: 422 },
     )
   }

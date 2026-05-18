@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { MapPin } from 'lucide-react'
 import type { ScheduleEvent } from '@/lib/server/google-data'
 
@@ -38,6 +39,8 @@ type EventTickerProps = {
 
 export function EventTicker({ initialEvents }: EventTickerProps) {
   const [segments, setSegments] = useState<string[]>([])
+  const pathname = usePathname()
+  const isHome = pathname === '/'
 
   useEffect(() => {
     const now = new Date()
@@ -61,6 +64,28 @@ export function EventTicker({ initialEvents }: EventTickerProps) {
       document.head.appendChild(style)
     }
   }, [])
+
+  if (isHome) {
+    return (
+      <div className="flex h-[50px] w-full items-center overflow-hidden border-b border-[#6f430f]/70 bg-[#110b07] text-white">
+        <div className="flex h-full shrink-0 items-center gap-2 border-r border-[#3a2410] px-11 text-[#d9a235]">
+          <MapPin className="h-4 w-4" />
+          <span className="text-[13px] font-black uppercase tracking-[0.28em]">
+            Find Us
+          </span>
+        </div>
+        <div className="flex h-full flex-1 items-center justify-between gap-8 overflow-hidden px-8">
+          <p className="truncate text-[13px] font-medium uppercase tracking-[0.24em] text-white/75">
+            Riverfront Park Miamisburg, 1 Water St, Miamisburg, OH 45342, USA
+          </p>
+          <p className="hidden shrink-0 items-center gap-5 text-[13px] font-medium uppercase tracking-[0.24em] text-white/85 lg:flex">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#d9a235]" />
+            May 16 · Michigan State Chippewa Club
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   if (segments.length === 0) return null
 
