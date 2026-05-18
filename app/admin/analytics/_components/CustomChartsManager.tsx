@@ -41,7 +41,8 @@ export function CustomChartsManager({ charts, canManageGa }: Props) {
   const handleAdd = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
-    const formData = new FormData(e.currentTarget)
+    const form = e.currentTarget
+    const formData = new FormData(form)
 
     startTransition(async () => {
       const result = await addGoogleAnalyticsChartAction(formData)
@@ -51,7 +52,7 @@ export function CustomChartsManager({ charts, canManageGa }: Props) {
         return
       }
 
-      e.currentTarget.reset()
+      form.reset()
       router.refresh()
     })
   }

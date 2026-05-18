@@ -583,7 +583,7 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
             </Button>
             {mode === 'edit' && initial.slug && (
               <Button asChild variant="outline" size="sm">
-                <a href={`/heat-index/${initial.slug}`} target="_blank" rel="noopener noreferrer">
+                <a href={`/admin/blog/posts/${initial.slug}/preview`} target="_blank" rel="noopener noreferrer">
                   <Eye className="w-3.5 h-3.5 mr-1.5" />
                   Preview
                 </a>
