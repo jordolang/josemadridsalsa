@@ -10,8 +10,7 @@ type ProductPageProps = {
 const imageFallback = '/images/shared/salsa-bowl.png'
 
 const loadProduct = async (slug: string): Promise<Product | null> => {
-  // Skip database during build to avoid connection issues
-  if (process.env.VERCEL || process.env.CI || !process.env.DATABASE_URL) {
+  if (!process.env.DATABASE_URL) {
     return null
   }
 
