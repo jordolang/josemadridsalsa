@@ -206,7 +206,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
         changelogNotes: (record.changelogNotes as string | null | undefined) ?? null,
         authorName: (record.authorName as string | null | undefined) ?? null,
         authorEmail: (record.authorEmail as string | null | undefined) ?? null,
-        authorId: (record.authorId ?? (record as { createdById?: unknown }).createdById) as string | null | undefined ?? null,
+        authorId: ((record.authorId ?? (record as { createdById?: unknown }).createdById) as string | null) ?? null,
       }
     })
   }

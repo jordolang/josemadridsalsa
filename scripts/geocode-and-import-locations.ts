@@ -5,7 +5,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { PrismaClient } from '@prisma/client'
-import { getErrorMessage } from '../lib/errors'
+import { getErrorMessage } from '@/lib/errors'
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY
 const DATA_PATH = path.join(process.cwd(), 'lib/locations/locations-data.json')
@@ -118,4 +118,8 @@ async function main() {
   await prisma.$disconnect()
 }
 
-main().catch(async (e: unknown) => { console.error(e); await prisma.$disconnect(); process.exit(1) })
+main().catch(async (e: unknown) => {
+  console.error(getErrorMessage(e))
+  await prisma.$disconnect()
+  process.exit(1)
+})

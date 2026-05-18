@@ -273,7 +273,7 @@ export async function saveStructuredData(
   entityType: StructuredDataType,
   entityId: string,
   schemaType: string,
-  jsonLd: unknown
+  jsonLd: Prisma.InputJsonValue
 ): Promise<void> {
   await prisma.structuredData.upsert({
     where: {
@@ -286,10 +286,10 @@ export async function saveStructuredData(
       entityType,
       entityId,
       schemaType,
-      jsonLd: jsonLd as Prisma.InputJsonValue,
+      jsonLd,
     },
     update: {
-      jsonLd: jsonLd as Prisma.InputJsonValue,
+      jsonLd,
     },
   })
 }

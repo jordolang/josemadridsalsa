@@ -187,8 +187,7 @@ const wishlistStoreConfig: StateCreator<WishlistStore> = (set, get) => ({
 
       set({ items, isLoading: false })
     } catch (error) {
-      // Only log non-authentication errors
-      if (error instanceof Error && error.message && !error.message.includes('401') && !error.message.includes('403')) {
+      if (error instanceof Error) {
         console.error('Failed to fetch wishlist:', error)
       }
       set({ items: [], isLoading: false })
