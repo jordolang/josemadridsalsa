@@ -5,7 +5,6 @@ import { connectBrowser } from '@/lib/scraper/browser'
 import { eventBus } from '@/lib/scraper/event-bus'
 import {
   STAFF_TITLE_PATTERNS,
-  GENERIC_EMAIL_PREFIXES,
 } from '@/lib/scraper/school-config'
 import type { Browser, Page } from 'playwright'
 
@@ -59,7 +58,6 @@ function extractEmails(text: string): string[] {
   return [...new Set(matches)]
     .map(e => e.toLowerCase())
     .filter(email => {
-      if (GENERIC_EMAIL_PREFIXES.some(prefix => email.startsWith(prefix + '@'))) return false
       if (FAKE_EMAIL_DOMAIN_EXTENSIONS.test(email)) return false
       if (URL_ENCODING_ARTIFACTS.test(email)) return false
       const [local, domain] = email.split('@')
@@ -270,7 +268,7 @@ export async function POST(
               continue
             }
             consecutiveFailures = 0
-            await page.waitForTimeout(1500)
+            await page.waitForTimeout(2000)
 
             // STEP 2: Scan the main page for ALL links and categorize them
             emit('info', 'parse', `Scanning ${domain} main page for directory/staff links...`)
@@ -279,11 +277,18 @@ export async function POST(
               const allLinks: Array<{ href: string; text: string; score: number }> = []
               const allEmails: string[] = []
 
-              // Extract emails from main page
+              // Extract emails from body text
               const bodyText = document.body?.textContent || ''
               const emailRe = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi
               const foundEmails = bodyText.match(emailRe) || []
               allEmails.push(...foundEmails)
+
+              // Extract emails from mailto: href attributes (most reliable source)
+              document.querySelectorAll('a[href^="mailto:"]').forEach(el => {
+                const href = el.getAttribute('href') || ''
+                const mailtoEmail = href.replace(/^mailto:/i, '').split('?')[0].trim()
+                if (mailtoEmail && mailtoEmail.includes('@')) allEmails.push(mailtoEmail)
+              })
 
               // Score every link on the page
               document.querySelectorAll('a[href]').forEach(el => {
@@ -292,7 +297,6 @@ export async function POST(
                 if (!href || !href.startsWith('http')) return
                 const hrefLower = href.toLowerCase()
                 const textLower = (a.textContent || '').toLowerCase().trim()
-                if (!textLower || textLower.length > 100) return
 
                 let score = 0
                 for (const kw of keywords) {
@@ -301,11 +305,11 @@ export async function POST(
                 }
 
                 if (score > 0) {
-                  allLinks.push({ href, text: textLower.substring(0, 60), score })
+                  allLinks.push({ href, text: textLower.substring(0, 80), score })
                 }
               })
 
-              // Sort by score descending, dedupe, take top 5
+              // Sort by score descending, dedupe, take top 8
               const seen = new Set<string>()
               const topLinks = allLinks
                 .sort((a, b) => b.score - a.score)
@@ -314,19 +318,24 @@ export async function POST(
                   seen.add(l.href)
                   return true
                 })
-                .slice(0, 5)
+                .slice(0, 8)
 
               return { topLinks, mainPageEmails: [...new Set(allEmails)] }
             }, DIRECTORY_KEYWORDS)
 
-            const mainEmails = extractEmails(pageAnalysis.mainPageEmails.join(' '))
+            // Also extract from raw HTML to catch any remaining mailto:/obfuscated emails
+            const mainPageHtml = await page.content()
+            const mainEmails = [...new Set([
+              ...extractEmails(pageAnalysis.mainPageEmails.join(' ')),
+              ...extractEmails(mainPageHtml),
+            ])]
 
             if (mainEmails.length > 0) {
               emit('info', 'parse', `Found ${mainEmails.length} emails on main page`)
             }
 
             if (pageAnalysis.topLinks.length > 0) {
-              emit('info', 'parse', `Found ${pageAnalysis.topLinks.length} promising links: ${pageAnalysis.topLinks.map(l => `"${l.text}" (${safePathname(l.href)})`).join(', ')}`)
+              emit('info', 'parse', `Found ${pageAnalysis.topLinks.length} promising links: ${pageAnalysis.topLinks.map(l => `"${l.text || safePathname(l.href)}" (${safePathname(l.href)})`).join(', ')}`)
             } else {
               emit('info', 'parse', `No directory/staff links found on ${domain} main page`)
             }
@@ -335,14 +344,11 @@ export async function POST(
             const allFoundEmails = new Set<string>(mainEmails)
             const emailContexts = new Map<string, string>()
 
-            // Store context for main page emails
-            if (mainEmails.length > 0) {
-              const mainHtml = await page.content()
-              for (const email of mainEmails) {
-                const idx = mainHtml.indexOf(email)
-                if (idx >= 0) {
-                  emailContexts.set(email, mainHtml.substring(Math.max(0, idx - 400), idx + email.length + 400))
-                }
+            // Store context for main page emails using already-fetched HTML
+            for (const email of mainEmails) {
+              const idx = mainPageHtml.indexOf(email)
+              if (idx >= 0) {
+                emailContexts.set(email, mainPageHtml.substring(Math.max(0, idx - 400), idx + email.length + 400))
               }
             }
 
@@ -351,17 +357,17 @@ export async function POST(
               if (Date.now() - startTime > maxRunTime) break
 
               try {
-                emit('info', 'parse', `  → Checking: "${link.text}" (${safePathname(link.href)})`)
+                emit('info', 'parse', `  → Checking: "${link.text || safePathname(link.href)}" (${safePathname(link.href)})`)
                 const subNav = await page.goto(link.href, { timeout: SUBPAGE_NAV_TIMEOUT, waitUntil: 'domcontentloaded' }).catch(() => null)
                 if (!subNav) continue
-                await page.waitForTimeout(1000)
+                await page.waitForTimeout(1500)
 
                 const subHtml = await page.content()
                 const subEmails = extractEmails(subHtml)
 
                 const newEmails = subEmails.filter(e => !allFoundEmails.has(e))
                 if (newEmails.length > 0) {
-                  emit('success', 'parse', `  ✓ Found ${newEmails.length} new emails on "${link.text}"`)
+                  emit('success', 'parse', `  ✓ Found ${newEmails.length} new emails on "${link.text || safePathname(link.href)}"`)
                   for (const email of newEmails) {
                     allFoundEmails.add(email)
                     const idx = subHtml.indexOf(email)
@@ -372,6 +378,41 @@ export async function POST(
                 }
               } catch {
                 emit('warn', 'parse', `  Could not load subpage: ${safePathname(link.href)}`)
+              }
+            }
+
+            // STEP 3b: If no emails found yet, try common contact/staff paths directly
+            if (allFoundEmails.size === 0) {
+              const CONTACT_FALLBACK_PATHS = [
+                '/contact', '/contact-us', '/about', '/about-us',
+                '/staff', '/directory', '/team', '/our-team', '/people',
+              ]
+              let siteOrigin = ''
+              try { siteOrigin = new URL(representativeUrl).origin } catch { /* skip */ }
+
+              if (siteOrigin) {
+                emit('info', 'parse', `No emails found via scoring — trying ${CONTACT_FALLBACK_PATHS.length} common paths on ${domain}`)
+                for (const path of CONTACT_FALLBACK_PATHS) {
+                  if (Date.now() - startTime > maxRunTime || allFoundEmails.size > 0) break
+                  const fallbackUrl = `${siteOrigin}${path}`
+                  try {
+                    const fallbackNav = await page.goto(fallbackUrl, { timeout: SUBPAGE_NAV_TIMEOUT, waitUntil: 'domcontentloaded' }).catch(() => null)
+                    if (!fallbackNav) continue
+                    await page.waitForTimeout(1000)
+                    const fallbackHtml = await page.content()
+                    const fallbackEmails = extractEmails(fallbackHtml)
+                    if (fallbackEmails.length > 0) {
+                      emit('success', 'parse', `  ✓ Found ${fallbackEmails.length} emails at ${path}`)
+                      for (const email of fallbackEmails) {
+                        allFoundEmails.add(email)
+                        const idx = fallbackHtml.indexOf(email)
+                        if (idx >= 0) {
+                          emailContexts.set(email, fallbackHtml.substring(Math.max(0, idx - 400), idx + email.length + 400))
+                        }
+                      }
+                    }
+                  } catch { /* skip this fallback path */ }
+                }
               }
             }
 

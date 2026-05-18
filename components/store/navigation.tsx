@@ -451,12 +451,14 @@ function NavigationContent() {
                     aria-label="Account menu"
                     className={cn(
                       "relative h-10 w-10 min-h-[40px] min-w-[40px] p-0",
-                      "text-amber-400 hover:text-amber-200 hover:bg-amber-500/15",
-                      isHome && "text-amber-300 hover:bg-amber-500/10 hover:text-amber-100",
+                      "bg-transparent hover:bg-transparent text-amber-400 hover:text-amber-200",
+                      isHome && "text-amber-300 hover:text-amber-100",
                     )}
-                    style={{ boxShadow: "0 0 10px 4px rgba(251,191,36,0.45), 0 0 20px 6px rgba(251,191,36,0.18)" }}
                   >
-                    <User className="h-[17px] w-[17px]" />
+                    <User
+                      className="h-[17px] w-[17px]"
+                      style={{ filter: "drop-shadow(0 0 5px rgba(251,191,36,0.9)) drop-shadow(0 0 12px rgba(251,191,36,0.55))" }}
+                    />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
