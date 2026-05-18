@@ -461,6 +461,7 @@ function NavigationContent() {
                       "text-blue-400 hover:text-blue-200 hover:bg-blue-500/15",
                       isHome && "text-blue-300 hover:bg-blue-500/10 hover:text-blue-100",
                     )}
+                    style={{ boxShadow: "0 0 8px 2px rgba(217,162,53,0.38)" }}
                   >
                     <User className="h-[17px] w-[17px]" />
                   </Button>
