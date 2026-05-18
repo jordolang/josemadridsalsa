@@ -443,14 +443,23 @@ function NavigationContent() {
 
             {/* Account */}
             {isSignedIn ? (
+              <div className="relative hidden lg:flex items-center justify-center h-10 w-10">
+                {/* Pulsing aura — visible indicator that a session is active */}
+                <span
+                  className="absolute inset-[-4px] rounded-full bg-blue-500/30 animate-ping pointer-events-none"
+                  style={{ animationDuration: "2.4s" }}
+                />
+                <span className="absolute inset-[-4px] rounded-full bg-blue-500/12 pointer-events-none" />
+                <span className="absolute inset-[-4px] rounded-full border border-blue-400/50 pointer-events-none" />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     aria-label="Account menu"
                     className={cn(
-                      "hidden lg:flex h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600",
-                      isHome && "text-white hover:bg-white/10 hover:text-[#d9a235]",
+                      "relative h-10 w-10 min-h-[40px] min-w-[40px] p-0",
+                      "text-blue-400 hover:text-blue-200 hover:bg-blue-500/15",
+                      isHome && "text-blue-300 hover:bg-blue-500/10 hover:text-blue-100",
                     )}
                   >
                     <User className="h-[17px] w-[17px]" />
@@ -498,6 +507,7 @@ function NavigationContent() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
             ) : (
               <Button
                 variant="ghost"
@@ -544,9 +554,12 @@ function NavigationContent() {
                 <Button
                   variant="ghost"
                   aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-                  className={cn("lg:hidden h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-foreground", isHome && "text-white")}
+                  className={cn("relative lg:hidden h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-foreground", isHome && "text-white")}
                 >
                   <Menu className="h-5 w-5" />
+                  {isSignedIn && (
+                    <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-blue-400 ring-2 ring-background animate-pulse" />
+                  )}
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="flex w-80 flex-col">
