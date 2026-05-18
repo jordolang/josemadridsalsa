@@ -443,24 +443,16 @@ function NavigationContent() {
 
             {/* Account */}
             {isSignedIn ? (
-              <div className="relative hidden lg:flex items-center justify-center h-10 w-10">
-                {/* Pulsing aura — visible indicator that a session is active */}
-                <span
-                  className="absolute inset-[-4px] rounded-full bg-blue-500/30 animate-ping pointer-events-none"
-                  style={{ animationDuration: "2.4s" }}
-                />
-                <span className="absolute inset-[-4px] rounded-full bg-blue-500/12 pointer-events-none" />
-                <span className="absolute inset-[-4px] rounded-full border border-blue-400/50 pointer-events-none" />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     aria-label="Account menu"
                     className={cn(
-                      "relative h-10 w-10 min-h-[40px] min-w-[40px] p-0",
-                      "text-blue-400 hover:text-blue-200 hover:bg-blue-500/15",
-                      isHome && "text-blue-300 hover:bg-blue-500/10 hover:text-blue-100",
+                      "hidden lg:flex h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-[#d9a235] hover:text-[#f0c050] hover:bg-transparent",
+                      isHome && "hover:bg-white/10",
                     )}
+                    style={{ boxShadow: "0 0 8px 2px rgba(217,162,53,0.38)" }}
                   >
                     <User className="h-[17px] w-[17px]" />
                   </Button>
@@ -507,7 +499,6 @@ function NavigationContent() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              </div>
             ) : (
               <Button
                 variant="ghost"
@@ -558,7 +549,7 @@ function NavigationContent() {
                 >
                   <Menu className="h-5 w-5" />
                   {isSignedIn && (
-                    <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-blue-400 ring-2 ring-background animate-pulse" />
+                    <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-[#d9a235] ring-1 ring-background" />
                   )}
                 </Button>
               </SheetTrigger>
