@@ -100,7 +100,7 @@
           "patterns_from": [],
           "verification": {
             "type": "command",
-            "command": "du -sh node_modules/@googleapis node_modules/@google-analytics 2>/dev/null | awk '{sum+=$1} END {print \"Total size: \" sum}'",
+            "command": "du -sb node_modules/@googleapis node_modules/@google-analytics 2>/dev/null | awk '{sum+=$1} END {print \"Total size: \" sum \" bytes\"}'",
             "expected": "Significantly smaller than 100MB (should be under 10MB)"
           },
           "status": "completed",
