@@ -72,6 +72,7 @@ export async function getReviewsData(): Promise<ReviewsData> {
       `https://maps.googleapis.com/maps/api/place/details/json?${params.toString()}`,
       {
         method: 'GET',
+        signal: AbortSignal.timeout(5000),
         // Next.js ISR: revalidate every 2 hours
         next: { revalidate: 7200 },
       }
@@ -274,6 +275,7 @@ export async function getCalendarEvents(limit = 25): Promise<ScheduleEvent[]> {
     const url = `https://calendar.google.com/calendar/ical/${encodeURIComponent(calendarId)}/public/basic.ics`
 
     const response = await fetch(url, {
+      signal: AbortSignal.timeout(5000),
       // Next.js ISR: revalidate every 5 minutes
       next: { revalidate: 300 },
     })
