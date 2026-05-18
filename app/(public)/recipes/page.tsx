@@ -1,16 +1,13 @@
+import prisma from '@/lib/prisma'
 import { RecipesClient } from './recipes-client'
 import type { Recipe } from '@/types/recipe'
 
-export const revalidate = 0
+export const revalidate = 300
 
 export default async function RecipesPage() {
   let recipes: Recipe[] = []
 
   try {
-    const prisma = (await import('@/lib/prisma')).default
-
-    // Try to connect and query
-    await prisma.$connect()
     recipes = await prisma.recipe.findMany({
       select: {
         id: true,

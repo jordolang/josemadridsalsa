@@ -1,9 +1,10 @@
+import { Suspense } from 'react'
 import { SalsasClient } from './salsas-client'
 import type { Product } from '@/components/store/product-card'
 import { getProducts, getCategories } from '@/lib/db/products'
 import { logger } from '@/lib/logger'
 
-export const revalidate = 0
+export const revalidate = 60
 
 interface SearchParams {
   category?: string
@@ -60,13 +61,15 @@ export default async function SalsasPage({
   }
 
   return (
-    <SalsasClient
-      initialProducts={products}
-      categories={categories}
-      initialCategory={params.category}
-      initialHeatLevel={params.heatLevel}
-      initialSearch={params.search}
-      initialView={params.view}
-    />
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <SalsasClient
+        initialProducts={products}
+        categories={categories}
+        initialCategory={params.category}
+        initialHeatLevel={params.heatLevel}
+        initialSearch={params.search}
+        initialView={params.view}
+      />
+    </Suspense>
   )
 }

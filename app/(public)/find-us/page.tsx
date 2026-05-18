@@ -63,17 +63,14 @@ export default async function FindUsPage({ searchParams }: FindUsPageProps) {
     console.log('[FindUsPage] Normalizing filters...');
     initialFilters = normalizeFilters(rawFilters)
 
-    console.log('[FindUsPage] Calling getAllLocationsFromDB...');
-    allLocations = await getAllLocationsFromDB()
-    console.log('[FindUsPage] Got', allLocations.length, 'locations from database');
+    const [rawLocations, dbFacets, filteredResult] = await Promise.all([
+      getAllLocationsFromDB(),
+      getLocationFacetsFromDB(),
+      filterLocationsFromDB(initialFilters),
+    ])
 
-    if (!allLocations || allLocations.length === 0) {
-      console.warn('[FindUsPage] No locations returned, using empty array');
-      allLocations = [];
-    }
-
-    console.log('[FindUsPage] Getting facets from database...');
-    const dbFacets = await getLocationFacetsFromDB()
+    allLocations = rawLocations || []
+    initialResult = filteredResult
 
     // Transform facets to match expected format
     facets = {
@@ -86,9 +83,6 @@ export default async function FindUsPage({ searchParams }: FindUsPageProps) {
         return acc
       }, {} as Record<string, string[]>),
     }
-
-    console.log('[FindUsPage] Filtering locations from database...');
-    initialResult = await filterLocationsFromDB(initialFilters)
 
     totalLocations = allLocations.length
     ohioLocations = allLocations.filter((location) => location.state === 'OH').length
