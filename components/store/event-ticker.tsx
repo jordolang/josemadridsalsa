@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
 import { MapPin } from 'lucide-react'
 import type { ScheduleEvent } from '@/lib/server/google-data'
 
@@ -39,8 +38,6 @@ type EventTickerProps = {
 
 export function EventTicker({ initialEvents }: EventTickerProps) {
   const [segments, setSegments] = useState<string[]>([])
-  const pathname = usePathname()
-  const isHome = pathname === '/'
 
   useEffect(() => {
     const now = new Date()
@@ -65,28 +62,6 @@ export function EventTicker({ initialEvents }: EventTickerProps) {
     }
   }, [])
 
-  if (isHome) {
-    return (
-      <div className="flex h-[50px] w-full items-center overflow-hidden border-b border-[#6f430f]/70 bg-[#110b07] text-white">
-        <div className="flex h-full shrink-0 items-center gap-2 border-r border-[#3a2410] px-11 text-[#d9a235]">
-          <MapPin className="h-4 w-4" />
-          <span className="text-[13px] font-black uppercase tracking-[0.28em]">
-            Find Us
-          </span>
-        </div>
-        <div className="flex h-full flex-1 items-center justify-between gap-8 overflow-hidden px-8">
-          <p className="truncate text-[13px] font-medium uppercase tracking-[0.24em] text-white/75">
-            Riverfront Park Miamisburg, 1 Water St, Miamisburg, OH 45342, USA
-          </p>
-          <p className="hidden shrink-0 items-center gap-5 text-[13px] font-medium uppercase tracking-[0.24em] text-white/85 lg:flex">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#d9a235]" />
-            May 16 · Michigan State Chippewa Club
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   if (segments.length === 0) return null
 
   const formattedSegments = segments.length > 1
@@ -98,32 +73,32 @@ export function EventTicker({ initialEvents }: EventTickerProps) {
 
   return (
     <div style={{
-      background: 'linear-gradient(90deg, #b91c1c 0%, #9a1515 100%)',
+      background: '#110b07',
       height: '44px',
       overflow: 'hidden',
       width: '100%',
       display: 'flex',
       alignItems: 'center',
-      borderBottom: '2px solid #7f1d1d',
+      borderBottom: '1px solid rgba(111,67,15,0.7)',
       position: 'relative',
     }}>
       <div style={{
         flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
-        gap: '6px',
-        padding: '0 20px',
-        background: '#7f1d1d',
+        gap: '8px',
+        padding: '0 28px',
+        background: 'transparent',
         height: '100%',
-        borderRight: '2px solid #991b1b',
+        borderRight: '1px solid #3a2410',
         zIndex: 2,
       }}>
-        <MapPin style={{ width: '15px', height: '15px', color: '#fde047', flexShrink: 0 }} />
+        <MapPin style={{ width: '15px', height: '15px', color: '#d9a235', flexShrink: 0 }} />
         <span style={{
-          color: '#fde047',
+          color: '#d9a235',
           fontWeight: 900,
           fontSize: '13px',
-          letterSpacing: '0.12em',
+          letterSpacing: '0.28em',
           textTransform: 'uppercase',
           whiteSpace: 'nowrap',
           fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -147,14 +122,13 @@ export function EventTicker({ initialEvents }: EventTickerProps) {
               alignItems: 'center',
               gap: '10px',
               padding: '0 48px',
-              color: seg.includes('COMING UP') ? '#fde047' : '#fef9c3',
-              fontWeight: 900,
-              fontSize: seg.includes('COMING UP') ? '12px' : '13px',
-              letterSpacing: seg.includes('COMING UP') ? '0.2em' : '0.1em',
+              color: seg.includes('UPCOMING') ? '#d9a235' : 'rgba(255,255,255,0.75)',
+              fontWeight: seg.includes('UPCOMING') ? 900 : 500,
+              fontSize: '13px',
+              letterSpacing: seg.includes('UPCOMING') ? '0.24em' : '0.1em',
               textTransform: 'uppercase',
               whiteSpace: 'nowrap',
               fontFamily: 'system-ui, -apple-system, sans-serif',
-              opacity: seg.includes('COMING UP') ? 0.8 : 1,
             }}>
               {seg}
             </span>
