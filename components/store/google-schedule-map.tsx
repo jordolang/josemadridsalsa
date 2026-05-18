@@ -52,7 +52,11 @@ function positionFromMarker(marker: GoogleMapsMarker): LatLngLiteral {
     return marker.getPosition();
   }
 
-  return marker.position as LatLngLiteral;
+  if (marker.position) {
+    return marker.position as LatLngLiteral;
+  }
+
+  throw new Error('Marker has no valid position');
 }
 
 function loadGoogleMaps(apiKey: string) {

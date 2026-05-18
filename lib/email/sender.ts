@@ -47,7 +47,8 @@ export function substituteVariables(
   // Replace {{variable}} patterns
   Object.keys(variables).forEach((key) => {
     const value = variables[key] ?? ''
-    const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g')
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(`{{\\s*${escapedKey}\\s*}}`, 'g')
     result = result.replace(regex, String(value))
   })
 

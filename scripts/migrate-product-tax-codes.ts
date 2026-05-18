@@ -10,7 +10,7 @@
  */
 
 import prisma from '../lib/prisma'
-import { getErrorMessage, isErrorWithMessage } from '../lib/errors'
+import { getErrorMessage, isErrorWithMessage } from '@/lib/errors'
 
 /**
  * Product for tax code determination

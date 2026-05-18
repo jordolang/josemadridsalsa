@@ -258,7 +258,7 @@ export function validateProducts(
       if (parsed.categoryId) {
         categoryId = parsed.categoryId;
       } else if (parsed.categoryName) {
-        const lookupId = categories.get(parsed.categoryName.toLowerCase());
+        const lookupId = categories.get(parsed.categoryName.trim().toLowerCase());
         if (lookupId) {
           categoryId = lookupId;
         } else {

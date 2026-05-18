@@ -20,7 +20,7 @@ export interface ProductFilters {
  * Type guard to check if a string is a valid HeatLevel
  */
 function isValidHeatLevel(value: string): value is HeatLevel {
-  return ['MILD', 'MEDIUM', 'HOT', 'EXTRA_HOT', 'FRUIT'].includes(value)
+  return Object.values(HeatLevel).includes(value as HeatLevel)
 }
 
 /**

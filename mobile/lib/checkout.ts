@@ -1,7 +1,13 @@
 import { API_BASE_URL } from './api';
 import type { CartItem } from '../store/cartStore';
 
-export async function fetchPaymentSheetParams(items: CartItem[]) {
+interface PaymentSheetParams {
+  clientSecret: string;
+  orderId: string;
+  amount: number;
+}
+
+export async function fetchPaymentSheetParams(items: CartItem[]): Promise<PaymentSheetParams> {
   // Mock customer info for rapid checkout (In a real app, this comes from state/inputs)
   const payload = {
     items: items.map(i => ({ productId: i.id, quantity: i.quantity })),

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { parseCSV, validateProducts } from '../lib/product-import';
-import { getErrorMessage } from '../lib/errors';
+import { getErrorMessage } from '@/lib/errors';
 
 async function testImport() {
   try {

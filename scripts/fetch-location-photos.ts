@@ -6,7 +6,7 @@ import {
   getBestPhotoUrlForPlace,
   getCompanyLogoFromWebsite,
 } from '../lib/google-places';
-import { getErrorMessage } from '../lib/errors';
+import { getErrorMessage } from '@/lib/errors';
 
 const prisma = new PrismaClient();
 
