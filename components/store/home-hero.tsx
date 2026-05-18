@@ -1,104 +1,128 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Star } from "lucide-react";
-
-interface HomeHeroStat {
-  value: string;
-  label: string;
-}
-
-const STATS: HomeHeroStat[] = [
-  { value: "25+", label: "Flavors" },
-  { value: "500+", label: "Fundraisers" },
-  { value: "35+", label: "Years" },
-];
+import { ArrowRight, Star, Flame, Users, Award } from "lucide-react";
 
 export function HomeHero() {
   return (
-    <section className="hero-gradient relative overflow-hidden text-white">
-      {/* Legibility overlay */}
-      <div aria-hidden className="absolute inset-0 bg-black/20" />
+    <section
+      className="relative overflow-hidden text-white"
+      style={{
+        background:
+          "radial-gradient(ellipse at 65% 45%, #6b3a10 0%, #3a1c05 35%, #1a0c02 70%, #110800 100%)",
+      }}
+    >
+      {/* Warm amber glow behind image area */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-0 top-0 h-full w-[55%]"
+        style={{
+          background:
+            "radial-gradient(ellipse at 55% 45%, rgba(160, 80, 10, 0.55) 0%, transparent 65%)",
+        }}
+      />
 
-      {/* Floating blur circles — signature kit texture */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute right-10 top-20 h-32 w-32 rounded-full bg-white/10 blur-2xl animate-bounce-gentle"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute bottom-10 left-10 h-24 w-24 rounded-full bg-white/10 blur-xl animate-bounce-gentle animation-delay-400"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/3 top-1/3 h-16 w-16 rounded-full bg-white/10 blur-lg animate-bounce-gentle animation-delay-600"
-      />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid min-h-[78vh] grid-cols-1 items-center lg:grid-cols-2">
+          {/* ── Left: copy ── */}
+          <div className="z-10 py-20 lg:py-28">
+            {/* Badge */}
+            <span className="mb-7 inline-flex items-center gap-2 rounded-full border border-amber-500/60 px-4 py-1.5 text-xs font-semibold tracking-wider text-amber-400">
+              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              Award-Winning Since 1987
+            </span>
 
-      <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:py-28 lg:px-8">
-        {/* Copy */}
-        <div className="animate-slide-up">
-          <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold backdrop-blur">
-            <Star className="h-3 w-3 fill-current" />
-            Award-Winning Since 1987
-          </span>
-          <h1
-            className="mb-5 font-serif text-5xl font-bold leading-[0.95] tracking-[-0.02em] md:text-6xl lg:text-7xl"
-          >
-            Premium Gourmet
-            <span className="block italic text-chile-200">Salsa</span>
-          </h1>
-          <p className="mb-7 max-w-md text-lg leading-relaxed text-white/90 md:text-xl">
-            Made with the finest ingredients in Ohio. From mild to fiery hot,
-            discover the perfect salsa for every taste — handcrafted in small batches.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/products"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-base font-semibold text-salsa-600 shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:bg-stone-100 hover:shadow-xl"
-            >
-              Shop Salsas
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/our-story"
-              className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/20"
-            >
-              Our Story
-            </Link>
+            {/* Heading */}
+            <h1 className="mb-4 font-serif font-black uppercase leading-[0.9] tracking-tight">
+              <span className="block text-[clamp(3rem,6vw,5.5rem)] text-white">Premium</span>
+              <span className="block text-[clamp(3rem,6vw,5.5rem)] text-white">Gourmet</span>
+              <span className="block text-[clamp(3rem,6vw,5.5rem)] text-amber-500">Salsa</span>
+            </h1>
+
+            {/* Divider */}
+            <div className="mb-5 h-px w-20 bg-amber-500/50" />
+
+            {/* Body */}
+            <p className="mb-8 max-w-[22rem] text-base leading-relaxed text-white/75">
+              Made with the finest ingredients in Ohio. From mild to fiery hot,
+              discover the perfect salsa for every taste — handcrafted in small batches.
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/products"
+                className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-7 py-3.5 text-sm font-bold uppercase tracking-widest text-black shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:bg-amber-400 hover:shadow-[0_6px_20px_rgba(245,158,11,0.4)]"
+              >
+                Shop Salsas
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/our-story"
+                className="inline-flex items-center gap-2 rounded-full border border-amber-700/60 bg-transparent px-7 py-3.5 text-sm font-bold uppercase tracking-widest text-white transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500/80 hover:bg-white/5"
+              >
+                Our Story
+              </Link>
+            </div>
           </div>
 
-          {/* Stat strip — Volkhov numerals, hairline divider */}
-          <dl className="mt-10 flex gap-8 border-t border-white/20 pt-6">
-            {STATS.map((stat) => (
-              <div key={stat.label}>
-                <dt className="sr-only">{stat.label}</dt>
-                <dd className="font-serif text-3xl font-bold">{stat.value}</dd>
-                <p className="mt-0.5 text-xs uppercase tracking-wider text-white/80">
-                  {stat.label}
-                </p>
-              </div>
-            ))}
-          </dl>
+          {/* ── Right: founder image ── */}
+          <div className="pointer-events-none relative -mr-4 self-end sm:-mr-6 lg:-mr-8">
+            <div className="relative h-[520px] w-full lg:h-[640px]">
+              <Image
+                src="/images/shared/Hero-Image-Mike.png"
+                alt="Mike Zakany, founder of Jose Madrid Salsa"
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 55vw"
+                className="object-contain object-bottom"
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Founder photo with floating badge */}
-        <div className="relative animate-slide-up animation-delay-200">
-          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl shadow-2xl">
-            <Image
-              src="/images/shared/Hero-Image-Mike.png"
-              alt="Mike Zakany, founder of Jose Madrid Salsa"
-              fill
-              priority
-              sizes="(max-width: 1024px) 100vw, 45vw"
-              className="object-cover object-center"
-            />
-          </div>
-          <div className="absolute -bottom-3 -left-3 flex items-center gap-2.5 rounded-2xl bg-white p-3 text-foreground shadow-xl">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-chile-100 text-xl">
-              🌶️
-            </span>
-            <div className="leading-tight">
-              <div className="text-xs font-semibold">Mike Zakany</div>
-              <div className="text-[10px] text-muted-foreground">Founder &amp; Chef</div>
+        {/* ── Stat bar ── */}
+        <div
+          className="relative z-10 mb-8 rounded-2xl border border-amber-900/30 px-6 py-5"
+          style={{ background: "rgba(18, 9, 1, 0.88)" }}
+        >
+          <div className="grid grid-cols-3 divide-x divide-amber-900/30">
+            {/* Flavors */}
+            <div className="flex items-center justify-center gap-3 px-4 sm:px-6">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-amber-700/50 text-amber-500">
+                <Flame className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="font-serif text-2xl font-bold leading-none text-amber-500">25+</div>
+                <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-white/50">
+                  Flavors
+                </div>
+              </div>
+            </div>
+
+            {/* Fundraisers */}
+            <div className="flex items-center justify-center gap-3 px-4 sm:px-6">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-amber-700/50 text-amber-500">
+                <Users className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="font-serif text-2xl font-bold leading-none text-amber-500">500+</div>
+                <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-white/50">
+                  Fundraisers
+                </div>
+              </div>
+            </div>
+
+            {/* Years */}
+            <div className="flex items-center justify-center gap-3 px-4 sm:px-6">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-amber-700/50 text-amber-500">
+                <Award className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="font-serif text-2xl font-bold leading-none text-amber-500">35+</div>
+                <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-white/50">
+                  Years
+                </div>
+              </div>
             </div>
           </div>
         </div>
