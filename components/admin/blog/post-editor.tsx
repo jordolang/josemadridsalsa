@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Loader2,
@@ -147,6 +147,25 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }))
+  }
+
+  useEffect(() => {
+    const ta = contentRef.current
+    if (!ta) return
+    ta.style.height = 'auto'
+    ta.style.height = `${ta.scrollHeight}px`
+  }, [form.content])
+
+  function handleContentKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      const ta = e.currentTarget
+      const start = ta.selectionStart
+      const end = ta.selectionEnd
+      const next = ta.value.slice(0, start) + '  ' + ta.value.slice(end)
+      update('content', next)
+      setTimeout(() => ta.setSelectionRange(start + 2, start + 2), 0)
+    }
   }
 
   function insertAtCursor(snippet: string) {
@@ -378,8 +397,8 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
             ref={contentRef}
             value={form.content}
             onChange={(e) => update('content', e.target.value)}
-            rows={24}
-            className="font-mono text-sm"
+            onKeyDown={handleContentKeyDown}
+            className="font-mono text-sm leading-relaxed min-h-[520px] resize-y overflow-hidden"
             placeholder="# Heading&#10;&#10;Write the post in Markdown. Use the toolbar above to insert images, video, and embeds."
           />
           <p className="text-xs text-muted-foreground mt-1">
