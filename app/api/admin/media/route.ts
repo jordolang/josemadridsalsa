@@ -3,6 +3,14 @@ import { requirePermission } from '@/lib/rbac';
 import { ok, fail, parsePagination } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import prisma from '@/lib/prisma';
+import {
+  BlobUploadError,
+  VERCEL_SERVER_UPLOAD_MAX_BYTES,
+  uploadToVercelBlob,
+} from '@/lib/blob-storage';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/admin/media
@@ -69,12 +77,55 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/admin/media
- * Create a new media entry (URL-based for now)
+ * Create a media entry by URL or upload a file to Vercel Blob.
  */
 export async function POST(req: NextRequest) {
   try {
     // Verify permissions
     const user = await requirePermission('content:write');
+
+    const contentType = req.headers.get('content-type') ?? '';
+
+    if (contentType.includes('multipart/form-data')) {
+      const form = await req.formData();
+      const file = form.get('file');
+      if (!(file instanceof File)) {
+        return fail('Missing file', 400);
+      }
+
+      const alt = (form.get('alt') as string | null) ?? null;
+      const caption = (form.get('caption') as string | null) ?? null;
+      const upload = await uploadToVercelBlob(file, {
+        directory: 'admin-media',
+        maxBytes: VERCEL_SERVER_UPLOAD_MAX_BYTES,
+        imagesOnly: true,
+      });
+
+      const media = await prisma.media.create({
+        data: {
+          url: upload.url,
+          filename: upload.filename,
+          mimeType: upload.mimeType,
+          fileSize: upload.fileSize,
+          alt,
+          caption,
+        },
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: 'media.upload',
+        entityType: 'media',
+        entityId: media.id,
+        changes: {
+          filename: media.filename,
+          url: media.url,
+          storage: 'vercel-blob',
+        },
+      });
+
+      return ok({ media, url: upload.url, isVideo: upload.isVideo }, 201);
+    }
 
     // Parse request body
     const body = await req.json();
@@ -117,6 +168,9 @@ export async function POST(req: NextRequest) {
 
     return ok({ media }, 201);
   } catch (error: any) {
+    if (error instanceof BlobUploadError) {
+      return fail(error.message, error.status);
+    }
     console.error('Error creating media:', error);
     return fail(error.message, error.status || 500);
   }

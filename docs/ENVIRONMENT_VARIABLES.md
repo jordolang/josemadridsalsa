@@ -111,8 +111,9 @@ Notes:
 ## Optional
 
 ### File Upload
-- `UPLOADTHING_SECRET` - UploadThing secret
-- `UPLOADTHING_APP_ID` - UploadThing app ID
+- `BLOB_READ_WRITE_TOKEN` - Vercel Blob read/write token for the `josemadridsalsa-blob` store. Used by admin media uploads and blog writer photo/video uploads.
+- `UPLOADTHING_SECRET` - Legacy UploadThing secret for remaining UploadThing-backed upload surfaces
+- `UPLOADTHING_APP_ID` - Legacy UploadThing app ID for remaining UploadThing-backed upload surfaces
 
 ## Development vs Production
 

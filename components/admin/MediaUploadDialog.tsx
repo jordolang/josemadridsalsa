@@ -16,7 +16,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useUploadThing } from '@/lib/uploadthing-client'
 import { getErrorMessage } from '@/lib/errors'
 
 interface MediaUploadDialogProps {
@@ -36,20 +35,9 @@ export default function MediaUploadDialog({ children }: MediaUploadDialogProps) 
   // File tab state
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [fileAlt, setFileAlt] = useState('')
+  const [isUploadingFile, setIsUploadingFile] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const { startUpload, isUploading } = useUploadThing('emailTemplateImage', {
-    onClientUploadComplete: async (res) => {
-      if (!res?.[0]) return
-      const uploadedUrl = res[0].url
-      const filename = selectedFile?.name ?? uploadedUrl.split('/').pop() ?? 'untitled'
-      await saveMediaRecord(uploadedUrl, filename, fileAlt)
-    },
-    onUploadError: (error) => {
-      alert(`Upload failed: ${error.message}`)
-    },
-  })
 
   const saveMediaRecord = async (mediaUrl: string, filename: string, alt: string) => {
     const response = await fetch('/api/admin/media', {
@@ -86,7 +74,27 @@ export default function MediaUploadDialog({ children }: MediaUploadDialogProps) 
 
   const handleFileUpload = async () => {
     if (!selectedFile) return
-    await startUpload([selectedFile])
+    setIsUploadingFile(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      formData.append('alt', fileAlt)
+
+      const response = await fetch('/api/admin/media', {
+        method: 'POST',
+        body: formData,
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed')
+      }
+      closeAndReset()
+      router.refresh()
+    } catch (error: unknown) {
+      alert(getErrorMessage(error))
+    } finally {
+      setIsUploadingFile(false)
+    }
   }
 
   const handleFileDrop = (e: React.DragEvent) => {
@@ -157,7 +165,7 @@ export default function MediaUploadDialog({ children }: MediaUploadDialogProps) 
                 <>
                   <Upload className="mb-3 h-8 w-8 text-muted-foreground" />
                   <p className="text-sm font-medium">Drop an image here or click to browse</p>
-                  <p className="mt-1 text-xs text-muted-foreground">PNG, JPG, WebP up to 8MB</p>
+                  <p className="mt-1 text-xs text-muted-foreground">PNG, JPG, WebP up to 4.5MB</p>
                 </>
               )}
               <input
@@ -185,10 +193,10 @@ export default function MediaUploadDialog({ children }: MediaUploadDialogProps) 
               </Button>
               <Button
                 type="button"
-                disabled={!selectedFile || isUploading}
+                disabled={!selectedFile || isUploadingFile}
                 onClick={handleFileUpload}
               >
-                {isUploading ? 'Uploading…' : 'Upload'}
+                {isUploadingFile ? 'Uploading…' : 'Upload'}
               </Button>
             </DialogFooter>
           </TabsContent>
