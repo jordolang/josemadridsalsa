@@ -21,12 +21,13 @@ const nextConfig = {
       // Next.js App Router requires 'unsafe-inline' for hydration scripts and RSC payloads.
       // 'unsafe-eval' is also needed in dev for HMR.
       isProd
-        ? "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://www.googletagmanager.com https://js.stripe.com"
-        : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://www.googletagmanager.com https://js.stripe.com",
+        ? "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com"
+        : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com",
+      "worker-src 'self' blob:",
       // Allow Google Maps iframes, GTM noscript, and Stripe checkout iframes
       "frame-src https://www.google.com/maps/ https://www.googletagmanager.com https://js.stripe.com https://hooks.stripe.com",
       // Images from multiple CDNs and data URIs
-      "img-src 'self' data: blob: https://utfs.io https://*.public.blob.vercel-storage.com https://images.unsplash.com https://*.googleapis.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com",
+      "img-src 'self' data: blob: https://utfs.io https://*.public.blob.vercel-storage.com https://images.unsplash.com https://*.googleapis.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com https://www.nudgeprinting.com",
       // Allow connections to self, external APIs used client-side, and Sentry
       "connect-src 'self' https://*.sentry.io https://api.growthbook.io https://cdn.growthbook.io https://api.stripe.com https://r.stripe.com https://amplitude.com https://*.amplitude.com https://calendar.google.com https://maps.googleapis.com",
       "font-src 'self' data:",
@@ -84,6 +85,12 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'cdn11.bigcommerce.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.nudgeprinting.com',
         port: '',
         pathname: '/**',
       },

@@ -36,6 +36,25 @@ export function blobUploadsConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN)
 }
 
+function assertBlobTokenConfigured(): string {
+  const token = process.env.BLOB_READ_WRITE_TOKEN
+  if (!token) {
+    throw new BlobUploadError(
+      'Uploads disabled: BLOB_READ_WRITE_TOKEN is not configured on the server',
+      503,
+    )
+  }
+
+  if (token.startsWith('store_')) {
+    throw new BlobUploadError(
+      'Uploads disabled: BLOB_READ_WRITE_TOKEN is set to a Blob store id. Use the Vercel Blob read/write token for josemadridsalsa-blob instead.',
+      503,
+    )
+  }
+
+  return token
+}
+
 export function slugifyBlobName(name: string): string {
   return name
     .toLowerCase()
@@ -68,23 +87,24 @@ export async function uploadToVercelBlob(
   file: File,
   options: { directory: string; maxBytes: number; imagesOnly?: boolean },
 ): Promise<BlobUploadResult> {
-  if (!blobUploadsConfigured()) {
-    throw new BlobUploadError(
-      'Uploads disabled: BLOB_READ_WRITE_TOKEN is not configured on the server',
-      503,
-    )
-  }
-
+  const token = assertBlobTokenConfigured()
   assertBlobUploadFile(file, options)
 
   const ext = BLOB_UPLOAD_TYPES[file.type]
   const base = slugifyBlobName(file.name) || 'upload'
   const pathname = `${options.directory}/${Date.now()}-${base}.${ext}`
-  const blob = await put(pathname, file, {
-    access: 'public',
-    contentType: file.type,
-    addRandomSuffix: false,
-  })
+  let blob: Awaited<ReturnType<typeof put>>
+  try {
+    blob = await put(pathname, file, {
+      access: 'public',
+      contentType: file.type,
+      addRandomSuffix: false,
+      token,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown Blob error'
+    throw new BlobUploadError(`Vercel Blob upload failed: ${message}`, 503)
+  }
 
   return {
     url: blob.url,
