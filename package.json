@@ -104,6 +104,7 @@
     "@stripe/react-stripe-js": "^5.2.0",
     "@stripe/stripe-js": "^8.0.0",
     "@tailwindcss/postcss": "^4.1.14",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/bcryptjs": "^2.4.6",
     "@types/nodemailer": "^7.0.4",
     "@uploadthing/react": "^7.3.3",
