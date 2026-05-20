@@ -40,6 +40,7 @@ import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FileDown } from 'lucide-react'
 import type { LeadCampaign, LeadEmailTemplate, Lead } from '@prisma/client'
+import { SCHOOL_FUNDRAISING_TEMPLATE, BUSINESS_OUTREACH_TEMPLATE } from '@/lib/email/default-templates'
 import { PdfReport, DEFAULT_PDF_OPTIONS, type PdfOptions } from './pdf-report'
 
 type CampaignWithTemplate = LeadCampaign & {
@@ -51,15 +52,12 @@ const ACTIVE_STATUSES = ['SCRAPING', 'PARSING_CONTACTS', 'SENDING_EMAILS']
 
 function getLeadTypeLabels(leadType: string) {
   const isBusiness = leadType === 'LOCAL_BUSINESS'
+  const defaultTpl = isBusiness ? BUSINESS_OUTREACH_TEMPLATE : SCHOOL_FUNDRAISING_TEMPLATE
   return {
     entityLabel: isBusiness ? 'Businesses' : 'Schools',
     searchStep: isBusiness ? '1. Search Businesses' : '1. Search Schools',
-    defaultSubject: isBusiness
-      ? 'Partnership opportunity for {{business_name}}'
-      : 'Fundraising for {{school_name}} {{sport}}',
-    defaultBody: isBusiness
-      ? '<p>Hi {{contact_name}},</p>\n\n<p>I came across {{business_name}} and thought you might be interested in a partnership with Jose Madrid Salsa. We offer wholesale pricing and co-marketing opportunities.</p>\n\n<p>Best,<br/>Jose Madrid Salsa</p>'
-      : '<p>Hi {{contact_name}},</p>\n\n<p>I noticed the {{school_name}} {{sport}} program might be looking for fundraising opportunities. We can help you raise money for {{sport_pitch}}.</p>\n\n<p>Best,<br/>Jose Madrid Salsa</p>',
+    defaultSubject: defaultTpl.subject,
+    defaultBody: defaultTpl.htmlContent,
     templateVars: isBusiness
       ? '{{business_name}}, {{contact_name}}, {{city}}, {{state}}, {{category}}'
       : '{{school_name}}, {{contact_name}}, {{sport}}, {{city}}, {{state}}, {{sport_pitch}}',
@@ -732,8 +730,7 @@ export function CampaignManager({ campaign, selectedLeadIds, leads = [] }: Campa
             disabled={
               loading ||
               campaign.status === 'SENDING_EMAILS' ||
-              campaign.totalEmailsFound === 0 ||
-              !campaign.templateId
+              campaign.totalEmailsFound === 0
             }
           >
             3. Send Emails
@@ -759,7 +756,7 @@ export function CampaignManager({ campaign, selectedLeadIds, leads = [] }: Campa
                   'Start the entire automation process (Scrape -> Parse -> Send)?'
                 )
               }
-              disabled={loading || !campaign.templateId}
+              disabled={loading}
             >
               One-Click Scan & Send
             </Button>

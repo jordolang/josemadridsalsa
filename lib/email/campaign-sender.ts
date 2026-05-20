@@ -2,14 +2,20 @@ import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { SPORT_PITCHES, SUBJECT_LINE_TEMPLATES, DEFAULT_PITCH } from '@/lib/scraper/school-config';
 import { emitScraperEvent } from '@/lib/scraper/scraper-events';
+import { getDefaultTemplate } from './default-templates';
 
 export async function runCampaignSender(campaignId: string) {
-  const campaign = await prisma.leadCampaign.findUnique({ 
+  const campaign = await prisma.leadCampaign.findUnique({
     where: { id: campaignId },
     include: { template: true }
   });
   if (!campaign) throw new Error("Campaign not found");
-  if (!campaign.template) throw new Error("No template assigned to campaign");
+
+  const template = campaign.template ?? getDefaultTemplate(campaign.leadType);
+
+  if (!campaign.template) {
+    emitScraperEvent(campaignId, 'info', 'email', 'No custom template set — using built-in default outreach template');
+  }
 
   await prisma.leadCampaign.update({
     where: { id: campaignId },
@@ -32,9 +38,8 @@ export async function runCampaignSender(campaignId: string) {
     emitScraperEvent(campaignId, 'info', 'email', `[${idx + 1}/${leads.length}] Sending to ${lead.email}`, lead.schoolName || '');
 
     try {
-      // 1. Process variables in template
-      let html = campaign.template.htmlContent;
-      let subject = campaign.template.subject;
+      let html = template.htmlContent;
+      let subject = template.subject;
 
       // Determine pitch based on sport
       const sportKey = lead.sport ? lead.sport.toLowerCase() : '';

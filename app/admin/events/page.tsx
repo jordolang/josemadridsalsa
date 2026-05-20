@@ -30,6 +30,7 @@ export default function EventsPage() {
 
   useEffect(() => {
     fetchEvents()
+    checkCalendarStatus()
   }, [])
 
   async function fetchEvents() {
@@ -43,6 +44,18 @@ export default function EventsPage() {
       console.error('Failed to fetch events:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function checkCalendarStatus() {
+    try {
+      const response = await fetch('/api/admin/events/calendar-status')
+      if (response.ok) {
+        const data = await response.json()
+        setIsConnected(data.connected)
+      }
+    } catch {
+      // silently ignore — status badge will just show Not Connected
     }
   }
 
@@ -98,11 +111,11 @@ export default function EventsPage() {
               {isConnected ? 'Connected' : 'Not Connected'}
             </Badge>
           </div>
-          <Link href="/api/auth/google-oauth?redirect=/admin/events">
-            <Button>
-              {isConnected ? 'Reconnect' : 'Connect'} Google Calendar
-            </Button>
-          </Link>
+          {!isConnected && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Set <code className="text-xs bg-muted px-1 py-0.5 rounded">GOOGLE_CALENDAR_ID</code> in your environment variables to enable calendar sync.
+            </p>
+          )}
         </div>
       </Card>
 

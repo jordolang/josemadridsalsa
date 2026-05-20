@@ -41,15 +41,14 @@ export default async function ArenaPage({ params }: Props) {
         </p>
       </header>
 
-      {snapshot.teams.length === 0 ? (
-        <div className="mx-auto max-w-md rounded border border-neutral-800 bg-black/40 p-8 text-center font-mono text-xs uppercase tracking-widest text-neutral-500">
-          No active teams for {period}.
-        </div>
-      ) : (
-        <section className="mx-auto max-w-6xl">
-          <ArenaClient snapshot={snapshot} />
-        </section>
-      )}
+      <section className="mx-auto max-w-6xl">
+        {snapshot.teams.length === 0 && (
+          <div className="mb-6 rounded border border-neutral-800 bg-black/40 p-8 text-center font-mono text-xs uppercase tracking-widest text-neutral-500">
+            No active teams for {period}.
+          </div>
+        )}
+        <ArenaClient snapshot={snapshot} />
+      </section>
     </main>
   )
 }
