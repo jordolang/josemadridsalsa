@@ -5,7 +5,7 @@ export function HomeHero() {
   return (
     <section
       aria-labelledby="home-hero-title"
-      className="relative isolate min-h-[620px] overflow-hidden bg-[#070503] text-white sm:min-h-[720px] lg:aspect-[1536/871] lg:min-h-0"
+      className="relative isolate aspect-[1536/871] overflow-hidden bg-[#070503] text-white"
     >
       <Image
         src="/images/home/jose-madrid-home-hero-reference.png"
