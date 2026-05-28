@@ -312,6 +312,7 @@ model AbandonedCart {
   cartData      Json
   recoveryToken String    @unique @default(cuid())
   recoveredAt   DateTime?
+  emailStage    Int       @default(0)
   emailSent     Boolean   @default(false)
   emailSentAt   DateTime?
   createdAt     DateTime  @default(now())
@@ -320,7 +321,7 @@ model AbandonedCart {
 
   @@index([userId])
   @@index([guestEmail])
-  @@index([emailSent, createdAt])
+  @@index([emailSent, emailStage, createdAt])
   @@map("abandoned_carts")
 }
 

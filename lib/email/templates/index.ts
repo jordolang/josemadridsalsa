@@ -46,6 +46,8 @@ import { backInStockTemplate } from './back-in-stock'
 import { winBackTemplate } from './win-back'
 import { birthdaySpecialTemplate } from './birthday-special'
 import { referralProgramTemplate } from './referral-program'
+import { giftCertificateDeliveryTemplate } from './gift-certificate-delivery'
+import { orderReadyPickupTemplate } from './order-ready-pickup'
 
 // Export all templates individually for named imports
 export {
@@ -79,6 +81,8 @@ export {
   winBackTemplate,
   birthdaySpecialTemplate,
   referralProgramTemplate,
+  giftCertificateDeliveryTemplate,
+  orderReadyPickupTemplate,
 }
 
 // Export array for backward compatibility
@@ -113,4 +117,6 @@ export const emailTemplates = [
   winBackTemplate,
   birthdaySpecialTemplate,
   referralProgramTemplate,
+  giftCertificateDeliveryTemplate,
+  orderReadyPickupTemplate,
 ]

@@ -5,6 +5,10 @@ import { hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
 import { z } from 'zod'
+import {
+  sendOrderCancellationEmail,
+  sendRefundProcessedEmail,
+} from '@/lib/email/transactional'
 
 const UpdateStatusSchema = z.object({
   status: z.enum(['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED']),
@@ -21,7 +25,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const permitted = await hasPermission(session.user as any, 'orders:write')
+    const permitted = await hasPermission(session.user as { id: string; role: string }, 'orders:write')
     if (!permitted) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
@@ -30,14 +34,25 @@ export async function POST(
     const body = await request.json()
     const { status, adminNote } = UpdateStatusSchema.parse(body)
 
-    const order = await prisma.order.findUnique({ where: { id } })
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        user: { select: { email: true, name: true } },
+        payments: {
+          select: { amount: true, methodType: true, provider: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    })
+
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
     const previousStatus = order.status
 
-    const updateData: any = { status }
+    const updateData: Record<string, unknown> = { status }
     if (status === 'SHIPPED' && !order.shippedAt) updateData.shippedAt = new Date()
     if (status === 'DELIVERED' && !order.deliveredAt) updateData.deliveredAt = new Date()
     if (adminNote) updateData.adminNotes = adminNote
@@ -48,12 +63,50 @@ export async function POST(
     })
 
     await logAudit({
-      userId: (session.user as any).id,
+      userId: (session.user as { id: string }).id,
       action: 'update',
       entityType: 'order',
       entityId: id,
       changes: { status: { from: previousStatus, to: status }, adminNote },
     })
+
+    // Fire transactional emails when status changes to terminal states
+    const recipientEmail = order.user?.email ?? order.guestEmail
+    const recipientName = order.user?.name ?? 'there'
+
+    if (recipientEmail && previousStatus !== status) {
+      if (status === 'CANCELLED') {
+        sendOrderCancellationEmail({
+          email: recipientEmail,
+          name: recipientName,
+          orderNumber: order.orderNumber,
+        }).catch((err: unknown) => {
+          console.error('Cancellation email failed for order', order.orderNumber, err)
+        })
+      } else if (status === 'REFUNDED') {
+        const payment = order.payments[0]
+        const refundAmount = payment
+          ? `$${Number(payment.amount).toFixed(2)}`
+          : `$${Number(order.total).toFixed(2)}`
+        const refundMethod = payment?.methodType ?? payment?.provider ?? 'original payment method'
+        const originalOrderDate = order.createdAt.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        })
+
+        sendRefundProcessedEmail({
+          email: recipientEmail,
+          name: recipientName,
+          orderNumber: order.orderNumber,
+          refundAmount,
+          refundMethod,
+          originalOrderDate,
+        }).catch((err: unknown) => {
+          console.error('Refund email failed for order', order.orderNumber, err)
+        })
+      }
+    }
 
     return NextResponse.json({ success: true, status: updated.status })
   } catch (error) {

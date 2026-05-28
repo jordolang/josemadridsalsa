@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
+import { sendGiftCertificateDeliveryEmail } from '@/lib/email/transactional'
 
 const CompleteSchema = z.object({
   orderId: z.string().cuid(),
@@ -60,8 +61,23 @@ export async function POST(request: Request) {
       },
     })
 
-    // Gift certificate is already created and linked to order
-    // No inventory to update for gift certificates
+    // Send delivery email to each gift certificate recipient
+    const giftCerts = order.giftCertificates ?? []
+    for (const cert of giftCerts) {
+      if (cert.recipientEmail) {
+        sendGiftCertificateDeliveryEmail({
+          recipientEmail: cert.recipientEmail,
+          recipientName: cert.recipientName,
+          purchaserName: cert.purchaserName,
+          code: cert.code,
+          amount: `$${Number(cert.originalAmount).toFixed(2)}`,
+          message: cert.message,
+          theme: cert.theme,
+        }).catch((err: unknown) => {
+          console.error('Gift certificate delivery email failed:', err)
+        })
+      }
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
