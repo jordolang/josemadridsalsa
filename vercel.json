@@ -9,7 +9,7 @@
   "crons": [
     {
       "path": "/api/cron/abandoned-cart",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/cron/review-requests",
@@ -21,7 +21,7 @@
     },
     {
       "path": "/api/cron/email-campaigns",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 7 * * *"
     },
     {
       "path": "/api/cron/dashboard-analysis",
