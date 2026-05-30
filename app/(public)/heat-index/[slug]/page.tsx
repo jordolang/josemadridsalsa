@@ -28,11 +28,16 @@ interface PageProps {
 }
 
 export async function generateStaticParams() {
-  const posts = await prisma.blogPost.findMany({
-    where: { status: 'PUBLISHED' },
-    select: { slug: true },
-  })
-  return posts.map((p) => ({ slug: p.slug }))
+  try {
+    const posts = await prisma.blogPost.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { slug: true },
+    })
+    return posts.map((p) => ({ slug: p.slug }))
+  } catch (error) {
+    console.warn('[heat-index/[slug]] generateStaticParams: DB unreachable, returning empty params', error)
+    return []
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

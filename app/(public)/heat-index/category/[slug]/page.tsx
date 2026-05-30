@@ -15,8 +15,13 @@ interface PageProps {
 }
 
 export async function generateStaticParams() {
-  const cats = await prisma.blogCategory.findMany({ select: { slug: true } })
-  return cats.map((c) => ({ slug: c.slug }))
+  try {
+    const cats = await prisma.blogCategory.findMany({ select: { slug: true } })
+    return cats.map((c) => ({ slug: c.slug }))
+  } catch (error) {
+    console.warn('[heat-index/category/[slug]] generateStaticParams: DB unreachable', error)
+    return []
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
