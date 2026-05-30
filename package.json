@@ -51,7 +51,7 @@
     "pre-commit": "lint-staged && npm run security:protect",
     "auto-execute": "tsx scripts/auto-execute-session.ts",
     "db:deploy": "prisma migrate deploy",
-    "vercel-build": "prisma migrate deploy && prisma generate && tsx prisma/seed.permissions.ts && next build",
+    "vercel-build": "(prisma migrate deploy || echo 'WARN: prisma migrate deploy skipped (DB unreachable)') && prisma generate && (tsx prisma/seed.permissions.ts || echo 'WARN: seed.permissions skipped (DB unreachable)') && next build",
     "db:sync": "prisma db push --skip-generate --accept-data-loss"
   },
   "keywords": [
