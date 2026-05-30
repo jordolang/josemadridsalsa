@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
+import nextDynamic from 'next/dynamic'
 import type { Metadata } from 'next'
 import { ArrowRight } from 'lucide-react'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
@@ -15,17 +15,17 @@ import { FeaturedProductsSection } from '@/components/store/featured-products-se
 export const dynamic = 'force-dynamic'
 
 // Lazy load heavy below-the-fold components
-const AnimatedTestimonials = dynamic(
+const AnimatedTestimonials = nextDynamic(
   () => import('@/components/store/animated-testimonials').then(mod => ({ default: mod.AnimatedTestimonials })),
   { loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" /> }
 )
 
-const GiftBoxSelector = dynamic(
+const GiftBoxSelector = nextDynamic(
   () => import('@/components/store/gift-box-selector').then(mod => ({ default: mod.GiftBoxSelector })),
   { loading: () => <div className="h-96 animate-pulse bg-muted rounded-lg" /> }
 )
 
-const ScheduleMapWrapper = dynamic(
+const ScheduleMapWrapper = nextDynamic(
   () => import('@/components/store/schedule-map-wrapper').then(mod => ({ default: mod.ScheduleMapWrapper })),
   { loading: () => <div className="h-[520px] animate-pulse bg-muted rounded-3xl" /> }
 )
