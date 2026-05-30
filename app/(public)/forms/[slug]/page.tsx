@@ -9,6 +9,9 @@ import { prisma } from '@/lib/prisma'
 import type { BusinessFormTemplate } from '@/types/forms'
 import { createMetadata } from '@/lib/metadata'
 
+export const dynamic = 'force-dynamic'
+
+
 type FormPageProps = {
   params: Promise<{
     slug: string

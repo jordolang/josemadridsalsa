@@ -8,6 +8,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { createMetadata } from "@/lib/metadata";
 
+export const dynamic = 'force-dynamic'
+
+
 export const metadata: Metadata = createMetadata({
   title: "Order History - Jose Madrid Salsa",
   description: "Review your previous Jose Madrid Salsa orders, statuses, and totals.",

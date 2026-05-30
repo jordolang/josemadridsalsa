@@ -12,6 +12,9 @@ import { ReferralHeader } from '@/components/fundraising/referral-header';
 import prisma from '@/lib/prisma';
 import { formatPrice } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic'
+
+
 interface PageProps {
   params: Promise<{
     slug: string;

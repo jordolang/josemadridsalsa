@@ -19,6 +19,8 @@ import {
   type PostDetail,
 } from '@/lib/blog/queries'
 
+export const dynamic = 'force-dynamic'
+
 export const revalidate = 300
 
 const SITE_URL = 'https://www.josemadrid.net'

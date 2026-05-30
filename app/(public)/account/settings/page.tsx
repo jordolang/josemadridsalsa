@@ -8,6 +8,9 @@ import { ProfileForm } from "@/components/account/ProfileForm";
 import { AddressForm } from "@/components/account/AddressForm";
 import { createMetadata } from "@/lib/metadata";
 
+export const dynamic = 'force-dynamic'
+
+
 export const metadata: Metadata = createMetadata({
   title: "Account Settings - Jose Madrid Salsa",
   description: "Update your Jose Madrid Salsa account details, saved addresses, and communication preferences.",

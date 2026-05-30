@@ -4,6 +4,9 @@ import prisma from '@/lib/prisma'
 import { formatPrice } from '@/lib/utils'
 import { ArrowUpRight } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
+
 type SuccessPageProps = {
   searchParams: Promise<{ order?: string }>
 }

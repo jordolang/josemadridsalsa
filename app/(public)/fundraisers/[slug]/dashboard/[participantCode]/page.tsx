@@ -4,6 +4,9 @@ import prisma from '@/lib/prisma'
 import { createMetadata } from '@/lib/metadata'
 import { ParticipantDashboard } from '@/components/fundraising/participant-dashboard'
 
+export const dynamic = 'force-dynamic'
+
+
 interface PageProps {
   params: Promise<{
     slug: string

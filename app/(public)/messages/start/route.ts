@@ -6,6 +6,9 @@ import { sendContactConfirmationEmail } from '@/lib/email/automation'
 import { sendEmail } from '@/lib/email/sender'
 import { logEngagementRequest } from '@/lib/engagements'
 
+export const dynamic = 'force-dynamic'
+
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)

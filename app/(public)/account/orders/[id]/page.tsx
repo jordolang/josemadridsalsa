@@ -9,6 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { createMetadata } from "@/lib/metadata";
 
+export const dynamic = 'force-dynamic'
+
+
 type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

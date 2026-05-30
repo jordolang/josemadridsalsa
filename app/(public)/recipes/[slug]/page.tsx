@@ -7,6 +7,9 @@ import { recipeData } from '@/lib/data/recipes'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Users, ChefHat } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
+
 type RecipePageProps = {
   params: Promise<{ slug: string }>
 }

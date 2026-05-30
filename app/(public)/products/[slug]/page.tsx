@@ -12,6 +12,9 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
 import { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
+
+
 type Props = {
   params: Promise<{ slug: string }>
 }

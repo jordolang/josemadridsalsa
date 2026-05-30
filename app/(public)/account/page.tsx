@@ -10,6 +10,9 @@ import { OrderCard } from "@/components/account/OrderCard";
 import { createMetadata } from "@/lib/metadata";
 import { UserRole } from "@prisma/client";
 
+export const dynamic = 'force-dynamic'
+
+
 export const metadata: Metadata = createMetadata({
   title: "Account Dashboard - Jose Madrid Salsa",
   description: "Review your recent orders, profile details, and quick links to manage your Jose Madrid Salsa account.",

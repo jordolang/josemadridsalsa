@@ -16,6 +16,9 @@ import { BattleArenaPanel } from '@/components/fundraiser/battle-arena-panel'
 import type { SupporterFeedItem } from '@/components/fundraiser/supporter-feed'
 import prisma from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
+
 interface PageProps {
   params: Promise<{ slug: string }>
 }

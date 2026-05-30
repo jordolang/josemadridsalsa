@@ -5,6 +5,9 @@ import { createMetadata } from '@/lib/metadata'
 import { DeveloperBlogCard } from '@/components/developer/developer-blog-card'
 import prisma from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
+
 export const metadata: Metadata = {
   ...createMetadata({
     title: 'Developer Blog | Jose Madrid Salsa',
