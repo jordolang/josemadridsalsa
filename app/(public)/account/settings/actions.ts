@@ -7,9 +7,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export const dynamic = 'force-dynamic'
-
-
 const profileSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   email: z.string().email(),
