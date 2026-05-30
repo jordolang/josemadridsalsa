@@ -156,3 +156,4 @@ tiktok-shop-products*.xlsx
 
 # Codex CLI working directory
 .codex/
+.clauge-worktrees/
