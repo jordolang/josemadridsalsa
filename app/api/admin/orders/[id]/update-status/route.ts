@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { hasPermission } from '@/lib/rbac'
+import { hasPermission, type UserRole } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
 import { z } from 'zod'
@@ -25,7 +25,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const permitted = await hasPermission(session.user as { id: string; role: string }, 'orders:write')
+    const permitted = await hasPermission(session.user as unknown as { role: UserRole }, 'orders:write')
     if (!permitted) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
