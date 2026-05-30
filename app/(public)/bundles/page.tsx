@@ -8,6 +8,7 @@ import { SocialShare } from '@/components/ui/social-share'
 import { generateHashtags } from '@/lib/sharing/metadata-extractor'
 import type { ShareContent } from '@/types/sharing'
 
+
 export default function BundlesPage() {
   const shareContent: ShareContent = {
     title: 'Bundle Deals - Create Your Perfect Gift Box',

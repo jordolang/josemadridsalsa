@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
 
+
 export default function FundraiserBattlesPage() {
   const [data, setData] = useState<any>(null)
   const { currentMonth, currentYear } = useMemo(() => {

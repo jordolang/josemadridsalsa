@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { createMetadata } from '@/lib/metadata';
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = createMetadata({
   title: 'Cookie Policy - Jose Madrid Salsa',
   description: 'Learn about how Jose Madrid Salsa uses cookies and similar technologies on our website.',

@@ -3,6 +3,8 @@ import { DeveloperHero } from '@/components/developer/developer-hero'
 import { DeveloperPageSections } from '@/components/developer/developer-page-sections'
 import { parseChangelog } from '@/lib/developer/parse-changelog'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = developerPageMetadata
 
 // Structured data for SEO — static content, safe for inline rendering.

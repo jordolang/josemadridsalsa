@@ -10,6 +10,7 @@ import { WishlistItemCard } from '@/components/wishlist/wishlist-item-card'
 import { EmptyWishlist } from '@/components/wishlist/empty-wishlist'
 import { Skeleton } from '@/components/ui/skeleton'
 
+
 export default function WishlistPage() {
   const { data: session, status } = useSession()
   const router = useRouter()

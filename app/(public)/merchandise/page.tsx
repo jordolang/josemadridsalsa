@@ -13,6 +13,8 @@ import {
 } from '@/lib/merchandise/config'
 import { createMetadata } from '@/lib/metadata'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = createMetadata({
   title: 'Merchandise - Jose Madrid Salsa',
   description:

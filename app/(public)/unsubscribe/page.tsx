@@ -1,6 +1,8 @@
 import { Suspense } from 'react'
 import { UnsubscribeForm } from './UnsubscribeForm'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'Unsubscribe - Jose Madrid Salsa',
   description: 'Manage your email preferences',

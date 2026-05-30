@@ -7,6 +7,8 @@ import { GoogleScheduleMap } from '@/components/store/google-schedule-map';
 import { getCalendarEvents } from '@/lib/server/google-data';
 import { createMetadata } from '@/lib/metadata';
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = createMetadata({
   title: 'Where is Jose? - Jose Madrid Salsa',
   description: 'Follow Jose Madrid Salsa from our Ohio home base to retail locations, farmers markets, and tables across the region. Discover where you can find our authentic flavors.',

@@ -12,6 +12,8 @@ import { ActiveCampaignsGrid } from '@/components/fundraiser/active-campaigns-gr
 import { HomeHero } from '@/components/store/home-hero'
 import { FeaturedProductsSection } from '@/components/store/featured-products-section'
 
+export const dynamic = 'force-dynamic'
+
 // Lazy load heavy below-the-fold components
 const AnimatedTestimonials = dynamic(
   () => import('@/components/store/animated-testimonials').then(mod => ({ default: mod.AnimatedTestimonials })),

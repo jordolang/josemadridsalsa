@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { getProductBySlug, getProducts } from '@/lib/db/products'
 import { ProductDetailClient, type Product } from './product-detail-client'
 
+export const dynamic = 'force-dynamic'
+
 type ProductPageProps = {
   params: Promise<{ slug: string }>
 }

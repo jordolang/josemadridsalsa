@@ -33,6 +33,7 @@ import {
   type PaymentMethodId,
 } from '@/components/checkout/PaymentMethodSelector'
 
+
 // Lazy-load payment provider components to avoid bundling PayPal (~100KB+)
 // and Square (~50KB+) SDKs when the user pays with card (the default).
 const PayPalProvider = dynamic(

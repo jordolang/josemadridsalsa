@@ -10,6 +10,7 @@ import { Loader2, Search } from 'lucide-react'
 import { ProductCard, type Product } from '@/components/store/product-card'
 import { formatPrice, getHeatLevelText } from '@/lib/utils'
 
+
 // Simple debounce implementation
 function debounce<T extends (...args: any[]) => any>(
   func: T,

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { createMetadata } from '@/lib/metadata';
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = createMetadata({
   title: 'Accessibility Statement - Jose Madrid Salsa',
   description: 'Jose Madrid Salsa is committed to making our website accessible to all users.',

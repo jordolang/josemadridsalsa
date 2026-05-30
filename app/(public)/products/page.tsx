@@ -2,6 +2,8 @@ import { ProductsClient } from './products-client'
 import type { Product } from '@/components/store/product-card'
 import { getProducts, getCategories } from '@/lib/db/products'
 
+export const dynamic = 'force-dynamic'
+
 export const revalidate = 0
 
 interface SearchParams {
