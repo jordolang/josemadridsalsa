@@ -7,6 +7,8 @@ import { createMetadata } from '@/lib/metadata';
 import { FundraiserSignupForm } from '@/components/fundraising/fundraiser-signup-form';
 import { ActiveCampaignsGrid } from '@/components/fundraiser/active-campaigns-grid';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = createMetadata({
   title: 'Fundraising - Jose Madrid Salsa',
   description: 'Partner with Jose Madrid Salsa for your fundraising goals! Earn 50% profit with free shipping, online and pre-sell options available.',
