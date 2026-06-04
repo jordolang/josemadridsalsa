@@ -33,6 +33,7 @@ const socialLinks = [
 const aboutLinks = [
   { text: 'About Jose', href: '/about' },
   { text: 'Our Story', href: '/our-story' },
+  { text: 'La Perla Ave (Our Chips)', href: '/la-perla-ave' },
   { text: 'Find Us Locally', href: '/find-us' },
   { text: 'Where is Jose?', href: '/where-is-jose' },
   { text: 'Recipes', href: '/recipes' },
