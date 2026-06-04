@@ -32,6 +32,12 @@ analyzer.log
 
 # Backup files
 *.bak
+prisma/seed.backup*.ts
+
+# Local SQLite dev DB (do not commit)
+prisma/dev.db
+prisma/*.db
+prisma/*.db-journal
 
 # Temp / one-off scripts
 verify-*.js
