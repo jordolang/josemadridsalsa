@@ -17,6 +17,10 @@ on:
     - cron: '*/15 * * * *'
   workflow_dispatch: {}
 
+# This job only makes an outbound curl request; it needs no access to the repo,
+# so drop all GITHUB_TOKEN permissions (CodeQL-recommended hardening).
+permissions: {}
+
 jobs:
   publish:
     runs-on: ubuntu-latest
