@@ -16,6 +16,35 @@ export type SocialPlatformOption = {
   connectUrl?: string
 }
 
+export type SocialCredentialProvider = 'facebook' | 'twitter' | 'tiktok' | 'google'
+
+export type AyrshareStatusInfo = {
+  configured: boolean
+  /** Ayrshare platform ids the owner has linked, e.g. ['facebook','instagram']. */
+  linkedAccounts: string[]
+  error?: string
+}
+
+export type PlatformConfigStatus = {
+  platform: SocialMediaPlatform
+  label: string
+  /** Credential provider powering this platform ('facebook' covers FB + Instagram). */
+  provider: SocialCredentialProvider
+  /** True when usable credentials exist (entered in admin or via env). */
+  configured: boolean
+  /** Where the active credentials came from, for honest UI messaging. */
+  source: 'admin' | 'env' | null
+  /** Env var names a power user could set instead of using the admin form. */
+  requiredEnv: string[]
+  devConsoleUrl: string
+  steps: string[]
+  note?: string
+  /** Exact OAuth redirect URL to paste into the platform's developer console. */
+  redirectUri: string
+  /** Set when this platform reuses another's credentials (Instagram → Facebook). */
+  sharesCredentialsWith?: SocialMediaPlatform
+}
+
 export type SocialAccountInfo = {
   id: string
   platform: SocialMediaPlatform

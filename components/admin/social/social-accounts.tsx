@@ -1,13 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Facebook,
   Instagram,
   Twitter,
   Music2,
   Store,
-  ExternalLink,
   Trash2,
   RefreshCw,
   Shield,
@@ -15,14 +15,43 @@ import {
   AlertTriangle,
   Loader2,
   Plus,
+  Settings2,
+  Copy,
+  Check,
+  ExternalLink,
+  KeyRound,
+  Zap,
 } from 'lucide-react'
 import type { SocialMediaPlatform } from '@prisma/client'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
-import type { SocialAccountInfo } from '@/types/social'
+import type {
+  SocialAccountInfo,
+  PlatformConfigStatus,
+  SocialCredentialProvider,
+  AyrshareStatusInfo,
+} from '@/types/social'
+
+// Friendly labels for the platform ids Ayrshare reports as linked.
+const AYRSHARE_PLATFORM_LABELS: Record<string, string> = {
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  twitter: 'X (Twitter)',
+  tiktok: 'TikTok',
+  gmb: 'Google Business',
+  linkedin: 'LinkedIn',
+  youtube: 'YouTube',
+  pinterest: 'Pinterest',
+  bluesky: 'Bluesky',
+  threads: 'Threads',
+  reddit: 'Reddit',
+  telegram: 'Telegram',
+}
 
 const PLATFORM_ICONS: Record<SocialMediaPlatform, React.ElementType> = {
   FACEBOOK: Facebook,
@@ -65,17 +94,358 @@ const PLATFORM_META: Record<SocialMediaPlatform, { label: string; color: string;
   },
 }
 
+// Field labels differ per provider so the form matches what each console calls them.
+const CREDENTIAL_LABELS: Record<SocialCredentialProvider, { id: string; secret: string }> = {
+  facebook: { id: 'App ID', secret: 'App Secret' },
+  twitter: { id: 'Client ID', secret: 'Client Secret' },
+  tiktok: { id: 'Client Key', secret: 'Client Secret' },
+  google: { id: 'Client ID', secret: 'Client Secret' },
+}
+
 const ALL_PLATFORMS: SocialMediaPlatform[] = ['FACEBOOK', 'TWITTER', 'TIKTOK', 'INSTAGRAM', 'GOOGLE_MY_BUSINESS']
 
 type Props = {
   accounts: SocialAccountInfo[]
+  platformConfig: PlatformConfigStatus[]
+  ayrshare: AyrshareStatusInfo
 }
 
-export function SocialAccounts({ accounts }: Props) {
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="h-7 shrink-0 gap-1 px-2 text-xs"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(value)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        } catch {
+          /* clipboard unavailable */
+        }
+      }}
+    >
+      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+      {copied ? 'Copied' : 'Copy'}
+    </Button>
+  )
+}
+
+// In-panel credential entry — the owner pastes keys here instead of editing
+// env files. Saves encrypted server-side, then refreshes to flip the card to
+// "Configured" with no redeploy.
+function CredentialForm({
+  provider,
+  configured,
+  onSaved,
+}: {
+  provider: SocialCredentialProvider
+  configured: boolean
+  onSaved: () => void
+}) {
+  const [clientId, setClientId] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const labels = CREDENTIAL_LABELS[provider]
+
+  const handleSave = async () => {
+    setError(null)
+    if (!clientId.trim() || !clientSecret.trim()) {
+      setError('Enter both values.')
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/social/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, clientId: clientId.trim(), clientSecret: clientSecret.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Failed to save.')
+        setSaving(false)
+        return
+      }
+      setClientId('')
+      setClientSecret('')
+      setSaving(false)
+      onSaved()
+    } catch {
+      setError('Failed to save. Please try again.')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-md border border-border bg-background p-3">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+        <KeyRound className="h-3.5 w-3.5" />
+        {configured ? 'Update keys' : 'Enter your keys here — no code or env files'}
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label className="text-xs">{labels.id}</Label>
+          <Input
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+            placeholder={`Paste ${labels.id}`}
+            className="h-8 text-sm"
+            autoComplete="off"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">{labels.secret}</Label>
+          <Input
+            type="password"
+            value={clientSecret}
+            onChange={(e) => setClientSecret(e.target.value)}
+            placeholder={`Paste ${labels.secret}`}
+            className="h-8 text-sm"
+            autoComplete="off"
+          />
+        </div>
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      <Button type="button" size="sm" className="h-8" onClick={handleSave} disabled={saving}>
+        {saving ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Check className="mr-2 h-3 w-3" />}
+        {configured ? 'Update keys' : 'Save & enable'}
+      </Button>
+    </div>
+  )
+}
+
+// Easy mode: connect every platform through one free Ayrshare login — no
+// developer apps, no per-platform keys. This is the path that matches "one
+// click, no developer settings" without a paid plan.
+function AyrshareEasyMode({
+  status,
+  onChanged,
+}: {
+  status: AyrshareStatusInfo
+  onChanged: () => void
+}) {
+  const [apiKey, setApiKey] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+
+  const save = async () => {
+    setError(null)
+    if (!apiKey.trim()) {
+      setError('Paste your Ayrshare API key.')
+      return
+    }
+    setBusy(true)
+    try {
+      const res = await fetch('/api/social/ayrshare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: apiKey.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Failed to save key.')
+        setBusy(false)
+        return
+      }
+      setApiKey('')
+      setBusy(false)
+      onChanged()
+    } catch {
+      setError('Failed to save key.')
+      setBusy(false)
+    }
+  }
+
+  const remove = async () => {
+    if (!confirm('Remove the Ayrshare key? Easy-mode posting will stop until you add it again.')) return
+    setBusy(true)
+    try {
+      await fetch('/api/social/ayrshare', { method: 'DELETE' })
+      onChanged()
+    } catch {
+      setError('Failed to remove key.')
+    }
+    setBusy(false)
+  }
+
+  return (
+    <Card className="border-primary/30 bg-primary/5 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Zap className="h-5 w-5 text-primary" />
+          <div>
+            <p className="font-semibold text-foreground">Easy mode — one free login, no developer apps</p>
+            <p className="text-xs text-muted-foreground">
+              Connect Facebook, Instagram, X, TikTok &amp; Google Business through a single free
+              Ayrshare account. No API keys per platform, no developer consoles.
+            </p>
+          </div>
+        </div>
+        {status.configured ? (
+          <Badge variant="outline" className="gap-1 border-primary/40 text-[10px] text-primary">
+            <CheckCircle2 className="h-3 w-3" /> Active
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="gap-1 border-amber-400 text-[10px] text-amber-600">
+            Optional
+          </Badge>
+        )}
+      </div>
+
+      {status.configured ? (
+        <div className="mt-4 space-y-3">
+          {status.error ? (
+            <p className="text-sm text-destructive">{status.error}</p>
+          ) : status.linkedAccounts.length > 0 ? (
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-foreground">Linked &amp; ready to post:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {status.linkedAccounts.map((p) => (
+                  <Badge key={p} className="gap-1 bg-primary/10 text-xs text-primary">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {AYRSHARE_PLATFORM_LABELS[p] ?? p}
+                  </Badge>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Posts and scheduled posts now publish through Ayrshare automatically.
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Key saved. Now link your social accounts on Ayrshare (one click each), then they&apos;ll
+              appear here.
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="outline">
+              <a href="https://app.ayrshare.com" target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-2 h-3 w-3" /> Link / manage accounts on Ayrshare
+              </a>
+            </Button>
+            <Button size="sm" variant="outline" onClick={remove} disabled={busy} className="text-destructive">
+              {busy ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Trash2 className="mr-2 h-3 w-3" />}
+              Remove key
+            </Button>
+          </div>
+        </div>
+      ) : open ? (
+        <div className="mt-4 space-y-3">
+          <ol className="ml-4 list-decimal space-y-1 text-sm text-muted-foreground">
+            <li>
+              Create a free account at{' '}
+              <a href="https://www.ayrshare.com" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline">
+                ayrshare.com
+              </a>{' '}
+              and link your social accounts (click-connect, no developer setup).
+            </li>
+            <li>In the Ayrshare dashboard, copy your API key.</li>
+            <li>Paste it below and save — that&apos;s the only key you&apos;ll ever enter.</li>
+          </ol>
+          <div className="space-y-1">
+            <Label className="text-xs">Ayrshare API key</Label>
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Paste API key"
+                className="h-9 text-sm"
+                autoComplete="off"
+              />
+              <Button size="sm" className="h-9" onClick={save} disabled={busy}>
+                {busy ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Check className="mr-2 h-3 w-3" />}
+                Save
+              </Button>
+            </div>
+          </div>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => setOpen(true)}>
+            <Zap className="mr-2 h-4 w-4" /> Set up easy mode
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <a href="https://www.ayrshare.com" target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="mr-2 h-3 w-3" /> Create free Ayrshare account
+            </a>
+          </Button>
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function SetupGuide({ config, onSaved }: { config: PlatformConfigStatus; onSaved: () => void }) {
+  // Instagram has no keys of its own — it rides on the Facebook app.
+  const sharesCreds = Boolean(config.sharesCredentialsWith)
+
+  return (
+    <div className="mt-3 space-y-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
+      <p className="font-medium text-amber-900 dark:text-amber-200">One-time setup</p>
+
+      <ol className="ml-4 list-decimal space-y-1 text-amber-900/90 dark:text-amber-200/90">
+        {config.steps.map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+
+      {!sharesCreds && (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+            Redirect URI to paste into the platform&apos;s console:
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 overflow-x-auto rounded bg-amber-100 px-2 py-1 text-xs text-amber-900 dark:bg-amber-900/30 dark:text-amber-100">
+              {config.redirectUri}
+            </code>
+            <CopyButton value={config.redirectUri} />
+          </div>
+        </div>
+      )}
+
+      {config.note && (
+        <p className="text-xs text-amber-800/80 dark:text-amber-200/70">Note: {config.note}</p>
+      )}
+
+      {sharesCreds ? (
+        <p className="text-xs text-amber-900 dark:text-amber-200">
+          Instagram uses your Facebook keys — set up Facebook above, then connect Instagram here.
+        </p>
+      ) : (
+        <CredentialForm provider={config.provider} configured={config.configured} onSaved={onSaved} />
+      )}
+
+      <a
+        href={config.devConsoleUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 text-xs font-medium text-amber-900 underline dark:text-amber-200"
+      >
+        Open developer console <ExternalLink className="h-3 w-3" />
+      </a>
+    </div>
+  )
+}
+
+export function SocialAccounts({ accounts, platformConfig, ayrshare }: Props) {
+  const router = useRouter()
   const [connecting, setConnecting] = useState<SocialMediaPlatform | null>(null)
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [openGuide, setOpenGuide] = useState<SocialMediaPlatform | null>(null)
   const [localAccounts, setLocalAccounts] = useState(accounts)
+
+  const configByPlatform = new Map(platformConfig.map((c) => [c.platform, c]))
+  const configuredCount = platformConfig.filter((c) => c.configured).length
 
   const handleConnect = async (platform: SocialMediaPlatform) => {
     setConnecting(platform)
@@ -116,16 +486,34 @@ export function SocialAccounts({ accounts }: Props) {
         <Alert variant="destructive">
           <AlertDescription className="flex items-center justify-between gap-3">
             <span>{error}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setError(null)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setError(null)}>
               Dismiss
             </Button>
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Easy mode (Ayrshare) — recommended free path with no developer apps */}
+      <AyrshareEasyMode status={ayrshare} onChanged={() => router.refresh()} />
+
+      {/* Honest configuration summary */}
+      <Card className="border-border p-4">
+        <div className="flex items-center gap-2">
+          {configuredCount === platformConfig.length ? (
+            <CheckCircle2 className="h-5 w-5 text-primary" />
+          ) : (
+            <Settings2 className="h-5 w-5 text-muted-foreground" />
+          )}
+          <p className="text-sm font-medium text-foreground">
+            {configuredCount} of {platformConfig.length} platforms configured
+          </p>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Set each platform up once below — paste your keys right here in the panel, no code or
+          server files. A platform must be configured before its &quot;Connect&quot; button works.
+          Anything not set up is shown honestly as &quot;Setup required.&quot;
+        </p>
+      </Card>
 
       {/* Connected accounts */}
       {localAccounts.length > 0 && (
@@ -261,79 +649,96 @@ export function SocialAccounts({ accounts }: Props) {
           {ALL_PLATFORMS.filter((p) => !connectedPlatforms.has(p)).map((platform) => {
             const Icon = PLATFORM_ICONS[platform]
             const meta = PLATFORM_META[platform]
+            const config = configByPlatform.get(platform)
+            const configured = config?.configured ?? false
+            const guideOpen = openGuide === platform
 
             return (
               <Card
                 key={platform}
-                className="group flex flex-col border-dashed border-input p-5 transition hover:border-solid hover:border-muted-foreground hover:shadow-md"
+                className={cn(
+                  'group flex flex-col border-dashed border-input p-5 transition',
+                  configured && 'hover:border-solid hover:border-muted-foreground hover:shadow-md',
+                )}
               >
-                <div className="flex items-center gap-3">
-                  <div className={cn('rounded-xl p-2.5', meta.color, 'bg-muted')}>
-                    <Icon className="h-6 w-6" />
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className={cn('rounded-xl p-2.5', meta.color, 'bg-muted')}>
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">{meta.label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {configured
+                          ? config?.source === 'admin'
+                            ? 'Ready to connect · keys saved'
+                            : 'Ready to connect'
+                          : 'Not connected'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{meta.label}</p>
-                    <p className="text-xs text-muted-foreground">Not connected</p>
-                  </div>
-                </div>
-                <p className="mt-3 flex-1 text-sm text-muted-foreground">{meta.description}</p>
-                <Button
-                  className="mt-4 w-full"
-                  onClick={() => handleConnect(platform)}
-                  disabled={connecting === platform}
-                >
-                  {connecting === platform ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {configured ? (
+                    <Badge variant="outline" className="gap-1 border-primary/40 text-[10px] text-primary">
+                      <CheckCircle2 className="h-3 w-3" /> Configured
+                    </Badge>
                   ) : (
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Badge variant="outline" className="gap-1 border-amber-400 text-[10px] text-amber-600">
+                      <AlertTriangle className="h-3 w-3" /> Setup required
+                    </Badge>
                   )}
-                  {connecting === platform ? 'Connecting...' : `Connect ${meta.label}`}
-                </Button>
+                </div>
+
+                <p className="mt-3 flex-1 text-sm text-muted-foreground">{meta.description}</p>
+
+                {configured ? (
+                  <div className="mt-4 space-y-2">
+                    <Button
+                      className="w-full"
+                      onClick={() => handleConnect(platform)}
+                      disabled={connecting === platform}
+                    >
+                      {connecting === platform ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="mr-2 h-4 w-4" />
+                      )}
+                      {connecting === platform ? 'Connecting...' : `Connect ${meta.label}`}
+                    </Button>
+                    {!config?.sharesCredentialsWith && (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground underline hover:text-foreground"
+                        onClick={() => setOpenGuide(guideOpen ? null : platform)}
+                      >
+                        {guideOpen ? 'Hide keys' : 'Update keys'}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="mt-4 w-full"
+                    onClick={() => setOpenGuide(guideOpen ? null : platform)}
+                  >
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    {guideOpen ? 'Hide setup steps' : 'Show setup steps'}
+                  </Button>
+                )}
+
+                {guideOpen && config && (
+                  <SetupGuide
+                    config={config}
+                    onSaved={() => {
+                      setOpenGuide(null)
+                      router.refresh()
+                    }}
+                  />
+                )}
               </Card>
             )
           })}
         </div>
       </div>
-
-      {/* Setup info */}
-      <Card className="border-border bg-primary/5 p-5">
-        <h4 className="font-semibold text-foreground">Platform Setup Requirements</h4>
-        <div className="mt-3 grid gap-4 text-sm text-blue-800 sm:grid-cols-2">
-          <div>
-            <p className="font-medium">Facebook & Instagram</p>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
-              <li>Facebook App created at developers.facebook.com</li>
-              <li>App ID and Secret in environment variables</li>
-              <li>Business Page with admin access</li>
-              <li>Instagram Business account linked to Page</li>
-            </ul>
-          </div>
-          <div>
-            <p className="font-medium">X (Twitter)</p>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
-              <li>Twitter Developer App at developer.x.com</li>
-              <li>OAuth 2.0 with PKCE enabled</li>
-              <li>Client ID and Secret configured</li>
-            </ul>
-          </div>
-          <div>
-            <p className="font-medium">TikTok</p>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
-              <li>TikTok Developer App at developers.tiktok.com</li>
-              <li>Content Posting API access approved</li>
-              <li>Client Key and Secret configured</li>
-            </ul>
-          </div>
-          <div>
-            <p className="font-medium">Environment Variables</p>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
-              <li>FACEBOOK_APP_ID, FACEBOOK_APP_SECRET</li>
-              <li>TWITTER_CLIENT_ID, TWITTER_CLIENT_SECRET</li>
-              <li>TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET</li>
-            </ul>
-          </div>
-        </div>
-      </Card>
     </div>
   )
 }

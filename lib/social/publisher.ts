@@ -1,6 +1,7 @@
 import type { SocialMediaPlatform } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { getAccountAccessToken } from './platforms'
+import { getValidAccessToken } from './platforms'
+import { isAyrshareConfigured, postViaAyrshare } from './ayrshare'
 
 type PublishResult = {
   success: boolean
@@ -387,6 +388,60 @@ async function publishToInstagram(
 }
 
 /**
+ * Publish a local post to a Google Business Profile location via the
+ * Business Profile API. The account's `accountId` holds the location resource
+ * name ("accounts/{id}/locations/{id}") captured at connect time.
+ */
+async function publishToGoogleMyBusiness(
+  accessToken: string,
+  locationName: string,
+  content: string,
+  mediaUrls: string[],
+  linkUrl?: string | null,
+): Promise<PublishResult> {
+  try {
+    const body: Record<string, unknown> = {
+      languageCode: 'en-US',
+      summary: content,
+      topicType: 'STANDARD',
+    }
+
+    if (linkUrl) {
+      body.callToAction = { actionType: 'LEARN_MORE', url: linkUrl }
+    }
+
+    if (mediaUrls.length > 0) {
+      body.media = [{ mediaFormat: 'PHOTO', sourceUrl: mediaUrls[0] }]
+    }
+
+    const res = await fetch(
+      `https://mybusiness.googleapis.com/v4/${locationName}/localPosts`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      },
+    )
+    const data = await res.json()
+
+    if (data.error) {
+      return { success: false, error: data.error.message || 'Google Business API error' }
+    }
+
+    return {
+      success: true,
+      externalPostId: data.name,
+      externalUrl: data.searchUrl ?? undefined,
+    }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+/**
  * Publish a post to a single platform account
  */
 export async function publishToAccount(
@@ -415,7 +470,7 @@ export async function publishToAccount(
     return { success: false, error: 'Post not found' }
   }
 
-  const accessToken = await getAccountAccessToken(accountId)
+  const accessToken = await getValidAccessToken(accountId)
   if (!accessToken) {
     return { success: false, error: 'Could not retrieve access token' }
   }
@@ -442,6 +497,19 @@ export async function publishToAccount(
   // Add hashtags
   if (post.hashtags.length > 0) {
     content = content + '\n\n' + post.hashtags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ')
+  }
+
+  // Idempotency guard: if this (post, account) pair already published, don't
+  // post again. Protects against overlapping scheduler runs double-posting.
+  const existing = await prisma.socialPostPublish.findUnique({
+    where: { postId_accountId: { postId, accountId } },
+  })
+  if (existing?.status === 'PUBLISHED') {
+    return {
+      success: true,
+      externalPostId: existing.externalPostId ?? undefined,
+      externalUrl: existing.externalUrl ?? undefined,
+    }
   }
 
   // Mark as publishing
@@ -474,6 +542,9 @@ export async function publishToAccount(
     case 'TIKTOK':
       result = await publishToTikTok(accessToken, content, mediaUrls)
       break
+    case 'GOOGLE_MY_BUSINESS':
+      result = await publishToGoogleMyBusiness(accessToken, account.accountId, content, mediaUrls, post.linkUrl)
+      break
     default:
       result = { success: false, error: `Publishing not yet supported for ${account.platform}` }
   }
@@ -494,11 +565,54 @@ export async function publishToAccount(
 }
 
 /**
+ * Publish a post through Ayrshare (easy mode) — one call covers every selected
+ * platform, so the owner never registers a developer app.
+ */
+async function publishPostViaAyrshare(postId: string): Promise<{
+  results: Array<{ platform: SocialMediaPlatform; accountId: string; result: PublishResult }>
+}> {
+  const post = await prisma.socialMediaPost.findUnique({
+    where: { id: postId },
+    include: { media: { include: { media: true }, orderBy: { order: 'asc' } } },
+  })
+  if (!post) throw new Error('Post not found')
+
+  let content = post.content
+  if (post.hashtags.length > 0) {
+    content = content + '\n\n' + post.hashtags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ')
+  }
+  const mediaUrls = post.media.map((m) => m.media.url)
+
+  const res = await postViaAyrshare({ post: content, platforms: post.platforms, mediaUrls })
+
+  await prisma.socialMediaPost.update({
+    where: { id: postId },
+    data: {
+      status: res.success ? 'PUBLISHED' : 'FAILED',
+      publishedAt: res.success ? new Date() : null,
+    },
+  })
+
+  // Surface one result per selected platform for the UI.
+  const result: PublishResult = res.success
+    ? { success: true, externalPostId: res.id }
+    : { success: false, error: res.error }
+  return {
+    results: post.platforms.map((platform) => ({ platform, accountId: 'ayrshare', result })),
+  }
+}
+
+/**
  * Publish a post to all selected platform accounts
  */
 export async function publishPost(postId: string): Promise<{
   results: Array<{ platform: SocialMediaPlatform; accountId: string; result: PublishResult }>
 }> {
+  // Easy mode: if an Ayrshare key is configured, route everything through it.
+  if (await isAyrshareConfigured()) {
+    return publishPostViaAyrshare(postId)
+  }
+
   const post = await prisma.socialMediaPost.findUnique({
     where: { id: postId },
   })

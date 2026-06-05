@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   try {
     const state = createOAuthState()
     const codeVerifier = platform === SocialMediaPlatform.TWITTER ? createCodeVerifier() : undefined
-    const oauthUrl = getOAuthUrl(platform, {
+    const oauthUrl = await getOAuthUrl(platform, {
       state,
       codeChallenge: codeVerifier ? createCodeChallenge(codeVerifier) : undefined,
     })
