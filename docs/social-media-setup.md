@@ -64,8 +64,19 @@ copy button with the right value for your current environment).
 
 ## Where to put these values
 
-- **Local dev:** add them to `.env` (see `.env.example` for the full list).
-- **Production (Vercel):** Project → Settings → Environment Variables, then redeploy.
+**Easiest (no developer tools): paste them in the admin panel.**
+Go to **Admin → Social → Accounts**, click **Show setup steps** under a
+platform, and enter the ID/key + secret right there. They're encrypted and
+saved instantly — the card flips to **Configured** and the **Connect** button
+goes live with no redeploy. This is the recommended path; you never touch a
+file or the Vercel dashboard.
+
+**Alternative (power users): environment variables.** The same keys can be set
+as env vars instead (see `.env.example`):
+- Local dev: add them to `.env`.
+- Production (Vercel): Project → Settings → Environment Variables, then redeploy.
+
+Admin-panel values take precedence over env vars when both are set.
 
 ## Scheduled posts
 

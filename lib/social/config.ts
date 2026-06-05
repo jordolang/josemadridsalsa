@@ -1,6 +1,7 @@
 import type { SocialMediaPlatform } from '@prisma/client'
-import type { PlatformConfigStatus } from '@/types/social'
-import { getFacebookAppId, getFacebookAppSecret, getSocialBaseUrl } from './platforms'
+import type { PlatformConfigStatus, SocialCredentialProvider } from '@/types/social'
+import { getSocialBaseUrl, platformToProvider } from './platforms'
+import { getProviderCredentials } from './credentials'
 
 /**
  * Single source of truth for "is this platform actually wired up?".
@@ -14,7 +15,9 @@ import { getFacebookAppId, getFacebookAppSecret, getSocialBaseUrl } from './plat
 export type PlatformSetup = {
   platform: SocialMediaPlatform
   label: string
-  /** Env var names that must ALL be present for this platform to work. */
+  /** Credential provider powering this platform. */
+  provider: SocialCredentialProvider
+  /** Env var names a power user could set instead of using the admin form. */
   requiredEnv: string[]
   /** Where the owner registers the developer app (one-time). */
   devConsoleUrl: string
@@ -22,12 +25,15 @@ export type PlatformSetup = {
   steps: string[]
   /** Extra note about review/approval gates the platform imposes. */
   note?: string
+  /** Set when this platform reuses another platform's credentials. */
+  sharesCredentialsWith?: SocialMediaPlatform
 }
 
 export const PLATFORM_SETUP: Record<SocialMediaPlatform, PlatformSetup> = {
   FACEBOOK: {
     platform: 'FACEBOOK',
     label: 'Facebook',
+    provider: 'facebook',
     requiredEnv: ['FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET'],
     devConsoleUrl: 'https://developers.facebook.com/apps',
     steps: [
@@ -42,6 +48,8 @@ export const PLATFORM_SETUP: Record<SocialMediaPlatform, PlatformSetup> = {
   INSTAGRAM: {
     platform: 'INSTAGRAM',
     label: 'Instagram',
+    provider: 'facebook',
+    sharesCredentialsWith: 'FACEBOOK',
     requiredEnv: ['FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET'],
     devConsoleUrl: 'https://developers.facebook.com/apps',
     steps: [
@@ -55,6 +63,7 @@ export const PLATFORM_SETUP: Record<SocialMediaPlatform, PlatformSetup> = {
   TWITTER: {
     platform: 'TWITTER',
     label: 'X (Twitter)',
+    provider: 'twitter',
     requiredEnv: ['TWITTER_CLIENT_ID', 'TWITTER_CLIENT_SECRET'],
     devConsoleUrl: 'https://developer.x.com/en/portal/dashboard',
     steps: [
@@ -68,6 +77,7 @@ export const PLATFORM_SETUP: Record<SocialMediaPlatform, PlatformSetup> = {
   TIKTOK: {
     platform: 'TIKTOK',
     label: 'TikTok',
+    provider: 'tiktok',
     requiredEnv: ['TIKTOK_CLIENT_KEY', 'TIKTOK_CLIENT_SECRET'],
     devConsoleUrl: 'https://developers.tiktok.com/apps',
     steps: [
@@ -81,6 +91,7 @@ export const PLATFORM_SETUP: Record<SocialMediaPlatform, PlatformSetup> = {
   GOOGLE_MY_BUSINESS: {
     platform: 'GOOGLE_MY_BUSINESS',
     label: 'Google Business',
+    provider: 'google',
     requiredEnv: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
     devConsoleUrl: 'https://console.cloud.google.com/apis/credentials',
     steps: [
@@ -99,36 +110,38 @@ export function getRedirectUri(): string {
   return `${getSocialBaseUrl()}/api/social/oauth/callback`
 }
 
-function isEnvPresent(name: string): boolean {
-  // Facebook accepts either the APP_* or CLIENT_* naming convention; treat the
-  // pair as present if the platforms helper can resolve a value.
-  if (name === 'FACEBOOK_APP_ID') return Boolean(getFacebookAppId())
-  if (name === 'FACEBOOK_APP_SECRET') return Boolean(getFacebookAppSecret())
-  return Boolean(process.env[name])
-}
-
 /**
- * Report, per platform, whether the server actually has the credentials it
- * needs. Safe to call from a server component — it only reads env var
- * presence and never returns secret values.
+ * Report, per platform, whether usable credentials exist — checking the
+ * admin-entered values first, then env vars. Safe to call from a server
+ * component; it never returns secret values, only presence + source.
  */
-export function getPlatformConfigStatus(): PlatformConfigStatus[] {
+export async function getPlatformConfigStatus(): Promise<PlatformConfigStatus[]> {
   const redirectUri = getRedirectUri()
+
+  // Resolve each distinct provider once, then map platforms onto it.
+  const providers: SocialCredentialProvider[] = ['facebook', 'twitter', 'tiktok', 'google']
+  const resolved = await Promise.all(
+    providers.map(async (provider) => [provider, await getProviderCredentials(provider)] as const),
+  )
+  const credsByProvider = new Map(resolved)
 
   return (Object.keys(PLATFORM_SETUP) as SocialMediaPlatform[]).map((platform) => {
     const setup = PLATFORM_SETUP[platform]
-    const missingEnv = setup.requiredEnv.filter((name) => !isEnvPresent(name))
+    const provider = platformToProvider(platform)
+    const creds = credsByProvider.get(provider) ?? null
 
     return {
       platform,
       label: setup.label,
-      configured: missingEnv.length === 0,
+      provider,
+      configured: creds !== null,
+      source: creds?.source ?? null,
       requiredEnv: setup.requiredEnv,
-      missingEnv,
       devConsoleUrl: setup.devConsoleUrl,
       steps: setup.steps,
       note: setup.note,
       redirectUri,
+      sharesCredentialsWith: setup.sharesCredentialsWith,
     }
   })
 }

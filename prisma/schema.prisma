@@ -1181,6 +1181,24 @@ model SocialMediaPostMedia {
   @@map("social_media_post_media")
 }
 
+// App-level OAuth credentials for each social provider, entered through the
+// admin panel (Social → Accounts) instead of server env vars, so a non-developer
+// can fully configure publishing from the UI. The client secret is encrypted at
+// rest; the client id is not sensitive. One row per provider:
+// 'facebook' (covers Facebook + Instagram), 'twitter', 'tiktok', 'google'.
+model SocialPlatformCredential {
+  id             String   @id @default(cuid())
+  provider       String   @unique
+  clientId       String
+  clientSecret   String
+  clientSecretIv String
+  updatedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("social_platform_credential")
+}
+
 model FormTemplate {
   id                  String                @id @default(cuid())
   slug                String                @unique

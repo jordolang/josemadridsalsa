@@ -7,12 +7,8 @@ import {
   parseSocialOAuthSession,
   SOCIAL_OAUTH_COOKIE_NAME,
 } from '@/lib/social/oauth'
-import {
-  getFacebookAppId,
-  getFacebookAppSecret,
-  getSocialBaseUrl,
-  upsertSocialAccount,
-} from '@/lib/social/platforms'
+import { getSocialBaseUrl, upsertSocialAccount } from '@/lib/social/platforms'
+import { getProviderCredentials } from '@/lib/social/credentials'
 import { logAudit } from '@/lib/audit'
 
 const FACEBOOK_SCOPES = [
@@ -35,14 +31,12 @@ const TWITTER_SCOPES = ['tweet.read', 'tweet.write', 'users.read', 'offline.acce
 const GOOGLE_SCOPES = ['https://www.googleapis.com/auth/business.manage']
 
 async function exchangeFacebookToken(code: string, redirectUri: string) {
-  const appId = getFacebookAppId()
-  const appSecret = getFacebookAppSecret()
-
-  if (!appId || !appSecret) {
-    throw new Error(
-      'Facebook is not configured. Set FACEBOOK_APP_ID/FACEBOOK_APP_SECRET (or FACEBOOK_CLIENT_ID/FACEBOOK_CLIENT_SECRET) on the server.',
-    )
+  const creds = await getProviderCredentials('facebook')
+  if (!creds) {
+    throw new Error('Facebook is not configured. Add your Facebook App ID and Secret in the admin panel (Social → Accounts → Facebook).')
   }
+  const appId = creds.clientId
+  const appSecret = creds.clientSecret
 
   const tokenRes = await fetch(
     `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&code=${code}&redirect_uri=${encodeURIComponent(redirectUri)}`,
@@ -79,12 +73,10 @@ async function exchangeFacebookToken(code: string, redirectUri: string) {
 }
 
 async function exchangeTwitterToken(code: string, redirectUri: string, codeVerifier: string) {
-  const clientId = process.env.TWITTER_CLIENT_ID
-  const clientSecret = process.env.TWITTER_CLIENT_SECRET
+  const creds = await getProviderCredentials('twitter')
+  if (!creds) throw new Error('X (Twitter) is not configured. Add your Client ID and Secret in the admin panel (Social → Accounts → X).')
 
-  if (!clientId || !clientSecret) throw new Error('Twitter app not configured')
-
-  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+  const basicAuth = Buffer.from(`${creds.clientId}:${creds.clientSecret}`).toString('base64')
 
   const tokenRes = await fetch('https://api.x.com/2/oauth2/token', {
     method: 'POST',
@@ -124,17 +116,15 @@ async function exchangeTwitterToken(code: string, redirectUri: string, codeVerif
 }
 
 async function exchangeTikTokToken(code: string, redirectUri: string) {
-  const clientKey = process.env.TIKTOK_CLIENT_KEY
-  const clientSecret = process.env.TIKTOK_CLIENT_SECRET
-
-  if (!clientKey || !clientSecret) throw new Error('TikTok app not configured')
+  const creds = await getProviderCredentials('tiktok')
+  if (!creds) throw new Error('TikTok is not configured. Add your Client Key and Secret in the admin panel (Social → Accounts → TikTok).')
 
   const tokenRes = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_key: clientKey,
-      client_secret: clientSecret,
+      client_key: creds.clientId,
+      client_secret: creds.clientSecret,
       code,
       grant_type: 'authorization_code',
       redirect_uri: redirectUri,
@@ -166,11 +156,9 @@ async function exchangeTikTokToken(code: string, redirectUri: string) {
 }
 
 async function exchangeGoogleToken(code: string, redirectUri: string) {
-  const clientId = process.env.GOOGLE_CLIENT_ID
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET
-
-  if (!clientId || !clientSecret) {
-    throw new Error('Google is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET on the server.')
+  const creds = await getProviderCredentials('google')
+  if (!creds) {
+    throw new Error('Google Business is not configured. Add your Google Client ID and Secret in the admin panel (Social → Accounts → Google Business).')
   }
 
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -178,14 +166,16 @@ async function exchangeGoogleToken(code: string, redirectUri: string) {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       code,
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: creds.clientId,
+      client_secret: creds.clientSecret,
       redirect_uri: redirectUri,
       grant_type: 'authorization_code',
     }),
   })
-  const tokenData = await tokenRes.json()
-  if (tokenData.error) throw new Error(tokenData.error_description || tokenData.error)
+  const tokenData = await tokenRes.json().catch(() => null)
+  if (!tokenRes.ok || !tokenData?.access_token) {
+    throw new Error(tokenData?.error_description || tokenData?.error || 'Google token exchange failed')
+  }
 
   const accessToken = tokenData.access_token as string
 
@@ -194,8 +184,10 @@ async function exchangeGoogleToken(code: string, redirectUri: string) {
     'https://mybusinessaccountmanagement.googleapis.com/v1/accounts',
     { headers: { Authorization: `Bearer ${accessToken}` } },
   )
-  const accountsData = await accountsRes.json()
-  if (accountsData.error) throw new Error(accountsData.error.message || 'Failed to list Google Business accounts')
+  const accountsData = await accountsRes.json().catch(() => null)
+  if (!accountsRes.ok || !accountsData) {
+    throw new Error(accountsData?.error?.message || 'Failed to list Google Business accounts')
+  }
 
   const gbAccounts = (accountsData.accounts ?? []) as Array<{ name: string; accountName?: string }>
   if (!gbAccounts.length) {
@@ -204,20 +196,28 @@ async function exchangeGoogleToken(code: string, redirectUri: string) {
 
   // Each location becomes its own connectable target. The localPosts API needs
   // the full "accounts/{id}/locations/{id}" resource name, so we build it here.
+  // Page through every location so accounts with many listings are fully synced.
   const locations: Array<{ resourceName: string; title: string }> = []
   for (const account of gbAccounts) {
-    const locRes = await fetch(
-      `https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations?readMask=name,title`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-    )
-    const locData = await locRes.json()
-    for (const loc of (locData.locations ?? []) as Array<{ name: string; title?: string }>) {
-      // loc.name is "locations/456"; prefix with the account to get the full path.
-      locations.push({
-        resourceName: `${account.name}/${loc.name}`,
-        title: loc.title || account.accountName || 'Google Business Location',
-      })
-    }
+    let pageToken: string | undefined
+    do {
+      const params = new URLSearchParams({ readMask: 'name,title', pageSize: '100' })
+      if (pageToken) params.set('pageToken', pageToken)
+      const locRes = await fetch(
+        `https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations?${params.toString()}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      )
+      const locData = await locRes.json().catch(() => null)
+      if (!locRes.ok || !locData) break
+      for (const loc of (locData.locations ?? []) as Array<{ name: string; title?: string }>) {
+        // loc.name is "locations/456"; prefix with the account to get the full path.
+        locations.push({
+          resourceName: `${account.name}/${loc.name}`,
+          title: loc.title || account.accountName || 'Google Business Location',
+        })
+      }
+      pageToken = locData.nextPageToken
+    } while (pageToken)
   }
 
   if (!locations.length) {

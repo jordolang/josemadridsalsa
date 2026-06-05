@@ -498,6 +498,19 @@ export async function publishToAccount(
     content = content + '\n\n' + post.hashtags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ')
   }
 
+  // Idempotency guard: if this (post, account) pair already published, don't
+  // post again. Protects against overlapping scheduler runs double-posting.
+  const existing = await prisma.socialPostPublish.findUnique({
+    where: { postId_accountId: { postId, accountId } },
+  })
+  if (existing?.status === 'PUBLISHED') {
+    return {
+      success: true,
+      externalPostId: existing.externalPostId ?? undefined,
+      externalUrl: existing.externalUrl ?? undefined,
+    }
+  }
+
   // Mark as publishing
   await prisma.socialPostPublish.upsert({
     where: { postId_accountId: { postId, accountId } },

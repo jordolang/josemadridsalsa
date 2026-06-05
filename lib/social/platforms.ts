@@ -1,6 +1,22 @@
 import type { ShopPlatform, SocialMediaPlatform } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { encryptSecret, decryptSecret } from '@/lib/crypto'
+import { getProviderCredentials, type SocialProvider } from './credentials'
+
+/** Map a publishing platform to the credential provider that powers it. */
+export function platformToProvider(platform: SocialMediaPlatform): SocialProvider {
+  switch (platform) {
+    case 'FACEBOOK':
+    case 'INSTAGRAM':
+      return 'facebook'
+    case 'TWITTER':
+      return 'twitter'
+    case 'TIKTOK':
+      return 'tiktok'
+    case 'GOOGLE_MY_BUSINESS':
+      return 'google'
+  }
+}
 
 const FACEBOOK_OAUTH_SCOPES = [
   'pages_manage_posts',
@@ -22,37 +38,6 @@ const TIKTOK_OAUTH_SCOPES = [
 
 export function getSocialBaseUrl(): string {
   return process.env.NEXTAUTH_URL || 'http://localhost:3000'
-}
-
-// Both FACEBOOK_APP_* (Graph API convention) and FACEBOOK_CLIENT_* (NextAuth
-// convention) are accepted so a single Facebook app credential pair powers
-// both NextAuth sign-in and the social publisher without duplicate secrets.
-// We MUST pair id+secret from the same convention; mixing them across two
-// different Facebook apps returns OAuth state mismatches that are confusing
-// to debug. Prefer APP_* when the full pair is set, otherwise CLIENT_*.
-function getFacebookAppCredentials() {
-  if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
-    return {
-      appId: process.env.FACEBOOK_APP_ID,
-      appSecret: process.env.FACEBOOK_APP_SECRET,
-    }
-  }
-  if (process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET) {
-    return {
-      appId: process.env.FACEBOOK_CLIENT_ID,
-      appSecret: process.env.FACEBOOK_CLIENT_SECRET,
-    }
-  }
-  // Partial — surface as not configured so the UI shows a clear error.
-  return { appId: undefined, appSecret: undefined }
-}
-
-export function getFacebookAppId(): string | undefined {
-  return getFacebookAppCredentials().appId
-}
-
-export function getFacebookAppSecret(): string | undefined {
-  return getFacebookAppCredentials().appSecret
 }
 
 /**
@@ -188,41 +173,40 @@ export async function disconnectAccount(accountId: string) {
 }
 
 /**
- * Generate OAuth authorization URL for a platform
+ * Generate OAuth authorization URL for a platform. Credentials are resolved
+ * from the admin panel first, then env vars, so connecting works as soon as the
+ * owner saves keys in the UI — no redeploy needed.
  */
-export function getOAuthUrl(
+export async function getOAuthUrl(
   platform: SocialMediaPlatform,
   options: { state: string; codeChallenge?: string },
-): string {
+): Promise<string> {
   const baseUrl = getSocialBaseUrl()
   const redirectUri = `${baseUrl}/api/social/oauth/callback`
+  const creds = await getProviderCredentials(platformToProvider(platform))
 
   switch (platform) {
     case 'FACEBOOK':
     case 'INSTAGRAM': {
-      const appId = getFacebookAppId()
-      if (!appId) throw new Error('Facebook is not configured. Set FACEBOOK_APP_ID (or FACEBOOK_CLIENT_ID) on the server.')
+      if (!creds) throw new Error('Facebook is not configured. Add your Facebook App ID and Secret in the admin panel (Social → Accounts → Facebook → Show setup steps).')
       const scopes = FACEBOOK_OAUTH_SCOPES.join(',')
-      return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&response_type=code`
+      return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${creds.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&response_type=code`
     }
     case 'TWITTER': {
-      const clientId = process.env.TWITTER_CLIENT_ID
-      if (!clientId) throw new Error('X (Twitter) is not configured. Set TWITTER_CLIENT_ID and TWITTER_CLIENT_SECRET on the server.')
+      if (!creds) throw new Error('X (Twitter) is not configured. Add your Client ID and Secret in the admin panel (Social → Accounts → X → Show setup steps).')
       if (!options.codeChallenge) throw new Error('Missing PKCE challenge')
       const scopes = 'tweet.read tweet.write users.read offline.access'
-      return `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&code_challenge=${options.codeChallenge}&code_challenge_method=S256`
+      return `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${creds.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&code_challenge=${options.codeChallenge}&code_challenge_method=S256`
     }
     case 'TIKTOK': {
-      const clientKey = process.env.TIKTOK_CLIENT_KEY
-      if (!clientKey) throw new Error('TikTok is not configured. Set TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET on the server (register a TikTok developer app at developers.tiktok.com).')
+      if (!creds) throw new Error('TikTok is not configured. Add your Client Key and Secret in the admin panel (Social → Accounts → TikTok → Show setup steps).')
       const scopes = TIKTOK_OAUTH_SCOPES.join(',')
-      return `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${encodeURIComponent(scopes)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(options.state)}`
+      return `https://www.tiktok.com/v2/auth/authorize/?client_key=${creds.clientId}&scope=${encodeURIComponent(scopes)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(options.state)}`
     }
     case 'GOOGLE_MY_BUSINESS': {
-      const clientId = process.env.GOOGLE_CLIENT_ID
-      if (!clientId) throw new Error('GOOGLE_CLIENT_ID not configured')
+      if (!creds) throw new Error('Google Business is not configured. Add your Google Client ID and Secret in the admin panel (Social → Accounts → Google Business → Show setup steps).')
       const scopes = 'https://www.googleapis.com/auth/business.manage'
-      return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&response_type=code&access_type=offline&prompt=consent`
+      return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${creds.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&response_type=code&access_type=offline&prompt=consent`
     }
     default:
       throw new Error(`OAuth not supported for platform: ${platform}`)
@@ -239,10 +223,9 @@ async function refreshPlatformToken(
 ): Promise<{ accessToken: string; refreshToken?: string; expiresIn: number } | null> {
   switch (platform) {
     case 'TWITTER': {
-      const clientId = process.env.TWITTER_CLIENT_ID
-      const clientSecret = process.env.TWITTER_CLIENT_SECRET
-      if (!clientId || !clientSecret) return null
-      const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+      const creds = await getProviderCredentials('twitter')
+      if (!creds) return null
+      const basicAuth = Buffer.from(`${creds.clientId}:${creds.clientSecret}`).toString('base64')
       const res = await fetch('https://api.x.com/2/oauth2/token', {
         method: 'POST',
         headers: {
@@ -254,8 +237,8 @@ async function refreshPlatformToken(
           refresh_token: refreshToken,
         }),
       })
-      const data = await res.json()
-      if (data.error || !data.access_token) return null
+      const data = await res.json().catch(() => null)
+      if (!res.ok || !data?.access_token) return null
       return {
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
@@ -263,21 +246,20 @@ async function refreshPlatformToken(
       }
     }
     case 'TIKTOK': {
-      const clientKey = process.env.TIKTOK_CLIENT_KEY
-      const clientSecret = process.env.TIKTOK_CLIENT_SECRET
-      if (!clientKey || !clientSecret) return null
+      const creds = await getProviderCredentials('tiktok')
+      if (!creds) return null
       const res = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-          client_key: clientKey,
-          client_secret: clientSecret,
+          client_key: creds.clientId,
+          client_secret: creds.clientSecret,
           grant_type: 'refresh_token',
           refresh_token: refreshToken,
         }),
       })
-      const data = await res.json()
-      if (data.error || !data.access_token) return null
+      const data = await res.json().catch(() => null)
+      if (!res.ok || data?.error || !data?.access_token) return null
       return {
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
@@ -285,21 +267,20 @@ async function refreshPlatformToken(
       }
     }
     case 'GOOGLE_MY_BUSINESS': {
-      const clientId = process.env.GOOGLE_CLIENT_ID
-      const clientSecret = process.env.GOOGLE_CLIENT_SECRET
-      if (!clientId || !clientSecret) return null
+      const creds = await getProviderCredentials('google')
+      if (!creds) return null
       const res = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-          client_id: clientId,
-          client_secret: clientSecret,
+          client_id: creds.clientId,
+          client_secret: creds.clientSecret,
           grant_type: 'refresh_token',
           refresh_token: refreshToken,
         }),
       })
-      const data = await res.json()
-      if (data.error || !data.access_token) return null
+      const data = await res.json().catch(() => null)
+      if (!res.ok || !data?.access_token) return null
       // Google does not return a new refresh token on refresh — keep the old one.
       return { accessToken: data.access_token, expiresIn: data.expires_in ?? 3600 }
     }

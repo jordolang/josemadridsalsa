@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Facebook,
   Instagram,
@@ -18,14 +19,17 @@ import {
   Copy,
   Check,
   ExternalLink,
+  KeyRound,
 } from 'lucide-react'
 import type { SocialMediaPlatform } from '@prisma/client'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
-import type { SocialAccountInfo, PlatformConfigStatus } from '@/types/social'
+import type { SocialAccountInfo, PlatformConfigStatus, SocialCredentialProvider } from '@/types/social'
 
 const PLATFORM_ICONS: Record<SocialMediaPlatform, React.ElementType> = {
   FACEBOOK: Facebook,
@@ -68,6 +72,14 @@ const PLATFORM_META: Record<SocialMediaPlatform, { label: string; color: string;
   },
 }
 
+// Field labels differ per provider so the form matches what each console calls them.
+const CREDENTIAL_LABELS: Record<SocialCredentialProvider, { id: string; secret: string }> = {
+  facebook: { id: 'App ID', secret: 'App Secret' },
+  twitter: { id: 'Client ID', secret: 'Client Secret' },
+  tiktok: { id: 'Client Key', secret: 'Client Secret' },
+  google: { id: 'Client ID', secret: 'Client Secret' },
+}
+
 const ALL_PLATFORMS: SocialMediaPlatform[] = ['FACEBOOK', 'TWITTER', 'TIKTOK', 'INSTAGRAM', 'GOOGLE_MY_BUSINESS']
 
 type Props = {
@@ -99,12 +111,98 @@ function CopyButton({ value }: { value: string }) {
   )
 }
 
-function SetupGuide({ config }: { config: PlatformConfigStatus }) {
+// In-panel credential entry — the owner pastes keys here instead of editing
+// env files. Saves encrypted server-side, then refreshes to flip the card to
+// "Configured" with no redeploy.
+function CredentialForm({
+  provider,
+  configured,
+  onSaved,
+}: {
+  provider: SocialCredentialProvider
+  configured: boolean
+  onSaved: () => void
+}) {
+  const [clientId, setClientId] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const labels = CREDENTIAL_LABELS[provider]
+
+  const handleSave = async () => {
+    setError(null)
+    if (!clientId.trim() || !clientSecret.trim()) {
+      setError('Enter both values.')
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/social/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, clientId: clientId.trim(), clientSecret: clientSecret.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Failed to save.')
+        setSaving(false)
+        return
+      }
+      setClientId('')
+      setClientSecret('')
+      setSaving(false)
+      onSaved()
+    } catch {
+      setError('Failed to save. Please try again.')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-md border border-border bg-background p-3">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+        <KeyRound className="h-3.5 w-3.5" />
+        {configured ? 'Update keys' : 'Enter your keys here — no code or env files'}
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label className="text-xs">{labels.id}</Label>
+          <Input
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+            placeholder={`Paste ${labels.id}`}
+            className="h-8 text-sm"
+            autoComplete="off"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">{labels.secret}</Label>
+          <Input
+            type="password"
+            value={clientSecret}
+            onChange={(e) => setClientSecret(e.target.value)}
+            placeholder={`Paste ${labels.secret}`}
+            className="h-8 text-sm"
+            autoComplete="off"
+          />
+        </div>
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      <Button type="button" size="sm" className="h-8" onClick={handleSave} disabled={saving}>
+        {saving ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Check className="mr-2 h-3 w-3" />}
+        {configured ? 'Update keys' : 'Save & enable'}
+      </Button>
+    </div>
+  )
+}
+
+function SetupGuide({ config, onSaved }: { config: PlatformConfigStatus; onSaved: () => void }) {
+  // Instagram has no keys of its own — it rides on the Facebook app.
+  const sharesCreds = Boolean(config.sharesCredentialsWith)
+
   return (
     <div className="mt-3 space-y-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
-      <p className="font-medium text-amber-900 dark:text-amber-200">
-        One-time setup ({config.missingEnv.length} setting{config.missingEnv.length === 1 ? '' : 's'} missing)
-      </p>
+      <p className="font-medium text-amber-900 dark:text-amber-200">One-time setup</p>
 
       <ol className="ml-4 list-decimal space-y-1 text-amber-900/90 dark:text-amber-200/90">
         {config.steps.map((step) => (
@@ -112,36 +210,30 @@ function SetupGuide({ config }: { config: PlatformConfigStatus }) {
         ))}
       </ol>
 
-      <div className="space-y-1">
-        <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
-          Redirect URI to paste into the platform&apos;s console:
-        </p>
-        <div className="flex items-center gap-2">
-          <code className="flex-1 overflow-x-auto rounded bg-amber-100 px-2 py-1 text-xs text-amber-900 dark:bg-amber-900/30 dark:text-amber-100">
-            {config.redirectUri}
-          </code>
-          <CopyButton value={config.redirectUri} />
-        </div>
-      </div>
-
-      <div className="space-y-1">
-        <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
-          Then set on the server (still missing):
-        </p>
-        <div className="flex flex-wrap gap-1">
-          {config.missingEnv.map((name) => (
-            <code
-              key={name}
-              className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
-            >
-              {name}
+      {!sharesCreds && (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+            Redirect URI to paste into the platform&apos;s console:
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 overflow-x-auto rounded bg-amber-100 px-2 py-1 text-xs text-amber-900 dark:bg-amber-900/30 dark:text-amber-100">
+              {config.redirectUri}
             </code>
-          ))}
+            <CopyButton value={config.redirectUri} />
+          </div>
         </div>
-      </div>
+      )}
 
       {config.note && (
         <p className="text-xs text-amber-800/80 dark:text-amber-200/70">Note: {config.note}</p>
+      )}
+
+      {sharesCreds ? (
+        <p className="text-xs text-amber-900 dark:text-amber-200">
+          Instagram uses your Facebook keys — set up Facebook above, then connect Instagram here.
+        </p>
+      ) : (
+        <CredentialForm provider={config.provider} configured={config.configured} onSaved={onSaved} />
       )}
 
       <a
@@ -157,6 +249,7 @@ function SetupGuide({ config }: { config: PlatformConfigStatus }) {
 }
 
 export function SocialAccounts({ accounts, platformConfig }: Props) {
+  const router = useRouter()
   const [connecting, setConnecting] = useState<SocialMediaPlatform | null>(null)
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -221,13 +314,13 @@ export function SocialAccounts({ accounts, platformConfig }: Props) {
             <Settings2 className="h-5 w-5 text-muted-foreground" />
           )}
           <p className="text-sm font-medium text-foreground">
-            {configuredCount} of {platformConfig.length} platforms configured on this server
+            {configuredCount} of {platformConfig.length} platforms configured
           </p>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          A platform must be configured once (below) before its &quot;Connect&quot; button works.
-          Platforms that aren&apos;t set up are shown honestly as &quot;Setup required&quot; — they
-          will never pretend to be connected.
+          Set each platform up once below — paste your keys right here in the panel, no code or
+          server files. A platform must be configured before its &quot;Connect&quot; button works.
+          Anything not set up is shown honestly as &quot;Setup required.&quot;
         </p>
       </Card>
 
@@ -385,7 +478,11 @@ export function SocialAccounts({ accounts, platformConfig }: Props) {
                     <div>
                       <p className="font-semibold text-foreground">{meta.label}</p>
                       <p className="text-xs text-muted-foreground">
-                        {configured ? 'Ready to connect' : 'Not connected'}
+                        {configured
+                          ? config?.source === 'admin'
+                            ? 'Ready to connect · keys saved'
+                            : 'Ready to connect'
+                          : 'Not connected'}
                       </p>
                     </div>
                   </div>
@@ -403,18 +500,29 @@ export function SocialAccounts({ accounts, platformConfig }: Props) {
                 <p className="mt-3 flex-1 text-sm text-muted-foreground">{meta.description}</p>
 
                 {configured ? (
-                  <Button
-                    className="mt-4 w-full"
-                    onClick={() => handleConnect(platform)}
-                    disabled={connecting === platform}
-                  >
-                    {connecting === platform ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Plus className="mr-2 h-4 w-4" />
+                  <div className="mt-4 space-y-2">
+                    <Button
+                      className="w-full"
+                      onClick={() => handleConnect(platform)}
+                      disabled={connecting === platform}
+                    >
+                      {connecting === platform ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="mr-2 h-4 w-4" />
+                      )}
+                      {connecting === platform ? 'Connecting...' : `Connect ${meta.label}`}
+                    </Button>
+                    {!config?.sharesCredentialsWith && (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground underline hover:text-foreground"
+                        onClick={() => setOpenGuide(guideOpen ? null : platform)}
+                      >
+                        {guideOpen ? 'Hide keys' : 'Update keys'}
+                      </button>
                     )}
-                    {connecting === platform ? 'Connecting...' : `Connect ${meta.label}`}
-                  </Button>
+                  </div>
                 ) : (
                   <Button
                     variant="outline"
@@ -426,7 +534,15 @@ export function SocialAccounts({ accounts, platformConfig }: Props) {
                   </Button>
                 )}
 
-                {!configured && guideOpen && config && <SetupGuide config={config} />}
+                {guideOpen && config && (
+                  <SetupGuide
+                    config={config}
+                    onSaved={() => {
+                      setOpenGuide(null)
+                      router.refresh()
+                    }}
+                  />
+                )}
               </Card>
             )
           })}

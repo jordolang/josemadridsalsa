@@ -202,7 +202,7 @@ export default async function SocialMediaPage({
     metrics,
   } = await getSocialMediaData()
 
-  const platformConfig = getPlatformConfigStatus()
+  const platformConfig = await getPlatformConfigStatus()
 
   const params = await searchParams
   const initialTab = (params.tab as DashboardTab) || 'overview'
