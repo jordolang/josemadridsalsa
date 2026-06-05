@@ -32,6 +32,7 @@ const INSTAGRAM_SCOPES = [
 
 const TIKTOK_SCOPES = ['user.info.basic', 'video.publish', 'video.upload']
 const TWITTER_SCOPES = ['tweet.read', 'tweet.write', 'users.read', 'offline.access']
+const GOOGLE_SCOPES = ['https://www.googleapis.com/auth/business.manage']
 
 async function exchangeFacebookToken(code: string, redirectUri: string) {
   const appId = getFacebookAppId()
@@ -161,6 +162,73 @@ async function exchangeTikTokToken(code: string, redirectUri: string) {
       avatar_url?: string
       username?: string
     } | undefined,
+  }
+}
+
+async function exchangeGoogleToken(code: string, redirectUri: string) {
+  const clientId = process.env.GOOGLE_CLIENT_ID
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+
+  if (!clientId || !clientSecret) {
+    throw new Error('Google is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET on the server.')
+  }
+
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    }),
+  })
+  const tokenData = await tokenRes.json()
+  if (tokenData.error) throw new Error(tokenData.error_description || tokenData.error)
+
+  const accessToken = tokenData.access_token as string
+
+  // Discover the Business Profile accounts this user manages.
+  const accountsRes = await fetch(
+    'https://mybusinessaccountmanagement.googleapis.com/v1/accounts',
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  )
+  const accountsData = await accountsRes.json()
+  if (accountsData.error) throw new Error(accountsData.error.message || 'Failed to list Google Business accounts')
+
+  const gbAccounts = (accountsData.accounts ?? []) as Array<{ name: string; accountName?: string }>
+  if (!gbAccounts.length) {
+    throw new Error('No Google Business accounts found for this Google login.')
+  }
+
+  // Each location becomes its own connectable target. The localPosts API needs
+  // the full "accounts/{id}/locations/{id}" resource name, so we build it here.
+  const locations: Array<{ resourceName: string; title: string }> = []
+  for (const account of gbAccounts) {
+    const locRes = await fetch(
+      `https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations?readMask=name,title`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    )
+    const locData = await locRes.json()
+    for (const loc of (locData.locations ?? []) as Array<{ name: string; title?: string }>) {
+      // loc.name is "locations/456"; prefix with the account to get the full path.
+      locations.push({
+        resourceName: `${account.name}/${loc.name}`,
+        title: loc.title || account.accountName || 'Google Business Location',
+      })
+    }
+  }
+
+  if (!locations.length) {
+    throw new Error('No Google Business locations found. Add a verified location first.')
+  }
+
+  return {
+    accessToken,
+    refreshToken: tokenData.refresh_token as string | undefined,
+    expiresIn: tokenData.expires_in ?? 3600,
+    locations,
   }
 }
 
@@ -341,6 +409,31 @@ export async function GET(request: Request) {
           action: 'social_account.connect',
           entityType: 'SocialAccount',
           changes: { platform: 'TIKTOK' },
+        })
+        break
+      }
+
+      case 'GOOGLE_MY_BUSINESS': {
+        const gData = await exchangeGoogleToken(code, redirectUri)
+
+        for (const location of gData.locations) {
+          await upsertSocialAccount({
+            platform: 'GOOGLE_MY_BUSINESS',
+            accountId: location.resourceName,
+            accountName: location.title,
+            accessToken: gData.accessToken,
+            refreshToken: gData.refreshToken,
+            tokenExpiresAt: new Date(Date.now() + gData.expiresIn * 1000),
+            scopes: GOOGLE_SCOPES,
+            connectedById: user.id,
+          })
+        }
+
+        await logAudit({
+          userId: user.id,
+          action: 'social_account.connect',
+          entityType: 'SocialAccount',
+          changes: { platform: 'GOOGLE_MY_BUSINESS', locations: gData.locations.length },
         })
         break
       }

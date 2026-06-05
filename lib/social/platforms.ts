@@ -229,6 +229,134 @@ export function getOAuthUrl(
   }
 }
 
+/**
+ * Refresh an OAuth access token for platforms that support refresh tokens.
+ * Returns the new credentials, or null if the platform/token can't be refreshed.
+ */
+async function refreshPlatformToken(
+  platform: SocialMediaPlatform,
+  refreshToken: string,
+): Promise<{ accessToken: string; refreshToken?: string; expiresIn: number } | null> {
+  switch (platform) {
+    case 'TWITTER': {
+      const clientId = process.env.TWITTER_CLIENT_ID
+      const clientSecret = process.env.TWITTER_CLIENT_SECRET
+      if (!clientId || !clientSecret) return null
+      const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+      const res = await fetch('https://api.x.com/2/oauth2/token', {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${basicAuth}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+        }),
+      })
+      const data = await res.json()
+      if (data.error || !data.access_token) return null
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresIn: data.expires_in ?? 7200,
+      }
+    }
+    case 'TIKTOK': {
+      const clientKey = process.env.TIKTOK_CLIENT_KEY
+      const clientSecret = process.env.TIKTOK_CLIENT_SECRET
+      if (!clientKey || !clientSecret) return null
+      const res = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_key: clientKey,
+          client_secret: clientSecret,
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+        }),
+      })
+      const data = await res.json()
+      if (data.error || !data.access_token) return null
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresIn: data.expires_in ?? 86400,
+      }
+    }
+    case 'GOOGLE_MY_BUSINESS': {
+      const clientId = process.env.GOOGLE_CLIENT_ID
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+      if (!clientId || !clientSecret) return null
+      const res = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+        }),
+      })
+      const data = await res.json()
+      if (data.error || !data.access_token) return null
+      // Google does not return a new refresh token on refresh — keep the old one.
+      return { accessToken: data.access_token, expiresIn: data.expires_in ?? 3600 }
+    }
+    default:
+      // Facebook/Instagram use long-lived Page tokens that aren't refreshed
+      // via a refresh_token grant; the user re-connects when they expire.
+      return null
+  }
+}
+
+/**
+ * Get a usable access token for an account, transparently refreshing it first
+ * if it's expired (or about to expire) and the platform supports refresh.
+ * This is what the publisher should call so posts don't fail on stale tokens.
+ */
+export async function getValidAccessToken(accountId: string): Promise<string | null> {
+  const account = await prisma.socialAccount.findUnique({ where: { id: accountId } })
+  if (!account || !account.isActive) return null
+
+  const expiresSoon =
+    account.tokenExpiresAt && account.tokenExpiresAt.getTime() - Date.now() < 5 * 60 * 1000
+
+  if (expiresSoon && account.refreshToken && account.refreshTokenIv) {
+    try {
+      const refreshTokenValue = decryptSecret(account.refreshToken, account.refreshTokenIv)
+      const refreshed = await refreshPlatformToken(account.platform, refreshTokenValue)
+      if (refreshed) {
+        const { encryptedValue, iv } = encryptSecret(refreshed.accessToken)
+        let newRefreshToken = account.refreshToken
+        let newRefreshTokenIv = account.refreshTokenIv
+        if (refreshed.refreshToken) {
+          const enc = encryptSecret(refreshed.refreshToken)
+          newRefreshToken = enc.encryptedValue
+          newRefreshTokenIv = enc.iv
+        }
+        await prisma.socialAccount.update({
+          where: { id: accountId },
+          data: {
+            accessToken: encryptedValue,
+            accessTokenIv: iv,
+            refreshToken: newRefreshToken,
+            refreshTokenIv: newRefreshTokenIv,
+            tokenExpiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
+            connectionError: null,
+            lastVerifiedAt: new Date(),
+          },
+        })
+        return refreshed.accessToken
+      }
+    } catch {
+      // Fall through to returning the existing (possibly stale) token below.
+    }
+  }
+
+  return getAccountAccessToken(accountId)
+}
+
 export function getExpectedAccountPlatformForShop(shopPlatform: ShopPlatform): SocialMediaPlatform {
   switch (shopPlatform) {
     case 'FACEBOOK_SHOP':

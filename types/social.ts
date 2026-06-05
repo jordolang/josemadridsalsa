@@ -16,6 +16,20 @@ export type SocialPlatformOption = {
   connectUrl?: string
 }
 
+export type PlatformConfigStatus = {
+  platform: SocialMediaPlatform
+  label: string
+  /** True only when every credential this platform needs is present on the server. */
+  configured: boolean
+  requiredEnv: string[]
+  missingEnv: string[]
+  devConsoleUrl: string
+  steps: string[]
+  note?: string
+  /** Exact OAuth redirect URL to paste into the platform's developer console. */
+  redirectUri: string
+}
+
 export type SocialAccountInfo = {
   id: string
   platform: SocialMediaPlatform

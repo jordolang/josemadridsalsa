@@ -7,7 +7,6 @@ import {
   Twitter,
   Music2,
   Store,
-  ExternalLink,
   Trash2,
   RefreshCw,
   Shield,
@@ -15,6 +14,10 @@ import {
   AlertTriangle,
   Loader2,
   Plus,
+  Settings2,
+  Copy,
+  Check,
+  ExternalLink,
 } from 'lucide-react'
 import type { SocialMediaPlatform } from '@prisma/client'
 import { Card } from '@/components/ui/card'
@@ -22,7 +25,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
-import type { SocialAccountInfo } from '@/types/social'
+import type { SocialAccountInfo, PlatformConfigStatus } from '@/types/social'
 
 const PLATFORM_ICONS: Record<SocialMediaPlatform, React.ElementType> = {
   FACEBOOK: Facebook,
@@ -69,13 +72,99 @@ const ALL_PLATFORMS: SocialMediaPlatform[] = ['FACEBOOK', 'TWITTER', 'TIKTOK', '
 
 type Props = {
   accounts: SocialAccountInfo[]
+  platformConfig: PlatformConfigStatus[]
 }
 
-export function SocialAccounts({ accounts }: Props) {
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="h-7 shrink-0 gap-1 px-2 text-xs"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(value)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        } catch {
+          /* clipboard unavailable */
+        }
+      }}
+    >
+      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+      {copied ? 'Copied' : 'Copy'}
+    </Button>
+  )
+}
+
+function SetupGuide({ config }: { config: PlatformConfigStatus }) {
+  return (
+    <div className="mt-3 space-y-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
+      <p className="font-medium text-amber-900 dark:text-amber-200">
+        One-time setup ({config.missingEnv.length} setting{config.missingEnv.length === 1 ? '' : 's'} missing)
+      </p>
+
+      <ol className="ml-4 list-decimal space-y-1 text-amber-900/90 dark:text-amber-200/90">
+        {config.steps.map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+
+      <div className="space-y-1">
+        <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+          Redirect URI to paste into the platform&apos;s console:
+        </p>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 overflow-x-auto rounded bg-amber-100 px-2 py-1 text-xs text-amber-900 dark:bg-amber-900/30 dark:text-amber-100">
+            {config.redirectUri}
+          </code>
+          <CopyButton value={config.redirectUri} />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+          Then set on the server (still missing):
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {config.missingEnv.map((name) => (
+            <code
+              key={name}
+              className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
+            >
+              {name}
+            </code>
+          ))}
+        </div>
+      </div>
+
+      {config.note && (
+        <p className="text-xs text-amber-800/80 dark:text-amber-200/70">Note: {config.note}</p>
+      )}
+
+      <a
+        href={config.devConsoleUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 text-xs font-medium text-amber-900 underline dark:text-amber-200"
+      >
+        Open developer console <ExternalLink className="h-3 w-3" />
+      </a>
+    </div>
+  )
+}
+
+export function SocialAccounts({ accounts, platformConfig }: Props) {
   const [connecting, setConnecting] = useState<SocialMediaPlatform | null>(null)
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [openGuide, setOpenGuide] = useState<SocialMediaPlatform | null>(null)
   const [localAccounts, setLocalAccounts] = useState(accounts)
+
+  const configByPlatform = new Map(platformConfig.map((c) => [c.platform, c]))
+  const configuredCount = platformConfig.filter((c) => c.configured).length
 
   const handleConnect = async (platform: SocialMediaPlatform) => {
     setConnecting(platform)
@@ -116,16 +205,31 @@ export function SocialAccounts({ accounts }: Props) {
         <Alert variant="destructive">
           <AlertDescription className="flex items-center justify-between gap-3">
             <span>{error}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setError(null)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setError(null)}>
               Dismiss
             </Button>
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Honest configuration summary */}
+      <Card className="border-border p-4">
+        <div className="flex items-center gap-2">
+          {configuredCount === platformConfig.length ? (
+            <CheckCircle2 className="h-5 w-5 text-primary" />
+          ) : (
+            <Settings2 className="h-5 w-5 text-muted-foreground" />
+          )}
+          <p className="text-sm font-medium text-foreground">
+            {configuredCount} of {platformConfig.length} platforms configured on this server
+          </p>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          A platform must be configured once (below) before its &quot;Connect&quot; button works.
+          Platforms that aren&apos;t set up are shown honestly as &quot;Setup required&quot; — they
+          will never pretend to be connected.
+        </p>
+      </Card>
 
       {/* Connected accounts */}
       {localAccounts.length > 0 && (
@@ -261,79 +365,73 @@ export function SocialAccounts({ accounts }: Props) {
           {ALL_PLATFORMS.filter((p) => !connectedPlatforms.has(p)).map((platform) => {
             const Icon = PLATFORM_ICONS[platform]
             const meta = PLATFORM_META[platform]
+            const config = configByPlatform.get(platform)
+            const configured = config?.configured ?? false
+            const guideOpen = openGuide === platform
 
             return (
               <Card
                 key={platform}
-                className="group flex flex-col border-dashed border-input p-5 transition hover:border-solid hover:border-muted-foreground hover:shadow-md"
+                className={cn(
+                  'group flex flex-col border-dashed border-input p-5 transition',
+                  configured && 'hover:border-solid hover:border-muted-foreground hover:shadow-md',
+                )}
               >
-                <div className="flex items-center gap-3">
-                  <div className={cn('rounded-xl p-2.5', meta.color, 'bg-muted')}>
-                    <Icon className="h-6 w-6" />
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className={cn('rounded-xl p-2.5', meta.color, 'bg-muted')}>
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">{meta.label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {configured ? 'Ready to connect' : 'Not connected'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{meta.label}</p>
-                    <p className="text-xs text-muted-foreground">Not connected</p>
-                  </div>
-                </div>
-                <p className="mt-3 flex-1 text-sm text-muted-foreground">{meta.description}</p>
-                <Button
-                  className="mt-4 w-full"
-                  onClick={() => handleConnect(platform)}
-                  disabled={connecting === platform}
-                >
-                  {connecting === platform ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {configured ? (
+                    <Badge variant="outline" className="gap-1 border-primary/40 text-[10px] text-primary">
+                      <CheckCircle2 className="h-3 w-3" /> Configured
+                    </Badge>
                   ) : (
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Badge variant="outline" className="gap-1 border-amber-400 text-[10px] text-amber-600">
+                      <AlertTriangle className="h-3 w-3" /> Setup required
+                    </Badge>
                   )}
-                  {connecting === platform ? 'Connecting...' : `Connect ${meta.label}`}
-                </Button>
+                </div>
+
+                <p className="mt-3 flex-1 text-sm text-muted-foreground">{meta.description}</p>
+
+                {configured ? (
+                  <Button
+                    className="mt-4 w-full"
+                    onClick={() => handleConnect(platform)}
+                    disabled={connecting === platform}
+                  >
+                    {connecting === platform ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="mr-2 h-4 w-4" />
+                    )}
+                    {connecting === platform ? 'Connecting...' : `Connect ${meta.label}`}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="mt-4 w-full"
+                    onClick={() => setOpenGuide(guideOpen ? null : platform)}
+                  >
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    {guideOpen ? 'Hide setup steps' : 'Show setup steps'}
+                  </Button>
+                )}
+
+                {!configured && guideOpen && config && <SetupGuide config={config} />}
               </Card>
             )
           })}
         </div>
       </div>
-
-      {/* Setup info */}
-      <Card className="border-border bg-primary/5 p-5">
-        <h4 className="font-semibold text-foreground">Platform Setup Requirements</h4>
-        <div className="mt-3 grid gap-4 text-sm text-blue-800 sm:grid-cols-2">
-          <div>
-            <p className="font-medium">Facebook & Instagram</p>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
-              <li>Facebook App created at developers.facebook.com</li>
-              <li>App ID and Secret in environment variables</li>
-              <li>Business Page with admin access</li>
-              <li>Instagram Business account linked to Page</li>
-            </ul>
-          </div>
-          <div>
-            <p className="font-medium">X (Twitter)</p>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
-              <li>Twitter Developer App at developer.x.com</li>
-              <li>OAuth 2.0 with PKCE enabled</li>
-              <li>Client ID and Secret configured</li>
-            </ul>
-          </div>
-          <div>
-            <p className="font-medium">TikTok</p>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
-              <li>TikTok Developer App at developers.tiktok.com</li>
-              <li>Content Posting API access approved</li>
-              <li>Client Key and Secret configured</li>
-            </ul>
-          </div>
-          <div>
-            <p className="font-medium">Environment Variables</p>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-primary">
-              <li>FACEBOOK_APP_ID, FACEBOOK_APP_SECRET</li>
-              <li>TWITTER_CLIENT_ID, TWITTER_CLIENT_SECRET</li>
-              <li>TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET</li>
-            </ul>
-          </div>
-        </div>
-      </Card>
     </div>
   )
 }
