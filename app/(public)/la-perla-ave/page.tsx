@@ -1,18 +1,19 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import {
-  Factory,
+  Store,
   Flame,
   Leaf,
-  Package,
-  ShieldCheck,
-  Truck,
   Utensils,
-  Layers,
   MapPin,
-  Mail,
   Phone,
+  Clock,
+  CreditCard,
+  Car,
+  ExternalLink,
+  Facebook,
   CheckCircle,
+  ShoppingBag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -21,125 +22,172 @@ import { createMetadata } from '@/lib/metadata';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = createMetadata({
-  title: 'La Perla Ave - Tortilla Chip Manufacturer in Toledo, OH',
+  title: 'La Perla Tortilla Factory - Toledo, OH | Maker of Jose Madrid Chips',
   description:
-    'La Perla Ave is the Toledo, Ohio tortilla chip maker behind Jose Madrid Salsa. Learn about our chips, co-packing and private-label capabilities, and how to start a wholesale partnership.',
+    'La Perla Tortilla Factory at 2742 Hill Ave in Toledo, Ohio makes fresh corn tortillas, tortilla chips, and Mexican ingredients — including the stone-ground white corn chips paired with Jose Madrid Salsa. Open to the public.',
   pathname: '/la-perla-ave',
 });
 
-const capabilities = [
+// Real business details from La Perla Tortilla Factory's listing.
+const BUSINESS = {
+  name: 'La Perla Tortilla Factory',
+  street: '2742 Hill Ave',
+  city: 'Toledo',
+  state: 'OH',
+  zip: '43607',
+  phone: '(419) 534-2074',
+  phoneHref: 'tel:+14195342074',
+  mapsUrl:
+    'https://www.google.com/maps/search/?api=1&query=La+Perla+Tortilla+Factory+2742+Hill+Ave+Toledo+OH+43607',
+  facebookUrl: 'https://www.facebook.com/search/top?q=Laperla%20Tortilla%20Factory',
+};
+
+const products = [
   {
     icon: Utensils,
-    title: 'Stone-Ground Tortilla Chips',
+    title: 'Fresh Corn Tortillas',
     description:
-      'Authentic corn tortilla chips made in small batches and fried to a sturdy, salsa-ready crunch — the perfect companion to Jose Madrid Salsa.',
+      'Stone-ground corn tortillas made fresh at the Hill Avenue factory — the foundation of every great taco, enchilada, and quesadilla.',
   },
   {
-    icon: Layers,
-    title: 'Co-Packing',
+    icon: Store,
+    title: 'Tortilla Chips',
     description:
-      'Bring us your recipe and we handle production, bagging, and finishing. Flexible run sizes for emerging brands and established lines alike.',
+      'Crisp, sturdy tortilla chips fried for a salsa-ready crunch, including the stone-ground white corn chips paired with Jose Madrid Salsa.',
   },
   {
-    icon: Package,
-    title: 'Private Label',
+    icon: Leaf,
+    title: 'Mexican Ingredients',
     description:
-      'Launch your own branded chip line. We help with formulation, bag formats, and packaging so your product is shelf-ready.',
+      'Authentic Mexican pantry staples and ingredients to round out your kitchen — sold right from the factory storefront.',
   },
   {
     icon: Flame,
-    title: 'Custom Seasoning',
+    title: 'Made Fresh, Open to All',
     description:
-      'From classic salted to bold, spiced blends, we tailor seasoning profiles to match your brand and your customers.',
+      'A working Toledo tortilla factory that welcomes the public in to buy fresh-made tortillas, chips, and more.',
   },
 ];
 
-const standards = [
-  {
-    icon: Leaf,
-    title: 'Quality Ingredients',
-    description:
-      'Simple, recognizable ingredients sourced for consistent flavor and texture in every batch.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Food-Safe Production',
-    description:
-      'Disciplined sanitation and quality-control practices on every line, every shift.',
-  },
-  {
-    icon: Truck,
-    title: 'Reliable Fulfillment',
-    description:
-      'Dependable lead times and shipping out of Toledo, Ohio to keep your shelves stocked.',
-  },
-  {
-    icon: Factory,
-    title: 'Made in Ohio',
-    description:
-      'Proudly produced in Toledo, supporting local jobs and the brands that partner with us.',
-  },
+const chipFacts = [
+  { label: 'Net Weight', value: '11 oz (311.8g)' },
+  { label: 'Serving Size', value: '1 oz (28g) — 11 per bag' },
+  { label: 'Calories', value: '132 per serving' },
+  { label: 'Total Fat', value: '3g (5% DV)' },
+  { label: 'Sodium', value: '51mg (2% DV)' },
+  { label: 'Total Carbohydrate', value: '22g (7% DV)' },
 ];
 
-const partnerTypes = [
-  {
-    title: 'Salsa & Dip Brands',
-    description:
-      'A crunchy, durable chip built to scoop and hold up to thick, chunky salsas like ours.',
-  },
-  {
-    title: 'Grocery & Specialty Retail',
-    description:
-      'Private-label and branded chips for grocery, gourmet, and specialty food shelves.',
-  },
-  {
-    title: 'Restaurants & Foodservice',
-    description:
-      'Bulk tortilla chips for restaurants, caterers, and concession operations.',
-  },
-  {
-    title: 'Emerging Food Startups',
-    description:
-      'Approachable run sizes and hands-on support to help new brands get to market.',
-  },
-];
+function LaPerlaBadge({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 200 200"
+      role="img"
+      aria-label="La Perla Tortilla Factory emblem"
+      className={className}
+    >
+      <defs>
+        <radialGradient id="pearl" cx="42%" cy="38%" r="65%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="55%" stopColor="#f6efdc" />
+          <stop offset="100%" stopColor="#d9c9a3" />
+        </radialGradient>
+      </defs>
 
-export default function LaPerlaAvePage() {
+      {/* Rings */}
+      <circle cx="100" cy="100" r="98" fill="#B0271F" />
+      <circle cx="100" cy="100" r="92" fill="none" stroke="#E0A92E" strokeWidth="2" />
+      <circle cx="100" cy="100" r="86" fill="#1E7A3D" />
+      <circle cx="100" cy="100" r="74" fill="#F4E7C9" />
+
+      {/* Top curved title */}
+      <path id="laPerlaArc" d="M 38 100 A 62 62 0 0 1 162 100" fill="none" />
+      <text
+        fill="#1E7A3D"
+        fontSize="12.5"
+        fontFamily="Georgia, 'Times New Roman', serif"
+        fontWeight="700"
+        letterSpacing="2"
+      >
+        <textPath href="#laPerlaArc" startOffset="50%" textAnchor="middle">
+          TORTILLA · FACTORY
+        </textPath>
+      </text>
+
+      {/* Center pearl */}
+      <circle cx="100" cy="82" r="13" fill="url(#pearl)" stroke="#E0A92E" strokeWidth="1.5" />
+
+      {/* Wordmark */}
+      <text
+        x="100"
+        y="120"
+        textAnchor="middle"
+        fill="#B0271F"
+        fontFamily="Georgia, 'Times New Roman', serif"
+        fontStyle="italic"
+        fontWeight="700"
+        fontSize="28"
+      >
+        La Perla
+      </text>
+
+      {/* Ribbon banner */}
+      <path d="M 30 146 L 170 146 L 162 160 L 170 174 L 30 174 L 38 160 Z" fill="#B0271F" />
+      <text
+        x="100"
+        y="164"
+        textAnchor="middle"
+        fill="#F4E7C9"
+        fontFamily="Georgia, 'Times New Roman', serif"
+        fontWeight="700"
+        fontSize="11"
+        letterSpacing="1.5"
+      >
+        OPEN TO THE PUBLIC
+      </text>
+    </svg>
+  );
+}
+
+export default function LaPerlaTortillaFactoryPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-chile-600 via-salsa-600 to-verde-600 text-white">
-        <div className="absolute inset-0 bg-black/20"></div>
+      <section className="relative bg-gradient-to-r from-chile-700 via-chile-600 to-verde-700 text-white">
+        <div className="absolute inset-0 bg-black/25"></div>
         <div className="relative container mx-auto px-4 py-20 lg:py-28">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-4 py-1.5 mb-6 text-sm font-medium">
-              <MapPin className="w-4 h-4" />
-              Toledo, Ohio
-            </div>
-            <h1 className="text-4xl lg:text-6xl font-serif font-bold mb-6 text-shadow-lg">
-              La Perla Ave
-            </h1>
-            <p className="text-xl lg:text-2xl text-salsa-100 max-w-3xl mx-auto leading-relaxed mb-8">
-              The tortilla chip maker behind Jose Madrid Salsa. Crafting fresh,
-              crunchy chips in Toledo, Ohio — and ready to make them for your
-              brand too.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Button
-                size="lg"
-                className="bg-white text-salsa-700 hover:bg-salsa-50 font-semibold"
-                asChild
-              >
-                <Link href="#capabilities">Our Capabilities</Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white/10"
-                asChild
-              >
-                <Link href="#contact">Start a Partnership</Link>
-              </Button>
+          <div className="max-w-5xl mx-auto grid lg:grid-cols-[auto,1fr] items-center gap-10 lg:gap-14">
+            <LaPerlaBadge className="w-40 h-40 lg:w-52 lg:h-52 mx-auto drop-shadow-xl" />
+            <div className="text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-4 py-1.5 mb-6 text-sm font-medium">
+                <MapPin className="w-4 h-4" />
+                Toledo, Ohio
+              </div>
+              <h1 className="text-4xl lg:text-6xl font-serif font-bold mb-6 text-shadow-lg">
+                La Perla Tortilla Factory
+              </h1>
+              <p className="text-xl lg:text-2xl text-salsa-100 max-w-3xl leading-relaxed mb-8">
+                A working Toledo tortilla factory making fresh corn tortillas,
+                tortilla chips, and Mexican ingredients — including the
+                stone-ground white corn chips paired with Jose Madrid Salsa.
+              </p>
+              <div className="flex flex-wrap justify-center lg:justify-start gap-4">
+                <Button
+                  size="lg"
+                  className="bg-white text-chile-700 hover:bg-salsa-50 font-semibold"
+                  asChild
+                >
+                  <Link href="#visit">Visit the Factory</Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-white text-white hover:bg-white/10"
+                  asChild
+                >
+                  <Link href="#products">What They Make</Link>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -151,47 +199,48 @@ export default function LaPerlaAvePage() {
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-10">
               <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
-                The Chip Behind the Salsa
+                A Toledo Tradition
               </h2>
             </div>
             <div className="card surface-shadow p-8 lg:p-12">
               <p className="text-lg text-muted-foreground leading-relaxed mb-6">
-                La Perla Ave is the Toledo, Ohio chip manufacturer that produces
-                the tortilla chips paired with Jose Madrid Salsa. Great salsa
-                deserves a great chip — sturdy enough to scoop, fresh enough to
-                taste the corn, and crunchy from the first bite to the last.
+                Just off the road on Hill Avenue, the bright red &amp; green La
+                Perla sign has welcomed Toledo neighbors for years with three
+                simple words: <span className="font-semibold text-foreground">Open to the Public</span>.
+                Inside, La Perla Tortilla Factory turns out fresh stone-ground
+                corn tortillas, crisp tortilla chips, and the Mexican
+                ingredients that bring a kitchen to life.
               </p>
               <p className="text-lg text-muted-foreground leading-relaxed">
-                Beyond supplying Jose Madrid Salsa, we partner with other food
-                brands, retailers, and restaurants through co-packing and
-                private-label production. Whether you need chips for your own
-                label or a reliable manufacturing partner, La Perla Ave brings
-                Midwestern craftsmanship to every batch.
+                Great salsa deserves a great chip, and La Perla makes the
+                stone-ground white corn tortilla chips paired with Jose Madrid
+                Salsa — sturdy enough to scoop, fresh enough to taste the corn,
+                and crunchy from the first bite to the last.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Capabilities */}
-      <section id="capabilities" className="py-16">
+      {/* Products */}
+      <section id="products" className="py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
-                What We Make
+                What They Make
               </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                From our signature tortilla chips to full co-packing and
-                private-label runs, we help brands put a great chip on the shelf.
+                Fresh from the factory floor and available right at the
+                storefront in Toledo.
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {capabilities.map((item, index) => (
+              {products.map((item, index) => (
                 <Card key={index} className="card surface-shadow text-center">
                   <CardHeader className="pb-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-salsa-500 to-chile-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-chile-500 to-verde-600 rounded-full flex items-center justify-center mx-auto mb-4">
                       <item.icon className="w-8 h-8 text-white" />
                     </div>
                     <h3 className="text-xl font-bold text-foreground">
@@ -210,143 +259,169 @@ export default function LaPerlaAvePage() {
         </div>
       </section>
 
-      {/* Standards */}
-      <section className="py-16 bg-gradient-to-r from-verde-600 to-salsa-600 text-white">
+      {/* The Chip Behind the Salsa */}
+      <section className="py-16 bg-gradient-to-r from-verde-700 to-chile-600 text-white">
         <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <ShieldCheck className="w-16 h-16 mx-auto mb-6 text-yellow-300" />
+          <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
+            <div>
+              <ShoppingBag className="w-14 h-14 mb-6 text-yellow-300" />
               <h2 className="text-3xl lg:text-4xl font-serif font-bold mb-6">
-                How We Make It
+                The Chip Behind the Salsa
               </h2>
-              <p className="text-xl text-verde-100 max-w-3xl mx-auto">
-                Quality you can taste, backed by production standards your brand
-                can rely on.
+              <p className="text-lg text-verde-50 leading-relaxed mb-6">
+                La Perla bakes and fries the stone-ground{' '}
+                <span className="font-semibold">White Corn Tortilla Chips</span>{' '}
+                sold under the Jose Madrid Stone Ground label. Simple
+                ingredients, real corn flavor, and a crunch built for thick,
+                chunky salsa.
               </p>
+              <p className="text-sm text-verde-100/90 mb-6">
+                Ingredients: white corn, water, lime, sunflower oil and/or
+                vegetable oil, and salt.
+              </p>
+              <Button
+                className="bg-white text-chile-700 hover:bg-salsa-50 font-semibold"
+                asChild
+              >
+                <Link href="/salsas">Shop Jose Madrid Salsa</Link>
+              </Button>
             </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {standards.map((item, index) => (
-                <div
-                  key={index}
-                  className="bg-white/10 backdrop-blur rounded-2xl p-6 text-center"
-                >
-                  <item.icon className="w-10 h-10 mx-auto mb-4 text-yellow-300" />
-                  <h3 className="text-lg font-bold mb-2">{item.title}</h3>
-                  <p className="text-verde-100 leading-relaxed text-sm">
-                    {item.description}
-                  </p>
-                </div>
-              ))}
+            <div className="bg-white/10 backdrop-blur rounded-2xl p-6 lg:p-8">
+              <h3 className="text-lg font-bold mb-4 text-yellow-300">
+                Nutrition at a Glance
+              </h3>
+              <dl className="divide-y divide-white/15">
+                {chipFacts.map((fact) => (
+                  <div
+                    key={fact.label}
+                    className="flex items-center justify-between py-2.5 text-sm"
+                  >
+                    <dt className="text-verde-50">{fact.label}</dt>
+                    <dd className="font-semibold text-white text-right">
+                      {fact.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Who We Partner With */}
-      <section className="py-16">
+      {/* Visit / Business Info */}
+      <section id="visit" className="py-16">
         <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-6">
-                Who We Work With
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-4">
+                Visit the Factory
               </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Our chips are a great fit for a range of partners across retail
-                and foodservice.
+                Open to the public — stop in for fresh tortillas, chips, and
+                Mexican ingredients.
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
-              {partnerTypes.map((type, index) => (
-                <Card key={index} className="card surface-shadow">
-                  <CardHeader>
-                    <h3 className="text-xl font-bold text-foreground flex items-center gap-3">
-                      <div className="w-3 h-3 bg-gradient-to-r from-salsa-500 to-chile-500 rounded-full"></div>
-                      {type.title}
-                    </h3>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {type.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+              {/* Contact card */}
+              <Card className="card surface-shadow">
+                <CardContent className="p-8 space-y-6">
+                  <div className="flex items-start gap-4">
+                    <MapPin className="w-6 h-6 text-chile-600 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-bold text-foreground mb-1">Address</h3>
+                      <p className="text-muted-foreground">
+                        {BUSINESS.street}
+                        <br />
+                        {BUSINESS.city}, {BUSINESS.state} {BUSINESS.zip}
+                      </p>
+                      <a
+                        href={BUSINESS.mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-chile-600 hover:text-chile-700 font-semibold mt-2"
+                      >
+                        Get directions <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
 
-      {/* Wholesale / Contact */}
-      <section
-        id="contact"
-        className="py-16 bg-gradient-to-r from-salsa-600 to-chile-600 text-white"
-      >
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl lg:text-4xl font-serif font-bold mb-6">
-              Start a Wholesale Partnership
-            </h2>
-            <p className="text-xl text-salsa-100 mb-12 max-w-2xl mx-auto">
-              Interested in co-packing, private-label chips, or carrying our
-              product? Reach out and our team will help you get started.
-            </p>
+                  <div className="flex items-start gap-4">
+                    <Phone className="w-6 h-6 text-chile-600 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-bold text-foreground mb-1">Phone</h3>
+                      <a
+                        href={BUSINESS.phoneHref}
+                        className="text-muted-foreground hover:text-chile-600 transition-colors"
+                      >
+                        {BUSINESS.phone}
+                      </a>
+                    </div>
+                  </div>
 
-            <div className="grid md:grid-cols-3 gap-6 mb-12 text-left max-w-3xl mx-auto">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-yellow-300 flex-shrink-0 mt-0.5" />
-                <span className="text-salsa-50">
-                  Co-packing &amp; private-label production
-                </span>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-yellow-300 flex-shrink-0 mt-0.5" />
-                <span className="text-salsa-50">
-                  Custom seasoning &amp; bag formats
-                </span>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-yellow-300 flex-shrink-0 mt-0.5" />
-                <span className="text-salsa-50">
-                  Reliable fulfillment from Toledo, OH
-                </span>
-              </div>
-            </div>
+                  <div className="flex items-start gap-4">
+                    <Clock className="w-6 h-6 text-chile-600 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-bold text-foreground mb-1">Hours</h3>
+                      <p className="text-muted-foreground">
+                        Open to the public, opening at 9:00 AM. Call ahead to
+                        confirm current hours.
+                      </p>
+                    </div>
+                  </div>
 
-            <div className="grid md:grid-cols-2 gap-8 mb-12">
-              <div className="bg-white/10 backdrop-blur rounded-2xl p-8">
-                <Mail className="w-12 h-12 mx-auto mb-4 text-chile-200" />
-                <h3 className="text-xl font-bold mb-2">Email Us</h3>
-                <p className="text-salsa-100 mb-4">
-                  Send us details about your project or order
-                </p>
-                <a
-                  href="mailto:mike@josemadrid.net"
-                  className="text-yellow-300 hover:text-yellow-200 font-semibold transition-colors"
-                >
-                  mike@josemadrid.net
-                </a>
-              </div>
+                  <div className="flex items-start gap-4">
+                    <Facebook className="w-6 h-6 text-chile-600 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-bold text-foreground mb-1">Follow</h3>
+                      <a
+                        href={BUSINESS.facebookUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-chile-600 hover:text-chile-700 font-semibold"
+                      >
+                        Laperla Tortilla Factory on Facebook{' '}
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div className="bg-white/10 backdrop-blur rounded-2xl p-8">
-                <Phone className="w-12 h-12 mx-auto mb-4 text-chile-200" />
-                <h3 className="text-xl font-bold mb-2">Call Us</h3>
-                <p className="text-salsa-100 mb-4">
-                  Speak with our team about your needs
-                </p>
-                <a
-                  href="tel:740-521-4304"
-                  className="text-yellow-300 hover:text-yellow-200 font-semibold transition-colors text-xl"
-                >
-                  740-521-4304
-                </a>
-              </div>
-            </div>
-
-            <div className="inline-flex items-center gap-2 text-salsa-100">
-              <MapPin className="w-5 h-5 text-yellow-300" />
-              <span>La Perla Ave — Toledo, Ohio</span>
+              {/* Good to know card */}
+              <Card className="card surface-shadow bg-gradient-to-br from-salsa-50 to-verde-50">
+                <CardHeader>
+                  <h3 className="text-xl font-bold text-foreground">
+                    Good to Know
+                  </h3>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Store className="w-5 h-5 text-verde-700 flex-shrink-0" />
+                    <span className="text-muted-foreground">
+                      Open to the public — walk-ins welcome
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="w-5 h-5 text-verde-700 flex-shrink-0" />
+                    <span className="text-muted-foreground">
+                      Accepts SNAP/EBT and credit cards
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Car className="w-5 h-5 text-verde-700 flex-shrink-0" />
+                    <span className="text-muted-foreground">
+                      Validated parking available
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-verde-700 flex-shrink-0" />
+                    <span className="text-muted-foreground">
+                      Corn tortillas, tortilla chips &amp; Mexican ingredients
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
@@ -357,11 +432,11 @@ export default function LaPerlaAvePage() {
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-4xl mx-auto">
             <p className="text-muted-foreground text-lg mb-6">
-              Tasting our chips with Jose Madrid Salsa?
+              Pairing La Perla chips with Jose Madrid Salsa?
             </p>
             <Button
               variant="outline"
-              className="border-salsa-500 text-salsa-600 hover:bg-salsa-50"
+              className="border-chile-500 text-chile-600 hover:bg-salsa-50"
               asChild
             >
               <Link href="/salsas">Shop Jose Madrid Salsa</Link>
