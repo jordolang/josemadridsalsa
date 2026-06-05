@@ -4,10 +4,33 @@ This is the **one-time** setup for posting to Facebook, Instagram, X (Twitter),
 TikTok, and Google Business from the admin panel. You only do this once. After
 it's done, connecting an account and posting are genuinely one click.
 
-> **Why any setup at all?** Facebook, X, TikTok, and Google require *every*
-> app that posts on their behalf to be registered with them — there is no way
-> around it (paid tools like Buffer just did this for you behind the scenes).
-> You register a free developer app once, paste a few values, and you're done.
+## Two ways to set this up
+
+### Easy mode (recommended, free, zero developer apps)
+
+Use **Ayrshare**, which has already registered apps with every platform, so you
+never touch a developer console:
+
+1. Create a free account at [ayrshare.com](https://www.ayrshare.com).
+2. On Ayrshare, click-connect your social accounts (Facebook, Instagram, X,
+   TikTok, Google Business) — one click each, no keys.
+3. Copy your Ayrshare **API key** and paste it in **Admin → Social → Accounts →
+   Easy mode** (or set `AYRSHARE_API_KEY`).
+
+That's it. Your linked accounts show up in the panel and all posting/scheduling
+routes through Ayrshare. The free tier covers a single business profile.
+
+### Direct mode (free, but you register one developer app per platform)
+
+If you'd rather not use Ayrshare, you can connect each platform directly. This
+is free but requires registering a free developer app per platform (Facebook,
+X, TikTok, Google) — the steps below and the in-panel setup cards walk you
+through it.
+
+> **Why any developer setup at all in direct mode?** Facebook, X, TikTok, and
+> Google require *every* app that posts on their behalf to be registered with
+> them — there's no way around it on the direct path (Easy mode avoids this by
+> using Ayrshare's pre-registered apps).
 
 The admin **Accounts** tab shows, per platform, whether it's **Configured** or
 **Setup required**, the exact **Redirect URI** to paste, and the precise

@@ -18,6 +18,13 @@ export type SocialPlatformOption = {
 
 export type SocialCredentialProvider = 'facebook' | 'twitter' | 'tiktok' | 'google'
 
+export type AyrshareStatusInfo = {
+  configured: boolean
+  /** Ayrshare platform ids the owner has linked, e.g. ['facebook','instagram']. */
+  linkedAccounts: string[]
+  error?: string
+}
+
 export type PlatformConfigStatus = {
   platform: SocialMediaPlatform
   label: string
