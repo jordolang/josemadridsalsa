@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { IntegrationHealth } from '@/components/admin/settings/integration-health'
 
 async function saveServiceKey(formData: FormData) {
   'use server'
@@ -155,9 +156,15 @@ export default async function IntegrationsPage() {
         </div>
       </div>
 
+      <IntegrationHealth />
+
       <Card>
         <CardHeader>
           <CardTitle>Current credentials</CardTitle>
+          <CardDescription>
+            Whether each stored key is enabled. For live &quot;is it actually working?&quot; status,
+            see Service health above.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {serviceKeys.length === 0 ? (
@@ -171,7 +178,7 @@ export default async function IntegrationsPage() {
                   <TableRow>
                     <TableHead>Service</TableHead>
                     <TableHead>Key</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Enabled</TableHead>
                     <TableHead>Last used</TableHead>
                     <TableHead>Updated</TableHead>
                     {canManage && <TableHead className="text-right">Actions</TableHead>}
@@ -191,7 +198,7 @@ export default async function IntegrationsPage() {
                         </TableCell>
                         <TableCell>
                           <Badge variant={serviceKey.isActive ? 'default' : 'outline'}>
-                            {serviceKey.isActive ? 'Active' : 'Disabled'}
+                            {serviceKey.isActive ? 'Enabled' : 'Disabled'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
