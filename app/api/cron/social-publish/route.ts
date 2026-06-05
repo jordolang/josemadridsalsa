@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { publishPost } from '@/lib/social/publisher'
 
-// Publishes scheduled social posts whose time has arrived. Wired to Vercel Cron
-// in vercel.json. Without this, "Schedule" only ever saved a row and never
-// actually posted — the gap that made scheduling look done but do nothing.
+// Publishes scheduled social posts whose time has arrived. Triggered every 15
+// minutes by the GitHub Actions workflow .github/workflows/social-publish.yml
+// (Vercel's free plan caps cron jobs, so we drive it from Actions instead).
+// Without this, "Schedule" only ever saved a row and never actually posted —
+// the gap that made scheduling look done but do nothing.
 
 export const dynamic = 'force-dynamic'
 

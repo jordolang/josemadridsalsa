@@ -69,9 +69,21 @@ copy button with the right value for your current environment).
 
 ## Scheduled posts
 
-Scheduling is executed by a cron job (`/api/cron/social-publish`, every 15
-minutes, configured in `vercel.json`). Set an optional `CRON_SECRET` to lock
-the endpoint down; Vercel Cron sends it automatically.
+Scheduling is executed by the endpoint `/api/cron/social-publish`, which
+publishes any post whose scheduled time has passed. It's triggered every 15
+minutes by a **GitHub Actions** workflow (`.github/workflows/social-publish.yml`)
+rather than a Vercel Cron, because the Vercel free (Hobby) plan caps cron jobs
+to a daily cadence and a small count that this project already uses. GitHub
+Actions is free on this public repo and gives real 15-minute granularity — so a
+post scheduled for 2:10pm goes out by ~2:15pm, not the next day.
+
+**Works with no extra setup** against `https://www.josemadrid.net`.
+Optional hardening: set `CRON_SECRET` in Vercel **and** add a matching GitHub
+Actions secret named `CRON_SECRET`. To point at a different domain, set a repo
+variable `CRON_TARGET_URL`.
+
+(Immediate "Publish now" posts are unaffected — they post in real time the
+moment you click, with no cron involved.)
 
 ## What works once configured
 

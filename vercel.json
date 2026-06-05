@@ -26,10 +26,6 @@
     {
       "path": "/api/cron/dashboard-analysis",
       "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/cron/social-publish",
-      "schedule": "0 9 * * *"
     }
   ]
 }
