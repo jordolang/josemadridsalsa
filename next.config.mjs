@@ -17,20 +17,20 @@ const nextConfig = {
     const csp = [
       "default-src 'self'",
       // Allow inline styles for Tailwind
-      "style-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https://vercel.live",
       // Next.js App Router requires 'unsafe-inline' for hydration scripts and RSC payloads.
       // 'unsafe-eval' is also needed in dev for HMR.
       isProd
-        ? "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com"
-        : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com",
+        ? "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live"
+        : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live",
       "worker-src 'self' blob:",
       // Allow Google Maps iframes, GTM noscript, and Stripe checkout iframes
-      "frame-src https://www.google.com/maps/ https://www.googletagmanager.com https://js.stripe.com https://hooks.stripe.com",
+      "frame-src https://www.google.com/maps/ https://www.googletagmanager.com https://js.stripe.com https://hooks.stripe.com https://vercel.live",
       // Images from multiple CDNs and data URIs
-      "img-src 'self' data: blob: https://utfs.io https://*.public.blob.vercel-storage.com https://images.unsplash.com https://*.googleapis.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com https://www.nudgeprinting.com",
+      "img-src 'self' data: blob: https://utfs.io https://*.public.blob.vercel-storage.com https://images.unsplash.com https://*.googleapis.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com https://www.nudgeprinting.com https://vercel.live https://vercel.com",
       // Allow connections to self, external APIs used client-side, and Sentry
-      "connect-src 'self' https://*.sentry.io https://api.growthbook.io https://cdn.growthbook.io https://api.stripe.com https://r.stripe.com https://amplitude.com https://*.amplitude.com https://calendar.google.com https://maps.googleapis.com",
-      "font-src 'self' data:",
+      "connect-src 'self' https://*.sentry.io https://api.growthbook.io https://cdn.growthbook.io https://api.stripe.com https://r.stripe.com https://amplitude.com https://*.amplitude.com https://calendar.google.com https://maps.googleapis.com https://vercel.live wss://ws-us3.pusher.com",
+      "font-src 'self' data: https://vercel.live https://assets.vercel.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",

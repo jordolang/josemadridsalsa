@@ -27,6 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed hard-coded database and Google API fallback credentials from maintenance scripts.
 
 ### Fixed
+- **Vercel Toolbar console errors** — The storefront CSP now permits the official Vercel Toolbar resources used for deployment feedback and inspection.
 - **Heat Index post pages on Vercel** — Heat Index routes now include Prisma client files in the serverless trace to prevent post detail pages from failing with a missing Prisma module at runtime.
 - **Vercel production deploys** — Scoped the mobile app ignore rule to `/mobile/` so `components/admin/mobile/*` is included in web builds.
 - **Front-page hydration stability** — Event ticker dates and review selection no longer render with client/server-only randomness that can trigger React hydration text mismatches.
