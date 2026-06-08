@@ -11,6 +11,7 @@ import { getReviewsData, getCalendarEvents } from '@/lib/server/google-data'
 import { ActiveCampaignsGrid } from '@/components/fundraiser/active-campaigns-grid'
 import { HomeHero } from '@/components/store/home-hero'
 import { FeaturedProductsSection } from '@/components/store/featured-products-section'
+import { FeaturedHeatIndexSection } from '@/components/store/featured-heat-index-section'
 
 export const dynamic = 'force-dynamic'
 
@@ -146,6 +147,11 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        {/* Featured Blog — newest Heat Index stories */}
+        <ErrorBoundary>
+          <FeaturedHeatIndexSection />
+        </ErrorBoundary>
 
         {/* What Sets Us Apart */}
         <section className="py-20">

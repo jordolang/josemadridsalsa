@@ -144,8 +144,10 @@ const nextConfig = {
       },
     ],
   },
-  // React Email packages need to be external for server components
-  serverExternalPackages: ['@react-email/render'],
+  // React Email packages need to be external for server components.
+  // Prisma is listed by Next.js as an external package, but keeping it explicit
+  // prevents serverless bundles from trying to load a traced package clone.
+  serverExternalPackages: ['@react-email/render', '@prisma/client', 'prisma'],
   // Bundle react-pdf to avoid Turbopack external module ID resolution issues
   transpilePackages: ['@react-pdf/renderer'],
   experimental: {
@@ -189,6 +191,10 @@ const nextConfig = {
       './node_modules/@prisma/client/**/*',
     ],
     '/products/**/*': [
+      './node_modules/.prisma/client/**/*',
+      './node_modules/@prisma/client/**/*',
+    ],
+    '/heat-index/**/*': [
       './node_modules/.prisma/client/**/*',
       './node_modules/@prisma/client/**/*',
     ],
