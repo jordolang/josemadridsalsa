@@ -8,6 +8,7 @@ const navItems = [
   { href: '/fundraiser-portal/dashboard', label: 'Dashboard', icon: 'chart' },
   { href: '/fundraiser-portal/page-editor', label: 'Page Editor', icon: 'layout' },
   { href: '/fundraiser-portal/assets', label: 'Media & Uploads', icon: 'image' },
+  { href: '/fundraiser-portal/character', label: 'Team Character', icon: 'image' },
   { href: '/fundraiser-portal/settings', label: 'Settings', icon: 'settings' },
   { href: '/fundraiser-portal/advanced-profile', label: 'Advanced Profile', icon: 'layout' },
   { href: '/fundraiser-portal/team', label: 'Team Access', icon: 'settings' },
