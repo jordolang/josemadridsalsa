@@ -4,12 +4,16 @@
     right: 0;
     bottom: auto;
     height: auto;
-    min-height: 3rem;
-    padding: 0.75rem;
+    min-height: 0;
+    width: 3rem;
+    padding: 0.75rem 0.5rem;
     border: 1px solid rgb(185 28 28);
     border-right: 0;
     border-radius: 0.5rem 0 0 0.5rem;
-    transform: translateY(-50%);
+    gap: 0.5rem;
+    writing-mode: vertical-rl;
+    translate: 0 -50%;
+    transform: rotate(180deg);
   }
 
   button[aria-label='Open live chat queue'] > span:first-of-type {
