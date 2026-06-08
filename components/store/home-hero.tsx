@@ -5,15 +5,16 @@ export function HomeHero() {
   return (
     <section
       aria-labelledby="home-hero-title"
-      className="relative isolate min-h-[calc(100svh-8rem)] overflow-hidden bg-[#070503] text-white md:aspect-[1536/871] md:min-h-0"
+      className="relative isolate min-h-[calc(100svh-8rem)] w-full max-w-[100vw] touch-pan-y overflow-hidden overscroll-x-none bg-[#070503] text-white md:aspect-[1536/871] md:min-h-0"
     >
       <Image
         src="/images/home/jose-madrid-home-hero-reference.png"
         alt=""
         fill
         priority
+        draggable={false}
         sizes="100vw"
-        className="object-cover object-[68%_center] md:object-center"
+        className="pointer-events-none select-none object-cover object-[68%_center] md:object-center"
       />
 
       <div
