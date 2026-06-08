@@ -8,6 +8,7 @@ import { splitNavForMobile } from '@/lib/admin/mobile-nav'
 import { Toaster } from '@/components/ui/sonner'
 import type { Metadata } from 'next'
 import { createMetadata } from '@/lib/metadata'
+import './mobile-live-chat.css'
 
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
