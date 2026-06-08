@@ -1,10 +1,16 @@
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const spaced = path.join(process.cwd(), 'public', 'Find Us Locally', 'Find Us Locally.md');
 const kebab = path.join(process.cwd(), 'public', 'find-us-locally', 'find-us-locally.md');
 
 try {
+  execFileSync(process.execPath, ['scripts/generate-game-icons-manifest.mjs'], {
+    cwd: process.cwd(),
+    stdio: 'inherit',
+  });
+
   if (fs.existsSync(spaced)) {
     const content = fs.readFileSync(spaced, 'utf-8');
     fs.mkdirSync(path.dirname(kebab), { recursive: true });
@@ -14,8 +20,6 @@ try {
     console.log('Spaced find-us markdown not found; skipping sync');
   }
 } catch (e) {
-  console.error('Failed to sync find-us markdown:', e.message);
+  console.error('Failed to prepare build assets:', e.message);
   process.exit(0);
 }
-
-
