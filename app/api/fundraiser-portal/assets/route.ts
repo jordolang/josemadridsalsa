@@ -31,7 +31,12 @@ export async function GET() {
 }
 
 const UpdateAssetsSchema = z.object({
-  logoUrl: z.string().url().optional(),
+  logoUrl: z
+    .union([
+      z.string().url(),
+      z.string().regex(/^\/game-icons\/[a-zA-Z0-9/%_+\-.]+$/),
+    ])
+    .optional(),
   coverPhotoUrl: z.string().url().optional(),
   galleryUrls: z.array(z.string().url()).max(20).optional(),
 })
