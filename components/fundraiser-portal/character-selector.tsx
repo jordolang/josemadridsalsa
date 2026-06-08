@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { FormEvent, useCallback, useEffect, useState } from 'react'
 import {
   Check,
@@ -204,19 +203,19 @@ export function CharacterSelector() {
                   setMessage('')
                 }}
                 className={cn(
-                  'relative aspect-square overflow-hidden rounded-md border bg-white p-1.5 transition hover:border-salsa-500 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-salsa-600',
+                  'relative aspect-square overflow-hidden rounded-md border bg-gray-950 p-1.5 transition hover:border-salsa-500 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-salsa-600',
                   isSelected ? 'border-salsa-600 ring-2 ring-salsa-600' : 'border-gray-200'
                 )}
               >
-                <Image
+                <img
                   src={icon.path}
                   alt=""
                   width={80}
                   height={80}
                   loading="lazy"
-                  unoptimized
-                  sizes="80px"
-                  className="h-full w-full object-contain"
+                  decoding="async"
+                  draggable={false}
+                  className="block h-full w-full object-contain opacity-100"
                 />
                 {isSelected && (
                   <span className="absolute right-1 top-1 rounded-full bg-salsa-600 p-0.5 text-white">
