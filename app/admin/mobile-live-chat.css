@@ -1,0 +1,51 @@
+@media (max-width: 767px) {
+  button[aria-label='Open live chat queue'] {
+    top: 50%;
+    right: 0;
+    bottom: auto;
+    height: auto;
+    min-height: 3rem;
+    padding: 0.75rem;
+    border: 1px solid rgb(185 28 28);
+    border-right: 0;
+    border-radius: 0.5rem 0 0 0.5rem;
+    transform: translateY(-50%);
+  }
+
+  button[aria-label='Open live chat queue'] > span:first-of-type {
+    order: 2;
+  }
+
+  button[aria-label='Open live chat queue'] > span:nth-of-type(2) {
+    order: 1;
+    min-width: auto;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  button[aria-label='Open live chat queue']:has(> span:nth-of-type(2)) {
+    animation: mobile-live-chat-alert 700ms ease-in-out infinite;
+  }
+}
+
+@keyframes mobile-live-chat-alert {
+  0%,
+  100% {
+    background-color: rgb(220 38 38);
+    color: white;
+  }
+
+  50% {
+    background-color: white;
+    color: rgb(185 28 28);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button[aria-label='Open live chat queue']:has(> span:nth-of-type(2)) {
+    animation: none;
+  }
+}
