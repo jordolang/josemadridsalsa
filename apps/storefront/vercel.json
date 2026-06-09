@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "node scripts/generate-game-icons-manifest.mjs && npm run vercel-build",
+  "buildCommand": "touch .env && node scripts/generate-game-icons-manifest.mjs && npm run vercel-build",
   "git": {
     "deploymentEnabled": {
       "main": true,
