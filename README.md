@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="public/images/shared/jose-madrid-salsa-logo.png" alt="Jose Madrid Salsa Logo" width="300" />
+  <img src="apps/storefront/public/images/shared/jose-madrid-salsa-logo.png" alt="Jose Madrid Salsa Logo" width="300" />
 
   <h1>Jose Madrid Salsa</h1>
   <p><strong>Version 2.0 - Full Production Launch Ready</strong></p>
@@ -79,16 +79,14 @@ These screenshots are generated from the live production homepage so the README 
 
 ```text
 josemadridsalsa/
-|-- app/                  # Next.js pages, layouts, APIs, admin, and account areas
-|-- components/           # Shared storefront, fundraiser, admin, and UI components
-|-- hooks/                # Reusable React hooks
-|-- lib/                  # Business logic, server helpers, schemas, and integrations
-|-- prisma/               # Database schema, migrations, and seeds
-|-- public/               # Static images, icons, and storefront assets
-|-- scripts/              # Maintenance, import, and migration scripts
-|-- tests/                # Automated test suite
+|-- apps/
+|   |-- storefront/       # Main Next.js commerce application
+|   |-- fundraising/      # Fundraising-only Next.js deployment boundary
+|   |-- backend/          # API-only Next.js deployment boundary
+|   `-- ios/              # Expo/React Native iOS application
 |-- docs/                 # Project documentation
-`-- messages/             # Internationalization messages
+|-- package.json          # npm workspace commands
+`-- turbo.json            # Turborepo task graph
 ```
 
 ## Local Development
@@ -112,6 +110,10 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+The fundraising boundary runs at [http://localhost:3001](http://localhost:3001)
+and the API boundary runs at [http://localhost:3002](http://localhost:3002).
+See [`docs/TURBOREPO_ARCHITECTURE.md`](docs/TURBOREPO_ARCHITECTURE.md).
 
 ## Quality Checks
 
@@ -144,6 +146,6 @@ Please do not open public issues for security vulnerabilities. Follow the respon
 ---
 
 <div align="center">
-  <img src="public/images/shared/jose_madrid_logo_profile.png" alt="Jose Madrid" width="80" />
+  <img src="apps/storefront/public/images/shared/jose_madrid_logo_profile.png" alt="Jose Madrid" width="80" />
   <p><strong>Jose Madrid Salsa</strong><br/>Zanesville, Ohio | <a href="https://www.josemadrid.net">josemadrid.net</a></p>
 </div>

@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
+
 ### Added
 - **Homepage Heat Index bento** — The storefront home page now features the three newest Heat Index posts in a responsive editorial bento section.
 - **Playable fundraiser battle arena** — The `/arena/[period]` view is now an interactive graphic arena with controllable player movement, team sprites in a shared level, local arena messages, sound toggles, support links, and purchase-triggered damage effects inferred from live HP and sales updates.
@@ -27,6 +29,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed hard-coded database and Google API fallback credentials from maintenance scripts.
 
 ### Fixed
+- **Storefront console noise** — Google Maps assets now have the required CSP sources, and desktop navigation moves focus before hiding an open menu to prevent Chromium accessibility warnings.
 - **Vercel Toolbar console errors** — The storefront CSP now permits the official Vercel Toolbar resources used for deployment feedback and inspection.
 - **Heat Index post pages on Vercel** — Heat Index routes now include Prisma client files in the serverless trace to prevent post detail pages from failing with a missing Prisma module at runtime.
 - **Vercel production deploys** — Scoped the mobile app ignore rule to `/mobile/` so `components/admin/mobile/*` is included in web builds.

@@ -35,6 +35,7 @@ Jose Madrid Salsa is a modern, full-featured e-commerce platform built with Next
 - [Admin Login Guide](ADMIN_LOGIN_GUIDE.md) — Admin dashboard access
 - [Stripe Integration](stripe/README.md) — Payment processing documentation
 - [API Documentation](API.md) — REST API endpoint reference
+- [Turborepo Architecture](TURBOREPO_ARCHITECTURE.md) — Application boundaries and migration model
 - [Database Setup](DATABASE.md) — Database configuration and maintenance
 
 ## Getting Started
@@ -106,6 +107,7 @@ Visit [http://localhost:3000](http://localhost:3000) to see the application.
 | Document | Description |
 |----------|-------------|
 | [API.md](API.md) | REST API endpoint reference |
+| [TURBOREPO_ARCHITECTURE.md](TURBOREPO_ARCHITECTURE.md) | Monorepo applications, commands, and deployment boundaries |
 | [ADMIN_LOGIN_GUIDE.md](ADMIN_LOGIN_GUIDE.md) | Admin dashboard access |
 | [PASSWORD_RESET_FEATURE.md](PASSWORD_RESET_FEATURE.md) | Password reset flow |
 | [LOCATION_MAP_FEATURE.md](LOCATION_MAP_FEATURE.md) | Retail location map feature |
@@ -139,22 +141,14 @@ The `import-infrastructure/` subdirectory contains technical analysis documents 
 
 ```
 josemadridsalsa/
-├── app/                    # Next.js App Router (pages and API routes)
-│   ├── (public)/          # Public storefront pages
-│   ├── (auth)/            # Authentication pages
-│   ├── admin/             # Admin dashboard
-│   ├── account/           # User account pages
-│   └── api/               # Serverless API routes
-├── components/            # Shared React components
-│   ├── ui/               # Base UI components (Radix UI + custom)
-│   ├── store/            # Storefront components
-│   └── admin/            # Admin-specific components
-├── lib/                   # Business logic and utilities
-├── prisma/               # Database schema and migrations
-├── public/               # Static assets (images, icons)
+├── apps/
+│   ├── storefront/        # Main Next.js commerce application
+│   ├── fundraising/       # Fundraising-only deployment boundary
+│   ├── backend/           # API-only deployment boundary
+│   └── ios/               # Expo/React Native iOS application
 ├── docs/                 # Project documentation (this directory)
-├── scripts/              # Maintenance and data scripts
-└── tests/                # Automated test suite
+├── package.json          # npm workspace commands
+└── turbo.json            # Turborepo task graph
 ```
 
 ## Development Workflow
@@ -180,4 +174,3 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution guidelines and [AGENT
 ## License
 
 MIT
-

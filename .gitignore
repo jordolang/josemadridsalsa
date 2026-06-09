@@ -67,7 +67,7 @@ gcloud/
 # Backstage
 backstage/
 josemadridsalsa/
-!mobile/ios-native/JoseMadridSalsa/
+!apps/ios/ios-native/JoseMadridSalsa/
 
 # Data files
 data/
@@ -119,7 +119,7 @@ piecesdb.json
 logs/
 logs/security/
 # Exception: admin email logs page is not a log directory
-!app/admin/email-marketing/logs/
+!apps/storefront/app/admin/email-marketing/logs/
 
 # Claude Code local settings (do not commit)
 .claude/settings.local.json
@@ -141,7 +141,14 @@ skills/
 skills-lock.json
 
 # iOS / SwiftPM build artifacts
-mobile/**/.build/
+apps/ios/**/.build/
+
+# Turborepo task cache
+.turbo/
+
+# Workspace build output
+**/.next/
+**/coverage/
 
 # Shipping API debug/verification logs
 shipping-api-error-handling-summary.md

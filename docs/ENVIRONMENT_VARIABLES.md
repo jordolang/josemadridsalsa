@@ -110,6 +110,12 @@ Notes:
 
 ## Optional
 
+### Monorepo Application Routing
+
+- `LEGACY_STOREFRONT_ORIGIN` - HTTPS origin used by the backend and fundraising boundaries while legacy routes are extracted
+- `BACKEND_ORIGIN` - HTTPS origin of the backend application used by the fundraising application
+- `FUNDRAISING_APP_ORIGIN` - HTTPS origin used by the main storefront to redirect public fundraising routes
+
 ### File Upload
 - `BLOB_READ_WRITE_TOKEN` - Vercel Blob read/write token for the `josemadridsalsa-blob` store. Used by admin media uploads and blog writer photo/video uploads.
 - `UPLOADTHING_SECRET` - Legacy UploadThing secret for remaining UploadThing-backed upload surfaces

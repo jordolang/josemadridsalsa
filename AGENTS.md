@@ -36,33 +36,24 @@ Every AI agent operating in this repository must:
 
 ```
 josemadridsalsa/
-├── app/                  # Next.js 15 App Router — pages, layouts, and API routes
-│   ├── (public)/         # Public storefront (home, products, cart, checkout)
-│   ├── (auth)/           # Authentication pages (sign-in, sign-up, reset)
-│   ├── admin/            # Admin dashboard (protected, RBAC-gated)
-│   ├── account/          # User account management
-│   └── api/              # Serverless API routes (REST endpoints)
-├── components/           # Shared React components
-│   ├── ui/              # Primitive UI components (Radix UI + custom)
-│   ├── store/           # Storefront-specific components
-│   └── admin/           # Admin-specific components
-├── hooks/                # Custom React hooks
-├── lib/                  # Business logic, server helpers, validation schemas
-├── prisma/               # Prisma schema, migrations, and seed scripts
-├── public/               # Static assets (images, fonts, icons)
-├── scripts/              # Maintenance and data migration scripts
-├── tests/                # Automated test suite (*.test.ts)
-├── types/                # Shared TypeScript type declarations
-├── messages/             # i18n translation files (en.json, es.json)
-└── docs/                 # All project documentation
+├── apps/
+│   ├── storefront/       # Main Next.js commerce app and legacy route implementations
+│   ├── fundraising/      # Fundraising-only deployment boundary
+│   ├── backend/          # API-only deployment boundary
+│   └── ios/              # Expo/React Native iOS application
+├── packages/             # Shared workspace packages extracted from applications
+├── docs/                 # All project documentation
+├── package.json          # npm workspace commands
+└── turbo.json            # Turborepo task graph
 ```
 
 **Key rules:**
-- Route-specific layouts stay close to their pages inside `app/`.
-- Storefront modules live under `components/store/`.
-- All reusable hooks go in `hooks/`.
-- Validation schemas and server helpers belong in `lib/`.
-- Static assets live in `public/` — never in `app/` or `components/`.
+- Route-specific layouts stay close to their application pages.
+- Existing storefront modules live under `apps/storefront/components/store/`.
+- New backend route logic belongs in `apps/backend/`.
+- New fundraising-only UI belongs in `apps/fundraising/`.
+- Shared cross-application contracts belong in `packages/`.
+- See `docs/TURBOREPO_ARCHITECTURE.md` before moving legacy routes.
 
 ---
 
@@ -77,8 +68,8 @@ josemadridsalsa/
 | `npm run start` | Serve production build |
 | `npm run lint` | ESLint (Next.js + Tailwind rules) |
 | `npm run type-check` | TypeScript compiler check |
-| `npx vitest run` | Run full test suite |
-| `npx vitest run --watch` | TDD watch mode |
+| `npm run test` | Run full test suite through Turborepo |
+| `npm run test:e2e` | Run storefront Playwright tests |
 | `npm run db:migrate` | Apply pending Prisma migrations |
 | `npm run db:generate` | Regenerate Prisma client |
 | `npm run db:seed` | Seed database with initial data |
@@ -86,7 +77,7 @@ josemadridsalsa/
 
 **Required before any commit or PR:**
 ```bash
-npx vitest run && npm run lint && npm run type-check
+npm run test && npm run lint && npm run type-check && npm run build
 ```
 
 ---
@@ -134,9 +125,9 @@ import { prisma } from '../../lib/prisma';
 ## Testing Guidelines
 
 - **Framework:** Vitest with jsdom, jest-dom matchers, and MSW for API mocking.
-- **Location:** All tests live in `tests/` mirroring the source path.
-  - Source: `lib/pricing.ts` → Test: `tests/lib/pricing.test.ts`
-- **Coverage thresholds** are configured in `vitest.config.ts` — do not lower them.
+- **Location:** Application tests live with their owning workspace and mirror the source path.
+  - Source: `apps/storefront/lib/pricing.ts` → Test: `apps/storefront/tests/lib/pricing.test.ts`
+- **Coverage thresholds** are configured in the owning workspace's `vitest.config.ts` — do not lower them.
 - **Prioritize domain logic:** Pricing, validation, inventory, authentication.
 - **Mock all external services:** Stripe, Resend, Google APIs, etc.
 - Every bug fix must include a regression test.
@@ -272,4 +263,3 @@ Agents performing repository maintenance or cleanup must follow these rules:
 5. **No junk files** — `DS_Store`, `*.bak`, `*.log`, `analyzer.log`, `dev-server.log`, temp scripts, and verification reports must not be committed to the repository.
 
 6. **`.gitignore` maintenance** — Ensure `.gitignore` prevents common junk files from being committed (`.DS_Store`, `*.log`, `*.bak`, etc.).
-
