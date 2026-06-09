@@ -2,9 +2,11 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { withSentryConfig } from '@sentry/nextjs'
 const projectRoot = path.dirname(fileURLToPath(import.meta.url))
+const monorepoRoot = path.resolve(projectRoot, '../..')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingRoot: monorepoRoot,
   // Force cache invalidation for Vercel builds
   generateBuildId: async () => {
     return `build-${Date.now()}`
@@ -17,20 +19,20 @@ const nextConfig = {
     const csp = [
       "default-src 'self'",
       // Allow inline styles for Tailwind
-      "style-src 'self' 'unsafe-inline' https://vercel.live",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live",
       // Next.js App Router requires 'unsafe-inline' for hydration scripts and RSC payloads.
       // 'unsafe-eval' is also needed in dev for HMR.
       isProd
-        ? "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live"
-        : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live",
+        ? "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live"
+        : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live",
       "worker-src 'self' blob:",
       // Allow Google Maps iframes, GTM noscript, and Stripe checkout iframes
-      "frame-src https://www.google.com/maps/ https://www.googletagmanager.com https://js.stripe.com https://hooks.stripe.com https://vercel.live",
+      "frame-src https://www.google.com/maps/ https://maps.google.com https://www.googletagmanager.com https://js.stripe.com https://hooks.stripe.com https://vercel.live",
       // Images from multiple CDNs and data URIs
-      "img-src 'self' data: blob: https://utfs.io https://*.public.blob.vercel-storage.com https://images.unsplash.com https://*.googleapis.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com https://www.nudgeprinting.com https://vercel.live https://vercel.com",
+      "img-src 'self' data: blob: https://utfs.io https://*.public.blob.vercel-storage.com https://images.unsplash.com https://*.googleapis.com https://maps.gstatic.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com https://www.nudgeprinting.com https://vercel.live https://vercel.com",
       // Allow connections to self, external APIs used client-side, and Sentry
       "connect-src 'self' https://*.sentry.io https://api.growthbook.io https://cdn.growthbook.io https://api.stripe.com https://r.stripe.com https://amplitude.com https://*.amplitude.com https://calendar.google.com https://maps.googleapis.com https://vercel.live wss://ws-us3.pusher.com",
-      "font-src 'self' data: https://vercel.live https://assets.vercel.com",
+      "font-src 'self' data: https://fonts.gstatic.com https://vercel.live https://assets.vercel.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -200,8 +202,8 @@ const nextConfig = {
     ],
   },
   turbopack: {
-    // Force Turbopack to resolve packages from the actual repo root.
-    root: projectRoot,
+    // Resolve hoisted workspace dependencies from the Turborepo root.
+    root: monorepoRoot,
   },
 }
 
