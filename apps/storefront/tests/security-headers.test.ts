@@ -68,6 +68,19 @@ describe('Security Headers Configuration', () => {
     return null
   }
 
+  function getCspDirective(csp: string | null, directiveName: string): string[] {
+    if (!csp) {
+      return []
+    }
+
+    const directive = csp
+      .split(';')
+      .map((entry) => entry.trim())
+      .find((entry) => entry.startsWith(`${directiveName} `))
+
+    return directive?.split(/\s+/).slice(1) ?? []
+  }
+
   describe('Content-Security-Policy', () => {
     it('should include default-src self directive', async () => {
       const headers = await getHeadersConfig('development')
@@ -86,8 +99,9 @@ describe('Security Headers Configuration', () => {
     it('should allow unsafe-eval for scripts in development', async () => {
       const headers = await getHeadersConfig('development')
       const csp = findHeader(headers, 'Content-Security-Policy')
+      const scriptSrc = getCspDirective(csp, 'script-src')
 
-      expect(csp).toContain("script-src 'self' 'unsafe-eval'")
+      expect(scriptSrc).toContain("'unsafe-eval'")
     })
 
     it('should NOT allow unsafe-eval for scripts in production', async () => {
@@ -101,17 +115,44 @@ describe('Security Headers Configuration', () => {
     it('should allow required image sources', async () => {
       const headers = await getHeadersConfig('development')
       const csp = findHeader(headers, 'Content-Security-Policy')
+      const imgSrc = getCspDirective(csp, 'img-src')
 
       expect(csp).toContain('img-src')
-      expect(csp).toContain('https://utfs.io')
-      expect(csp).toContain('https://images.unsplash.com')
-      expect(csp).toContain('https://*.googleapis.com')
-      expect(csp).toContain('https://lh3.googleusercontent.com')
-      expect(csp).toContain('https://logo.clearbit.com')
-      expect(csp).toContain('https://www.google.com')
-      expect(csp).toContain('https://cdn11.bigcommerce.com')
-      expect(csp).toContain('data:')
-      expect(csp).toContain('blob:')
+      expect(imgSrc).toContain('https://utfs.io')
+      expect(imgSrc).toContain('https://images.unsplash.com')
+      expect(imgSrc).toContain('https://*.googleapis.com')
+      expect(imgSrc).toContain('https://lh3.googleusercontent.com')
+      expect(imgSrc).toContain('https://logo.clearbit.com')
+      expect(imgSrc).toContain('https://www.google.com')
+      expect(imgSrc).toContain('https://cdn11.bigcommerce.com')
+      expect(imgSrc).toContain('data:')
+      expect(imgSrc).toContain('blob:')
+    })
+
+    it('should allow Google Maps runtime sources without weakening unrelated directives', async () => {
+      const headers = await getHeadersConfig('development')
+      const csp = findHeader(headers, 'Content-Security-Policy')
+
+      expect(getCspDirective(csp, 'script-src')).toContain('https://maps.googleapis.com')
+      expect(getCspDirective(csp, 'script-src')).toContain('https://maps.gstatic.com')
+      expect(getCspDirective(csp, 'frame-src')).toContain('https://maps.google.com')
+      expect(getCspDirective(csp, 'img-src')).toContain('https://maps.gstatic.com')
+      expect(getCspDirective(csp, 'style-src')).toContain('https://fonts.googleapis.com')
+      expect(getCspDirective(csp, 'font-src')).toContain('https://fonts.gstatic.com')
+      expect(getCspDirective(csp, 'object-src')).toEqual(["'none'"])
+      expect(getCspDirective(csp, 'frame-ancestors')).toEqual(["'none'"])
+    })
+
+    it('should retain Vercel Toolbar source allowances', async () => {
+      const headers = await getHeadersConfig('development')
+      const csp = findHeader(headers, 'Content-Security-Policy')
+
+      expect(getCspDirective(csp, 'style-src')).toContain('https://vercel.live')
+      expect(getCspDirective(csp, 'script-src')).toContain('https://vercel.live')
+      expect(getCspDirective(csp, 'frame-src')).toContain('https://vercel.live')
+      expect(getCspDirective(csp, 'img-src')).toContain('https://vercel.live')
+      expect(getCspDirective(csp, 'connect-src')).toContain('https://vercel.live')
+      expect(getCspDirective(csp, 'font-src')).toContain('https://vercel.live')
     })
 
     it('should allow connections to self and Sentry', async () => {
