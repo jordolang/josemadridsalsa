@@ -173,12 +173,6 @@ function NavigationContent() {
     if (searchOpen) searchRef.current?.focus();
   }, [searchOpen]);
 
-  // Close dropdowns AND the mobile sheet on route change.
-  useEffect(() => {
-    setOpenGroupId(null);
-    setIsMobileMenuOpen(false);
-  }, [pathname, searchParams]);
-
   // Prevent a pending close timer from firing after unmount.
   useEffect(() => {
     return () => {
@@ -189,20 +183,35 @@ function NavigationContent() {
     };
   }, []);
 
-  // When a panel closes, move focus to its trigger if a descendant had focus.
-  // This prevents aria-hidden being applied to an ancestor of the focused element.
-  useEffect(() => {
-    if (openGroupId !== null) return;
+  const closeGroup = (groupId: NavGroup["id"] | null = openGroupId) => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+
     const active = document.activeElement as HTMLElement | null;
-    if (!active) return;
-    for (const id of Object.keys(panelRefs.current) as NavGroup["id"][]) {
-      const panel = panelRefs.current[id];
-      if (panel?.contains(active)) {
-        triggerRefs.current[id]?.focus();
-        break;
+    if (groupId && active && panelRefs.current[groupId]?.contains(active)) {
+      // Focus must leave the panel before React applies aria-hidden/inert.
+      triggerRefs.current[groupId]?.focus();
+    }
+
+    setOpenGroupId(null);
+  };
+
+  // Close dropdowns AND the mobile sheet on route change.
+  useEffect(() => {
+    const active = document.activeElement as HTMLElement | null;
+    if (active) {
+      for (const id of Object.keys(panelRefs.current) as NavGroup["id"][]) {
+        if (panelRefs.current[id]?.contains(active)) {
+          triggerRefs.current[id]?.focus();
+          break;
+        }
       }
     }
-  }, [openGroupId]);
+    setOpenGroupId(null);
+    setIsMobileMenuOpen(false);
+  }, [pathname, searchParams]);
 
   const openGroup = (id: NavGroup["id"]) => {
     if (closeTimer.current) {
@@ -214,7 +223,7 @@ function NavigationContent() {
 
   const scheduleClose = () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => setOpenGroupId(null), 140);
+    closeTimer.current = setTimeout(() => closeGroup(), 140);
   };
 
   const focusPanelItem = (groupId: NavGroup["id"], direction: "first" | "last") => {
@@ -230,8 +239,8 @@ function NavigationContent() {
   };
 
   const closeAndRefocusTrigger = (groupId: NavGroup["id"]) => {
-    setOpenGroupId(null);
     triggerRefs.current[groupId]?.focus();
+    closeGroup(groupId);
   };
 
   const handleTriggerKeyDown = (
@@ -248,7 +257,7 @@ function NavigationContent() {
       focusPanelItem(groupId, "last");
     } else if (event.key === "Escape" && openGroupId === groupId) {
       event.preventDefault();
-      setOpenGroupId(null);
+      closeGroup(groupId);
     }
   };
 
@@ -311,7 +320,7 @@ function NavigationContent() {
           <Link
             href="/"
             className={cn("group flex items-center justify-self-start", isHome ? "gap-4" : "gap-3")}
-            onClick={() => setOpenGroupId(null)}
+            onClick={() => closeGroup()}
           >
             <span className={cn("relative flex-shrink-0", isHome ? "h-[66px] w-[66px]" : "h-11 w-11")}>
               <Image
@@ -361,7 +370,7 @@ function NavigationContent() {
                     aria-haspopup="menu"
                     aria-expanded={isOpen}
                     aria-controls={`nav-panel-${group.id}`}
-                    onClick={() => setOpenGroupId(isOpen ? null : group.id)}
+                    onClick={() => (isOpen ? closeGroup(group.id) : openGroup(group.id))}
                     onFocus={() => openGroup(group.id)}
                     onKeyDown={(e) => handleTriggerKeyDown(e, group.id)}
                     className={cn("group relative py-3", isHome ? "px-8" : "px-5")}
