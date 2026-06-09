@@ -1,8 +1,12 @@
 import path from 'node:path'
+import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { withSentryConfig } from '@sentry/nextjs'
 const projectRoot = path.dirname(fileURLToPath(import.meta.url))
-const monorepoRoot = path.resolve(projectRoot, '../..')
+const workspaceRoot = path.resolve(projectRoot, '../..')
+const monorepoRoot = existsSync(path.join(workspaceRoot, 'turbo.json'))
+  ? workspaceRoot
+  : projectRoot
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
