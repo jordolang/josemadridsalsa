@@ -15,8 +15,9 @@ export default function proxy(request: NextRequest) {
   const isFundraisingRoute = FUNDRAISING_ROUTE_PREFIXES.some(
     (prefix) => request.nextUrl.pathname === prefix || request.nextUrl.pathname.startsWith(`${prefix}/`),
   )
+  const isFundraisingAppProxy = request.nextUrl.searchParams.get('fundraising-app-proxy') === '1'
 
-  if (fundraisingOrigin && isFundraisingRoute) {
+  if (fundraisingOrigin && isFundraisingRoute && !isFundraisingAppProxy) {
     const target = new URL(request.nextUrl.pathname + request.nextUrl.search, fundraisingOrigin)
     const requestHost = request.headers.get('x-forwarded-host') ?? request.nextUrl.host
 

@@ -1,5 +1,6 @@
 const storefrontOrigin = process.env.LEGACY_STOREFRONT_ORIGIN ?? 'http://localhost:3000'
 const backendOrigin = process.env.BACKEND_ORIGIN ?? 'http://localhost:3002'
+const legacyFundraisingRoute = (path) => `${storefrontOrigin}${path}?fundraising-app-proxy=1`
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -11,12 +12,12 @@ const nextConfig = {
         { source: '/images/:path*', destination: `${storefrontOrigin}/images/:path*` },
         { source: '/game-icons/:path*', destination: `${storefrontOrigin}/game-icons/:path*` },
         { source: '/auth/:path*', destination: `${storefrontOrigin}/auth/:path*` },
-        { source: '/fundraise/:path*', destination: `${storefrontOrigin}/fundraise/:path*` },
-        { source: '/fundraiser-portal/:path*', destination: `${storefrontOrigin}/fundraiser-portal/:path*` },
-        { source: '/fundraisers/:path*', destination: `${storefrontOrigin}/fundraisers/:path*` },
-        { source: '/fundraising', destination: `${storefrontOrigin}/fundraising` },
-        { source: '/f/:path*', destination: `${storefrontOrigin}/f/:path*` },
-        { source: '/arena/:path*', destination: `${storefrontOrigin}/arena/:path*` }
+        { source: '/fundraise/:path*', destination: legacyFundraisingRoute('/fundraise/:path*') },
+        { source: '/fundraiser-portal/:path*', destination: legacyFundraisingRoute('/fundraiser-portal/:path*') },
+        { source: '/fundraisers/:path*', destination: legacyFundraisingRoute('/fundraisers/:path*') },
+        { source: '/fundraising', destination: legacyFundraisingRoute('/fundraising') },
+        { source: '/f/:path*', destination: legacyFundraisingRoute('/f/:path*') },
+        { source: '/arena/:path*', destination: legacyFundraisingRoute('/arena/:path*') }
       ],
       afterFiles: [],
       fallback: []
