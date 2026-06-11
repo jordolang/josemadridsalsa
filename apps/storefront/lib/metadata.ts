@@ -11,6 +11,7 @@ const ogImageMap: Record<string, string> = {
   '/account/orders': `${SITE_URL}${OG_IMAGE_BASE_PATH}/josemadridhome.png`,
   '/account/settings': `${SITE_URL}${OG_IMAGE_BASE_PATH}/josemadridhome.png`,
   '/about': `${SITE_URL}${OG_IMAGE_BASE_PATH}/josemadridhome.png`,
+  '/contact': `${SITE_URL}${OG_IMAGE_BASE_PATH}/josemadridhome.png`,
   '/auth': `${SITE_URL}${OG_IMAGE_BASE_PATH}/josemadridhome.png`,
   '/checkout': `${SITE_URL}${OG_IMAGE_BASE_PATH}/josemadridhome.png`,
   '/cookies': `${SITE_URL}${OG_IMAGE_BASE_PATH}/josemadridhome.png`,

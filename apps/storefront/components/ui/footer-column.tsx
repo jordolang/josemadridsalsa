@@ -49,6 +49,7 @@ const serviceLinks = [
 ]
 
 const helpfulLinks = [
+  { text: 'Contact Us', href: '/contact' },
   { text: 'Wholesale Program', href: '/wholesale' },
   { text: 'Retail Partner Resources', href: '/forms' },
   { text: 'Documentation', href: 'https://salsadocs.vercel.app' },
