@@ -13,7 +13,7 @@
 
   <p>
     <a href="https://www.josemadrid.net">Live Site</a> |
-    <a href="docs/index.md">Documentation</a> |
+    <a href="https://github.com/jordolang/salsadocs">Documentation</a> |
     <a href="CHANGELOG.md">Changelog</a> |
     <a href="SECURITY.md">Security</a>
   </p>
@@ -81,10 +81,7 @@ These screenshots are generated from the live production homepage so the README 
 josemadridsalsa/
 |-- apps/
 |   |-- storefront/       # Main Next.js commerce application
-|   |-- fundraising/      # Fundraising-only Next.js deployment boundary
-|   |-- backend/          # API-only Next.js deployment boundary
-|   `-- ios/              # Expo/React Native iOS application
-|-- docs/                 # Project documentation
+|   `-- backend/          # API-only Next.js deployment boundary
 |-- package.json          # npm workspace commands
 `-- turbo.json            # Turborepo task graph
 ```
@@ -111,9 +108,11 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-The fundraising boundary runs at [http://localhost:3001](http://localhost:3001)
-and the API boundary runs at [http://localhost:3002](http://localhost:3002).
-See [`docs/TURBOREPO_ARCHITECTURE.md`](docs/TURBOREPO_ARCHITECTURE.md).
+The API boundary runs at [http://localhost:3002](http://localhost:3002). The
+fundraising and admin deployment boundaries live in their own repositories:
+[josemadridsalsa-fundraising](https://github.com/jordolang/josemadridsalsa-fundraising)
+and [josemadridsalsa-admin](https://github.com/jordolang/josemadridsalsa-admin).
+See the [salsadocs](https://github.com/jordolang/salsadocs) repository for the Turborepo architecture guide.
 
 ## Quality Checks
 
@@ -129,13 +128,8 @@ Pushing to `main` triggers the production deployment pipeline on Vercel. Product
 
 ## Documentation
 
-- [Documentation Hub](docs/index.md)
-- [Environment Setup](docs/ENVIRONMENT_SETUP.md)
-- [Environment Variables](docs/ENVIRONMENT_VARIABLES.md)
-- [Database](docs/DATABASE.md)
-- [API Reference](docs/API.md)
-- [Admin Login Guide](docs/ADMIN_LOGIN_GUIDE.md)
-- [Stripe Webhook Setup](docs/STRIPE_WEBHOOK_SETUP.md)
+Project documentation lives in the [salsadocs](https://github.com/jordolang/salsadocs) repository.
+
 - [Security Policy](SECURITY.md)
 - [Changelog](CHANGELOG.md)
 
