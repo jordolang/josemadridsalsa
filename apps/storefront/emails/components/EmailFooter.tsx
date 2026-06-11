@@ -13,7 +13,7 @@ export const EmailFooter = ({
   companyName = 'Jose Madrid Salsa',
   companyAddress = '123 Main Street, Austin, TX 78701',
   unsubscribeUrl,
-  supportEmail = 'support@josemadrid.net',
+  supportEmail = 'mike@josemadridsalsa.com',
   privacyUrl = 'https://josemadrid.net/privacy',
   termsUrl = 'https://josemadrid.net/terms',
 }: EmailFooterProps) => {

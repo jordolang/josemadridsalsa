@@ -130,8 +130,8 @@ export const DeliveryConfirmationEmail = ({
         <Section style={supportSection}>
           <Text style={supportText}>
             Any issues with your delivery? We&apos;re here to help! Reply to this email or contact us at{' '}
-            <a href="mailto:orders@josemadridsalsa.com" style={link}>
-              orders@josemadridsalsa.com
+            <a href="mailto:mike@josemadridsalsa.com" style={link}>
+              mike@josemadridsalsa.com
             </a>
           </Text>
         </Section>

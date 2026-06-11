@@ -150,7 +150,7 @@ export default async function CheckoutSuccessPage({
           Continue shopping
         </Link>
         <p className="text-sm text-gray-500">
-          Need help with your order? Email us at mike@josemadrid.net
+          Need help with your order? Email us at mike@josemadridsalsa.com
         </p>
       </div>
     </div>

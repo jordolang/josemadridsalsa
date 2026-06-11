@@ -113,7 +113,7 @@ Perform these checks across ALL email clients:
 
 #### Deliverability
 - [ ] Email not marked as spam/junk
-- [ ] Sender shows as "Jose Madrid Salsa <orders@josemadrid.net>"
+- [ ] Sender shows as "Jose Madrid Salsa <mike@josemadridsalsa.com>"
 - [ ] Subject line displays correctly
 - [ ] Preview text appears (first line of email)
 

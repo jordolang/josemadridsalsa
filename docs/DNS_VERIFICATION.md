@@ -5,7 +5,7 @@
 **Last Updated:** 2026-05-12  
 **Domain:** josemadrid.net  
 **Email Service Provider:** Resend  
-**Sender Email:** Jose Madrid Salsa <mike@josemadrid.net>
+**Sender Email:** Jose Madrid Salsa <mike@josemadridsalsa.com>
 
 ### Verification Results
 
@@ -18,7 +18,7 @@
 ### DNS Records Configuration
 
 Based on the environment configuration:
-- **FROM_EMAIL:** `Jose Madrid Salsa <mike@josemadrid.net>`
+- **FROM_EMAIL:** `Jose Madrid Salsa <mike@josemadridsalsa.com>`
 - **Domain:** `josemadrid.net`
 - **Resend API Key:** Configured ✓
 
@@ -227,7 +227,7 @@ Use this checklist to confirm production readiness:
 
 **Findings:**
 - ✅ Resend API key configured in environment (`RESEND_API_KEY`)
-- ✅ FROM_EMAIL configured as `Jose Madrid Salsa <mike@josemadrid.net>`
+- ✅ FROM_EMAIL configured as `Jose Madrid Salsa <mike@josemadridsalsa.com>`
 - ✅ Email system implemented with Resend SDK integration
 - ⏳ Manual Resend dashboard verification required
 

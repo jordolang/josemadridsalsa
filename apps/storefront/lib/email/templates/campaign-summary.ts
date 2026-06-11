@@ -29,7 +29,7 @@ export function CampaignSummaryEmail({
   participantCount,
   topParticipants = [],
   campaignUrl,
-  supportEmail = 'fundraising@josemadridsalsa.com',
+  supportEmail = 'mike@josemadridsalsa.com',
   unsubscribeUrl,
 }: CampaignSummaryEmailProps) {
   const previewText = `${campaignName} Campaign Summary - ${totalRaised} raised!`

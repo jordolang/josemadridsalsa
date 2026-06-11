@@ -245,7 +245,7 @@ Use this checklist after sending test emails:
 
 #### Contact Form Email
 - [ ] Subject line: "New Contact Form Submission from Test User"
-- [ ] Sender: "Jose Madrid Salsa <mike@josemadrid.net>"
+- [ ] Sender: "Jose Madrid Salsa <mike@josemadridsalsa.com>"
 - [ ] Reply-To: Test email address
 - [ ] Contains name: "Test User"
 - [ ] Contains email: your test email
@@ -256,8 +256,8 @@ Use this checklist after sending test emails:
 
 #### Shipping Notification Email
 - [ ] Subject line: "Your Order #TEST-12345 Has Shipped!"
-- [ ] Sender: "Jose Madrid Salsa <mike@josemadrid.net>"
-- [ ] Reply-To: "mike@josemadrid.net"
+- [ ] Sender: "Jose Madrid Salsa <mike@josemadridsalsa.com>"
+- [ ] Reply-To: "mike@josemadridsalsa.com"
 - [ ] Contains order number: TEST-12345
 - [ ] Contains tracking number: 1Z999AA10123456784
 - [ ] Contains carrier: UPS
@@ -269,8 +269,8 @@ Use this checklist after sending test emails:
 
 #### Delivery Confirmation Email
 - [ ] Subject line: "Your Order #TEST-12345 Has Been Delivered!"
-- [ ] Sender: "Jose Madrid Salsa <mike@josemadrid.net>"
-- [ ] Reply-To: "mike@josemadrid.net"
+- [ ] Sender: "Jose Madrid Salsa <mike@josemadridsalsa.com>"
+- [ ] Reply-To: "mike@josemadridsalsa.com"
 - [ ] Contains order number: TEST-12345
 - [ ] Contains delivery date
 - [ ] Contains shipping address

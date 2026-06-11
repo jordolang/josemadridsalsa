@@ -122,7 +122,7 @@ export async function sendOrderConfirmationEmail(orderId: string) {
     to: recipientEmail,
     subject: `Order Confirmation #${order.orderNumber}`,
     react: emailContent,
-    replyTo: 'mike@josemadrid.net',
+    replyTo: 'mike@josemadridsalsa.com',
     type: 'order-confirmation',
     orderId: order.id,
     userId: order.userId ?? undefined,
@@ -192,7 +192,7 @@ export async function sendFundraiserDonationReceipt(options: {
     to: donorEmail,
     subject: `Thanks for supporting ${teamName}! Receipt for ${amountFormatted}`,
     react: emailContent,
-    replyTo: 'mike@josemadrid.net',
+    replyTo: 'mike@josemadridsalsa.com',
     type: 'fundraiser-donation-receipt',
     userId: donorUserId ?? undefined,
   })
@@ -278,7 +278,7 @@ export async function sendContactConfirmationEmail(options: {
     to: options.email,
     subject: 'Thanks for reaching out to Jose Madrid Salsa',
     react: emailContent,
-    replyTo: 'support@josemadridsalsa.com',
+    replyTo: 'mike@josemadridsalsa.com',
     type: 'contact-confirmation',
   })
 }
@@ -291,7 +291,7 @@ export async function sendFundraiserFollowupEmail(options: {
   supportEmail?: string
 }) {
   const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
-  const supportEmail = options.supportEmail || 'fundraising@josemadridsalsa.com'
+  const supportEmail = options.supportEmail || 'mike@josemadridsalsa.com'
 
   const emailContent = React.createElement(
     EmailLayout,
@@ -345,7 +345,7 @@ export async function sendCampaignLaunchEmail(options: {
   supportEmail?: string
 }) {
   const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
-  const supportEmail = options.supportEmail || 'fundraising@josemadridsalsa.com'
+  const supportEmail = options.supportEmail || 'mike@josemadridsalsa.com'
 
   const emailContent = React.createElement(CampaignLaunchEmail, {
     coordinatorName: options.coordinatorName,
@@ -439,7 +439,7 @@ export async function sendAbandonedCartEmail(options: {
     to: options.email,
     subject: 'You left something behind! Complete your order now',
     react: emailContent,
-    replyTo: 'support@josemadridsalsa.com',
+    replyTo: 'mike@josemadridsalsa.com',
     type: 'abandoned-cart',
   })
 }
@@ -454,7 +454,7 @@ export async function sendParticipantWelcomeEmail(options: {
 }) {
   const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
   const fundraiserUrl = `${defaultAppUrl}/fundraisers/${options.fundraiserId}`
-  const supportEmail = options.supportEmail || 'fundraising@josemadridsalsa.com'
+  const supportEmail = options.supportEmail || 'mike@josemadridsalsa.com'
 
   const emailContent = React.createElement(ParticipantWelcomeEmail, {
     participantName: options.participantName,
@@ -486,7 +486,7 @@ export async function sendParticipantMilestoneEmail(options: {
 }) {
   const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
   const dashboardUrl = `${defaultAppUrl}/fundraisers/${options.fundraiserId}/dashboard`
-  const supportEmail = options.supportEmail || 'fundraising@josemadridsalsa.com'
+  const supportEmail = options.supportEmail || 'mike@josemadridsalsa.com'
   const totalRaised = `$${options.totalRaised.toFixed(2)}`
 
   const emailContent = React.createElement(ParticipantMilestoneEmail, {
@@ -568,7 +568,7 @@ export async function sendCampaignSummaryEmail(fundraiserId: string) {
 
   const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
   const campaignUrl = `${defaultAppUrl}/fundraisers/${fundraiser.id}/dashboard`
-  const supportEmail = 'fundraising@josemadridsalsa.com'
+  const supportEmail = 'mike@josemadridsalsa.com'
 
   const emailContent = React.createElement(CampaignSummaryEmail, {
     coordinatorName: fundraiser.organizationName,
@@ -658,7 +658,7 @@ export async function sendAdminNewOrderNotification(orderId: string) {
         to: adminEmail,
         subject: `New Order #${order.orderNumber} - ${customerName}`,
         react: emailContent,
-        replyTo: 'orders@josemadridsalsa.com',
+        replyTo: 'mike@josemadridsalsa.com',
         type: 'admin-order-notification',
         orderId: order.id,
       })

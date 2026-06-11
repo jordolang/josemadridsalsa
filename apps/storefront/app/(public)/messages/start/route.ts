@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       ])
     }
 
-    const supportEmail = process.env.SUPPORT_EMAIL || 'support@josemadridsalsa.com'
+    const supportEmail = process.env.SUPPORT_EMAIL || 'mike@josemadridsalsa.com'
     const notifyResult = await sendEmail({
       to: supportEmail,
       subject: `[New Conversation] ${subject || 'Customer Inquiry'}`,

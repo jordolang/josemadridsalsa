@@ -36,8 +36,8 @@ export const OrderCancellationEmail = ({
         <Section style={alertBox}>
           <Text style={alertText}>
             If you did not request this cancellation, please contact us immediately at{' '}
-            <a href="mailto:support@josemadridsalsa.com" style={link}>
-              support@josemadridsalsa.com
+            <a href="mailto:mike@josemadridsalsa.com" style={link}>
+              mike@josemadridsalsa.com
             </a>{' '}
             or call (740) 521-4304.
           </Text>
@@ -57,8 +57,8 @@ export const OrderCancellationEmail = ({
         <Section style={supportSection}>
           <Text style={supportText}>
             Questions?{' '}
-            <a href="mailto:support@josemadridsalsa.com" style={link}>
-              support@josemadridsalsa.com
+            <a href="mailto:mike@josemadridsalsa.com" style={link}>
+              mike@josemadridsalsa.com
             </a>
           </Text>
         </Section>

@@ -8,7 +8,7 @@ import type {
 } from '@/types/merchandise'
 
 const printerContactEmail =
-  process.env.NEXT_PUBLIC_FULFILLMENT_EMAIL ?? 'partner-support@josemadridsalsa.com'
+  process.env.NEXT_PUBLIC_FULFILLMENT_EMAIL ?? 'mike@josemadridsalsa.com'
 const printerName =
   process.env.NEXT_PUBLIC_FULFILLMENT_PARTNER ?? 'SpiceLine Fulfillment'
 const printerPortalUrl =

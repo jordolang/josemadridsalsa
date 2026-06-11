@@ -5,7 +5,7 @@ const resend = process.env.RESEND_API_KEY
   : null
 
 const fromEmail =
-  process.env.FROM_EMAIL || 'Jose Madrid Salsa <mike@josemadrid.net>'
+  process.env.FROM_EMAIL || 'Jose Madrid Salsa <mike@josemadridsalsa.com>'
 
 export async function sendAdminReplyEmail(
   to: string,

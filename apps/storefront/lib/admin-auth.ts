@@ -7,7 +7,7 @@ export async function requireAdminSession(): Promise<{ id: string; email?: strin
   const token = cookieStore.get("admin_token")?.value;
 
   if (process.env.ADMIN_SECRET_TOKEN && token === process.env.ADMIN_SECRET_TOKEN) {
-    return { id: "admin", email: "admin@josemadrid.net" };
+    return { id: "admin", email: "mike@josemadridsalsa.com" };
   }
 
   const user = await getCurrentUser();

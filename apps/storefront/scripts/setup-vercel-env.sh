@@ -200,7 +200,7 @@ if [ "$optional_choice" = "y" ] || [ "$optional_choice" = "Y" ]; then
     set_env_var \
         "FROM_EMAIL" \
         "From email address" \
-        "orders@josemadridsalsa.com" \
+        "mike@josemadridsalsa.com" \
         "false"
 fi
 

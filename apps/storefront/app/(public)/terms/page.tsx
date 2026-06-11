@@ -40,7 +40,7 @@ export default function TermsOfServicePage() {
             <h2>Returns and Refunds</h2>
             <p>
               If you are not satisfied with your purchase, please contact support at
-              <a href="mailto:support@josemadrid.net"> support@josemadrid.net</a>. We will work with you to
+              <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a>. We will work with you to
               address any issues in accordance with our policies and applicable law.
             </p>
 
@@ -90,7 +90,7 @@ export default function TermsOfServicePage() {
             <h2>Contact</h2>
             <p>
               For questions about these Terms, contact us at
-              <a href="mailto:support@josemadrid.net"> support@josemadrid.net</a>.
+              <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a>.
             </p>
           </div>
         </div>

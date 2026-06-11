@@ -57,7 +57,7 @@ export default function AccessibilityPage() {
             </p>
             <ul>
               <li>
-                <strong>Email</strong>: <a href="mailto:support@josemadrid.net">support@josemadrid.net</a>
+                <strong>Email</strong>: <a href="mailto:mike@josemadridsalsa.com">mike@josemadridsalsa.com</a>
               </li>
               <li>
                 <strong>Phone</strong>: (740) 521-4304
@@ -114,7 +114,7 @@ export default function AccessibilityPage() {
             <h2>Contact</h2>
             <p>
               For questions about accessibility or to report issues, please contact us at
-              <a href="mailto:support@josemadrid.net"> support@josemadrid.net</a> or call (740) 521-4304.
+              <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a> or call (740) 521-4304.
             </p>
           </div>
         </div>

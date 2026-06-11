@@ -93,7 +93,7 @@ export default function PrivacyPolicyPage() {
             <h2>Contact Us</h2>
             <p>
               If you have questions about this Privacy Policy or our data practices, please contact us at
-              <a href="mailto:support@josemadrid.net"> support@josemadrid.net</a>.
+              <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a>.
             </p>
           </div>
         </div>

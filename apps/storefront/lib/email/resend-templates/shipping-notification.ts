@@ -84,7 +84,7 @@ export const shippingNotification: ResendTemplateDefinition = {
   name: 'Shipping Notification',
   alias: 'shipping-notification',
   subject: 'Order #{{{ORDER_NUMBER}}} Has Shipped - Track Your Delivery!',
-  from: 'Jose Madrid Salsa <mike@josemadrid.net>',
+  from: 'Jose Madrid Salsa <mike@josemadridsalsa.com>',
   html: buildHtml(),
   variables: [
     { key: 'CUSTOMER_NAME', type: 'string', fallbackValue: 'there' },

@@ -68,8 +68,8 @@ export const RefundProcessedEmail = ({
         <Section style={supportSection}>
           <Text style={supportText}>
             Questions about your refund?{' '}
-            <a href="mailto:support@josemadridsalsa.com" style={link}>
-              support@josemadridsalsa.com
+            <a href="mailto:mike@josemadridsalsa.com" style={link}>
+              mike@josemadridsalsa.com
             </a>
           </Text>
         </Section>

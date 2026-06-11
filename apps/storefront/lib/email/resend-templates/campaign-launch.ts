@@ -65,7 +65,7 @@ export const campaignLaunch: ResendTemplateDefinition = {
   name: 'Campaign Launch',
   alias: 'campaign-launch',
   subject: 'Your {{{CAMPAIGN_NAME}}} Fundraiser is Ready!',
-  from: 'Jose Madrid Salsa <mike@josemadrid.net>',
+  from: 'Jose Madrid Salsa <mike@josemadridsalsa.com>',
   html: buildHtml(),
   variables: [
     { key: 'COORDINATOR_NAME', type: 'string' },
@@ -75,6 +75,6 @@ export const campaignLaunch: ResendTemplateDefinition = {
     { key: 'START_DATE', type: 'string' },
     { key: 'END_DATE', type: 'string' },
     { key: 'GOAL_AMOUNT_LINE', type: 'string', fallbackValue: '' },
-    { key: 'SUPPORT_EMAIL', type: 'string', fallbackValue: 'fundraising@josemadridsalsa.com' },
+    { key: 'SUPPORT_EMAIL', type: 'string', fallbackValue: 'mike@josemadridsalsa.com' },
   ],
 }

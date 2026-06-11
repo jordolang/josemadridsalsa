@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     // Send email notification (best-effort — don't fail the request if email fails)
     try {
       await sendEmail({
-        to: 'info@josemadridsalsa.com',
+        to: 'mike@josemadridsalsa.com',
         subject: `[Developer Page] ${subject}`,
         react: ContactFormEmail({
           name,

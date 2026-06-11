@@ -41,8 +41,8 @@ export default async function FundraiserPortalLayout({
           </h1>
           <p className="text-gray-600">
             Your fundraiser account has been suspended. Please contact us at{' '}
-            <a href="mailto:fundraising@josemadrid.net" className="text-salsa-600 hover:text-salsa-700">
-              fundraising@josemadrid.net
+            <a href="mailto:mike@josemadridsalsa.com" className="text-salsa-600 hover:text-salsa-700">
+              mike@josemadridsalsa.com
             </a>{' '}
             for more information.
           </p>

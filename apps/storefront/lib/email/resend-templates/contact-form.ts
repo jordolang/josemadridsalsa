@@ -97,7 +97,7 @@ export const contactForm: ResendTemplateDefinition = {
   name: 'Contact Form Notification',
   alias: 'contact-form',
   subject: 'New Contact Form Submission from {{{CONTACT_NAME}}}',
-  from: 'Jose Madrid Salsa <mike@josemadrid.net>',
+  from: 'Jose Madrid Salsa <mike@josemadridsalsa.com>',
   html: buildHtml(),
   variables: [
     { key: 'CONTACT_NAME', type: 'string' },

@@ -53,7 +53,7 @@ export const orderConfirmationTemplate: EmailTemplateDefinition = {
       <div style="text-align:center;margin:30px 0;">
         <a href="{{trackingLink}}" style="${baseStyles.button}">Track Your Order</a>
       </div>
-      <p style="color:#6c757d;font-size:14px;margin-top:30px;">Need help? Contact us at <a href="mailto:orders@josemadridsalsa.com" style="color:#dc2626;">orders@josemadridsalsa.com</a></p>
+      <p style="color:#6c757d;font-size:14px;margin-top:30px;">Need help? Contact us at <a href="mailto:mike@josemadridsalsa.com" style="color:#dc2626;">mike@josemadridsalsa.com</a></p>
     </div>
     ${jmsFooter}
   </div>
@@ -71,5 +71,5 @@ Shipping Address:
 
 Track your order: {{trackingLink}}
 
-Questions? Email orders@josemadridsalsa.com`,
+Questions? Email mike@josemadridsalsa.com`,
 }

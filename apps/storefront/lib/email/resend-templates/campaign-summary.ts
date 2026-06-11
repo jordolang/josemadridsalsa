@@ -68,7 +68,7 @@ export const campaignSummary: ResendTemplateDefinition = {
   name: 'Campaign Summary',
   alias: 'campaign-summary',
   subject: '{{{CAMPAIGN_NAME}}} Campaign Summary - {{{TOTAL_RAISED}}} Raised!',
-  from: 'Jose Madrid Salsa <mike@josemadrid.net>',
+  from: 'Jose Madrid Salsa <mike@josemadridsalsa.com>',
   html: buildHtml(),
   variables: [
     { key: 'COORDINATOR_NAME', type: 'string' },
@@ -80,6 +80,6 @@ export const campaignSummary: ResendTemplateDefinition = {
     { key: 'PARTICIPANT_COUNT', type: 'number' },
     { key: 'TOP_PARTICIPANTS_HTML', type: 'string', fallbackValue: '' },
     { key: 'CAMPAIGN_URL', type: 'string' },
-    { key: 'SUPPORT_EMAIL', type: 'string', fallbackValue: 'fundraising@josemadridsalsa.com' },
+    { key: 'SUPPORT_EMAIL', type: 'string', fallbackValue: 'mike@josemadridsalsa.com' },
   ],
 }

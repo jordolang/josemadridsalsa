@@ -44,7 +44,7 @@ export async function sendEmail({
   to,
   subject,
   react,
-  from = process.env.FROM_EMAIL || 'Jose Madrid Salsa <mike@josemadrid.net>',
+  from = process.env.FROM_EMAIL || 'Jose Madrid Salsa <mike@josemadridsalsa.com>',
   replyTo,
   type,
   orderId,

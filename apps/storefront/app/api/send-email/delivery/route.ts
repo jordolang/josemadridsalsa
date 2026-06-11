@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       type: 'delivery-confirmation',
       orderId: data.orderId,
       userId: data.userId,
-      replyTo: 'mike@josemadrid.net',
+      replyTo: 'mike@josemadridsalsa.com',
     })
 
     if (!result.success) {

@@ -82,7 +82,7 @@ Review and configure all required environment variables in Vercel. See [ENVIRONM
 **Email Service:**
 
 - [ ] `RESEND_API_KEY` - Production API key
-- [ ] `FROM_EMAIL` - Verified sender email (orders@josemadridsalsa.com)
+- [ ] `FROM_EMAIL` - Verified sender email (mike@josemadridsalsa.com)
 - [ ] `RESEND_WEBHOOK_SECRET` - Webhook signing secret
 - [ ] `CRON_SECRET` - Bearer token for cron job authentication
 - [ ] `UNSUBSCRIBE_SECRET` - Secret for signing unsubscribe tokens
@@ -156,7 +156,7 @@ See [STRIPE_WEBHOOK_SETUP.md](./STRIPE_WEBHOOK_SETUP.md) for detailed configurat
 
 - [ ] Domain verified (josemadridsalsa.com)
 - [ ] DNS records configured (SPF, DKIM, DMARC)
-- [ ] Sender email verified (orders@josemadridsalsa.com)
+- [ ] Sender email verified (mike@josemadridsalsa.com)
 - [ ] Webhook endpoint configured: `https://www.josemadrid.net/api/webhooks/resend`
 - [ ] Test email sent and received successfully
 - [ ] Email templates reviewed for production content

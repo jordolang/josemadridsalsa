@@ -37,14 +37,14 @@ STRIPE_WEBHOOK_SECRET="whsec_..."
 ### Resend
 ```bash
 RESEND_API_KEY="re_..."
-FROM_EMAIL="orders@josemadridsalsa.com"
+FROM_EMAIL="mike@josemadridsalsa.com"
 ```
 
 ## Customer Experience & Marketing
 
 ### Public Site Contact + Reviews
 ```bash
-NEXT_PUBLIC_SUPPORT_EMAIL="mike@josemadrid.net"                 # Footer contact email
+NEXT_PUBLIC_SUPPORT_EMAIL="mike@josemadridsalsa.com"                 # Footer contact email
 NEXT_PUBLIC_SUPPORT_PHONE="(740) 521-4304"                      # Footer phone number (format for tel:)
 NEXT_PUBLIC_HQ_LOCATION="601 Putnam Ave, Zanesville, OH 43701"  # Displayed in footer contact block
 NEXT_PUBLIC_GOOGLE_BUSINESS_URL="https://g.page/..."            # Review link for navigation/footer

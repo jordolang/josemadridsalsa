@@ -89,7 +89,7 @@
             "required": true
           },
           "FROM_EMAIL": {
-            "value": "orders@josemadrid.net",
+            "value": "mike@josemadridsalsa.com",
             "source": ".env.production",
             "type": "email",
             "sensitive": false,
@@ -229,7 +229,7 @@
             "required": false
           },
           "NEXT_PUBLIC_SUPPORT_EMAIL": {
-            "value": "mike@josemadrid.net\\n",
+            "value": "mike@josemadridsalsa.com\\n",
             "source": ".env.production",
             "type": "email",
             "sensitive": false,

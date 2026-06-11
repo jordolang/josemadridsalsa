@@ -15,7 +15,7 @@ npm run create-admin
 ```
 
 **Default credentials:**
-- Email: `admin@josemadridsalsa.com`
+- Email: `mike@josemadridsalsa.com`
 - Password: `admin123456`
 
 **Custom credentials:**
@@ -243,5 +243,5 @@ Check the documentation:
 ---
 
 **Admin Panel URL:** `http://localhost:3000/admin`  
-**Default Admin Email:** `admin@josemadridsalsa.com`  
+**Default Admin Email:** `mike@josemadridsalsa.com`  
 **Default Password:** `admin123456` (change immediately!)

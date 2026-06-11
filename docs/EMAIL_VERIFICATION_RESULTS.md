@@ -36,7 +36,7 @@
 | Test | Status | Notes |
 |------|--------|-------|
 | Subject line correct | ⏳ | Expected: "New Contact Form Submission from Test User" |
-| Sender correct | ⏳ | Expected: "Jose Madrid Salsa <mike@josemadrid.net>" |
+| Sender correct | ⏳ | Expected: "Jose Madrid Salsa <mike@josemadridsalsa.com>" |
 | Reply-To set correctly | ⏳ | Expected: Test email address |
 | Name displayed | ⏳ | Expected: "Test User" |
 | Email displayed | ⏳ | |
@@ -50,7 +50,7 @@
 | Test | Status | Notes |
 |------|--------|-------|
 | Subject line correct | ⏳ | Expected: "Your Order #TEST-12345 Has Shipped!" |
-| Sender correct | ⏳ | Expected: "Jose Madrid Salsa <mike@josemadrid.net>" |
+| Sender correct | ⏳ | Expected: "Jose Madrid Salsa <mike@josemadridsalsa.com>" |
 | Order number displayed | ⏳ | Expected: TEST-12345 |
 | Tracking number displayed | ⏳ | Expected: 1Z999AA10123456784 |
 | Carrier displayed | ⏳ | Expected: UPS |
@@ -65,7 +65,7 @@
 | Test | Status | Notes |
 |------|--------|-------|
 | Subject line correct | ⏳ | Expected: "Your Order #TEST-12345 Has Been Delivered!" |
-| Sender correct | ⏳ | Expected: "Jose Madrid Salsa <mike@josemadrid.net>" |
+| Sender correct | ⏳ | Expected: "Jose Madrid Salsa <mike@josemadridsalsa.com>" |
 | Order number displayed | ⏳ | Expected: TEST-12345 |
 | Delivery date displayed | ⏳ | |
 | Shipping address displayed | ⏳ | Expected: 123 Test Street, Test City, CA 90210 |

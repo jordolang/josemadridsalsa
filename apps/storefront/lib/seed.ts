@@ -512,7 +512,7 @@ export async function seedDatabase() {
   const hashedPassword = await bcrypt.hash('admin123', 10)
   await prisma.user.create({
     data: {
-      email: 'admin@josemadrid.net',
+      email: 'mike@josemadridsalsa.com',
       name: 'Admin User',
       password: hashedPassword,
       role: 'ADMIN',

@@ -32,7 +32,7 @@ export default function RefundPolicyPage() {
             <h2>How to Initiate a Return</h2>
             <p>
               To start a return, please contact our customer support team at
-              <a href="mailto:support@josemadrid.net"> support@josemadrid.net</a> with your order number and
+              <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a> with your order number and
               reason for return. We will provide you with return instructions and a return authorization if applicable.
             </p>
 
@@ -74,7 +74,7 @@ export default function RefundPolicyPage() {
             <h2>Damaged or Defective Items</h2>
             <p>
               If you receive a damaged or defective item, please contact us immediately at
-              <a href="mailto:support@josemadrid.net"> support@josemadrid.net</a> with photos of the damage or defect.
+              <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a> with photos of the damage or defect.
               We will arrange for a replacement or full refund, including return shipping costs.
             </p>
 
@@ -86,7 +86,7 @@ export default function RefundPolicyPage() {
               <li>Check your bank account or credit card statement again.</li>
               <li>Contact your financial institution, as processing times may vary.</li>
               <li>If you have done this and still have not received your refund, please contact us at
-                <a href="mailto:support@josemadrid.net"> support@josemadrid.net</a>.
+                <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a>.
               </li>
             </ul>
 
@@ -106,7 +106,7 @@ export default function RefundPolicyPage() {
             <h2>Contact Us</h2>
             <p>
               If you have questions about returns or refunds, or need assistance with your order, please contact us at
-              <a href="mailto:support@josemadrid.net"> support@josemadrid.net</a>. We are here to help and will work
+              <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a>. We are here to help and will work
               with you to resolve any issues.
             </p>
           </div>

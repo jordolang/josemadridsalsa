@@ -56,7 +56,7 @@ export const ProductReviewRequestEmail = ({
         <Section style={supportSection}>
           <Text style={supportText}>
             Something wasn&apos;t right with your order?{' '}
-            <a href="mailto:support@josemadridsalsa.com" style={link}>
+            <a href="mailto:mike@josemadridsalsa.com" style={link}>
               Let us know
             </a>{' '}
             and we&apos;ll make it right.
