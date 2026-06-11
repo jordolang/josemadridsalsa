@@ -14,7 +14,7 @@ export const metadata: Metadata = createMetadata({
 })
 
 const supportPhone = process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? '(740) 521-4304'
-const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? 'mike@josemadrid.net'
+const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? 'mike@josemadridsalsa.com'
 const headquartersLocation =
   process.env.NEXT_PUBLIC_HQ_LOCATION ?? '601 Putnam Ave, Zanesville, OH 43701'
 
