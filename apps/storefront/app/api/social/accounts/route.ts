@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { disconnectAccount } from '@/lib/social/platforms'
@@ -45,6 +46,14 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Account ID required' }, { status: 400 })
   }
 
-  await disconnectAccount(accountId)
+  try {
+    await disconnectAccount(accountId)
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return NextResponse.json({ error: 'Account not found' }, { status: 404 })
+    }
+    console.error('Failed to disconnect social account:', error)
+    return NextResponse.json({ error: 'Failed to disconnect account' }, { status: 500 })
+  }
   return NextResponse.json({ success: true })
 }

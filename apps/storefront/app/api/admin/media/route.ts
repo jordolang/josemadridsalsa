@@ -98,7 +98,6 @@ export async function POST(req: NextRequest) {
       const upload = await uploadToVercelBlob(file, {
         directory: 'admin-media',
         maxBytes: VERCEL_SERVER_UPLOAD_MAX_BYTES,
-        imagesOnly: true,
       });
 
       const media = await prisma.media.create({

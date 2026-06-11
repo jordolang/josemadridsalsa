@@ -272,8 +272,12 @@ export function SocialShops({ accounts }: Props) {
   const handleDelete = async (listingId: string) => {
     if (!confirm('Remove this shop listing?')) return
     try {
-      await fetch(`/api/social/shops?id=${listingId}`, { method: 'DELETE' })
-      setListings((prev) => prev.filter((l) => l.id !== listingId))
+      const res = await fetch(`/api/social/shops?id=${listingId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        setError('Failed to remove listing.')
+      } else {
+        setListings((prev) => prev.filter((l) => l.id !== listingId))
+      }
     } catch {
       setError('Failed to remove listing.')
     }

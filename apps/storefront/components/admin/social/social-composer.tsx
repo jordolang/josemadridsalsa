@@ -59,6 +59,17 @@ type Props = {
 
 const INITIAL_STATE: SocialComposerState = { status: 'idle' }
 
+const MAX_MEDIA_ATTACHMENTS = 10
+const ACCEPTED_MEDIA_TYPES =
+  'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'
+
+type MediaAttachment = {
+  id: string
+  url: string
+  mimeType: string
+  filename: string
+}
+
 export function SocialComposer({ action, accounts, canSchedule, canPublish }: Props) {
   const [state, formAction] = useActionState(action, INITIAL_STATE)
   const [content, setContent] = useState('')
@@ -66,6 +77,9 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
   const [hashtags, setHashtags] = useState('')
   const [linkUrl, setLinkUrl] = useState('')
+  const [mediaItems, setMediaItems] = useState<MediaAttachment[]>([])
+  const [mediaUploading, setMediaUploading] = useState(false)
+  const [mediaError, setMediaError] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
   const [activePreviewPlatform, setActivePreviewPlatform] = useState<SocialMediaPlatform>('FACEBOOK')
 
@@ -85,10 +99,54 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
       setScheduleEnabled(false)
       setHashtags('')
       setLinkUrl('')
+      setMediaItems([])
+      setMediaError(null)
       setPlatformOverrides({})
       setShowOverrides(false)
     }
   }, [state])
+
+  const handleMediaSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? [])
+    event.target.value = ''
+    if (files.length === 0) return
+
+    setMediaError(null)
+    if (mediaItems.length + files.length > MAX_MEDIA_ATTACHMENTS) {
+      setMediaError(`You can attach up to ${MAX_MEDIA_ATTACHMENTS} files per post.`)
+      return
+    }
+
+    setMediaUploading(true)
+    for (const file of files) {
+      const formData = new FormData()
+      formData.append('file', file)
+      try {
+        const res = await fetch('/api/admin/media', { method: 'POST', body: formData })
+        const data = await res.json()
+        if (!res.ok) {
+          setMediaError(data.error || `Failed to upload ${file.name}.`)
+          continue
+        }
+        setMediaItems((prev) => [
+          ...prev,
+          {
+            id: data.media.id,
+            url: data.media.url,
+            mimeType: data.media.mimeType,
+            filename: data.media.filename,
+          },
+        ])
+      } catch {
+        setMediaError(`Failed to upload ${file.name}.`)
+      }
+    }
+    setMediaUploading(false)
+  }
+
+  const removeMedia = (id: string) => {
+    setMediaItems((prev) => prev.filter((m) => m.id !== id))
+  }
 
   const togglePlatform = (platform: SocialMediaPlatform) => {
     setSelectedPlatforms((prev) => {
@@ -143,6 +201,9 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
         ))}
         <input type="hidden" name="hashtags" value={hashtags} />
         <input type="hidden" name="linkUrl" value={linkUrl} />
+        {mediaItems.map((m) => (
+          <input key={m.id} type="hidden" name="mediaIds" value={m.id} />
+        ))}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
           {/* Main composer */}
@@ -225,6 +286,69 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
               />
               {state.fieldErrors?.content && (
                 <p className="text-xs text-destructive">{state.fieldErrors.content.join(' ')}</p>
+              )}
+            </div>
+
+            {/* Media attachments */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                Media
+              </label>
+              {mediaItems.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {mediaItems.map((m) => (
+                    <div
+                      key={m.id}
+                      className="group relative h-20 w-20 overflow-hidden rounded-lg border border-border bg-muted"
+                    >
+                      {m.mimeType.startsWith('video/') ? (
+                        <video src={m.url} className="h-full w-full object-cover" muted />
+                      ) : (
+                        <img src={m.url} alt={m.filename} className="h-full w-full object-cover" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeMedia(m.id)}
+                        className="absolute right-1 top-1 rounded-full bg-background/80 p-0.5 text-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-label={`Remove ${m.filename}`}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={mediaUploading || mediaItems.length >= MAX_MEDIA_ATTACHMENTS}
+                  onClick={() => document.getElementById('social-media-upload')?.click()}
+                >
+                  {mediaUploading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <ImagePlus className="mr-2 h-4 w-4" />
+                  )}
+                  {mediaUploading ? 'Uploading...' : 'Add photos / video'}
+                </Button>
+                <input
+                  id="social-media-upload"
+                  type="file"
+                  accept={ACCEPTED_MEDIA_TYPES}
+                  multiple
+                  className="hidden"
+                  onChange={handleMediaSelect}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Required for Instagram. TikTok needs a video. Up to {MAX_MEDIA_ATTACHMENTS} files, 4.5 MB each.
+                </p>
+              </div>
+              {mediaError && <p className="text-xs text-destructive">{mediaError}</p>}
+              {state.fieldErrors?.media && (
+                <p className="text-xs text-destructive">{state.fieldErrors.media.join(' ')}</p>
               )}
             </div>
 
@@ -404,6 +528,7 @@ export function SocialComposer({ action, accounts, canSchedule, canPublish }: Pr
                     content={getContentForPlatform(activePreviewPlatform)}
                     hashtags={hashtags}
                     linkUrl={linkUrl}
+                    media={mediaItems}
                     account={accounts.find((a) => a.platform === activePreviewPlatform)}
                   />
                 )}
@@ -421,12 +546,14 @@ function PostPreview({
   content,
   hashtags,
   linkUrl,
+  media,
   account,
 }: {
   platform: SocialMediaPlatform
   content: string
   hashtags: string
   linkUrl: string
+  media: MediaAttachment[]
   account?: SocialAccountInfo
 }) {
   const config = PLATFORM_CONFIGS[platform]
@@ -465,6 +592,26 @@ function PostPreview({
       <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
         {fullContent || <span className="italic text-muted-foreground">Start typing your post...</span>}
       </div>
+
+      {/* Media preview */}
+      {media.length > 0 && (
+        <div className={cn('grid gap-1 overflow-hidden rounded-lg', media.length > 1 ? 'grid-cols-2' : 'grid-cols-1')}>
+          {media.slice(0, 4).map((m, i) => (
+            <div key={m.id} className="relative aspect-square bg-muted">
+              {m.mimeType.startsWith('video/') ? (
+                <video src={m.url} className="h-full w-full object-cover" muted />
+              ) : (
+                <img src={m.url} alt={m.filename} className="h-full w-full object-cover" />
+              )}
+              {i === 3 && media.length > 4 && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-semibold text-white">
+                  +{media.length - 4}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Link preview */}
       {linkUrl && (

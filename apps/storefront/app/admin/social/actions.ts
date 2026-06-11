@@ -33,8 +33,25 @@ const composeSchema = z
     twitterContent: z.string().optional().default(''),
     tiktokContent: z.string().optional().default(''),
     instagramContent: z.string().optional().default(''),
+    mediaIds: z.array(z.string().min(1)).max(10).default([]),
   })
   .superRefine((data, ctx) => {
+    if (data.intent !== 'draft' && data.platforms.includes('INSTAGRAM') && data.mediaIds.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Instagram posts require at least one image or video.',
+        path: ['media'],
+      })
+    }
+
+    if (data.intent !== 'draft' && data.platforms.includes('TIKTOK') && data.mediaIds.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'TikTok posts require a video.',
+        path: ['media'],
+      })
+    }
+
     if (data.intent === 'schedule' && !data.scheduledAt) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -84,6 +101,7 @@ export async function createSocialPost(
     twitterContent: typeof formData.get('twitterContent') === 'string' ? formData.get('twitterContent') : '',
     tiktokContent: typeof formData.get('tiktokContent') === 'string' ? formData.get('tiktokContent') : '',
     instagramContent: typeof formData.get('instagramContent') === 'string' ? formData.get('instagramContent') : '',
+    mediaIds: formData.getAll('mediaIds').map(String).filter(Boolean),
   })
 
   if (!parsed.success) {
@@ -116,6 +134,34 @@ export async function createSocialPost(
     return { status: 'error', message: 'You need publishing permissions to mark posts as live.' }
   }
 
+  const mediaIds = Array.from(new Set(data.mediaIds))
+  if (mediaIds.length > 0) {
+    const mediaRecords = await prisma.media.findMany({
+      where: { id: { in: mediaIds } },
+      select: { id: true, mimeType: true },
+    })
+
+    if (mediaRecords.length !== mediaIds.length) {
+      return {
+        status: 'error',
+        message: 'Some attached media could not be found. Remove and re-upload them.',
+        fieldErrors: { media: ['Some attached media could not be found.'] },
+      }
+    }
+
+    if (
+      data.intent !== 'draft' &&
+      data.platforms.includes('TIKTOK') &&
+      !mediaRecords.some((m) => m.mimeType.startsWith('video/'))
+    ) {
+      return {
+        status: 'error',
+        message: 'TikTok posts require a video attachment.',
+        fieldErrors: { media: ['TikTok posts require a video attachment.'] },
+      }
+    }
+  }
+
   const hashtags = data.hashtags
     ? data.hashtags.split(',').map((h) => h.trim()).filter(Boolean)
     : []
@@ -131,6 +177,9 @@ export async function createSocialPost(
     tiktokContent: data.tiktokContent || null,
     instagramContent: data.instagramContent || null,
     createdById: user.id,
+    media: {
+      create: mediaIds.map((mediaId, order) => ({ mediaId, order })),
+    },
   }
 
   if (data.intent === 'schedule' && data.scheduledAt && canSchedule) {
