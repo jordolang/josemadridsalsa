@@ -87,6 +87,5 @@ jobs:
           name: build-artifacts
           path: |
             apps/storefront/.next
-            apps/fundraising/.next
             apps/backend/.next
           retention-days: 7

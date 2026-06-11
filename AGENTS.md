@@ -38,7 +38,6 @@ Every AI agent operating in this repository must:
 josemadridsalsa/
 ├── apps/
 │   ├── storefront/       # Main Next.js commerce app and legacy route implementations
-│   ├── fundraising/      # Fundraising-only deployment boundary
 │   └── backend/          # API-only deployment boundary
 ├── packages/             # Shared workspace packages extracted from applications
 ├── package.json          # npm workspace commands
@@ -49,7 +48,7 @@ josemadridsalsa/
 - Route-specific layouts stay close to their application pages.
 - Existing storefront modules live under `apps/storefront/components/store/`.
 - New backend route logic belongs in `apps/backend/`.
-- New fundraising-only UI belongs in `apps/fundraising/`.
+- The fundraising and admin deployment boundaries live in the [josemadridsalsa-fundraising](https://github.com/jordolang/josemadridsalsa-fundraising) and [josemadridsalsa-admin](https://github.com/jordolang/josemadridsalsa-admin) repositories.
 - Shared cross-application contracts belong in `packages/`.
 - See `TURBOREPO_ARCHITECTURE.md` in the [salsadocs](https://github.com/jordolang/salsadocs) repository before moving legacy routes.
 
