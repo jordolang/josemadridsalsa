@@ -118,7 +118,7 @@ export default function CookiePolicyPage() {
             <h2>Contact Us</h2>
             <p>
               If you have questions about our use of cookies, please contact us at
-              <a href="mailto:support@josemadrid.net"> support@josemadrid.net</a>.
+              <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a>.
             </p>
           </div>
         </div>

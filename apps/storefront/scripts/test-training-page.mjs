@@ -11,7 +11,7 @@ import { chromium } from 'playwright';
     await page.waitForLoadState('networkidle');
 
     console.log('Filling in credentials...');
-    await page.fill('input[type="email"]', 'admin@josemadrid.net');
+    await page.fill('input[type="email"]', 'mike@josemadridsalsa.com');
     await page.fill('input[type="password"]', 'admin123456');
     
     console.log('Submitting login form...');

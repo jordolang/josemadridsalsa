@@ -61,12 +61,12 @@ function main() {
   
   log('📋 Environment Configuration:', 'blue');
   log(`   Database Protocol: ${dbUrl.split(':')[0]}://...`);
-  log(`   Seed Admin Email: ${process.env.SEED_ADMIN_EMAIL || 'admin@josemadridsalsa.com'}`);
+  log(`   Seed Admin Email: ${process.env.SEED_ADMIN_EMAIL || 'mike@josemadridsalsa.com'}`);
   log('');
 
   // Set environment variables
   process.env.DATABASE_URL = dbUrl;
-  process.env.SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'admin@josemadridsalsa.com';
+  process.env.SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'mike@josemadridsalsa.com';
   process.env.SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'admin123456';
 
   // Confirm with user

@@ -59,8 +59,8 @@ export const AccountWelcomeEmail = ({
               josemadrid.net/account
             </a>
             . Questions?{' '}
-            <a href="mailto:support@josemadridsalsa.com" style={link}>
-              support@josemadridsalsa.com
+            <a href="mailto:mike@josemadridsalsa.com" style={link}>
+              mike@josemadridsalsa.com
             </a>
           </Text>
         </Section>

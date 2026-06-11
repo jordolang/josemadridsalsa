@@ -21,7 +21,7 @@ echo ""
 
 # Check 2: FROM_EMAIL
 echo "2. Checking FROM_EMAIL..."
-FROM_EMAIL="${FROM_EMAIL:-Jose Madrid Salsa <mike@josemadrid.net>}"
+FROM_EMAIL="${FROM_EMAIL:-Jose Madrid Salsa <mike@josemadridsalsa.com>}"
 echo "   ℹ FROM_EMAIL: $FROM_EMAIL"
 echo ""
 

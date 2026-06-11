@@ -33,7 +33,7 @@ export default async function TaxesPage() {
           </p>
         </div>
         <Button variant="default" asChild>
-          <a href="mailto:finance@josemadridsalsa.com?subject=Tax%20CPA%20Review">Request CPA review</a>
+          <a href="mailto:mike@josemadridsalsa.com?subject=Tax%20CPA%20Review">Request CPA review</a>
         </Button>
       </header>
 

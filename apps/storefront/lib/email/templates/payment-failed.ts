@@ -38,7 +38,7 @@ export const paymentFailedTemplate: EmailTemplateDefinition = {
         <a href="{{updatePaymentUrl}}" style="${baseStyles.button}">Update Payment Info</a>
       </div>
       <p style="margin-top:30px;">If your payment information is not updated within 3 days, your order will be automatically canceled.</p>
-      <p style="margin-top:20px;">If you have any questions, please contact us at <a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;">support@josemadridsalsa.com</a>.</p>
+      <p style="margin-top:20px;">If you have any questions, please contact us at <a href="mailto:mike@josemadridsalsa.com" style="color:#dc2626;">mike@josemadridsalsa.com</a>.</p>
     </div>
     ${jmsFooter}
   </div>
@@ -54,5 +54,5 @@ Please update your payment information: {{updatePaymentUrl}}
 
 If not updated within 3 days, your order will be canceled.
 
-Questions? Email support@josemadridsalsa.com`,
+Questions? Email mike@josemadridsalsa.com`,
 }

@@ -93,7 +93,7 @@ export async function POST(request: Request) {
 
     // Send email to company
     const result = await sendEmail({
-      to: 'info@josemadridsalsa.com',
+      to: 'mike@josemadridsalsa.com',
       subject: `New Contact Form Submission from ${name}`,
       react: ContactFormEmail(emailProps),
       type: 'contact-form',

@@ -98,7 +98,7 @@ export const deliveryConfirmation: ResendTemplateDefinition = {
   name: 'Delivery Confirmation',
   alias: 'delivery-confirmation',
   subject: 'Order #{{{ORDER_NUMBER}}} Delivered - We Hope You Enjoy!',
-  from: 'Jose Madrid Salsa <mike@josemadrid.net>',
+  from: 'Jose Madrid Salsa <mike@josemadridsalsa.com>',
   html: buildHtml(),
   variables: [
     { key: 'CUSTOMER_NAME', type: 'string', fallbackValue: 'there' },

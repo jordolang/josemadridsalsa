@@ -19,7 +19,7 @@ export function ParticipantWelcomeEmail({
   fundraiserName,
   referralCode,
   fundraiserUrl,
-  supportEmail = 'fundraising@josemadridsalsa.com',
+  supportEmail = 'mike@josemadridsalsa.com',
   unsubscribeUrl,
 }: ParticipantWelcomeEmailProps) {
   const previewText = `Welcome to the ${fundraiserName} fundraiser!`

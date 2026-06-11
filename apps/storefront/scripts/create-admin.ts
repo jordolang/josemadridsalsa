@@ -8,7 +8,7 @@ const prisma = process.env.DATABASE_URL?.includes('prisma+postgres://')
   : baseClient
 
 async function main() {
-  const email = process.env.ADMIN_EMAIL || 'admin@josemadridsalsa.com'
+  const email = process.env.ADMIN_EMAIL || 'mike@josemadridsalsa.com'
   const password = process.env.ADMIN_PASSWORD || 'admin123456' // Change this!
   const name = process.env.ADMIN_NAME || 'Admin User'
 

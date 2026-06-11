@@ -63,7 +63,7 @@ export const participantMilestone: ResendTemplateDefinition = {
   name: 'Participant Milestone',
   alias: 'participant-milestone',
   subject: "Congratulations! You've Reached {{{MILESTONE}}} Sales!",
-  from: 'Jose Madrid Salsa <mike@josemadrid.net>',
+  from: 'Jose Madrid Salsa <mike@josemadridsalsa.com>',
   html: buildHtml(),
   variables: [
     { key: 'PARTICIPANT_NAME', type: 'string' },
@@ -73,6 +73,6 @@ export const participantMilestone: ResendTemplateDefinition = {
     { key: 'TOTAL_SALES', type: 'number' },
     { key: 'TOTAL_RAISED', type: 'string' },
     { key: 'DASHBOARD_URL', type: 'string' },
-    { key: 'SUPPORT_EMAIL', type: 'string', fallbackValue: 'fundraising@josemadridsalsa.com' },
+    { key: 'SUPPORT_EMAIL', type: 'string', fallbackValue: 'mike@josemadridsalsa.com' },
   ],
 }

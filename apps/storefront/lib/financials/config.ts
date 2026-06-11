@@ -15,7 +15,7 @@ export const financialIntegrations: FinancialIntegration[] = [
     description: 'Sync invoices, expenses, and payroll entries directly to QuickBooks.',
     docUrl: 'https://quickbooks.intuit.com/app/apps/appdetails/jose-madrid-salsa',
     features: ['Two-way invoice sync', 'Expense categorization', 'Payroll journal export'],
-    supportEmail: 'finance@josemadridsalsa.com',
+    supportEmail: 'mike@josemadridsalsa.com',
   },
   {
     id: 'quicken',

@@ -75,7 +75,7 @@ Resend will display the required DNS records for your domain:
 3. **Optional - DMARC Record:**
    - Record Type: TXT
    - Host: `_dmarc`
-   - Value: `v=DMARC1; p=none; rua=mailto:dmarc@josemadrid.net`
+   - Value: `v=DMARC1; p=none; rua=mailto:mike@josemadridsalsa.com`
 
 ### Step 3: Add Records to DNS Provider
 
@@ -299,7 +299,7 @@ DMARC (Domain-based Message Authentication, Reporting, and Conformance) builds o
 **Host/Name:** `_dmarc`
 **Value:**
 ```txt
-v=DMARC1; p=none; rua=mailto:dmarc@josemadrid.net
+v=DMARC1; p=none; rua=mailto:mike@josemadridsalsa.com
 ```
 
 **DMARC Policy Options:**
@@ -316,11 +316,11 @@ Ensure these environment variables are properly set:
 ```bash
 # .env.local (development)
 RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxxxx"
-FROM_EMAIL="orders@josemadrid.net"
+FROM_EMAIL="mike@josemadridsalsa.com"
 
 # .env.production (production)
 RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxxxx"
-FROM_EMAIL="orders@josemadrid.net"
+FROM_EMAIL="mike@josemadridsalsa.com"
 ```
 
 **Important:** Only use verified domains in production. For testing, you can use `onboarding@resend.dev`.
@@ -335,7 +335,7 @@ FROM_EMAIL="orders@josemadrid.net"
    - After testing with `~all`, consider upgrading to `-all` (hard fail)
 
 3. **Monitor DMARC reports**
-   - Set up `rua=mailto:dmarc@josemadrid.net` to receive weekly reports
+   - Set up `rua=mailto:mike@josemadridsalsa.com` to receive weekly reports
    - Review reports for unauthorized sending attempts
 
 4. **Rotate API keys periodically**
@@ -352,11 +352,11 @@ FROM_EMAIL="orders@josemadrid.net"
 
 Use role-based email addresses for different purposes:
 
-- `orders@josemadrid.net` - Order confirmations
-- `shipping@josemadrid.net` - Shipping notifications
-- `support@josemadrid.net` - Customer support
-- `info@josemadrid.net` - General contact form emails
-- `noreply@josemadrid.net` - System notifications (use sparingly)
+- `mike@josemadridsalsa.com` - Order confirmations
+- `mike@josemadridsalsa.com` - Shipping notifications
+- `mike@josemadridsalsa.com` - Customer support
+- `mike@josemadridsalsa.com` - General contact form emails
+- `mike@josemadridsalsa.com` - System notifications (use sparingly)
 
 ### Avoid Using
 

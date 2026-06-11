@@ -283,7 +283,7 @@ describe('DeliveryConfirmationEmail', () => {
     it('should include support contact information', async () => {
       const html = await render(<DeliveryConfirmationEmail {...baseProps} />)
 
-      expect(html).toContain('orders@josemadridsalsa.com')
+      expect(html).toContain('mike@josemadridsalsa.com')
     })
 
     it('should include company branding', async () => {

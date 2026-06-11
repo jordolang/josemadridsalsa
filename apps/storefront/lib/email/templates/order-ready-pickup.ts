@@ -35,7 +35,7 @@ export const orderReadyPickupTemplate: EmailTemplateDefinition = {
       <div style="background:#fef9c3;border-left:4px solid #f59e0b;padding:16px 20px;margin:24px 0;border-radius:0 6px 6px 0;">
         <p style="margin:0;color:#92400e;font-size:14px;">Please bring this email or order number <strong>#{{orderNumber}}</strong> when you come to pick up.</p>
       </div>
-      <p style="margin-top:30px;color:#6b7280;font-size:14px;">Questions? Contact us at <a href="mailto:support@josemadridsalsa.com" style="color:#dc2626;">support@josemadridsalsa.com</a> or (740) 521-4304.</p>
+      <p style="margin-top:30px;color:#6b7280;font-size:14px;">Questions? Contact us at <a href="mailto:mike@josemadridsalsa.com" style="color:#dc2626;">mike@josemadridsalsa.com</a> or (740) 521-4304.</p>
     </div>
     ${jmsFooter}
   </div>
@@ -52,5 +52,5 @@ Hours: {{pickupHours}}
 
 Please bring this email or your order number when you arrive.
 
-Questions? support@josemadridsalsa.com · (740) 521-4304`,
+Questions? mike@josemadridsalsa.com · (740) 521-4304`,
 }

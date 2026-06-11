@@ -158,7 +158,7 @@ describe('Send Email API', () => {
 
       expect(mockSendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
-          to: 'info@josemadridsalsa.com',
+          to: 'mike@josemadridsalsa.com',
           subject: 'New Contact Form Submission from John Doe',
           type: 'contact-form',
           userId: 'user-123',
@@ -435,7 +435,7 @@ describe('Send Email API', () => {
           type: 'shipping-notification',
           orderId: 'order-123',
           userId: 'user-456',
-          replyTo: 'mike@josemadrid.net',
+          replyTo: 'mike@josemadridsalsa.com',
         })
       )
     })
@@ -632,7 +632,7 @@ describe('Send Email API', () => {
           type: 'delivery-confirmation',
           orderId: 'order-789',
           userId: 'user-012',
-          replyTo: 'mike@josemadrid.net',
+          replyTo: 'mike@josemadridsalsa.com',
         })
       )
     })

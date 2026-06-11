@@ -53,8 +53,8 @@ export default function CheckoutCancelPage() {
       <div className="text-center">
         <p className="text-sm text-gray-500">
           Need help completing your order? Email us at{' '}
-          <a href="mailto:mike@josemadrid.net" className="underline hover:text-gray-700">
-            mike@josemadrid.net
+          <a href="mailto:mike@josemadridsalsa.com" className="underline hover:text-gray-700">
+            mike@josemadridsalsa.com
           </a>
         </p>
       </div>

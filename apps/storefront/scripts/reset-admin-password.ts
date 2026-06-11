@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  const email = process.argv[2] || 'admin@josemadridsalsa.com'
+  const email = process.argv[2] || 'mike@josemadridsalsa.com'
   const newPassword = process.argv[3] || 'admin123456'
 
   console.log(`\n🔄 Resetting password for: ${email}`)

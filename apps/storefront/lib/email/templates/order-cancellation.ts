@@ -161,7 +161,7 @@ export const orderCancellationTemplate: EmailTemplateDefinition = {
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
       <p style="margin-bottom:20px;">Your order #{{orderNumber}} has been canceled as of {{cancellationDate}}.</p>
       <div style="background:#ffe3e3;border-left:4px solid #dc2626;padding:20px;margin:30px 0;border-radius:6px;">
-        <p style="margin:0;color:#991b1b;">If you did not request this cancellation, please contact us immediately at <a href="mailto:support@josemadridsalsa.com" style="color:#991b1b;">support@josemadridsalsa.com</a>.</p>
+        <p style="margin:0;color:#991b1b;">If you did not request this cancellation, please contact us immediately at <a href="mailto:mike@josemadridsalsa.com" style="color:#991b1b;">mike@josemadridsalsa.com</a>.</p>
       </div>
       <p style="margin-top:30px;">If you have any questions, feel free to reach out. We're here to help.</p>
     </div>
@@ -173,7 +173,7 @@ export const orderCancellationTemplate: EmailTemplateDefinition = {
 
 Your order #{{orderNumber}} has been canceled as of {{cancellationDate}}.
 
-If you did not request this, please contact us immediately at support@josemadridsalsa.com.
+If you did not request this, please contact us immediately at mike@josemadridsalsa.com.
 
 If you have any questions, feel free to reach out.`,
 }

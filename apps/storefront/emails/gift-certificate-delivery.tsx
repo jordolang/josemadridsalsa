@@ -75,8 +75,8 @@ export const GiftCertificateDeliveryEmail = ({
         <Section style={supportSection}>
           <Text style={supportText}>
             Questions?{' '}
-            <a href="mailto:support@josemadridsalsa.com" style={link}>
-              support@josemadridsalsa.com
+            <a href="mailto:mike@josemadridsalsa.com" style={link}>
+              mike@josemadridsalsa.com
             </a>
           </Text>
         </Section>

@@ -223,7 +223,7 @@ async function syncDbTemplates(
       tpl.name,
       tpl.key,
       subject,
-      process.env.FROM_EMAIL || 'Jose Madrid Salsa <mike@josemadrid.net>',
+      process.env.FROM_EMAIL || 'Jose Madrid Salsa <mike@josemadridsalsa.com>',
       html,
       text,
       variables,

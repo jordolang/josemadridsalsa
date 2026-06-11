@@ -160,7 +160,7 @@ describe('milestone email', () => {
     it('should use default support email when not provided', async () => {
       const html = await render(<ParticipantMilestoneEmail {...baseProps} />)
 
-      expect(html).toContain('fundraising@josemadridsalsa.com')
+      expect(html).toContain('mike@josemadridsalsa.com')
     })
 
     it('should include unsubscribe URL', async () => {

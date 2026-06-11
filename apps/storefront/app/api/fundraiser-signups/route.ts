@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       goal: data.fundraisingGoal ?? undefined,
     })
 
-    const fundraisingInbox = process.env.FUNDRAISING_EMAIL || 'fundraising@josemadridsalsa.com'
+    const fundraisingInbox = process.env.FUNDRAISING_EMAIL || 'mike@josemadridsalsa.com'
     await sendEmail({
       to: fundraisingInbox,
       subject: `New Fundraiser Signup: ${data.organizationName}`,

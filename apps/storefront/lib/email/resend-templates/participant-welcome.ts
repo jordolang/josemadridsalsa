@@ -66,13 +66,13 @@ export const participantWelcome: ResendTemplateDefinition = {
   name: 'Participant Welcome',
   alias: 'participant-welcome',
   subject: 'Welcome to the {{{FUNDRAISER_NAME}}} Fundraiser!',
-  from: 'Jose Madrid Salsa <mike@josemadrid.net>',
+  from: 'Jose Madrid Salsa <mike@josemadridsalsa.com>',
   html: buildHtml(),
   variables: [
     { key: 'PARTICIPANT_NAME', type: 'string' },
     { key: 'FUNDRAISER_NAME', type: 'string' },
     { key: 'REFERRAL_CODE', type: 'string' },
     { key: 'FUNDRAISER_URL', type: 'string' },
-    { key: 'SUPPORT_EMAIL', type: 'string', fallbackValue: 'fundraising@josemadridsalsa.com' },
+    { key: 'SUPPORT_EMAIL', type: 'string', fallbackValue: 'mike@josemadridsalsa.com' },
   ],
 }

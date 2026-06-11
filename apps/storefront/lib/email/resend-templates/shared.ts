@@ -149,7 +149,7 @@ export function footer(): string {
     <p style="margin:8px 0;font-size:14px;color:${colors.textMuted};${font}line-height:1.5;text-align:center;">Jose Madrid Salsa</p>
     <p style="margin:8px 0;font-size:14px;color:${colors.textMuted};${font}line-height:1.5;text-align:center;">123 Main Street, Austin, TX 78701</p>
     <p style="margin:8px 0;font-size:14px;color:${colors.textMuted};${font}line-height:1.5;text-align:center;">
-      Questions? Email us at <a href="mailto:support@josemadrid.net" style="color:${colors.link};text-decoration:none;">support@josemadrid.net</a>
+      Questions? Email us at <a href="mailto:mike@josemadridsalsa.com" style="color:${colors.link};text-decoration:none;">mike@josemadridsalsa.com</a>
     </p>
     <p style="margin:16px 0 8px 0;font-size:12px;color:${colors.textLight};${font}line-height:1.5;text-align:center;">
       <a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:${colors.link};text-decoration:none;">Unsubscribe</a>
@@ -210,7 +210,7 @@ ${bodyRows}
 
 /* ── Support blurb ──────────────────────────────────────── */
 
-export function supportBlurb(email = 'orders@josemadridsalsa.com'): string {
+export function supportBlurb(email = 'mike@josemadridsalsa.com'): string {
   return `
 <tr>
   <td style="padding:24px 48px 0 48px;">

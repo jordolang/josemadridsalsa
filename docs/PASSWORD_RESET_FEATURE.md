@@ -74,7 +74,7 @@ Branded HTML email with:
 # Already configured in your .env file
 NEXTAUTH_URL=http://localhost:3000  # Update for production
 RESEND_API_KEY=re_...
-FROM_EMAIL=orders@josemadridsalsa.com
+FROM_EMAIL=mike@josemadridsalsa.com
 ```
 
 ## Testing Checklist

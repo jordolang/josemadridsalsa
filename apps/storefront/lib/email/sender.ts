@@ -108,7 +108,7 @@ export async function sendEmail(
   configId?: string
 ): Promise<{ success: boolean; error?: string; messageId?: string }> {
   const defaultFrom =
-    process.env.FROM_EMAIL || 'Jose Madrid Salsa <mike@josemadrid.net>'
+    process.env.FROM_EMAIL || 'Jose Madrid Salsa <mike@josemadridsalsa.com>'
 
   // Primary: Resend API
   if (resend) {

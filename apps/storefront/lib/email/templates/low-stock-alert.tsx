@@ -24,7 +24,7 @@ export function LowStockAlertEmail({
   recipientName,
   products,
   inventoryUrl,
-  supportEmail = 'support@josemadridsalsa.com',
+  supportEmail = 'mike@josemadridsalsa.com',
   unsubscribeUrl,
 }: LowStockAlertEmailProps) {
   const productCount = products.length

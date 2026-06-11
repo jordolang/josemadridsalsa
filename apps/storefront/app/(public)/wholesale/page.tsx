@@ -276,10 +276,10 @@ export default function WholesalePage() {
                 <h3 className="text-xl font-bold mb-2">Email Us</h3>
                 <p className="text-salsa-100 mb-4">Get in touch via email for detailed discussions</p>
                 <a 
-                  href="mailto:mike@josemadrid.net"
+                  href="mailto:mike@josemadridsalsa.com"
                   className="text-yellow-300 hover:text-yellow-200 font-semibold transition-colors"
                 >
-                  mike@josemadrid.net
+                  mike@josemadridsalsa.com
                 </a>
               </div>
               

@@ -514,7 +514,7 @@ async function main() {
   await seedNutritionAndIngredients(prisma)
 
   // Prepare seeded credentials
-  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@josemadridsalsa.com'
+  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'mike@josemadridsalsa.com'
   const adminPassword =
     process.env.SEED_ADMIN_PASSWORD ?? 'admin123456' // Change for production environments
   const customerEmail = process.env.SEED_CUSTOMER_EMAIL ?? 'customer@example.com'

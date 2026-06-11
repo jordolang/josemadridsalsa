@@ -306,7 +306,7 @@ Resend API key for email delivery. System will fail gracefully if missing.
 
 **FROM_EMAIL**  
 Default sender email address.  
-Default: `Jose Madrid Salsa <mike@josemadrid.net>`
+Default: `Jose Madrid Salsa <mike@josemadridsalsa.com>`
 
 **NEXT_PUBLIC_BASE_URL**  
 Base URL for unsubscribe links and web content.  

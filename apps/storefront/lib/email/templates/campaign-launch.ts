@@ -25,7 +25,7 @@ export function CampaignLaunchEmail({
   startDate,
   endDate,
   goalAmount,
-  supportEmail = 'fundraising@josemadridsalsa.com',
+  supportEmail = 'mike@josemadridsalsa.com',
   unsubscribeUrl,
 }: CampaignLaunchEmailProps) {
   const previewText = `Your ${campaignName} fundraiser is ready to launch!`

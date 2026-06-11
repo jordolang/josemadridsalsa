@@ -58,7 +58,7 @@ vi.mock('@/lib/auth/session', () => ({
   getCurrentUser: vi.fn(() =>
     Promise.resolve({
       id: 'admin-user-123',
-      email: 'admin@josemadrid.com',
+      email: 'mike@josemadridsalsa.com',
       name: 'Admin User',
       role: 'ADMIN',
     })

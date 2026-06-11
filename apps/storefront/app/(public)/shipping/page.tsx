@@ -96,14 +96,14 @@ export default function ShippingPolicyPage() {
               <li>Check with neighbors or household members who may have accepted the delivery.</li>
               <li>Look around your delivery location for a safe place the carrier may have left the package.</li>
               <li>Contact the carrier directly using your tracking number for more information.</li>
-              <li>If you still cannot locate your package, contact us at support@josemadrid.net and we will assist you.</li>
+              <li>If you still cannot locate your package, contact us at mike@josemadridsalsa.com and we will assist you.</li>
             </ul>
 
             <h2>Damaged or Lost Packages</h2>
             <p>
               While rare, packages may occasionally be damaged during shipping. If you receive a damaged package,
               please take photos of the packaging and product and contact us immediately at
-              <a href="mailto:support@josemadrid.net"> support@josemadrid.net</a>. We will work with you and the
+              <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a>. We will work with you and the
               carrier to resolve the issue. For lost packages, we will investigate with the carrier and provide
               a replacement or refund as appropriate.
             </p>
@@ -127,7 +127,7 @@ export default function ShippingPolicyPage() {
             <h2>Contact Us</h2>
             <p>
               If you have questions about shipping, tracking, or delivery, please contact us at
-              <a href="mailto:support@josemadrid.net"> support@josemadrid.net</a>. We're here to help ensure
+              <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a>. We're here to help ensure
               your order arrives safely and on time.
             </p>
           </div>

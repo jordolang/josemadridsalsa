@@ -187,7 +187,7 @@ export const SCHOOL_FUNDRAISING_TEMPLATE: DefaultTemplate = {
           </p>
           <table cellpadding="0" cellspacing="0" border="0" align="center">
             <tr><td bgcolor="#b91c1c" style="border-radius:8px;padding:14px 36px;">
-              <a href="mailto:fundraising@josemadridsalsa.com" style="color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;font-family:Arial,Helvetica,sans-serif;">Start Raising Money Today &#8594;</a>
+              <a href="mailto:mike@josemadridsalsa.com" style="color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;font-family:Arial,Helvetica,sans-serif;">Start Raising Money Today &#8594;</a>
             </td></tr>
           </table>
           <p style="margin:16px 0 0;color:#9ca3af;font-size:13px;font-family:Arial,Helvetica,sans-serif;">No contracts. No minimums. No risk.</p>
@@ -329,7 +329,7 @@ export const BUSINESS_OUTREACH_TEMPLATE: DefaultTemplate = {
           </p>
           <table cellpadding="0" cellspacing="0" border="0" align="center">
             <tr><td bgcolor="#b91c1c" style="border-radius:8px;padding:14px 36px;">
-              <a href="mailto:wholesale@josemadridsalsa.com" style="color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;font-family:Arial,Helvetica,sans-serif;">Request Wholesale Pricing &#8594;</a>
+              <a href="mailto:mike@josemadridsalsa.com" style="color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;font-family:Arial,Helvetica,sans-serif;">Request Wholesale Pricing &#8594;</a>
             </td></tr>
           </table>
           <p style="margin:16px 0 0;color:#9ca3af;font-size:13px;font-family:Arial,Helvetica,sans-serif;">No commitment required. Just a conversation.</p>

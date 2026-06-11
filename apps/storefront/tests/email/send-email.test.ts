@@ -8,7 +8,7 @@ import React from 'react'
 
 // Set environment variables before any imports
 process.env.RESEND_API_KEY = 'test_resend_api_key_12345'
-process.env.FROM_EMAIL = 'Jose Madrid Salsa <mike@josemadrid.net>'
+process.env.FROM_EMAIL = 'Jose Madrid Salsa <mike@josemadridsalsa.com>'
 process.env.NEXT_PUBLIC_BASE_URL = 'https://josemadrid.net'
 
 // Mock Resend client with proper constructor
@@ -75,7 +75,7 @@ describe('sendEmail', () => {
       expect(result.messageId).toBe('email-123')
       expect(render).toHaveBeenCalled()
       expect(mockResendSend).toHaveBeenCalledWith({
-        from: 'Jose Madrid Salsa <mike@josemadrid.net>',
+        from: 'Jose Madrid Salsa <mike@josemadridsalsa.com>',
         to: 'customer@example.com',
         subject: 'Test Email',
         html: '<html><body>Test Email</body></html>',

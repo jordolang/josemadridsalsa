@@ -353,7 +353,7 @@ NEXT_PUBLIC_LAUNCH_DATE=2025-01-27
 ```tsx
 // seed-demo-user.ts
 const demoUser = {
-  email: 'demo@josemadridsalsa.com',
+  email: 'mike@josemadridsalsa.com',
   password: 'demo123', // Use strong password in production
   role: 'admin',
   name: 'Demo User'

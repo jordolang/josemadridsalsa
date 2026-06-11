@@ -876,7 +876,7 @@ curl -X GET "https://josemadrid.net/api/orders?status=PENDING&skip=0&take=10&sor
 ## Support
 
 For API support or questions:
-- **Email:** support@josemadrid.net
+- **Email:** mike@josemadridsalsa.com
 - **Documentation:** https://salsadocs.vercel.app
 - **Status Page:** https://status.josemadrid.net
 

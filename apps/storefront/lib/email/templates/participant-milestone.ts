@@ -23,7 +23,7 @@ export function ParticipantMilestoneEmail({
   totalSales,
   totalRaised,
   dashboardUrl,
-  supportEmail = 'fundraising@josemadridsalsa.com',
+  supportEmail = 'mike@josemadridsalsa.com',
   unsubscribeUrl,
 }: ParticipantMilestoneEmailProps) {
   const previewText = `Congratulations! You've reached ${milestone} sales!`

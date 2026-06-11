@@ -194,7 +194,7 @@ export const refundProcessedTemplate: EmailTemplateDefinition = {
       <h3 style="color:#dc2626;font-size:18px;margin-bottom:15px;">We'd Love Your Feedback</h3>
       <p style="margin-bottom:20px;">If you have a moment, please let us know what went wrong so we can make it right:</p>
       <div style="text-align:center;margin:30px 0;">
-        <a href="mailto:support@josemadridsalsa.com" style="${baseStyles.button}">Share Feedback</a>
+        <a href="mailto:mike@josemadridsalsa.com" style="${baseStyles.button}">Share Feedback</a>
       </div>
       <p style="margin-top:30px;">Thank you for giving us a try.</p>
       <p style="margin-top:10px;"><strong>The Jose Madrid Salsa Team</strong></p>

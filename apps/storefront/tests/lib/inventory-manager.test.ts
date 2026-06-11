@@ -57,7 +57,7 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Set environment variables for testing
-    process.env.INVENTORY_ALERT_EMAILS = 'admin@josemadrid.net,inventory@josemadrid.net';
+    process.env.INVENTORY_ALERT_EMAILS = 'mike@josemadridsalsa.com,mike@josemadridsalsa.com';
     process.env.RESEND_API_KEY = 'test-api-key';
     process.env.NEXTAUTH_URL = 'http://localhost:3000';
   });
@@ -112,7 +112,7 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
       vi.mocked(prisma.inventoryAlert.update).mockResolvedValue({
         ...mockAlert,
         notifiedAt: new Date(),
-        notifiedTo: ['admin@josemadrid.net', 'inventory@josemadrid.net'],
+        notifiedTo: ['mike@josemadridsalsa.com', 'mike@josemadridsalsa.com'],
       } as any);
 
       // Step 1: Reduce stock below threshold (from 12 to 3)
@@ -202,7 +202,7 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
       const { sendEmail } = await import('@/lib/email');
 
       const result = await sendLowStockEmail(
-        'admin@josemadrid.net',
+        'mike@josemadridsalsa.com',
         'Test Salsa',
         'TST-001',
         'prod-1',
@@ -215,7 +215,7 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
       expect(sendEmail).toHaveBeenCalledTimes(1);
       const emailCall = vi.mocked(sendEmail).mock.calls[0][0];
 
-      expect(emailCall.to).toBe('admin@josemadrid.net');
+      expect(emailCall.to).toBe('mike@josemadridsalsa.com');
       expect(emailCall.subject).toContain('LOW STOCK ALERT');
       expect(emailCall.subject).toContain('Test Salsa');
       expect(emailCall.html).toContain('Test Salsa');
@@ -230,7 +230,7 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
       const { sendEmail } = await import('@/lib/email');
 
       await sendLowStockEmail(
-        'admin@josemadrid.net',
+        'mike@josemadridsalsa.com',
         'Test Salsa',
         'TST-001',
         'prod-1',
@@ -251,7 +251,7 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
       const { sendEmail } = await import('@/lib/email');
 
       const result = await sendLowStockEmail(
-        'admin@josemadrid.net',
+        'mike@josemadridsalsa.com',
         'Test Salsa',
         'TST-001',
         'prod-1',
@@ -269,7 +269,7 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
       vi.mocked(sendEmail).mockRejectedValueOnce(new Error('Email service unavailable'));
 
       const result = await sendLowStockEmail(
-        'admin@josemadrid.net',
+        'mike@josemadridsalsa.com',
         'Test Salsa',
         'TST-001',
         'prod-1',
@@ -977,7 +977,7 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
         stockLevel: 0,
         recommendedQty: 60,
         sentAt: new Date(),
-        sentTo: ['admin@josemadrid.net', 'inventory@josemadrid.net'],
+        sentTo: ['mike@josemadridsalsa.com', 'mike@josemadridsalsa.com'],
         createdAt: new Date(),
       };
       vi.mocked(prisma.restockNotification.create).mockResolvedValue(mockNotification as any);
@@ -1008,7 +1008,7 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
         data: expect.objectContaining({
           productId: 'prod-1',
           stockLevel: 0,
-          sentTo: ['admin@josemadrid.net', 'inventory@josemadrid.net'],
+          sentTo: ['mike@josemadridsalsa.com', 'mike@josemadridsalsa.com'],
         }),
       });
 
@@ -1246,7 +1246,7 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
         stockLevel: 2,
         recommendedQty: 13,
         sentAt: new Date(),
-        sentTo: ['admin@josemadrid.net', 'inventory@josemadrid.net'],
+        sentTo: ['mike@josemadridsalsa.com', 'mike@josemadridsalsa.com'],
         createdAt: new Date(),
       };
       vi.mocked(prisma.restockNotification.create).mockResolvedValue(mockNotification as any);
@@ -1267,7 +1267,7 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
           stockLevel: 2,
           recommendedQty: 13, // 3x threshold (15) - current stock (2)
           sentAt: expect.any(Date),
-          sentTo: ['admin@josemadrid.net', 'inventory@josemadrid.net'],
+          sentTo: ['mike@josemadridsalsa.com', 'mike@josemadridsalsa.com'],
         },
       });
 
@@ -1276,7 +1276,7 @@ describe('Inventory Manager - Low Stock Alert Flow', () => {
       expect(result.notification?.productId).toBe('prod-1');
       expect(result.notification?.stockLevel).toBe(2);
       expect(result.notification?.recommendedQty).toBe(13);
-      expect(result.notification?.sentTo).toEqual(['admin@josemadrid.net', 'inventory@josemadrid.net']);
+      expect(result.notification?.sentTo).toEqual(['mike@josemadridsalsa.com', 'mike@josemadridsalsa.com']);
     });
   });
 });

@@ -12,7 +12,7 @@ import { FooterNewsletterSignup } from '@/components/store/footer-newsletter-sig
 import { LeaveAReview } from '@/components/reviews/leave-a-review'
 
 const supportPhone = process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? '(740) 521-4304'
-const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? 'mike@josemadrid.net'
+const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? 'mike@josemadridsalsa.com'
 const headquartersLocation = process.env.NEXT_PUBLIC_HQ_LOCATION ?? '601 Putnam Ave, Zanesville, OH 43701'
 const googleBusinessUrl = process.env.NEXT_PUBLIC_GOOGLE_BUSINESS_URL ?? 'https://g.page/jose-madrid-salsa/review'
 
@@ -49,6 +49,7 @@ const serviceLinks = [
 ]
 
 const helpfulLinks = [
+  { text: 'Contact Us', href: '/contact' },
   { text: 'Wholesale Program', href: '/wholesale' },
   { text: 'Retail Partner Resources', href: '/forms' },
   { text: 'Documentation', href: 'https://salsadocs.vercel.app' },
