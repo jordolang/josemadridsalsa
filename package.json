@@ -14,7 +14,6 @@
     "dev:storefront": "turbo run dev --filter=@jose-madrid/storefront --env-mode=loose",
     "dev:backend": "turbo run dev --filter=@jose-madrid/backend --env-mode=loose",
     "dev:fundraising": "turbo run dev --filter=@jose-madrid/fundraising --env-mode=loose",
-    "dev:ios": "turbo run ios --filter=@jose-madrid/ios --env-mode=loose",
     "start": "npm run start --workspace=@jose-madrid/storefront",
     "build": "turbo run build --env-mode=loose",
     "lint": "turbo run lint --env-mode=loose",

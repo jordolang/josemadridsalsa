@@ -27,7 +27,7 @@ Every AI agent operating in this repository must:
 2. **Preserve functionality** — Never alter logic, remove working features, or change behavior unless explicitly asked.
 3. **Follow the conventions below** — These rules are not suggestions; they are the standard for this codebase.
 4. **Validate changes** — Run lint, type-check, and tests after every meaningful change.
-5. **Keep documentation current** — When adding features or changing behavior, update the relevant `docs/` file.
+5. **Keep documentation current** — When adding features or changing behavior, update the relevant documentation in the [salsadocs](https://github.com/jordolang/salsadocs) repository.
 6. **Respect the non-negotiables** — See [Security & Non-Negotiables](#security--non-negotiables).
 
 ---
@@ -39,10 +39,8 @@ josemadridsalsa/
 ├── apps/
 │   ├── storefront/       # Main Next.js commerce app and legacy route implementations
 │   ├── fundraising/      # Fundraising-only deployment boundary
-│   ├── backend/          # API-only deployment boundary
-│   └── ios/              # Expo/React Native iOS application
+│   └── backend/          # API-only deployment boundary
 ├── packages/             # Shared workspace packages extracted from applications
-├── docs/                 # All project documentation
 ├── package.json          # npm workspace commands
 └── turbo.json            # Turborepo task graph
 ```
@@ -53,7 +51,7 @@ josemadridsalsa/
 - New backend route logic belongs in `apps/backend/`.
 - New fundraising-only UI belongs in `apps/fundraising/`.
 - Shared cross-application contracts belong in `packages/`.
-- See `docs/TURBOREPO_ARCHITECTURE.md` before moving legacy routes.
+- See `TURBOREPO_ARCHITECTURE.md` in the [salsadocs](https://github.com/jordolang/salsadocs) repository before moving legacy routes.
 
 ---
 
@@ -169,46 +167,12 @@ Every PR must include:
 
 ## Documentation Standards
 
-- **All documentation lives in `docs/`** — no exceptions (except the root-level standard files below).
+- **All documentation lives in the [salsadocs](https://github.com/jordolang/salsadocs) repository** — no exceptions (except the root-level standard files below).
 - **Root-level documentation files allowed:** `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `AGENTS.md`.
 - **No documentation files elsewhere** — do not create `.md` files in `app/`, `lib/`, `scripts/`, etc.
 - **File naming:** `UPPER_SNAKE_CASE.md` (e.g., `ENVIRONMENT_SETUP.md`).
-- **Documentation hub:** `docs/index.md` — update it when adding new docs.
 - **Versioning:** Maintain `CHANGELOG.md` with entries under `[Unreleased]` during development; tag on release.
 - **No real values** in documentation — use placeholder names for env vars, never actual keys or passwords.
-
-### Documentation Structure (docs/)
-
-```
-docs/
-├── index.md                    # Documentation hub (always up-to-date)
-├── ENVIRONMENT_SETUP.md        # Local development setup
-├── ENVIRONMENT_VARIABLES.md    # All env var definitions (names only)
-├── DATABASE.md                 # Database setup and troubleshooting
-├── ENCRYPTION_SETUP.md         # Encryption configuration
-├── NEXTAUTH_PRODUCTION_CONFIG.md  # NextAuth production setup
-├── API.md                      # REST API reference
-├── ADMIN_LOGIN_GUIDE.md        # Admin dashboard guide
-├── STRIPE_WEBHOOK_SETUP.md     # Stripe webhook configuration
-├── EMAIL_DNS_SETUP.md          # Email / DNS setup
-├── GOOGLE_MAPS_SETUP.md        # Google Maps integration
-├── GOOGLE_PLACES_SETUP.md      # Google Places integration
-├── GOOGLE_REVIEWS_SETUP.md     # Google Reviews setup
-├── GOOGLE_CALENDAR_SETUP.md    # Google Calendar integration
-├── GITHUB_INTEGRATION.md       # GitHub Actions / CI
-├── SHOPIFY_INTEGRATION.md      # Shopify data migration
-├── SHOPIFY_WEBHOOK_SETUP.md    # Shopify webhook configuration
-├── IMAGE_MANAGEMENT.md         # Image upload/management
-├── PRODUCT_IMPORT.md           # Product import guide
-├── PRODUCT_PHOTOGRAPHY.md      # Photography standards
-├── PASSWORD_RESET_FEATURE.md   # Password reset flow
-├── LOCATION_MAP_FEATURE.md     # Retail location map
-├── JSDOC_CONVENTIONS.md        # JSDoc standards
-├── PERFORMANCE.md              # Performance notes
-├── openapi.yaml                # OpenAPI spec
-├── import-infrastructure/      # Data import analysis docs
-└── stripe/                     # Stripe-specific documentation
-```
 
 ---
 
@@ -217,7 +181,7 @@ docs/
 - Secrets live in `.env.local` — **never commit this file**.
 - Required variables before first run: `DATABASE_URL`, `NEXTAUTH_SECRET`, `MASTER_KEY`.
 - After every schema change: run `npm run db:generate` and commit the generated client changes.
-- Document any new environment variable in `docs/ENVIRONMENT_VARIABLES.md` by name and purpose — **never include actual values**.
+- Document any new environment variable in `ENVIRONMENT_VARIABLES.md` in the [salsadocs](https://github.com/jordolang/salsadocs) repository by name and purpose — **never include actual values**.
 - Production secrets are managed through **Vercel environment variables**.
 
 ---
@@ -231,7 +195,7 @@ docs/
 1. **Commit API keys, secrets, tokens, or passwords** — Not in code, not in docs, not in comments.
 2. **Commit `.env` files** of any kind (`.env`, `.env.local`, `.env.production`, etc.).
 3. **Include actual secret values** in any documentation, README, or markdown file.
-4. **Create documentation files outside `docs/`** (except the allowed root-level files listed above).
+4. **Create documentation files in this repository** (except the allowed root-level files listed above) — documentation belongs in the [salsadocs](https://github.com/jordolang/salsadocs) repository.
 5. **Lower test coverage thresholds** — If tests are failing, fix the code, not the thresholds.
 6. **Bypass the linter** — Fix lint errors; do not add `eslint-disable` comments without strong justification.
 7. **Use `any` in TypeScript** without an explicit, justified comment.
@@ -242,7 +206,7 @@ docs/
 1. **Validate all user input** with Zod schemas before processing.
 2. **Use parameterized queries** through Prisma — never build raw SQL strings.
 3. **Run the quality checks** (`vitest run`, `lint`, `type-check`) before any commit.
-4. **Keep the `docs/` directory clean** — Only documented, purposeful files.
+4. **Keep documentation in [salsadocs](https://github.com/jordolang/salsadocs) current** — Only documented, purposeful files.
 5. **Update `CHANGELOG.md`** when adding a feature, fixing a bug, or making a breaking change.
 6. **Report discovered security vulnerabilities** privately per `SECURITY.md`.
 
