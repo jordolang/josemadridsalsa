@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { ok, fail, serverError } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
+import { developerApiErrorResponse } from '@/lib/developer/api-errors'
 import { readRepoMarkdownFile } from '@/lib/developer/repo-docs'
 import { convertMarkdownToFumadocs, slugifyDocName } from '@/lib/developer/salsadocs'
 
@@ -45,12 +46,6 @@ export async function POST(req: NextRequest) {
       suggestedSlug: slugifyDocName(fileName),
     })
   } catch (error: unknown) {
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return fail('Unauthorized', 401)
-    }
-    if (error instanceof Error && error.message.includes('Forbidden')) {
-      return fail('Forbidden', 403)
-    }
-    return serverError('Failed to convert markdown file', error)
+    return developerApiErrorResponse(error) ?? serverError('Failed to convert markdown file', error)
   }
 }

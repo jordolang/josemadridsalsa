@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
 import { ok, fail, serverError } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
-import { getSalsadocsFile, SalsadocsError } from '@/lib/developer/salsadocs'
+import { developerApiErrorResponse } from '@/lib/developer/api-errors'
+import { getSalsadocsFile } from '@/lib/developer/salsadocs'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -23,15 +24,6 @@ export async function GET(req: NextRequest) {
     const file = await getSalsadocsFile(path)
     return ok(file)
   } catch (error: unknown) {
-    if (error instanceof SalsadocsError) {
-      return fail(error.message, error.status)
-    }
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return fail('Unauthorized', 401)
-    }
-    if (error instanceof Error && error.message.includes('Forbidden')) {
-      return fail('Forbidden', 403)
-    }
-    return serverError('Failed to fetch the document', error)
+    return developerApiErrorResponse(error) ?? serverError('Failed to fetch the document', error)
   }
 }

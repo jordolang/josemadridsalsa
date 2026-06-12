@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { ok, fail, serverError } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
-import { BlobUploadError } from '@/lib/blob-storage'
+import { developerApiErrorResponse } from '@/lib/developer/api-errors'
 import { deleteBlobFiles, listBlobDirectory } from '@/lib/developer/blob-explorer'
 
 export const runtime = 'nodejs'
@@ -12,19 +12,6 @@ export const dynamic = 'force-dynamic'
 const deleteBlobSchema = z.object({
   urls: z.array(z.string().min(1)).min(1).max(100),
 })
-
-function toErrorResponse(error: unknown) {
-  if (error instanceof BlobUploadError) {
-    return fail(error.message, error.status)
-  }
-  if (error instanceof Error && error.message.includes('Unauthorized')) {
-    return fail('Unauthorized', 401)
-  }
-  if (error instanceof Error && error.message.includes('Forbidden')) {
-    return fail('Forbidden', 403)
-  }
-  return null
-}
 
 /**
  * GET /api/developer/admin/blob?prefix=dir/&cursor=...
@@ -42,7 +29,7 @@ export async function GET(req: NextRequest) {
 
     return ok(listing)
   } catch (error: unknown) {
-    return toErrorResponse(error) ?? serverError('Failed to list blob storage', error)
+    return developerApiErrorResponse(error) ?? serverError('Failed to list blob storage', error)
   }
 }
 
@@ -74,6 +61,6 @@ export async function DELETE(req: NextRequest) {
 
     return ok({ deleted: parsed.data.urls.length })
   } catch (error: unknown) {
-    return toErrorResponse(error) ?? serverError('Failed to delete blob files', error)
+    return developerApiErrorResponse(error) ?? serverError('Failed to delete blob files', error)
   }
 }

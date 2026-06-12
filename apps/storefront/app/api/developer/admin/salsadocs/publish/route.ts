@@ -2,8 +2,9 @@ import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { ok, fail, serverError } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
+import { developerApiErrorResponse } from '@/lib/developer/api-errors'
 import { logAuditWithRequest } from '@/lib/audit'
-import { getSalsadocsConfig, putSalsadocsFile, SalsadocsError } from '@/lib/developer/salsadocs'
+import { getSalsadocsConfig, putSalsadocsFile } from '@/lib/developer/salsadocs'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -57,15 +58,6 @@ export async function POST(req: NextRequest) {
 
     return ok(result, result.created ? 201 : 200)
   } catch (error: unknown) {
-    if (error instanceof SalsadocsError) {
-      return fail(error.message, error.status)
-    }
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return fail('Unauthorized', 401)
-    }
-    if (error instanceof Error && error.message.includes('Forbidden')) {
-      return fail('Forbidden', 403)
-    }
-    return serverError('Failed to publish the document', error)
+    return developerApiErrorResponse(error) ?? serverError('Failed to publish the document', error)
   }
 }

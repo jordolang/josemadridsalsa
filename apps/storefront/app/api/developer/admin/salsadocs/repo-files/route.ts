@@ -1,5 +1,6 @@
-import { ok, fail, serverError } from '@/lib/api'
+import { ok, serverError } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
+import { developerApiErrorResponse } from '@/lib/developer/api-errors'
 import { listRepoMarkdownFiles } from '@/lib/developer/repo-docs'
 
 export const runtime = 'nodejs'
@@ -16,12 +17,6 @@ export async function GET() {
     const files = await listRepoMarkdownFiles()
     return ok({ files })
   } catch (error: unknown) {
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return fail('Unauthorized', 401)
-    }
-    if (error instanceof Error && error.message.includes('Forbidden')) {
-      return fail('Forbidden', 403)
-    }
-    return serverError('Failed to list repository markdown files', error)
+    return developerApiErrorResponse(error) ?? serverError('Failed to list repository markdown files', error)
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { ok, fail, serverError } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
+import { developerApiErrorResponse } from '@/lib/developer/api-errors'
 import prisma from '@/lib/prisma'
 import {
   DEFAULT_DEVELOPER_PAGE_CONTENT,
@@ -11,16 +12,6 @@ import {
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-function authError(error: unknown) {
-  if (error instanceof Error && error.message.includes('Unauthorized')) {
-    return fail('Unauthorized', 401)
-  }
-  if (error instanceof Error && error.message.includes('Forbidden')) {
-    return fail('Forbidden', 403)
-  }
-  return null
-}
 
 /**
  * GET /api/developer/admin/content
@@ -32,7 +23,7 @@ export async function GET() {
     const content = await getDeveloperPageContent()
     return ok({ content, defaults: DEFAULT_DEVELOPER_PAGE_CONTENT })
   } catch (error: unknown) {
-    return authError(error) ?? serverError('Failed to load developer page content', error)
+    return developerApiErrorResponse(error) ?? serverError('Failed to load developer page content', error)
   }
 }
 
@@ -69,7 +60,7 @@ export async function PUT(req: NextRequest) {
 
     return ok({ content: parsed.data })
   } catch (error: unknown) {
-    return authError(error) ?? serverError('Failed to save developer page content', error)
+    return developerApiErrorResponse(error) ?? serverError('Failed to save developer page content', error)
   }
 }
 
@@ -94,6 +85,6 @@ export async function DELETE(req: NextRequest) {
 
     return ok({ content: DEFAULT_DEVELOPER_PAGE_CONTENT })
   } catch (error: unknown) {
-    return authError(error) ?? serverError('Failed to reset developer page content', error)
+    return developerApiErrorResponse(error) ?? serverError('Failed to reset developer page content', error)
   }
 }

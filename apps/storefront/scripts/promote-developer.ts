@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { withAccelerate } from '@prisma/extension-accelerate'
+import { DEVELOPER_ACCOUNT_EMAIL } from '../lib/developer/constants'
 
 const baseClient = new PrismaClient()
 const prisma = process.env.DATABASE_URL?.includes('prisma+postgres://')
@@ -7,7 +8,7 @@ const prisma = process.env.DATABASE_URL?.includes('prisma+postgres://')
   : baseClient
 
 async function main() {
-  const email = (process.env.DEVELOPER_EMAIL || 'jordolang@gmail.com').toLowerCase().trim()
+  const email = (process.env.DEVELOPER_EMAIL || DEVELOPER_ACCOUNT_EMAIL).toLowerCase().trim()
 
   console.log(`Promoting ${email} to DEVELOPER (super admin)...`)
 
