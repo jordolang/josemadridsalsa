@@ -71,13 +71,16 @@ interface RepoMarkdownFile {
 
 const ROOT_SECTION = '__root__'
 
+// Preserves "/" so nested documents (e.g. guides/setup.mdx) keep their path.
 function slugify(value: string): string {
   return value
     .toLowerCase()
     .replace(/\.mdx?$/, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 100)
+    .split('/')
+    .map((segment) => segment.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''))
+    .filter(Boolean)
+    .join('/')
+    .slice(0, 200)
 }
 
 export function SalsadocsManager() {
@@ -475,7 +478,10 @@ export function SalsadocsManager() {
               <Input
                 id="doc-slug"
                 value={slug}
-                onChange={(e) => setSlug(slugify(e.target.value) || e.target.value.toLowerCase())}
+                onChange={(e) =>
+                  setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9/-]+/g, '-'))
+                }
+                onBlur={() => setSlug((current) => slugify(current) || current)}
                 placeholder="getting-started"
                 className="font-mono"
               />

@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
 
     const conversion = convertMarkdownToFumadocs(markdown, {
       fallbackTitle: fileName.replace(/\.mdx?$/i, '').replace(/[-_]+/g, ' '),
+      mdxInput: /\.mdx$/i.test(fileName),
     })
 
     return ok({

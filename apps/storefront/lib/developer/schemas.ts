@@ -31,7 +31,7 @@ export const developerBlogPostSchema = z.object({
     ),
   excerpt: z.string().trim().min(10).max(500),
   content: z.string().min(50).max(100_000),
-  coverImage: z.string().url().optional(),
+  coverImage: z.string().url().nullable().optional(),
   tags: z.array(z.string()).default([]),
   published: z.boolean().default(false),
 })

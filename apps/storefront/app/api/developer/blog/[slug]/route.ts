@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { ok, fail, notFound, serverError } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import { developerBlogPostSchema } from '@/lib/developer/schemas'
 import prisma from '@/lib/prisma'
 
@@ -41,7 +42,7 @@ export async function PATCH(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    await requirePermission('developer:blog')
+    const user = await requirePermission('developer:blog')
 
     const { slug } = await params
     const body = await req.json()
@@ -78,6 +79,17 @@ export async function PATCH(
       data,
     })
 
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'developer.blog.update',
+        entityType: 'developer_blog_post',
+        entityId: updated.id,
+        changes: { slug: updated.slug, published: updated.published },
+      },
+      req,
+    )
+
     return ok(updated)
   } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('Unauthorized')) {
@@ -95,11 +107,11 @@ export async function PATCH(
  * Developer-only — delete a blog post.
  */
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    await requirePermission('developer:blog')
+    const user = await requirePermission('developer:blog')
 
     const { slug } = await params
 
@@ -109,6 +121,17 @@ export async function DELETE(
     }
 
     await prisma.developerBlogPost.delete({ where: { slug } })
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'developer.blog.delete',
+        entityType: 'developer_blog_post',
+        entityId: existing.id,
+        changes: { slug: existing.slug, title: existing.title },
+      },
+      req,
+    )
 
     return ok({ deleted: true })
   } catch (error: unknown) {

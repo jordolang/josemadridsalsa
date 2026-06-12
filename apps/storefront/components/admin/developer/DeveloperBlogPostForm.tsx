@@ -69,14 +69,13 @@ export function DeveloperBlogPostForm({ post }: { post?: DeveloperBlogPostFormVa
         slug: slug.trim(),
         excerpt: excerpt.trim(),
         content,
+        // null clears an existing cover image on update
+        coverImage: coverImage.trim() || null,
         tags: tags
           .split(',')
           .map((t) => t.trim())
           .filter(Boolean),
         published,
-      }
-      if (coverImage.trim()) {
-        payload.coverImage = coverImage.trim()
       }
 
       const res = await fetch(

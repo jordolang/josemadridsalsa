@@ -92,4 +92,27 @@ describe('convertMarkdownToFumadocs', () => {
     expect(result.mdx).toContain('title: "A \\"quoted\\" title"')
     expect(result.mdx).toContain('description: "Body."')
   })
+
+  it('replaces existing frontmatter instead of stacking a second block', () => {
+    const markdown = '---\ntitle: "Existing Title"\ndescription: Existing description\n---\n\nBody text.\n'
+    const result = convertMarkdownToFumadocs(markdown, { fallbackTitle: 'f' })
+    expect(result.title).toBe('Existing Title')
+    expect(result.description).toBe('Existing description')
+    expect(result.mdx.match(/^---$/gm)?.length).toBe(2)
+    expect(result.mdx).toContain('Body text.')
+  })
+
+  it('prefers an existing frontmatter title over the first H1', () => {
+    const markdown = "---\ntitle: 'FM Title'\n---\n\n# Heading Title\n\nBody.\n"
+    const result = convertMarkdownToFumadocs(markdown, { fallbackTitle: 'f' })
+    expect(result.title).toBe('FM Title')
+    expect(result.mdx).not.toContain('# Heading Title')
+  })
+
+  it('passes MDX input through without escaping JSX or expressions', () => {
+    const markdown = '# T\n\n<Card value={count}>Body {expr}</Card>\n'
+    const result = convertMarkdownToFumadocs(markdown, { fallbackTitle: 'f', mdxInput: true })
+    expect(result.mdx).toContain('<Card value={count}>Body {expr}</Card>')
+    expect(result.mdx).not.toContain('\\{')
+  })
 })

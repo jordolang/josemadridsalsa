@@ -98,7 +98,11 @@ export function BlobFileExplorer() {
         }
         setListing((prev) =>
           cursor && prev && prev.prefix === data.prefix
-            ? { ...data, files: [...prev.files, ...data.files] }
+            ? {
+                ...data,
+                folders: Array.from(new Set([...prev.folders, ...data.folders])),
+                files: [...prev.files, ...data.files],
+              }
             : data,
         )
       } catch (e) {

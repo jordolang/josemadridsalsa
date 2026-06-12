@@ -9,11 +9,16 @@ import { getSalsadocsConfig, putSalsadocsFile } from '@/lib/developer/salsadocs'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const sectionPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+// Slugs may contain "/" so nested documents (e.g. guides/setup) keep their path.
+const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/
 
 const publishSchema = z.object({
-  section: z.string().regex(slugPattern).max(100).nullable(),
-  slug: z.string().regex(slugPattern, 'Slug must be lowercase alphanumeric with hyphens').max(100),
+  section: z.string().regex(sectionPattern).max(100).nullable(),
+  slug: z
+    .string()
+    .regex(slugPattern, 'Slug must be lowercase alphanumeric with hyphens (and "/" for nesting)')
+    .max(200),
   mdx: z.string().min(1).max(500_000),
   message: z.string().trim().max(200).optional(),
 })

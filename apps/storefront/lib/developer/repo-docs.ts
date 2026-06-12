@@ -16,6 +16,8 @@ export interface RepoMarkdownFile {
   title: string | null
 }
 
+// Keep in sync with outputFileTracingExcludes in next.config.mjs — anything
+// excluded from serverless traces is invisible to the importer in production.
 const EXCLUDED_DIRS = new Set([
   'node_modules',
   '.git',
@@ -28,6 +30,9 @@ const EXCLUDED_DIRS = new Set([
   'coverage',
   'public',
   'data',
+  'docs',
+  'scripts',
+  'tests',
 ])
 
 const MAX_DEPTH = 6
