@@ -264,6 +264,39 @@ export const adminNavigation: NavItem[] = [
     icon: 'Lock',
     permission: 'credentials:read',
   },
+  {
+    label: 'Developer',
+    href: '/admin/developer',
+    icon: 'Terminal',
+    permission: 'developer:access',
+    children: [
+      {
+        label: 'Console',
+        href: '/admin/developer',
+        permission: 'developer:access',
+      },
+      {
+        label: 'File Explorer',
+        href: '/admin/developer/files',
+        permission: 'developer:blob',
+      },
+      {
+        label: 'Developer Blog',
+        href: '/admin/developer/blog',
+        permission: 'developer:blog',
+      },
+      {
+        label: 'Page Content',
+        href: '/admin/developer/content',
+        permission: 'developer:content',
+      },
+      {
+        label: 'Salsadocs',
+        href: '/admin/developer/salsadocs',
+        permission: 'developer:salsadocs',
+      },
+    ],
+  },
 ]
 
 /**

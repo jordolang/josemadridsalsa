@@ -50,6 +50,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const existing = await prisma.user.findUnique({ where: { id } })
     if (!existing) return fail('User not found', 404)
 
+    // The DEVELOPER (super admin) role and account can only be managed by a developer
+    if (currentUser.role !== 'DEVELOPER') {
+      if (data.role === 'DEVELOPER') {
+        return fail('Only a developer can assign the DEVELOPER role', 403)
+      }
+      if (existing.role === 'DEVELOPER') {
+        return fail('Only a developer can modify a DEVELOPER account', 403)
+      }
+    }
+
     // Hash password if provided
     const updateData: any = { ...data }
     if (data.password) {
@@ -89,6 +99,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     // Prevent deleting yourself
     if (existing.id === currentUser.id) {
       return fail('Cannot delete your own account', 400)
+    }
+
+    // The DEVELOPER (super admin) account can only be removed by a developer
+    if (existing.role === 'DEVELOPER' && currentUser.role !== 'DEVELOPER') {
+      return fail('Only a developer can delete a DEVELOPER account', 403)
     }
 
     await prisma.user.delete({ where: { id } })

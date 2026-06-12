@@ -48,6 +48,13 @@ export function isAdmin(user: { role: UserRole } | null): boolean {
 }
 
 /**
+ * Check if user is the developer (super admin)
+ */
+export function isDeveloper(user: { role: UserRole } | null): boolean {
+  return hasRole(user, [UserRole.DEVELOPER])
+}
+
+/**
  * Check if user is staff or higher (ADMIN, DEVELOPER, STAFF)
  */
 export function isStaff(user: { role: UserRole } | null): boolean {

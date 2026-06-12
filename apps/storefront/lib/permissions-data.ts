@@ -96,10 +96,24 @@ export const permissionDefinitions: PermissionDefinition[] = [
   { name: 'fundraiser:edit-page', description: 'Edit fundraiser profile page', category: 'FUNDRAISER_PORTAL' },
   { name: 'fundraiser:upload-assets', description: 'Upload logo, cover photo, gallery', category: 'FUNDRAISER_PORTAL' },
   { name: 'fundraiser:view-analytics', description: 'View own fundraiser analytics', category: 'FUNDRAISER_PORTAL' },
+
+  // Developer Console (super admin) — granted exclusively to the DEVELOPER role
+  { name: 'developer:access', description: 'Access the Developer Console', category: 'DEVELOPER' },
+  { name: 'developer:blob', description: 'Browse, upload, and delete files in the josemadridsalsa-blob store', category: 'DEVELOPER' },
+  { name: 'developer:blog', description: 'Manage developer blog posts', category: 'DEVELOPER' },
+  { name: 'developer:content', description: 'Edit the public developer page content', category: 'DEVELOPER' },
+  { name: 'developer:salsadocs', description: 'Manage Salsadocs documentation', category: 'DEVELOPER' },
+  { name: 'developer:system', description: 'View system status and platform controls', category: 'DEVELOPER' },
 ] as const
 
+const developerOnlyPermissions = permissionDefinitions
+  .filter((perm) => perm.category === 'DEVELOPER')
+  .map((perm) => perm.name)
+
 export const defaultRolePermissions: Record<UserRole, string[]> = {
-  ADMIN: permissionDefinitions.map((perm) => perm.name),
+  ADMIN: permissionDefinitions
+    .map((perm) => perm.name)
+    .filter((name) => !developerOnlyPermissions.includes(name)),
   DEVELOPER: permissionDefinitions.map((perm) => perm.name),
   STAFF: [
     'orders:read',

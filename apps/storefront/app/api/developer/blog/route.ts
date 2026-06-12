@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { ok, fail, serverError, parsePagination, paginated } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import { developerBlogPostSchema } from '@/lib/developer/schemas'
 import prisma from '@/lib/prisma'
 
@@ -50,11 +51,11 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/developer/blog
- * Admin-only — create a new blog post.
+ * Developer-only — create a new blog post.
  */
 export async function POST(req: NextRequest) {
   try {
-    await requirePermission('products:write')
+    const user = await requirePermission('developer:blog')
 
     const body = await req.json()
     const parsed = developerBlogPostSchema.safeParse(body)
@@ -83,6 +84,17 @@ export async function POST(req: NextRequest) {
         publishedAt: published ? new Date() : null,
       },
     })
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'developer.blog.create',
+        entityType: 'developer_blog_post',
+        entityId: post.id,
+        changes: { slug: post.slug, published: post.published },
+      },
+      req,
+    )
 
     return ok(post, 201)
   } catch (error: unknown) {

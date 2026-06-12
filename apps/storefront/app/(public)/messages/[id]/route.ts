@@ -11,7 +11,8 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') {
+  const role = (session?.user as any)?.role
+  if (!session?.user?.id || (role !== 'ADMIN' && role !== 'DEVELOPER')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const { id } = await context.params
@@ -28,7 +29,8 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') {
+  const role = (session?.user as any)?.role
+  if (!session?.user?.id || (role !== 'ADMIN' && role !== 'DEVELOPER')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const { id } = await context.params

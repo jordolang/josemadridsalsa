@@ -5,8 +5,14 @@ import Link from 'next/link'
 import { ExternalLink, Code2, Heart } from 'lucide-react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRef, useState } from 'react'
+import type { DeveloperPageContentData } from '@/lib/developer/page-content'
 
-export function DeveloperHero() {
+interface DeveloperHeroProps {
+  readonly content: DeveloperPageContentData
+}
+
+export function DeveloperHero({ content }: DeveloperHeroProps) {
+  const hero = content.hero
   const sectionRef = useRef<HTMLElement>(null)
   const [imageError, setImageError] = useState(false)
   const { scrollYProgress } = useScroll({
@@ -32,7 +38,7 @@ export function DeveloperHero() {
 
       <div className="relative container mx-auto px-4 py-20 lg:py-32">
         <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className={hero.showPhoto ? 'grid lg:grid-cols-2 gap-12 items-center' : 'grid gap-12 items-center'}>
             {/* Text content */}
             <div className="text-center lg:text-left order-2 lg:order-1">
               <motion.div
@@ -42,7 +48,7 @@ export function DeveloperHero() {
               >
                 <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
                   <Code2 className="w-4 h-4 text-chile-300" />
-                  <span className="text-chile-200 text-sm font-medium">Full-Stack Developer</span>
+                  <span className="text-chile-200 text-sm font-medium">{hero.badge}</span>
                 </div>
               </motion.div>
 
@@ -52,7 +58,7 @@ export function DeveloperHero() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.1, ease: 'easeOut' }}
               >
-                Jordan Lang
+                {hero.heading}
               </motion.h1>
 
               <motion.p
@@ -61,28 +67,25 @@ export function DeveloperHero() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
               >
-                Builder of this project from start to finish. Jose Madrid Salsa&apos;s entire
-                digital platform — designed, developed, and delivered completely free, as originally
-                promised.
+                {hero.intro}
               </motion.p>
 
               {/* Faith statement */}
-              <motion.div
-                className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-5 mb-8 max-w-lg mx-auto lg:mx-0"
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.3, ease: 'easeOut' }}
-              >
-                <div className="flex items-start gap-3">
-                  <Heart className="w-5 h-5 text-chile-300 mt-0.5 shrink-0" />
-                  <p className="text-salsa-100 font-serif italic leading-relaxed">
-                    &ldquo;Soli Deo Gloria&rdquo; — To God alone be the glory. &ldquo;As each has
-                    received a gift, use it to serve one another, as good stewards of God&apos;s
-                    varied grace&rdquo; (1 Peter 4:10). &ldquo;Let us not grow weary of doing good…
-                    as we have opportunity, let us do good to everyone&rdquo; (Galatians 6:9–10).
-                  </p>
-                </div>
-              </motion.div>
+              {hero.showFaithStatement && hero.faithStatement && (
+                <motion.div
+                  className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-5 mb-8 max-w-lg mx-auto lg:mx-0"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: 0.3, ease: 'easeOut' }}
+                >
+                  <div className="flex items-start gap-3">
+                    <Heart className="w-5 h-5 text-chile-300 mt-0.5 shrink-0" />
+                    <p className="text-salsa-100 font-serif italic leading-relaxed">
+                      {hero.faithStatement}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
 
               {/* CTA buttons */}
               <motion.div
@@ -92,24 +95,27 @@ export function DeveloperHero() {
                 transition={{ duration: 0.6, delay: 0.45, ease: 'easeOut' }}
               >
                 <Link
-                  href="https://jlang.dev"
+                  href={hero.primaryCtaHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 bg-white text-salsa-800 font-semibold px-6 py-3 rounded-lg hover:bg-salsa-50 transition-colors shadow-lg shadow-black/20"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  Visit jlang.dev
+                  {hero.primaryCtaLabel}
                 </Link>
-                <Link
-                  href="#timeline"
-                  className="inline-flex items-center gap-2 border border-white/30 text-white font-semibold px-6 py-3 rounded-lg hover:bg-white/10 transition-colors backdrop-blur-sm"
-                >
-                  View Project Timeline
-                </Link>
+                {content.sections.timeline && (
+                  <Link
+                    href="#timeline"
+                    className="inline-flex items-center gap-2 border border-white/30 text-white font-semibold px-6 py-3 rounded-lg hover:bg-white/10 transition-colors backdrop-blur-sm"
+                  >
+                    View Project Timeline
+                  </Link>
+                )}
               </motion.div>
             </div>
 
             {/* Profile image */}
+            {hero.showPhoto && (
             <motion.div
               className="flex justify-center order-1 lg:order-2"
               initial={{ opacity: 0, scale: 0.8 }}
@@ -151,6 +157,7 @@ export function DeveloperHero() {
                 />
               </div>
             </motion.div>
+            )}
           </div>
         </div>
       </div>

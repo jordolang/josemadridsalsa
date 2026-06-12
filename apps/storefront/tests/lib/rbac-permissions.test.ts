@@ -278,17 +278,25 @@ describe('RBAC Permissions Verification', () => {
       expect(filtered.some((n) => n.href === '/admin/orders')).toBe(true)
     })
 
-    it('shows all items for admin with all permissions', () => {
+    it('shows all non-developer items for admin with all permissions', () => {
       const adminPerms = defaultRolePermissions.ADMIN
       const filtered = filterNavByPermissions(adminNavigation, adminPerms)
-      // Admin should see all nav items
+      // Admin sees every nav item except the developer-only console
+      expect(filtered.length).toBe(adminNavigation.length - 1)
+      expect(filtered.some((n) => n.href === '/admin/developer')).toBe(false)
+    })
+
+    it('shows the developer console only for the DEVELOPER role', () => {
+      const devPerms = defaultRolePermissions.DEVELOPER
+      const filtered = filterNavByPermissions(adminNavigation, devPerms)
       expect(filtered.length).toBe(adminNavigation.length)
+      expect(filtered.some((n) => n.href === '/admin/developer')).toBe(true)
     })
 
     it('shows only unpermissioned items for user with no permissions', () => {
       const filtered = filterNavByPermissions(adminNavigation, [])
       // Only items without permission field
-      const unpermissioned = adminNavigation.filter((n) => !n.permissions)
+      const unpermissioned = adminNavigation.filter((n) => !n.permission)
       expect(filtered.length).toBe(unpermissioned.length)
     })
   })

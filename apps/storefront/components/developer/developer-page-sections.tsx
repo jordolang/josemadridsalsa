@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { Clock, BookOpen, Wrench, FileText, BarChart3 } from 'lucide-react'
 import { DeveloperScrollSection } from './developer-scroll-section'
 import type { ChangelogVersion } from '@/lib/developer/parse-changelog'
+import type { DeveloperPageContentData } from '@/lib/developer/page-content'
 
 // Code-split heavy below-the-fold components to reduce initial bundle size.
 // Framer Motion (~30-40 KB gzipped) is only loaded when these sections scroll into view.
@@ -39,30 +40,24 @@ const DeveloperChangelog = dynamic(
 
 interface DeveloperPageSectionsProps {
   readonly changelogVersions: readonly ChangelogVersion[]
+  readonly content: DeveloperPageContentData
 }
 
-export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectionsProps) {
+export function DeveloperPageSections({ changelogVersions, content }: DeveloperPageSectionsProps) {
   return (
     <>
       {/* About / Mission section */}
+      {content.sections.about && (
       <section className="py-16 lg:py-24">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <DeveloperScrollSection>
               <div className="text-center mb-12">
                 <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-4">
-                  Built with Purpose
+                  {content.about.heading}
                 </h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                  This entire platform was built as a gift — no charge, no strings attached.
-                  From the first line of code to the final deployment, every feature was crafted
-                  to serve Jose Madrid Salsa and its community. However, unfortunately after
-                  repeated events, I cannot deliver this work to a company that treats a gift from 
-                  God as less than human. 
-                  "Do not neglect to extend hospitality to strangers [especially among the family of 
-                  believers—being friendly, cordial, and gracious, sharing the comforts of your home 
-                  and doing your part generously], for by this some have entertained angels without 
-                  knowing it." - Hebrews 13:2" 
+                  {content.about.body}
                 </p>
               </div>
             </DeveloperScrollSection>
@@ -110,8 +105,10 @@ export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectio
           </div>
         </div>
       </section>
+      )}
 
       {/* Real-numbers stats section */}
+      {content.sections.stats && (
       <section id="stats" className="py-16 lg:py-24 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
@@ -134,8 +131,10 @@ export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectio
           </div>
         </div>
       </section>
+      )}
 
       {/* Blog preview section */}
+      {content.sections.blog && (
       <section className="py-16 lg:py-24 bg-muted/50">
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
@@ -156,8 +155,10 @@ export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectio
           </div>
         </div>
       </section>
+      )}
 
       {/* Feature Timeline placeholder section — populated by separate task */}
+      {content.sections.timeline && (
       <section id="timeline" className="py-16 lg:py-24 bg-muted/50">
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
@@ -176,8 +177,10 @@ export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectio
           </div>
         </div>
       </section>
+      )}
 
       {/* Tech Stack / Skills section */}
+      {content.sections.skills && (
       <section className="py-16 lg:py-24">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
@@ -196,8 +199,10 @@ export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectio
           </div>
         </div>
       </section>
+      )}
 
       {/* Changelog section */}
+      {content.sections.changelog && (
       <section id="changelog" className="py-16 lg:py-24 bg-muted/50">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
@@ -221,18 +226,20 @@ export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectio
           </div>
         </div>
       </section>
+      )}
 
       {/* Contact form placeholder section — populated by separate task */}
+      {content.sections.contact && (
       <section className="py-16 lg:py-24 bg-gradient-to-br from-salsa-600 via-salsa-700 to-chile-700 text-white">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto">
             <DeveloperScrollSection>
               <div className="text-center mb-12">
                 <h2 className="text-3xl lg:text-4xl font-serif font-bold mb-4">
-                  Get in Touch
+                  {content.contact.heading}
                 </h2>
                 <p className="text-lg text-salsa-100 max-w-xl mx-auto">
-                  Have a question about the project, want to collaborate, or just want to say hello?
+                  {content.contact.description}
                 </p>
               </div>
             </DeveloperScrollSection>
@@ -243,8 +250,10 @@ export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectio
           </div>
         </div>
       </section>
+      )}
 
       {/* Closing faith statement */}
+      {content.sections.closing && (
       <section className="py-16 lg:py-20">
         <div className="container mx-auto px-4">
           <DeveloperScrollSection>
@@ -253,16 +262,16 @@ export function DeveloperPageSections({ changelogVersions }: DeveloperPageSectio
                 <span className="text-white text-2xl font-serif font-bold">+</span>
               </div>
               <blockquote className="text-xl lg:text-2xl font-serif text-foreground leading-relaxed mb-4">
-                &ldquo;Whatever you do, work at it with all your heart, as working for the Lord,
-                not for human masters.&rdquo;
+                &ldquo;{content.closing.quote}&rdquo;
               </blockquote>
               <cite className="text-muted-foreground text-sm">
-                — Colossians 3:23
+                {content.closing.cite}
               </cite>
             </div>
           </DeveloperScrollSection>
         </div>
       </section>
+      )}
     </>
   )
 }

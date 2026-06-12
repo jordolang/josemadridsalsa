@@ -2558,6 +2558,16 @@ model ContactSubmission {
   @@map("contact_submissions")
 }
 
+model DeveloperPageContent {
+  id        String   @id @default(cuid())
+  singleton String   @unique @default("singleton")
+  content   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("developer_page_content")
+}
+
 enum ShopPlatform {
   FACEBOOK_SHOP
   FACEBOOK_MARKETPLACE
@@ -2649,6 +2659,7 @@ enum PermissionCategory {
   AI_TRAINING
   CREDENTIALS
   FUNDRAISER_PORTAL
+  DEVELOPER
 }
 
 enum TagType {

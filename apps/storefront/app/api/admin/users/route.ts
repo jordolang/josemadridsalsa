@@ -72,6 +72,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = userSchema.parse(body)
 
+    // The DEVELOPER (super admin) role can only be granted by a developer
+    if (data.role === 'DEVELOPER' && currentUser.role !== UserRole.DEVELOPER) {
+      return fail('Only a developer can assign the DEVELOPER role', 403)
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(data.password, 10)
 

@@ -63,8 +63,8 @@ export async function GET(
       )
     }
 
-    // Verify order belongs to authenticated user (or user is admin)
-    if (order.userId !== user.id && user.role !== 'ADMIN') {
+    // Verify order belongs to authenticated user (or user is admin/developer)
+    if (order.userId !== user.id && user.role !== 'ADMIN' && user.role !== 'DEVELOPER') {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
