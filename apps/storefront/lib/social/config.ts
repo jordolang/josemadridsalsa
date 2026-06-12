@@ -42,8 +42,9 @@ export const PLATFORM_SETUP: Record<SocialMediaPlatform, PlatformSetup> = {
       'Paste the Redirect URI shown below into Facebook Login → Settings → Valid OAuth Redirect URIs.',
       'Copy the App ID and App Secret into FACEBOOK_APP_ID and FACEBOOK_APP_SECRET on the server.',
       'Make sure you are an admin of the Facebook Business Page you want to post to.',
+      'Switch the app from Development to Live mode (toggle at the top of the app dashboard).',
     ],
-    note: 'Posting to a Page needs the pages_manage_posts permission approved via Meta App Review before non-admins can use it.',
+    note: 'In Development mode, anyone without a role on the app sees "App not active" when connecting. If that error appears even for the app admin, Meta has deactivated the app — check the app dashboard for alerts (Data Use Checkup, business verification). Separately, posting to a Page needs the pages_manage_posts permission approved via Meta App Review before non-admins can use it.',
   },
   INSTAGRAM: {
     platform: 'INSTAGRAM',
