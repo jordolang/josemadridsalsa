@@ -634,14 +634,15 @@ export async function publishPost(postId: string): Promise<{
     results.push({ platform: account.platform, accountId: account.id, result })
   }
 
-  // Update overall post status
-  const allSucceeded = results.every((r) => r.result.success)
+  // Update overall post status. Per-platform failures are tracked on each
+  // SocialPostPublish record; an empty results array means no connected
+  // account matched the post's platforms, which is a failure.
   const anySucceeded = results.some((r) => r.result.success)
 
   await prisma.socialMediaPost.update({
     where: { id: postId },
     data: {
-      status: allSucceeded ? 'PUBLISHED' : anySucceeded ? 'PUBLISHED' : 'FAILED',
+      status: anySucceeded ? 'PUBLISHED' : 'FAILED',
       publishedAt: anySucceeded ? new Date() : null,
     },
   })

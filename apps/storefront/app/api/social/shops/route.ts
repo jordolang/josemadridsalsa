@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { ShopPlatform } from '@prisma/client'
+import { Prisma, ShopPlatform } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
@@ -391,7 +391,14 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Listing ID required' }, { status: 400 })
   }
 
-  await prisma.shopListing.delete({ where: { id } })
+  try {
+    await prisma.shopListing.delete({ where: { id } })
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
+    }
+    throw error
+  }
 
   await logAudit({
     userId: user.id,

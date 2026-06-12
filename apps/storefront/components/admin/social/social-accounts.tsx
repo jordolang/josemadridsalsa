@@ -470,8 +470,12 @@ export function SocialAccounts({ accounts, platformConfig, ayrshare }: Props) {
     if (!confirm('Disconnect this account? You can reconnect anytime.')) return
     setDisconnecting(accountId)
     try {
-      await fetch(`/api/social/accounts?id=${accountId}`, { method: 'DELETE' })
-      setLocalAccounts((prev) => prev.filter((a) => a.id !== accountId))
+      const res = await fetch(`/api/social/accounts?id=${accountId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        setError('Failed to disconnect account.')
+      } else {
+        setLocalAccounts((prev) => prev.filter((a) => a.id !== accountId))
+      }
     } catch {
       setError('Failed to disconnect account.')
     }

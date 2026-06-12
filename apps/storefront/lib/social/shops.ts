@@ -161,6 +161,10 @@ async function syncToFacebookCatalog(
     const title = listing.overrides.title || listing.product.name
     const description = listing.overrides.description || listing.product.description || listing.product.name
     const price = listing.overrides.price ?? listing.product.price
+    // compareAtPrice is the original price; the product is on sale when it exceeds the current price.
+    // Facebook expects `price` = regular price and `sale_price` = discounted price.
+    const compareAtPrice = listing.product.compareAtPrice
+    const onSale = compareAtPrice !== null && compareAtPrice > price
     const condition = listing.overrides.condition || 'new'
     const availability = listing.overrides.availability || (listing.product.inventory > 0 ? 'in stock' : 'out of stock')
     const imageUrl = listing.product.featuredImage || listing.product.images[0]
@@ -169,26 +173,28 @@ async function syncToFacebookCatalog(
       return { success: false, error: 'Product must have at least one image for Facebook catalog.' }
     }
 
-    // Use the Catalog Batch API to create or update the product
+    // Use the Catalog Items Batch API to create or update the product.
+    // items_batch uses feed-style field names (title/link/image_link) and
+    // decimal prices like "9.99 USD" — not the cents format of the older
+    // /batch endpoint.
     const method = existingExternalId ? 'UPDATE' : 'CREATE'
     const requestData: Record<string, unknown> = {
       method,
-      retailer_id: listing.product.sku,
       data: {
-        name: title,
+        id: listing.product.sku,
+        title,
         description,
         availability,
         condition,
-        price: `${(price * 100).toFixed(0)} USD`,
-        sale_price: listing.product.compareAtPrice
-          ? `${(price * 100).toFixed(0)} USD`
-          : undefined,
-        url: listing.product.url,
-        image_url: imageUrl,
-        additional_image_urls: listing.product.images.slice(1, 10),
+        price: `${(onSale ? compareAtPrice : price).toFixed(2)} USD`,
+        sale_price: onSale ? `${price.toFixed(2)} USD` : undefined,
+        link: listing.product.url,
+        image_link: imageUrl,
+        additional_image_link: listing.product.images.slice(1, 10),
         brand: 'Jose Madrid Salsa',
         inventory: listing.product.inventory,
-        category: listing.overrides.category || 'Food & Beverages > Condiments & Sauces > Salsas',
+        google_product_category:
+          listing.overrides.category || 'Food, Beverages & Tobacco > Food Items > Condiments & Sauces > Salsa',
       },
     }
 
@@ -199,6 +205,7 @@ async function syncToFacebookCatalog(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           access_token: accessToken,
+          item_type: 'PRODUCT_ITEM',
           requests: [requestData],
         }),
       },
@@ -365,8 +372,10 @@ async function syncToTikTokShop(
       return { success: false, error: 'Product must have at least one image for TikTok Shop.' }
     }
 
+    // TikTok Shop Product API (202309): `title` + `skus[].price` with a
+    // decimal amount string, e.g. { amount: "9.99", currency: "USD" }.
     const productPayload = {
-      product_name: title,
+      title,
       description,
       category_id: listing.overrides.category || '601501', // Food > Condiments
       brand: { name: 'Jose Madrid Salsa' },
@@ -376,8 +385,8 @@ async function syncToTikTokShop(
       skus: [
         {
           seller_sku: listing.product.sku,
-          original_price: {
-            amount: (price * 100).toFixed(0),
+          price: {
+            amount: price.toFixed(2),
             currency: 'USD',
           },
           inventory: [
