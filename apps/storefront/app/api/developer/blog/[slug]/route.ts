@@ -34,14 +34,14 @@ export async function GET(
 
 /**
  * PATCH /api/developer/blog/[slug]
- * Admin-only — update an existing blog post.
+ * Developer-only — update an existing blog post.
  */
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    await requirePermission('products:write')
+    await requirePermission('developer:blog')
 
     const { slug } = await params
     const body = await req.json()
@@ -92,14 +92,14 @@ export async function PATCH(
 
 /**
  * DELETE /api/developer/blog/[slug]
- * Admin-only — delete a blog post.
+ * Developer-only — delete a blog post.
  */
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    await requirePermission('products:write')
+    await requirePermission('developer:blog')
 
     const { slug } = await params
 

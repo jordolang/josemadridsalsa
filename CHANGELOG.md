@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
 ### Added
+- **Developer Console (super admin)** — The DEVELOPER role is now the platform super admin with exclusive `developer:*` permissions and a dedicated `/admin/developer` console: a blob file explorer for the `josemadridsalsa-blob` store (browse, upload, delete — Developer-only), developer blog post management, a public developer page content editor with section visibility controls, and a Salsadocs manager that imports repository Markdown, converts it to Fumadocs MDX, and publishes pages and sections to the salsadocs repository directly from the admin panel. The designated developer account is auto-promoted to DEVELOPER at sign-in, with an `npm run create-developer` script for manual promotion.
 - **Homepage Heat Index bento** — The storefront home page now features the three newest Heat Index posts in a responsive editorial bento section.
 - **Playable fundraiser battle arena** — The `/arena/[period]` view is now an interactive graphic arena with controllable player movement, team sprites in a shared level, local arena messages, sound toggles, support links, and purchase-triggered damage effects inferred from live HP and sales updates.
 - **Heat Index blog concept page** — Added a new public editorial landing page with acrylic bento story cards for salsa posts, fictional Jose Madrid lore, expo dispatches, recipes, and developer notes.

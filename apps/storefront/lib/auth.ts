@@ -7,6 +7,7 @@ import AppleProvider from 'next-auth/providers/apple'
 import type { NextAuthOptions } from 'next-auth'
 import bcrypt from 'bcryptjs'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limiter'
+import { DEVELOPER_ACCOUNT_EMAIL } from '@/lib/developer/constants'
 
 /** Cached Prisma client instance for lazy loading */
 let prismaClient: any = null
@@ -256,6 +257,28 @@ export const authOptions: NextAuthOptions = {
           } catch (dbError) {
             console.error('[JWT Callback] Database error:', dbError)
             // Continue with existing token data
+          }
+        }
+
+        // The designated developer account is always the DEVELOPER (super admin) role.
+        // Promote it in the database and token if it ever holds a different role.
+        if (
+          typeof token.email === 'string' &&
+          token.email.toLowerCase().trim() === DEVELOPER_ACCOUNT_EMAIL &&
+          token.role !== 'DEVELOPER'
+        ) {
+          try {
+            const prisma = await getPrisma()
+            const promoted = await prisma.user.update({
+              where: { email: DEVELOPER_ACCOUNT_EMAIL },
+              data: { role: 'DEVELOPER' },
+              select: { id: true, role: true },
+            })
+            token.id = promoted.id
+            token.role = promoted.role
+            console.log('[JWT Callback] Promoted developer account to DEVELOPER role')
+          } catch (promoteError) {
+            console.error('[JWT Callback] Developer account promotion error:', promoteError)
           }
         }
 

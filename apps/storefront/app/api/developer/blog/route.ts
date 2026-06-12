@@ -50,11 +50,11 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/developer/blog
- * Admin-only — create a new blog post.
+ * Developer-only — create a new blog post.
  */
 export async function POST(req: NextRequest) {
   try {
-    await requirePermission('products:write')
+    await requirePermission('developer:blog')
 
     const body = await req.json()
     const parsed = developerBlogPostSchema.safeParse(body)

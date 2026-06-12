@@ -189,6 +189,13 @@ const nextConfig = {
       './node_modules/.prisma/client/**/*',
       './node_modules/@prisma/client/**/*',
     ],
+    // The Salsadocs importer reads repository markdown at runtime
+    '/api/developer/admin/salsadocs/**/*': [
+      './*.md',
+      '../../*.md',
+      '../../apps/*/*.md',
+      '../../packages/**/*.md',
+    ],
     '/find-us/**/*': [
       './public/find-us-locally/**/*',
     ],
