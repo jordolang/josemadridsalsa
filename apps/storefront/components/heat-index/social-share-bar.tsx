@@ -2,6 +2,7 @@
 
 import { Facebook, Twitter, Instagram } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { nativeShareOr } from './native-share'
 
 interface SocialShareBarProps {
   title: string
@@ -45,13 +46,8 @@ export function SocialShareBar({ title, url, excerpt }: SocialShareBarProps) {
   const facebook = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`
   const x = `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`
 
-  function nativeShareOr(fallbackUrl: string) {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({ title, text: excerpt, url }).catch(() => {})
-    } else {
-      window.open(fallbackUrl, '_blank', 'noopener,noreferrer')
-    }
-  }
+  const share = (fallbackUrl: string) =>
+    nativeShareOr(fallbackUrl, { title, url, text: excerpt })
 
   return (
     <div className="mt-10 pt-6 border-t border-border">
@@ -65,7 +61,7 @@ export function SocialShareBar({ title, url, excerpt }: SocialShareBarProps) {
             variant="outline"
             size="icon"
             aria-label="Share on Facebook"
-            onClick={() => nativeShareOr(facebook)}
+            onClick={() => share(facebook)}
             className="text-muted-foreground hover:text-white hover:bg-[#1877F2] hover:border-[#1877F2]"
           >
             <Facebook className="w-4 h-4" />
@@ -75,7 +71,7 @@ export function SocialShareBar({ title, url, excerpt }: SocialShareBarProps) {
             variant="outline"
             size="icon"
             aria-label="Share on X"
-            onClick={() => nativeShareOr(x)}
+            onClick={() => share(x)}
             className="text-muted-foreground hover:text-white hover:bg-black hover:border-black"
           >
             <Twitter className="w-4 h-4" />
@@ -85,7 +81,7 @@ export function SocialShareBar({ title, url, excerpt }: SocialShareBarProps) {
             variant="outline"
             size="icon"
             aria-label="Share to Instagram"
-            onClick={() => nativeShareOr(INSTAGRAM_PROFILE)}
+            onClick={() => share(INSTAGRAM_PROFILE)}
             className="text-muted-foreground hover:text-white hover:bg-[#E1306C] hover:border-[#E1306C]"
           >
             <Instagram className="w-4 h-4" />
@@ -95,7 +91,7 @@ export function SocialShareBar({ title, url, excerpt }: SocialShareBarProps) {
             variant="outline"
             size="icon"
             aria-label="Share to TikTok"
-            onClick={() => nativeShareOr(TIKTOK_PROFILE)}
+            onClick={() => share(TIKTOK_PROFILE)}
             className="text-muted-foreground hover:text-white hover:bg-black hover:border-black"
           >
             <TikTokIcon className="w-4 h-4" />

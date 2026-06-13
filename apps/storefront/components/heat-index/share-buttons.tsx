@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Twitter, Facebook, Mail, Link as LinkIcon, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { nativeShareOr } from './native-share'
 
 interface ShareButtonsProps {
   title: string
@@ -19,17 +20,7 @@ export function ShareButtons({ title, url }: ShareButtonsProps) {
   const facebook = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`
   const email = `mailto:?subject=${encodedTitle}&body=${encodedUrl}`
 
-  // On mobile the Facebook/X apps intercept their web share URLs as universal
-  // links and open their home feed instead of a share composer, so nothing
-  // gets shared. Prefer the device's native share sheet when available and
-  // fall back to the web intent (e.g. on desktop).
-  function nativeShareOr(fallbackUrl: string) {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({ title, url }).catch(() => {})
-    } else {
-      window.open(fallbackUrl, '_blank', 'noopener,noreferrer')
-    }
-  }
+  const share = (fallbackUrl: string) => nativeShareOr(fallbackUrl, { title, url })
 
   async function copyLink() {
     try {
@@ -51,7 +42,7 @@ export function ShareButtons({ title, url }: ShareButtonsProps) {
         variant="ghost"
         size="icon"
         aria-label="Share on X"
-        onClick={() => nativeShareOr(twitter)}
+        onClick={() => share(twitter)}
         className="text-muted-foreground hover:text-salsa-600 hover:bg-salsa-50 dark:hover:bg-salsa-900/30"
       >
         <Twitter className="w-4 h-4" />
@@ -61,7 +52,7 @@ export function ShareButtons({ title, url }: ShareButtonsProps) {
         variant="ghost"
         size="icon"
         aria-label="Share on Facebook"
-        onClick={() => nativeShareOr(facebook)}
+        onClick={() => share(facebook)}
         className="text-muted-foreground hover:text-salsa-600 hover:bg-salsa-50 dark:hover:bg-salsa-900/30"
       >
         <Facebook className="w-4 h-4" />
