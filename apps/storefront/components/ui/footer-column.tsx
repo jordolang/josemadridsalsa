@@ -61,6 +61,7 @@ const legalLinks = [
   { text: 'Privacy Policy', href: '/privacy' },
   { text: 'Terms of Service', href: '/terms' },
   { text: 'Cookie Policy', href: '/cookies' },
+  { text: 'Delete My Data', href: '/deletemydata' },
   { text: 'Accessibility', href: '/accessibility' },
 ]
 
