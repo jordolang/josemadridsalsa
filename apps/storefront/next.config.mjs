@@ -179,6 +179,17 @@ const nextConfig = {
       'prisma/seeds/**',
       'AGENTS.md',
     ],
+    /**
+     * The Salsadocs importer routes walk the repository for Markdown at runtime
+     * (lib/developer/repo-docs.ts), which makes the file tracer pull the entire
+     * app — including the ~340 MB public/ tree — into the function and blow past
+     * the serverless size limit. These functions never serve static assets, so
+     * exclude public/ here (the page-level image-optimization concern that keeps
+     * public/images/** in the global trace does not apply to them).
+     */
+    '/api/developer/admin/salsadocs/**/*': [
+      'public/**',
+    ],
   },
   /**
    * Explicitly include required files in serverless function traces
@@ -195,6 +206,11 @@ const nextConfig = {
       '../../*.md',
       '../../apps/*/*.md',
       '../../packages/**/*.md',
+    ],
+    // The public /developer page reads the monorepo-root CHANGELOG.md at runtime
+    '/developer': [
+      './CHANGELOG.md',
+      '../../CHANGELOG.md',
     ],
     '/find-us/**/*': [
       './public/find-us-locally/**/*',

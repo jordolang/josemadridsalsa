@@ -15,12 +15,30 @@ export interface ChangelogVersion {
 
 /**
  * Parse a keepachangelog.com formatted CHANGELOG.md into structured data.
- * Reads from the project root at build time (RSC).
+ * Reads from the project root (or the monorepo root) at request time (RSC).
+ * Returns an empty list rather than throwing when the file is unavailable, so
+ * the /developer page renders even if the changelog cannot be located.
+ *
+ * Each location is a separate readFile call with a fully static path. A
+ * computed/variable path would defeat @vercel/nft static analysis and cause it
+ * to trace the entire project (the whole public/ tree) into this page's
+ * serverless function, blowing past the size limit.
  */
 export async function parseChangelog(): Promise<readonly ChangelogVersion[]> {
-  const filePath = join(process.cwd(), 'CHANGELOG.md')
-  const content = await readFile(filePath, 'utf-8')
-  return parseChangelogContent(content)
+  // The storefront runs with cwd = apps/storefront.
+  try {
+    const content = await readFile(join(process.cwd(), 'CHANGELOG.md'), 'utf-8')
+    return parseChangelogContent(content)
+  } catch {
+    // Fall back to the canonical CHANGELOG.md at the monorepo root.
+  }
+  try {
+    const content = await readFile(join(process.cwd(), '..', '..', 'CHANGELOG.md'), 'utf-8')
+    return parseChangelogContent(content)
+  } catch {
+    console.warn('[Developer] CHANGELOG.md not found; rendering empty changelog')
+    return []
+  }
 }
 
 export function parseChangelogContent(content: string): readonly ChangelogVersion[] {
