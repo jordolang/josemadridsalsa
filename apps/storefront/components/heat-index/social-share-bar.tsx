@@ -31,9 +31,12 @@ function TikTokIcon({ className }: { className?: string }) {
  * comes from the page's Open Graph / Twitter Card meta tags, so each button
  * only needs to hand the platform the post URL.
  *
- * Facebook and X accept a link via a web share intent. Instagram and TikTok
- * have no web link-share endpoint, so those use the device's native share
- * sheet when available, and fall back to the brand profile otherwise.
+ * On mobile the Facebook/X apps intercept their web share URLs as universal
+ * links and drop the user on their home feed instead of a share composer, so
+ * nothing actually gets shared. To avoid that, every button prefers the
+ * device's native share sheet when available (which hands the post to the
+ * chosen app correctly) and falls back to the platform's web intent — or, for
+ * Instagram/TikTok which have no web link-share endpoint, the brand profile.
  */
 export function SocialShareBar({ title, url, excerpt }: SocialShareBarProps) {
   const encodedTitle = encodeURIComponent(title)
@@ -42,11 +45,11 @@ export function SocialShareBar({ title, url, excerpt }: SocialShareBarProps) {
   const facebook = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`
   const x = `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`
 
-  function nativeShareOrProfile(profileUrl: string) {
+  function nativeShareOr(fallbackUrl: string) {
     if (typeof navigator !== 'undefined' && navigator.share) {
       navigator.share({ title, text: excerpt, url }).catch(() => {})
     } else {
-      window.open(profileUrl, '_blank', 'noopener,noreferrer')
+      window.open(fallbackUrl, '_blank', 'noopener,noreferrer')
     }
   }
 
@@ -58,33 +61,31 @@ export function SocialShareBar({ title, url, excerpt }: SocialShareBarProps) {
         </p>
         <div className="flex items-center gap-2">
           <Button
-            asChild
+            type="button"
             variant="outline"
             size="icon"
             aria-label="Share on Facebook"
+            onClick={() => nativeShareOr(facebook)}
             className="text-muted-foreground hover:text-white hover:bg-[#1877F2] hover:border-[#1877F2]"
           >
-            <a href={facebook} target="_blank" rel="noopener noreferrer">
-              <Facebook className="w-4 h-4" />
-            </a>
+            <Facebook className="w-4 h-4" />
           </Button>
           <Button
-            asChild
+            type="button"
             variant="outline"
             size="icon"
             aria-label="Share on X"
+            onClick={() => nativeShareOr(x)}
             className="text-muted-foreground hover:text-white hover:bg-black hover:border-black"
           >
-            <a href={x} target="_blank" rel="noopener noreferrer">
-              <Twitter className="w-4 h-4" />
-            </a>
+            <Twitter className="w-4 h-4" />
           </Button>
           <Button
             type="button"
             variant="outline"
             size="icon"
             aria-label="Share to Instagram"
-            onClick={() => nativeShareOrProfile(INSTAGRAM_PROFILE)}
+            onClick={() => nativeShareOr(INSTAGRAM_PROFILE)}
             className="text-muted-foreground hover:text-white hover:bg-[#E1306C] hover:border-[#E1306C]"
           >
             <Instagram className="w-4 h-4" />
@@ -94,7 +95,7 @@ export function SocialShareBar({ title, url, excerpt }: SocialShareBarProps) {
             variant="outline"
             size="icon"
             aria-label="Share to TikTok"
-            onClick={() => nativeShareOrProfile(TIKTOK_PROFILE)}
+            onClick={() => nativeShareOr(TIKTOK_PROFILE)}
             className="text-muted-foreground hover:text-white hover:bg-black hover:border-black"
           >
             <TikTokIcon className="w-4 h-4" />
