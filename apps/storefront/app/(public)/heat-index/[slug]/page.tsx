@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { BlogContent } from '@/components/heat-index/blog-content'
 import { PostCard } from '@/components/heat-index/post-card'
 import { ShareButtons } from '@/components/heat-index/share-buttons'
+import { SocialShareBar } from '@/components/heat-index/social-share-bar'
 import { ReactionBar } from '@/components/heat-index/reaction-bar'
 import { CommentsSection } from '@/components/heat-index/comments-section'
 import { SubscribeForm } from '@/components/heat-index/subscribe-form'
@@ -327,6 +328,8 @@ export default async function PostDetailPage({ params }: PageProps) {
               ))}
             </div>
           )}
+
+          <SocialShareBar title={post.title} url={url} excerpt={post.excerpt} />
 
           <div className="mt-10">
             <ReactionBar postSlug={post.slug} initialCounts={reactionCounts} />
