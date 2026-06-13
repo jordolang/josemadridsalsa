@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Twitter, Facebook, Mail, Link as LinkIcon, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { nativeShareOr } from './native-share'
 
 interface ShareButtonsProps {
   title: string
@@ -18,6 +19,8 @@ export function ShareButtons({ title, url }: ShareButtonsProps) {
   const twitter = `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`
   const facebook = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`
   const email = `mailto:?subject=${encodedTitle}&body=${encodedUrl}`
+
+  const share = (fallbackUrl: string) => nativeShareOr(fallbackUrl, { title, url })
 
   async function copyLink() {
     try {
@@ -35,26 +38,24 @@ export function ShareButtons({ title, url }: ShareButtonsProps) {
         Share
       </span>
       <Button
-        asChild
+        type="button"
         variant="ghost"
         size="icon"
         aria-label="Share on X"
+        onClick={() => share(twitter)}
         className="text-muted-foreground hover:text-salsa-600 hover:bg-salsa-50 dark:hover:bg-salsa-900/30"
       >
-        <a href={twitter} target="_blank" rel="noopener noreferrer">
-          <Twitter className="w-4 h-4" />
-        </a>
+        <Twitter className="w-4 h-4" />
       </Button>
       <Button
-        asChild
+        type="button"
         variant="ghost"
         size="icon"
         aria-label="Share on Facebook"
+        onClick={() => share(facebook)}
         className="text-muted-foreground hover:text-salsa-600 hover:bg-salsa-50 dark:hover:bg-salsa-900/30"
       >
-        <a href={facebook} target="_blank" rel="noopener noreferrer">
-          <Facebook className="w-4 h-4" />
-        </a>
+        <Facebook className="w-4 h-4" />
       </Button>
       <Button
         asChild
