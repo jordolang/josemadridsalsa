@@ -2,7 +2,6 @@
   "name": "@jose-madrid/storefront",
   "version": "2.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "next dev --turbo --port 3000",
     "dev:fast": "next dev --turbo --port 3000",
