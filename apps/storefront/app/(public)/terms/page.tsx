@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import { createMetadata } from '@/lib/metadata';
 
-export const dynamic = 'force-dynamic'
-
 export const metadata: Metadata = createMetadata({
   title: 'Terms of Service - Jose Madrid Salsa',
   description: 'Read the terms that govern the use of Jose Madrid Salsa’s website and services.',
@@ -15,7 +13,7 @@ export default function TermsOfServicePage() {
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-6">Terms of Service</h1>
-          <p className="text-sm text-muted-foreground mb-10">Last updated: {new Date().getFullYear()}</p>
+          <p className="text-sm text-muted-foreground mb-10">Last updated: 2026</p>
 
           <div className="prose prose-slate dark:prose-invert max-w-none">
             <p>
