@@ -7,7 +7,6 @@ import { nativeShareOr } from './native-share'
 interface SocialShareBarProps {
   title: string
   url: string
-  excerpt: string
 }
 
 // Jose Madrid Salsa brand profiles (handle pattern matches the footer / nav).
@@ -32,22 +31,21 @@ function TikTokIcon({ className }: { className?: string }) {
  * comes from the page's Open Graph / Twitter Card meta tags, so each button
  * only needs to hand the platform the post URL.
  *
- * On mobile the Facebook/X apps intercept their web share URLs as universal
- * links and drop the user on their home feed instead of a share composer, so
- * nothing actually gets shared. To avoid that, every button prefers the
- * device's native share sheet when available (which hands the post to the
+ * On touch devices the Facebook/X apps intercept their web share URLs as
+ * universal links and drop the user on their home feed instead of a share
+ * composer, so nothing actually gets shared. To avoid that, every button
+ * prefers the device's native share sheet there (which hands the post to the
  * chosen app correctly) and falls back to the platform's web intent — or, for
  * Instagram/TikTok which have no web link-share endpoint, the brand profile.
  */
-export function SocialShareBar({ title, url, excerpt }: SocialShareBarProps) {
+export function SocialShareBar({ title, url }: SocialShareBarProps) {
   const encodedTitle = encodeURIComponent(title)
   const encodedUrl = encodeURIComponent(url)
 
   const facebook = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`
   const x = `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`
 
-  const share = (fallbackUrl: string) =>
-    nativeShareOr(fallbackUrl, { title, url, text: excerpt })
+  const share = (fallbackUrl: string) => nativeShareOr(fallbackUrl, { title, url })
 
   return (
     <div className="mt-10 pt-6 border-t border-border">
