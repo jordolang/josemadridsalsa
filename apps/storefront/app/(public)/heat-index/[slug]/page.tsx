@@ -329,7 +329,7 @@ export default async function PostDetailPage({ params }: PageProps) {
             </div>
           )}
 
-          <SocialShareBar title={post.title} url={url} excerpt={post.excerpt} />
+          <SocialShareBar title={post.title} url={url} />
 
           <div className="mt-10">
             <ReactionBar postSlug={post.slug} initialCounts={reactionCounts} />
