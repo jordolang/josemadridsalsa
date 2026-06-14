@@ -30,8 +30,9 @@ const nextConfig = {
         ? "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live"
         : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live",
       "worker-src 'self' blob:",
-      // Allow Google Maps iframes, GTM noscript, and Stripe checkout iframes
-      "frame-src https://www.google.com/maps/ https://maps.google.com https://www.googletagmanager.com https://js.stripe.com https://hooks.stripe.com https://vercel.live",
+      // Allow Google Maps iframes, GTM noscript, Stripe checkout iframes, and
+      // YouTube/Vimeo video embeds used in blog (Heat Index) posts.
+      "frame-src https://www.google.com/maps/ https://maps.google.com https://www.googletagmanager.com https://js.stripe.com https://hooks.stripe.com https://vercel.live https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com",
       // Images from multiple CDNs and data URIs
       "img-src 'self' data: blob: https://utfs.io https://*.public.blob.vercel-storage.com https://images.unsplash.com https://*.googleapis.com https://maps.gstatic.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com https://www.nudgeprinting.com https://vercel.live https://vercel.com",
       // Allow connections to self, external APIs used client-side, and Sentry

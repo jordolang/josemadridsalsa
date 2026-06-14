@@ -55,7 +55,7 @@ function YouTubeEmbed({ id }: { id: string }) {
         src={`https://www.youtube-nocookie.com/embed/${cleaned}`}
         title="YouTube video"
         loading="lazy"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
         className="absolute inset-0 h-full w-full border-0"
       />
