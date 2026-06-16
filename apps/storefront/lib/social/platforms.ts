@@ -18,16 +18,17 @@ export function platformToProvider(platform: SocialMediaPlatform): SocialProvide
   }
 }
 
+// Trimmed to scopes available without App Review so the connect flow completes.
+// Restore the posting/Instagram scopes once the Instagram product is added and
+// Meta App Review + business verification are done:
+//   'pages_manage_posts', 'instagram_basic', 'instagram_content_publish',
+//   'instagram_manage_insights'
 const FACEBOOK_OAUTH_SCOPES = [
-  'pages_manage_posts',
   'pages_read_engagement',
   'pages_show_list',
   'pages_manage_metadata',
   'catalog_management',
   'business_management',
-  'instagram_basic',
-  'instagram_content_publish',
-  'instagram_manage_insights',
 ]
 
 const TIKTOK_OAUTH_SCOPES = [
