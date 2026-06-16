@@ -1,0 +1,127 @@
+{%- comment -%}
+  Header — mirrors the storefront Navigation (Shop / About / For You mega-menus),
+  logo, search, account and cart, plus a mobile drawer.
+{%- endcomment -%}
+
+{%- if settings.show_announcement and settings.announcement_text != blank -%}
+  <div class="announcement-bar">{{ settings.announcement_text }}</div>
+{%- endif -%}
+
+<header class="site-header">
+  <div class="container header__inner">
+    <button class="icon-btn menu-toggle" data-drawer-open aria-label="Open menu" aria-controls="mobile-drawer">
+      {% render 'icon', name: 'menu' %}
+    </button>
+
+    <a href="{{ routes.root_url }}" class="header__logo">
+      {%- if settings.logo -%}
+        <img src="{{ settings.logo | image_url: width: 120 }}" alt="{{ settings.brand_name }}" width="48" height="48" loading="eager">
+      {%- else -%}
+        <img src="{{ 'logo.png' | asset_url }}" alt="{{ settings.brand_name }}" width="48" height="48" loading="eager">
+      {%- endif -%}
+      <span class="hidden-sm">{{ settings.brand_name }}</span>
+    </a>
+
+    <nav class="header__nav" aria-label="Primary">
+      {%- comment -%} SHOP {%- endcomment -%}
+      <div class="nav-group">
+        <button class="nav-group__btn" aria-haspopup="true">Shop {% render 'icon', name: 'chevron' %}</button>
+        <div class="nav-group__panel">
+          <a class="nav-group__featured" href="{{ routes.all_products_collection_url }}">
+            <strong>All Products</strong>
+            <span>Browse our complete collection of handcrafted salsas</span>
+          </a>
+          <a class="nav-group__link" href="/collections/mild"><strong>Mild &amp; Sweet</strong><span>Perfect for beginners and families</span></a>
+          <a class="nav-group__link" href="/collections/medium"><strong>Medium Heat</strong><span>Just the right kick</span></a>
+          <a class="nav-group__link" href="/collections/hot"><strong>Hot &amp; Spicy</strong><span>For the brave souls</span></a>
+          <a class="nav-group__link" href="/collections/fruit"><strong>Gourmet Fruit</strong><span>Unique fruit-infused flavors</span></a>
+          <a class="nav-group__link" href="/collections/bundles"><strong>Bundle Deals</strong><span>Mix &amp; match your favorites</span></a>
+          <a class="nav-group__link" href="/collections/merchandise"><strong>Merchandise</strong><span>T-shirts, hats, and accessories</span></a>
+        </div>
+      </div>
+
+      {%- comment -%} ABOUT {%- endcomment -%}
+      <div class="nav-group">
+        <button class="nav-group__btn" aria-haspopup="true">About {% render 'icon', name: 'chevron' %}</button>
+        <div class="nav-group__panel">
+          <a class="nav-group__link" href="/pages/our-story"><strong>Our Story</strong><span>From Clovis, NM to Zanesville, OH</span></a>
+          <a class="nav-group__link" href="/pages/la-perla-ave"><strong>La Perla Tortilla Factory</strong><span>Our tortilla chip maker in Toledo, OH</span></a>
+          <a class="nav-group__link" href="/blogs/heat-index"><strong>The Heat Index</strong><span>Stories, recipes, road notes, and salsa lore</span></a>
+          <a class="nav-group__link" href="/pages/recipes"><strong>Recipes</strong><span>Cooking with our salsas</span></a>
+          <a class="nav-group__link" href="/pages/find-us"><strong>Find Us</strong><span>Retailers near you</span></a>
+        </div>
+      </div>
+
+      {%- comment -%} FOR YOU {%- endcomment -%}
+      <div class="nav-group">
+        <button class="nav-group__btn" aria-haspopup="true">For You {% render 'icon', name: 'chevron' %}</button>
+        <div class="nav-group__panel">
+          <a class="nav-group__link" href="/pages/fundraising"><strong>Fundraising</strong><span>Earn 50% profit</span></a>
+          <a class="nav-group__link" href="/pages/wholesale"><strong>Wholesale</strong><span>Stock our jars</span></a>
+          <a class="nav-group__link" href="/pages/where-is-jose"><strong>Where Is Jose?</strong><span>Catch us at events and markets</span></a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="header__actions">
+      <a class="icon-btn" href="{{ routes.search_url }}" aria-label="Search">{% render 'icon', name: 'search' %}</a>
+      <a class="icon-btn" href="{{ routes.account_url }}" aria-label="Account">{% render 'icon', name: 'user' %}</a>
+      <a class="icon-btn" href="{{ routes.cart_url }}" aria-label="Cart">
+        {% render 'icon', name: 'cart' %}
+        <span class="count" data-cart-count>{{ cart.item_count }}</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+{%- comment -%} Mobile drawer {%- endcomment -%}
+<div class="mobile-drawer" id="mobile-drawer" aria-hidden="true">
+  <div class="mobile-drawer__overlay" data-drawer-close></div>
+  <div class="mobile-drawer__panel" role="dialog" aria-label="Menu">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <span class="header__logo">{{ settings.brand_name }}</span>
+      <button class="icon-btn" data-drawer-close aria-label="Close menu">{% render 'icon', name: 'close' %}</button>
+    </div>
+
+    <div class="mobile-drawer__group">
+      <strong>Shop</strong>
+      <a href="{{ routes.all_products_collection_url }}">All Products</a>
+      <a href="/collections/mild">Mild &amp; Sweet</a>
+      <a href="/collections/medium">Medium Heat</a>
+      <a href="/collections/hot">Hot &amp; Spicy</a>
+      <a href="/collections/fruit">Gourmet Fruit</a>
+      <a href="/collections/bundles">Bundle Deals</a>
+      <a href="/collections/merchandise">Merchandise</a>
+    </div>
+    <div class="mobile-drawer__group">
+      <strong>About</strong>
+      <a href="/pages/our-story">Our Story</a>
+      <a href="/pages/la-perla-ave">La Perla Tortilla Factory</a>
+      <a href="/blogs/heat-index">The Heat Index</a>
+      <a href="/pages/recipes">Recipes</a>
+      <a href="/pages/find-us">Find Us</a>
+    </div>
+    <div class="mobile-drawer__group">
+      <strong>For You</strong>
+      <a href="/pages/fundraising">Fundraising</a>
+      <a href="/pages/wholesale">Wholesale</a>
+      <a href="/pages/where-is-jose">Where Is Jose?</a>
+    </div>
+    <div class="mobile-drawer__group">
+      <a href="{{ routes.account_url }}">Account</a>
+      <a href="{{ routes.cart_url }}">Cart ({{ cart.item_count }})</a>
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Header",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Logo, colors, and the announcement bar are configured in Theme settings."
+    }
+  ]
+}
+{% endschema %}

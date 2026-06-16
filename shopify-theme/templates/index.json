@@ -1,0 +1,62 @@
+{
+  "sections": {
+    "hero": {
+      "type": "hero",
+      "settings": {
+        "eyebrow": "Award-winning since 1987",
+        "heading": "Premium Gourmet",
+        "accent": "Salsa",
+        "subheading": "Made with the finest ingredients in Ohio. From mild to fiery hot, discover the perfect salsa for every taste, handcrafted in small batches.",
+        "button_label": "Shop salsas",
+        "button2_label": "Read our story",
+        "button2_link": "/pages/our-story"
+      }
+    },
+    "featured": {
+      "type": "featured-collection",
+      "settings": {
+        "limit": 4,
+        "eyebrow": "Best Sellers",
+        "heading": "Find Your Perfect",
+        "heading_accent": "Heat Level",
+        "subheading": "From sweet fruit blends that brighten any dish to extra-hot picks that bring real fire — every jar is small-batch and handcrafted in Zanesville, Ohio.",
+        "button_label": "View All 25+ Flavors"
+      }
+    },
+    "heat-levels": {
+      "type": "heat-levels",
+      "blocks": {
+        "mild": { "type": "tile", "settings": { "icon": "🌿", "eyebrow": "Mild & Sweet", "title": "Mild", "tone": "verde", "body": "Perfect for those who enjoy flavor without the heat. Great for kids and mild palates.", "link": "/collections/mild" } },
+        "medium": { "type": "tile", "settings": { "icon": "🌶️", "eyebrow": "Medium Heat", "title": "Medium", "tone": "chile", "body": "The perfect balance of flavor and heat. Our most popular choice for everyday enjoyment.", "link": "/collections/medium" } },
+        "hot": { "type": "tile", "settings": { "icon": "🔥", "eyebrow": "Hot & Spicy", "title": "Hot", "tone": "salsa", "body": "For those who love the heat — bold flavors with a serious kick that builds with each bite.", "link": "/collections/hot" } }
+      },
+      "block_order": ["mild", "medium", "hot"]
+    },
+    "feature-split": {
+      "type": "feature-split",
+      "blocks": {
+        "f1": { "type": "feature", "settings": { "icon": "🏪", "tone": "salsa", "title": "Fundraising Made Easy", "body": "Perfect for schools, churches, and organizations. High-profit margins and products people actually want." } },
+        "f2": { "type": "feature", "settings": { "icon": "🏭", "tone": "verde", "title": "Wholesale Options", "body": "Stock our premium salsas in your store. Competitive pricing with excellent support." } },
+        "f3": { "type": "feature", "settings": { "icon": "📍", "tone": "chile", "title": "Local Presence", "body": "Find us at local stores throughout Ohio, or order online for delivery anywhere." } }
+      },
+      "block_order": ["f1", "f2", "f3"]
+    },
+    "cta-band": {
+      "type": "cta-band",
+      "blocks": {
+        "s1": { "type": "stat", "settings": { "value": "50%", "label": "Profit per jar" } },
+        "s2": { "type": "stat", "settings": { "value": "96+", "label": "Jar minimum" } },
+        "s3": { "type": "stat", "settings": { "value": "10 days", "label": "Ship time" } }
+      },
+      "block_order": ["s1", "s2", "s3"],
+      "settings": {
+        "eyebrow": "Fundraising",
+        "heading": "Raise More with Salsa People Love",
+        "subheading": "Schools, teams, and churches earn 50% profit on every jar. No upfront cost, easy to run, and a product everyone wants.",
+        "button_label": "Start a Fundraiser",
+        "button_link": "/pages/fundraising"
+      }
+    }
+  },
+  "order": ["hero", "featured", "heat-levels", "feature-split", "cta-band"]
+}

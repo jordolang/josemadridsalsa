@@ -1,0 +1,45 @@
+{%- comment -%} Hero — mirrors components/store/home-hero.tsx {%- endcomment -%}
+<section class="hero" aria-labelledby="hero-title">
+  {%- if section.settings.image -%}
+    <img class="hero__img" src="{{ section.settings.image | image_url: width: 1920 }}" alt="" width="1920" height="1080" fetchpriority="high">
+  {%- else -%}
+    <img class="hero__img" src="{{ 'hero-home.png' | asset_url }}" alt="" width="1536" height="871" fetchpriority="high">
+  {%- endif -%}
+  <div class="hero__scrim" aria-hidden="true"></div>
+
+  <div class="container hero__content animate-fade-in">
+    {%- if section.settings.eyebrow != blank -%}
+      <p class="hero__eyebrow">{{ section.settings.eyebrow }}</p>
+    {%- endif -%}
+    <h1 id="hero-title">{{ section.settings.heading }} <span class="accent">{{ section.settings.accent }}</span></h1>
+    {%- if section.settings.subheading != blank -%}
+      <p class="lede">{{ section.settings.subheading }}</p>
+    {%- endif -%}
+    <div class="hero__cta">
+      {%- if section.settings.button_label != blank -%}
+        <a href="{{ section.settings.button_link | default: routes.all_products_collection_url }}" class="btn btn-gold">{{ section.settings.button_label }}</a>
+      {%- endif -%}
+      {%- if section.settings.button2_label != blank -%}
+        <a href="{{ section.settings.button2_link }}" class="btn btn-secondary" style="background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.4);">{{ section.settings.button2_label }}</a>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Hero",
+  "settings": [
+    { "type": "image_picker", "id": "image", "label": "Background image" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Award-winning since 1987" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Premium Gourmet" },
+    { "type": "text", "id": "accent", "label": "Heading accent word", "default": "Salsa" },
+    { "type": "textarea", "id": "subheading", "label": "Subheading", "default": "Made with the finest ingredients in Ohio. From mild to fiery hot, discover the perfect salsa for every taste, handcrafted in small batches." },
+    { "type": "text", "id": "button_label", "label": "Primary button label", "default": "Shop salsas" },
+    { "type": "url", "id": "button_link", "label": "Primary button link" },
+    { "type": "text", "id": "button2_label", "label": "Secondary button label", "default": "Read our story" },
+    { "type": "url", "id": "button2_link", "label": "Secondary button link" }
+  ],
+  "presets": [{ "name": "Hero" }]
+}
+{% endschema %}

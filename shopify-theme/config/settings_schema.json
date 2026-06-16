@@ -1,0 +1,95 @@
+[
+  {
+    "name": "theme_info",
+    "theme_name": "Jose Madrid Salsa",
+    "theme_version": "1.0.0",
+    "theme_author": "Jose Madrid Salsa",
+    "theme_documentation_url": "https://www.josemadridsalsa.com",
+    "theme_support_url": "https://www.josemadridsalsa.com/contact"
+  },
+  {
+    "name": "Brand",
+    "settings": [
+      {
+        "type": "image_picker",
+        "id": "logo",
+        "label": "Logo image"
+      },
+      {
+        "type": "text",
+        "id": "brand_name",
+        "label": "Brand name",
+        "default": "Jose Madrid Salsa"
+      }
+    ]
+  },
+  {
+    "name": "Colors",
+    "settings": [
+      {
+        "type": "color",
+        "id": "color_salsa",
+        "label": "Salsa (primary red)",
+        "default": "#e53e3e"
+      },
+      {
+        "type": "color",
+        "id": "color_chile",
+        "label": "Chile (gold/amber)",
+        "default": "#f59e0b"
+      },
+      {
+        "type": "color",
+        "id": "color_verde",
+        "label": "Verde (green)",
+        "default": "#22c55e"
+      },
+      {
+        "type": "color",
+        "id": "color_background",
+        "label": "Background",
+        "default": "#ffffff"
+      },
+      {
+        "type": "color",
+        "id": "color_foreground",
+        "label": "Text",
+        "default": "#0c0a09"
+      }
+    ]
+  },
+  {
+    "name": "Announcement bar",
+    "settings": [
+      {
+        "type": "checkbox",
+        "id": "show_announcement",
+        "label": "Show announcement bar",
+        "default": true
+      },
+      {
+        "type": "text",
+        "id": "announcement_text",
+        "label": "Announcement text",
+        "default": "Free shipping on orders over $75 — Fresh batches every week"
+      }
+    ]
+  },
+  {
+    "name": "Social",
+    "settings": [
+      { "type": "url", "id": "social_facebook", "label": "Facebook URL" },
+      { "type": "url", "id": "social_instagram", "label": "Instagram URL" },
+      { "type": "url", "id": "social_twitter", "label": "X (Twitter) URL" },
+      { "type": "url", "id": "social_google", "label": "Google Business URL" }
+    ]
+  },
+  {
+    "name": "Contact",
+    "settings": [
+      { "type": "text", "id": "support_phone", "label": "Phone", "default": "(740) 521-4304" },
+      { "type": "text", "id": "support_email", "label": "Email", "default": "mike@josemadridsalsa.com" },
+      { "type": "text", "id": "hq_location", "label": "Address", "default": "601 Putnam Ave, Zanesville, OH 43701" }
+    ]
+  }
+]

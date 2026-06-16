@@ -1,0 +1,60 @@
+{%- comment -%} Collection grid — mirrors the products listing page {%- endcomment -%}
+<section class="section">
+  <div class="container">
+    <div class="collection-head">
+      <span class="eyebrow">Shop</span>
+      <h1 class="section-title">{{ collection.title }}</h1>
+      {%- if collection.description != blank -%}
+        <div class="section-sub rte">{{ collection.description }}</div>
+      {%- endif -%}
+    </div>
+
+    <div class="collection-toolbar">
+      <p style="color:hsl(var(--muted-foreground));margin:0;">{{ collection.products_count }} {% if collection.products_count == 1 %}product{% else %}products{% endif %}</p>
+      <form method="get" id="sort-form">
+        <label for="sort-by" class="sr-only">Sort by</label>
+        <select name="sort_by" id="sort-by" onchange="document.getElementById('sort-form').submit()">
+          {%- assign sort = collection.sort_by | default: collection.default_sort_by -%}
+          <option value="manual" {% if sort == 'manual' %}selected{% endif %}>Featured</option>
+          <option value="best-selling" {% if sort == 'best-selling' %}selected{% endif %}>Best selling</option>
+          <option value="title-ascending" {% if sort == 'title-ascending' %}selected{% endif %}>A–Z</option>
+          <option value="title-descending" {% if sort == 'title-descending' %}selected{% endif %}>Z–A</option>
+          <option value="price-ascending" {% if sort == 'price-ascending' %}selected{% endif %}>Price, low to high</option>
+          <option value="price-descending" {% if sort == 'price-descending' %}selected{% endif %}>Price, high to low</option>
+          <option value="created-descending" {% if sort == 'created-descending' %}selected{% endif %}>Newest</option>
+        </select>
+      </form>
+    </div>
+
+    {%- paginate collection.products by 12 -%}
+      {%- if collection.products.size > 0 -%}
+        <div class="grid grid-4">
+          {%- for product in collection.products -%}
+            {% render 'product-card', product: product %}
+          {%- endfor -%}
+        </div>
+
+        {%- if paginate.pages > 1 -%}
+          <nav class="pagination" role="navigation" aria-label="Pagination">
+            {%- if paginate.previous -%}<a href="{{ paginate.previous.url }}">{{ 'general.pagination.previous' | t }}</a>{%- endif -%}
+            {%- for part in paginate.parts -%}
+              {%- if part.is_link -%}<a href="{{ part.url }}">{{ part.title }}</a>
+              {%- elsif part.title == paginate.current_page -%}<span class="current">{{ part.title }}</span>
+              {%- else -%}<span>{{ part.title }}</span>{%- endif -%}
+            {%- endfor -%}
+            {%- if paginate.next -%}<a href="{{ paginate.next.url }}">{{ 'general.pagination.next' | t }}</a>{%- endif -%}
+          </nav>
+        {%- endif -%}
+      {%- else -%}
+        <p class="text-center" style="color:hsl(var(--muted-foreground));">No products found in this collection yet.</p>
+      {%- endif -%}
+    {%- endpaginate -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Collection grid",
+  "settings": []
+}
+{% endschema %}

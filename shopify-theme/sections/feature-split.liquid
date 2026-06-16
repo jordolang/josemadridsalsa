@@ -1,0 +1,67 @@
+{%- comment -%} "What Sets Us Apart" feature split — mirrors the home page section {%- endcomment -%}
+<section class="section">
+  <div class="container">
+    <div class="feature-split">
+      <div>
+        <span class="eyebrow">{{ section.settings.eyebrow }}</span>
+        <h2 class="section-title" style="text-align:left;">{{ section.settings.heading }} <span class="text-gradient">{{ section.settings.heading_accent }}</span></h2>
+        <div style="margin-top:2rem;">
+          {%- for block in section.blocks -%}
+            <div class="feature-row" {{ block.shopify_attributes }}>
+              <div class="feature-row__icon heat-tile__icon--{{ block.settings.tone }}"><span aria-hidden="true">{{ block.settings.icon }}</span></div>
+              <div>
+                <h3>{{ block.settings.title }}</h3>
+                <p>{{ block.settings.body }}</p>
+              </div>
+            </div>
+          {%- endfor -%}
+        </div>
+      </div>
+
+      <div class="feature-media">
+        {%- if section.settings.image -%}
+          <img src="{{ section.settings.image | image_url: width: 900 }}" alt="{{ section.settings.image.alt | escape }}" width="900" height="700" loading="lazy">
+        {%- else -%}
+          {{ 'lifestyle-1' | placeholder_svg_tag }}
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Feature split",
+  "max_blocks": 5,
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "What Sets Us Apart" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "More Than Just" },
+    { "type": "text", "id": "heading_accent", "label": "Heading accent", "default": "Great Taste" },
+    { "type": "image_picker", "id": "image", "label": "Image" }
+  ],
+  "blocks": [
+    {
+      "type": "feature",
+      "name": "Feature",
+      "settings": [
+        { "type": "text", "id": "icon", "label": "Emoji icon", "default": "🏪" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Fundraising Made Easy" },
+        { "type": "textarea", "id": "body", "label": "Body", "default": "Perfect for schools, churches, and organizations. High-profit margins and products people actually want." },
+        { "type": "select", "id": "tone", "label": "Color tone", "default": "salsa", "options": [
+          { "value": "verde", "label": "Verde" }, { "value": "chile", "label": "Chile" }, { "value": "salsa", "label": "Salsa" }
+        ]}
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Feature split",
+      "blocks": [
+        { "type": "feature", "settings": { "icon": "🏪", "tone": "salsa", "title": "Fundraising Made Easy", "body": "Perfect for schools, churches, and organizations. High-profit margins and products people actually want." } },
+        { "type": "feature", "settings": { "icon": "🏭", "tone": "verde", "title": "Wholesale Options", "body": "Stock our premium salsas in your store. Competitive pricing with excellent support." } },
+        { "type": "feature", "settings": { "icon": "📍", "tone": "chile", "title": "Local Presence", "body": "Find us at local stores throughout Ohio, or order online for delivery anywhere." } }
+      ]
+    }
+  ]
+}
+{% endschema %}

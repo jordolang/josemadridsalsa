@@ -1,0 +1,63 @@
+{%- comment -%} Cart page — mirrors the storefront cart {%- endcomment -%}
+<section class="section">
+  <div class="container" style="max-width:56rem;">
+    <h1 class="section-title" style="text-align:left;margin-bottom:2rem;">{{ 'cart.general.title' | t }}</h1>
+
+    {%- if cart.item_count > 0 -%}
+      <form action="{{ routes.cart_url }}" method="post" novalidate>
+        {%- for item in cart.items -%}
+          <div class="cart-item">
+            <a href="{{ item.url }}">
+              {%- if item.image -%}
+                <img src="{{ item.image | image_url: width: 160 }}" alt="{{ item.title | escape }}" width="80" height="80">
+              {%- else -%}
+                {{ 'product-1' | placeholder_svg_tag }}
+              {%- endif -%}
+            </a>
+            <div>
+              <a href="{{ item.url }}"><strong>{{ item.product.title }}</strong></a>
+              {%- unless item.variant.title contains 'Default' -%}
+                <p style="color:hsl(var(--muted-foreground));font-size:.85rem;margin:.2rem 0;">{{ item.variant.title }}</p>
+              {%- endunless -%}
+              <p style="margin:.2rem 0;">{{ item.final_price | money }}</p>
+              <div style="display:flex;align-items:center;gap:1rem;margin-top:.5rem;">
+                <div class="qty" data-qty>
+                  <button type="button" data-qty-step="-1" aria-label="Decrease">−</button>
+                  <input type="number" name="updates[]" value="{{ item.quantity }}" min="0"
+                         data-cart-line="{{ forloop.index }}" inputmode="numeric"
+                         onchange="this.form.submit()">
+                  <button type="button" data-qty-step="1" aria-label="Increase">+</button>
+                </div>
+                <a href="{{ item.url_to_remove }}" style="font-size:.85rem;color:var(--salsa-600);">{{ 'cart.general.remove' | t }}</a>
+              </div>
+            </div>
+            <div style="text-align:right;font-weight:700;">{{ item.final_line_price | money }}</div>
+          </div>
+        {%- endfor -%}
+
+        <div class="cart-summary">
+          <div style="text-align:right;">
+            <p style="color:hsl(var(--muted-foreground));font-size:.85rem;">{{ 'cart.general.taxes_note' | t }}</p>
+            <p class="cart-summary__total">{{ 'cart.general.subtotal' | t }}: {{ cart.total_price | money }}</p>
+          </div>
+          <div style="display:flex;gap:1rem;">
+            <a href="{{ routes.all_products_collection_url }}" class="btn btn-secondary">{{ 'cart.general.continue_shopping' | t }}</a>
+            <button type="submit" name="checkout" class="btn btn-primary">{{ 'cart.general.checkout' | t }}</button>
+          </div>
+        </div>
+      </form>
+    {%- else -%}
+      <div class="text-center" style="padding:4rem 0;">
+        <p style="font-size:1.25rem;color:hsl(var(--muted-foreground));margin-bottom:1.5rem;">{{ 'cart.general.empty' | t }}</p>
+        <a href="{{ routes.all_products_collection_url }}" class="btn btn-primary">{{ 'cart.general.continue_shopping' | t }}</a>
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Cart",
+  "settings": []
+}
+{% endschema %}

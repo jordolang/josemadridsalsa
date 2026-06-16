@@ -1,0 +1,63 @@
+{%- comment -%}
+  Product card — mirrors components/store/product-card.tsx.
+  Accepts: product (object)
+{%- endcomment -%}
+{%- liquid
+  assign on_sale = false
+  if product.compare_at_price > product.price
+    assign on_sale = true
+    assign discount = product.compare_at_price | minus: product.price | times: 100.0 | divided_by: product.compare_at_price | round
+  endif
+
+  assign heat = product.metafields.custom.heat_level | default: '' | downcase
+  assign featured_tag = false
+  if product.tags contains 'Featured' or product.tags contains 'featured'
+    assign featured_tag = true
+  endif
+-%}
+<div class="card interactive-card product-card">
+  <a href="{{ product.url }}" class="product-card__media">
+    {%- if product.featured_image -%}
+      <img src="{{ product.featured_image | image_url: width: 500 }}"
+           alt="{{ product.featured_image.alt | escape | default: product.title }}"
+           width="500" height="500" loading="lazy">
+    {%- else -%}
+      {{ 'product-1' | placeholder_svg_tag: 'product-card__media' }}
+    {%- endif -%}
+
+    <div class="product-card__badges">
+      {%- if featured_tag -%}<span class="badge badge-featured">Featured</span>{%- endif -%}
+      {%- if on_sale -%}<span class="badge badge-sale">{{ discount }}% OFF</span>{%- endif -%}
+      {%- unless product.available -%}<span class="badge badge-soldout">Out of Stock</span>{%- endunless -%}
+    </div>
+
+    {%- if heat != blank -%}
+      <div class="product-card__heat">
+        <span class="badge badge-{{ heat }}">{{ heat | capitalize }}</span>
+      </div>
+    {%- endif -%}
+  </a>
+
+  <div class="product-card__body">
+    <a href="{{ product.url }}"><h3 class="product-card__title">{{ product.title }}</h3></a>
+    {%- if product.description != blank -%}
+      <p class="product-card__desc">{{ product.description | strip_html | truncatewords: 18 }}</p>
+    {%- endif -%}
+
+    <div class="product-card__foot">
+      <div>
+        <span class="price">{{ product.price | money }}</span>
+        {%- if on_sale -%}<span class="price__compare">{{ product.compare_at_price | money }}</span>{%- endif -%}
+      </div>
+
+      {%- if product.available -%}
+        {%- form 'product', product, class: 'product-card__atc' -%}
+          <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+          <button type="submit" class="btn btn-primary" style="padding:.5rem .9rem;font-size:.85rem;">Add</button>
+        {%- endform -%}
+      {%- else -%}
+        <button class="btn btn-secondary" disabled style="padding:.5rem .9rem;font-size:.85rem;">Sold out</button>
+      {%- endif -%}
+    </div>
+  </div>
+</div>

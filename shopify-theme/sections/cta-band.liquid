@@ -1,0 +1,59 @@
+{%- comment -%} Fundraising CTA band with stats — mirrors the home fundraising callout {%- endcomment -%}
+<section class="section">
+  <div class="container">
+    <div class="cta-band">
+      <span class="eyebrow" style="color:rgba(255,255,255,.85);">{{ section.settings.eyebrow }}</span>
+      <h2>{{ section.settings.heading }}</h2>
+      <p>{{ section.settings.subheading }}</p>
+
+      {%- if section.blocks.size > 0 -%}
+        <div class="cta-stats">
+          {%- for block in section.blocks -%}
+            <div class="stat" {{ block.shopify_attributes }}>
+              <strong>{{ block.settings.value }}</strong>
+              <span>{{ block.settings.label }}</span>
+            </div>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+      {%- if section.settings.button_label != blank -%}
+        <a href="{{ section.settings.button_link }}" class="btn" style="background:#fff;color:var(--salsa-600);">{{ section.settings.button_label }}</a>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "CTA band",
+  "max_blocks": 4,
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Fundraising" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Raise More with Salsa People Love" },
+    { "type": "textarea", "id": "subheading", "label": "Subheading", "default": "Schools, teams, and churches earn 50% profit on every jar. No upfront cost, easy to run, and a product everyone wants." },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Start a Fundraiser" },
+    { "type": "url", "id": "button_link", "label": "Button link" }
+  ],
+  "blocks": [
+    {
+      "type": "stat",
+      "name": "Stat",
+      "settings": [
+        { "type": "text", "id": "value", "label": "Value", "default": "50%" },
+        { "type": "text", "id": "label", "label": "Label", "default": "Profit per jar" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "CTA band",
+      "blocks": [
+        { "type": "stat", "settings": { "value": "50%", "label": "Profit per jar" } },
+        { "type": "stat", "settings": { "value": "96+", "label": "Jar minimum" } },
+        { "type": "stat", "settings": { "value": "10 days", "label": "Ship time" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,35 @@
+{%- comment -%} Search results {%- endcomment -%}
+<section class="section">
+  <div class="container">
+    <div class="collection-head">
+      <span class="eyebrow">Search</span>
+      <h1 class="section-title">{{ 'general.search.title' | t }}</h1>
+      <form action="{{ routes.search_url }}" method="get" role="search" style="max-width:32rem;margin:1.5rem auto 0;display:flex;gap:.5rem;">
+        <input type="search" name="q" value="{{ search.terms | escape }}" placeholder="{{ 'general.search.placeholder' | t }}"
+               style="flex:1;padding:.7rem .9rem;border:1px solid hsl(var(--border));border-radius:.5rem;">
+        <button type="submit" class="btn btn-primary">Search</button>
+      </form>
+    </div>
+
+    {%- if search.performed -%}
+      {%- if search.results.size > 0 -%}
+        <p class="text-center" style="color:hsl(var(--muted-foreground));margin-bottom:1.5rem;">{{ search.results_count }} results for "{{ search.terms | escape }}"</p>
+        <div class="grid grid-4">
+          {%- for item in search.results -%}
+            {%- if item.object_type == 'product' -%}
+              {% render 'product-card', product: item %}
+            {%- else -%}
+              <a href="{{ item.url }}" class="card" style="padding:1.25rem;"><strong>{{ item.title }}</strong></a>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- else -%}
+        <p class="text-center" style="color:hsl(var(--muted-foreground));">No results found for "{{ search.terms | escape }}".</p>
+      {%- endif -%}
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{ "name": "Search", "settings": [] }
+{% endschema %}

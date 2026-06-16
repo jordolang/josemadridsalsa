@@ -1,0 +1,32 @@
+{%- comment -%} List of collections {%- endcomment -%}
+<section class="section">
+  <div class="container">
+    <div class="collection-head">
+      <span class="eyebrow">Shop</span>
+      <h1 class="section-title">Collections</h1>
+    </div>
+    <div class="grid grid-3">
+      {%- for collection in collections -%}
+        <a href="{{ collection.url }}" class="card interactive-card" style="overflow:hidden;">
+          <div class="product-card__media">
+            {%- if collection.image -%}
+              <img src="{{ collection.image | image_url: width: 500 }}" alt="{{ collection.title | escape }}" width="500" height="500" loading="lazy">
+            {%- elsif collection.products.first.featured_image -%}
+              <img src="{{ collection.products.first.featured_image | image_url: width: 500 }}" alt="{{ collection.title | escape }}" width="500" height="500" loading="lazy">
+            {%- else -%}
+              {{ 'collection-1' | placeholder_svg_tag }}
+            {%- endif -%}
+          </div>
+          <div class="product-card__body">
+            <h3 class="product-card__title">{{ collection.title }}</h3>
+            <p class="product-card__desc">{{ collection.products_count }} products</p>
+          </div>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{ "name": "List collections", "settings": [] }
+{% endschema %}

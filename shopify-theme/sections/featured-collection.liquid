@@ -1,0 +1,53 @@
+{%- comment -%} Featured products — mirrors components/store/featured-products-section.tsx {%- endcomment -%}
+{%- assign collection = collections[section.settings.collection] -%}
+<section class="section">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:3rem;">
+      <span class="eyebrow">{{ section.settings.eyebrow }}</span>
+      <h2 class="section-title">{{ section.settings.heading }} <span class="text-gradient">{{ section.settings.heading_accent }}</span></h2>
+      <p class="section-sub">{{ section.settings.subheading }}</p>
+    </div>
+
+    <div class="grid grid-4">
+      {%- if collection and collection.products_count > 0 -%}
+        {%- for product in collection.products limit: section.settings.limit -%}
+          {% render 'product-card', product: product %}
+        {%- endfor -%}
+      {%- else -%}
+        {%- for i in (1..section.settings.limit) -%}
+          <div class="card product-card">
+            <div class="product-card__media">{{ 'product-1' | placeholder_svg_tag }}</div>
+            <div class="product-card__body">
+              <h3 class="product-card__title">Example Salsa</h3>
+              <p class="product-card__desc">Assign a collection in the theme editor to show real products here.</p>
+              <div class="product-card__foot"><span class="price">$8.99</span></div>
+            </div>
+          </div>
+        {%- endfor -%}
+      {%- endif -%}
+    </div>
+
+    {%- if section.settings.button_label != blank -%}
+      <div class="text-center" style="margin-top:2.5rem;">
+        <a href="{{ section.settings.button_link | default: routes.all_products_collection_url }}" class="btn btn-pill">{{ section.settings.button_label }} {% render 'icon', name: 'arrow-right' %}</a>
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Featured products",
+  "settings": [
+    { "type": "collection", "id": "collection", "label": "Collection" },
+    { "type": "range", "id": "limit", "label": "Products to show", "min": 2, "max": 12, "step": 1, "default": 4 },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Best Sellers" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Find Your Perfect" },
+    { "type": "text", "id": "heading_accent", "label": "Heading accent", "default": "Heat Level" },
+    { "type": "textarea", "id": "subheading", "label": "Subheading", "default": "From sweet fruit blends that brighten any dish to extra-hot picks that bring real fire — every jar is small-batch and handcrafted in Zanesville, Ohio." },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "View All 25+ Flavors" },
+    { "type": "url", "id": "button_link", "label": "Button link" }
+  ],
+  "presets": [{ "name": "Featured products" }]
+}
+{% endschema %}

@@ -1,0 +1,26 @@
+{
+  "general": {
+    "search": { "placeholder": "Search salsas...", "title": "Search" },
+    "404": { "title": "Page not found", "subtext": "The page you were looking for doesn't exist.", "link": "Continue shopping" },
+    "pagination": { "previous": "Previous", "next": "Next" }
+  },
+  "products": {
+    "product": {
+      "add_to_cart": "Add to cart",
+      "sold_out": "Sold out",
+      "quantity": "Quantity",
+      "view_details": "View full product details"
+    }
+  },
+  "cart": {
+    "general": {
+      "title": "Your Cart",
+      "empty": "Your cart is empty",
+      "continue_shopping": "Continue shopping",
+      "subtotal": "Subtotal",
+      "checkout": "Check out",
+      "remove": "Remove",
+      "taxes_note": "Taxes and shipping calculated at checkout"
+    }
+  }
+}

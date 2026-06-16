@@ -1,0 +1,20 @@
+{
+  "current": {
+    "brand_name": "Jose Madrid Salsa",
+    "color_salsa": "#e53e3e",
+    "color_chile": "#f59e0b",
+    "color_verde": "#22c55e",
+    "color_background": "#ffffff",
+    "color_foreground": "#0c0a09",
+    "show_announcement": true,
+    "announcement_text": "Free shipping on orders over $75 — Fresh batches every week",
+    "social_facebook": "https://www.facebook.com/josemadridsalsa",
+    "social_instagram": "https://instagram.com/josemadridsalsa",
+    "social_twitter": "https://twitter.com/josemadridsalsa",
+    "social_google": "https://g.page/jose-madrid-salsa/review",
+    "support_phone": "(740) 521-4304",
+    "support_email": "mike@josemadridsalsa.com",
+    "hq_location": "601 Putnam Ave, Zanesville, OH 43701"
+  },
+  "presets": {}
+}

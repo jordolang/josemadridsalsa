@@ -1,0 +1,93 @@
+{%- comment -%} Product page — mirrors the storefront product detail layout {%- endcomment -%}
+{%- assign current = product.selected_or_first_available_variant -%}
+<section class="section">
+  <div class="container">
+    <div class="product">
+      <div class="product__gallery">
+        {%- if product.featured_image -%}
+          <img id="product-main-image" src="{{ product.featured_image | image_url: width: 900 }}"
+               alt="{{ product.featured_image.alt | escape | default: product.title }}" width="900" height="900">
+        {%- else -%}
+          {{ 'product-1' | placeholder_svg_tag }}
+        {%- endif -%}
+
+        {%- if product.images.size > 1 -%}
+          <div class="product__thumbs">
+            {%- for image in product.images limit: 6 -%}
+              <img src="{{ image | image_url: width: 150 }}" alt="{{ image.alt | escape }}" width="72" height="72"
+                   onclick="document.getElementById('product-main-image').src='{{ image | image_url: width: 900 }}'">
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+
+      <div class="product__info">
+        {%- assign heat = product.metafields.custom.heat_level | default: '' | downcase -%}
+        {%- if heat != blank -%}<span class="badge badge-{{ heat }}" style="margin-bottom:.75rem;">{{ heat | capitalize }}</span>{%- endif -%}
+
+        <h1 class="product__title">{{ product.title }}</h1>
+        {%- if product.vendor != blank -%}<p style="color:hsl(var(--muted-foreground));">{{ product.vendor }}</p>{%- endif -%}
+
+        <div class="product__price">
+          <span data-product-price>{{ current.price | money }}</span>
+          {%- if product.compare_at_price > product.price -%}
+            <span class="price__compare">{{ product.compare_at_price | money }}</span>
+          {%- endif -%}
+        </div>
+
+        {%- if product.description != blank -%}
+          <div class="product__desc rte">{{ product.description }}</div>
+        {%- endif -%}
+
+        {%- form 'product', product, data-product-form: true, class: 'product__form' -%}
+          {%- unless product.has_only_default_variant -%}
+            {%- for option in product.options_with_values -%}
+              <label style="display:flex;flex-direction:column;gap:.35rem;font-weight:600;">
+                {{ option.name }}
+                <select class="variant-select" data-variant-option name="options[{{ option.name | escape }}]">
+                  {%- for value in option.values -%}
+                    <option value="{{ value | escape }}" {% if option.selected_value == value %}selected{% endif %}>{{ value }}</option>
+                  {%- endfor -%}
+                </select>
+              </label>
+            {%- endfor -%}
+          {%- endunless -%}
+
+          <input type="hidden" name="id" value="{{ current.id }}">
+
+          <div style="display:flex;gap:1rem;align-items:flex-end;">
+            <div>
+              <label for="qty" style="display:block;font-weight:600;margin-bottom:.35rem;">Quantity</label>
+              <div class="qty" data-qty>
+                <button type="button" data-qty-step="-1" aria-label="Decrease">−</button>
+                <input id="qty" type="number" name="quantity" value="1" min="1" inputmode="numeric">
+                <button type="button" data-qty-step="1" aria-label="Increase">+</button>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" data-add-to-cart data-label="{{ 'products.product.add_to_cart' | t }}"
+            {% unless current.available %}disabled{% endunless %}>
+            {% if current.available %}{{ 'products.product.add_to_cart' | t }}{% else %}{{ 'products.product.sold_out' | t }}{% endif %}
+          </button>
+        {%- endform -%}
+
+        {%- if product.metafields.custom.ingredients != blank -%}
+          <div class="rte" style="margin-top:2rem;">
+            <h3 style="font-family:var(--font-sans);font-size:1.1rem;">Ingredients</h3>
+            <p style="color:hsl(var(--muted-foreground));">{{ product.metafields.custom.ingredients }}</p>
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</section>
+
+<script type="application/json" data-product-json>{{ product | json }}</script>
+
+{% schema %}
+{
+  "name": "Product",
+  "settings": []
+}
+{% endschema %}

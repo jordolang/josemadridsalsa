@@ -1,0 +1,95 @@
+{%- comment -%} Footer — mirrors the storefront multi-column footer. {%- endcomment -%}
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div style="display:flex;align-items:center;">
+          {%- if settings.logo -%}
+            <img src="{{ settings.logo | image_url: width: 120 }}" alt="{{ settings.brand_name }} logo" width="56" height="56">
+          {%- else -%}
+            <img src="{{ 'logo.png' | asset_url }}" alt="{{ settings.brand_name }} logo" width="56" height="56">
+          {%- endif -%}
+          <span class="footer-brand__name">{{ settings.brand_name }}</span>
+        </div>
+        <p>Handcrafted, small-batch salsas made in Ohio since 1989. We partner with families, fundraisers, and retail shops across the Midwest.</p>
+        <div class="footer-social">
+          {%- if settings.social_facebook != blank -%}<a href="{{ settings.social_facebook }}" aria-label="Facebook">{% render 'icon', name: 'facebook' %}</a>{%- endif -%}
+          {%- if settings.social_instagram != blank -%}<a href="{{ settings.social_instagram }}" aria-label="Instagram">{% render 'icon', name: 'instagram' %}</a>{%- endif -%}
+          {%- if settings.social_twitter != blank -%}<a href="{{ settings.social_twitter }}" aria-label="X">{% render 'icon', name: 'twitter' %}</a>{%- endif -%}
+          {%- if settings.social_google != blank -%}<a href="{{ settings.social_google }}" aria-label="Google Business">{% render 'icon', name: 'map-pin' %}</a>{%- endif -%}
+        </div>
+      </div>
+
+      <div class="footer-cols">
+        <div class="footer-col">
+          <h4>About Us</h4>
+          <a href="/pages/about">About Jose</a>
+          <a href="/pages/our-story">Our Story</a>
+          <a href="/pages/la-perla-ave">La Perla Tortilla Factory</a>
+          <a href="/pages/find-us">Find Us Locally</a>
+          <a href="/pages/where-is-jose">Where is Jose?</a>
+          <a href="/pages/recipes">Recipes</a>
+        </div>
+        <div class="footer-col">
+          <h4>Shop</h4>
+          <a href="{{ routes.all_products_collection_url }}">Shop All Salsas</a>
+          <a href="/collections/merchandise">Merchandise</a>
+          <a href="/pages/gift-certificates">Gift Certificates</a>
+          <a href="/pages/fundraising">Fundraising Program</a>
+        </div>
+        <div class="footer-col">
+          <h4>Helpful Links</h4>
+          <a href="/pages/contact">Contact Us</a>
+          <a href="/pages/wholesale">Wholesale Program</a>
+          <a href="{{ routes.account_url }}">Customer Login</a>
+          <a href="mailto:{{ settings.support_email }}">Support</a>
+        </div>
+        <div class="footer-col">
+          <h4>Policies</h4>
+          {%- if shop.privacy_policy != blank -%}<a href="{{ shop.privacy_policy.url }}">Privacy Policy</a>{%- else -%}<a href="/policies/privacy-policy">Privacy Policy</a>{%- endif -%}
+          {%- if shop.terms_of_service != blank -%}<a href="{{ shop.terms_of_service.url }}">Terms of Service</a>{%- else -%}<a href="/policies/terms-of-service">Terms of Service</a>{%- endif -%}
+          {%- if shop.refund_policy != blank -%}<a href="{{ shop.refund_policy.url }}">Refund Policy</a>{%- else -%}<a href="/policies/refund-policy">Refund Policy</a>{%- endif -%}
+          <a href="/pages/accessibility">Accessibility</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-top" style="margin-top:3rem;border-top:1px solid hsl(var(--border));padding-top:3rem;">
+      <div class="footer-col">
+        <h4>Contact Us</h4>
+        <a href="mailto:{{ settings.support_email }}">{% render 'icon', name: 'mail' %} {{ settings.support_email }}</a>
+        <a href="tel:{{ settings.support_phone | replace: ' ', '' | replace: '(', '' | replace: ')', '' | replace: '-', '' }}">{% render 'icon', name: 'phone' %} {{ settings.support_phone }}</a>
+        <span style="display:flex;gap:.4rem;color:hsl(var(--secondary-foreground) / .7);font-size:.9rem;padding-top:.4rem;">{% render 'icon', name: 'map-pin' %} {{ settings.hq_location }}</span>
+      </div>
+
+      <div class="footer-col" style="grid-column:span 2;">
+        <h4>Join our newsletter</h4>
+        <p style="color:hsl(var(--secondary-foreground) / .7);font-size:.9rem;">Fresh-batch updates, new flavors, and the occasional discount.</p>
+        {%- form 'customer', id: 'footer-newsletter' -%}
+          <input type="hidden" name="contact[tags]" value="newsletter">
+          {%- if form.posted_successfully? -%}
+            <p style="color:var(--verde-600);margin-top:.5rem;">Thanks for subscribing!</p>
+          {%- endif -%}
+          <div class="newsletter-form">
+            <input type="email" name="contact[email]" placeholder="you@example.com" aria-label="Email" required>
+            <button type="submit" class="btn btn-primary">Subscribe</button>
+          </div>
+        {%- endform -%}
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; {{ 'now' | date: '%Y' }} {{ settings.brand_name }}. All rights reserved.</p>
+      <p>Crafted in Ohio • Fresh batches every week</p>
+    </div>
+  </div>
+</footer>
+
+{% schema %}
+{
+  "name": "Footer",
+  "settings": [
+    { "type": "paragraph", "content": "Social links, contact info and the logo are configured in Theme settings." }
+  ]
+}
+{% endschema %}

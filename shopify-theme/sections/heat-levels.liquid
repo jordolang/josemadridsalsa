@@ -1,0 +1,65 @@
+{%- comment -%} Heat-level category tiles — mirrors the home "Built for Every Palate" section {%- endcomment -%}
+<section class="section section--muted">
+  <div class="container">
+    <div class="text-center mb-4" style="margin-bottom:4rem;">
+      <span class="eyebrow">{{ section.settings.eyebrow }}</span>
+      <h2 class="section-title">{{ section.settings.heading }} <span class="text-gradient">{{ section.settings.heading_accent }}</span></h2>
+      <p class="section-sub">{{ section.settings.subheading }}</p>
+    </div>
+
+    <div class="grid grid-3">
+      {%- for block in section.blocks -%}
+        <a href="{{ block.settings.link }}" class="card interactive-card heat-tile" {{ block.shopify_attributes }}>
+          <div class="heat-tile__icon heat-tile__icon--{{ block.settings.tone }}">
+            <span aria-hidden="true">{{ block.settings.icon }}</span>
+          </div>
+          <span class="heat-tile__eyebrow">{{ block.settings.eyebrow }}</span>
+          <h3>{{ block.settings.title }}</h3>
+          <p>{{ block.settings.body }}</p>
+          <span class="heat-tile__more">Shop {{ block.settings.title }} {% render 'icon', name: 'arrow-right' %}</span>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Heat levels",
+  "max_blocks": 4,
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Heat Levels" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Built for Every" },
+    { "type": "text", "id": "heading_accent", "label": "Heading accent", "default": "Palate" },
+    { "type": "textarea", "id": "subheading", "label": "Subheading", "default": "From those who like it mild to the heat seekers — we have the perfect salsa for everyone." }
+  ],
+  "blocks": [
+    {
+      "type": "tile",
+      "name": "Tile",
+      "settings": [
+        { "type": "text", "id": "icon", "label": "Emoji icon", "default": "🌿" },
+        { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Mild & Sweet" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Mild" },
+        { "type": "textarea", "id": "body", "label": "Body", "default": "Perfect for those who enjoy flavor without the heat. Great for kids and mild palates." },
+        { "type": "url", "id": "link", "label": "Link" },
+        { "type": "select", "id": "tone", "label": "Color tone", "default": "verde", "options": [
+          { "value": "verde", "label": "Verde (green)" },
+          { "value": "chile", "label": "Chile (gold)" },
+          { "value": "salsa", "label": "Salsa (red)" }
+        ]}
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Heat levels",
+      "blocks": [
+        { "type": "tile", "settings": { "icon": "🌿", "eyebrow": "Mild & Sweet", "title": "Mild", "tone": "verde", "body": "Perfect for those who enjoy flavor without the heat. Great for kids and mild palates." } },
+        { "type": "tile", "settings": { "icon": "🌶️", "eyebrow": "Medium Heat", "title": "Medium", "tone": "chile", "body": "The perfect balance of flavor and heat. Our most popular choice for everyday enjoyment." } },
+        { "type": "tile", "settings": { "icon": "🔥", "eyebrow": "Hot & Spicy", "title": "Hot", "tone": "salsa", "body": "For those who love the heat — bold flavors with a serious kick that builds with each bite." } }
+      ]
+    }
+  ]
+}
+{% endschema %}
