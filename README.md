@@ -1,145 +1,63 @@
-<div align="center">
+# Jose Madrid Salsa — Shopify Theme
 
-  <img src="apps/storefront/public/images/shared/jose-madrid-salsa-logo.png" alt="Jose Madrid Salsa Logo" width="300" />
+An Online Store 2.0 Liquid theme that replicates the look & feel of the Jose Madrid
+Salsa Next.js storefront: the salsa / verde / chile palette, Montserrat + Volkhov
+typography, the dark hero, heat-level category tiles, featured products, the
+"What Sets Us Apart" split, the fundraising CTA band, and the multi-column footer.
 
-  <h1>Jose Madrid Salsa</h1>
-  <p><strong>Version 2.0 - Full Production Launch Ready</strong></p>
+This is a **visual port**, not a code port — Shopify renders Liquid against
+Shopify's own product/collection/cart data, so the React components were rebuilt as
+Liquid sections.
 
-  [![Version](https://img.shields.io/badge/version-2.0.0-cb3b32)](https://github.com/jordolang/josemadridsalsa/releases)
-  [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js&logoColor=white)](https://nextjs.org/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.x-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-  [![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel&logoColor=white)](https://vercel.com/)
+> **Note:** This branch (`claude/sweet-lamport-6x0cq0`) contains *only* the Shopify
+> theme, with the theme folders at the repository root so it can be loaded directly
+> by Shopify (GitHub integration or `shopify theme push`). The full platform
+> monorepo lives on `main`.
 
-  <p>
-    <a href="https://www.josemadrid.net">Live Site</a> |
-    <a href="https://github.com/jordolang/salsadocs">Documentation</a> |
-    <a href="CHANGELOG.md">Changelog</a> |
-    <a href="SECURITY.md">Security</a>
-  </p>
+## What's included
 
-</div>
+Core commerce pages:
 
----
+| Page | Template | Section |
+| --- | --- | --- |
+| Home | `templates/index.json` | hero, featured-collection, heat-levels, feature-split, cta-band |
+| Product | `templates/product.json` | `main-product` |
+| Collection | `templates/collection.json` | `main-collection-product-grid` |
+| Cart | `templates/cart.json` | `main-cart` |
+| All collections | `templates/list-collections.json` | `main-list-collections` |
+| Page | `templates/page.json` | `main-page` |
+| Search | `templates/search.json` | `main-search` |
+| 404 | `templates/404.json` | `main-404` |
 
-## Overview
+Shared chrome: `sections/header.liquid` (mega-menu + mobile drawer) and
+`sections/footer.liquid`, wired in `layout/theme.liquid`.
 
-Jose Madrid Salsa is the production e-commerce, fundraising, and business-management platform for Jose Madrid Salsa. Version 2.0 combines a responsive public storefront, customer accounts, fundraising campaign tools, an interactive battle arena, and a role-based administration platform.
+Design tokens live in `assets/theme.css` (ported from `tailwind.config.ts` and
+`globals.css`). Interactions (mobile drawer, qty steppers, variant price updates)
+are in `assets/theme.js`.
 
-The production website is live at [www.josemadrid.net](https://www.josemadrid.net).
+## Setup notes
 
-## Homepage Preview
+1. **Install** with the Shopify CLI from this folder:
+   ```bash
+   shopify theme dev      # live preview against a dev store
+   shopify theme push     # upload to a store
+   ```
+2. **Heat-level badges** read a product metafield `custom.heat_level` with a value
+   of `mild`, `medium`, `hot`, or `fruit`. Create that metafield and tag your
+   products to get the colored heat badges on cards and product pages.
+3. **Featured products** on the home page pull from a collection — set it in the
+   theme editor (Home → Featured products → Collection). Until then a placeholder
+   grid is shown.
+4. **Nav links** in the header point to conventional Shopify routes
+   (`/collections/mild`, `/collections/medium`, `/collections/hot`,
+   `/collections/fruit`, `/collections/bundles`, `/collections/merchandise`, and
+   `/pages/...`). Create those collections/pages, or edit `sections/header.liquid`.
+5. **Brand settings** (logo, colors, announcement bar, socials, contact) are under
+   Theme settings — defaults match the live site.
 
-### Desktop
+## Not included (out of scope for this first pass)
 
-<a href="https://www.josemadrid.net">
-  <img src="https://image.thum.io/get/width/1440/crop/1000/noanimate/https://www.josemadrid.net" alt="Jose Madrid Salsa Version 2.0 homepage on desktop" width="100%" />
-</a>
-
-### Mobile
-
-<p align="center">
-  <a href="https://www.josemadrid.net">
-    <img src="https://image.thum.io/get/width/430/crop/932/noanimate/https://www.josemadrid.net" alt="Jose Madrid Salsa Version 2.0 homepage on mobile" width="430" />
-  </a>
-</p>
-
-These screenshots are generated from the live production homepage so the README continues to show the current storefront.
-
-## Version 2.0 Highlights
-
-- Redesigned mobile-responsive storefront and homepage
-- Product catalog, heat-level discovery, comparison, cart, checkout, and gift certificates
-- Customer accounts with order history, saved addresses, and profile management
-- Full fundraising account management platform
-- Fundraiser page builder, participant tracking, campaign branding, and analytics
-- Searchable Team Character selector with thousands of available character sprites
-- Interactive Fundraiser Battle Arena with live team activity
-- Mobile-ready administration dashboard with role-based access control
-- Order, inventory, customer, media, email campaign, and contact-message management
-- Multi-provider payment support, real-time tax, shipping, analytics, and monitoring
-
-## Technology
-
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 16 App Router and React Server Components |
-| Language | TypeScript |
-| Styling | Tailwind CSS 4 and Shadcn UI / Radix UI |
-| Database | PostgreSQL with Prisma ORM |
-| Authentication | NextAuth.js |
-| Payments | Stripe, PayPal, Square, and POS integrations |
-| Email | Resend and Nodemailer |
-| Validation | Zod and React Hook Form |
-| Testing | Vitest, Testing Library, MSW, and Playwright |
-| Deployment | Vercel and Prisma Accelerate |
-| Monitoring | Sentry, Amplitude, and Vercel Analytics |
-
-## Project Structure
-
-```text
-josemadridsalsa/
-|-- apps/
-|   |-- storefront/       # Main Next.js commerce application
-|   `-- backend/          # API-only Next.js deployment boundary
-|-- package.json          # npm workspace commands
-`-- turbo.json            # Turborepo task graph
-```
-
-## Local Development
-
-### Requirements
-
-- Node.js 20 or 22
-- PostgreSQL 14+
-- Required environment variables documented in [`docs/ENVIRONMENT_VARIABLES.md`](docs/ENVIRONMENT_VARIABLES.md)
-
-### Setup
-
-```bash
-git clone https://github.com/jordolang/josemadridsalsa.git
-cd josemadridsalsa
-npm install
-cp .env.example .env.local
-npm run db:migrate
-npm run db:seed
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-The API boundary runs at [http://localhost:3002](http://localhost:3002). The
-fundraising and admin deployment boundaries live in their own repositories:
-[josemadridsalsa-fundraising](https://github.com/jordolang/josemadridsalsa-fundraising)
-and [josemadridsalsa-admin](https://github.com/jordolang/josemadridsalsa-admin).
-See the [salsadocs](https://github.com/jordolang/salsadocs) repository for the Turborepo architecture guide.
-
-## Quality Checks
-
-Run the required checks before every commit or pull request:
-
-```bash
-npx vitest run && npm run lint && npm run type-check
-```
-
-## Deployment
-
-Pushing to `main` triggers the production deployment pipeline on Vercel. Production secrets are managed through Vercel environment variables and must never be committed to the repository.
-
-## Documentation
-
-Project documentation lives in the [salsadocs](https://github.com/jordolang/salsadocs) repository.
-
-- [Security Policy](SECURITY.md)
-- [Changelog](CHANGELOG.md)
-
-## Security
-
-Please do not open public issues for security vulnerabilities. Follow the responsible disclosure process in [`SECURITY.md`](SECURITY.md).
-
----
-
-<div align="center">
-  <img src="apps/storefront/public/images/shared/jose_madrid_logo_profile.png" alt="Jose Madrid" width="80" />
-  <p><strong>Jose Madrid Salsa</strong><br/>Zanesville, Ohio | <a href="https://www.josemadrid.net">josemadrid.net</a></p>
-</div>
+Customer account templates and the rich content pages (Our Story, Fundraising,
+Wholesale, Find Us, Heat Index, Recipes). The footer/nav link to them as standard
+Shopify pages; build them as `page` templates when needed.
