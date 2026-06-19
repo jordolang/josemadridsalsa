@@ -81,7 +81,12 @@ These screenshots are generated from the live production homepage so the README 
 josemadridsalsa/
 |-- apps/
 |   |-- storefront/       # Main Next.js commerce application
-|   `-- backend/          # API-only Next.js deployment boundary
+|   |-- backend/          # API-only Next.js deployment boundary
+|   |-- fundraising/      # Fundraising campaign platform
+|   `-- admin/            # Role-based administration dashboard
+|-- packages/
+|   |-- shared-types/     # Shared TypeScript types across all apps
+|   `-- shared-utils/     # Shared utility functions
 |-- package.json          # npm workspace commands
 `-- turbo.json            # Turborepo task graph
 ```
@@ -108,10 +113,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-The API boundary runs at [http://localhost:3002](http://localhost:3002). The
-fundraising and admin deployment boundaries live in their own repositories:
-[josemadridsalsa-fundraising](https://github.com/jordolang/josemadridsalsa-fundraising)
-and [josemadridsalsa-admin](https://github.com/jordolang/josemadridsalsa-admin).
+The monorepo includes four deployment boundaries:
+- **Storefront** - [http://localhost:3000](http://localhost:3000)
+- **Fundraising** - [http://localhost:3001](http://localhost:3001)
+- **Backend API** - [http://localhost:3002](http://localhost:3002)
+- **Admin** - [http://localhost:3003](http://localhost:3003)
+
 See the [salsadocs](https://github.com/jordolang/salsadocs) repository for the Turborepo architecture guide.
 
 ## Quality Checks
