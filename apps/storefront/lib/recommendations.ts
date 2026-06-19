@@ -466,14 +466,6 @@ export async function getComplementaryRecommendations(
         id: { notIn: productIds }, // Exclude already purchased
         isActive: true,
         inventory: { gt: 0 },
-        OR: [
-          // Same category (for familiar flavor profiles)
-          ...(purchasedCategories.size > 0
-            ? [{ categoryId: { in: Array.from(purchasedCategories) } }]
-            : []),
-          // Any product with a heat level (to ensure variety)
-          { heatLevel: { not: null } },
-        ],
       },
       select: {
         id: true,
@@ -522,17 +514,31 @@ export async function getComplementaryRecommendations(
           slug: p.slug,
           price: Number(p.price),
           featuredImage: p.featuredImage,
-          heatLevel: p.heatLevel,
+          heatLevel: p.heatLevel as string | null,
           sku: p.sku,
           inventory: p.inventory,
           score,
         }
       })
-      .filter((p): p is RecommendedProduct => p !== null) // Remove filtered products
+      .filter(
+        (
+          p,
+        ): p is {
+          id: string
+          name: string
+          slug: string
+          price: number
+          featuredImage: string | null
+          heatLevel: string | null
+          sku: string
+          inventory: number
+          score: number
+        } => p !== null,
+      ) // Remove filtered products
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
 
-    return scoredProducts
+    return scoredProducts as RecommendedProduct[]
   } catch (error) {
     console.error('Error getting complementary recommendations:', error)
     return []
