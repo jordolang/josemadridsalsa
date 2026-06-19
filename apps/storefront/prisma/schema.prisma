@@ -1971,37 +1971,34 @@ model ShippingProvider {
 }
 
 model ShippingCarrier {
-  id           String          @id @default(cuid())
+  id           String   @id @default(cuid())
   name         String
-  code         String          @unique
+  code         String   @unique
   apiEndpoint  String?
-  isActive     Boolean         @default(true)
-  requiresAuth Boolean         @default(true)
+  isActive     Boolean  @default(true)
+  requiresAuth Boolean  @default(true)
   config       Json?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  labels       ShippingLabel[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@map("shipping_carriers")
 }
 
 model ShippingLabel {
-  id                String          @id @default(cuid())
-  orderId           String
-  carrierId         String
-  trackingNumber    String
-  labelUrl          String?
-  cost              Decimal?        @db.Decimal(10, 2)
-  shipDate          DateTime?
-  estimatedDelivery DateTime?
-  carrierResponse   Json?
-  createdAt         DateTime        @default(now())
-  createdById       String?
-  carrier           ShippingCarrier @relation(fields: [carrierId], references: [id])
-  order             Order           @relation(fields: [orderId], references: [id])
+  id                 String   @id @default(cuid())
+  orderId            String
+  easypostShipmentId String   @unique
+  trackingCode       String
+  labelUrl           String?
+  carrierName        String
+  serviceName        String
+  status             String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  order              Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
-  @@index([trackingNumber])
+  @@index([trackingCode])
   @@map("shipping_labels")
 }
 
