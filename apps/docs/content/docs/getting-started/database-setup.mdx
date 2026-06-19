@@ -1,0 +1,142 @@
+---
+title: Database Setup
+description: Configure and manage the PostgreSQL database
+---
+
+# Database Setup & Maintenance
+
+This guide covers database configuration, connection setup, schema management, and troubleshooting.
+
+## Overview
+
+The platform uses **PostgreSQL** as the primary database, accessed through **Prisma ORM**. In production, connections are pooled via **Prisma Accelerate** for optimized performance.
+
+### Supported Connection Modes
+
+| Mode | URL Format | Use Case |
+|------|-----------|----------|
+| Direct | `postgresql://...` | Local development |
+| Prisma Accelerate | `prisma+postgres://...` | Production / Vercel |
+
+## Connection Setup
+
+### Environment Variables
+
+Set **one** of the following in your `.env` or `.env.local` file:
+
+```bash
+# Option A: Direct PostgreSQL connection (local development only)
+DATABASE_URL="postgresql://user:password@localhost:5432/josemadridsalsa"
+```
+
+```bash
+# Option B: Prisma Accelerate (production / Vercel — recommended)
+DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=..."
+```
+
+> **Note:** Never commit `.env` files to source control. Use Vercel environment variables for production secrets.
+
+### Local Development
+
+1. Install PostgreSQL locally or use a managed service (Neon, Supabase, Railway).
+2. Create a database:
+   ```bash
+   createdb josemadridsalsa_dev
+   ```
+3. Set `DATABASE_URL` in `.env.local`.
+4. Run migrations:
+   ```bash
+   npm run db:migrate
+   ```
+
+## Schema Management
+
+### Apply Migrations
+
+```bash
+# Apply pending migrations
+npm run db:migrate
+
+# Generate the Prisma client after schema changes
+npm run db:generate
+
+# Reset the database and re-apply all migrations (destructive)
+npm run db:reset
+```
+
+### Schema Location
+
+The Prisma schema is located at `prisma/schema.prisma`. It defines all models, relations, and indexes.
+
+### Migration Files
+
+Migration history is stored in `prisma/migrations/`. Each migration is a timestamped directory containing a `migration.sql` file.
+
+## Seeding Data
+
+```bash
+# Seed all data (permissions, products, users)
+npm run db:seed
+
+# Seed only admin user
+npx tsx scripts/create-admin.ts
+```
+
+## Troubleshooting
+
+### DNS / Connection Errors
+
+**Symptom:** `Could not resolve host` or `ECONNREFUSED`
+
+**Cause:** Incorrect `DATABASE_URL` — the hostname may no longer exist or the port is blocked.
+
+**Fix:**
+1. Verify `DATABASE_URL` in your environment settings.
+2. For production, use Prisma Accelerate (`prisma+postgres://...`) rather than a direct connection URL.
+3. Confirm the Vercel environment variable is set and deployed.
+
+### Schema Drift
+
+**Symptom:** Tables exist in migrations but are missing from the database, or Prisma reports schema conflicts.
+
+**Cause:** Migration history in `_prisma_migrations` does not match the actual database state.
+
+**Fix:**
+```bash
+# Sync schema to database (adds missing tables)
+npx prisma db push
+
+# Full reset (destructive — drops and recreates all tables)
+npm run db:reset
+```
+
+### NextAuth Session Errors
+
+**Symptom:** `CLIENT_FETCH_ERROR` or 500 errors on `/api/auth/session`
+
+**Cause:** Database connection failure causing authentication to fail.
+
+**Fix:**
+1. Confirm `DATABASE_URL` is set correctly.
+2. Confirm `NEXTAUTH_URL` is set to the production domain (not `localhost`).
+3. Restart the Vercel deployment after updating environment variables.
+
+## Production Database
+
+The production database runs on **Vercel Postgres** (Neon-backed). Key details:
+
+- **Host:** Managed by Vercel — configure via the Vercel dashboard
+- **Connection Pooling:** Prisma Accelerate (`prisma+postgres://...`)
+- **Tables Required:** 41 tables defined in `prisma/schema.prisma`
+- **Migration Strategy:** Apply via `prisma migrate deploy` during CI/CD
+
+### Vercel Environment Variables (Required)
+
+```bash
+DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=..."
+NEXTAUTH_URL="https://www.josemadrid.net"
+NEXTAUTH_SECRET="<strong-random-secret>"
+MASTER_KEY="<64-char-hex-string>"
+```
+
+> Never commit actual values. Always set these through the Vercel dashboard.

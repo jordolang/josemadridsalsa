@@ -1,0 +1,103 @@
+---
+title: PayPal Integration
+description: PayPal payment adapter using the Orders API with redirect-based authorization, cached OAuth tokens, and Venmo support
+---
+
+# PayPal Integration
+
+PayPal handles wallet-based payments and Venmo through the PayPal Orders API. It uses a redirect/popup-based authorization flow rather than client-side card collection.
+
+## Architecture
+
+<Files>
+  <Folder name="lib/payments/providers">
+    <File name="paypal.ts" />
+  </Folder>
+  <Folder name="app/api/checkout">
+    <Folder name="paypal">
+      <File name="route.ts" />
+    </Folder>
+  </Folder>
+  <Folder name="components/checkout">
+    <File name="PayPalProvider.tsx" />
+    <File name="PayPalButton.tsx" />
+    <File name="VenmoButton.tsx" />
+  </Folder>
+</Files>
+
+## PayPalAdapter
+
+The `PayPalAdapter` class implements `PaymentProviderAdapter` using the `@paypal/checkout-server-sdk`.
+
+### Conditional Registration
+
+PayPal is only registered when both credentials are available:
+
+```ts
+if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) {
+  registerProvider(new PayPalAdapter())
+}
+```
+
+### Client Initialization
+
+The adapter lazily initializes a singleton `PayPalHttpClient`, choosing sandbox or live environment based on `PAYPAL_SANDBOX`:
+
+```ts
+const environment = config.sandbox
+  ? new paypal.core.SandboxEnvironment(config.clientId, config.clientSecret)
+  : new paypal.core.LiveEnvironment(config.clientId, config.clientSecret)
+```
+
+### OAuth Token Caching
+
+PayPal OAuth2 tokens last approximately 9 hours. The adapter caches the token and refreshes 5 minutes before expiry to avoid races during webhook processing. This saves 200-500ms per webhook call.
+
+### Payment Flow
+
+1. `createPayment()` creates a PayPal Order via the Orders API
+2. Returns an `approvalUrl` that the customer is redirected to
+3. Customer approves payment in PayPal
+4. PayPal redirects back to `PAYPAL_RETURN_URL`
+5. `confirmPayment()` captures the approved order
+
+### API Timeout
+
+All PayPal API calls have a 15-second timeout to prevent checkout from hanging:
+
+```ts
+const PAYPAL_API_TIMEOUT_MS = 15_000
+```
+
+## Client-Side Components
+
+PayPal components are lazy-loaded to avoid bundling the PayPal SDK (~100KB+) when the user selects card payment:
+
+```tsx
+const PayPalProvider = dynamic(
+  () => import('@/components/checkout/PayPalProvider'),
+  { ssr: false }
+)
+const PayPalButton = dynamic(
+  () => import('@/components/checkout/PayPalButton'),
+  { ssr: false }
+)
+const VenmoButton = dynamic(
+  () => import('@/components/checkout/VenmoButton'),
+  { ssr: false }
+)
+```
+
+## Environment Variables
+
+| Variable | Description |
+| --- | --- |
+| `PAYPAL_CLIENT_ID` | PayPal app client ID |
+| `PAYPAL_CLIENT_SECRET` | PayPal app secret |
+| `PAYPAL_SANDBOX` | `"true"` (default) or `"false"` for production |
+| `PAYPAL_RETURN_URL` | Redirect after approval (defaults to `/checkout/paypal/return`) |
+| `PAYPAL_CANCEL_URL` | Redirect on cancel (defaults to `/checkout/paypal/cancel`) |
+
+<Callout type="info">
+PayPal and Venmo share the same PayPal Orders API backend. The checkout component renders separate buttons for each, but both route through the `PayPalAdapter`.
+</Callout>

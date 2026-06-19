@@ -1,0 +1,238 @@
+---
+title: Troubleshooting
+description: Solutions for common problems in the Jose Madrid Salsa platform
+---
+
+# Troubleshooting
+
+<PageInlineTOC>Jump to issue</PageInlineTOC>
+
+Quick solutions for the most common issues encountered when running and developing the Jose Madrid Salsa platform.
+
+## Database Issues
+
+### "DATABASE_URL is not set"
+
+The Prisma client cannot find a database connection string.
+
+<Steps>
+<Step>
+Check that `.env.local` exists in the project root with a valid `DATABASE_URL`:
+
+```bash
+DATABASE_URL="postgresql://user:password@localhost:5432/josemadrid"
+```
+</Step>
+
+<Step>
+The client also accepts fallback variables. It checks in order:
+1. `DATABASE_URL`
+2. `PRISMA_DATABASE_URL` (Prisma Accelerate)
+3. `POSTGRES_URL` (Vercel Postgres)
+</Step>
+
+<Step>
+Run the diagnostic script:
+
+```bash
+node scripts/diagnose-db-connection.js
+```
+</Step>
+</Steps>
+
+### "P2021: Table does not exist"
+
+The database exists but tables are missing. Run migrations:
+
+```bash
+npm run db:migrate
+```
+
+For the RBAC permission tables specifically, also run:
+
+```bash
+tsx prisma/seed.permissions.ts
+```
+
+### Migration Conflicts
+
+If migrations fail due to conflicts:
+
+```bash
+# Check migration status
+npx prisma migrate status
+
+# In development only - reset and re-migrate
+npm run db:reset  # WARNING: destroys all data
+```
+
+<Callout type="warn" title="Never Reset Production">
+`db:reset` destroys all data. In production, use `prisma migrate deploy` for safe, forward-only migrations.
+</Callout>
+
+## Authentication Issues
+
+### "Unauthorized - not authenticated"
+
+This error from `requireRole()` or `requirePermission()` means no valid session was found.
+
+**Fixes:**
+- Verify you are logged in (check `/auth/signin`)
+- Check that `NEXTAUTH_SECRET` is set
+- Check that `NEXTAUTH_URL` matches the URL you are accessing
+- Clear cookies and log in again
+
+### "Forbidden - requires permission: X"
+
+Your user role does not have the required permission.
+
+**Fixes:**
+- Check your role: `SELECT role FROM users WHERE email = 'your@email.com'`
+- Verify permissions are seeded: `tsx prisma/seed.permissions.ts`
+- Check `lib/permissions-data.ts` to see which roles have which permissions
+
+### Password Reset Emails Not Arriving
+
+1. Verify `RESEND_API_KEY` is set
+2. Check server logs for `RESEND_API_KEY not set; skipping`
+3. Check Resend dashboard for delivery status
+4. Verify `FROM_EMAIL` domain is verified in Resend
+
+## Payment Issues
+
+### Stripe PaymentIntent Fails
+
+| Error | Solution |
+|-------|----------|
+| `Invalid API Key` | Check `STRIPE_SECRET_KEY` in `.env.local` |
+| `Amount must be at least 50 cents` | Ensure order total > $0.50 |
+| `No such customer` | `stripeCustomerId` on user may be stale |
+
+### Tax Calculation Returns Zero
+
+Run the configuration validator:
+
+```typescript
+import { validateTaxConfiguration } from '@/lib/tax-calculator'
+const result = await validateTaxConfiguration()
+console.log(result) // { configured: true } or { configured: false, error: '...' }
+```
+
+If it fails, check:
+- Stripe Tax is enabled in your Stripe Dashboard
+- Your Stripe account has tax registrations configured
+- `STRIPE_SECRET_KEY` has the correct permissions
+
+## Shipping Issues
+
+### Always Getting Fallback Rates
+
+The shipping calculator falls back to estimate rates when the carrier API fails. Check:
+
+1. `SHIPPING_API_KEY` is set and valid
+2. Origin address env vars are configured:
+   ```bash
+   SHIPPING_ORIGIN_ADDRESS="123 Main St"
+   SHIPPING_ORIGIN_CITY="San Francisco"
+   SHIPPING_ORIGIN_STATE="CA"
+   SHIPPING_ORIGIN_ZIP="94111"
+   ```
+3. Look for `[Shipping Calculator]` errors in server logs
+
+### Free Shipping Not Applying
+
+The free shipping threshold is read from the database first, then falls back to $50. To check the current threshold:
+
+```sql
+SELECT "freeShippingThreshold" FROM "shipping_settings"
+WHERE singleton = 'singleton';
+```
+
+## Email Issues
+
+### Emails Silently Skipped
+
+All email functions check for `RESEND_API_KEY`. If missing, they log a warning and return `{ skipped: true }`:
+
+```bash
+# Check your env
+echo $RESEND_API_KEY
+```
+
+### Campaign Emails Failing
+
+Check the campaign detail page at `/admin/email-campaigns/[id]` for per-lead error messages. Common causes:
+- Invalid email addresses
+- Resend rate limits exceeded (500ms delay between sends)
+- Template rendering errors (missing variables)
+
+## Build and Deploy Issues
+
+### Build Fails with Prisma Errors
+
+```bash
+npm run clean           # Clear .next cache
+npm run db:generate     # Regenerate Prisma client
+npm run build           # Retry
+```
+
+### Type Errors After Git Pull
+
+```bash
+npm install             # Install new dependencies
+npm run db:generate     # Regenerate Prisma types
+npm run type-check      # Verify types
+```
+
+### Vercel Deployment Fails
+
+The `vercel-build` script runs in sequence:
+
+```bash
+prisma migrate deploy && prisma generate && tsx prisma/seed.permissions.ts && next build
+```
+
+Check which step failed in the Vercel build logs. Common issues:
+- `DATABASE_URL` not set in Vercel environment variables
+- Migration requires manual data changes
+- New environment variables not added to Vercel
+
+## Performance Issues
+
+### Slow API Responses
+
+1. Check Prisma query logs for slow queries (enable in dev mode)
+2. Verify database indexes exist for common query patterns
+3. Check rate limiter - high traffic may be hitting limits
+
+### High Memory Usage
+
+The in-memory rate limiter stores entries that are cleaned every 5 minutes. Under heavy traffic, this can grow. For multi-server deployments, switch to Redis-based rate limiting.
+
+## File Upload Issues
+
+### UploadThing Errors
+
+1. Verify `UPLOADTHING_TOKEN` is set
+2. Check file size limits in your UploadThing configuration
+3. Check the UploadThing dashboard for error logs
+
+## Common Environment Variable Checklist
+
+```bash
+# Required
+DATABASE_URL=          # PostgreSQL connection
+NEXTAUTH_URL=          # App URL
+NEXTAUTH_SECRET=       # Auth secret
+MASTER_KEY=            # Encryption key
+
+# Payments (required for checkout)
+STRIPE_SECRET_KEY=
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# Optional but recommended
+RESEND_API_KEY=        # Email
+SHIPPING_API_KEY=      # Carrier rates
+UPLOADTHING_TOKEN=     # File uploads
+```

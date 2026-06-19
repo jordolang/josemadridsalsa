@@ -1,0 +1,268 @@
+---
+title: Order Management
+description: Managing orders from placement through fulfillment and refunds
+---
+
+# Order Management
+
+This guide covers the complete order lifecycle in Jose Madrid Salsa, from creation through fulfillment.
+
+## Order Lifecycle
+
+Orders flow through these statuses:
+
+```
+PENDING -> CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED
+                                   \-> CANCELLED
+                                   \-> REFUNDED
+```
+
+Payment statuses track separately: `PENDING`, `PAID`, `FAILED`, `REFUNDED`, `PARTIALLY_REFUNDED`.
+
+## How Orders Are Created
+
+Orders are created through the checkout API at `app/api/orders/route.ts`. The flow:
+
+<Steps>
+<Step>
+### Cart Validation
+
+The API receives `cartItemIds` and fetches the authenticated user's cart items. It verifies all items exist and have sufficient inventory.
+
+```typescript
+const cartItems = await prisma.cartItem.findMany({
+  where: {
+    id: { in: cartItemIds },
+    userId: user.id,
+  },
+  include: { product: true },
+})
+```
+</Step>
+
+<Step>
+### Tax Calculation
+
+Tax is calculated via the Stripe Tax API. The system uses tax code `txcd_30011000` for prepared food and falls back to zero tax if the API is unavailable.
+
+```typescript
+const taxResult = await calculateTax({
+  lineItems: orderItems.map((item) => ({
+    amount: Math.round(Number(item.totalPrice) * 100),
+    reference: item.productId,
+    taxCode: 'txcd_30011000',
+  })),
+  shippingAddress: { ... },
+  customerEmail: user.email,
+})
+```
+</Step>
+
+<Step>
+### Shipping Calculation
+
+Shipping costs are determined using the carrier API with fallback to estimate-based rates. Free shipping applies for orders over the configurable threshold (default $50).
+</Step>
+
+<Step>
+### Payment Intent
+
+A Stripe PaymentIntent is created for the total amount:
+
+```typescript
+const paymentIntent = await stripe.paymentIntents.create({
+  amount: Math.round(total * 100),
+  currency: 'usd',
+  receipt_email: user.email,
+  metadata: { orderNumber, customerName },
+})
+```
+</Step>
+
+<Step>
+### Order Record
+
+The order is persisted with all line items, and the cart is cleared:
+
+```typescript
+const order = await prisma.order.create({
+  data: {
+    orderNumber: generateOrderNumber(), // JMS-YYYYMMDD-XXXXXXXX
+    userId: user.id,
+    subtotal: toDecimal(subtotal),
+    shippingCost: toDecimal(shippingCost),
+    tax: toDecimal(taxAmount),
+    total: toDecimal(total),
+    paymentStatus: 'PENDING',
+    status: 'PENDING',
+    stripePaymentId: paymentIntent.id,
+    items: { create: orderItems },
+  },
+})
+```
+</Step>
+
+<Step>
+### Audit Logging
+
+Every order creation is logged with full context:
+
+```typescript
+await logAuditWithRequest({
+  userId: user.id,
+  action: 'create',
+  entityType: 'Order',
+  entityId: order.id,
+  changes: { orderNumber, total, items: orderItems.length },
+}, request)
+```
+</Step>
+</Steps>
+
+## Order Number Format
+
+Order numbers follow the pattern `JMS-YYYYMMDD-XXXXXXXX` where the suffix is a collision-resistant random string from `crypto.randomUUID()`.
+
+## Viewing Orders (Admin)
+
+Navigate to `/admin/orders` to view all orders. The admin panel supports:
+
+- Filtering by status and payment status
+- Sorting by date
+- Searching by order number or customer email
+- Exporting to CSV/PDF (requires `orders:export` permission)
+
+## Updating Order Status
+
+Use the Zod-validated schema to update order status:
+
+```typescript
+import { UpdateOrderStatusSchema } from '@/lib/validations/orders'
+
+const parsed = UpdateOrderStatusSchema.safeParse({
+  orderId: 'clxx...',
+  status: 'SHIPPED',
+  notes: 'Shipped via USPS Priority',
+})
+```
+
+Valid status transitions:
+
+| From | Allowed Transitions |
+|------|-------------------|
+| PENDING | CONFIRMED, CANCELLED |
+| CONFIRMED | PROCESSING, CANCELLED |
+| PROCESSING | SHIPPED, CANCELLED |
+| SHIPPED | DELIVERED |
+| DELIVERED | REFUNDED |
+
+## Adding Tracking Information
+
+```typescript
+import { UpdateOrderTrackingSchema } from '@/lib/validations/orders'
+
+const tracking = UpdateOrderTrackingSchema.parse({
+  orderId: 'clxx...',
+  trackingNumber: '9400111899223456789012',
+  carrier: 'USPS',
+  trackingUrl: 'https://tools.usps.com/go/TrackConfirmAction?tLabels=...',
+})
+```
+
+## Cancelling Orders
+
+```typescript
+import { CancelOrderSchema } from '@/lib/validations/orders'
+
+const cancellation = CancelOrderSchema.parse({
+  orderId: 'clxx...',
+  reason: 'Customer requested cancellation',
+  refundAmount: 25.99,  // optional partial refund
+})
+```
+
+## Customer Order View
+
+Customers view their orders at `/api/orders` which filters by the authenticated user's ID:
+
+```typescript
+const where = { userId: user.id }
+
+if (status) where.status = status
+if (paymentStatus) where.paymentStatus = paymentStatus
+
+const orders = await prisma.order.findMany({
+  where,
+  orderBy: { createdAt: sortOrder },
+  include: { items: { include: { product: true } } },
+})
+```
+
+## Shopify Sync
+
+After order creation, a Shopify sync is automatically queued:
+
+```typescript
+queueShopifySync(order.id)
+```
+
+This creates a corresponding order in Shopify for fulfillment tracking across platforms.
+
+<Callout type="warn" title="Rate Limiting">
+The orders API is protected by rate limiting at 100 requests per minute per IP address. Both GET and POST handlers use `withRateLimit(handler, RATE_LIMITS.API_GENERAL)`.
+</Callout>
+
+## Validation Schemas
+
+All order operations use Zod schemas defined in `lib/validations/orders.ts`:
+
+<Tabs items={['Create Order', 'Query Orders', 'Update Status']}>
+<Tab value="Create Order">
+```typescript
+const CreateOrderSchema = z.object({
+  cartItemIds: z.array(z.string().cuid()).min(1, 'Cart is empty'),
+  shippingAddress: ShippingAddressSchema,
+  billingAddress: ShippingAddressSchema.optional(),
+  notes: z.string().optional(),
+})
+```
+</Tab>
+<Tab value="Query Orders">
+```typescript
+const OrderQuerySchema = z.object({
+  status: z.enum(ORDER_STATUSES).optional(),
+  paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
+  take: z.coerce.number().int().positive().optional(),
+  skip: z.coerce.number().int().min(0).default(0),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+})
+```
+</Tab>
+<Tab value="Update Status">
+```typescript
+const UpdateOrderStatusSchema = z.object({
+  orderId: z.string().cuid(),
+  status: z.enum(ORDER_STATUSES),
+  notes: z.string().optional(),
+})
+```
+</Tab>
+</Tabs>
+
+## Key Files
+
+<Files>
+  <Folder name="app/api/orders" defaultOpen>
+    <File name="route.ts" />
+    <Folder name="[id]">
+      <File name="route.ts" />
+    </Folder>
+  </Folder>
+  <Folder name="app/admin/orders">
+    <File name="page.tsx" />
+  </Folder>
+  <Folder name="lib">
+    <File name="validations/orders.ts" />
+    <File name="audit.ts" />
+  </Folder>
+</Files>

@@ -1,0 +1,145 @@
+---
+title: Analytics
+description: Google Analytics, Google Tag Manager, Amplitude, and Vercel Analytics setup
+---
+
+# Analytics
+
+Jose Madrid Salsa uses four analytics systems, each serving a distinct purpose.
+
+## Analytics Stack Overview
+
+| Tool | Purpose | Data Location |
+|---|---|---|
+| **Google Tag Manager** | Tag orchestration, event routing | GTM Dashboard |
+| **Google Analytics 4** | Traffic, conversions, SEO | GA4 Dashboard |
+| **Amplitude** | Product analytics, user journeys, session replay | Amplitude Dashboard |
+| **Vercel Analytics** | Web Vitals, performance metrics | Vercel Dashboard |
+
+## Google Tag Manager
+
+GTM is loaded in the public layout (`app/(public)/layout.tsx`) with container ID `GTM-5KSQW4JJ` using `next/script` with `strategy="afterInteractive"`. A `noscript` fallback iframe is also included for non-JavaScript environments.
+
+GTM manages:
+- Google Analytics tags
+- Conversion tracking pixels
+- Custom event forwarding
+
+## Google Analytics 4
+
+GA4 is loaded as a separate React component for flexibility:
+
+```tsx title="components/analytics/google-analytics.tsx"
+export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
+  const resolvedId =
+    measurementId || process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID || 'G-HG4QV5GFKH'
+
+  // Renders gtag.js script and config via next/script
+}
+```
+
+The measurement ID is resolved server-side via `getPublicGoogleAnalyticsMeasurementId()`, enabling dynamic configuration without code changes.
+
+### Environment Variables
+
+```bash
+GOOGLE_ANALYTICS_ID="G-HG4QV5GFKH"    # GA4 measurement ID
+```
+
+## Amplitude
+
+Amplitude provides deep product analytics with session replay.
+
+### Initialization
+
+```ts title="lib/analytics/amplitude.ts"
+import * as amplitude from '@amplitude/analytics-browser'
+import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser'
+
+export const initAmplitude = () => {
+  amplitude.init(apiKey, {
+    defaultTracking: {
+      sessions: true,
+      pageViews: true,
+      formInteractions: true,
+      fileDownloads: true,
+    },
+  })
+  amplitude.add(sessionReplayPlugin())
+}
+```
+
+### Client Component
+
+```tsx title="components/analytics/amplitude-analytics.tsx"
+'use client'
+
+import { useEffect } from 'react'
+import { initAmplitude } from '@/lib/analytics/amplitude'
+
+export function AmplitudeAnalytics() {
+  useEffect(() => {
+    initAmplitude()
+  }, [])
+  return null
+}
+```
+
+### Tracking Custom Events
+
+```ts
+import { trackEvent, identifyUser, resetUser } from '@/lib/analytics/amplitude'
+
+// Track a purchase
+trackEvent('purchase_completed', {
+  orderId: order.id,
+  total: order.total,
+  itemCount: order.items.length,
+})
+
+// Identify a logged-in user
+identifyUser(user.id, {
+  email: user.email,
+  role: user.role,
+})
+
+// Clear on logout
+resetUser()
+```
+
+### Environment Variables
+
+```bash
+NEXT_PUBLIC_AMPLITUDE_API_KEY="..."    # Amplitude project API key
+```
+
+## Vercel Analytics
+
+Vercel Analytics is the simplest integration -- a single component:
+
+```tsx title="app/(public)/layout.tsx"
+import { Analytics } from '@vercel/analytics/react'
+
+// At the end of the layout:
+<Analytics />
+```
+
+This automatically captures Core Web Vitals (LCP, FID, CLS, TTFB, INP) and page view data. No additional configuration is needed as Vercel detects the linked project automatically.
+
+## Loading Strategy
+
+All analytics scripts use `strategy="afterInteractive"` from `next/script`, which loads them after the page becomes interactive. This prevents analytics from blocking the initial page render.
+
+```
+Page Load Timeline:
+ HTML parse + hydration
+ Page becomes interactive (FID/INP ready)
+ GTM loads (afterInteractive)
+ GA4 loads (afterInteractive, via GTM or direct)
+ Amplitude initializes (useEffect)
+ Vercel Analytics captures Web Vitals
+```
+
+<Callout title="No PostHog">
+PostHog is not currently integrated into the application. The analytics stack uses Amplitude for product analytics and session replay instead.
+</Callout>

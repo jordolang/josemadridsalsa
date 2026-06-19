@@ -1,0 +1,338 @@
+---
+title: Common Prisma Query Patterns
+description: Frequently used database query patterns in the Jose Madrid Salsa platform
+---
+
+# Common Prisma Query Patterns
+
+This guide covers the most common database query patterns used throughout the Jose Madrid Salsa platform, with practical examples you can adapt.
+
+## Basic CRUD Operations
+
+### Finding Records
+
+```typescript
+import { prisma } from '@/lib/prisma'
+
+// Find by unique field
+const user = await prisma.user.findUnique({
+  where: { email: 'user@example.com' },
+})
+
+// Find first matching record
+const activeProduct = await prisma.product.findFirst({
+  where: { isActive: true, heatLevel: 'HOT' },
+})
+
+// Find many with filtering
+const products = await prisma.product.findMany({
+  where: {
+    isActive: true,
+    heatLevel: 'MILD',
+    inventory: { gt: 0 },
+  },
+  orderBy: [
+    { isFeatured: 'desc' },
+    { sortOrder: 'asc' },
+    { name: 'asc' },
+  ],
+})
+```
+
+### Creating Records
+
+```typescript
+const product = await prisma.product.create({
+  data: {
+    name: 'Ghost of Clovis',
+    slug: 'ghost-of-clovis',
+    heatLevel: 'HOT',
+    price: 9.49,
+    sku: 'JMS-HOT-001',
+    inventory: 80,
+    categoryId: 'category_id_here',
+    ingredients: ['Ghost Peppers', 'Tomatoes'],
+  },
+})
+```
+
+### Updating Records
+
+```typescript
+const updated = await prisma.order.update({
+  where: { id: orderId },
+  data: {
+    status: 'SHIPPED',
+    trackingNumber: '9400111899223456789012',
+  },
+})
+```
+
+### Deleting Records
+
+```typescript
+// Soft delete (prefer for user-facing data)
+await prisma.product.update({
+  where: { id: productId },
+  data: { isActive: false },
+})
+
+// Hard delete
+await prisma.cartItem.deleteMany({
+  where: { userId: user.id },
+})
+```
+
+## Filtering Patterns
+
+### Case-Insensitive Search
+
+The products API uses `mode: 'insensitive'` for search:
+
+```typescript
+const where = {
+  OR: [
+    { name: { contains: search, mode: 'insensitive' } },
+    { description: { contains: search, mode: 'insensitive' } },
+  ],
+}
+```
+
+### Tag and Category Filtering
+
+```typescript
+// Filter by category slug
+where.category = { slug: { in: ['salsas', 'hot-sauces'] } }
+
+// Filter by tag slug (through relation)
+where.productTags = {
+  some: {
+    tag: { slug: { in: ['spicy', 'organic'] } },
+  },
+}
+```
+
+### Date Range Filtering
+
+```typescript
+const recentOrders = await prisma.order.findMany({
+  where: {
+    createdAt: {
+      gte: new Date('2024-01-01'),
+      lte: new Date('2024-12-31'),
+    },
+  },
+})
+```
+
+### Stock Filtering
+
+```typescript
+// In-stock only
+where.inventory = { gt: 0 }
+
+// By stock status enum
+where.stockStatus = 'IN_STOCK'
+```
+
+## Relation Queries
+
+### Eager Loading (Include)
+
+```typescript
+const order = await prisma.order.findUnique({
+  where: { id: orderId },
+  include: {
+    items: {
+      include: {
+        product: true,
+      },
+    },
+    user: {
+      select: { id: true, email: true, name: true },
+    },
+    shippingAddress: true,
+  },
+})
+```
+
+### Nested Includes
+
+The product query demonstrates deep nesting:
+
+```typescript
+const products = await prisma.product.findMany({
+  include: {
+    productTags: {
+      include: { tag: true },
+    },
+    nutritionalInfo: true,
+    productIngredients: {
+      include: { ingredient: true },
+      orderBy: { sortOrder: 'asc' },
+    },
+  },
+})
+```
+
+### Selective Fields
+
+```typescript
+const users = await prisma.user.findMany({
+  select: {
+    id: true,
+    email: true,
+    role: true,
+    // Exclude sensitive fields like password
+  },
+})
+```
+
+## Pagination
+
+```typescript
+const { searchParams } = new URL(request.url)
+const rawTake = Number(searchParams.get('take'))
+const take = Number.isFinite(rawTake) && rawTake > 0 ? rawTake : undefined
+const rawSkip = Number(searchParams.get('skip'))
+const skip = Number.isFinite(rawSkip) && rawSkip >= 0 ? rawSkip : 0
+
+const products = await prisma.product.findMany({
+  skip,
+  take,
+  orderBy: { createdAt: 'desc' },
+})
+```
+
+## Decimal Handling
+
+Prisma returns `Decimal` types for monetary fields. Always convert for JSON responses:
+
+```typescript
+const parsedProducts = products.map(product => ({
+  ...product,
+  price: parseFloat(String(product.price)),
+  compareAtPrice: product.compareAtPrice
+    ? parseFloat(String(product.compareAtPrice))
+    : undefined,
+}))
+```
+
+For creating records with decimals:
+
+```typescript
+import { Prisma } from '@prisma/client'
+
+const toDecimal = (value: number) =>
+  new Prisma.Decimal(value.toFixed(2))
+
+await prisma.order.create({
+  data: {
+    subtotal: toDecimal(25.99),
+    tax: toDecimal(2.34),
+    total: toDecimal(28.33),
+  },
+})
+```
+
+## Transactions
+
+### Simple Transaction
+
+```typescript
+const [order, updatedInventory] = await prisma.$transaction([
+  prisma.order.create({ data: orderData }),
+  prisma.product.update({
+    where: { id: productId },
+    data: { inventory: { decrement: quantity } },
+  }),
+])
+```
+
+### Interactive Transaction
+
+The inventory manager uses interactive transactions for complex operations:
+
+```typescript
+await prisma.$transaction(async (tx) => {
+  const product = await tx.product.findUnique({
+    where: { id: productId },
+  })
+
+  if (product.inventory < quantity) {
+    throw new Error('Insufficient inventory')
+  }
+
+  await tx.product.update({
+    where: { id: productId },
+    data: { inventory: { decrement: quantity } },
+  })
+
+  await tx.inventoryTransaction.create({
+    data: {
+      productId,
+      quantity: -quantity,
+      type: 'SALE',
+    },
+  })
+})
+```
+
+### Serializable Retry Pattern
+
+For high-contention operations, use the retry pattern from `lib/inventory-manager.ts`:
+
+```typescript
+async function withSerializableRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3
+): Promise<T> {
+  let lastError: unknown
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error: any) {
+      if (error?.code === 'P2034' && attempt < maxRetries - 1) {
+        lastError = error
+        continue
+      }
+      throw error
+    }
+  }
+  throw lastError
+}
+```
+
+## Aggregations
+
+```typescript
+// Count orders by status
+const orderCounts = await prisma.order.groupBy({
+  by: ['status'],
+  _count: { id: true },
+})
+
+// Sum revenue
+const revenue = await prisma.order.aggregate({
+  _sum: { total: true },
+  where: { paymentStatus: 'PAID' },
+})
+```
+
+## Upsert Pattern
+
+```typescript
+// Create if not exists, update if exists
+const settings = await prisma.shippingSettings.upsert({
+  where: { singleton: 'singleton' },
+  update: { freeShippingThreshold: 75.00 },
+  create: {
+    singleton: 'singleton',
+    freeShippingThreshold: 75.00,
+  },
+})
+```
+
+<Callout type="info" title="Query Performance">
+Enable query logging in development to see generated SQL. Set `logLevels` to `['query']` in `lib/prisma.ts`. This helps identify slow queries and missing indexes.
+</Callout>

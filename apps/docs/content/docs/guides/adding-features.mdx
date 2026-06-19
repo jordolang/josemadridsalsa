@@ -1,0 +1,296 @@
+---
+title: Adding Features
+description: How to add a new feature to the Jose Madrid Salsa platform
+---
+
+# Adding Features
+
+This guide walks you through the process of adding a new feature to the platform, from database schema through API endpoint to admin UI.
+
+## Feature Development Workflow
+
+<Steps>
+<Step>
+### Define the Data Model
+
+Start by adding or modifying the Prisma schema in `prisma/schema.prisma`. Follow the existing conventions:
+
+```graphql
+model NewFeature {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("new_features")
+}
+```
+
+Key conventions:
+- Use `cuid()` for IDs
+- Include `createdAt` and `updatedAt` timestamps
+- Use `@@map` for snake_case table names
+- Use enums for fixed value sets
+- Use `Decimal(10, 2)` for monetary values
+</Step>
+
+<Step>
+### Run Migration
+
+Generate and apply the migration:
+
+```bash
+npx prisma migrate dev --name add-new-feature-table
+```
+
+This creates a migration file in `prisma/migrations/` and updates the Prisma client.
+</Step>
+
+<Step>
+### Add Validation Schema
+
+Create a Zod schema in `lib/validations/`:
+
+```typescript
+// lib/validations/new-feature.ts
+import { z } from 'zod'
+
+export const CreateNewFeatureSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  description: z.string().optional(),
+  isActive: z.boolean().default(true),
+})
+
+export const UpdateNewFeatureSchema = CreateNewFeatureSchema.partial()
+
+export type CreateNewFeature = z.infer<typeof CreateNewFeatureSchema>
+export type UpdateNewFeature = z.infer<typeof UpdateNewFeatureSchema>
+```
+</Step>
+
+<Step>
+### Create the API Route
+
+Add a route handler in `app/api/`:
+
+```typescript
+// app/api/new-feature/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/rbac'
+import { withRateLimit } from '@/lib/middleware/api-helpers'
+import { RATE_LIMITS } from '@/lib/rate-limiter'
+import { CreateNewFeatureSchema } from '@/lib/validations/new-feature'
+
+async function handleGet(request: NextRequest) {
+  try {
+    const items = await prisma.newFeature.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    return NextResponse.json(items)
+  } catch (error) {
+    console.error('[NewFeature API] Error:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch' },
+      { status: 500 }
+    )
+  }
+}
+
+async function handlePost(request: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    const json = await request.json()
+    const parsed = CreateNewFeatureSchema.safeParse(json)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid payload', details: parsed.error.flatten() },
+        { status: 400 }
+      )
+    }
+
+    const item = await prisma.newFeature.create({
+      data: parsed.data,
+    })
+
+    return NextResponse.json(item, { status: 201 })
+  } catch (error) {
+    console.error('[NewFeature API] Error:', error)
+    return NextResponse.json(
+      { error: 'Failed to create' },
+      { status: 500 }
+    )
+  }
+}
+
+export const GET = withRateLimit(handleGet, RATE_LIMITS.API_GENERAL)
+export const POST = withRateLimit(handlePost, RATE_LIMITS.API_GENERAL)
+```
+</Step>
+
+<Step>
+### Add Permissions (if needed)
+
+If the feature needs admin access control, add permissions to `lib/permissions-data.ts`:
+
+```typescript
+// Add to permissionDefinitions array
+{ name: 'new_feature:read', description: 'View new features', category: 'CONTENT' },
+{ name: 'new_feature:write', description: 'Manage new features', category: 'CONTENT' },
+```
+
+Then add to the appropriate role defaults:
+
+```typescript
+STAFF: [
+  // existing permissions...
+  'new_feature:read',
+  'new_feature:write',
+],
+```
+
+Re-seed permissions:
+
+```bash
+tsx prisma/seed.permissions.ts
+```
+</Step>
+
+<Step>
+### Build the Admin UI
+
+Create the admin page:
+
+```
+app/admin/new-feature/
+  page.tsx          # List view
+  new/page.tsx      # Creation form
+  [id]/page.tsx     # Detail/edit view
+```
+
+The admin page should check permissions:
+
+```typescript
+import { requirePermission } from '@/lib/rbac'
+
+export default async function NewFeaturePage() {
+  await requirePermission('new_feature:read')
+
+  const items = await prisma.newFeature.findMany({
+    orderBy: { createdAt: 'desc' },
+  })
+
+  return (/* render list */)
+}
+```
+</Step>
+
+<Step>
+### Add Audit Logging
+
+Log important actions for admin accountability:
+
+```typescript
+import { logAuditWithRequest } from '@/lib/audit'
+
+await logAuditWithRequest({
+  userId: user.id,
+  action: 'create',
+  entityType: 'NewFeature',
+  entityId: item.id,
+  changes: { name: item.name },
+}, request)
+```
+</Step>
+
+<Step>
+### Write Tests
+
+Add tests in the `tests/` directory:
+
+```typescript
+// tests/lib/new-feature.test.ts
+import { describe, it, expect } from 'vitest'
+import { CreateNewFeatureSchema } from '@/lib/validations/new-feature'
+
+describe('CreateNewFeatureSchema', () => {
+  it('validates a correct payload', () => {
+    const result = CreateNewFeatureSchema.safeParse({
+      name: 'Test Feature',
+      description: 'A test',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects empty name', () => {
+    const result = CreateNewFeatureSchema.safeParse({
+      name: '',
+    })
+    expect(result.success).toBe(false)
+  })
+})
+```
+</Step>
+</Steps>
+
+## Feature Anatomy Checklist
+
+Every feature should include these components:
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| Prisma model | `prisma/schema.prisma` | Data structure |
+| Migration | `prisma/migrations/` | Schema change |
+| Validation | `lib/validations/{name}.ts` | Input validation |
+| API route | `app/api/{name}/route.ts` | REST endpoint |
+| Permissions | `lib/permissions-data.ts` | Access control |
+| Admin page | `app/admin/{name}/page.tsx` | Management UI |
+| Audit logging | Within API handler | Accountability |
+| Tests | `tests/` | Quality assurance |
+
+## Adding Server Actions
+
+For form submissions, you can use Server Actions instead of API routes:
+
+```typescript
+// app/admin/new-feature/_actions/create.ts
+'use server'
+
+import { requirePermission } from '@/lib/rbac'
+import { prisma } from '@/lib/prisma'
+import { CreateNewFeatureSchema } from '@/lib/validations/new-feature'
+import { revalidatePath } from 'next/cache'
+
+export async function createNewFeature(formData: FormData) {
+  const user = await requirePermission('new_feature:write')
+
+  const data = {
+    name: formData.get('name') as string,
+    description: formData.get('description') as string,
+  }
+
+  const parsed = CreateNewFeatureSchema.parse(data)
+  await prisma.newFeature.create({ data: parsed })
+
+  revalidatePath('/admin/new-feature')
+}
+```
+
+## Adding to Navigation
+
+Update the admin sidebar to include your new feature. The admin layout component renders navigation items based on the user's permissions.
+
+<Callout type="info" title="Feature Flags">
+For features that should be gradually rolled out, use the `isActive` field as a simple feature flag. For more sophisticated rollout, consider integrating GrowthBook (already in the project dependencies).
+</Callout>

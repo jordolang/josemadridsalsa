@@ -1,0 +1,271 @@
+---
+title: Development Setup
+description: Full development environment setup walkthrough for Jose Madrid Salsa
+---
+
+# Development Setup
+
+This guide walks you through setting up a complete local development environment for the Jose Madrid Salsa platform.
+
+## Prerequisites
+
+- **Node.js** 18+ (recommended: 20 LTS)
+- **PostgreSQL** (local or cloud instance)
+- **Git**
+
+## Quick Start
+
+<Steps>
+<Step>
+### Clone and Install
+
+```bash
+git clone https://github.com/your-org/josemadridsalsa.git
+cd josemadridsalsa
+npm install
+```
+
+The `postinstall` script automatically runs `prisma generate` to create the Prisma client.
+</Step>
+
+<Step>
+### Configure Environment
+
+Copy the example environment file and fill in values:
+
+```bash
+cp .env.example .env.local
+```
+
+At minimum, set these variables:
+
+```bash
+# Database
+DATABASE_URL="postgresql://user:pass@localhost:5432/josemadrid"
+
+# Auth
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="generate-a-random-32-char-string"
+
+# Encryption
+MASTER_KEY="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+```
+</Step>
+
+<Step>
+### Set Up Database
+
+Run Prisma migrations and seed the database:
+
+```bash
+npm run db:migrate     # Run migrations
+npm run db:seed        # Seed base data
+```
+
+Additional seed scripts for specific data:
+
+```bash
+npm run db:seed:recipes         # Seed recipe content
+npm run db:seed:nutrition       # Seed nutritional info & ingredients
+npm run db:seed:email-templates # Seed email templates
+```
+</Step>
+
+<Step>
+### Create Admin User
+
+```bash
+npm run create-admin
+```
+
+Follow the prompts to set email and password for your admin account.
+</Step>
+
+<Step>
+### Start Development Server
+
+```bash
+npm run dev
+```
+
+This starts Next.js with Turbopack on `http://localhost:3000`. The `dev` script uses `next dev --turbo` for fast refresh.
+</Step>
+</Steps>
+
+## Project Structure
+
+<Files>
+  <Folder name="app" defaultOpen>
+    <Folder name="(public)">
+      <File name="page.tsx" />
+    </Folder>
+    <Folder name="admin">
+      <File name="layout.tsx" />
+    </Folder>
+    <Folder name="api">
+      <File name="..." />
+    </Folder>
+    <Folder name="auth">
+      <File name="..." />
+    </Folder>
+  </Folder>
+  <Folder name="components" defaultOpen>
+    <Folder name="ui">
+      <File name="button.tsx" />
+    </Folder>
+    <Folder name="admin">
+      <File name="..." />
+    </Folder>
+    <Folder name="store">
+      <File name="..." />
+    </Folder>
+  </Folder>
+  <Folder name="lib" defaultOpen>
+    <File name="prisma.ts" />
+    <File name="auth.ts" />
+    <File name="rbac.ts" />
+    <File name="stripe.ts" />
+  </Folder>
+  <Folder name="prisma">
+    <File name="schema.prisma" />
+    <File name="seed.ts" />
+  </Folder>
+  <Folder name="mobile">
+    <File name="app.config.ts" />
+  </Folder>
+  <Folder name="tests">
+    <File name="..." />
+  </Folder>
+</Files>
+
+## Available Scripts
+
+<Tabs items={['Development', 'Database', 'Testing', 'Build']}>
+<Tab value="Development">
+```bash
+npm run dev          # Start with Turbopack
+npm run dev:fast     # Start on port 3000 explicitly
+npm run dev:debug    # Start with Node inspector
+npm run clean        # Clear .next cache
+npm run fresh        # Clean + reinstall + dev
+```
+</Tab>
+<Tab value="Database">
+```bash
+npm run db:migrate   # Run pending migrations
+npm run db:push      # Push schema changes (dev only)
+npm run db:seed      # Seed database
+npm run db:studio    # Open Prisma Studio GUI
+npm run db:reset     # Reset database (WARNING: destructive)
+npm run db:generate  # Regenerate Prisma client
+npm run db:diagnose  # Diagnose connection issues
+```
+</Tab>
+<Tab value="Testing">
+```bash
+npm test             # Run Vitest tests
+npm run type-check   # TypeScript type checking
+npm run lint         # ESLint
+```
+</Tab>
+<Tab value="Build">
+```bash
+npm run build        # Production build
+npm run start        # Start production server
+npm run analyze      # Project analysis
+```
+</Tab>
+</Tabs>
+
+## Tech Stack
+
+| Technology | Purpose |
+|-----------|---------|
+| Next.js 16 | App Router framework |
+| React 19 | UI library |
+| TypeScript 5 | Type safety |
+| Prisma 6 | ORM / database client |
+| PostgreSQL | Database |
+| Tailwind CSS 4 | Styling |
+| Stripe | Payments and tax |
+| Resend | Email delivery |
+| NextAuth.js 4 | Authentication |
+| Vitest | Unit testing |
+| Playwright | E2E testing |
+| Zod 4 | Schema validation |
+| Zustand | Client state management |
+| Turbopack | Dev bundler |
+
+## Optional Services
+
+These services enhance functionality but the app runs without them:
+
+```bash
+# Payments
+STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_SECRET_KEY="sk_test_..."
+
+# Email
+RESEND_API_KEY="re_..."
+
+# File uploads
+UPLOADTHING_TOKEN="..."
+
+# Shipping
+SHIPPING_API_KEY="..."
+
+# Analytics
+NEXT_PUBLIC_AMPLITUDE_API_KEY="..."
+NEXT_PUBLIC_GOOGLE_ANALYTICS_ID="G-..."
+
+# Error tracking
+SENTRY_DSN="..."
+```
+
+<Callout type="info" title="Graceful Degradation">
+The platform is designed to run without most external services. Missing API keys trigger console warnings, but the app continues to function with fallback behavior (e.g., zero tax, free shipping, skipped emails).
+</Callout>
+
+## Database Connection
+
+The Prisma client in `lib/prisma.ts` uses lazy initialization and supports multiple connection URL formats:
+
+1. `DATABASE_URL` (primary)
+2. `PRISMA_DATABASE_URL` (Prisma Accelerate)
+3. `POSTGRES_URL` (Vercel Postgres fallback)
+
+For Prisma Accelerate connections (URLs starting with `prisma://`), the client automatically enables the Accelerate extension.
+
+## IDE Setup
+
+### VS Code
+
+Recommended extensions:
+- Prisma
+- ESLint
+- Tailwind CSS IntelliSense
+- Pretty TypeScript Errors
+
+### Path Aliases
+
+The project uses `@/` as the root alias, configured in `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"]
+    }
+  }
+}
+```
+
+## Troubleshooting Setup
+
+| Problem | Solution |
+|---------|----------|
+| `DATABASE_URL is not set` | Check `.env.local` exists with valid `DATABASE_URL` |
+| Prisma client errors | Run `npm run db:generate` then restart dev server |
+| Migration failures | Run `npm run db:diagnose` for connection diagnostics |
+| Port 3000 in use | Use `npm run dev:fast` or kill the existing process |
+| Type errors after pull | Run `npm run db:generate && npm run type-check` |

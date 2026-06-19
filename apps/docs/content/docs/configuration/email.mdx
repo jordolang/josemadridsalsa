@@ -1,0 +1,169 @@
+---
+title: Email Configuration
+description: Configure email sending with Resend and SMTP for transactional and campaign emails
+---
+
+
+# Email Configuration
+
+Jose Madrid Salsa uses a dual email sending system: **Resend** as the primary transactional email service and **SMTP** (via Nodemailer) for campaign emails. The system supports logging, unsubscribe management, and automatic fallback.
+
+## Architecture
+
+```
+Email Request
+    │
+    ├─── React Email Templates (lib/email/client.ts)
+    │         └── Renders React components to HTML
+    │         └── Sends via Resend with List-Unsubscribe headers
+    │
+    └─── Campaign / SMTP Emails (lib/email/sender.ts)
+              └── Tries SMTP first (from EmailConfiguration in DB)
+              └── Falls back to Resend if SMTP fails
+```
+
+## Resend (Primary)
+
+The main email client at `lib/email.ts` and `lib/email/client.ts` both use the Resend SDK:
+
+```ts title="lib/email/client.ts"
+import { Resend } from 'resend'
+
+function getResendClient(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) return null
+  return new Resend(apiKey)
+}
+```
+
+### Sending with React Templates
+
+The `sendEmail` function in `lib/email/client.ts` accepts a React Email component and renders it to HTML:
+
+```ts title="lib/email/client.ts"
+export async function sendEmail({
+  to,
+  subject,
+  react,         // React Email component
+  from,
+  replyTo,
+  type,          // Email type for logging/unsubscribe checking
+  orderId,
+  userId,
+}: SendEmailOptions): Promise<EmailSendResult> {
+  // Check unsubscribe preferences (skip for transactional emails)
+  const isTransactional = ['order-confirmation', 'shipping-notification', 'delivery-confirmation'].includes(type)
+
+  // Render React component to HTML
+  const html = await render(react)
+
+  // Send with List-Unsubscribe header for compliance
+  const result = await resend.emails.send({
+    from,
+    to,
+    subject,
+    html,
+    headers: {
+      'List-Unsubscribe': `<${unsubscribeUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    },
+  })
+}
+```
+
+### Simple Email Sending
+
+For non-template emails, `lib/email.ts` provides a simpler interface:
+
+```ts title="lib/email.ts"
+export async function sendEmail(options: {
+  to: string
+  subject: string
+  html?: string
+  text?: string
+}) {
+  const resend = new Resend(resendApiKey)
+  return resend.emails.send({
+    from: fromEmail,
+    to: options.to,
+    subject: options.subject,
+    ...(options.html ? { html: options.html } : { text: options.text }),
+  })
+}
+```
+
+## SMTP (Campaign Emails)
+
+Campaign emails can use database-configured SMTP servers. The `lib/email/sender.ts` module reads `EmailConfiguration` records from the database:
+
+```ts title="lib/email/sender.ts"
+async function getSMTPTransporter(configId?: string) {
+  const config = configId
+    ? await prisma.emailConfiguration.findUnique({ where: { id: configId, isActive: true } })
+    : await prisma.emailConfiguration.findFirst({ where: { isDefault: true, isActive: true } })
+
+  const decryptedPassword = config.smtpPassword
+    ? isEncrypted(config.smtpPassword) ? decrypt(config.smtpPassword) : config.smtpPassword
+    : null
+
+  return nodemailer.createTransport({
+    host: config.smtpHost,
+    port: config.smtpPort || 587,
+    secure: port === 465,  // Port 465 = implicit SSL, 587 = STARTTLS
+    auth: { user: config.smtpUsername, pass: decryptedPassword },
+  })
+}
+```
+
+<Callout type="info">
+SMTP passwords stored in the database are encrypted with the `ENCRYPTION_KEY` environment variable using AES-256-GCM. See the [Encryption](/docs/configuration/encryption) page for details.
+</Callout>
+
+## Email Sending Priority
+
+When sending via `lib/email/sender.ts`:
+
+1. **Try SMTP** from the database `EmailConfiguration` (default or specified config)
+2. **Fall back to Resend** if SMTP fails and `useResend` is enabled on the config
+3. **Fail** if neither is available
+
+## Campaign Sending
+
+The campaign system sends emails in batches with configurable delays:
+
+```ts title="lib/email/sender.ts"
+export async function sendCampaign({
+  campaignId,
+  batchSize = 50,
+  delayBetweenBatches = 1000, // ms
+}: CampaignSendOptions)
+```
+
+- Processes recipients in parallel batches
+- Tracks per-recipient status (PENDING, SENDING, SENT, FAILED)
+- Updates campaign progress after each batch
+- Supports retry of failed recipients up to `maxRetries` (default: 3)
+
+## Unsubscribe Management
+
+Non-transactional emails check the user's unsubscribe preferences before sending. Transactional emails (order confirmation, shipping notification, delivery confirmation) always send regardless of preferences.
+
+All emails include `List-Unsubscribe` and `List-Unsubscribe-Post` headers for one-click unsubscribe compliance.
+
+## Required Environment Variables
+
+| Variable | Description |
+|---|---|
+| `RESEND_API_KEY` | Resend API key (`re_...`) |
+| `FROM_EMAIL` | Default sender address (default: `orders@josemadridsalsa.com`) |
+| `ENCRYPTION_KEY` | Required if using database-stored SMTP passwords |
+
+## Email Logging
+
+All email sends (successful and failed) are logged to the `EmailLog` table via `lib/email/logger.ts`, including:
+
+- Recipient (hashed for privacy in logs)
+- Template ID and subject
+- Status (SENT or FAILED)
+- Error message (if failed)
+- Associated order ID and user ID

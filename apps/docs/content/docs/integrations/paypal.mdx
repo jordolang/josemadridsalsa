@@ -1,0 +1,136 @@
+---
+title: PayPal
+description: PayPal wallet and Venmo payment integration using the PayPal Orders API
+---
+
+
+# PayPal Integration
+
+<PageInlineTOC>On this page</PageInlineTOC>
+
+## SDK
+
+<GithubInfo owner="paypal" repo="paypal-checkout-server-sdk" />
+
+PayPal handles wallet-based payments via the PayPal Orders API. The integration uses a redirect/popup authorization flow where customers approve payment on PayPal's site before the order is captured.
+
+## Architecture
+
+The `PayPalAdapter` at `lib/payments/providers/paypal.ts` implements the same `PaymentProviderAdapter` interface as Stripe and Square. It uses the `@paypal/checkout-server-sdk` package for server-side order creation and capture.
+
+```
+Checkout -> PayPalAdapter -> PayPal Orders API -> Customer redirected to PayPal
+                          -> PayPal Capture API -> Payment confirmed
+```
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `PAYPAL_CLIENT_ID` | PayPal application client ID | Yes |
+| `PAYPAL_CLIENT_SECRET` | PayPal application client secret | Yes |
+| `PAYPAL_SANDBOX` | Set to `false` for production (defaults to sandbox) | No |
+| `PAYPAL_WEBHOOK_ID` | Webhook ID for signature verification | Yes |
+| `PAYPAL_RETURN_URL` | URL to redirect after approval | No |
+| `PAYPAL_CANCEL_URL` | URL to redirect on cancellation | No |
+
+<Callout type="info">
+If `PAYPAL_RETURN_URL` and `PAYPAL_CANCEL_URL` are not set, they default to `{NEXT_PUBLIC_BASE_URL}/checkout/paypal/return` and `{NEXT_PUBLIC_BASE_URL}/checkout/paypal/cancel`.
+</Callout>
+
+## Setup
+
+<Steps>
+
+### Install the PayPal SDK
+
+```bash
+npm install @paypal/checkout-server-sdk
+```
+
+### Create a PayPal application
+
+Go to [developer.paypal.com](https://developer.paypal.com) and create a REST API application. Copy the client ID and secret.
+
+### Configure environment variables
+
+```bash
+PAYPAL_CLIENT_ID=AV...
+PAYPAL_CLIENT_SECRET=EK...
+PAYPAL_SANDBOX=true
+PAYPAL_WEBHOOK_ID=5T...
+```
+
+### Register the webhook
+
+Create a webhook at `https://your-domain.com/api/webhooks/paypal` in the PayPal Developer Dashboard.
+
+</Steps>
+
+## Payment Flow
+
+### Creating a Payment
+
+`PayPalAdapter.createPayment()` creates a PayPal Order with intent `CAPTURE`:
+
+- Converts amount from **cents to dollars** (PayPal expects dollar strings)
+- Sets `application_context.brand_name` to "Jose Madrid Salsa"
+- Sets `user_action` to `PAY_NOW`
+- Returns an `approvalUrl` for customer redirect
+
+The response status is always `REQUIRES_ACTION` since the customer must approve on PayPal.
+
+### Confirming a Payment
+
+`confirmPayment()` checks the order status and captures if approved:
+
+1. If status is `COMPLETED` -- returns success immediately
+2. If status is `APPROVED` -- captures the payment via `OrdersCaptureRequest`
+3. Otherwise -- returns `FAILED`
+
+### Refunds
+
+Refunds use the PayPal Captures Refund API. The `providerPaymentId` must be the PayPal **capture ID** (not the order ID). Partial refunds are supported by specifying an amount. The `reason` field is sent as `note_to_payer`.
+
+## OAuth Token Caching
+
+The adapter caches PayPal OAuth2 access tokens to avoid redundant token fetches. Tokens are refreshed 5 minutes before expiry:
+
+```ts
+cachedAccessToken = {
+  token: tokenData.access_token,
+  expiresAt: Date.now() + expiresInMs - 5 * 60 * 1000,
+}
+```
+
+This saves 200-500ms per webhook by eliminating redundant `/v1/oauth2/token` calls.
+
+## Webhook Verification
+
+The `verifyWebhookSignature()` method:
+
+1. Extracts PayPal signature headers (`paypal-transmission-id`, `paypal-transmission-sig`, etc.)
+2. Validates the `paypal-cert-url` against an allowlist (SSRF protection)
+3. Obtains an access token via `getPayPalAccessToken()`
+4. Calls `/v1/notifications/verify-webhook-signature` to validate
+
+<Callout type="warn">
+The cert URL validation is critical for preventing SSRF attacks. Only URLs from `paypal.com`, `api.sandbox.paypal.com`, and `api.paypal.com` are accepted.
+</Callout>
+
+## Timeout Protection
+
+All PayPal API calls are wrapped with a 15-second timeout via `withTimeout()`. If any request exceeds this limit, it rejects with a descriptive error including the operation label.
+
+## Limitations
+
+- **No saved payment methods**: PayPal Vault API integration is not yet implemented. The `listPaymentMethods()` and `detachPaymentMethod()` methods are no-ops.
+- **No customer creation**: PayPal identifies customers via their PayPal account during checkout. `createCustomer()` returns a placeholder.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/payments/providers/paypal.ts` | PayPalAdapter implementation |
+| `app/api/webhooks/paypal/route.ts` | Webhook HTTP endpoint |
+| `lib/payments/types.ts` | Shared payment type definitions |

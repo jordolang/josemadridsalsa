@@ -1,0 +1,110 @@
+---
+title: Product Recommendations
+description: Three recommendation algorithms - frequently bought together, similarity-based, and personalized based on purchase history
+---
+
+# Product Recommendations
+
+The recommendation engine provides three algorithms: co-purchase frequency, product similarity scoring, and personalized recommendations based on order history. All algorithms filter out inactive and out-of-stock products.
+
+## Architecture
+
+<Files>
+  <Folder name="lib" defaultOpen>
+    <File name="recommendations.ts" />
+  </Folder>
+  <Folder name="components/store">
+    <File name="product-recommendations.tsx" />
+    <File name="recently-viewed.tsx" />
+  </Folder>
+  <Folder name="app/api/recommendations">
+    <File name="route.ts" />
+  </Folder>
+</Files>
+
+## Recommendation Types
+
+### Frequently Bought Together
+
+`getFrequentlyBoughtTogether(productId, limit)` analyzes the last 100 orders containing a product and ranks co-purchased products by occurrence frequency.
+
+**Algorithm:**
+1. Find distinct orders containing the target product (last 100)
+2. Group other products in those orders by `productId`
+3. Count occurrences and sort descending
+4. Fetch product details, filtering to active + in-stock
+5. Normalize scores (0-1) based on max occurrence count
+
+```ts
+const coOccurrences = await prisma.orderItem.groupBy({
+  by: ['productId'],
+  where: {
+    orderId: { in: orderIds },
+    productId: { not: productId },
+  },
+  _count: { orderId: true },
+  orderBy: { _count: { orderId: 'desc' } },
+  take: limit * 2,
+})
+```
+
+### You May Also Like
+
+`getYouMayAlsoLike(productId, limit)` scores candidate products by similarity to the source product:
+
+| Factor | Score | Condition |
+| --- | --- | --- |
+| Same category | +0.5 | `categoryId` matches |
+| Same heat level | +0.3 | `heatLevel` matches |
+| Similar price | +0.2 | Within 30% of source price |
+
+Products are sorted by total score descending.
+
+### Personalized Recommendations
+
+`getPersonalizedRecommendations(userId, limit)` builds a preference profile from the user's last 10 paid orders:
+
+1. Extract all purchased product IDs, categories, and heat levels
+2. Rank categories and heat levels by frequency
+3. Find active, in-stock products matching the top category or heat level
+4. Exclude already-purchased products
+5. Return with a fixed confidence score of 0.8
+
+```ts
+const topCategory = Array.from(categories.entries())
+  .sort((a, b) => b[1] - a[1])[0]?.[0]
+const topHeatLevel = Array.from(heatLevels.entries())
+  .sort((a, b) => b[1] - a[1])[0]?.[0]
+```
+
+## RecommendedProduct Type
+
+All three algorithms return the same type:
+
+```ts
+interface RecommendedProduct {
+  id: string
+  name: string
+  slug: string
+  price: number
+  featuredImage: string | null
+  heatLevel: string | null
+  sku: string
+  inventory: number
+  score: number  // 0-1 confidence score
+}
+```
+
+## UI Components
+
+### Product Recommendations
+
+The `ProductRecommendations` component renders a grid of recommended products below the product detail page, using `getFrequentlyBoughtTogether()` and `getYouMayAlsoLike()`.
+
+### Recently Viewed
+
+The `RecentlyViewed` component (`lib/store/recently-viewed.ts`) uses a separate Zustand store to track and display products the user has visited in the current session.
+
+<Callout type="info">
+All recommendation queries over-fetch by 2x the limit (`take: limit * 2`) to account for products that may be out of stock or inactive after the groupBy query.
+</Callout>

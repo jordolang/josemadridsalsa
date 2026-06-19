@@ -1,0 +1,275 @@
+---
+title: Analytics Setup
+description: Setting up Amplitude, Google Analytics, and Vercel Analytics tracking
+---
+
+# Analytics Setup
+
+Jose Madrid Salsa uses multiple analytics platforms: Amplitude for product analytics, Google Analytics for traffic analysis, and Vercel Analytics for web vitals.
+
+## Amplitude
+
+### Setup
+
+Amplitude is initialized in `lib/analytics/amplitude.ts`:
+
+```typescript
+import * as amplitude from '@amplitude/analytics-browser'
+import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser'
+
+export const initAmplitude = () => {
+  const apiKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY
+  if (!apiKey) {
+    console.warn('Amplitude API key not found. Analytics will not be tracked.')
+    return
+  }
+
+  amplitude.init(apiKey, {
+    defaultTracking: {
+      sessions: true,
+      pageViews: true,
+      formInteractions: true,
+      fileDownloads: true,
+    },
+  })
+
+  // Session replay for debugging user experiences
+  amplitude.add(sessionReplayPlugin())
+}
+```
+
+Set the environment variable:
+
+```bash
+NEXT_PUBLIC_AMPLITUDE_API_KEY="your-amplitude-api-key"
+```
+
+### Tracking Events
+
+```typescript
+import { trackEvent } from '@/lib/analytics/amplitude'
+
+// Track a custom event
+trackEvent('product_viewed', {
+  productId: product.id,
+  productName: product.name,
+  heatLevel: product.heatLevel,
+  price: product.price,
+})
+
+// Track a purchase
+trackEvent('order_completed', {
+  orderId: order.id,
+  total: order.total,
+  itemCount: order.items.length,
+})
+```
+
+### User Identification
+
+```typescript
+import { identifyUser, resetUser } from '@/lib/analytics/amplitude'
+
+// On login
+identifyUser(user.id, {
+  email: user.email,
+  role: user.role,
+  name: user.name,
+})
+
+// On logout
+resetUser()
+```
+
+### Default Tracking
+
+Amplitude automatically tracks:
+- **Sessions** - Start and end times
+- **Page Views** - Every route change
+- **Form Interactions** - Form starts and completions
+- **File Downloads** - Download link clicks
+
+## Google Analytics
+
+### Configuration
+
+Google Analytics settings are managed through the admin panel and stored in the database via `lib/google-analytics-config.ts`.
+
+Set the measurement ID:
+
+```bash
+NEXT_PUBLIC_GOOGLE_ANALYTICS_ID="G-XXXXXXXXXX"
+```
+
+### Admin Dashboard Configuration
+
+The analytics admin at `/admin/analytics` allows customizing chart definitions. Each chart is defined by:
+
+```typescript
+interface GoogleAnalyticsChartDefinition {
+  id: string
+  title: string
+  description: string | null
+  metric: string        // e.g., 'sessions', 'totalUsers'
+  dimension: string     // e.g., 'date', 'deviceCategory'
+  chartType: 'bar' | 'line' | 'pie'
+  limit: number | null
+  color: 'indigo' | 'emerald' | 'amber' | 'rose'
+}
+```
+
+### Available Metrics
+
+| Metric | Description |
+|--------|-------------|
+| `sessions` | Total number of visits |
+| `totalUsers` | Unique visitors |
+| `newUsers` | First-time visitors |
+| `engagedSessions` | Sessions longer than 10 seconds |
+| `eventCount` | Total recorded events |
+| `conversions` | Conversion events |
+| `bounceRate` | Percentage of single-page sessions |
+| `averageSessionDuration` | Average session length |
+| `screenPageViews` | Page views |
+| `purchaseRevenue` | E-commerce revenue |
+
+### Available Dimensions
+
+| Dimension | Description |
+|-----------|-------------|
+| `date` | Calendar day |
+| `sessionDefaultChannelGrouping` | Traffic channel (Organic, Paid, etc.) |
+| `sessionSourceMedium` | Source and medium |
+| `deviceCategory` | Desktop, mobile, tablet |
+| `country` | User country |
+| `city` | User city |
+| `pageTitle` | Page title |
+| `pagePathPlusQueryString` | Full page path |
+| `landingPage` | Session entry page |
+
+### Default Charts
+
+Three charts are created by default:
+
+1. **Sessions by Source/Medium** - Bar chart showing top traffic sources
+2. **Engaged Sessions Over Time** - Line chart of engagement trends
+3. **Users by Device Category** - Pie chart of device breakdown
+
+### Adding Custom Charts
+
+```typescript
+import { addGoogleAnalyticsChartDefinition } from '@/lib/google-analytics-config'
+
+await addGoogleAnalyticsChartDefinition({
+  title: 'Revenue Over Time',
+  description: 'Daily purchase revenue',
+  metric: 'purchaseRevenue',
+  dimension: 'date',
+  chartType: 'line',
+  limit: 30,
+  color: 'emerald',
+  updatedBy: user.id,
+})
+```
+
+### Programmatic Settings Management
+
+```typescript
+import {
+  getGoogleAnalyticsSettings,
+  saveGoogleAnalyticsSettings,
+} from '@/lib/google-analytics-config'
+
+// Read settings
+const settings = await getGoogleAnalyticsSettings()
+
+// Update settings
+await saveGoogleAnalyticsSettings({
+  measurementId: 'G-XXXXXXXXXX',
+  propertyId: '123456789',
+  dataStreamId: '987654321',
+  updatedBy: user.id,
+})
+```
+
+## Vercel Analytics
+
+Vercel Analytics provides Core Web Vitals monitoring. It is included in the root layout:
+
+```typescript
+import { Analytics } from '@vercel/analytics/react'
+
+// In app/layout.tsx
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <Analytics />
+      </body>
+    </html>
+  )
+}
+```
+
+No additional configuration is needed -- Vercel Analytics is automatically active on Vercel deployments.
+
+## Sentry Error Tracking
+
+Sentry is configured for error monitoring across all runtimes:
+
+<Tabs items={['Client', 'Server', 'Edge']}>
+<Tab value="Client">
+```typescript
+// sentry.client.config.ts
+// Captures client-side JavaScript errors
+```
+</Tab>
+<Tab value="Server">
+```typescript
+// sentry.server.config.ts
+// Captures server-side Node.js errors
+```
+</Tab>
+<Tab value="Edge">
+```typescript
+// sentry.edge.config.ts
+// Captures Edge Runtime errors
+```
+</Tab>
+</Tabs>
+
+Set the Sentry DSN:
+
+```bash
+SENTRY_DSN="https://xxx@xxx.ingest.sentry.io/xxx"
+```
+
+## GrowthBook (Feature Flags)
+
+The project includes GrowthBook for A/B testing and feature flags:
+
+```typescript
+import { GrowthBook } from '@growthbook/growthbook-react'
+```
+
+<Callout type="info" title="Optional Analytics">
+All analytics services are optional. The app runs without any analytics keys set. Missing keys produce console warnings but do not affect functionality.
+</Callout>
+
+## Key Files
+
+<Files>
+  <Folder name="lib/analytics" defaultOpen>
+    <File name="amplitude.ts" />
+    <File name="date-range.ts" />
+    <File name="google-analytics.tsx" />
+  </Folder>
+  <Folder name="lib">
+    <File name="google-analytics-config.ts" />
+    <File name="google-analytics-reports.ts" />
+  </Folder>
+  <Folder name="app/admin/analytics">
+    <File name="page.tsx" />
+  </Folder>
+</Files>

@@ -1,0 +1,106 @@
+---
+title: Orders
+description: Order creation, processing, fulfillment workflow, and admin management for the Jose Madrid Salsa e-commerce platform
+---
+
+# Orders
+
+Orders are created during checkout and progress through a defined lifecycle from `PENDING` to `DELIVERED`. The system supports both authenticated and guest orders.
+
+## Architecture
+
+<Files>
+  <Folder name="app/admin/orders" defaultOpen>
+    <File name="page.tsx" />
+    <Folder name="[id]">
+      <File name="page.tsx" />
+    </Folder>
+    <Folder name="_components">
+      <File name="OrdersTable.tsx" />
+    </Folder>
+  </Folder>
+  <Folder name="app/api/orders" defaultOpen>
+    <File name="route.ts" />
+  </Folder>
+  <Folder name="lib/orders">
+    <File name="import.ts" />
+    <File name="modify.ts" />
+  </Folder>
+</Files>
+
+## Order Statuses
+
+| Status | Description |
+| --- | --- |
+| `PENDING` | Order created, awaiting payment |
+| `CONFIRMED` | Payment received, ready to process |
+| `PROCESSING` | Being prepared for shipment |
+| `SHIPPED` | Shipped with tracking number |
+| `DELIVERED` | Confirmed delivered |
+| `CANCELLED` | Cancelled before fulfillment |
+| `REFUNDED` | Payment refunded |
+
+## Payment Statuses
+
+| Status | Description |
+| --- | --- |
+| `PENDING` | Awaiting payment |
+| `PAID` | Payment confirmed by provider |
+| `FAILED` | Payment attempt failed |
+| `REFUNDED` | Full refund issued |
+| `PARTIALLY_REFUNDED` | Partial refund issued |
+
+## Order Creation Flow
+
+<Steps>
+### Cart Submission
+
+The checkout page sends cart items, customer info, and shipping details to `POST /api/checkout/create-session`.
+
+### Order Record
+
+A Prisma `Order` record is created with line items, computed subtotal, shipping cost, tax, and discount amounts. Each order gets a sequential number in the format `JMS-YYYYMMDD-XXXX`.
+
+### Inventory Reservation
+
+Before payment, inventory is reserved for each line item via `reserveMultipleProducts()` from `lib/inventory-manager.ts`. This uses `Serializable` transaction isolation to prevent overselling.
+
+### Payment Processing
+
+The appropriate payment provider creates a payment intent. On success, `POST /api/checkout/complete` transitions the order to `CONFIRMED` / `PAID` and deducts reserved inventory atomically.
+
+### Email Notification
+
+An order confirmation email is sent to the customer with order details, line items, and shipping address.
+</Steps>
+
+## Order Number Format
+
+Orders use the format `JMS-YYYYMMDD-XXXX` where:
+- `JMS` is the Jose Madrid Salsa prefix
+- `YYYYMMDD` is the creation date
+- `XXXX` is a random 4-digit number
+
+Gift certificate orders use `JMS-GC-YYYYMMDD-XXXX`.
+
+## Admin Order Management
+
+The admin orders page (`/admin/orders`) displays:
+
+- Filterable order list with status badges
+- Order detail view with line items, payment info, and customer details
+- Status update controls (confirm, ship, deliver, cancel)
+- Refund processing via the payment provider's refund API
+- Tracking number entry for shipped orders
+
+## Guest Orders
+
+Orders can be placed without an account by providing a `guestEmail`. Guest orders:
+- Are linked to the email rather than a user ID
+- Appear on the order lookup page by email + order number
+- Support the same fulfillment workflow as authenticated orders
+- Trigger abandoned cart tracking when the cart has a guest email set
+
+<Callout type="info">
+If a guest later creates an account with the same email, their previous orders are not automatically linked. This is a known limitation.
+</Callout>

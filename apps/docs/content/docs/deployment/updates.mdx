@@ -1,0 +1,183 @@
+---
+title: Updates and Rollbacks
+description: Update procedures, dependency management, and rollback strategies
+---
+
+# Updates and Rollbacks
+
+Procedures for updating dependencies, deploying changes, and rolling back failed deployments.
+
+## Deployment Flow
+
+Every push to `main` triggers the following pipeline:
+
+```
+git push origin main
+       |
+       v
+┌──────────────────┐
+│  GitHub Actions   │  Lint, type-check, test, build, E2E
+│  (CI Pipeline)    │
+└────────┬─────────┘
+         |
+         v
+┌──────────────────┐
+│  Vercel Build     │  prisma migrate deploy + next build
+│  (Auto-deploy)    │
+└────────┬─────────┘
+         |
+         v
+┌──────────────────┐
+│  Production       │  https://www.josemadrid.net
+│  Deployment       │
+└──────────────────┘
+```
+
+## Rolling Back
+
+### Via Vercel Dashboard
+
+<Steps>
+  <Step>
+    ### Go to Deployments
+
+    Navigate to your project in the Vercel Dashboard and click the **Deployments** tab.
+  </Step>
+  <Step>
+    ### Find the last working deployment
+
+    Each deployment shows its git commit, timestamp, and status. Find the last deployment that was working correctly.
+  </Step>
+  <Step>
+    ### Promote to production
+
+    Click the three-dot menu on the target deployment and select **Promote to Production**. This instantly serves that deployment without rebuilding.
+  </Step>
+</Steps>
+
+### Via CLI
+
+```bash
+# List recent deployments
+vercel ls
+
+# Promote a specific deployment to production
+vercel promote <deployment-url>
+```
+
+<Callout type="warn" title="Database Migrations Are Not Rolled Back">
+Promoting a previous deployment reverts the application code but does NOT revert database migrations. If the new deployment included a migration, you may need to manually create a reverse migration.
+</Callout>
+
+## Updating Dependencies
+
+### Routine Updates
+
+```bash
+# Check for outdated packages
+npm outdated
+
+# Update within semver ranges
+npm update
+
+# Update a specific package
+npm install package-name@latest
+```
+
+### Major Version Updates
+
+For major version upgrades (breaking changes):
+
+<Steps>
+  <Step>
+    ### Create a branch
+
+    ```bash
+    git checkout -b chore/update-package-name
+    ```
+  </Step>
+  <Step>
+    ### Update the package
+
+    ```bash
+    npm install package-name@latest
+    ```
+  </Step>
+  <Step>
+    ### Run the test suite
+
+    ```bash
+    npm run lint
+    npm run type-check
+    npm run test
+    ```
+  </Step>
+  <Step>
+    ### Test the build
+
+    ```bash
+    npm run build
+    ```
+  </Step>
+  <Step>
+    ### Open a PR
+
+    Push the branch and open a PR. The CI pipeline will run automatically. Verify the preview deployment works before merging.
+  </Step>
+</Steps>
+
+### Security Overrides
+
+The project pins transitive dependencies for security fixes:
+
+```json title="package.json"
+"overrides": {
+  "tar": ">=7.5.10",
+  "minimatch": ">=10.2.3",
+  "@vercel/node": { "undici": "6.24.1", "path-to-regexp": "6.3.0" }
+}
+```
+
+When `npm audit` reports a vulnerability in a transitive dependency, add an override to force the patched version.
+
+## Next.js Updates
+
+Next.js is currently at **16.2.1**. To upgrade:
+
+```bash
+npm install next@latest react@latest react-dom@latest
+```
+
+Check the [Next.js upgrade guide](https://nextjs.org/docs/app/guides/upgrading) for breaking changes between versions. The `resolutions` field in `package.json` pins Next.js across the dependency tree:
+
+```json
+"resolutions": {
+  "next": "16.2.1"
+}
+```
+
+## Prisma Updates
+
+```bash
+npm install prisma@latest @prisma/client@latest
+npx prisma generate
+```
+
+After updating Prisma, verify:
+- `prisma generate` succeeds
+- `prisma migrate dev` works locally
+- Binary targets include `rhel-openssl-3.0.x` for Vercel
+
+## Node.js Version
+
+The project uses **Node.js 22.x** on Vercel (configured in `.vercel/project.json`). Update the version in the Vercel Dashboard under **Project Settings > General > Node.js Version**.
+
+## Recovery Checklist
+
+If a deployment breaks production:
+
+1. **Immediate:** Promote the last working deployment in Vercel Dashboard
+2. **Investigate:** Check Vercel build logs and Sentry for errors
+3. **Fix:** Create a hotfix branch, test locally, push to main
+4. **Verify:** Confirm the new deployment resolves the issue
+5. **Postmortem:** Document what went wrong and how to prevent it
