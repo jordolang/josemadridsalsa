@@ -318,6 +318,7 @@ model AbandonedCart {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders        Order[]
 
   @@index([userId])
   @@index([guestEmail])
@@ -485,6 +486,7 @@ model Order {
   paymentChannel           PaymentChannel?        @default(ONLINE)
   paymentProvider          PaymentProvider?       @default(STRIPE)
   providerPaymentId        String?
+  abandonedCartId          String?
   supportMessages          FundraiserMessage[]
   giftCertificateUsages    GiftCertificateUsage[]
   giftCertificates         GiftCertificate[]
@@ -494,11 +496,13 @@ model Order {
   participant              FundraiserParticipant? @relation(fields: [participantId], references: [id])
   shippingAddress          Address?               @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
   user                     User?                  @relation(fields: [userId], references: [id])
+  abandonedCart            AbandonedCart?         @relation(fields: [abandonedCartId], references: [id])
   payments                 Payment[]
   shippingLabels           ShippingLabel[]
 
   @@index([userId])
   @@index([participantId])
+  @@index([abandonedCartId])
   @@map("orders")
 }
 
