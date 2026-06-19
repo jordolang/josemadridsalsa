@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import type { HeatLevel } from '@prisma/client'
 
 export interface RecommendedProduct {
   id: string
@@ -345,7 +346,7 @@ export async function getPersonalizedRecommendations(
       orConditions.push({ categoryId: { in: targetCategories } })
     }
     if (targetHeatLevels && targetHeatLevels.length > 0) {
-      orConditions.push({ heatLevel: { in: targetHeatLevels as any } })
+      orConditions.push({ heatLevel: { in: targetHeatLevels as HeatLevel[] } })
     }
 
     // If no preferences available, return empty array

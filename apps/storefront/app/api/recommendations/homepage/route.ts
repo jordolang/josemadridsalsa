@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams
-    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') ?? '6', 10), 1), 20)
+    const rawLimit = parseInt(searchParams.get('limit') ?? '6', 10)
+    const safeLimit = Number.isFinite(rawLimit) ? rawLimit : 6
+    const limit = Math.min(Math.max(safeLimit, 1), 20)
 
     const recommendations = await getPersonalizedRecommendations(user.id, limit)
 
