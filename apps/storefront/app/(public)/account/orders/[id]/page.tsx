@@ -35,6 +35,17 @@ function formatCurrency(v: number) {
   return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(v);
 }
 
+function formatDate(date: Date | null | undefined) {
+  if (!date) return "N/A";
+  return new Date(date).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
 export default async function OrderDetailPage({ params }: PageProps) {
   const { id } = await params;
   const session = await getServerSession(authOptions);
@@ -48,6 +59,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
       items: { include: { product: true } },
       shippingAddress: true,
       billingAddress: true,
+      shippingLabels: true,
     },
   });
 
@@ -60,6 +72,12 @@ export default async function OrderDetailPage({ params }: PageProps) {
   const shipping = Number(order.shippingCost ?? 0);
   const tax = Number(order.tax ?? 0);
   const total = Number(order.total);
+
+  // Get tracking details from order or first shipping label
+  const shippingLabel = order.shippingLabels?.[0];
+  const trackingNumber = order.trackingNumber ?? shippingLabel?.trackingCode ?? null;
+  const carrier = order.carrierName ?? shippingLabel?.carrierName ?? null;
+  const trackingUrl = order.trackingUrl ?? null;
 
   return (
     <div className="grid gap-6">
@@ -76,7 +94,6 @@ export default async function OrderDetailPage({ params }: PageProps) {
               <div>Placed: {order.createdAt.toLocaleString()}</div>
               {order.shippedAt ? <div>Shipped: {order.shippedAt.toLocaleString()}</div> : null}
               {order.deliveredAt ? <div>Delivered: {order.deliveredAt.toLocaleString()}</div> : null}
-              {order.trackingNumber ? <div>Tracking: {order.trackingNumber}</div> : null}
               {order.paymentMethod ? <div>Payment Method: {order.paymentMethod}</div> : null}
               {order.paymentStatus ? <div>Payment Status: {order.paymentStatus}</div> : null}
             </div>
@@ -93,6 +110,63 @@ export default async function OrderDetailPage({ params }: PageProps) {
           </div>
         </div>
       </Card>
+
+      {trackingNumber && (
+        <Card className="p-4">
+          <h2 className="font-medium mb-2">Tracking Information</h2>
+          <div className="grid gap-4">
+            <div className="grid md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Tracking Number:</span>
+                <p className="font-medium">{trackingNumber}</p>
+              </div>
+              {carrier && (
+                <div>
+                  <span className="text-muted-foreground">Carrier:</span>
+                  <p className="font-medium">{carrier}</p>
+                </div>
+              )}
+              {order.shippedAt && (
+                <div>
+                  <span className="text-muted-foreground">Shipped:</span>
+                  <p className="font-medium">{formatDate(order.shippedAt)}</p>
+                </div>
+              )}
+              {order.estimatedDelivery && (
+                <div>
+                  <span className="text-muted-foreground">Estimated Delivery:</span>
+                  <p className="font-medium">{formatDate(order.estimatedDelivery)}</p>
+                </div>
+              )}
+              {order.deliveredAt && (
+                <div>
+                  <span className="text-muted-foreground">Delivered:</span>
+                  <p className="font-medium">{formatDate(order.deliveredAt)}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-4 pt-2">
+              <Link
+                href={`/track/${trackingNumber}`}
+                className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+              >
+                View detailed tracking →
+              </Link>
+              {trackingUrl && (
+                <a
+                  href={trackingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+                >
+                  Track on {carrier ?? 'carrier'} website →
+                </a>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card className="p-4">
         <h2 className="font-medium mb-2">Items</h2>
