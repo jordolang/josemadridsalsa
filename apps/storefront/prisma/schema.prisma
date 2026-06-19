@@ -455,6 +455,11 @@ model Order {
   estimatedDelivery        DateTime?
   actualDelivery           DateTime?
   shippingLabelUrl         String?
+  easypostShipmentId       String?
+  carrierName              String?
+  trackingUrl              String?
+  lastTrackingUpdate       DateTime?
+  trackingHistory          Json?
   packingSlipUrl           String?
   invoiceUrl               String?
   invoiceSentAt            DateTime?
