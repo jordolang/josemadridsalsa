@@ -224,6 +224,12 @@ export async function getYouMayAlsoLike(
   }
 }
 
+export interface PersonalizedRecommendationsOptions {
+  limit?: number
+  heatLevels?: string[]
+  categoryIds?: string[]
+}
+
 /**
  * Get personalised product recommendations for an authenticated user.
  *
@@ -231,14 +237,26 @@ export async function getYouMayAlsoLike(
  * last 10 paid orders, then surfaces in-stock products matching those
  * preferences that the user has not yet purchased.
  *
+ * Optionally accepts browsing behavior filters (heatLevels, categoryIds) which
+ * override purchase history preferences to support real-time personalization.
+ *
  * @param {string} userId - The authenticated user's ID.
- * @param {number} [limit=8] - Maximum number of recommendations to return.
+ * @param {number | PersonalizedRecommendationsOptions} [limitOrOptions=8] - Maximum number of recommendations or options object.
  * @returns {Promise<RecommendedProduct[]>} Personalised recommendations with a fixed confidence score of 0.8.
  */
 export async function getPersonalizedRecommendations(
   userId: string,
-  limit: number = 8
+  limitOrOptions: number | PersonalizedRecommendationsOptions = 8
 ): Promise<RecommendedProduct[]> {
+  // Parse options for backwards compatibility
+  const options: PersonalizedRecommendationsOptions =
+    typeof limitOrOptions === 'number'
+      ? { limit: limitOrOptions }
+      : limitOrOptions
+
+  const limit = options.limit ?? 8
+  const browsingHeatLevels = options.heatLevels
+  const browsingCategoryIds = options.categoryIds
   const isDev = process.env.NODE_ENV === 'development'
   try {
     const startTime = isDev ? Date.now() : 0
@@ -299,9 +317,41 @@ export async function getPersonalizedRecommendations(
       })
     })
 
-    // Get top preferences
-    const topCategory = Array.from(categories.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
-    const topHeatLevel = Array.from(heatLevels.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
+    // Determine preferences: use browsing behavior if provided, otherwise use purchase history
+    let targetCategories: string[] | undefined
+    let targetHeatLevels: string[] | undefined
+
+    if (browsingCategoryIds && browsingCategoryIds.length > 0) {
+      targetCategories = browsingCategoryIds
+    } else {
+      const topCategory = Array.from(categories.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
+      if (topCategory) {
+        targetCategories = [topCategory]
+      }
+    }
+
+    if (browsingHeatLevels && browsingHeatLevels.length > 0) {
+      targetHeatLevels = browsingHeatLevels
+    } else {
+      const topHeatLevel = Array.from(heatLevels.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
+      if (topHeatLevel) {
+        targetHeatLevels = [topHeatLevel]
+      }
+    }
+
+    // Build OR conditions based on available preferences
+    const orConditions = []
+    if (targetCategories && targetCategories.length > 0) {
+      orConditions.push({ categoryId: { in: targetCategories } })
+    }
+    if (targetHeatLevels && targetHeatLevels.length > 0) {
+      orConditions.push({ heatLevel: { in: targetHeatLevels as any } })
+    }
+
+    // If no preferences available, return empty array
+    if (orConditions.length === 0) {
+      return []
+    }
 
     // Find products matching preferences
     const recommendationsStartTime = isDev ? Date.now() : 0
@@ -310,10 +360,7 @@ export async function getPersonalizedRecommendations(
         id: { notIn: Array.from(purchasedProductIds) }, // Exclude already purchased
         isActive: true,
         inventory: { gt: 0 },
-        OR: [
-          { categoryId: topCategory },
-          { heatLevel: topHeatLevel as any },
-        ],
+        OR: orConditions,
       },
       select: {
         id: true,
