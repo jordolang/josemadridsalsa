@@ -8,6 +8,8 @@ import { CampaignLaunchEmail } from '@/lib/email/templates/campaign-launch'
 import { ParticipantWelcomeEmail } from '@/lib/email/templates/participant-welcome'
 import { ParticipantMilestoneEmail } from '@/lib/email/templates/participant-milestone'
 import { CampaignSummaryEmail } from '@/lib/email/templates/campaign-summary'
+import { OrderShippedEmail } from '@/emails/order-shipped'
+import { OrderDeliveredEmail } from '@/emails/order-delivered'
 import { Text, Section } from '@react-email/components'
 import { EmailLayout } from '@/emails/components/EmailLayout'
 import { EmailHeader } from '@/emails/components/EmailHeader'
@@ -674,4 +676,130 @@ export async function sendAdminNewOrderNotification(orderId: string) {
   }
 
   return { success: true, message: 'Admin notification sent' }
+}
+
+export async function sendOrderShippedEmail(orderId: string) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      items: true,
+      user: { select: { name: true, email: true } },
+    },
+  })
+
+  if (!order) {
+    console.warn(`[EmailAutomation] Order ${orderId} not found for shipped email`)
+    return { success: false, error: 'Order not found' }
+  }
+
+  const recipientEmail = order.user?.email ?? order.guestEmail
+  if (!recipientEmail) {
+    console.warn(`[EmailAutomation] Order ${orderId} missing email, skipping shipped email`)
+    return { success: false, error: 'Order email missing' }
+  }
+
+  if (!order.trackingNumber) {
+    console.warn(`[EmailAutomation] Order ${orderId} missing tracking number, skipping shipped email`)
+    return { success: false, error: 'Tracking number missing' }
+  }
+
+  const items = order.items.map((item) => ({
+    productName: item.productName,
+    productSku: item.productSku,
+    totalPrice: `$${Number(item.totalPrice).toFixed(2)}`,
+    quantity: item.quantity,
+  }))
+
+  const shippingAddress =
+    order.shippingMethod ||
+    'Standard shipping'
+
+  const trackingLink = `${defaultAppUrl}/track/${order.trackingNumber}`
+
+  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+
+  const emailContent = React.createElement(OrderShippedEmail, {
+    name: order.user?.name || 'there',
+    orderNumber: order.orderNumber,
+    shippedDate: order.shippedAt ? format(order.shippedAt, 'MMMM d, yyyy') : format(new Date(), 'MMMM d, yyyy'),
+    trackingNumber: order.trackingNumber,
+    carrier: 'USPS',
+    estimatedDelivery: order.estimatedDelivery ? format(order.estimatedDelivery, 'MMMM d, yyyy') : undefined,
+    items,
+    shippingAddress,
+    trackingLink,
+    unsubscribeUrl,
+  })
+
+  const result = await sendEmail({
+    to: recipientEmail,
+    subject: `Your Order #${order.orderNumber} Has Shipped!`,
+    react: emailContent,
+    replyTo: 'mike@josemadridsalsa.com',
+    type: 'order-shipped',
+    orderId: order.id,
+    userId: order.userId ?? undefined,
+  })
+
+  return result
+}
+
+export async function sendOrderDeliveredEmail(orderId: string) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      items: true,
+      user: { select: { name: true, email: true } },
+    },
+  })
+
+  if (!order) {
+    console.warn(`[EmailAutomation] Order ${orderId} not found for delivered email`)
+    return { success: false, error: 'Order not found' }
+  }
+
+  const recipientEmail = order.user?.email ?? order.guestEmail
+  if (!recipientEmail) {
+    console.warn(`[EmailAutomation] Order ${orderId} missing email, skipping delivered email`)
+    return { success: false, error: 'Order email missing' }
+  }
+
+  const items = order.items.map((item) => ({
+    productName: item.productName,
+    productSku: item.productSku,
+    totalPrice: `$${Number(item.totalPrice).toFixed(2)}`,
+    quantity: item.quantity,
+  }))
+
+  const shippingAddress =
+    order.shippingMethod ||
+    'Standard shipping'
+
+  const orderHistoryLink = `${defaultAppUrl}/account/orders`
+
+  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+
+  const emailContent = React.createElement(OrderDeliveredEmail, {
+    name: order.user?.name || 'there',
+    orderNumber: order.orderNumber,
+    orderDate: format(order.createdAt, 'MMMM d, yyyy'),
+    deliveryDate: order.deliveredAt ? format(order.deliveredAt, 'MMMM d, yyyy') : format(new Date(), 'MMMM d, yyyy'),
+    orderTotal: `$${Number(order.total).toFixed(2)}`,
+    items,
+    shippingAddress,
+    orderHistoryLink,
+    unsubscribeUrl,
+  })
+
+  const result = await sendEmail({
+    to: recipientEmail,
+    subject: `Your Order #${order.orderNumber} Has Been Delivered!`,
+    react: emailContent,
+    replyTo: 'mike@josemadridsalsa.com',
+    type: 'order-delivered',
+    orderId: order.id,
+    userId: order.userId ?? undefined,
+  })
+
+  return result
 }
