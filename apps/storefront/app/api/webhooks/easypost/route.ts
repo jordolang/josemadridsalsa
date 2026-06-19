@@ -96,9 +96,10 @@ export async function POST(request: Request) {
       await prisma.webhookEvent.create({
         data: {
           providerEventId: event.id,
-          provider: 'EASYPOST',
           type: event.description,
           processed: false,
+          // Note: provider field is for payment providers only (STRIPE, SQUARE, PAYPAL)
+          // EasyPost is a shipping provider, so we leave this field null
         },
       })
     }

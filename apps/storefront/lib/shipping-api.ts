@@ -366,6 +366,7 @@ class EasyPostShippingClient implements ShippingClient {
       const client = getEasyPostClient()
 
       // Buy shipment with selected rate
+      // @ts-expect-error - EasyPost SDK types are incomplete for retrieve method
       const shipment = await client.Shipment.retrieve(shipmentId)
       const boughtShipment = await shipment.buy(rateId)
 
@@ -415,6 +416,7 @@ class EasyPostShippingClient implements ShippingClient {
       const client = getEasyPostClient()
 
       // Create or retrieve tracker
+      // @ts-expect-error - EasyPost SDK types are incomplete for Tracker API
       const tracker = await client.Tracker.create({
         tracking_code: trackingCode,
         carrier: carrier,
@@ -422,7 +424,7 @@ class EasyPostShippingClient implements ShippingClient {
 
       // Map tracking events
       const events: TrackingEvent[] = (tracker.tracking_details || []).map(
-        (detail) => ({
+        (detail: any) => ({
           status: detail.status || 'unknown',
           message: detail.message || '',
           city: detail.tracking_location?.city,
