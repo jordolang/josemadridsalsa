@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { getProvider } from '@/lib/payments'
@@ -33,6 +34,10 @@ export async function POST(request: Request) {
   let order: OrderWithItems | null = null
 
   try {
+    // Read abandonedCartId from cookie for attribution tracking
+    const cookieStore = await cookies()
+    const abandonedCartId = cookieStore.get('abandonedCartId')?.value || null
+
     const json = await request.json()
     const parsed = CompleteSchema.safeParse(json)
 
@@ -129,30 +134,40 @@ export async function POST(request: Request) {
             paymentStatus: 'PAID',
             status: 'CONFIRMED',
             stripePaymentId: paymentIntentId,
+            abandonedCartId: abandonedCartId || undefined,
           },
         })
 
-        // Mark any abandoned carts as recovered
-        if (order!.userId) {
-          await tx.abandonedCart.updateMany({
-            where: {
-              userId: order!.userId,
-              recoveredAt: null,
-            },
-            data: {
-              recoveredAt: new Date(),
-            },
+        // Mark abandoned cart as recovered
+        if (abandonedCartId) {
+          // If we have a specific abandonedCartId from the recovery link, update that cart
+          await tx.abandonedCart.update({
+            where: { id: abandonedCartId },
+            data: { recoveredAt: new Date() },
           })
-        } else if (order!.guestEmail) {
-          await tx.abandonedCart.updateMany({
-            where: {
-              guestEmail: order!.guestEmail.toLowerCase(),
-              recoveredAt: null,
-            },
-            data: {
-              recoveredAt: new Date(),
-            },
-          })
+        } else {
+          // Fallback: mark any unrecovered carts for this user/guest as recovered
+          if (order!.userId) {
+            await tx.abandonedCart.updateMany({
+              where: {
+                userId: order!.userId,
+                recoveredAt: null,
+              },
+              data: {
+                recoveredAt: new Date(),
+              },
+            })
+          } else if (order!.guestEmail) {
+            await tx.abandonedCart.updateMany({
+              where: {
+                guestEmail: order!.guestEmail.toLowerCase(),
+                recoveredAt: null,
+              },
+              data: {
+                recoveredAt: new Date(),
+              },
+            })
+          }
         }
 
         // Update participant totals if order is attributed to a participant
