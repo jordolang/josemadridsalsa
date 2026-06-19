@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Facebook, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { fetchFacebookLiveStatus } from '@/lib/live/facebook-live'
+import { getLiveStatus } from '@/lib/live/facebook-live'
 
 export const metadata: Metadata = {
   title: 'Live | Jose Madrid Salsa',
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 }
 
 export default async function LivePage() {
-  const status = await fetchFacebookLiveStatus()
+  const status = await getLiveStatus()
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 lg:py-14">

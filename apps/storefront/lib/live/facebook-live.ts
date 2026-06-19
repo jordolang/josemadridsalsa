@@ -61,3 +61,21 @@ export async function fetchFacebookLiveStatus(): Promise<LiveStatus> {
     return OFFLINE_LIVE_STATUS
   }
 }
+
+// Throttle Graph API calls: every visitor polls /api/live/status and the /live
+// page renders on request, but we only need to ask Facebook a couple of times a
+// minute. Shared module-level cache so both callers collapse to one call per TTL.
+const CACHE_TTL_MS = 30_000
+let cache: { at: number; value: LiveStatus } | null = null
+
+/**
+ * Cached wrapper around {@link fetchFacebookLiveStatus}. Use this from request
+ * handlers and pages so a burst of traffic hits Facebook at most once per 30s.
+ */
+export async function getLiveStatus(): Promise<LiveStatus> {
+  const now = Date.now()
+  if (!cache || now - cache.at > CACHE_TTL_MS) {
+    cache = { at: now, value: await fetchFacebookLiveStatus() }
+  }
+  return cache.value
+}
