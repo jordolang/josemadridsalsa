@@ -377,8 +377,8 @@ export interface ShareAnalyticsEvent {
   /** Page URL where share occurred */
   sourceUrl: string;
 
-  /** Timestamp */
-  timestamp: Date;
+  /** ISO 8601 timestamp */
+  timestamp: string;
 
   /** User ID if authenticated */
   userId?: string;

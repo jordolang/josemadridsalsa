@@ -340,7 +340,7 @@ Many environment variables are **shared across all apps** (same values):
 - `GOOGLE_CALENDAR_ID` - Shared
 
 **Analytics:**
-- `GOOGLE_ANALYTICS_ID` - Same for all (or unique per app for separate tracking)
+- `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID` - Same for all (or unique per app for separate tracking)
 - `NEXT_PUBLIC_AMPLITUDE_API_KEY` - Same or unique
 
 ### App-Specific Environment Variables
