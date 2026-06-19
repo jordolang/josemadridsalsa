@@ -20,7 +20,7 @@ export interface LiveStatus {
 
 /** Public Facebook page URL. Used as the offline fallback for the Live tab. */
 export const FACEBOOK_PAGE_URL =
-  process.env.NEXT_PUBLIC_FACEBOOK_PAGE_URL ?? 'https://www.facebook.com/josemadridsalsa'
+  process.env.NEXT_PUBLIC_FACEBOOK_PAGE_URL ?? 'https://www.facebook.com/josemadridsalsainc'
 
 /** Default "not live" status, shared so client and server agree on the shape. */
 export const OFFLINE_LIVE_STATUS: LiveStatus = {
