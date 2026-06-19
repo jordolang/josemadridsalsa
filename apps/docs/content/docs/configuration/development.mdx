@@ -1,0 +1,221 @@
+---
+title: Development Setup
+description: Local development environment configuration
+---
+
+
+# Development Setup
+
+Get Jose Madrid Salsa running locally for development.
+
+## Prerequisites
+
+- **Node.js** 18+ (recommended: 20 LTS)
+- **npm** (comes with Node.js)
+- **PostgreSQL** 16+ (local or Docker)
+- **Git**
+
+## Quick Start
+
+<Steps>
+### Clone the Repository
+
+```bash
+git clone https://github.com/your-org/josemadridsalsa.git
+cd josemadridsalsa
+```
+
+### Install Dependencies
+
+```bash
+npm install
+```
+
+This also runs `prisma generate` via the `postinstall` hook.
+
+### Create Environment File
+
+Copy the example and fill in your values:
+
+```bash
+cp .env.example .env.local
+```
+
+### Minimum Required Variables
+
+At minimum, set these in `.env.local`:
+
+```bash title=".env.local"
+# Database (local PostgreSQL)
+DATABASE_URL="postgresql://postgres:password@localhost:5432/josemadridsalsa"
+
+# Auth (generate a random secret)
+NEXTAUTH_SECRET="your-development-secret-at-least-32-chars"
+NEXTAUTH_URL="http://localhost:3000"
+
+# Encryption (generate random keys)
+MASTER_KEY="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+ENCRYPTION_KEY="$(node -e "console.log(require('crypto').randomBytes(64).toString('base64'))")"
+```
+
+### Set Up the Database
+
+Create the database and run migrations:
+
+```bash
+# If using local PostgreSQL
+createdb josemadridsalsa
+
+# Apply migrations
+npx prisma migrate dev
+
+# Seed initial data
+npx prisma db seed
+```
+
+### Start the Dev Server
+
+```bash
+npm run dev
+```
+
+The app will be available at [http://localhost:3000](http://localhost:3000).
+</Steps>
+
+## Optional Services
+
+These are optional for local development. Features that depend on them will degrade gracefully with console warnings.
+
+### OAuth Providers
+
+For testing social login, create development OAuth apps:
+
+```bash title=".env.local"
+GOOGLE_CLIENT_ID="..."
+GOOGLE_CLIENT_SECRET="..."
+GITHUB_CLIENT_ID="..."
+GITHUB_CLIENT_SECRET="..."
+```
+
+Set callback URLs to `http://localhost:3000/api/auth/callback/<provider>`.
+
+### Stripe
+
+For testing payments:
+
+```bash title=".env.local"
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+```
+
+Use Stripe CLI for local webhook testing:
+
+```bash
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+```
+
+### Email (Resend)
+
+For testing email delivery:
+
+```bash title=".env.local"
+RESEND_API_KEY="re_..."
+FROM_EMAIL="test@yourdomain.com"
+```
+
+Without `RESEND_API_KEY`, email sends are skipped with a console warning.
+
+### Google Maps
+
+For testing location features:
+
+```bash title=".env.local"
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="..."
+```
+
+### AI Chat
+
+For testing the AI chatbot:
+
+```bash title=".env.local"
+ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+## Database Tools
+
+### Prisma Studio
+
+Browse and edit database records in a GUI:
+
+```bash
+npx prisma studio
+```
+
+Opens at [http://localhost:5555](http://localhost:5555).
+
+### Reset Database
+
+Drop all tables, reapply migrations, and re-seed:
+
+```bash
+npx prisma migrate reset
+```
+
+### Push Schema Changes (No Migration)
+
+For rapid prototyping without creating migration files:
+
+```bash
+npx prisma db push
+```
+
+<Callout type="warn">
+`prisma db push` does not create migration files. Use `prisma migrate dev` when you want to keep a migration history.
+</Callout>
+
+## Development Logging
+
+In development mode, additional logging is enabled:
+
+- **NextAuth**: Debug-level logging for auth flows
+- **Prisma**: Query, error, and warning logs
+- **Email**: Console warnings when API keys are missing
+
+```ts title="lib/prisma.ts"
+const logLevels = process.env.NODE_ENV === 'development'
+  ? ['query', 'error', 'warn']
+  : ['error']
+```
+
+## Common Issues
+
+### "DATABASE_URL is not set"
+
+Ensure `.env.local` exists and contains a valid `DATABASE_URL`. Restart the dev server after changing environment variables.
+
+### "NEXTAUTH_SECRET is required in development"
+
+The auth module throws a hard error in development if `NEXTAUTH_SECRET` is missing. Generate one:
+
+```bash
+openssl rand -base64 32
+```
+
+### Prisma Client Out of Sync
+
+If you see type errors after pulling schema changes:
+
+```bash
+npx prisma generate
+```
+
+### Port 3000 Already in Use
+
+```bash
+# Find and kill the process
+lsof -ti:3000 | xargs kill -9
+
+# Or use a different port
+npm run dev -- -p 3001
+```

@@ -1,0 +1,225 @@
+---
+title: Authentication
+description: How API authentication works including JWT sessions, OAuth providers, credentials login, and role-based access control
+---
+
+# Authentication
+
+The Jose Madrid Salsa API uses **NextAuth.js** with **JWT-based sessions** for authentication. All protected endpoints require a valid session, which is established through either credentials login or OAuth provider sign-in.
+
+<Callout type="warn" title="No API Key Authentication">
+The API does not currently support standalone API keys for third-party integrations. All authentication flows go through NextAuth session tokens. The mobile app bypasses rate limiting via a custom `User-Agent` header but still requires a valid session for protected endpoints.
+</Callout>
+
+## Authentication Methods
+
+<Tabs items={['Credentials', 'OAuth Providers']}>
+  <Tab value="Credentials">
+    ### Email & Password
+
+    Users can authenticate with an email and password. Passwords are hashed with **bcrypt** (12 rounds) and compared server-side.
+
+    **Login endpoint:** `POST /api/auth/callback/credentials`
+
+    ```json title="Request body"
+    {
+      "email": "user@example.com",
+      "password": "your-password"
+    }
+    ```
+
+    **Behavior:**
+    - Email is normalized to lowercase and trimmed before lookup
+    - Returns a JWT session token on success
+    - Returns `null` (NextAuth 401) on invalid credentials
+    - Users without a password set (OAuth-only accounts) cannot use credentials login
+
+    **Registration:** `POST /api/auth/register`
+
+    ```json title="Request body"
+    {
+      "email": "user@example.com",
+      "password": "minimum8chars",
+      "name": "Optional Name"
+    }
+    ```
+
+    Registration validates input with Zod, hashes the password, assigns the `CUSTOMER` role, and sends a welcome email.
+  </Tab>
+  <Tab value="OAuth Providers">
+    ### Supported OAuth Providers
+
+    | Provider | Sign-In URL |
+    |----------|-------------|
+    | Google | `/api/auth/signin/google` |
+    | GitHub | `/api/auth/signin/github` |
+    | Facebook | `/api/auth/signin/facebook` |
+    | Apple | `/api/auth/signin/apple` |
+
+    **OAuth flow:**
+    1. User is redirected to the provider's authorization page
+    2. On callback, the JWT callback checks if the user exists in the database
+    3. If the user does not exist, a new account is created with `CUSTOMER` role and `isEmailVerified: true`
+    4. The user's database ID and role are stored in the JWT token
+    5. Profile pictures from OAuth providers are included in the session
+
+    <Callout title="Account Linking">
+    OAuth sign-in matches users by email address. If a user registers with credentials first and later signs in with Google using the same email, the existing account is used rather than creating a duplicate.
+    </Callout>
+  </Tab>
+</Tabs>
+
+## Session Structure
+
+Sessions use the **JWT strategy** with a 30-day maximum age. The session object available to your application includes:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `user.id` | `string` | Database user ID |
+| `user.email` | `string` | User email address |
+| `user.name` | `string \| null` | Display name |
+| `user.role` | `UserRole` | Role enum value (see below) |
+| `user.fundraiserId` | `string \| undefined` | Fundraiser account ID, present only for `FUNDRAISER` role |
+| `user.image` | `string \| undefined` | Profile picture URL from OAuth provider |
+
+### JWT Token Enrichment
+
+The JWT callback enriches tokens with additional data:
+
+<Steps>
+  <Step>
+    ### Sign-In
+    On initial sign-in, the user's `id` and `role` are written to the JWT token from the database.
+  </Step>
+  <Step>
+    ### Fundraiser Lookup
+    If the user has the `FUNDRAISER` role, their `fundraiserId` is fetched and stored in the token to avoid repeated database lookups.
+  </Step>
+  <Step>
+    ### Fallback Fetch
+    If the token is missing a role (edge case), the system fetches it from the database using the token's email address.
+  </Step>
+</Steps>
+
+## User Roles
+
+The platform defines six roles used for authorization:
+
+| Role | Description |
+|------|-------------|
+| `ADMIN` | Full access to all features and settings |
+| `DEVELOPER` | Full access, equivalent to ADMIN for permissions |
+| `STAFF` | Operational access to orders, products, content, and messaging |
+| `CUSTOMER` | Default role for new users. Access to own orders, cart, and profile |
+| `WHOLESALE` | Wholesale customer account |
+| `FUNDRAISER` | Fundraiser portal access with limited self-service permissions |
+
+## Role-Based Access Control (RBAC)
+
+Authorization is enforced through two complementary systems: **role checks** and **granular permissions**.
+
+### Role Checks
+
+The `withAuth` middleware and `requireRole` helper restrict endpoints by role:
+
+```ts title="Admin-only endpoint"
+import { withAuth } from '@/lib/middleware/api-helpers'
+import { UserRole } from '@prisma/client'
+
+export const POST = withAuth(async (request) => {
+  // Only ADMIN users reach this handler
+  return NextResponse.json({ success: true })
+}, { roles: [UserRole.ADMIN] })
+```
+
+### Granular Permissions
+
+Permissions follow a `resource:action` naming convention (e.g., `products:read`, `orders:write`). They are checked against the `RolePermission` table in the database, with a **fallback to default permissions** if the table is empty or missing.
+
+```ts title="Permission-based endpoint"
+import { requirePermission } from '@/lib/rbac'
+
+export async function GET(req: NextRequest) {
+  const user = await requirePermission('products:read')
+  // User has products:read permission
+}
+```
+
+### Permission Categories
+
+| Category | Example Permissions |
+|----------|-------------------|
+| Orders | `orders:read`, `orders:write`, `orders:export`, `orders:import`, `orders:modify`, `orders:print-labels`, `orders:sync-shopify` |
+| Products | `products:read`, `products:write`, `products:bulk`, `products:export`, `products:import` |
+| Users | `users:read`, `users:write`, `users:impersonate`, `users:export` |
+| Content | `content:read`, `content:write`, `content:publish` |
+| Analytics | `analytics:read`, `analytics:export` |
+| Settings | `settings:read`, `settings:write` |
+| Financials | `financials:read`, `financials:refunds`, `financials:export` |
+| Messaging | `messaging:read`, `messaging:reply`, `messaging:assign` |
+| Gift Certificates | `gift-certificates:read`, `gift-certificates:write`, `gift-certificates:import`, `gift-certificates:export` |
+| Fundraiser Portal | `fundraiser:view-dashboard`, `fundraiser:edit-page`, `fundraiser:upload-assets`, `fundraiser:view-analytics` |
+
+### Default Role Permissions
+
+- **ADMIN / DEVELOPER**: All permissions
+- **STAFF**: Orders (read/write/export/import/modify/print-labels), Products (read/write/bulk/import), Users (read), Content (read/write), Analytics (read), Messaging (all), Gift Certificates (read/write), Locations (read), Events (read), SEO (read), AI analytics (view)
+- **CUSTOMER / WHOLESALE**: No admin permissions (access own resources only)
+- **FUNDRAISER**: Fundraiser portal permissions only
+
+<Callout type="warn" title="Permission Fallback">
+If the `RolePermission` database table is empty or missing (e.g., after a fresh migration), the system falls back to hardcoded default permissions defined in `lib/permissions-data.ts`. A warning is logged when this fallback is used.
+</Callout>
+
+## Middleware Helpers
+
+The `lib/middleware/api-helpers.ts` module provides composable wrappers for API route handlers.
+
+### withAuth
+
+Wraps a handler with authentication and optional role/permission checks.
+
+```ts
+withAuth(handler, {
+  required: true,       // Require authentication (default: true)
+  roles: [UserRole.ADMIN], // Restrict to specific roles
+  permission: 'orders:read' // Require a specific permission
+})
+```
+
+### Presets
+
+| Preset | Description |
+|--------|-------------|
+| `commonAuth.required` | Require any authenticated user |
+| `commonAuth.optional` | Allow unauthenticated access (user may be null) |
+| `commonAuth.admin` | Require `ADMIN` role |
+| `commonAuth.staff` | Require `ADMIN`, `DEVELOPER`, or `STAFF` role |
+
+### Composing Middleware
+
+Multiple middleware wrappers can be composed together using the `compose` helper:
+
+```ts title="Auth + rate limiting"
+import { compose, withAuth, withRateLimit } from '@/lib/middleware/api-helpers'
+import { RATE_LIMITS } from '@/lib/rate-limiter'
+
+export const POST = compose(
+  (h) => withAuth(h, { roles: [UserRole.ADMIN] }),
+  (h) => withRateLimit(h, RATE_LIMITS.API_GENERAL)
+)(async (request) => {
+  return NextResponse.json({ success: true })
+})
+```
+
+## Making Authenticated Requests
+
+Include the NextAuth session cookie in your requests:
+
+```bash title="Authenticated request"
+curl -X GET https://josemadrid.net/api/orders \
+  -H "Cookie: next-auth.session-token=your-session-token" \
+  -H "Content-Type: application/json"
+```
+
+For browser-based clients, the session cookie is set automatically after sign-in. For programmatic access, authenticate via the NextAuth credentials endpoint first to obtain a session token.

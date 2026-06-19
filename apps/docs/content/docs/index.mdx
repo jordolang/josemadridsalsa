@@ -1,0 +1,159 @@
+---
+title: Jose Madrid Salsa Documentation
+description: Complete documentation for the Jose Madrid Salsa e-commerce platform
+---
+
+<Callout title="Welcome to the Jose Madrid Salsa Developer Docs">
+Everything you need to understand, build upon, and deploy the Jose Madrid Salsa e-commerce platform. Start with **Getting Started** or jump straight to the section you need.
+</Callout>
+
+<PageInlineTOC>On this page</PageInlineTOC>
+
+## Repository
+
+<GithubInfo owner="jordolang" repo="josemadridsalsa" />
+
+## Quick Navigation
+
+<Cards>
+  <Card title="Getting Started" href="/docs/getting-started" description="Set up your dev environment and run the project locally" />
+  <Card title="API Reference" href="/docs/api" description="REST API endpoints, authentication, and request schemas" />
+  <Card title="Features" href="/docs/features" description="Checkout, payments, shipping, battle arena, and more" />
+  <Card title="Integrations" href="/docs/integrations" description="Stripe, PayPal, Square, Google Maps, and email services" />
+  <Card title="Deployment" href="/docs/deployment" description="Deploy to Vercel, manage environments, and CI/CD" />
+  <Card title="Configuration" href="/docs/configuration" description="Environment variables, database, and service setup" />
+</Cards>
+
+## Platform Overview
+
+Jose Madrid Salsa is a full-featured e-commerce platform built with **Next.js 16**, **Prisma**, and **TypeScript**.
+
+<Tabs items={['Core Features', 'Tech Stack', 'Integrations']}>
+  <Tab value="Core Features">
+    - **E-commerce** — Product catalog, shopping cart, checkout, and order management
+    - **Payment Processing** — Stripe, PayPal, and Square for flexible payments
+    - **Shipping & Fulfillment** — Calculated rates, label generation, tracking
+    - **Admin Dashboard** — Full management suite for products, orders, and users
+    - **Fundraiser Battle Arena** — Gamified fundraising system with leaderboards
+    - **Email Marketing** — Automated campaigns, templates, and engagement tracking
+  </Tab>
+  <Tab value="Tech Stack">
+    - **Framework:** Next.js 16 (App Router, Server Components)
+    - **Database:** PostgreSQL via Prisma ORM (Neon serverless)
+    - **Auth:** NextAuth.js with Google, GitHub, Facebook, Apple OAuth
+    - **Styling:** Tailwind CSS with custom design system
+    - **Deployment:** Vercel with Fluid Compute
+    - **Monitoring:** Sentry error tracking, Vercel Analytics
+  </Tab>
+  <Tab value="Integrations">
+    - **Payments:** Stripe, PayPal, Square
+    - **Email:** Nodemailer, Resend, React Email templates
+    - **Maps:** Google Maps Platform (Places, Geocoding)
+    - **Storage:** Vercel Blob, UploadThing
+    - **Analytics:** Google Analytics, Amplitude, PostHog
+    - **AI:** Anthropic Claude API for content generation
+  </Tab>
+</Tabs>
+
+## Project Structure
+
+<Files>
+  <Folder name="app" defaultOpen>
+    <Folder name="(public)">
+      <File name="products/page.tsx" />
+      <File name="recipes/page.tsx" />
+      <File name="checkout/page.tsx" />
+    </Folder>
+    <Folder name="admin">
+      <File name="layout.tsx" />
+      <File name="orders/page.tsx" />
+      <File name="products/page.tsx" />
+    </Folder>
+    <Folder name="api">
+      <Folder name="auth">
+        <File name="[...nextauth]/route.ts" />
+      </Folder>
+    </Folder>
+  </Folder>
+  <Folder name="components">
+    <File name="store/navigation.tsx" />
+    <File name="ui/button.tsx" />
+  </Folder>
+  <Folder name="lib">
+    <File name="auth.ts" />
+    <File name="prisma.ts" />
+    <File name="stripe.ts" />
+  </Folder>
+  <Folder name="prisma">
+    <File name="schema.prisma" />
+  </Folder>
+  <File name="package.json" />
+  <File name="next.config.mjs" />
+</Files>
+
+## Getting Started
+
+<Steps>
+  <Step>
+    ### Clone the Repository
+
+    ```bash title="Terminal"
+    git clone https://github.com/jordolang/josemadridsalsa.git
+    cd josemadridsalsa
+    ```
+  </Step>
+  <Step>
+    ### Install Dependencies
+
+    ```bash title="Terminal"
+    npm install
+    ```
+  </Step>
+  <Step>
+    ### Configure Environment
+
+    Copy the example environment file and add your credentials:
+
+    ```bash title="Terminal"
+    cp .env.example .env.local
+    ```
+
+    See the [Configuration Guide](/docs/configuration) for all required variables.
+  </Step>
+  <Step>
+    ### Run the Development Server
+
+    ```bash title="Terminal"
+    npm run dev
+    ```
+
+    Open [http://localhost:3000](http://localhost:3000) to see the app.
+  </Step>
+</Steps>
+
+<Callout type="warn" title="Database Required">
+You'll need a PostgreSQL database to run the project. We recommend [Neon](https://neon.tech) for serverless Postgres. See the [Database Setup](/docs/getting-started/database-setup) guide.
+</Callout>
+
+## Documentation Map
+
+Explore how every section of the docs connects. Click a node to jump to that page.
+
+<SiteGraph />
+
+## Getting Help
+
+<Accordions>
+  <Accordion title="Where do I find API documentation?">
+    The [API Reference](/docs/api) section covers all REST endpoints including authentication, request/response schemas, and rate limiting details.
+  </Accordion>
+  <Accordion title="How do I set up payment processing?">
+    Check the [Payment Integration](/docs/features/payment-integration) guide for Stripe, PayPal, and Square setup instructions.
+  </Accordion>
+  <Accordion title="How do I deploy to production?">
+    The [Deployment Guide](/docs/deployment) walks through Vercel deployment, environment configuration, and CI/CD setup.
+  </Accordion>
+  <Accordion title="Where do I report issues?">
+    File issues on the [GitHub repository](https://github.com/jordolang/josemadridsalsa/issues) or contact the development team directly.
+  </Accordion>
+</Accordions>

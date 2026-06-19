@@ -1,0 +1,161 @@
+---
+title: Email Templates
+description: React Email templates for transactional and marketing emails
+---
+
+
+# Email Templates
+
+Jose Madrid Salsa uses [React Email](https://react.email) to build transactional email templates as React components. Templates live in the `emails/` directory and are rendered to HTML at send time.
+
+## Directory Structure
+
+```
+emails/
+  components/
+    Button.tsx          # Reusable CTA button
+    EmailFooter.tsx     # Standard footer with unsubscribe link
+    EmailHeader.tsx     # Brand header with logo/image
+    EmailLayout.tsx     # Base layout wrapper
+    OrderItemsTable.tsx # Order line items table
+  contact-form.tsx          # Contact form submission notification
+  delivery-confirmation.tsx # Delivery confirmation email
+  order-confirmation.tsx    # Order confirmation email
+  shipping-notification.tsx # Shipping notification email
+  styles.ts                 # Shared style constants
+```
+
+## Template Components
+
+### EmailLayout
+
+The base layout wraps all emails with consistent structure:
+
+```tsx title="emails/components/EmailLayout.tsx"
+<EmailLayout previewText="Order #123 confirmed">
+  {/* Email content */}
+</EmailLayout>
+```
+
+### OrderConfirmationEmail
+
+The order confirmation template accepts typed props:
+
+```tsx title="emails/order-confirmation.tsx"
+interface OrderConfirmationEmailProps {
+  name?: string
+  orderNumber: string
+  orderDate: string
+  orderTotal: string
+  items: OrderItem[]
+  shippingAddress: string
+  trackingLink?: string
+  unsubscribeUrl?: string
+}
+
+export const OrderConfirmationEmail = ({
+  name = 'there',
+  orderNumber,
+  orderDate,
+  orderTotal,
+  items = [],
+  shippingAddress,
+  trackingLink,
+  unsubscribeUrl = '#',
+}: OrderConfirmationEmailProps) => {
+  return (
+    <EmailLayout previewText={`Order #${orderNumber} confirmed`}>
+      <EmailHeader headerImage="order-confirmed.png" headerAlt="Order Confirmed" />
+      {/* Order details, items table, total, tracking link */}
+      <EmailFooter unsubscribeUrl={unsubscribeUrl} />
+    </EmailLayout>
+  )
+}
+```
+
+### Shared Components
+
+| Component | Purpose |
+|---|---|
+| `Button` | CTA button with `variant` (primary/secondary) and `size` props |
+| `EmailHeader` | Branded header with configurable image |
+| `EmailFooter` | Footer with unsubscribe link and brand info |
+| `OrderItemsTable` | Renders line items with name, quantity, and price |
+
+## Rendering
+
+Templates are rendered to HTML using `@react-email/render`:
+
+```ts title="lib/email/client.ts"
+import { render } from '@react-email/render'
+
+const html = await render(react) // react = React Email component
+```
+
+<Callout type="info">
+`@react-email/render` is listed in `serverExternalPackages` in `next.config.mjs` to ensure it works correctly in server components.
+</Callout>
+
+## Database Templates
+
+In addition to React Email templates, the application stores HTML email templates in the database (`EmailTemplate` model) for campaign emails. These support variable substitution:
+
+```ts title="lib/email/sender.ts"
+export function substituteVariables(
+  template: string,
+  variables: Record<string, any>
+): string {
+  let result = template
+  Object.keys(variables).forEach((key) => {
+    const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g')
+    result = result.replace(regex, String(variables[key] ?? ''))
+  })
+  return result
+}
+```
+
+Variables use `{{variableName}}` syntax (e.g., `{{name}}`, `{{orderNumber}}`).
+
+## Template Categories
+
+Database templates are categorized:
+
+```graphql
+enum EmailTemplateCategory {
+  TRANSACTIONAL
+  MARKETING
+  NOTIFICATION
+  SYSTEM
+}
+```
+
+## Styling
+
+Email styles use inline CSS objects (React Email convention):
+
+```ts title="emails/styles.ts"
+// Shared styles imported by all templates
+export const bodyContent = { ... }
+```
+
+Individual templates define additional styles as const objects with proper TypeScript typing:
+
+```tsx
+const heading = {
+  margin: '0 0 24px',
+  fontSize: '24px',
+  fontWeight: '700' as const,
+  color: '#dc2626',  // Jose Madrid brand red
+  fontFamily: 'Arial, sans-serif',
+}
+```
+
+## Brand Colors
+
+| Color | Hex | Usage |
+|---|---|---|
+| Brand Red | `#dc2626` | Headings, CTA buttons, totals |
+| Dark Text | `#1f2937` | Body text |
+| Muted Text | `#64748b` | Secondary text, labels |
+| Link Blue | `#3b82f6` | Hyperlinks |
+| Background | `#f8fafc` | Card backgrounds |

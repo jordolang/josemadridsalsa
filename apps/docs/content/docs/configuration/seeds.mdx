@@ -1,0 +1,143 @@
+---
+title: Database Seeding
+description: Seed the database with initial categories, products, users, and recipes
+---
+
+
+# Database Seeding
+
+The seed script at `prisma/seed.ts` populates the database with initial data for development and testing. It creates categories, products, users, and recipes.
+
+## Running the Seed
+
+```bash
+npx prisma db seed
+```
+
+Or directly:
+
+```bash
+npx tsx prisma/seed.ts
+```
+
+## What Gets Seeded
+
+### 1. Cleanup
+
+The seed script first deletes all existing data in dependency order:
+
+```ts title="prisma/seed.ts"
+await prisma.orderItem.deleteMany()
+await prisma.order.deleteMany()
+await prisma.cartItem.deleteMany()
+await prisma.wishlistItem.deleteMany()
+await prisma.review.deleteMany()
+await prisma.fundraiserProduct.deleteMany()
+await prisma.fundraiser.deleteMany()
+await prisma.product.deleteMany()
+await prisma.category.deleteMany()
+await prisma.address.deleteMany()
+await prisma.wholesaleAccount.deleteMany()
+await prisma.recipe.deleteMany()
+await prisma.user.deleteMany()
+```
+
+<Callout type="warn">
+Running the seed script **deletes all existing data** before inserting fresh records. Never run this against a production database.
+</Callout>
+
+### 2. Categories
+
+Four salsa categories are created:
+
+| Category | Slug | Sort Order |
+|---|---|---|
+| Mild Salsa | `mild-salsa` | 1 |
+| Medium Salsa | `medium-salsa` | 2 |
+| Hot Salsa | `hot-salsa` | 3 |
+| Gourmet & Fruit Salsa | `gourmet-fruit-salsa` | 4 |
+
+### 3. Products
+
+Products are created with Jose Madrid Salsa branding, including:
+
+- Name, slug, description
+- Heat level (MILD, MEDIUM, HOT, EXTRA_HOT)
+- Ingredients list
+- Pricing (price, compare-at price, cost price)
+- SKU and initial inventory
+- Category assignment
+
+Example:
+
+```ts title="prisma/seed.ts"
+{
+  name: 'Jose Madrid Original Mild',
+  slug: 'jose-madrid-original-mild',
+  heatLevel: HeatLevel.MILD,
+  ingredients: ['Tomatoes', 'Onions', 'Bell Peppers', 'Garlic', 'Vinegar', 'Salt', 'Spices'],
+  price: 8.99,
+  sku: 'JMS-MILD-001',
+  inventory: 100,
+}
+```
+
+### 4. Users
+
+Test users are created with bcrypt-hashed passwords:
+
+- Admin user
+- Customer users
+- Wholesale account user
+- Fundraiser account user
+
+### 5. Recipes
+
+Recipe data is imported from `lib/data/recipes` and seeded with:
+
+- Title, slug, description
+- Category, difficulty, prep/cook time
+- Ingredients and instructions
+- Featured image
+
+### 6. Nutritional Info
+
+The seed calls `seedNutritionAndIngredients()` from `scripts/seed-nutrition-ingredients.ts` to populate nutritional data for products.
+
+## Seed Files
+
+| File | Purpose |
+|---|---|
+| `prisma/seed.ts` | Main seed script |
+| `prisma/seed.permissions.ts` | Permissions and role-permission mappings |
+| `prisma/seeds/retail-locations.ts` | Retail location data |
+| `prisma/seed.backup.ts` | Backup of previous seed data |
+
+## Prisma Seed Configuration
+
+The seed command is configured in `package.json`:
+
+```json title="package.json"
+{
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}
+```
+
+<Callout type="info">
+The seed script uses `tsx` to run TypeScript directly without a separate compilation step.
+</Callout>
+
+## Permissions Seed
+
+`prisma/seed.permissions.ts` sets up the RBAC permission system:
+
+- Creates `Permission` records (e.g., `orders:read`, `products:write`)
+- Creates `RolePermission` mappings for each `UserRole`
+
+Run it separately:
+
+```bash
+npx tsx prisma/seed.permissions.ts
+```

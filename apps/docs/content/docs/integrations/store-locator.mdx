@@ -1,0 +1,95 @@
+---
+title: Store Locator
+description: Store locator feature combining Google Maps, Geocoding, and the locations database
+---
+
+
+# Store Locator
+
+The Store Locator feature at `/find-us` helps customers discover retail locations that carry Jose Madrid Salsa products. It combines the locations database with Google Maps, Geocoding API, and the Places API to provide an interactive map-based search experience.
+
+## Architecture
+
+```
+/find-us page (Server Component)
+  -> Query locations from Prisma database
+  -> Pass to LocationsMap client component
+      -> Geocode addresses without coordinates
+      -> Render Google Map with markers
+      -> Info windows with business details
+```
+
+The feature integrates three Google APIs:
+- **Maps JavaScript API** -- Renders the interactive map
+- **Geocoding API** -- Converts addresses to lat/lng coordinates
+- **Places API** -- Enriches location data with photos and business details
+
+## Components
+
+### LocationsMap
+
+**File:** `app/(public)/find-us/_components/LocationsMap.tsx`
+
+The main client component that renders the map. See [Google Maps Integration](/docs/integrations/google-maps) for full details on the map implementation.
+
+Key behaviors:
+- Locations with stored coordinates (`latitude`/`longitude`) are used directly
+- Locations without coordinates are geocoded in batches (10 at a time, 200ms between batches)
+- Markers display city abbreviations with business name disambiguation
+- Info windows show address, phone, website, and distance (when proximity search is active)
+
+### Location Data
+
+Locations are stored in the Prisma database with these relevant fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | String | Unique identifier |
+| `businessName` | String | Store/business name |
+| `address` | String | Street address |
+| `city` | String | City name |
+| `state` | String | State code |
+| `zipCode` | String? | ZIP code |
+| `phone` | String? | Phone number |
+| `website` | String? | Website URL |
+| `latitude` | Float? | Pre-geocoded latitude |
+| `longitude` | Float? | Pre-geocoded longitude |
+
+## Location Enrichment
+
+When locations are imported or updated, the platform can enrich them with Google Places data:
+
+1. **`findPlaceByNameAddress()`** searches for the business on Google Places
+2. **`getBestPhotoUrlForPlace()`** selects the highest quality photo
+3. **`getCompanyLogoFromWebsite()`** fetches a logo via Clearbit or Google Favicons
+
+See [Google Places Integration](/docs/integrations/google-places) for details on the Places API usage.
+
+## Environment Variables
+
+The store locator requires these variables (shared with Google Maps and Places):
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Client-side Maps API key | Yes |
+| `GOOGLE_PLACES_API_KEY` | Server-side Places API key | For enrichment |
+
+## Distance Calculation
+
+When a user's location is available (via browser geolocation or manual entry), the map displays distance in miles on each info window. The `distanceMiles` field is calculated on the client side from the user's coordinates to each location's coordinates.
+
+## Related Documentation
+
+- [Google Maps Integration](/docs/integrations/google-maps) -- Map component details
+- [Google Places Integration](/docs/integrations/google-places) -- Places API for location enrichment
+- [Google Reviews Integration](/docs/integrations/google-reviews) -- Business reviews display
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `app/(public)/find-us/_components/LocationsMap.tsx` | Map component |
+| `lib/google-places.ts` | Places API helpers for enrichment |
+| `lib/locations/query.ts` | Location database queries |
+| `app/api/locations/` | Locations API endpoints |
+| `app/api/places/` | Places API proxy endpoint |

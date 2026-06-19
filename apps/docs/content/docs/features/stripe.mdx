@@ -1,0 +1,101 @@
+---
+title: Stripe Integration
+description: Stripe payment adapter handling card, Apple Pay, Google Pay, and ACH payments via the PaymentIntents API
+---
+
+# Stripe Integration
+
+Stripe is the primary payment provider, handling card payments, Apple Pay, Google Pay, ACH transfers, and tax calculation. It is always registered (no conditional env check).
+
+## Architecture
+
+<Files>
+  <Folder name="lib/payments/providers">
+    <File name="stripe.ts" />
+  </Folder>
+  <Folder name="lib">
+    <File name="stripe.ts" />
+    <File name="tax-calculator.ts" />
+  </Folder>
+  <Folder name="app/api/webhooks">
+    <File name="stripe/route.ts" />
+  </Folder>
+</Files>
+
+## StripeAdapter
+
+The `StripeAdapter` class (`lib/payments/providers/stripe.ts`) implements `PaymentProviderAdapter` using the Stripe Node.js SDK.
+
+### Payment Methods Handled
+
+| Method Type | Stripe Feature |
+| --- | --- |
+| `CARD` | PaymentIntents with `CardElement` |
+| `ACH` | PaymentIntents with `us_bank_account` |
+| `APPLE_PAY` | PaymentIntents with `ExpressCheckoutElement` |
+| `GOOGLE_PAY` | PaymentIntents with `ExpressCheckoutElement` |
+
+### createPayment
+
+Creates a Stripe `PaymentIntent` with:
+- Amount in cents and USD currency
+- Shipping address attached to the intent
+- Customer ID for saved payment methods
+- `setup_future_usage` when customer opts to save card
+- Metadata: `orderId`, `orderNumber`, `customerEmail`
+
+Returns a `clientSecret` for client-side confirmation via Stripe.js.
+
+### Status Mapping
+
+```ts
+function mapStripeStatus(status: string): PaymentResult['status'] {
+  switch (status) {
+    case 'requires_payment_method':
+    case 'requires_confirmation':
+      return 'REQUIRES_CONFIRMATION'
+    case 'requires_action':
+      return 'REQUIRES_ACTION'
+    case 'processing':
+      return 'PROCESSING'
+    case 'succeeded':
+      return 'SUCCEEDED'
+    default:
+      return 'FAILED'
+  }
+}
+```
+
+## Stripe Tax
+
+Tax calculation uses the Stripe Tax API via `lib/tax-calculator.ts`. See the [Taxes](/docs/features/taxes) page for details.
+
+## Client-Side Integration
+
+The checkout page loads Stripe.js and wraps the payment form in `<Elements>`:
+
+```tsx
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+
+<Elements stripe={stripePromise}>
+  <CardElement options={CardElementOptions} />
+  <ExpressCheckoutElement />
+  <LinkAuthenticationElement />
+</Elements>
+```
+
+## Webhooks
+
+Stripe webhooks are handled at `/api/webhooks/stripe/route.ts`. The adapter's `verifyWebhookSignature()` method validates the `stripe-signature` header against `STRIPE_WEBHOOK_SECRET`.
+
+## Environment Variables
+
+| Variable | Description |
+| --- | --- |
+| `STRIPE_SECRET_KEY` | Server-side API key |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Client-side publishable key |
+| `STRIPE_WEBHOOK_SECRET` | Webhook endpoint signing secret |
+
+<Callout type="warn">
+Stripe is always registered as a provider regardless of environment variables. If `STRIPE_SECRET_KEY` is missing, API calls will fail at runtime with a clear error message from the Stripe SDK.
+</Callout>

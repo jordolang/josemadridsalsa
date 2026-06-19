@@ -1,0 +1,100 @@
+---
+title: Image Optimization
+description: Next.js Image Optimization configuration for remote and local images
+---
+
+
+# Image Optimization
+
+Jose Madrid Salsa uses Next.js Image Optimization with AVIF and WebP support. The configuration in `next.config.mjs` defines responsive breakpoints and approved remote image sources.
+
+## Image Formats
+
+```js title="next.config.mjs"
+images: {
+  formats: ['image/avif', 'image/webp'],
+}
+```
+
+Images are served in AVIF format when supported by the browser, falling back to WebP, then the original format. AVIF provides ~50% smaller files than JPEG with equivalent quality.
+
+## Device Sizes
+
+Responsive images are generated for these viewport widths:
+
+```js title="next.config.mjs"
+deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+```
+
+- `deviceSizes`: Used when the `sizes` prop indicates full-width images
+- `imageSizes`: Used for smaller images (icons, thumbnails, avatars)
+
+## Cache TTL
+
+```js title="next.config.mjs"
+minimumCacheTTL: 60, // seconds
+```
+
+Optimized images are cached for at least 60 seconds. Vercel's CDN may cache them longer based on demand.
+
+## Remote Patterns
+
+All approved remote image sources:
+
+| Hostname | Purpose |
+|---|---|
+| `cdn11.bigcommerce.com` | Product images (legacy BigCommerce) |
+| `images.unsplash.com` | Stock photos for recipes/blog |
+| `maps.googleapis.com` | Google Maps static images |
+| `lh3.googleusercontent.com` | Google profile pictures (OAuth) |
+| `places.googleapis.com` | Google Places photos |
+| `logo.clearbit.com` | Company logos for partner pages |
+| `www.google.com` | Google favicons |
+| `utfs.io` | UploadThing CDN (user uploads) |
+
+```js title="next.config.mjs"
+remotePatterns: [
+  { protocol: 'https', hostname: 'cdn11.bigcommerce.com', pathname: '/**' },
+  { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
+  { protocol: 'https', hostname: 'maps.googleapis.com', pathname: '/**' },
+  { protocol: 'https', hostname: 'lh3.googleusercontent.com', pathname: '/**' },
+  { protocol: 'https', hostname: 'places.googleapis.com', pathname: '/**' },
+  { protocol: 'https', hostname: 'logo.clearbit.com', pathname: '/**' },
+  { protocol: 'https', hostname: 'www.google.com', pathname: '/s2/favicons/**' },
+  { protocol: 'https', hostname: 'utfs.io', pathname: '/**' },
+],
+```
+
+## Usage
+
+Always use `next/image` instead of `<img>`:
+
+```tsx
+import Image from 'next/image'
+
+<Image
+  src={product.featuredImage || '/images/placeholder.jpg'}
+  alt={product.name}
+  width={400}
+  height={400}
+  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+/>
+```
+
+## Image Proxy
+
+The application includes an image proxy route at `app/api/image-proxy/` for cases where direct image URLs cannot be used (e.g., avoiding mixed content or CORS issues).
+
+<Callout type="warn">
+Do **not** add `public/images/**` to `outputFileTracingExcludes` -- this breaks Next.js Image Optimization for local images.
+</Callout>
+
+## File Uploads
+
+Product images and user uploads are stored via UploadThing and served from `utfs.io`. Configure UploadThing with:
+
+```bash title=".env.local"
+UPLOADTHING_SECRET="sk_live_..."
+UPLOADTHING_APP_ID="..."
+```

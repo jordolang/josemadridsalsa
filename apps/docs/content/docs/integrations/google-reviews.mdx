@@ -1,0 +1,123 @@
+---
+title: Google Reviews
+description: Google Business reviews integration via the Places API
+---
+
+
+# Google Reviews Integration
+
+The platform displays Google Business reviews on the storefront by fetching them from the Google Places API (v1). Reviews are loaded server-side and cached via ISR to avoid client-side API calls.
+
+## Architecture
+
+Two data paths serve reviews:
+
+1. **Server component fetcher** (`lib/server/google-data.ts`) -- Used by server components with ISR caching (2-hour revalidation)
+2. **API route** (`app/api/reviews/google/route.ts`) -- Client-accessible endpoint with 2-hour cache
+
+Both call the same Google Places API endpoint.
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `GOOGLE_PLACES_API_KEY` | Server-side Places API key | Recommended |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Fallback if server key not set | Alternative |
+| `GOOGLE_PLACE_ID` | Google Place ID for the business | Recommended |
+| `NEXT_PUBLIC_GOOGLE_PLACE_ID` | Fallback public place ID | Alternative |
+| `GOOGLE_PLACE_NAME` | Business name for place search (defaults to "Jose Madrid Salsa") | No |
+
+<Callout type="info">
+If no Place ID is configured, the API route will attempt to find it by searching for the business name via the Places Text Search API.
+</Callout>
+
+## Setup
+
+<Steps>
+
+### Find your Google Place ID
+
+Search for your business on Google Maps and extract the Place ID from the URL, or use the [Place ID Finder](https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder).
+
+### Enable the Places API
+
+In Google Cloud Console, enable the **Places API (New)** for your project.
+
+### Configure environment variables
+
+```bash
+GOOGLE_PLACES_API_KEY=AIza...
+GOOGLE_PLACE_ID=ChIJ...
+```
+
+</Steps>
+
+## API Call
+
+The Places API v1 is called with specific field masks:
+
+```
+GET https://places.googleapis.com/v1/places/{placeId}
+Headers:
+  X-Goog-Api-Key: {apiKey}
+  X-Goog-FieldMask: reviews,rating,userRatingCount
+```
+
+## Data Types
+
+```ts
+type Review = {
+  authorName: string
+  rating: number
+  text: string
+  relativePublishTime: string | null
+}
+
+type ReviewsData = {
+  reviews: Review[]
+  totalRating: number
+  totalReviews: number
+}
+```
+
+- `authorName` comes from `review.authorAttribution.displayName`
+- `relativePublishTime` is formatted as a readable date string (e.g., "March 15, 2026")
+- `totalRating` is the aggregate business rating
+- `totalReviews` is the total review count from `userRatingCount`
+
+## Caching
+
+### Server Component Fetcher
+
+Uses Next.js ISR with `next: { revalidate: 7200 }` (2 hours):
+
+```ts
+const response = await fetch(url, {
+  next: { revalidate: 7200 },
+})
+```
+
+### API Route
+
+Uses Next.js route segment config:
+
+```ts
+export const revalidate = 7200 // 2 hours
+```
+
+## Error Handling
+
+Both implementations return empty data on failure rather than throwing:
+
+```ts
+return { reviews: [], totalRating: 0, totalReviews: 0 }
+```
+
+The API route returns HTTP 200 with empty reviews and an error message in the response body to prevent UI breakage.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/server/google-data.ts` | Server component data fetcher |
+| `app/api/reviews/google/route.ts` | Client-accessible reviews endpoint |

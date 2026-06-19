@@ -1,0 +1,109 @@
+---
+title: Wishlist
+description: Server-synced wishlist with optimistic UI updates, Zustand state management, and authentication-gated access
+---
+
+# Wishlist
+
+Authenticated users can save products to a wishlist that persists server-side. The client-side Zustand store provides optimistic updates with automatic rollback on API failure.
+
+## Architecture
+
+<Files>
+  <Folder name="lib/store" defaultOpen>
+    <File name="wishlist.ts" />
+  </Folder>
+  <Folder name="app/(public)/wishlist">
+    <File name="page.tsx" />
+  </Folder>
+  <Folder name="app/api/wishlist">
+    <File name="route.ts" />
+  </Folder>
+  <Folder name="components/store">
+    <File name="product-card.tsx" />
+  </Folder>
+</Files>
+
+## Wishlist Store
+
+The store (`lib/store/wishlist.ts`) uses Zustand with localStorage persistence:
+
+```ts
+interface WishlistStore {
+  items: WishlistItem[]
+  isLoading: boolean
+
+  addItem: (productId: string) => Promise<void>
+  removeItem: (productId: string) => Promise<void>
+  isInWishlist: (productId: string) => boolean
+  clearWishlist: () => void
+  fetchWishlist: () => Promise<void>
+  totalItems: () => number
+}
+```
+
+### WishlistItem
+
+Each wishlist item includes full product data for rendering without additional fetches:
+
+```ts
+interface WishlistItem {
+  id: string           // WishlistItem.id from database
+  productId: string    // Product.id
+  name: string
+  slug: string
+  price: number
+  compareAtPrice?: number | null
+  image: string
+  heatLevel: string
+  sku: string
+  inventory: number
+  isActive: boolean
+  addedAt: Date
+}
+```
+
+## Optimistic Updates
+
+### Adding Items
+
+1. A temporary item with `id: temp-{productId}` is immediately added to the store
+2. A POST request is sent to `/api/wishlist`
+3. On success, the temporary item is replaced with the real server data
+4. On failure, the temporary item is removed (rollback)
+
+### Removing Items
+
+1. The item is immediately removed from the store
+2. A DELETE request is sent to `/api/wishlist`
+3. On failure, the original items are restored (rollback)
+
+## Authentication
+
+The wishlist requires authentication:
+
+- The `ProductCard` component checks `useSession()` before toggling wishlist state
+- Unauthenticated users clicking the heart icon are redirected to sign-in
+- The `fetchWishlist()` function silently clears the store on 401/403 responses without logging errors
+
+```tsx
+const handleWishlistToggle = () => {
+  if (!session) {
+    router.push('/auth/signin?callbackUrl=/products')
+    return
+  }
+  // toggle logic...
+}
+```
+
+## Wishlist Page
+
+The `/wishlist` page displays all saved products in a grid layout with:
+- Product images, names, and prices
+- Heat level badges
+- Add-to-cart buttons
+- Remove from wishlist action
+
+<Callout type="info">
+The wishlist store uses `partialize` to only persist `items` to localStorage, providing instant loading on page refresh. The server-side state is fetched on mount via `fetchWishlist()` to ensure consistency.
+</Callout>

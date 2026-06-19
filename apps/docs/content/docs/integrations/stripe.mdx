@@ -1,0 +1,177 @@
+---
+title: Stripe
+description: Stripe payment processing for cards, Apple Pay, Google Pay, and ACH transfers
+---
+
+
+# Stripe Integration
+
+<PageInlineTOC>On this page</PageInlineTOC>
+
+## SDK
+
+<GithubInfo owner="stripe" repo="stripe-node" />
+
+Stripe is the primary payment processor for online card payments, Apple Pay, Google Pay, and ACH transfers. The integration uses the Stripe PaymentIntents API via a provider adapter pattern.
+
+## Architecture
+
+Stripe is one of three payment providers behind the `PaymentProviderAdapter` interface. The adapter is located at `lib/payments/providers/stripe.ts` and uses a singleton Stripe client from `lib/stripe.ts`.
+
+```
+Checkout -> Provider Registry -> StripeAdapter -> Stripe PaymentIntents API
+```
+
+The adapter handles these payment method types:
+
+| Method | Type Constant |
+|--------|---------------|
+| Credit/Debit Cards | `CARD` |
+| ACH Bank Transfer | `ACH` |
+| Apple Pay | `APPLE_PAY` |
+| Google Pay | `GOOGLE_PAY` |
+
+## Environment Variables
+
+<Callout type="warn">
+All Stripe keys must be set before the payment system will function. The application throws on startup if `STRIPE_SECRET_KEY` is missing.
+</Callout>
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `STRIPE_SECRET_KEY` | Stripe secret API key (sk_live or sk_test) | Yes |
+| `STRIPE_WEBHOOK_SECRET` | Webhook endpoint signing secret (whsec_) | Yes |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Public key for client-side Elements | Yes |
+
+## Setup
+
+<Steps>
+
+### Install the Stripe SDK
+
+The project uses the `stripe` npm package. It is already listed in `package.json`.
+
+```bash
+npm install stripe
+```
+
+### Configure environment variables
+
+Add your Stripe keys to `.env.local`:
+
+```bash
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
+
+### Set up the webhook endpoint
+
+Register `https://your-domain.com/api/webhooks/stripe` in the Stripe Dashboard under Developers > Webhooks. Subscribe to these events:
+
+- `payment_intent.succeeded`
+- `payment_intent.payment_failed`
+- `payment_intent.canceled`
+- `charge.refunded`
+
+</Steps>
+
+## Stripe Client
+
+The singleton client is initialized in `lib/stripe.ts` with retry and timeout configuration:
+
+```ts
+stripeClient = new Stripe(secretKey, {
+  apiVersion: '2025-10-29.clover',
+  maxNetworkRetries: 2,
+  timeout: 30000, // 30 seconds
+})
+```
+
+Access it via `getStripe()`. The function throws if no secret key is configured.
+
+## Payment Flow
+
+### Creating a Payment
+
+The `StripeAdapter.createPayment()` method creates a PaymentIntent with order metadata, shipping address, and optional future usage setup:
+
+```ts
+const params = {
+  amount: request.amount,       // in cents
+  currency: request.currency,
+  receipt_email: request.customerEmail,
+  metadata: {
+    orderId: request.orderId,
+    orderNumber: request.orderNumber,
+    customerName: request.customerName,
+  },
+}
+```
+
+The response includes a `clientSecret` that the frontend uses to confirm payment with Stripe Elements.
+
+### Confirming a Payment
+
+`confirmPayment()` retrieves the PaymentIntent status from Stripe and maps it to the unified status enum:
+
+| Stripe Status | Mapped Status |
+|---------------|---------------|
+| `requires_payment_method` | `REQUIRES_CONFIRMATION` |
+| `requires_action` | `REQUIRES_ACTION` |
+| `processing` | `PROCESSING` |
+| `succeeded` | `SUCCEEDED` |
+| Other | `FAILED` |
+
+### Refunds
+
+The adapter supports full and partial refunds via `stripe.refunds.create()`. Reason codes map to Stripe's allowed values: `duplicate`, `fraudulent`, or `requested_by_customer`.
+
+## Webhook Handler
+
+**Route:** `app/api/webhooks/stripe/route.ts`
+
+The webhook handler performs these operations:
+
+1. **Signature verification** using `stripe.webhooks.constructEvent()`
+2. **Idempotency check** via the `WebhookEvent` database table (prevents duplicate processing)
+3. **Event routing** based on `event.type`
+
+### Handled Events
+
+| Event | Action |
+|-------|--------|
+| `payment_intent.succeeded` | Marks order as `CONFIRMED`, updates payment status to `SUCCEEDED`, deducts reserved inventory, sends confirmation email |
+| `payment_intent.payment_failed` | Updates payment status to `FAILED` |
+| `payment_intent.canceled` | Updates order to `CANCELLED`, payment to `FAILED` |
+| `charge.refunded` | Updates order/payment status, creates refund record, restores inventory on full refunds, creates audit log |
+
+<Callout type="info">
+Partial refunds do not restore inventory automatically. An administrator must manually adjust inventory for partial refund scenarios.
+</Callout>
+
+### Inventory Management
+
+On `payment_intent.succeeded`, the handler calls `deductReservedInventoryInTx()` inside a Prisma transaction. Each item deduction is idempotent -- it checks for an existing `ORDER_COMPLETION` inventory transaction before proceeding.
+
+After the transaction commits, `checkAndUpdateAlerts()` fires asynchronously to update low-stock alerts.
+
+## Customer Management
+
+The adapter supports creating Stripe customers (`cus_xxx`) and listing/detaching saved card payment methods. This enables returning customers to use saved cards:
+
+```ts
+await adapter.createCustomer(email, name, { userId: user.id })
+await adapter.listPaymentMethods(customerId)
+await adapter.detachPaymentMethod(paymentMethodId)
+```
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/stripe.ts` | Singleton Stripe client |
+| `lib/payments/providers/stripe.ts` | StripeAdapter implementation |
+| `lib/payments/types.ts` | Shared payment type definitions |
+| `lib/stripe/webhooks.ts` | Webhook event handler functions |
+| `app/api/webhooks/stripe/route.ts` | Webhook HTTP endpoint |

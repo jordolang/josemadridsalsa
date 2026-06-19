@@ -1,0 +1,112 @@
+---
+title: SSL/TLS and Custom Domains
+description: SSL certificates and custom domain configuration on Vercel
+---
+
+# SSL/TLS and Custom Domains
+
+Vercel provides automatic SSL/TLS certificates for all deployments, including custom domains.
+
+## Automatic SSL
+
+Every Vercel deployment gets a free SSL certificate:
+
+- **Production:** `https://www.josemadrid.net`
+- **Preview:** `https://<branch>-josemadridsalsa.vercel.app`
+- **Default:** `https://josemadridsalsa.vercel.app`
+
+Certificates are issued via Let's Encrypt and renewed automatically before expiration. No manual certificate management is required.
+
+## Custom Domain Setup
+
+The production domain `www.josemadrid.net` is configured in the Vercel Dashboard.
+
+<Steps>
+  <Step>
+    ### Add the domain in Vercel
+
+    Navigate to **Project Settings > Domains** and add your domain.
+  </Step>
+  <Step>
+    ### Configure DNS
+
+    Add the DNS records shown by Vercel at your domain registrar:
+
+    | Type | Name | Value |
+    |---|---|---|
+    | `CNAME` | `www` | `cname.vercel-dns.com` |
+    | `A` | `@` | `76.76.21.21` |
+
+    The `A` record handles the apex domain (`josemadrid.net`), and the `CNAME` handles `www.josemadrid.net`.
+  </Step>
+  <Step>
+    ### Wait for verification
+
+    Vercel verifies DNS propagation and issues the SSL certificate automatically. This typically takes a few minutes.
+  </Step>
+  <Step>
+    ### Configure redirect
+
+    In the Vercel Dashboard, set either the apex or www variant as the primary domain. The other redirects automatically with a 308 redirect.
+  </Step>
+</Steps>
+
+## HTTPS Enforcement
+
+Vercel enforces HTTPS for all traffic. HTTP requests are automatically redirected to HTTPS with a `308 Permanent Redirect`.
+
+The application also enforces HTTPS at the code level for security-sensitive operations:
+
+```ts
+// Image proxy only allows HTTPS URLs
+if (!imageUrl.startsWith('https://')) {
+  return NextResponse.json({ error: 'Only HTTPS URLs are allowed' }, { status: 400 })
+}
+```
+
+## NextAuth Domain Configuration
+
+NextAuth is configured with the production URL:
+
+```bash
+NEXTAUTH_URL="https://www.josemadrid.net"
+```
+
+For cross-subdomain session sharing (if needed), set:
+
+```bash
+NEXTAUTH_COOKIE_DOMAIN=".josemadrid.net"
+```
+
+This allows session cookies to be shared between `www.josemadrid.net` and any future subdomains.
+
+## TLS Version
+
+Vercel supports TLS 1.2 and TLS 1.3. Older protocols (TLS 1.0, 1.1) are not supported, which is the recommended security posture.
+
+## Certificate Transparency
+
+All certificates issued by Let's Encrypt are logged in public Certificate Transparency logs, meeting modern browser requirements.
+
+## Troubleshooting
+
+### SSL Certificate Not Issued
+
+**Cause:** DNS records are not pointing to Vercel, or DNS has not propagated.
+
+**Fix:**
+- Verify DNS records with `dig www.josemadrid.net`
+- Wait up to 48 hours for DNS propagation (usually much faster)
+- Check the Vercel Dashboard for specific error messages
+
+### Mixed Content Warnings
+
+**Cause:** The page loads resources over HTTP instead of HTTPS.
+
+**Fix:** Ensure all asset URLs use `https://` or protocol-relative URLs (`//`). The Next.js `Image` component handles this automatically for configured remote patterns.
+
+### Custom Domain Shows Vercel 404
+
+**Cause:** The domain is added to Vercel but points to the wrong project or is not verified.
+
+**Fix:** Check **Project Settings > Domains** and verify the domain shows a green checkmark.

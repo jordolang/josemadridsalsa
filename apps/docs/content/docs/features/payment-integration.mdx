@@ -1,0 +1,603 @@
+---
+title: Payment Integration
+description: Multi-provider payment processing with Stripe and PayPal, webhook handling, refund management, tax calculation, and comprehensive error recovery
+---
+
+# Payment Integration
+
+This guide covers payment processing integration with Stripe and PayPal, webhook configuration, refund handling, tax calculation, and error management.
+
+## Overview
+
+The platform supports multiple payment providers for maximum flexibility and geographic coverage:
+
+- **Stripe** — Primary payment processor for cards, Apple Pay, Google Pay
+- **PayPal** — Secondary processor for PayPal and Venmo payments
+
+Both providers are configured in a provider registry pattern, allowing seamless switching and multi-provider support.
+
+## Environment Variables
+
+### Stripe Configuration
+
+```bash
+STRIPE_SECRET_KEY="sk_test_..."              # Secret key for backend API calls
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..." # Public key for client-side Stripe.js
+STRIPE_WEBHOOK_SECRET="whsec_..."            # Webhook signature verification secret
+```
+
+### PayPal Configuration
+
+```bash
+PAYPAL_CLIENT_ID="AQ..."                     # OAuth client ID for backend calls
+PAYPAL_CLIENT_SECRET="..."                   # OAuth client secret (keep private)
+NEXT_PUBLIC_PAYPAL_CLIENT_ID="AQ..."         # Client ID for client-side SDK
+PAYPAL_WEBHOOK_ID="WH-..."                   # Webhook endpoint ID
+```
+
+## Payment Flow Diagram
+
+```
+User initiates checkout
+       ↓
+[Select payment method]
+       ↓
+   ┌─────────────────────────┐
+   │ Stripe or PayPal SDK    │
+   │ Authenticate payment    │
+   └─────────┬───────────────┘
+             ↓
+      [Confirm payment]
+             ↓
+    ┌────────────────────┐
+    │ POST /api/checkout/complete
+    │ - Verify payment   │
+    │ - Update order     │
+    │ - Create shipment  │
+    └────────┬───────────┘
+             ↓
+   [Webhook verification]
+             ↓
+  ┌──────────────────────┐
+  │ POST /api/webhooks/  │
+  │ [stripe|paypal]      │
+  │ - Validate signature │
+  │ - Update DB idempotently
+  │ - Send notifications │
+  └──────────────────────┘
+```
+
+## Stripe Integration
+
+### Payment Intent Creation
+
+**File:** `lib/payments/providers/stripe.ts`
+
+```typescript
+export async function createPaymentIntent(
+  amount: number,
+  currency: string,
+  orderId: string,
+  metadata?: Record<string, string>
+) {
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: Math.round(amount * 100), // Convert to cents
+    currency,
+    metadata: {
+      orderId,
+      ...metadata
+    },
+    automatic_payment_methods: {
+      enabled: true
+    }
+  })
+
+  return {
+    clientSecret: paymentIntent.client_secret,
+    intentId: paymentIntent.id
+  }
+}
+```
+
+### Payment Confirmation (Client-side)
+
+**File:** `app/(public)/checkout/page.tsx`
+
+```typescript
+const handlePayment = async () => {
+  const { error, paymentIntent } = await stripe.confirmCardPayment(
+    clientSecret,
+    {
+      payment_method: {
+        card: cardElement,
+        billing_details: {
+          name: `${firstName} ${lastName}`,
+          email,
+          address: {
+            line1: address,
+            city,
+            state,
+            postal_code: zip,
+            country: 'US'
+          }
+        }
+      }
+    }
+  )
+
+  if (error) {
+    setError(error.message)
+    return
+  }
+
+  if (paymentIntent?.status === 'succeeded') {
+    router.push(`/order-confirmation?orderId=${orderId}`)
+  }
+}
+```
+
+## Webhook Configuration
+
+### Stripe Webhook Events
+
+**File:** `lib/stripe/webhooks.ts`
+
+The webhook handler processes Stripe events with idempotent database updates:
+
+```typescript
+export async function handleStripeWebhook(event: Stripe.Event) {
+  // Check if event already processed (idempotency)
+  const existingEvent = await db.webhookEvent.findUnique({
+    where: { stripeEventId: event.id }
+  })
+
+  if (existingEvent) {
+    return { received: true }
+  }
+
+  // Process event
+  switch (event.type) {
+    case 'payment_intent.succeeded':
+      await handlePaymentIntentSucceeded(event.data.object)
+      break
+
+    case 'payment_intent.payment_failed':
+      await handlePaymentIntentFailed(event.data.object)
+      break
+
+    case 'payment_intent.canceled':
+      await handlePaymentIntentCanceled(event.data.object)
+      break
+
+    case 'charge.refunded':
+      await handleChargeRefunded(event.data.object)
+      break
+  }
+
+  // Record event as processed
+  await db.webhookEvent.create({
+    data: {
+      stripeEventId: event.id,
+      type: event.type,
+      processedAt: new Date()
+    }
+  })
+
+  return { received: true }
+}
+```
+
+### Supported Webhook Events
+
+| Event | Handler | Action |
+|-------|---------|--------|
+| `payment_intent.succeeded` | `handlePaymentIntentSucceeded` | Mark order PAID, create shipment, send confirmation email |
+| `payment_intent.payment_failed` | `handlePaymentIntentFailed` | Mark order FAILED, send payment retry email |
+| `payment_intent.canceled` | `handlePaymentIntentCanceled` | Mark order CANCELLED, notify customer |
+| `charge.refunded` | `handleChargeRefunded` | Update order status, create refund record, notify customer |
+
+### Webhook Endpoint
+
+**Endpoint:** `POST /api/webhooks/stripe`
+
+**URL:** `https://yourdomain.com/api/webhooks/stripe`
+
+**Setup in Stripe Dashboard:**
+1. Navigate to **Developers → Webhooks**
+2. Click **Add endpoint**
+3. Paste webhook URL
+4. Select events: `payment_intent.*`, `charge.refunded`
+5. Copy Signing Secret → `STRIPE_WEBHOOK_SECRET`
+
+## PayPal Integration
+
+### PayPal SDK Setup
+
+**File:** `components/checkout/PayPalProvider.tsx`
+
+```typescript
+import { PayPalScriptProvider } from '@paypal/checkout-js-sdk'
+
+export function PayPalCheckoutProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <PayPalScriptProvider
+      options={{
+        clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
+        currency: 'USD',
+        vault: false,
+        components: 'buttons,funding-eligibility',
+        intent: 'capture'
+      }}
+    >
+      {children}
+    </PayPalScriptProvider>
+  )
+}
+```
+
+### PayPal Button Component
+
+**File:** `components/checkout/PayPalButton.tsx`
+
+```typescript
+import { PayPalButtons } from '@paypal/checkout-js-sdk'
+
+export function PayPalButton({ orderId, amount, onSuccess, onError }: PayPalButtonProps) {
+  return (
+    <PayPalButtons
+      createOrder={async () => {
+        const response = await fetch('/api/paypal/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, amount })
+        })
+        return response.json().then(d => d.orderId)
+      }}
+      onApprove={async (data) => {
+        const response = await fetch('/api/paypal/capture-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: data.orderID })
+        })
+        onSuccess(await response.json())
+      }}
+      onError={onError}
+    />
+  )
+}
+```
+
+## Venmo Support
+
+**File:** `components/checkout/VenmoButton.tsx`
+
+PayPal SDK automatically includes Venmo when available (US users on mobile).
+
+```typescript
+import { PayPalButtons, FUNDING } from '@paypal/checkout-js-sdk'
+
+export function VenmoButton({ orderId, amount, onSuccess, onError }: VenmoButtonProps) {
+  return (
+    <PayPalButtons
+      fundingSource={FUNDING.VENMO}
+      createOrder={async () => {
+        // Same as PayPal flow
+      }}
+      onApprove={onSuccess}
+      onError={onError}
+    />
+  )
+}
+```
+
+## Refund Process
+
+### Refund API Endpoint
+
+**Endpoint:** `POST /api/admin/orders/[id]/refund`
+
+**Request:**
+```typescript
+interface RefundRequest {
+  amount?: number        // Optional: partial refund (cents). If omitted, full refund
+  reason?: string       // Reason for refund
+  notifyCustomer?: boolean // Default: true
+}
+```
+
+**Response:**
+```typescript
+interface RefundResponse {
+  refundId: string
+  chargeId: string
+  amount: number
+  status: 'succeeded' | 'failed'
+  message?: string
+  error?: string
+}
+```
+
+### Refund Implementation
+
+**File:** `app/api/admin/orders/[id]/refund/route.ts`
+
+```typescript
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const body = await req.json()
+  const { amount, reason, notifyCustomer = true } = body
+
+  // Verify authorization
+  const session = await auth()
+  if (!session?.user?.email || session.user.role !== 'ADMIN') {
+    return Response.json({ error: 'Unauthorized' }, { status: 403 })
+  }
+
+  try {
+    // Fetch order
+    const order = await db.order.findUnique({
+      where: { id },
+      include: { items: true }
+    })
+
+    if (!order) {
+      return Response.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    // Verify Stripe payment
+    if (!order.stripePaymentId) {
+      return Response.json(
+        { error: 'Order was not paid via Stripe' },
+        { status: 400 }
+      )
+    }
+
+    // Fetch charge
+    const charge = await stripe.charges.retrieve(order.stripePaymentId)
+
+    // Calculate refundable amount
+    const refundableAmount = order.total - (charge.amount_refunded / 100)
+    const refundAmount = amount ? amount / 100 : refundableAmount
+
+    if (refundAmount > refundableAmount) {
+      return Response.json(
+        { error: `Maximum refundable: $${refundableAmount.toFixed(2)}` },
+        { status: 400 }
+      )
+    }
+
+    // Create refund
+    const refund = await stripe.refunds.create({
+      charge: order.stripePaymentId,
+      amount: Math.round(refundAmount * 100),
+      metadata: { orderId: order.id, reason }
+    })
+
+    // Update order
+    await db.order.update({
+      where: { id },
+      data: {
+        paymentStatus: refund.status === 'succeeded' ? 'REFUNDED' : 'FAILED',
+        refundedAmount: {
+          increment: refund.amount / 100
+        }
+      }
+    })
+
+    // Notify customer
+    if (notifyCustomer) {
+      await sendRefundEmail(order, refund.amount / 100)
+    }
+
+    // Create audit log
+    await createAuditLog(session.user.id, 'order.refund', {
+      orderId: id,
+      refundId: refund.id,
+      amount: refund.amount / 100
+    })
+
+    return Response.json({
+      refundId: refund.id,
+      chargeId: order.stripePaymentId,
+      amount: refund.amount / 100,
+      status: refund.status
+    })
+  } catch (error) {
+    console.error('Refund error:', error)
+
+    // Handle Stripe-specific errors
+    if (error instanceof Stripe.errors.StripeInvalidRequestError) {
+      return Response.json(
+        { error: error.message, code: error.code },
+        { status: 400 }
+      )
+    }
+
+    return Response.json(
+      { error: 'Refund failed' },
+      { status: 500 }
+    )
+  }
+}
+```
+
+## Tax Calculation
+
+### Stripe Tax Integration
+
+**File:** `lib/tax-calculator.ts`
+
+The platform uses Stripe Tax API for accurate tax calculations across US states:
+
+```typescript
+export async function calculateTax(
+  lineItems: Array<{ amount: number; quantity: number }>,
+  address: {
+    line1: string
+    city: string
+    state: string
+    postalCode: string
+    country: string
+  }
+) {
+  const calculation = await stripe.tax.calculations.create({
+    line_items: lineItems,
+    customer_details: {
+      address: {
+        line1: address.line1,
+        city: address.city,
+        state: address.state,
+        postal_code: address.postalCode,
+        country: address.country
+      }
+    },
+    expand: ['line_items', 'tax_breakdown']
+  })
+
+  return {
+    taxAmount: calculation.tax_amount_exclusive / 100,
+    breakdown: calculation.tax_breakdown
+  }
+}
+```
+
+### Tax Code
+
+Product tax code: `txcd_30011000` (Food & Beverage - prepared foods)
+
+Set on Stripe Product:
+```typescript
+const product = await stripe.products.create({
+  name: 'Salsa Kit',
+  tax_code: 'txcd_30011000'
+})
+```
+
+## Error Handling
+
+### Client-side Payment Errors
+
+Common Stripe error codes:
+
+| Code | Message | Resolution |
+|------|---------|-----------|
+| `payment_intent_authentication_failure` | 3D Secure authentication required | Prompt user to authenticate with bank |
+| `card_declined` | Card was declined | Ask customer to try different payment method |
+| `rate_limit` | API rate limit exceeded | Retry with exponential backoff |
+| `api_connection_error` | Network connectivity issue | Retry request with exponential backoff |
+| `card_error` | Card processor error | Contact support or try different card |
+
+### Server-side Recovery
+
+```typescript
+const withRetry = async (
+  fn: () => Promise<any>,
+  maxRetries = 3,
+  backoff = 1000
+) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn()
+    } catch (error) {
+      if (i === maxRetries - 1) throw error
+
+      // Exponential backoff
+      const delay = backoff * Math.pow(2, i)
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+}
+
+// Usage
+await withRetry(() => stripe.paymentIntents.retrieve(intentId))
+```
+
+## Payment Methods
+
+Supported payment methods and providers:
+
+| Method | Provider | Availability |
+|--------|----------|--------------|
+| Visa | Stripe | Worldwide |
+| Mastercard | Stripe | Worldwide |
+| American Express | Stripe | Worldwide |
+| Apple Pay | Stripe | iOS Safari |
+| Google Pay | Stripe | Android Chrome, Safari |
+| PayPal | PayPal | 200+ countries |
+| Venmo | PayPal | US mobile only |
+
+## Type Definitions
+
+**File:** `lib/stripe/types.ts`
+
+```typescript
+export interface CheckoutSessionRequest {
+  orderId: string
+  amount: number
+  currency: string
+  successUrl: string
+  cancelUrl: string
+  customerEmail: string
+}
+
+export interface CheckoutSessionResponse {
+  sessionId: string
+  url: string
+}
+
+export interface PaymentMetadata {
+  orderId: string
+  customerId: string
+  invoiceId?: string
+}
+
+export interface RefundRequest {
+  chargeId: string
+  amount?: number
+  reason?: string
+}
+
+export interface RefundResponse {
+  refundId: string
+  status: string
+  amount: number
+}
+
+export type WebhookEventType =
+  | 'payment_intent.succeeded'
+  | 'payment_intent.payment_failed'
+  | 'charge.refunded'
+  | 'charge.dispute.created'
+
+export interface WebhookEventData {
+  id: string
+  type: WebhookEventType
+  data: Record<string, any>
+  timestamp: number
+}
+```
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/stripe.ts` | Stripe client initialization and configuration |
+| `lib/stripe/types.ts` | TypeScript type definitions for Stripe integration |
+| `lib/stripe/webhooks.ts` | Stripe webhook event handling and idempotency |
+| `lib/payments/providers/stripe.ts` | Stripe provider implementation |
+| `lib/payments/providers/paypal.ts` | PayPal provider implementation |
+| `lib/payments/registry.ts` | Payment provider registry and factory |
+| `lib/tax-calculator.ts` | Tax calculation via Stripe Tax API |
+| `app/api/checkout/route.ts` | Checkout initiation (create order + payment intent) |
+| `app/api/checkout/complete/route.ts` | Checkout completion (verify payment + confirm order) |
+| `app/api/webhooks/stripe/route.ts` | Stripe webhook endpoint |
+| `app/api/webhooks/paypal/route.ts` | PayPal webhook endpoint |
+| `app/api/admin/orders/[id]/refund/route.ts` | Refund processing API |
+| `app/(public)/checkout/page.tsx` | Checkout page with payment form |
+| `components/checkout/PayPalProvider.tsx` | PayPal SDK provider wrapper |
+| `components/checkout/PayPalButton.tsx` | PayPal payment button |
+| `components/checkout/VenmoButton.tsx` | Venmo payment button |
+| `components/checkout/PaymentMethodSelector.tsx` | Payment method selection UI |

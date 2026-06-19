@@ -1,0 +1,136 @@
+---
+title: NextAuth.js Configuration
+description: Authentication setup with NextAuth.js, JWT sessions, and provider configuration
+---
+
+
+# NextAuth.js Configuration
+
+Jose Madrid Salsa uses [NextAuth.js](https://next-auth.js.org/) for authentication. The configuration lives in `lib/auth.ts` and exports an `authOptions` object used by the NextAuth API route and `getServerSession()` calls throughout the app.
+
+## Overview
+
+- **Session strategy**: JWT (no database session table)
+- **Session lifetime**: 30 days
+- **Providers**: Google, GitHub, Facebook, Apple, and email/password credentials
+- **Custom pages**: `/auth/signin` and `/auth/error`
+
+## Configuration
+
+```ts title="lib/auth.ts"
+export const authOptions: NextAuthOptions = {
+  adapter: undefined, // No DB adapter -- JWT strategy only
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
+  useSecureCookies: process.env.NODE_ENV === 'production',
+  debug: process.env.NODE_ENV === 'development',
+  secret: process.env.NEXTAUTH_SECRET,
+  providers: [
+    GoogleProvider({ ... }),
+    GitHubProvider({ ... }),
+    FacebookProvider({ ... }),
+    AppleProvider({ ... }),
+    CredentialsProvider({ ... }),
+  ],
+  callbacks: {
+    jwt({ token, user, account, trigger }) { ... },
+    session({ session, token }) { ... },
+  },
+}
+```
+
+## Credentials Provider
+
+The credentials provider authenticates users with email and password. Passwords are hashed with `bcryptjs`:
+
+```ts title="lib/auth.ts (authorize callback)"
+authorize: async (credentials) => {
+  const normalizedEmail = credentials.email.toLowerCase().trim()
+  const prisma = await getPrisma()
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    select: { id: true, email: true, name: true, role: true, password: true },
+  })
+
+  if (!user || !user.password) return null
+
+  const isValid = await bcrypt.compare(credentials.password, user.password)
+  if (!isValid) return null
+
+  return { id: user.id, email: user.email, name: user.name, role: user.role }
+}
+```
+
+<Callout type="info">
+Email addresses are normalized to lowercase before lookup, matching the registration flow.
+</Callout>
+
+## JWT Callback
+
+The JWT callback enriches the token with application-specific data:
+
+1. **OAuth sign-in**: Upserts the user in the database when signing in via Google, GitHub, Facebook, or Apple. New users are created with `role: 'CUSTOMER'` and `isEmailVerified: true`.
+2. **Credentials sign-in**: Copies `id` and `role` from the authenticated user object.
+3. **Fundraiser lookup**: If the user has role `FUNDRAISER`, fetches their `fundraiserId` from the `FundraiserAccount` table and stores it in the token.
+4. **Fallback DB lookup**: If `token.role` is missing (rare), queries the database by email.
+
+## Session Callback
+
+The session callback maps JWT token fields to the session object:
+
+```ts title="lib/auth.ts (session callback)"
+async session({ session, token }) {
+  if (session.user) {
+    session.user.id = token.id
+    session.user.role = token.role
+    if (token.fundraiserId) session.user.fundraiserId = token.fundraiserId
+    if (token.avatar) session.user.image = token.avatar
+  }
+  return session
+}
+```
+
+This means `session.user` contains `id`, `role`, and optionally `fundraiserId` and `image` (from OAuth profile pictures).
+
+## Lazy Prisma Loading
+
+The auth module loads Prisma lazily to avoid crashing at module load time when the database is unavailable:
+
+```ts title="lib/auth.ts"
+let prismaClient: any = null
+
+async function getPrisma() {
+  if (!prismaClient) {
+    const { prisma } = await import('@/lib/prisma')
+    prismaClient = prisma
+  }
+  return prismaClient
+}
+```
+
+## Required Environment Variables
+
+| Variable | Description |
+|---|---|
+| `NEXTAUTH_SECRET` | JWT signing secret. **Required** in all environments. |
+| `NEXTAUTH_URL` | Canonical URL. Auto-detected on Vercel but recommended to set explicitly. |
+
+## Custom Pages
+
+| Page | Path | Purpose |
+|---|---|---|
+| Sign In | `/auth/signin` | Custom sign-in UI with provider buttons and credentials form |
+| Error | `/auth/error` | Custom error page for authentication failures |
+
+## Security Features
+
+- **Secure cookies** in production (`useSecureCookies: true`)
+- **Debug mode** only in development
+- **Structured logging** for auth errors, warnings, and debug events
+- **Case-insensitive email** matching (all emails normalized to lowercase)
