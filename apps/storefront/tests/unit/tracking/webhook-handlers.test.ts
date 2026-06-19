@@ -1,17 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { handleTrackerUpdated } from '@/lib/tracking/webhook-handlers'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-// Mock dependencies
-const mockFindUnique = vi.fn()
-const mockUpdate = vi.fn()
-const mockSendOrderShippedEmail = vi.fn()
-const mockSendOrderDeliveredEmail = vi.fn()
+// Store original environment
+const originalEnv = { ...process.env }
 
+// Mock Prisma
 vi.mock('@/lib/prisma', () => ({
   default: {
     shippingLabel: {
-      findUnique: mockFindUnique,
-      update: mockUpdate,
+      findFirst: vi.fn(),
+      update: vi.fn(),
     },
     order: {
       update: vi.fn(),
@@ -19,14 +16,39 @@ vi.mock('@/lib/prisma', () => ({
   },
 }))
 
+// Mock email automation
 vi.mock('@/lib/email/automation', () => ({
-  sendOrderShippedEmail: mockSendOrderShippedEmail,
-  sendOrderDeliveredEmail: mockSendOrderDeliveredEmail,
+  sendOrderShippedEmail: vi.fn(),
+  sendOrderDeliveredEmail: vi.fn(),
 }))
 
 describe('EasyPost Webhook Handlers', () => {
-  beforeEach(() => {
+  let handleTrackerUpdated: any
+  let prisma: any
+  let sendOrderShippedEmail: any
+  let sendOrderDeliveredEmail: any
+
+  beforeEach(async () => {
+    // Clear modules and reimport
+    vi.resetModules()
     vi.clearAllMocks()
+    process.env = { ...originalEnv }
+
+    // Import fresh instances
+    prisma = (await import('@/lib/prisma')).default
+    const emailAutomation = await import('@/lib/email/automation')
+    sendOrderShippedEmail = emailAutomation.sendOrderShippedEmail
+    sendOrderDeliveredEmail = emailAutomation.sendOrderDeliveredEmail
+    const webhookHandlers = await import('@/lib/tracking/webhook-handlers')
+    handleTrackerUpdated = webhookHandlers.handleTrackerUpdated
+
+    // Make email functions return promises
+    sendOrderShippedEmail.mockResolvedValue({ success: true })
+    sendOrderDeliveredEmail.mockResolvedValue({ success: true })
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
   })
 
   describe('handleTrackerUpdated', () => {
@@ -42,8 +64,8 @@ describe('EasyPost Webhook Handlers', () => {
         },
       }
 
-      mockFindUnique.mockResolvedValue(mockShippingLabel)
-      mockUpdate.mockResolvedValue({
+      prisma.shippingLabel.findFirst.mockResolvedValue(mockShippingLabel)
+      prisma.shippingLabel.update.mockResolvedValue({
         ...mockShippingLabel,
         status: 'in_transit',
       })
@@ -66,19 +88,19 @@ describe('EasyPost Webhook Handlers', () => {
 
       await handleTrackerUpdated(trackerData)
 
-      expect(mockFindUnique).toHaveBeenCalledWith({
+      expect(prisma.shippingLabel.findFirst).toHaveBeenCalledWith({
         where: { trackingCode: 'TRACK123' },
         include: { order: true },
       })
 
-      expect(mockUpdate).toHaveBeenCalledWith({
+      expect(prisma.shippingLabel.update).toHaveBeenCalledWith({
         where: { id: 'label-1' },
         data: {
           status: 'in_transit',
         },
       })
 
-      expect(mockSendOrderShippedEmail).toHaveBeenCalledWith('order-1')
+      expect(sendOrderShippedEmail).toHaveBeenCalledWith('order-1')
     })
 
     it('sets deliveredAt timestamp on delivered status', async () => {
@@ -94,8 +116,8 @@ describe('EasyPost Webhook Handlers', () => {
         },
       }
 
-      mockFindUnique.mockResolvedValue(mockShippingLabel)
-      mockUpdate.mockResolvedValue({
+      prisma.shippingLabel.findFirst.mockResolvedValue(mockShippingLabel)
+      prisma.shippingLabel.update.mockResolvedValue({
         ...mockShippingLabel,
         status: 'delivered',
       })
@@ -118,18 +140,18 @@ describe('EasyPost Webhook Handlers', () => {
 
       await handleTrackerUpdated(trackerData)
 
-      expect(mockUpdate).toHaveBeenCalledWith({
+      expect(prisma.shippingLabel.update).toHaveBeenCalledWith({
         where: { id: 'label-1' },
         data: {
           status: 'delivered',
         },
       })
 
-      expect(mockSendOrderDeliveredEmail).toHaveBeenCalledWith('order-1')
+      expect(sendOrderDeliveredEmail).toHaveBeenCalledWith('order-1')
     })
 
     it('does nothing when shipping label not found', async () => {
-      mockFindUnique.mockResolvedValue(null)
+      prisma.shippingLabel.findFirst.mockResolvedValue(null)
 
       const trackerData = {
         tracking_code: 'INVALID123',
@@ -139,14 +161,14 @@ describe('EasyPost Webhook Handlers', () => {
 
       await handleTrackerUpdated(trackerData)
 
-      expect(mockFindUnique).toHaveBeenCalledWith({
+      expect(prisma.shippingLabel.findFirst).toHaveBeenCalledWith({
         where: { trackingCode: 'INVALID123' },
         include: { order: true },
       })
 
-      expect(mockUpdate).not.toHaveBeenCalled()
-      expect(mockSendOrderShippedEmail).not.toHaveBeenCalled()
-      expect(mockSendOrderDeliveredEmail).not.toHaveBeenCalled()
+      expect(prisma.shippingLabel.update).not.toHaveBeenCalled()
+      expect(sendOrderShippedEmail).not.toHaveBeenCalled()
+      expect(sendOrderDeliveredEmail).not.toHaveBeenCalled()
     })
 
     it('updates tracking history with event details', async () => {
@@ -168,8 +190,8 @@ describe('EasyPost Webhook Handlers', () => {
         },
       }
 
-      mockFindUnique.mockResolvedValue(mockShippingLabel)
-      mockUpdate.mockResolvedValue(mockShippingLabel)
+      prisma.shippingLabel.findFirst.mockResolvedValue(mockShippingLabel)
+      prisma.shippingLabel.update.mockResolvedValue(mockShippingLabel)
 
       const trackerData = {
         tracking_code: 'TRACK123',
@@ -196,7 +218,7 @@ describe('EasyPost Webhook Handlers', () => {
       await handleTrackerUpdated(trackerData)
 
       // Should update with all tracking events
-      expect(mockUpdate).toHaveBeenCalled()
+      expect(prisma.shippingLabel.update).toHaveBeenCalled()
     })
 
     it('handles webhook for pre_transit status without sending emails', async () => {
@@ -211,8 +233,8 @@ describe('EasyPost Webhook Handlers', () => {
         },
       }
 
-      mockFindUnique.mockResolvedValue(mockShippingLabel)
-      mockUpdate.mockResolvedValue({
+      prisma.shippingLabel.findFirst.mockResolvedValue(mockShippingLabel)
+      prisma.shippingLabel.update.mockResolvedValue({
         ...mockShippingLabel,
         status: 'pre_transit',
       })
@@ -231,10 +253,10 @@ describe('EasyPost Webhook Handlers', () => {
 
       await handleTrackerUpdated(trackerData)
 
-      expect(mockUpdate).toHaveBeenCalled()
+      expect(prisma.shippingLabel.update).toHaveBeenCalled()
       // Should not send emails for pre_transit
-      expect(mockSendOrderShippedEmail).not.toHaveBeenCalled()
-      expect(mockSendOrderDeliveredEmail).not.toHaveBeenCalled()
+      expect(sendOrderShippedEmail).not.toHaveBeenCalled()
+      expect(sendOrderDeliveredEmail).not.toHaveBeenCalled()
     })
   })
 })

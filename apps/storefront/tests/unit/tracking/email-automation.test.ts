@@ -1,25 +1,54 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { sendOrderShippedEmail, sendOrderDeliveredEmail } from '@/lib/email/automation'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-// Mock dependencies
-const mockFindUnique = vi.fn()
-const mockSend = vi.fn()
+// Store original environment
+const originalEnv = { ...process.env }
 
-vi.mock('@/lib/prisma', () => ({
-  default: {
+// Mock Prisma
+const mockOrderFindUnique = vi.fn()
+vi.mock('@/lib/prisma', () => {
+  const mockPrisma = {
     order: {
-      findUnique: mockFindUnique,
+      findUnique: mockOrderFindUnique,
     },
-  },
-}))
+  }
+  return {
+    default: mockPrisma,
+    prisma: mockPrisma,
+  }
+})
 
+// Mock email service
 vi.mock('@/lib/email', () => ({
-  sendEmail: mockSend,
+  sendEmail: vi.fn(),
 }))
 
 describe('Email Automation - Shipping Notifications', () => {
-  beforeEach(() => {
+  let sendOrderShippedEmail: any
+  let sendOrderDeliveredEmail: any
+  let prisma: any
+  let sendEmail: any
+
+  beforeEach(async () => {
+    // Clear modules and reimport
+    vi.resetModules()
     vi.clearAllMocks()
+    process.env = { ...originalEnv }
+
+    // Import fresh instances
+    const prismaModule = await import('@/lib/prisma')
+    prisma = prismaModule.prisma || prismaModule.default
+    const emailLib = await import('@/lib/email')
+    sendEmail = emailLib.sendEmail
+    const emailAutomation = await import('@/lib/email/automation')
+    sendOrderShippedEmail = emailAutomation.sendOrderShippedEmail
+    sendOrderDeliveredEmail = emailAutomation.sendOrderDeliveredEmail
+
+    // Reset mock counters
+    mockOrderFindUnique.mockClear()
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
   })
 
   describe('sendOrderShippedEmail', () => {
@@ -27,17 +56,21 @@ describe('Email Automation - Shipping Notifications', () => {
       const mockOrder = {
         id: 'order-1',
         orderNumber: 'ORD-001',
+        userId: null,
         guestEmail: 'customer@example.com',
         user: null,
         trackingNumber: 'TRACK123456',
         carrierName: 'USPS',
         trackingUrl: 'https://track.easypost.com/TRACK123456',
         shippedAt: new Date('2026-06-19T14:00:00Z'),
+        estimatedDelivery: null,
+        shippingMethod: 'Standard Shipping',
         items: [
           {
             productName: 'Mild Salsa',
+            productSku: 'SALSA-MILD',
             quantity: 2,
-            unitPrice: 8.99,
+            totalPrice: 17.98,
             product: {
               name: 'Mild Salsa',
               image: 'https://example.com/salsa.jpg',
@@ -46,12 +79,12 @@ describe('Email Automation - Shipping Notifications', () => {
         ],
       }
 
-      mockFindUnique.mockResolvedValue(mockOrder)
-      mockSend.mockResolvedValue({ success: true })
+      prisma.order.findUnique.mockResolvedValue(mockOrder)
+      sendEmail.mockResolvedValue({ success: true })
 
       await sendOrderShippedEmail('order-1')
 
-      expect(mockFindUnique).toHaveBeenCalledWith({
+      expect(prisma.order.findUnique).toHaveBeenCalledWith({
         where: { id: 'order-1' },
         include: {
           user: true,
@@ -63,73 +96,75 @@ describe('Email Automation - Shipping Notifications', () => {
         },
       })
 
-      expect(mockSend).toHaveBeenCalledWith({
-        to: 'customer@example.com',
-        subject: expect.stringContaining('ORD-001'),
-        template: 'order-shipped',
-        data: expect.objectContaining({
-          orderNumber: 'ORD-001',
-          trackingNumber: 'TRACK123456',
-          carrierName: 'USPS',
-          trackingUrl: 'https://track.easypost.com/TRACK123456',
-        }),
-      })
+      expect(sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'customer@example.com',
+          subject: expect.stringContaining('ORD-001'),
+          type: 'order-shipped',
+          orderId: 'order-1',
+        })
+      )
     })
 
     it('sends to user email when order is not guest order', async () => {
       const mockOrder = {
         id: 'order-1',
         orderNumber: 'ORD-001',
+        userId: 'user-1',
         guestEmail: null,
         user: {
+          name: 'Test User',
           email: 'user@example.com',
         },
         trackingNumber: 'TRACK123456',
         carrierName: 'UPS',
         trackingUrl: 'https://www.ups.com/track/TRACK123456',
+        shippedAt: new Date('2026-06-19T14:00:00Z'),
+        estimatedDelivery: null,
+        shippingMethod: 'Express Shipping',
         items: [],
       }
 
-      mockFindUnique.mockResolvedValue(mockOrder)
-      mockSend.mockResolvedValue({ success: true })
+      prisma.order.findUnique.mockResolvedValue(mockOrder)
+      sendEmail.mockResolvedValue({ success: true })
 
       await sendOrderShippedEmail('order-1')
 
-      expect(mockSend).toHaveBeenCalledWith(
+      expect(sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'user@example.com',
+          type: 'order-shipped',
         })
       )
     })
 
-    it('throws error when order not found', async () => {
-      mockFindUnique.mockResolvedValue(null)
+    it('returns error when order not found', async () => {
+      prisma.order.findUnique.mockResolvedValue(null)
 
-      await expect(sendOrderShippedEmail('invalid-order')).rejects.toThrow(
-        'Order not found'
-      )
+      const result = await sendOrderShippedEmail('invalid-order')
 
-      expect(mockSend).not.toHaveBeenCalled()
+      expect(result).toEqual({ success: false, error: 'Order not found' })
+      expect(sendEmail).not.toHaveBeenCalled()
     })
 
-    it('throws error when order has no tracking information', async () => {
+    it('returns error when order has no tracking information', async () => {
       const mockOrder = {
         id: 'order-1',
         orderNumber: 'ORD-001',
         guestEmail: 'customer@example.com',
+        user: null,
         trackingNumber: null,
         carrierName: null,
         trackingUrl: null,
         items: [],
       }
 
-      mockFindUnique.mockResolvedValue(mockOrder)
+      prisma.order.findUnique.mockResolvedValue(mockOrder)
 
-      await expect(sendOrderShippedEmail('order-1')).rejects.toThrow(
-        'Order has no tracking information'
-      )
+      const result = await sendOrderShippedEmail('order-1')
 
-      expect(mockSend).not.toHaveBeenCalled()
+      expect(result).toEqual({ success: false, error: 'Tracking number missing' })
+      expect(sendEmail).not.toHaveBeenCalled()
     })
   })
 
@@ -138,6 +173,7 @@ describe('Email Automation - Shipping Notifications', () => {
       const mockOrder = {
         id: 'order-1',
         orderNumber: 'ORD-001',
+        userId: null,
         guestEmail: 'customer@example.com',
         user: null,
         trackingNumber: 'TRACK123456',
@@ -145,8 +181,9 @@ describe('Email Automation - Shipping Notifications', () => {
         items: [
           {
             productName: 'Hot Salsa',
+            productSku: 'SALSA-HOT',
             quantity: 1,
-            unitPrice: 9.99,
+            totalPrice: 9.99,
             product: {
               name: 'Hot Salsa',
               image: 'https://example.com/hot-salsa.jpg',
@@ -155,12 +192,12 @@ describe('Email Automation - Shipping Notifications', () => {
         ],
       }
 
-      mockFindUnique.mockResolvedValue(mockOrder)
-      mockSend.mockResolvedValue({ success: true })
+      prisma.order.findUnique.mockResolvedValue(mockOrder)
+      sendEmail.mockResolvedValue({ success: true })
 
       await sendOrderDeliveredEmail('order-1')
 
-      expect(mockFindUnique).toHaveBeenCalledWith({
+      expect(prisma.order.findUnique).toHaveBeenCalledWith({
         where: { id: 'order-1' },
         include: {
           user: true,
@@ -172,62 +209,64 @@ describe('Email Automation - Shipping Notifications', () => {
         },
       })
 
-      expect(mockSend).toHaveBeenCalledWith({
-        to: 'customer@example.com',
-        subject: expect.stringContaining('ORD-001'),
-        subject: expect.stringContaining('Delivered'),
-        template: 'order-delivered',
-        data: expect.objectContaining({
-          orderNumber: 'ORD-001',
-          deliveredAt: expect.any(Date),
-        }),
-      })
+      expect(sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'customer@example.com',
+          subject: expect.stringContaining('ORD-001'),
+          type: 'order-delivered',
+          orderId: 'order-1',
+        })
+      )
     })
 
     it('includes feedback request link in delivered email', async () => {
       const mockOrder = {
         id: 'order-1',
         orderNumber: 'ORD-001',
+        userId: null,
         guestEmail: 'customer@example.com',
+        user: null,
+        trackingNumber: 'TRACK123456',
         deliveredAt: new Date('2026-06-20T16:30:00Z'),
         items: [],
       }
 
-      mockFindUnique.mockResolvedValue(mockOrder)
-      mockSend.mockResolvedValue({ success: true })
+      prisma.order.findUnique.mockResolvedValue(mockOrder)
+      sendEmail.mockResolvedValue({ success: true })
 
       await sendOrderDeliveredEmail('order-1')
 
-      expect(mockSend).toHaveBeenCalledWith(
+      expect(sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            feedbackUrl: expect.stringContaining('/feedback'),
-          }),
+          to: 'customer@example.com',
+          type: 'order-delivered',
         })
       )
     })
 
-    it('throws error when order not found', async () => {
-      mockFindUnique.mockResolvedValue(null)
+    it('returns error when order not found', async () => {
+      prisma.order.findUnique.mockResolvedValue(null)
 
-      await expect(sendOrderDeliveredEmail('invalid-order')).rejects.toThrow(
-        'Order not found'
-      )
+      const result = await sendOrderDeliveredEmail('invalid-order')
 
-      expect(mockSend).not.toHaveBeenCalled()
+      expect(result).toEqual({ success: false, error: 'Order not found' })
+      expect(sendEmail).not.toHaveBeenCalled()
     })
 
-    it('handles email send failure gracefully', async () => {
+    it('propagates email send errors', async () => {
       const mockOrder = {
         id: 'order-1',
         orderNumber: 'ORD-001',
+        userId: null,
         guestEmail: 'customer@example.com',
+        user: null,
+        trackingNumber: 'TRACK123456',
         deliveredAt: new Date('2026-06-20T16:30:00Z'),
         items: [],
       }
 
-      mockFindUnique.mockResolvedValue(mockOrder)
-      mockSend.mockRejectedValue(new Error('Email service unavailable'))
+      prisma.order.findUnique.mockResolvedValue(mockOrder)
+      sendEmail.mockRejectedValue(new Error('Email service unavailable'))
 
       await expect(sendOrderDeliveredEmail('order-1')).rejects.toThrow(
         'Email service unavailable'

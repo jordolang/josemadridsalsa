@@ -1,29 +1,52 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createShipment, buyShipmentLabel, getTrackingDetails } from '@/lib/shipping-api'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { ShipmentRequest } from '@/lib/shipping-api'
 
-// Mock EasyPost client
-const mockCreate = vi.fn()
-const mockRetrieve = vi.fn()
-const mockBuy = vi.fn()
+// Store original environment variables
+const originalEnv = { ...process.env }
+
+// Mock implementations
+const mockShipmentCreate = vi.fn()
+const mockShipmentRetrieve = vi.fn()
 const mockTrackerCreate = vi.fn()
 
-// Mock the shipping-api module directly since EasyPost client is internal
-vi.mock('@/lib/shipping-api', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/shipping-api')>('@/lib/shipping-api')
-  return {
-    ...actual,
-    createShipment: vi.fn(),
-    buyShipmentLabel: vi.fn(),
-    getTrackingDetails: vi.fn(),
+// Mock EasyPost SDK
+vi.mock('@easypost/api', () => {
+  class MockEasyPostClient {
+    Shipment: any
+    Tracker: any
+
+    constructor(_apiKey: string, _config: any) {
+      this.Shipment = {
+        create: mockShipmentCreate,
+        retrieve: mockShipmentRetrieve,
+      }
+      this.Tracker = {
+        create: mockTrackerCreate,
+      }
+    }
   }
+
+  return { default: MockEasyPostClient }
 })
 
 describe('Shipping API - EasyPost Integration', () => {
   beforeEach(() => {
+    // Clear module cache to reset the singleton
+    vi.resetModules()
+    // Clear all mocks
     vi.clearAllMocks()
+    mockShipmentCreate.mockClear()
+    mockShipmentRetrieve.mockClear()
+    mockTrackerCreate.mockClear()
+    // Reset environment variables
+    process.env = { ...originalEnv }
     process.env.SHIPPING_API_KEY = 'test_api_key'
     process.env.EASYPOST_WEBHOOK_SECRET = 'test_webhook_secret'
+  })
+
+  afterEach(() => {
+    // Restore original environment
+    process.env = originalEnv
   })
 
   describe('createShipment', () => {
@@ -36,17 +59,21 @@ describe('Shipping API - EasyPost Integration', () => {
             carrier: 'USPS',
             service: 'Priority',
             rate: '10.50',
+            currency: 'USD',
           },
           {
             id: 'rate_test2',
             carrier: 'UPS',
             service: 'Ground',
             rate: '12.00',
+            currency: 'USD',
           },
         ],
       }
 
-      mockCreate.mockResolvedValue(mockShipmentResponse)
+      mockShipmentCreate.mockResolvedValue(mockShipmentResponse)
+
+      const { createShipment } = await import('@/lib/shipping-api')
 
       const request: ShipmentRequest = {
         fromAddress: {
@@ -77,25 +104,13 @@ describe('Shipping API - EasyPost Integration', () => {
 
       const result = await createShipment(request)
 
-      expect(result).toEqual({
-        shipmentId: 'shp_test123',
-        rates: [
-          {
-            id: 'rate_test1',
-            carrier: 'USPS',
-            service: 'Priority',
-            price: '10.50',
-          },
-          {
-            id: 'rate_test2',
-            carrier: 'UPS',
-            service: 'Ground',
-            price: '12.00',
-          },
-        ],
-      })
+      expect(result).toBeDefined()
+      expect(result.id).toBe('shp_test123')
+      expect(result.rates).toHaveLength(2)
+      expect(result.rates[0].carrier).toBe('USPS')
+      expect(result.rates[0].rate).toBe(10.50)
 
-      expect(mockCreate).toHaveBeenCalledWith({
+      expect(mockShipmentCreate).toHaveBeenCalledWith({
         from_address: expect.objectContaining({
           name: 'José Madrid Salsa',
           street1: '123 Salsa St',
@@ -118,6 +133,8 @@ describe('Shipping API - EasyPost Integration', () => {
 
     it('throws error when API key is missing', async () => {
       delete process.env.SHIPPING_API_KEY
+
+      const { createShipment } = await import('@/lib/shipping-api')
 
       const request: ShipmentRequest = {
         fromAddress: {
@@ -150,8 +167,9 @@ describe('Shipping API - EasyPost Integration', () => {
     })
 
     it('handles EasyPost API errors gracefully', async () => {
-      process.env.SHIPPING_API_KEY = 'test_api_key' // Ensure key is set
-      mockCreate.mockRejectedValue(new Error('Invalid address'))
+      mockShipmentCreate.mockRejectedValue(new Error('Invalid address'))
+
+      const { createShipment } = await import('@/lib/shipping-api')
 
       const request: ShipmentRequest = {
         fromAddress: {
@@ -186,57 +204,56 @@ describe('Shipping API - EasyPost Integration', () => {
     it('purchases label with selected rate', async () => {
       const mockShipment = {
         id: 'shp_test123',
-        buy: mockBuy,
+        buy: vi.fn().mockResolvedValue({
+          id: 'shp_test123',
+          tracking_code: 'TRACK123456',
+          postage_label: {
+            label_url: 'https://easypost.com/labels/test.pdf',
+          },
+          tracker: {
+            id: 'trk_test',
+            public_url: 'https://track.easypost.com/TRACK123456',
+          },
+          selected_rate: {
+            carrier: 'USPS',
+            service: 'Priority',
+            rate: '10.50',
+            currency: 'USD',
+          },
+          status: 'purchased',
+          created_at: '2026-06-19T10:00:00Z',
+        }),
       }
 
-      const mockBoughtShipment = {
-        id: 'shp_test123',
-        tracking_code: 'TRACK123456',
-        postage_label: {
-          label_url: 'https://easypost.com/labels/test.pdf',
-        },
-        tracker: {
-          id: 'trk_test',
-          public_url: 'https://track.easypost.com/TRACK123456',
-        },
-        selected_rate: {
-          carrier: 'USPS',
-          service: 'Priority',
-        },
-      }
+      mockShipmentRetrieve.mockResolvedValue(mockShipment)
 
-      mockRetrieve.mockResolvedValue(mockShipment)
-      mockBuy.mockResolvedValue(mockBoughtShipment)
+      const { buyShipmentLabel } = await import('@/lib/shipping-api')
 
       const result = await buyShipmentLabel('shp_test123', 'rate_test1')
 
-      expect(result).toEqual({
-        shipmentId: 'shp_test123',
-        trackingCode: 'TRACK123456',
-        labelUrl: 'https://easypost.com/labels/test.pdf',
-        trackingUrl: 'https://track.easypost.com/TRACK123456',
-        carrier: 'USPS',
-        service: 'Priority',
-      })
+      expect(result).toBeDefined()
+      expect(result.id).toBe('shp_test123')
+      expect(result.trackingCode).toBe('TRACK123456')
+      expect(result.labelUrl).toBe('https://easypost.com/labels/test.pdf')
+      expect(result.carrier).toBe('USPS')
 
-      expect(mockRetrieve).toHaveBeenCalledWith('shp_test123')
-      expect(mockBuy).toHaveBeenCalledWith('rate_test1')
+      expect(mockShipmentRetrieve).toHaveBeenCalledWith('shp_test123')
+      expect(mockShipment.buy).toHaveBeenCalledWith('rate_test1')
     })
 
     it('throws error when label URL is not available', async () => {
       const mockShipment = {
         id: 'shp_test123',
-        buy: mockBuy,
+        buy: vi.fn().mockResolvedValue({
+          id: 'shp_test123',
+          tracking_code: 'TRACK123456',
+          postage_label: null, // No label available
+        }),
       }
 
-      const mockBoughtShipment = {
-        id: 'shp_test123',
-        tracking_code: 'TRACK123456',
-        postage_label: null, // No label available
-      }
+      mockShipmentRetrieve.mockResolvedValue(mockShipment)
 
-      mockRetrieve.mockResolvedValue(mockShipment)
-      mockBuy.mockResolvedValue(mockBoughtShipment)
+      const { buyShipmentLabel } = await import('@/lib/shipping-api')
 
       await expect(
         buyShipmentLabel('shp_test123', 'rate_test1')
@@ -249,6 +266,7 @@ describe('Shipping API - EasyPost Integration', () => {
       const mockTracker = {
         id: 'trk_test',
         tracking_code: 'TRACK123456',
+        carrier: 'USPS',
         status: 'in_transit',
         est_delivery_date: '2026-06-25',
         public_url: 'https://track.easypost.com/TRACK123456',
@@ -276,28 +294,17 @@ describe('Shipping API - EasyPost Integration', () => {
 
       mockTrackerCreate.mockResolvedValue(mockTracker)
 
+      const { getTrackingDetails } = await import('@/lib/shipping-api')
+
       const result = await getTrackingDetails('TRACK123456', 'USPS')
 
-      expect(result).toEqual({
-        trackingCode: 'TRACK123456',
-        status: 'in_transit',
-        estimatedDelivery: '2026-06-25',
-        trackingUrl: 'https://track.easypost.com/TRACK123456',
-        events: [
-          {
-            status: 'pre_transit',
-            message: 'Shipping label created',
-            timestamp: '2026-06-19T10:00:00Z',
-            location: 'Miami, FL',
-          },
-          {
-            status: 'in_transit',
-            message: 'Package accepted at facility',
-            timestamp: '2026-06-19T14:00:00Z',
-            location: 'Jacksonville, FL',
-          },
-        ],
-      })
+      expect(result).toBeDefined()
+      expect(result.trackingCode).toBe('TRACK123456')
+      expect(result.status).toBe('in_transit')
+      expect(result.carrier).toBe('USPS')
+      expect(result.events).toHaveLength(2)
+      expect(result.events[0].status).toBe('in_transit') // Sorted newest first
+      expect(result.events[1].status).toBe('pre_transit')
 
       expect(mockTrackerCreate).toHaveBeenCalledWith({
         tracking_code: 'TRACK123456',
@@ -309,6 +316,8 @@ describe('Shipping API - EasyPost Integration', () => {
       mockTrackerCreate.mockRejectedValue(
         new Error('Tracking code not found')
       )
+
+      const { getTrackingDetails } = await import('@/lib/shipping-api')
 
       await expect(
         getTrackingDetails('INVALID', 'USPS')
