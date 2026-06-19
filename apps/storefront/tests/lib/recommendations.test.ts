@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { getFrequentlyBoughtTogether, getYouMayAlsoLike, getPersonalizedRecommendations } from '@/lib/recommendations'
+import { getFrequentlyBoughtTogether, getYouMayAlsoLike, getPersonalizedRecommendations, getComplementaryRecommendations } from '@/lib/recommendations'
 import { prisma } from '@/lib/prisma'
 
 // Mock prisma
@@ -695,6 +695,316 @@ describe('getPersonalizedRecommendations', () => {
     expect(result).toEqual([])
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'Error getting personalized recommendations:',
+      expect.any(Error)
+    )
+    consoleErrorSpy.mockRestore()
+  })
+})
+
+describe('getComplementaryRecommendations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(prisma.product.findMany).mockReset()
+  })
+
+  it('should return complementary products with different heat levels and same categories', async () => {
+    const purchasedProducts = [
+      {
+        id: 'prod-1',
+        categoryId: 'cat-salsa',
+        heatLevel: 'MEDIUM',
+      },
+      {
+        id: 'prod-2',
+        categoryId: 'cat-salsa',
+        heatLevel: 'MEDIUM',
+      },
+    ]
+
+    const complementaryProducts = [
+      {
+        id: 'prod-3',
+        name: 'Hot Salsa',
+        slug: 'hot-salsa',
+        price: 10.99,
+        featuredImage: '/images/hot.jpg',
+        heatLevel: 'HOT', // Different heat level
+        sku: 'HOT-001',
+        inventory: 50,
+        categoryId: 'cat-salsa', // Same category
+      },
+      {
+        id: 'prod-4',
+        name: 'Mild Salsa',
+        slug: 'mild-salsa',
+        price: 9.99,
+        featuredImage: '/images/mild.jpg',
+        heatLevel: 'MILD', // Different heat level
+        sku: 'MILD-001',
+        inventory: 40,
+        categoryId: 'cat-salsa', // Same category
+      },
+      {
+        id: 'prod-5',
+        name: 'Hot Sauce',
+        slug: 'hot-sauce',
+        price: 11.99,
+        featuredImage: '/images/hot-sauce.jpg',
+        heatLevel: 'HOT', // Different heat level
+        sku: 'HOT-002',
+        inventory: 30,
+        categoryId: 'cat-sauce', // Different category
+      },
+    ]
+
+    vi.mocked(prisma.product.findMany)
+      .mockResolvedValueOnce(purchasedProducts as any)
+      .mockResolvedValueOnce(complementaryProducts as any)
+
+    const result = await getComplementaryRecommendations(['prod-1', 'prod-2'], 4)
+
+    expect(result).toHaveLength(3)
+
+    // Products with same category AND different heat level should score highest (1.0)
+    expect(result[0].id).toBe('prod-3')
+    expect(result[0].score).toBe(1.0)
+    expect(result[1].id).toBe('prod-4')
+    expect(result[1].score).toBe(1.0)
+
+    // Products with different heat level but different category should score lower (0.5)
+    expect(result[2].id).toBe('prod-5')
+    expect(result[2].score).toBe(0.5)
+  })
+
+  it('should exclude already purchased products', async () => {
+    const purchasedProducts = [
+      {
+        id: 'prod-1',
+        categoryId: 'cat-salsa',
+        heatLevel: 'MEDIUM',
+      },
+    ]
+
+    const complementaryProducts = [
+      {
+        id: 'prod-2',
+        name: 'Hot Salsa',
+        slug: 'hot-salsa',
+        price: 10.99,
+        featuredImage: '/images/hot.jpg',
+        heatLevel: 'HOT',
+        sku: 'HOT-001',
+        inventory: 50,
+        categoryId: 'cat-salsa',
+      },
+    ]
+
+    vi.mocked(prisma.product.findMany)
+      .mockResolvedValueOnce(purchasedProducts as any)
+      .mockResolvedValueOnce(complementaryProducts as any)
+
+    await getComplementaryRecommendations(['prod-1'], 4)
+
+    // Verify that purchased product IDs are excluded
+    expect(prisma.product.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: { notIn: ['prod-1'] },
+        }),
+      })
+    )
+  })
+
+  it('should handle empty purchased products array', async () => {
+    const result = await getComplementaryRecommendations([], 4)
+
+    expect(result).toEqual([])
+    expect(prisma.product.findMany).not.toHaveBeenCalled()
+  })
+
+  it('should handle products with null categoryId and heatLevel', async () => {
+    const purchasedProducts = [
+      {
+        id: 'prod-1',
+        categoryId: null,
+        heatLevel: null,
+      },
+    ]
+
+    vi.mocked(prisma.product.findMany)
+      .mockResolvedValueOnce(purchasedProducts as any)
+      .mockResolvedValueOnce([])
+
+    const result = await getComplementaryRecommendations(['prod-1'], 4)
+
+    expect(result).toEqual([])
+  })
+
+  it('should convert Decimal prices to numbers', async () => {
+    const purchasedProducts = [
+      {
+        id: 'prod-1',
+        categoryId: 'cat-salsa',
+        heatLevel: 'MEDIUM',
+      },
+    ]
+
+    const complementaryProducts = [
+      {
+        id: 'prod-2',
+        name: 'Hot Salsa',
+        slug: 'hot-salsa',
+        price: 10.99,
+        featuredImage: '/images/hot.jpg',
+        heatLevel: 'HOT',
+        sku: 'HOT-001',
+        inventory: 50,
+        categoryId: 'cat-salsa',
+      },
+    ]
+
+    vi.mocked(prisma.product.findMany)
+      .mockResolvedValueOnce(purchasedProducts as any)
+      .mockResolvedValueOnce(complementaryProducts as any)
+
+    const result = await getComplementaryRecommendations(['prod-1'], 4)
+
+    expect(result).toHaveLength(1)
+    expect(typeof result[0].price).toBe('number')
+    expect(result[0].price).toBe(10.99)
+  })
+
+  it('should respect the limit parameter', async () => {
+    const purchasedProducts = [
+      {
+        id: 'prod-1',
+        categoryId: 'cat-salsa',
+        heatLevel: 'MEDIUM',
+      },
+    ]
+
+    const manyProducts = Array.from({ length: 20 }, (_, i) => ({
+      id: `prod-${i + 2}`,
+      name: `Product ${i + 2}`,
+      slug: `product-${i + 2}`,
+      price: 10.0,
+      featuredImage: null,
+      heatLevel: 'HOT',
+      sku: `SKU-${i + 2}`,
+      inventory: 50,
+      categoryId: 'cat-salsa',
+    }))
+
+    vi.mocked(prisma.product.findMany)
+      .mockResolvedValueOnce(purchasedProducts as any)
+      .mockResolvedValueOnce(manyProducts as any)
+
+    const result = await getComplementaryRecommendations(['prod-1'], 3)
+
+    expect(result).toHaveLength(3)
+  })
+
+  it('should only recommend products with different heat levels', async () => {
+    const purchasedProducts = [
+      {
+        id: 'prod-1',
+        categoryId: 'cat-salsa',
+        heatLevel: 'MEDIUM',
+      },
+    ]
+
+    const complementaryProducts = [
+      {
+        id: 'prod-2',
+        name: 'Hot Salsa',
+        slug: 'hot-salsa',
+        price: 10.99,
+        featuredImage: '/images/hot.jpg',
+        heatLevel: 'HOT', // Different
+        sku: 'HOT-001',
+        inventory: 50,
+        categoryId: 'cat-salsa',
+      },
+      {
+        id: 'prod-3',
+        name: 'Another Medium Salsa',
+        slug: 'medium-salsa',
+        price: 9.99,
+        featuredImage: '/images/medium.jpg',
+        heatLevel: 'MEDIUM', // Same - should be filtered out
+        sku: 'MED-001',
+        inventory: 40,
+        categoryId: 'cat-salsa',
+      },
+    ]
+
+    vi.mocked(prisma.product.findMany)
+      .mockResolvedValueOnce(purchasedProducts as any)
+      .mockResolvedValueOnce(complementaryProducts as any)
+
+    const result = await getComplementaryRecommendations(['prod-1'], 4)
+
+    // Should only include prod-2 (HOT), not prod-3 (MEDIUM - same as purchased)
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('prod-2')
+  })
+
+  it('should prioritize same category over different category', async () => {
+    const purchasedProducts = [
+      {
+        id: 'prod-1',
+        categoryId: 'cat-salsa',
+        heatLevel: 'MEDIUM',
+      },
+    ]
+
+    const complementaryProducts = [
+      {
+        id: 'prod-2',
+        name: 'Hot Sauce',
+        slug: 'hot-sauce',
+        price: 11.99,
+        featuredImage: '/images/hot-sauce.jpg',
+        heatLevel: 'HOT',
+        sku: 'HOT-002',
+        inventory: 30,
+        categoryId: 'cat-sauce', // Different category
+      },
+      {
+        id: 'prod-3',
+        name: 'Hot Salsa',
+        slug: 'hot-salsa',
+        price: 10.99,
+        featuredImage: '/images/hot.jpg',
+        heatLevel: 'HOT',
+        sku: 'HOT-001',
+        inventory: 50,
+        categoryId: 'cat-salsa', // Same category
+      },
+    ]
+
+    vi.mocked(prisma.product.findMany)
+      .mockResolvedValueOnce(purchasedProducts as any)
+      .mockResolvedValueOnce(complementaryProducts as any)
+
+    const result = await getComplementaryRecommendations(['prod-1'], 4)
+
+    // Same category should come first
+    expect(result[0].id).toBe('prod-3')
+    expect(result[0].score).toBe(1.0)
+    expect(result[1].id).toBe('prod-2')
+    expect(result[1].score).toBe(0.5)
+  })
+
+  it('should return empty array on error', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(prisma.product.findMany).mockRejectedValue(new Error('Database error'))
+
+    const result = await getComplementaryRecommendations(['prod-1'], 4)
+
+    expect(result).toEqual([])
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Error getting complementary recommendations:',
       expect.any(Error)
     )
     consoleErrorSpy.mockRestore()

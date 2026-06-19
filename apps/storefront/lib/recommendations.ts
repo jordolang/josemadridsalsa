@@ -393,3 +393,148 @@ export async function getPersonalizedRecommendations(
     return []
   }
 }
+
+/**
+ * Get complementary product recommendations for post-purchase emails.
+ *
+ * Suggests products with different heat levels but similar categories to expand
+ * the customer's flavor exploration while staying within familiar categories.
+ *
+ * Scores candidates by:
+ * - Different heat level (+0.5)
+ * - Same category as purchased products (+0.5)
+ *
+ * @param {string[]} productIds - Array of purchased product IDs.
+ * @param {number} [limit=4] - Maximum number of recommendations to return.
+ * @returns {Promise<RecommendedProduct[]>} Complementary recommendations, sorted by score descending.
+ */
+export async function getComplementaryRecommendations(
+  productIds: string[],
+  limit: number = 4
+): Promise<RecommendedProduct[]> {
+  const isDev = process.env.NODE_ENV === 'development'
+  try {
+    // Return early if no products provided
+    if (productIds.length === 0) {
+      return []
+    }
+
+    const startTime = isDev ? Date.now() : 0
+    if (isDev) {
+      console.log('[Recommendations] getComplementaryRecommendations: Starting query for productIds:', productIds)
+    }
+
+    // Fetch purchased products to analyze their attributes
+    const purchasedProducts = await prisma.product.findMany({
+      where: {
+        id: { in: productIds },
+      },
+      select: {
+        id: true,
+        categoryId: true,
+        heatLevel: true,
+      },
+    })
+
+    if (isDev) {
+      const duration = Date.now() - startTime
+      console.log(`[Recommendations] getComplementaryRecommendations: Purchased products query completed in ${duration}ms (${purchasedProducts.length} products)`)
+    }
+
+    // Extract categories and heat levels from purchased products
+    const purchasedCategories = new Set<string>()
+    const purchasedHeatLevels = new Set<string>()
+
+    purchasedProducts.forEach(product => {
+      if (product.categoryId) {
+        purchasedCategories.add(product.categoryId)
+      }
+      if (product.heatLevel) {
+        purchasedHeatLevels.add(product.heatLevel)
+      }
+    })
+
+    // Return early if no valid categories or heat levels
+    if (purchasedCategories.size === 0 && purchasedHeatLevels.size === 0) {
+      return []
+    }
+
+    // Find complementary products
+    const complementaryStartTime = isDev ? Date.now() : 0
+    const complementaryProducts = await prisma.product.findMany({
+      where: {
+        id: { notIn: productIds }, // Exclude already purchased
+        isActive: true,
+        inventory: { gt: 0 },
+        OR: [
+          // Same category (for familiar flavor profiles)
+          ...(purchasedCategories.size > 0
+            ? [{ categoryId: { in: Array.from(purchasedCategories) } }]
+            : []),
+          // Any product with a heat level (to ensure variety)
+          { heatLevel: { not: null } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        price: true,
+        featuredImage: true,
+        heatLevel: true,
+        sku: true,
+        inventory: true,
+        categoryId: true,
+      },
+      take: limit * 3, // Fetch more to allow filtering
+    })
+
+    if (isDev) {
+      const complementaryDuration = Date.now() - complementaryStartTime
+      const totalDuration = Date.now() - startTime
+      console.log(`[Recommendations] getComplementaryRecommendations: Complementary products query completed in ${complementaryDuration}ms (${complementaryProducts.length} results)`)
+      console.log(`[Recommendations] getComplementaryRecommendations: Total execution time ${totalDuration}ms`)
+    }
+
+    // Score and filter complementary products
+    const scoredProducts = complementaryProducts
+      .map(p => {
+        let score = 0
+
+        // Only recommend products with DIFFERENT heat levels (complementary variety)
+        if (p.heatLevel && purchasedHeatLevels.has(p.heatLevel)) {
+          return null // Filter out same heat levels
+        }
+
+        // Different heat level = +0.5 (core requirement for complementary)
+        if (p.heatLevel) {
+          score += 0.5
+        }
+
+        // Same category = +0.5 (familiar flavor profile)
+        if (p.categoryId && purchasedCategories.has(p.categoryId)) {
+          score += 0.5
+        }
+
+        return {
+          id: p.id,
+          name: p.name,
+          slug: p.slug,
+          price: Number(p.price),
+          featuredImage: p.featuredImage,
+          heatLevel: p.heatLevel,
+          sku: p.sku,
+          inventory: p.inventory,
+          score,
+        }
+      })
+      .filter((p): p is RecommendedProduct => p !== null) // Remove filtered products
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+
+    return scoredProducts
+  } catch (error) {
+    console.error('Error getting complementary recommendations:', error)
+    return []
+  }
+}
