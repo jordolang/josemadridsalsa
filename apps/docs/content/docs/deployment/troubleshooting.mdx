@@ -1,0 +1,181 @@
+---
+title: Troubleshooting
+description: Common deployment issues and fixes for José Madrid Salsa on Vercel
+---
+
+# Troubleshooting
+
+<PageInlineTOC>Jump to issue</PageInlineTOC>
+
+Common deployment and production issues with solutions.
+
+## Build Failures
+
+### Prisma Migrate Deploy Fails
+
+**Symptom:** Build fails at the `prisma migrate deploy` step in `vercel-build`.
+
+**Causes:**
+- `DATABASE_URL` or `DATABASE_URL_UNPOOLED` not set in Vercel environment
+- Migration SQL has syntax errors
+- Database is unreachable (Neon maintenance)
+
+**Fix:**
+
+```bash
+# Verify env vars are set
+vercel env ls
+
+# Test migration locally against production
+vercel env pull .env.vercel.production --environment=production --yes
+npx prisma migrate deploy
+```
+
+### Serverless Function Too Large
+
+**Symptom:** Build error about function exceeding 250 MB.
+
+**Fix:** Check `outputFileTracingExcludes` in `next.config.mjs`. Large directories like `data/`, `docs/`, and `scripts/` should be excluded. Do NOT exclude `public/images/` as it breaks Image Optimization.
+
+### Missing Prisma Client in API Routes
+
+**Symptom:** API routes throw `PrismaClient is not defined` or similar import errors.
+
+**Fix:** Verify `outputFileTracingIncludes` includes the Prisma client for the affected routes:
+
+```js
+outputFileTracingIncludes: {
+  '/api/**/*': [
+    './node_modules/.prisma/client/**/*',
+    './node_modules/@prisma/client/**/*',
+  ],
+}
+```
+
+## Database Connection Issues
+
+### DATABASE_URL Not Set
+
+**Symptom:** Logs show `[Prisma] DATABASE_URL is not set!`
+
+The Prisma client attempts fallbacks in this order:
+1. `DATABASE_URL`
+2. `PRISMA_DATABASE_URL`
+3. `POSTGRES_URL`
+
+**Fix:**
+
+```bash
+# Check what's set
+vercel env ls | grep -i database
+
+# Set the variable
+vercel env add DATABASE_URL production
+```
+
+### Whitespace in Connection String
+
+**Symptom:** Database connection fails with authentication errors despite correct credentials.
+
+**Cause:** Copy/paste into the Vercel dashboard can add trailing whitespace or newlines.
+
+**Fix:** The Prisma client sanitizes URLs automatically (`value?.trim()`), but you can verify in the Vercel Dashboard by editing the variable and checking for trailing characters.
+
+### Connection Timeout
+
+**Symptom:** Prisma queries time out intermittently.
+
+**Causes:**
+- Neon serverless compute is cold starting
+- Connection pool exhaustion
+
+**Fix:**
+- Use the pooled connection URL for `DATABASE_URL`
+- Enable Prisma Accelerate for connection pooling
+- Check the Neon dashboard for compute auto-suspend settings
+
+## Sentry Issues
+
+### Errors Not Appearing
+
+**Symptom:** Production errors are not showing up in Sentry.
+
+**Checklist:**
+- [ ] `NEXT_PUBLIC_SENTRY_DSN` is set in Vercel
+- [ ] `enabled: process.env.NODE_ENV === 'production'` is true
+- [ ] Ad-blockers are not blocking Sentry (the tunnel route `/monitoring` should bypass this)
+- [ ] The Sentry project `javascript-nextjs` exists in org `josemadridsalsa`
+
+### Source Maps Not Working
+
+**Symptom:** Stack traces show minified code in Sentry.
+
+**Fix:** Verify `SENTRY_AUTH_TOKEN` is set in Vercel for build-time source map upload:
+
+```bash
+vercel env ls | grep SENTRY
+```
+
+## Analytics Issues
+
+### Google Analytics Not Tracking
+
+**Symptom:** No data in GA4 dashboard.
+
+**Checklist:**
+- [ ] `GOOGLE_ANALYTICS_ID` is set (default: `G-HG4QV5GFKH`)
+- [ ] GTM container `GTM-5KSQW4JJ` is published (not in draft)
+- [ ] Ad-blockers are not blocking GTM/GA scripts
+- [ ] Check browser console for script loading errors
+
+### Amplitude Not Initializing
+
+**Symptom:** No events in Amplitude dashboard.
+
+**Fix:** Verify `NEXT_PUBLIC_AMPLITUDE_API_KEY` is set. The initialization logs a warning if the key is missing:
+
+```
+Amplitude API key not found. Analytics will not be tracked.
+```
+
+## Deployment Issues
+
+### Preview Deployment Uses Wrong Env Vars
+
+**Symptom:** Preview deployment connects to production database or uses production Stripe keys.
+
+**Fix:** Scope environment variables correctly in Vercel:
+- Production secrets: Production only
+- Test/dev secrets: Preview + Development
+- Public keys: All environments (with appropriate values)
+
+### Deployment Succeeds But Site Shows Old Content
+
+**Symptom:** After deployment, the site serves stale pages.
+
+**Causes:**
+- Browser cache
+- Vercel CDN cache
+- ISR stale pages
+
+**Fix:**
+- Hard refresh: `Cmd+Shift+R` / `Ctrl+Shift+R`
+- Purge Vercel cache via dashboard or `vercel --force`
+- The `generateBuildId: () => 'build-' + Date.now()` config forces new build IDs
+
+## Diagnostic Commands
+
+```bash
+# Full database connection diagnostic
+node scripts/diagnose-db-connection.js
+
+# Pull production env and compare
+npm run db:production:pull-env
+
+# Verify Vercel project linking
+vercel whoami
+vercel project ls
+
+# Check recent deployments
+vercel ls
+```

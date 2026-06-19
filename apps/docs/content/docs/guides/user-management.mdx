@@ -1,0 +1,258 @@
+---
+title: User Management
+description: Managing users, roles, and permissions in the RBAC system
+---
+
+# User Management
+
+Jose Madrid Salsa uses a role-based access control (RBAC) system with granular permissions. This guide covers user roles, permissions, and access control patterns.
+
+## User Roles
+
+The platform defines six roles in the `UserRole` enum:
+
+| Role | Description | Admin Access |
+|------|-------------|-------------|
+| `ADMIN` | Full system access, all permissions | Yes |
+| `DEVELOPER` | Full system access, all permissions | Yes |
+| `STAFF` | Operational access (orders, products, content) | Yes |
+| `CUSTOMER` | Standard customer, no admin permissions | No |
+| `WHOLESALE` | Wholesale buyer, no admin permissions | No |
+| `FUNDRAISER` | Fundraiser portal access only | Limited |
+
+## Permission System
+
+Permissions follow a `resource:action` naming convention. The full list is defined in `lib/permissions-data.ts`:
+
+<Tabs items={['Orders', 'Products', 'Users', 'Content', 'Other']}>
+<Tab value="Orders">
+```
+orders:read          - View orders
+orders:write         - Create and update orders
+orders:export        - Export orders to CSV/PDF
+orders:import        - Import orders from CSV/Excel
+orders:modify        - Modify existing orders
+orders:print-labels  - Print shipping labels
+orders:sync-shopify  - Sync orders with Shopify
+```
+</Tab>
+<Tab value="Products">
+```
+products:read   - View products
+products:write  - Create, update, and delete products
+products:bulk   - Bulk product operations
+products:export - Export products
+products:import - Import products from files
+```
+</Tab>
+<Tab value="Users">
+```
+users:read        - View users
+users:write       - Create, update, and manage users
+users:impersonate - Impersonate users
+users:export      - Export user data
+```
+</Tab>
+<Tab value="Content">
+```
+content:read    - View content (recipes, media, events)
+content:write   - Create and edit content
+content:publish - Publish content
+```
+</Tab>
+<Tab value="Other">
+```
+analytics:read         - View analytics and reports
+settings:read/write    - View/modify settings
+financials:read        - View financial data
+financials:refunds     - Process refunds
+api_keys:manage        - Manage API keys
+messaging:read/reply   - View/reply to messages
+social_media:compose   - Compose social posts
+```
+</Tab>
+</Tabs>
+
+## Default Role Permissions
+
+ADMIN and DEVELOPER roles receive all permissions. STAFF gets a curated subset:
+
+```typescript
+const defaultRolePermissions = {
+  ADMIN: permissionDefinitions.map((perm) => perm.name), // all
+  DEVELOPER: permissionDefinitions.map((perm) => perm.name), // all
+  STAFF: [
+    'orders:read', 'orders:write', 'orders:export',
+    'orders:import', 'orders:modify', 'orders:print-labels',
+    'products:read', 'products:write', 'products:bulk', 'products:import',
+    'users:read',
+    'content:read', 'content:write',
+    'analytics:read',
+    'messaging:read', 'messaging:reply', 'messaging:assign',
+    // ...
+  ],
+  CUSTOMER: [],
+  WHOLESALE: [],
+  FUNDRAISER: [
+    'fundraiser:view-dashboard',
+    'fundraiser:edit-page',
+    'fundraiser:upload-assets',
+    'fundraiser:view-analytics',
+  ],
+}
+```
+
+## Checking Permissions in Code
+
+### Server-Side (API Routes / Server Actions)
+
+```typescript
+import { getCurrentUser, hasPermission, requirePermission } from '@/lib/rbac'
+
+// Option 1: Check and handle
+const user = await getCurrentUser()
+if (await hasPermission(user, 'orders:write')) {
+  // allow operation
+}
+
+// Option 2: Throw if missing (for API routes)
+const user = await requirePermission('orders:write')
+// Throws "Forbidden" if user lacks permission
+```
+
+### Role Checks
+
+```typescript
+import { isAdmin, isStaff, hasRole, requireRole } from '@/lib/rbac'
+
+// Quick role checks
+if (isAdmin(user)) { /* full access */ }
+if (isStaff(user)) { /* admin panel access */ }
+
+// Require specific roles (throws on failure)
+const user = await requireRole(['ADMIN', 'DEVELOPER'])
+```
+
+### Multiple Permissions
+
+```typescript
+import { hasAllPermissions, hasAnyPermission } from '@/lib/rbac'
+
+// User must have ALL listed permissions
+const canManageOrders = await hasAllPermissions(user, [
+  'orders:read',
+  'orders:write',
+  'orders:modify',
+])
+
+// User needs at least ONE
+const canViewData = await hasAnyPermission(user, [
+  'analytics:read',
+  'financials:read',
+])
+```
+
+## Fallback Permission System
+
+If the permission tables don't exist in the database (e.g., during initial setup), the system falls back to the default permission map:
+
+```typescript
+function shouldFallbackToDefaultPermissions(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError
+    && error.code === 'P2021' // table doesn't exist
+}
+```
+
+This ensures admins never lose access even if permission tables haven't been seeded yet.
+
+## Creating an Admin User
+
+Use the CLI script to create the first admin:
+
+```bash
+npm run create-admin
+```
+
+Or via Prisma directly:
+
+```typescript
+import bcrypt from 'bcryptjs'
+
+const hashedPassword = await bcrypt.hash('your-password', 10)
+
+await prisma.user.create({
+  data: {
+    email: 'admin@josemadrid.net',
+    name: 'Admin User',
+    password: hashedPassword,
+    role: 'ADMIN',
+    isEmailVerified: true,
+  },
+})
+```
+
+## Seeding Permissions
+
+Run the permissions seed script to populate the database:
+
+```bash
+tsx prisma/seed.permissions.ts
+```
+
+This creates all `Permission` records and `RolePermission` mappings from the `permissionDefinitions` array.
+
+<Callout type="warn" title="Production Deployment">
+The `vercel-build` script automatically runs `prisma/seed.permissions.ts` during deployment. If you add new permissions, they will be created on the next deploy.
+</Callout>
+
+## Admin Panel Access Control
+
+The admin layout at `app/admin/layout.tsx` checks for staff-level access:
+
+```typescript
+import { canAccessAdmin } from '@/lib/rbac'
+
+// Returns true for ADMIN, DEVELOPER, and STAFF roles
+const hasAccess = await canAccessAdmin()
+```
+
+## Authentication Flow
+
+Authentication uses NextAuth.js with JWT sessions:
+
+- **Session Strategy**: JWT (30-day expiration)
+- **Providers**: Credentials (email/password with bcrypt)
+- **Pages**: Custom sign-in at `/auth/signin`
+- **Session Data**: JWT tokens include user ID, role, and fundraiser account info
+
+```typescript
+// In lib/auth.ts
+export const authOptions: NextAuthOptions = {
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
+}
+```
+
+## Key Files
+
+<Files>
+  <Folder name="lib" defaultOpen>
+    <File name="rbac.ts" />
+    <File name="permissions-data.ts" />
+    <File name="permissions-map.ts" />
+    <File name="auth.ts" />
+    <File name="admin-auth.ts" />
+  </Folder>
+  <Folder name="prisma">
+    <File name="seed.permissions.ts" />
+  </Folder>
+  <Folder name="app/admin/users">
+    <File name="page.tsx" />
+  </Folder>
+</Files>

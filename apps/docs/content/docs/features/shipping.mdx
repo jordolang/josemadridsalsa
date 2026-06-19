@@ -1,0 +1,124 @@
+---
+title: Shipping
+description: Shipping calculation with real carrier API rates, fallback estimates, PO Box detection, free shipping thresholds, and address validation
+---
+
+# Shipping
+
+Shipping costs are calculated using real carrier API rates with automatic fallback to estimate-based rates. The system supports free shipping thresholds, PO Box detection, weight-based pricing, and state-specific multipliers.
+
+## Architecture
+
+<Files>
+  <Folder name="lib" defaultOpen>
+    <File name="shipping-calculator.ts" />
+    <File name="shipping-api.ts" />
+  </Folder>
+  <Folder name="app/api/checkout">
+    <Folder name="calculate-shipping">
+      <File name="route.ts" />
+    </Folder>
+  </Folder>
+  <Folder name="app/(public)/shipping">
+    <File name="page.tsx" />
+  </Folder>
+</Files>
+
+## Calculation Strategy
+
+<Steps>
+### Free Shipping Check
+
+The system first checks if the order subtotal meets the free shipping threshold. The threshold is configurable in the database via `ShippingSettings` and defaults to $50.
+
+```ts
+const freeShippingThreshold = await getFreeShippingThreshold()
+if (subtotal >= freeShippingThreshold) {
+  return { shippingCost: 0, shippingMethod: 'Free Shipping', ... }
+}
+```
+
+### International Routing
+
+Non-US orders fall back to flat-rate estimates ($24.99, 7-14 business days). Real international carrier API support is planned.
+
+### Carrier API Call
+
+For domestic orders, the system:
+1. Computes parcel dimensions from item weights and sizes
+2. Builds a `ShipmentRequest` with origin and destination addresses
+3. Calls `getShippingRates()` from `lib/shipping-api.ts`
+4. Sorts returned rates by cost (cheapest first)
+5. Returns all options with the cheapest as default
+
+### PO Box Filtering
+
+If the destination is a PO Box (detected by regex patterns), only USPS rates are shown since UPS and FedEx cannot deliver to PO Boxes.
+
+### Fallback Estimates
+
+If the carrier API fails or returns no rates, the system falls back to estimate-based rates with a `fallback: true` flag. Checkout is never blocked by shipping calculation failures.
+</Steps>
+
+## Rate Configuration
+
+Default rates (used for fallback calculations):
+
+| Method | Cost | Delivery |
+| --- | --- | --- |
+| Standard | $6.99 | 3-5 business days |
+| Express | $14.99 | 1-2 business days |
+| International | $24.99 | 7-14 business days |
+| Free | $0.00 | Orders over threshold |
+
+### Weight-Based Pricing
+
+For orders over 5 lbs, shipping switches from flat-rate to weight-based:
+
+```ts
+baseCost = Math.max(
+  FLAT_RATE.cost,
+  WEIGHT_BASED.baseRate + (totalWeight - 5) * WEIGHT_BASED.perPound
+)
+// baseRate: $4.99, perPound: $0.50
+```
+
+### State Multipliers
+
+Remote locations have higher shipping costs:
+
+| State | Multiplier |
+| --- | --- |
+| Alaska (AK) | 1.5x |
+| Hawaii (HI) | 1.5x |
+| Puerto Rico (PR) | 2.0x |
+
+## PO Box Detection
+
+The `isPOBox()` function checks address lines against common patterns:
+
+```ts
+const poBoxPatterns = [
+  /\bP\s*O\s+BOX\b/,           // PO BOX, P.O. BOX
+  /\bPOST\s+OFFICE\s+BOX\b/,  // POST OFFICE BOX
+  /\bP\s*O\s*B\b/,             // POB, P.O.B
+  /^\s*BOX\s+\d+/,             // BOX 123 (at start)
+]
+```
+
+## Address Validation
+
+The `validateShippingAddress()` function checks:
+- Address line 1 (min 3 characters)
+- City (min 2 characters)
+- State (exactly 2 letters)
+- Postal code (min 5 characters)
+- Country (exactly 2 letters)
+
+## Frontend Preview
+
+The `getShippingEstimate()` function provides a quick estimate for the cart page without detailed item info, based only on subtotal, state, and country.
+
+<Callout type="info">
+The free shipping threshold is stored in the `ShippingSettings` singleton table and can be updated from the admin panel without code changes.
+</Callout>

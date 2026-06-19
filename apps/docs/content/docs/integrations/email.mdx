@@ -1,0 +1,135 @@
+---
+title: Email
+description: Email service integration using Resend with React Email templates
+---
+
+
+# Email Integration
+
+The platform sends emails through [Resend](https://resend.com) using React Email templates. The email system supports transactional emails (order confirmations, shipping notifications), marketing emails (campaigns, newsletters), and administrative emails (password resets, admin replies).
+
+## Architecture
+
+The email system is split across two main modules:
+
+- **`lib/email.ts`** -- Simple email functions (admin replies, password resets, generic sends)
+- **`lib/email/client.ts`** -- Full-featured email client with React Email rendering, logging, and unsubscribe checking
+
+```
+Email Request -> Unsubscribe Check -> React Email Render -> Resend API -> Email Log
+```
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `RESEND_API_KEY` | Resend API key (re_xxx) | Yes |
+| `FROM_EMAIL` | Sender email address | No (defaults to `orders@josemadridsalsa.com`) |
+| `NEXT_PUBLIC_BASE_URL` | Base URL for unsubscribe links | Yes |
+| `NEXTAUTH_URL` | Used for password reset links | Yes |
+
+<Callout type="warn">
+If `RESEND_API_KEY` is not set, all email functions gracefully skip sending and return `{ skipped: true }`. This allows development without a Resend account.
+</Callout>
+
+## Setup
+
+<Steps>
+
+### Create a Resend account
+
+Sign up at [resend.com](https://resend.com) and generate an API key.
+
+### Verify your domain
+
+Add DNS records to verify your sending domain in the Resend dashboard.
+
+### Configure environment variables
+
+```bash
+RESEND_API_KEY=re_...
+FROM_EMAIL=orders@josemadridsalsa.com
+NEXT_PUBLIC_BASE_URL=https://josemadrid.net
+```
+
+</Steps>
+
+## Simple Email Functions (`lib/email.ts`)
+
+### `sendAdminReplyEmail(to, subject, message)`
+
+Sends a reply from the admin panel. Attempts to load a customizable `admin_reply` template from the database (Prisma `EmailTemplate` model). Falls back to plain text if no template exists.
+
+### `sendPasswordResetEmail(email, token)`
+
+Sends a branded HTML password reset email with:
+- Reset link (expires in 1 hour)
+- Copy-paste URL fallback
+- Jose Madrid Salsa branding with gradient header
+
+### `sendEmail(options)`
+
+Generic email sender accepting `to`, `subject`, `html`, and `text` fields.
+
+## React Email Client (`lib/email/client.ts`)
+
+### `sendEmail(options)`
+
+The full-featured email sender:
+
+```ts
+await sendEmail({
+  to: 'customer@example.com',
+  subject: 'Order Confirmed',
+  react: <OrderConfirmationEmail order={order} />,
+  type: 'order-confirmation',
+  orderId: order.id,
+  userId: user.id,
+})
+```
+
+Features:
+- **React Email rendering**: Converts React components to HTML via `@react-email/render`
+- **Unsubscribe checking**: Non-transactional emails check `checkUnsubscribed()` before sending
+- **List-Unsubscribe header**: Compliant `List-Unsubscribe` and `List-Unsubscribe-Post` headers for one-click unsubscribe
+- **Email logging**: Every send (success or failure) is logged via `logEmailSend()`
+- **Privacy**: Email addresses are SHA-256 hashed (first 12 chars) in log output
+
+### Transactional vs. Marketing
+
+Transactional emails are always sent regardless of unsubscribe status:
+- `order-confirmation`
+- `shipping-notification`
+- `delivery-confirmation`
+
+All other email types respect unsubscribe preferences.
+
+## Email System Components
+
+The `lib/email/` directory contains a comprehensive email infrastructure:
+
+| File | Purpose |
+|------|---------|
+| `client.ts` | React Email rendering and sending |
+| `automation.ts` | Automated email triggers (order confirmation, etc.) |
+| `automation-engine.ts` | Campaign automation engine |
+| `campaign-sender.ts` | Bulk campaign email sender |
+| `sender.ts` | Low-level sending logic |
+| `queue.ts` | Email queue management |
+| `rate-limit.ts` | Rate limiting for bulk sends |
+| `suppression.ts` | Suppression list management |
+| `logger.ts` | Email send logging |
+| `templates.ts` | Template management |
+| `template-library.ts` | Pre-built template library |
+| `types.ts` | Email type definitions |
+| `blocks/` | Reusable email template blocks |
+| `templates/` | React Email template components |
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/email.ts` | Simple email functions |
+| `lib/email/client.ts` | Full-featured React Email client |
+| `app/api/send-email/` | Email sending API endpoint |
+| `app/api/webhooks/resend/` | Resend webhook handler |

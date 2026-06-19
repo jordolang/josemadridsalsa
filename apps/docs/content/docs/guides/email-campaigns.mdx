@@ -1,0 +1,212 @@
+---
+title: Email Campaigns
+description: Setting up and running email campaigns with templates, lead targeting, and delivery tracking
+---
+
+# Email Campaigns
+
+Jose Madrid Salsa includes a full email campaign system built on Resend for transactional email delivery. This guide covers setting up campaigns, creating templates, and monitoring delivery.
+
+## Architecture Overview
+
+The email system is organized into several modules:
+
+<Files>
+  <Folder name="lib/email" defaultOpen>
+    <File name="client.ts" />
+    <File name="sender.ts" />
+    <File name="campaign-sender.ts" />
+    <File name="templates.ts" />
+    <File name="template-library.ts" />
+    <File name="automation.ts" />
+    <File name="automation-engine.ts" />
+    <File name="rate-limit.ts" />
+    <File name="suppression.ts" />
+    <File name="queue.ts" />
+    <File name="logger.ts" />
+    <File name="types.ts" />
+  </Folder>
+  <Folder name="app/admin/email-campaigns" defaultOpen>
+    <File name="page.tsx" />
+    <File name="actions.ts" />
+    <Folder name="new">
+      <File name="page.tsx" />
+    </Folder>
+  </Folder>
+</Files>
+
+## Prerequisites
+
+<Callout title="Required Environment Variables">
+```bash
+RESEND_API_KEY="re_..."           # Resend API key
+FROM_EMAIL="hello@josemadrid.net" # Sender email address
+```
+If `RESEND_API_KEY` is not set, all email operations are silently skipped with a console warning.
+</Callout>
+
+## Creating a Campaign
+
+<Steps>
+<Step>
+### Create an Email Template
+
+Navigate to `/admin/email-templates` to create a new template. Templates support variable interpolation using double-brace syntax:
+
+```html
+<h1>Hello {{contact_name}},</h1>
+<p>We'd love to partner with {{school_name}} for their {{sport}} program.</p>
+<p>{{sport_pitch}}</p>
+```
+
+Available template variables:
+- `{{school_name}}` - Organization name
+- `{{contact_name}}` - Contact person name
+- `{{title}}` - Contact's title (e.g., "Athletic Director")
+- `{{sport}}` - Sport name
+- `{{sport_pitch}}` - Auto-generated pitch based on sport type
+- `{{city}}` - City
+- `{{state}}` - State
+</Step>
+
+<Step>
+### Create a Campaign
+
+Navigate to `/admin/email-campaigns/new` to create a new campaign. Link it to an email template and configure the target audience.
+
+Campaigns are stored in the `LeadCampaign` table and linked to `Lead` records that contain contact information.
+</Step>
+
+<Step>
+### Send the Campaign
+
+When you trigger the campaign, the `runCampaignSender` function processes each lead sequentially:
+
+```typescript
+export async function runCampaignSender(campaignId: string) {
+  const campaign = await prisma.leadCampaign.findUnique({
+    where: { id: campaignId },
+    include: { template: true },
+  })
+
+  const leads = await prisma.lead.findMany({
+    where: {
+      campaignId,
+      status: 'CONTACT_FOUND',
+      email: { not: null },
+    },
+  })
+
+  for (const lead of leads) {
+    // Process template variables
+    // Send via Resend
+    // Update lead status
+    await new Promise(resolve => setTimeout(resolve, 500)) // Rate limit delay
+  }
+}
+```
+</Step>
+</Steps>
+
+## Email Sending Mechanism
+
+The core `sendEmail` function in `lib/email.ts` uses the Resend SDK:
+
+```typescript
+import { Resend } from 'resend'
+
+export async function sendEmail(options: {
+  to: string
+  subject: string
+  html?: string
+  text?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  return resend.emails.send({
+    from: process.env.FROM_EMAIL || 'no-reply@example.com',
+    to: options.to,
+    subject: options.subject,
+    ...(options.html ? { html: options.html } : { text: options.text || '' }),
+  })
+}
+```
+
+## Campaign Status Flow
+
+```
+CREATED -> SENDING_EMAILS -> COMPLETED
+```
+
+Each lead within a campaign tracks its own status:
+
+| Lead Status | Description |
+|------------|-------------|
+| `CONTACT_FOUND` | Ready to send |
+| `EMAIL_SENT` | Successfully delivered |
+| `EMAIL_FAILED` | Delivery failed |
+
+## Rate Limiting
+
+The campaign sender includes a 500ms delay between emails to respect Resend API rate limits. The `lib/email/rate-limit.ts` module provides additional rate limiting controls.
+
+## Built-in Email Templates
+
+The platform includes several built-in email types:
+
+<Tabs items={['Password Reset', 'Admin Reply', 'Campaign']}>
+<Tab value="Password Reset">
+```typescript
+await sendPasswordResetEmail(email, token)
+// Sends branded HTML email with reset link
+// Link expires in 1 hour
+```
+</Tab>
+<Tab value="Admin Reply">
+```typescript
+await sendAdminReplyEmail(to, subject, message)
+// Loads template from DB (key: 'admin_reply')
+// Falls back to plain text if no template exists
+```
+</Tab>
+<Tab value="Campaign">
+```typescript
+await runCampaignSender(campaignId)
+// Processes all leads with CONTACT_FOUND status
+// Replaces template variables per-lead
+// Tracks sent/failed counts
+```
+</Tab>
+</Tabs>
+
+## Monitoring Campaign Progress
+
+Campaign progress is tracked via real-time events:
+
+```typescript
+emitScraperEvent(campaignId, 'info', 'email',
+  `[${idx + 1}/${leads.length}] Sending to ${lead.email}`)
+```
+
+The admin panel at `/admin/email-campaigns/[id]` shows:
+- Total leads in campaign
+- Emails sent vs failed
+- Per-lead delivery status and error messages
+- Campaign completion status
+
+## Suppression and Unsubscribe
+
+The platform supports unsubscribe preferences via the `UnsubscribePreference` model. The suppression module in `lib/email/suppression.ts` checks these preferences before sending.
+
+Unsubscribe links are processed at `/api/unsubscribe`.
+
+<Callout type="warn" title="Email Compliance">
+Always include an unsubscribe link in marketing emails. The platform tracks unsubscribe preferences per user to comply with CAN-SPAM requirements.
+</Callout>
+
+## Seeding Email Templates
+
+Use the seed script to populate default templates:
+
+```bash
+npm run db:seed:email-templates
+```

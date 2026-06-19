@@ -1,0 +1,144 @@
+---
+title: Environment Variables
+description: Production environment variable management via Vercel for José Madrid Salsa
+---
+
+# Environment Variables
+
+All production environment variables are managed through the **Vercel Dashboard** or the **Vercel CLI**. Variables are scoped per environment (Production, Preview, Development).
+
+## Required Variables
+
+These variables **must** be set for production to function:
+
+### Database
+
+```bash
+DATABASE_URL="postgresql://..."              # Neon pooled connection string
+DATABASE_URL_UNPOOLED="postgresql://..."      # Neon direct connection (for migrations)
+```
+
+<Callout type="warn" title="Whitespace in Vercel">
+Copy/paste into the Vercel dashboard can introduce trailing whitespace or newlines. The Prisma client in `lib/prisma.ts` sanitizes these automatically, but double-check values if connections fail.
+</Callout>
+
+The Prisma client also supports fallback resolution:
+
+1. `DATABASE_URL` (primary)
+2. `PRISMA_DATABASE_URL` (fallback)
+3. `POSTGRES_URL` (second fallback)
+
+### Authentication
+
+```bash
+NEXTAUTH_URL="https://www.josemadrid.net"    # Production domain
+NEXTAUTH_SECRET="..."                         # 32+ char random string
+```
+
+Generate a secret: `openssl rand -hex 32`
+
+### Encryption
+
+```bash
+MASTER_KEY="..."         # AES-256 admin panel encryption (64 hex chars)
+ENCRYPTION_KEY="..."     # Sensitive data encryption (SMTP passwords, etc.)
+```
+
+Generate with: `node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"`
+
+## Payment Processing
+
+```bash
+STRIPE_PUBLISHABLE_KEY="pk_live_..."
+STRIPE_SECRET_KEY="sk_live_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+```
+
+<Callout type="warn" title="Live vs Test Keys">
+Use `pk_live_` / `sk_live_` prefixed keys for production. Test keys (`pk_test_` / `sk_test_`) will silently fail to process real payments.
+</Callout>
+
+## Email
+
+```bash
+RESEND_API_KEY="re_..."
+FROM_EMAIL="orders@josemadridsalsa.com"
+```
+
+## Google Services
+
+```bash
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="AIza..."    # Client-side maps (billing enabled)
+GOOGLE_PLACES_API_KEY="AIza..."               # Server-side places/reviews
+GOOGLE_ANALYTICS_ID="G-HG4QV5GFKH"           # GA4 measurement ID
+GOOGLE_CALENDAR_ID="..."                      # "Where is Jose" schedule
+GOOGLE_SERVICE_ACCOUNT_EMAIL="..."            # Calendar API service account
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="..."      # Include \\n for newlines
+```
+
+## Monitoring
+
+```bash
+NEXT_PUBLIC_SENTRY_DSN="https://...@sentry.io/..."
+SENTRY_AUTH_TOKEN="..."
+SENTRY_ORG="josemadridsalsa"
+SENTRY_PROJECT="javascript-nextjs"
+NEXT_PUBLIC_AMPLITUDE_API_KEY="..."
+```
+
+## File Storage
+
+```bash
+UPLOADTHING_SECRET="..."
+UPLOADTHING_APP_ID="..."
+```
+
+## AI Services
+
+```bash
+ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+## Managing Variables
+
+### Via Vercel CLI
+
+```bash
+# Pull all production variables to local file
+vercel env pull .env.vercel.production --environment=production --yes
+
+# Add a variable
+vercel env add VARIABLE_NAME production
+
+# Remove a variable
+vercel env rm VARIABLE_NAME production
+```
+
+### Via Dashboard
+
+Navigate to **Project Settings > Environment Variables** in the Vercel dashboard. Variables can be scoped to:
+
+- **Production** -- Applied to production deployments only
+- **Preview** -- Applied to preview deployments (PR branches)
+- **Development** -- Available when running `vercel dev`
+
+### Automated Setup
+
+Run the interactive setup script:
+
+```bash
+npm run vercel:setup-env
+```
+
+This script guides you through setting all required variables and optionally triggers a redeployment.
+
+## NEXT_PUBLIC_ Prefix
+
+Variables prefixed with `NEXT_PUBLIC_` are inlined into the client-side JavaScript bundle at build time. Only use this prefix for values that are safe to expose publicly:
+
+| Safe for `NEXT_PUBLIC_` | Keep Server-Only |
+|---|---|
+| Google Maps API key | Stripe secret key |
+| Amplitude API key | Database URL |
+| Sentry DSN | NextAuth secret |
+| Google Analytics ID | Encryption keys |

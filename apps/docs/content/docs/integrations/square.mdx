@@ -1,0 +1,137 @@
+---
+title: Square
+description: Square payment processing for in-person POS terminal and online payments
+---
+
+
+# Square Integration
+
+<PageInlineTOC>On this page</PageInlineTOC>
+
+## SDK
+
+<GithubInfo owner="square" repo="square-nodejs-sdk" />
+
+Square handles in-person point-of-sale (POS) terminal payments and can also process online payments. The integration uses the Square Payments API and Customers API via the official `square` SDK.
+
+## Architecture
+
+The `SquareAdapter` at `lib/payments/providers/square.ts` implements the `PaymentProviderAdapter` interface. It routes payments with `SQUARE_TERMINAL` method type.
+
+```
+POS / Checkout -> Provider Registry -> SquareAdapter -> Square Payments API
+```
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `SQUARE_ACCESS_TOKEN` | Square application access token | Yes |
+| `SQUARE_LOCATION_ID` | Square location ID for the business | Yes |
+| `SQUARE_SANDBOX` | Set to `false` for production (defaults to sandbox) | No |
+| `SQUARE_WEBHOOK_SIGNATURE_KEY` | Webhook signature key for verification | Yes |
+| `SQUARE_WEBHOOK_URL` | Public URL of the webhook endpoint | Yes |
+
+## Setup
+
+<Steps>
+
+### Install the Square SDK
+
+```bash
+npm install square
+```
+
+### Create a Square application
+
+Go to [developer.squareup.com](https://developer.squareup.com) and create an application. Obtain the access token and location ID from the application dashboard.
+
+### Configure environment variables
+
+```bash
+SQUARE_ACCESS_TOKEN=EAAAEEpQ...
+SQUARE_LOCATION_ID=L1234...
+SQUARE_SANDBOX=true
+SQUARE_WEBHOOK_SIGNATURE_KEY=abc123...
+SQUARE_WEBHOOK_URL=https://your-domain.com/api/webhooks/square
+```
+
+### Register the webhook
+
+Create a webhook subscription at `https://your-domain.com/api/webhooks/square` in the Square Developer Dashboard.
+
+</Steps>
+
+## Payment Flow
+
+### Creating a Payment
+
+The adapter creates payments via `client.payments.create()`:
+
+- Uses `BigInt` for amounts (Square SDK requirement)
+- Generates a `randomUUID()` idempotency key for each request
+- Sets `sourceId` to `EXTERNAL` for external payment sources
+- Attaches `referenceId` (order ID) and `note` (order number)
+- Maps shipping address fields to Square's address format
+
+### Confirming a Payment
+
+`confirmPayment()` retrieves the payment via `client.payments.get()` and maps the status:
+
+| Square Status | Mapped Status |
+|---------------|---------------|
+| `COMPLETED` | `SUCCEEDED` |
+| `APPROVED` / `PENDING` | `PROCESSING` |
+| `CANCELED` / `FAILED` | `FAILED` |
+| Other | `REQUIRES_ACTION` |
+
+### Refunds
+
+Refunds use `client.refunds.refundPayment()` with an idempotency key. Both full and partial refunds are supported. The `reason` field is passed directly to Square.
+
+## Customer Management
+
+The adapter creates Square customers via `client.customers.create()`:
+
+- Splits the name into `givenName` and `familyName`
+- Stores the internal user ID as `referenceId`
+- Passes additional metadata as `note` (JSON-serialized)
+
+<Callout type="info">
+Saved payment methods (Square Cards on File) are not yet implemented. The `listPaymentMethods()` method returns an empty array as POS terminal payments typically do not use saved cards.
+</Callout>
+
+## Webhook Verification
+
+Webhook signatures are verified using `WebhooksHelper.verifySignature()` from the Square SDK:
+
+```ts
+WebhooksHelper.verifySignature({
+  requestBody: request.body,
+  signatureHeader: signature,
+  signatureKey: config.webhookSignatureKey,
+  notificationUrl,
+})
+```
+
+The handler validates the `x-square-hmacsha256-signature` header.
+
+## Error Handling
+
+The adapter uses typed error handling with `SquareError`:
+
+```ts
+if (error instanceof SquareError) {
+  return error.message || 'Square API error'
+}
+```
+
+All payment operations return structured results with `success: false` and descriptive `error` messages rather than throwing exceptions.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/payments/providers/square.ts` | SquareAdapter implementation |
+| `app/api/webhooks/square/route.ts` | Webhook HTTP endpoint |
+| `lib/payments/types.ts` | Shared payment type definitions |

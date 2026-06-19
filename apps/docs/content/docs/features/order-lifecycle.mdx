@@ -1,0 +1,336 @@
+---
+title: Order Lifecycle
+description: Order statuses, transitions, admin actions, notifications, and management throughout the complete order lifecycle
+---
+
+# Order Lifecycle
+
+This guide covers order statuses, state transitions, admin actions, notifications, and order management throughout the complete lifecycle.
+
+## Overview
+
+Orders track two independent status dimensions:
+- **Order status** — Fulfillment lifecycle (PENDING through DELIVERED/CANCELLED/REFUNDED)
+- **Payment status** — Payment state (PENDING through PAID/FAILED/REFUNDED)
+
+Both statuses are stored on the `Order` model and can be updated independently.
+
+## Order Statuses
+
+Defined in `lib/validations/orders.ts` (mirrors the Prisma `OrderStatus` enum):
+
+| Status | Description | Admin UI Color |
+|--------|-------------|----------------|
+| `PENDING` | Order created, awaiting payment confirmation | Yellow |
+| `CONFIRMED` | Payment received, order accepted | Blue |
+| `PROCESSING` | Order being prepared for shipment | Purple |
+| `SHIPPED` | Order shipped, tracking available | Indigo |
+| `DELIVERED` | Order delivered to customer | Green |
+| `CANCELLED` | Order cancelled (before or after payment) | Red |
+| `REFUNDED` | Full refund issued | Gray |
+
+## Payment Statuses
+
+Defined in `lib/validations/orders.ts` (mirrors the Prisma `PaymentStatus` enum):
+
+| Status | Description |
+|--------|-------------|
+| `PENDING` | Awaiting payment |
+| `PAID` | Payment successfully processed |
+| `FAILED` | Payment attempt failed |
+| `REFUNDED` | Full refund issued |
+| `PARTIALLY_REFUNDED` | Partial refund issued |
+
+## Status Flow Diagram
+
+```
+                     +----------+
+                     | PENDING  |
+                     +----+-----+
+                          |
+               Payment confirmed
+               (checkout/complete or webhook)
+                          |
+                     +----v-----+
+                +--->| CONFIRMED |<---+
+                |    +----+-----+    |
+                |         |          |
+                |    Admin action    |
+                |    "Processing"    |
+                |         |          |
+                |    +----v------+   |
+                |    | PROCESSING|   |
+                |    +----+------+   |
+                |         |          |
+                |    Admin action    |
+                |    "Ship" +        |
+                |    tracking info   |
+                |         |          |
+                |    +----v---+      |
+                |    | SHIPPED|      |
+                |    +----+--+      |
+                |         |         |
+                |    Admin action   |
+                |    "Delivered"    |
+                |         |         |
+                |    +----v----+    |
+                |    |DELIVERED|    |
+                |    +---------+    |
+                |                   |
+                |   (Any status     |
+                |    can also       |
+                |    transition to) |
+                |         |         |
+          +-----v---+ +--v-------+
+          |CANCELLED | | REFUNDED |
+          +---------+ +----------+
+
+Payment Status Flow:
+
+PENDING ---> PAID ---> REFUNDED
+   |           |
+   v           v
+ FAILED   PARTIALLY_REFUNDED
+```
+
+### Key Transition Rules
+
+- **PENDING → CONFIRMED**: Triggered automatically when payment succeeds (via `/api/checkout/complete` or Stripe webhook `payment_intent.succeeded`)
+- **PENDING → CANCELLED**: Triggered by Stripe webhook `payment_intent.canceled` or admin action
+- **CONFIRMED → PROCESSING**: Admin manually moves order to processing
+- **PROCESSING → SHIPPED**: Admin adds tracking information
+- **SHIPPED → DELIVERED**: Admin confirms delivery
+- **Any → CANCELLED**: Admin cancellation (order status update)
+- **Any → REFUNDED**: Full refund via Stripe webhook `charge.refunded`
+- **PAID → PARTIALLY_REFUNDED**: Partial refund via Stripe webhook
+
+## Admin Actions
+
+### Order Detail Page
+
+**URL:** `/admin/orders/[id]`
+**Required permission:** `orders:read` to view, `orders:write` to modify
+
+Available admin actions (when `orders:write` permission is granted):
+
+| Action | Component | Description |
+|--------|-----------|-------------|
+| Update Status | `UpdateStatusDialog` | Change order status with optional notes |
+| Add Tracking | `TrackingDialog` | Add tracking number, carrier, and tracking URL |
+| Issue Refund | `RefundDialog` | Process full or partial refund via Stripe |
+| Send Email | `SendEmailDialog` | Send custom email to customer |
+| Print Invoice | `PrintInvoiceButton` | Generate printable invoice |
+| Packing Slip | `PackingSlipButton` | Generate packing slip for fulfillment |
+
+### Refund Eligibility
+
+The admin detail page calculates the refundable amount by:
+1. Checking if a `stripePaymentId` exists on the order
+2. Verifying payment status is `PAID` or `PARTIALLY_REFUNDED`
+3. Retrieving the charge from Stripe to get `amount_refunded`
+4. Returning `max(0, total - totalRefunded)`
+
+### Order List Page
+
+**URL:** `/admin/orders`
+
+Supports filtering by:
+- Order status (enum dropdown)
+- Payment status (enum dropdown)
+- Pagination with configurable page size
+- Sort order (ascending/descending by date)
+
+### Order Import
+
+**URL:** Available via import dialog on orders list page
+
+Supports bulk order creation from CSV or XLSX files. See [Order Import](#order-import) section.
+
+## Notifications
+
+### Notification System
+
+**File:** `lib/notifications/order-notifications.ts`
+
+The notification system supports both in-app notifications and email alerts, configurable per admin user via `OrderNotificationSetting`.
+
+### Notification Types
+
+| Type | In-App | Email | Trigger |
+|------|--------|-------|---------|
+| `ORDER_NEW` | Configurable | Configurable | New order placed |
+| `ORDER_STATUS_CHANGE` | Configurable | Configurable | Order status updated |
+| `ORDER_HIGH_VALUE` | Configurable (with threshold) | Configurable | Order total exceeds threshold |
+| `ORDER_MODIFIED` | Always | Never | Order items or details changed |
+| `SYSTEM` | Always | Never | System-generated notification |
+
+### Notification Settings
+
+Each admin user has an `OrderNotificationSetting` record controlling:
+
+| Setting | Description |
+|---------|-------------|
+| `newOrderInApp` | Show in-app notification for new orders |
+| `newOrderEmail` | Send email for new orders |
+| `orderStatusInApp` | Show in-app notification for status changes |
+| `orderStatusEmail` | Send email for status changes |
+| `highValueInApp` | Show in-app notification for high-value orders |
+| `highValueEmail` | Send email for high-value orders |
+| `highValueThreshold` | Dollar amount threshold for high-value alerts |
+
+### Admin Notification Flow
+
+When a new order is placed, `notifyAdminsOfNewOrder()` is called:
+
+1. Fetches all users with `ADMIN` or `DEVELOPER` role
+2. Creates `ORDER_NEW` notification for each admin (respecting their settings)
+3. If order total >= $100, also creates `ORDER_HIGH_VALUE` notification
+
+### Notification Delivery
+
+- **In-app:** Creates a `Notification` record in the database (title, message, entity reference)
+- **Email:** Sends via `sendEmail()` with a link to the admin order detail page
+- **Mark as read:** `markNotificationAsRead()` updates `isRead` flag and `readAt` timestamp
+
+## Order Modification
+
+**File:** `lib/orders/modify.ts`
+
+Admins can modify existing orders. The `modifyOrder()` function handles:
+
+### Modifiable Fields
+
+| Field | Description |
+|-------|-------------|
+| `items` | Replace order items (deletes existing, creates new) |
+| `shippingAddress` | Update shipping address |
+| `status` | Change order status |
+| `shippingCost` | Adjust shipping cost |
+| `notes` | Add/update admin notes |
+
+### Modification Process
+
+1. Fetch existing order with items and shipping address
+2. If items are updated: delete all existing `OrderItem` records, create new ones, recalculate subtotal
+3. Recalculate total: `subtotal + shippingCost + tax - discountAmount`
+4. Append modification to `modificationHistory` JSON array with timestamp, userId, and changes
+5. Update order record
+6. Create audit log entry (`order.modify`)
+
+### Modification History
+
+Each modification is recorded in the order's `modificationHistory` JSON field:
+
+```json
+{
+  "timestamp": "2026-03-31T12:00:00.000Z",
+  "userId": "clxxx...",
+  "changes": {
+    "before": { "items": [...] },
+    "after": { "items": [...] }
+  }
+}
+```
+
+## Order Import
+
+**File:** `lib/orders/import.ts`
+
+Supports bulk order creation from CSV or XLSX files.
+
+### Supported File Formats
+
+- **CSV** — Parsed via PapaParse (headers required, empty lines skipped, `#` comments supported)
+- **XLSX/XLS** — Parsed via ExcelJS (first worksheet, first row as headers)
+
+### Required Columns
+
+| Column | Type | Required | Description |
+|--------|------|----------|-------------|
+| `customerEmail` | string | Yes | Valid email address |
+| `customerName` | string | Yes | Customer full name |
+| `shippingFirstName` | string | Yes | Shipping first name |
+| `shippingLastName` | string | Yes | Shipping last name |
+| `shippingStreet` | string | Yes | Shipping street address |
+| `shippingCity` | string | Yes | Shipping city |
+| `shippingState` | string | Yes | Shipping state (2+ chars) |
+| `shippingZip` | string | Yes | Shipping ZIP code |
+| `productSku` | string | Yes | Product SKU |
+| `productName` | string | Yes | Product display name |
+| `quantity` | number | Yes | Order quantity (min 1) |
+| `unitPrice` | number | Yes | Unit price (min 0) |
+
+### Optional Columns
+
+| Column | Default | Description |
+|--------|---------|-------------|
+| `orderNumber` | Auto-generated | Custom order number |
+| `customerPhone` | - | Customer phone |
+| `shippingCountry` | `US` | Shipping country |
+| `shippingPhone` | - | Shipping phone |
+| `billingFirstName` | Uses shipping | Billing first name |
+| `billingLastName` | Uses shipping | Billing last name |
+| `billingStreet` | Uses shipping | Billing street |
+| `billingCity` | Uses shipping | Billing city |
+| `billingState` | Uses shipping | Billing state |
+| `billingZip` | Uses shipping | Billing ZIP |
+| `billingCountry` | `US` | Billing country |
+| `shippingCost` | `0` | Shipping cost |
+| `tax` | `0` | Tax amount |
+| `discountAmount` | `0` | Discount amount |
+| `status` | `PENDING` | Order status |
+| `paymentStatus` | `PENDING` | Payment status |
+| `paymentMethod` | - | Payment method |
+| `customerNotes` | - | Customer notes |
+| `adminNotes` | - | Admin notes |
+| `createdAt` | Now | Order creation date |
+
+### Import Options
+
+| Option | Description |
+|--------|-------------|
+| `createMissingProducts` | Create placeholder products for unknown SKUs |
+| `createMissingUsers` | Create user accounts for unknown email addresses |
+| `skipDuplicates` | Skip orders with existing order numbers |
+
+### Multi-Item Orders
+
+Rows with the same `orderNumber` are grouped into a single order with multiple line items.
+
+### Auto-Generated Order Numbers
+
+Format: `ORD-YYYYMM-NNNNN` (e.g., `ORD-202603-00001`), using sequential numbering within each month.
+
+## Validation Schemas
+
+**File:** `lib/validations/orders.ts`
+
+Zod schemas for all order operations:
+
+| Schema | Purpose |
+|--------|---------|
+| `OrderItemSchema` | `{ productId: CUID, quantity: positive int }` |
+| `CustomerInfoSchema` | `{ email, firstName, lastName, phone? }` |
+| `ShippingAddressSchema` | `{ address1, address2?, city, state, postalCode, country }` |
+| `CreateOrderSchema` | `{ cartItemIds, shippingAddress, billingAddress?, notes? }` |
+| `UpdateOrderStatusSchema` | `{ orderId: CUID, status: OrderStatus, notes? }` |
+| `UpdateOrderPaymentStatusSchema` | `{ orderId: CUID, paymentStatus: PaymentStatus }` |
+| `OrderQuerySchema` | Filtering/pagination: `{ status?, paymentStatus?, take?, skip, sortOrder }` |
+| `CancelOrderSchema` | `{ orderId: CUID, reason, refundAmount? }` |
+| `UpdateOrderTrackingSchema` | `{ orderId: CUID, trackingNumber, carrier, trackingUrl? }` |
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/validations/orders.ts` | Order status enums, Zod validation schemas |
+| `lib/orders/modify.ts` | Order modification logic with audit trail |
+| `lib/orders/import.ts` | Bulk order import from CSV/XLSX |
+| `lib/notifications/order-notifications.ts` | In-app and email notification system |
+| `app/admin/orders/page.tsx` | Admin order list with filtering |
+| `app/admin/orders/[id]/page.tsx` | Admin order detail with action dialogs |
+| `app/admin/orders/[id]/invoice/page.tsx` | Printable invoice generation |
+| `app/admin/orders/[id]/packing-slip/page.tsx` | Packing slip generation |
+| `app/admin/orders/_components/import-orders-dialog.tsx` | Import UI dialog |
+| `app/api/webhooks/stripe/route.ts` | Automatic status updates from Stripe events |
+| `lib/stripe/webhooks.ts` | Webhook handler logic for payment/refund events |

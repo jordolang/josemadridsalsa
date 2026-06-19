@@ -1,0 +1,49 @@
+---
+title: Deployment
+description: Production deployment and hosting guide for José Madrid Salsa on Vercel
+---
+
+# Deployment
+
+<PageInlineTOC>Jump to section</PageInlineTOC>
+
+Guide for deploying and operating José Madrid Salsa in production on **Vercel**.
+
+## Vercel Platform
+
+- [Vercel Deployment](/docs/deployment/vercel) - Project linking, build pipeline, CI/CD
+- [Environment Variables](/docs/deployment/environment-variables) - Production env var management
+- [Database Setup](/docs/deployment/database-production) - Neon serverless Postgres configuration
+- [SSL/TLS & Domains](/docs/deployment/ssl) - Custom domains and HTTPS
+
+## Pre-Deployment Checklist
+
+- [ ] Environment variables configured in Vercel
+- [ ] Database migrations tested locally
+- [ ] Secrets stored in Vercel (not in code)
+- [ ] Sentry DSN and auth token set
+- [ ] Analytics keys configured
+- [ ] Gitleaks pre-commit hook active
+
+## Security
+
+- [Security Configuration](/docs/deployment/security) - Hardening, headers, RBAC
+- [Secrets Management](/docs/deployment/secrets) - Rotation, generation, isolation
+
+## Performance
+
+- [Performance Optimization](/docs/deployment/performance) - Images, bundles, scripts
+- [Caching Strategy](/docs/deployment/caching) - Vercel CDN, ISR, revalidation
+- [Database Optimization](/docs/deployment/database-optimization) - Indexes, pooling, query tuning
+
+## Monitoring & Logging
+
+- [Application Monitoring](/docs/deployment/monitoring) - Sentry, Vercel Analytics, Amplitude
+- [Error Tracking](/docs/deployment/error-tracking) - Sentry integration details
+- [Analytics](/docs/deployment/analytics) - GA4, GTM, Amplitude, Vercel Analytics
+- [Log Management](/docs/deployment/logs) - Production logging and debugging
+
+## Maintenance
+
+- [Updates & Rollbacks](/docs/deployment/updates) - Dependency updates, deployment rollback
+- [Troubleshooting](/docs/deployment/troubleshooting) - Common issues and fixes

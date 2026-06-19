@@ -1,0 +1,296 @@
+---
+title: Security Best Practices
+description: Security checklist and best practices for the Jose Madrid Salsa platform
+---
+
+# Security Best Practices
+
+This guide covers the security measures built into the Jose Madrid Salsa platform and best practices for maintaining a secure deployment.
+
+## Authentication Security
+
+### Password Hashing
+
+All passwords are hashed with bcrypt before storage:
+
+```typescript
+import bcrypt from 'bcryptjs'
+
+// Registration
+const hashedPassword = await bcrypt.hash(password, 10)
+
+// Verification
+const isValid = await bcrypt.compare(providedPassword, user.password)
+```
+
+<Callout type="warn" title="Salt Rounds">
+The platform uses 10 bcrypt salt rounds. Do not lower this value. Higher values increase security but slow down login.
+</Callout>
+
+### JWT Session Security
+
+```typescript
+// In lib/auth.ts
+session: {
+  strategy: 'jwt',
+  maxAge: 30 * 24 * 60 * 60, // 30 days
+},
+useSecureCookies: process.env.NODE_ENV === 'production',
+```
+
+- Sessions use JWTs, not database-backed sessions
+- Secure cookies are enforced in production
+- `NEXTAUTH_SECRET` is validated at startup
+
+### Rate Limiting on Auth
+
+Login and password reset endpoints have strict rate limits:
+
+```typescript
+AUTH_LOGIN:     { maxRequests: 5, windowSeconds: 900 }    // 5 per 15 min
+PASSWORD_RESET: { maxRequests: 3, windowSeconds: 3600 }   // 3 per hour
+```
+
+## Input Validation
+
+### Zod Schema Validation
+
+All API inputs are validated using Zod schemas before processing:
+
+```typescript
+import { CreateOrderSchema } from '@/lib/validations/orders'
+
+const parsed = CreateOrderSchema.safeParse(json)
+if (!parsed.success) {
+  return NextResponse.json(
+    { error: 'Invalid payload', details: parsed.error.flatten() },
+    { status: 400 }
+  )
+}
+```
+
+Validation schemas exist for:
+- Order creation and updates (`lib/validations/orders.ts`)
+- Cart operations (`lib/validations/cart.ts`)
+- Payment processing (`lib/validations/payment.ts`)
+
+### HTML Escaping
+
+User-generated content is escaped before rendering in emails:
+
+```typescript
+function escapeHtml(str: string) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+```
+
+## Authorization
+
+### Role-Based Access Control
+
+Every admin endpoint verifies user roles and permissions:
+
+```typescript
+// Throws 403 if user lacks permission
+const user = await requirePermission('orders:write')
+
+// Check specific roles
+const user = await requireRole(['ADMIN', 'DEVELOPER'])
+
+// Check admin panel access
+const hasAccess = await canAccessAdmin() // ADMIN, DEVELOPER, STAFF
+```
+
+### Principle of Least Privilege
+
+The permission system follows least privilege:
+
+| Role | Permissions |
+|------|------------|
+| CUSTOMER | None (storefront only) |
+| WHOLESALE | None (storefront + wholesale pricing) |
+| FUNDRAISER | Own dashboard, page editing, asset uploads |
+| STAFF | Orders, products, content, messaging |
+| ADMIN | Everything |
+
+## Secret Management
+
+### Environment Variables
+
+Secrets are never hardcoded. All sensitive values come from environment variables:
+
+```bash
+# Required secrets
+NEXTAUTH_SECRET=          # JWT signing
+MASTER_KEY=               # AES-256 encryption
+STRIPE_SECRET_KEY=        # Payment processing
+STRIPE_WEBHOOK_SECRET=    # Webhook verification
+RESEND_API_KEY=           # Email service
+SHIPPING_API_KEY=         # Carrier API
+```
+
+### Encryption
+
+The admin panel uses AES-256 encryption for stored credentials:
+
+```bash
+# Generate a MASTER_KEY
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+The `lib/encryption.ts` and `lib/crypto.ts` modules handle encryption/decryption operations.
+
+### Secret Scanning
+
+The project includes Gitleaks for automated secret detection:
+
+```bash
+npm run security:scan      # Scan repository
+npm run security:protect   # Pre-commit check (staged files)
+npm run security:baseline  # Generate baseline report
+```
+
+The `pre-commit` hook automatically runs `lint-staged && npm run security:protect`.
+
+## API Security
+
+### Rate Limiting
+
+All API endpoints are protected by rate limiting:
+
+```typescript
+export const POST = withRateLimit(handlePost, RATE_LIMITS.API_GENERAL)
+export const GET = withRateLimit(handleGet, RATE_LIMITS.API_GENERAL)
+```
+
+Rate limit headers inform clients of their remaining quota.
+
+### CORS and Request Validation
+
+API routes validate the request method and content type. The Next.js middleware (proxy) handles CORS and header validation.
+
+### Audit Logging
+
+All admin actions are recorded in the audit log:
+
+```typescript
+await logAuditWithRequest({
+  userId: user.id,
+  action: 'create',
+  entityType: 'Order',
+  entityId: order.id,
+  changes: { orderNumber, total },
+}, request)
+```
+
+Audit logs capture: user ID, action type, entity type/ID, change details, IP address, and user agent.
+
+## Payment Security
+
+### Stripe Integration
+
+- Payment processing happens server-side via Stripe API
+- The client only receives a `clientSecret` for the PaymentIntent
+- Webhook signatures are verified with `STRIPE_WEBHOOK_SECRET`
+- No card data is stored in the application database
+
+### Webhook Verification
+
+```typescript
+const event = stripe.webhooks.constructEvent(
+  body,
+  sig,
+  process.env.STRIPE_WEBHOOK_SECRET!
+)
+```
+
+## Data Protection
+
+### Unsubscribe Management
+
+Email unsubscribe preferences are stored per-user and checked before sending:
+
+```typescript
+// Check suppression before sending
+const suppressed = await checkSuppression(email)
+if (suppressed) return { skipped: true }
+```
+
+### Password Reset Tokens
+
+Reset tokens are time-limited (1 hour) and single-use:
+
+```graphql
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+}
+```
+
+## Security Checklist
+
+<Steps>
+<Step>
+### Environment Validation
+
+Verify all required secrets are set:
+- [ ] `NEXTAUTH_SECRET` (32+ characters)
+- [ ] `MASTER_KEY` (64 hex characters)
+- [ ] `STRIPE_SECRET_KEY`
+- [ ] `STRIPE_WEBHOOK_SECRET`
+</Step>
+
+<Step>
+### Pre-Commit Checks
+
+Ensure Gitleaks is running:
+- [ ] Husky hooks installed (`npm run prepare`)
+- [ ] `security:protect` runs on commit
+- [ ] No secrets in committed code
+</Step>
+
+<Step>
+### Access Control
+
+Verify RBAC is configured:
+- [ ] Permission tables are seeded
+- [ ] Admin users have correct roles
+- [ ] API routes check permissions
+</Step>
+
+<Step>
+### Monitoring
+
+Set up error and security monitoring:
+- [ ] Sentry configured for error tracking
+- [ ] Audit logs capturing admin actions
+- [ ] Rate limiting active on all endpoints
+</Step>
+</Steps>
+
+## Key Files
+
+<Files>
+  <Folder name="lib" defaultOpen>
+    <File name="auth.ts" />
+    <File name="rbac.ts" />
+    <File name="encryption.ts" />
+    <File name="crypto.ts" />
+    <File name="rate-limiter.ts" />
+    <File name="audit.ts" />
+    <File name="validation.ts" />
+  </Folder>
+  <Folder name="lib/validations">
+    <File name="orders.ts" />
+    <File name="cart.ts" />
+    <File name="payment.ts" />
+  </Folder>
+</Files>

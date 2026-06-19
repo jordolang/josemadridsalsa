@@ -1,0 +1,174 @@
+---
+title: Location Map Feature
+description: Interactive location map with Google Maps integration, Street View, and business information display for the main page
+---
+
+# Location Map Feature
+
+## Overview
+
+This feature adds an interactive location map to the main page of the Jose Madrid Salsa website, displaying the business location at 601 Putnam Ave, Zanesville, OH 43701, with Google Maps integration, Street View, and Google Reviews.
+
+## What Was Added
+
+### 1. Location Map Component (`components/store/location-map.tsx`)
+
+A new client-side component that provides:
+
+- **Interactive Map View**: Full Google Maps embed showing the business location
+- **Street View**: Interactive 360° street-level view of the business exterior
+- **Toggle Between Views**: Easy switching between Map and Street View
+- **Static Map Image**: Sidebar card with a static map snapshot
+- **Get Directions**: Direct links to Google Maps for navigation
+- **Responsive Design**: Mobile-friendly layout that adapts to all screen sizes
+- **Graceful Degradation**: Falls back to address display if API key is not configured
+
+### 2. Updated Main Page (`app/page.tsx`)
+
+- Added `LocationMap` component import
+- Positioned the map section after Features and before Gift Box Selector
+- Maintains existing Reviews section below
+
+### 3. Environment Configuration
+
+Updated `.env` with required API keys:
+
+```bash
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=""    # For maps and street view
+GOOGLE_PLACES_API_KEY=""              # For reviews (already existed)
+GOOGLE_PLACE_ID=""                    # Optional Place ID
+GOOGLE_PLACE_NAME="Jose Madrid Salsa" # Business name
+```
+
+### 4. Documentation
+
+- Created `GOOGLE_MAPS_SETUP.md` with complete setup instructions
+- Includes troubleshooting guide and security best practices
+
+## Page Structure
+
+The main page now has the following sections in order:
+
+1. Hero Section
+2. Product Categories (Heat Levels)
+3. Features Section
+4. **Location Map** ← NEW
+5. Gift Box Selector
+6. **Google Reviews** ← Already existed
+7. Call to Action
+
+## Features in Detail
+
+### Interactive Map
+
+- Full-width embedded Google Map
+- Zoom controls and street navigation
+- Pin marking the business location
+- "Open in Maps" link for external navigation
+
+### Street View
+
+- 360° interactive view of the business exterior
+- Navigate around the building
+- Zoom and pan controls
+- Realistic street-level perspective
+
+### Information Sidebar
+
+Three cards displaying:
+
+1. **Building Photo**: Static map image of the location
+2. **Store Information**: Address and "Get Directions" button
+3. **Contact Card**: Link to contact page
+
+### Styling
+
+- Matches existing design system (salsa, verde, chile colors)
+- Card-based layout for visual consistency
+- Smooth animations and transitions
+- Dark mode support
+- Mobile-responsive grid layout
+
+## Technical Details
+
+### API Requirements
+
+| API | Cost | Notes |
+|-----|------|-------|
+| Maps Embed API | Free (basic) | Basic usage included |
+| Street View Static API | $7 per 1,000 requests | After free tier |
+| Maps Static API | $2 per 1,000 requests | After free tier |
+| Google Free Credit | $200/month | Applies to all APIs |
+
+### Performance
+
+- Lazy loading for map iframes
+- Static image preload in sidebar
+- Conditional rendering based on API key availability
+- No blocking JavaScript
+
+### Security
+
+- Public API key uses `NEXT_PUBLIC_` prefix (client-side safe)
+- Recommend HTTP referrer restrictions in Google Cloud Console
+- API key validation and error handling
+- Graceful fallback if APIs fail
+
+## Setup Instructions
+
+1. **Get Google Cloud API Keys**
+   - Follow instructions in `docs/GOOGLE_MAPS_SETUP.md`
+   - Enable required APIs in Google Cloud Console
+   - Create API key with appropriate restrictions
+
+2. **Configure Environment Variables**
+   ```bash
+   # In .env.local
+   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your-api-key-here"
+   GOOGLE_PLACE_ID="your-place-id" # Optional but recommended
+   ```
+
+3. **Restart Development Server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Visit Homepage**
+   - Navigate to `http://localhost:3000`
+   - Scroll down to see the location map section
+   - Toggle between Map View and Street View
+   - Reviews section appears below
+
+## Testing Checklist
+
+- [ ] Map loads and displays correct location
+- [ ] Street View loads and is interactive
+- [ ] Toggle switches between Map and Street View smoothly
+- [ ] "Get Directions" opens Google Maps in new tab
+- [ ] Static map image displays in sidebar
+- [ ] Layout is responsive on mobile, tablet, and desktop
+- [ ] Dark mode styling works correctly
+- [ ] Reviews section still displays below map
+- [ ] Graceful fallback works without API key
+
+## Future Enhancements
+
+Potential improvements for later:
+
+- Add business hours to the information sidebar
+- Include phone number and "Call Now" button
+- Display multiple photos of the storefront in a carousel
+- Add directions from user's current location
+- Show nearby landmarks or parking information
+- Integrate real-time store status (open/closed)
+
+## Related Files
+
+| File | Purpose |
+|------|---------|
+| `components/store/location-map.tsx` | Location map component |
+| `app/page.tsx` | Main page with map section |
+| `app/api/reviews/google/route.ts` | Reviews API endpoint |
+| `components/store/reviews-section.tsx` | Reviews component |
+| `.env` | Environment configuration |
+| `docs/GOOGLE_MAPS_SETUP.md` | Google Maps setup guide |

@@ -1,0 +1,218 @@
+---
+title: Shipping Configuration
+description: Configure shipping rates, carriers, and free shipping thresholds
+---
+
+# Shipping Configuration
+
+The shipping system in Jose Madrid Salsa uses a multi-tier strategy: real carrier API rates with fallback to estimate-based rates, ensuring checkout is never blocked.
+
+## How Shipping Calculation Works
+
+The `calculateShipping` function in `lib/shipping-calculator.ts` follows this strategy:
+
+<Steps>
+<Step>
+### Check Free Shipping
+
+The system first checks if the order meets the free shipping threshold (configurable in the database, defaults to $50). If met, shipping is free with no API call needed.
+
+```typescript
+const freeShippingThreshold = await getFreeShippingThreshold()
+
+if (subtotal >= freeShippingThreshold) {
+  return {
+    shippingCost: 0,
+    shippingMethod: 'Free Shipping',
+    estimatedDelivery: '3-5 business days',
+  }
+}
+```
+</Step>
+
+<Step>
+### Call Carrier API
+
+For domestic orders under the threshold, the system calls the carrier API with calculated parcel dimensions:
+
+```typescript
+const parcel = calculateParcelDimensions(items)
+const shipmentRequest: ShipmentRequest = {
+  fromAddress: DEFAULT_ORIGIN_ADDRESS,
+  toAddress: { ... },
+  parcel,
+}
+const ratesResponse = await getShippingRates(shipmentRequest)
+```
+</Step>
+
+<Step>
+### Filter and Sort Rates
+
+Rates are filtered based on address type (PO Box addresses only get USPS options) and sorted by cost:
+
+```typescript
+if (isPoBox) {
+  filteredRates = ratesResponse.rates.filter((rate) =>
+    rate.carrier.toUpperCase().includes('USPS')
+  )
+}
+const sortedRates = [...filteredRates].sort((a, b) => a.rate - b.rate)
+```
+</Step>
+
+<Step>
+### Fallback to Estimates
+
+If the API fails or returns no rates, the system falls back to estimate-based rates to never block checkout:
+
+```typescript
+catch (error) {
+  console.error('[Shipping Calculator] Error:', error)
+  return calculateEstimateRates(input, freeShippingThreshold, true)
+}
+```
+</Step>
+</Steps>
+
+## Shipping Rate Configuration
+
+Default rates are defined in `lib/shipping-calculator.ts`:
+
+```typescript
+const SHIPPING_RATES = {
+  FREE_SHIPPING_THRESHOLD: 50,
+
+  FLAT_RATE: {
+    cost: 6.99,
+    estimatedDays: '3-5 business days',
+  },
+
+  WEIGHT_BASED: {
+    baseRate: 4.99,
+    perPound: 0.50,
+    estimatedDays: '3-5 business days',
+  },
+
+  EXPRESS: {
+    cost: 14.99,
+    estimatedDays: '1-2 business days',
+  },
+
+  INTERNATIONAL: {
+    cost: 24.99,
+    estimatedDays: '7-14 business days',
+  },
+
+  STATE_MULTIPLIERS: {
+    AK: 1.5, // Alaska
+    HI: 1.5, // Hawaii
+    PR: 2.0, // Puerto Rico
+  },
+}
+```
+
+## Configuring Free Shipping Threshold
+
+The free shipping threshold is stored in the `ShippingSettings` table and can be updated via the admin panel at `/admin/settings`:
+
+```typescript
+// The system reads from the database first, falls back to default
+async function getFreeShippingThreshold(): Promise<number> {
+  const settings = await prisma.shippingSettings.findUnique({
+    where: { singleton: 'singleton' },
+    select: { freeShippingThreshold: true },
+  })
+
+  if (settings?.freeShippingThreshold) {
+    return parseFloat(settings.freeShippingThreshold.toString())
+  }
+
+  return SHIPPING_RATES.FREE_SHIPPING_THRESHOLD // default: $50
+}
+```
+
+## Origin Address Configuration
+
+Set the shipping origin via environment variables:
+
+```bash
+SHIPPING_ORIGIN_ADDRESS="123 Main St"
+SHIPPING_ORIGIN_CITY="San Francisco"
+SHIPPING_ORIGIN_STATE="CA"
+SHIPPING_ORIGIN_ZIP="94111"
+SHIPPING_API_KEY="..."  # Carrier API key
+```
+
+## PO Box Detection
+
+The system automatically detects PO Box addresses and restricts shipping options to USPS-only:
+
+```typescript
+function isPOBox(address: string | undefined): boolean {
+  const patterns = [
+    /\bP\s*O\s+BOX\b/,
+    /\bPOST\s+OFFICE\s+BOX\b/,
+    /^\s*BOX\s+\d+/,
+  ]
+  return patterns.some(p => p.test(address.toUpperCase()))
+}
+```
+
+## Address Validation
+
+Use the built-in validation before submitting shipping requests:
+
+```typescript
+import { validateShippingAddress } from '@/lib/shipping-calculator'
+
+const result = validateShippingAddress({
+  address1: '123 Main St',
+  city: 'San Francisco',
+  state: 'CA',
+  postalCode: '94111',
+  country: 'US',
+})
+
+if (!result.valid) {
+  console.error(result.errors)
+  // ["State must be a 2-letter code (e.g., CA, NY)"]
+}
+```
+
+## Frontend Shipping Estimates
+
+For real-time shipping previews, use the lightweight estimate function:
+
+```typescript
+import { getShippingEstimate } from '@/lib/shipping-calculator'
+
+const estimate = await getShippingEstimate({
+  subtotal: 35.00,
+  state: 'CA',
+  country: 'US',
+})
+// Returns: 6.99 (or 0 if over free shipping threshold)
+```
+
+## Parcel Dimensions
+
+The system calculates parcel dimensions from order items:
+
+- **Weight**: Sum of all item weights (defaults to 1 lb per item), converted to ounces
+- **Length/Width**: Maximum dimensions across items
+- **Height**: Sum of heights, capped at 24 inches
+
+<Callout type="info" title="Weight Defaults">
+If a product has no weight set in the database, the calculator defaults to 1 pound per item. Set accurate weights in the product editor for better rate accuracy.
+</Callout>
+
+## Key Files
+
+<Files>
+  <Folder name="lib" defaultOpen>
+    <File name="shipping-calculator.ts" />
+    <File name="shipping-api.ts" />
+    <File name="shipping-carriers.ts" />
+  </Folder>
+</Files>

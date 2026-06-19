@@ -1,0 +1,90 @@
+---
+title: Google Places
+description: Google Places API integration for location search, photos, and business details
+---
+
+
+# Google Places Integration
+
+The Google Places API is used to find retail locations by name and address, fetch business photos, and retrieve company logos. The integration supports both the new Places API (v1) and the legacy Places API as a fallback.
+
+## Architecture
+
+The Places helper functions live in `lib/google-places.ts`. They are used during location data imports and enrichment to match database records with Google Places data and fetch high-quality photos.
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `GOOGLE_PLACES_API_KEY` | Server-side Places API key | Recommended |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Falls back to this if server key not set | Alternative |
+
+## Core Functions
+
+### `findPlaceByNameAddress()`
+
+Searches for a business by name and address. Tries the v1 Text Search API first, falls back to the legacy Find Place API:
+
+```ts
+const result = await findPlaceByNameAddress({
+  businessName: 'Kroger',
+  address: '123 Main St',
+  city: 'Columbus',
+  state: 'OH',
+})
+// Returns: { place, photos: string[] }
+```
+
+**v1 API request:**
+- Endpoint: `places.googleapis.com/v1/places:searchText`
+- Fields: `places.id, places.displayName, places.formattedAddress, places.location, places.photos, places.types`
+- Location bias: 50km radius centered on the state
+
+**Legacy API fallback:**
+- Endpoint: `maps.googleapis.com/maps/api/place/findplacefromtext/json`
+- Fields: `place_id, name, formatted_address, photos`
+
+### `buildPlacesPhotoUrl()`
+
+Constructs a photo URL from either the new API photo name or a legacy photo reference:
+
+```ts
+// New API format (contains 'places/')
+`${PLACES_API_BASE}/${photoReference}/media?key=${API_KEY}&maxWidthPx=${maxWidth}`
+
+// Legacy format
+`${LEGACY_PLACES_API_BASE}/place/photo?photoreference=${photoReference}&key=${API_KEY}&maxwidth=${maxWidth}`
+```
+
+### `getBestPhotoUrlForPlace()`
+
+Selects the best photo from a place's photo array:
+- Filters out photos without dimensions
+- Prefers horizontal orientation (wider aspect ratio)
+- Caps width at 1200px to avoid oversized images
+- Returns null if no suitable photos exist
+
+### `getCompanyLogoFromWebsite()`
+
+Attempts to find a company logo from a website URL:
+1. Tries Clearbit logo API first (higher quality): `logo.clearbit.com/{domain}`
+2. Falls back to Google favicon API: `google.com/s2/favicons?sz=256&domain={domain}`
+3. Validates each URL with a HEAD request before returning
+
+## Retry Logic
+
+All API calls use `fetchWithRetry()` with exponential backoff:
+- 3 retry attempts
+- Backoff: 1s, 2s, 4s
+- Retries on HTTP 429 (rate limit) and 5xx (server errors)
+- Non-retryable errors return immediately
+
+A 100ms delay is added between place search results to respect rate limits.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/google-places.ts` | Places API helper functions |
+| `app/api/places/` | Places API route handler |
+| `lib/server/google-data.ts` | Server-side Places data fetcher (reviews) |

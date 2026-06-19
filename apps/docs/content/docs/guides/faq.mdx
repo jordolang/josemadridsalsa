@@ -1,0 +1,167 @@
+---
+title: FAQ
+description: Frequently asked questions about the Jose Madrid Salsa platform
+---
+
+# Frequently Asked Questions
+
+<PageInlineTOC>Jump to a question</PageInlineTOC>
+
+## General
+
+### What tech stack does the platform use?
+
+Jose Madrid Salsa is built with Next.js 16 (App Router), React 19, TypeScript 5, Prisma 6 with PostgreSQL, Tailwind CSS 4, and Stripe for payments. See [Development Setup](/docs/guides/development-setup) for the complete stack breakdown.
+
+### How do I access the admin panel?
+
+Navigate to `/admin` in your browser. You need a user account with the ADMIN, DEVELOPER, or STAFF role. The admin layout checks access via `canAccessAdmin()` from `lib/rbac.ts`.
+
+### How do I create the first admin user?
+
+Run `npm run create-admin` and follow the prompts. Alternatively, insert directly via Prisma with the `ADMIN` role.
+
+## Products
+
+### What heat levels are supported?
+
+The `HeatLevel` enum supports: `MILD`, `MEDIUM`, `HOT`, and `EXTRA_HOT`.
+
+### Can I bulk import products?
+
+Yes. Use the CSV import scripts:
+
+```bash
+npm run products:transform    # Transform CSV format
+npm run products:test-import  # Test before importing
+```
+
+### How do product variants work?
+
+Each product can have multiple `ProductVariant` records with a `type` (e.g., "size", "flavor") and optional price override. If a variant has a `price` set, it overrides the base product price.
+
+## Orders
+
+### What is the order number format?
+
+Order numbers follow `JMS-YYYYMMDD-XXXXXXXX` where the suffix is generated from `crypto.randomUUID()` for collision resistance.
+
+### How is tax calculated?
+
+Tax is calculated via the Stripe Tax API based on the shipping address and product tax code. Wholesale accounts with approved resale numbers are automatically tax-exempt. See [Tax Configuration](/docs/guides/taxes).
+
+### When does free shipping apply?
+
+Orders over the configurable threshold (default: $50) qualify for free shipping. The threshold is stored in the `ShippingSettings` database table and can be changed in the admin panel.
+
+## Authentication
+
+### What authentication providers are supported?
+
+The platform uses NextAuth.js with credentials-based authentication (email + bcrypt password). The auth configuration in `lib/auth.ts` also includes provider configurations for Google, GitHub, Facebook, and Apple, though credentials is the primary method.
+
+### How long do sessions last?
+
+JWT sessions expire after 30 days by default, configurable in `authOptions.session.maxAge`.
+
+### How do I reset a user's password?
+
+Users can request a password reset via `/auth/reset-password`. The system sends a tokenized link via Resend email. The token expires in 1 hour.
+
+## Permissions
+
+### What permissions does the STAFF role have?
+
+STAFF can read/write orders, read/write products, view users, manage content, view analytics, and handle messaging. They cannot manage settings, financials, or API keys. See [User Management](/docs/guides/user-management) for the full list.
+
+### What happens if permission tables are missing?
+
+The RBAC system falls back to a default permission map defined in `lib/permissions-data.ts`. This means admins always retain access even before the permission seed runs.
+
+## Payments
+
+### What payment processors are supported?
+
+Stripe is the primary payment processor. The platform also has configurations for PayPal and Square.
+
+### How do webhooks work?
+
+Stripe webhooks hit `/api/webhooks/stripe` and update order payment status. The webhook secret (`STRIPE_WEBHOOK_SECRET`) verifies the signature.
+
+## Email
+
+### What email service is used?
+
+The platform uses [Resend](https://resend.com) for transactional email delivery via the `resend` npm package.
+
+### What happens when RESEND_API_KEY is missing?
+
+All email operations are silently skipped with a console warning. No errors are thrown. This allows development without an email service.
+
+### How do I test emails locally?
+
+Set up a Resend account (free tier available), get an API key, and set `RESEND_API_KEY` in `.env.local`. You can also use Resend's test mode.
+
+## Database
+
+### How does the Prisma client handle missing DATABASE_URL?
+
+The client in `lib/prisma.ts` uses lazy initialization. If `DATABASE_URL` is not set at build time, it creates a basic client that logs warnings. The client tries fallback URLs (`PRISMA_DATABASE_URL`, `POSTGRES_URL`) before giving up.
+
+### How do I reset the database?
+
+```bash
+npm run db:reset  # WARNING: destroys all data
+```
+
+For a less destructive option, drop specific tables via Prisma Studio.
+
+### How do I access Prisma Studio?
+
+```bash
+npm run db:studio
+```
+
+Opens at `http://localhost:5555`.
+
+## Mobile App
+
+### What framework does the mobile app use?
+
+The mobile app is built with Expo and React Native, using Expo Router for navigation. See [Mobile Setup](/docs/guides/mobile-setup).
+
+### Does the mobile app share code with the web app?
+
+The mobile app is in the `mobile/` directory with its own `package.json`. It communicates with the same backend API but does not share React components with the web frontend.
+
+## Deployment
+
+### How do I deploy to production?
+
+The platform deploys to Vercel. The build command is:
+
+```bash
+prisma migrate deploy && prisma generate && tsx prisma/seed.permissions.ts && next build
+```
+
+### What environment variables do I need in production?
+
+At minimum: `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `MASTER_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, and `STRIPE_WEBHOOK_SECRET`.
+
+## Development
+
+### How do I run tests?
+
+```bash
+npm test          # Vitest unit tests
+npm run lint      # ESLint
+npm run type-check # TypeScript
+```
+
+### What is the path alias?
+
+`@/` maps to the project root. So `@/lib/prisma` resolves to `./lib/prisma.ts`.
+
+### How do I add a new API route?
+
+Create a `route.ts` file in the appropriate `app/api/` directory. Use Zod for input validation and `withRateLimit` for rate limiting. See [Adding Features](/docs/guides/adding-features).

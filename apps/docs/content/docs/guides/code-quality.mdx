@@ -1,0 +1,308 @@
+---
+title: Code Quality
+description: Code style, linting, testing, and quality practices for the Jose Madrid Salsa platform
+---
+
+# Code Quality
+
+This guide covers the coding standards, linting configuration, testing framework, and quality practices used in the Jose Madrid Salsa platform.
+
+## Linting
+
+### ESLint Configuration
+
+The project uses ESLint with the `next/core-web-vitals` preset:
+
+```javascript
+// eslint.config.mjs
+import { FlatCompat } from '@eslint/eslintrc'
+
+const config = [
+  { ignores: ['node_modules/**', '.next/**'] },
+  ...compat.extends('next/core-web-vitals'),
+  {
+    rules: {
+      'react/no-unescaped-entities': 'off',
+    },
+  },
+]
+```
+
+Run linting:
+
+```bash
+npm run lint
+```
+
+### Lint-Staged
+
+On commit, lint-staged automatically formats and lints changed files:
+
+```json
+{
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write"],
+    "*.{json,md,yml,yaml}": ["prettier --write"]
+  }
+}
+```
+
+## TypeScript
+
+### Type Checking
+
+Run type checking separately from the build:
+
+```bash
+npm run type-check  # tsc --noEmit
+```
+
+### Path Aliases
+
+The project uses `@/` as the root alias:
+
+```typescript
+import { prisma } from '@/lib/prisma'    // not ../../lib/prisma
+import { Button } from '@/components/ui/button'
+```
+
+### Strict Types
+
+Key patterns used throughout the codebase:
+
+<Tabs items={['Type Exports', 'Zod Inference', 'Error Narrowing']}>
+<Tab value="Type Exports">
+```typescript
+// Export types from validation schemas
+export type CreateOrder = z.infer<typeof CreateOrderSchema>
+export type OrderQuery = z.infer<typeof OrderQuerySchema>
+export type ShippingAddress = z.infer<typeof ShippingAddressSchema>
+```
+</Tab>
+<Tab value="Zod Inference">
+```typescript
+import { z } from 'zod'
+
+const ProductSchema = z.object({
+  name: z.string().min(1),
+  price: z.number().positive(),
+  heatLevel: z.enum(['MILD', 'MEDIUM', 'HOT', 'EXTRA_HOT']),
+})
+
+type Product = z.infer<typeof ProductSchema>
+```
+</Tab>
+<Tab value="Error Narrowing">
+```typescript
+// Always narrow unknown errors safely
+catch (error: unknown) {
+  if (error instanceof Error) {
+    console.error('Details:', error.message)
+  }
+  // Never assume error shape
+}
+```
+</Tab>
+</Tabs>
+
+## Testing
+
+### Vitest Configuration
+
+The project uses Vitest with React Testing Library:
+
+```typescript
+// vitest.config.ts
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./vitest-setup.ts'],
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html', 'json-summary'],
+      thresholds: {
+        lines: 60,
+        functions: 60,
+        branches: 60,
+        statements: 60,
+      },
+    },
+  },
+  resolve: {
+    alias: { '@': path.resolve(__dirname, './') },
+  },
+})
+```
+
+### Running Tests
+
+```bash
+npm test              # Run all tests
+npx vitest --ui       # Interactive test UI
+npx vitest --coverage # With coverage report
+```
+
+### Writing Tests
+
+Tests live in the `tests/` directory:
+
+```typescript
+// tests/lib/shipping-calculator.test.ts
+import { describe, it, expect } from 'vitest'
+import { validateShippingAddress } from '@/lib/shipping-calculator'
+
+describe('validateShippingAddress', () => {
+  it('accepts a valid US address', () => {
+    const result = validateShippingAddress({
+      address1: '123 Main St',
+      city: 'San Francisco',
+      state: 'CA',
+      postalCode: '94111',
+      country: 'US',
+    })
+    expect(result.valid).toBe(true)
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('rejects missing city', () => {
+    const result = validateShippingAddress({
+      address1: '123 Main St',
+      city: '',
+      state: 'CA',
+      postalCode: '94111',
+      country: 'US',
+    })
+    expect(result.valid).toBe(false)
+    expect(result.errors).toContain('City is required')
+  })
+})
+```
+
+### E2E Testing
+
+Playwright is configured for end-to-end tests:
+
+```typescript
+// playwright.config.ts is at project root
+```
+
+Run E2E tests:
+
+```bash
+npx playwright test
+npx playwright test --ui  # Interactive mode
+```
+
+## Code Organization
+
+### File Structure Conventions
+
+| Pattern | Convention |
+|---------|-----------|
+| Components | `components/{domain}/{ComponentName}.tsx` |
+| API Routes | `app/api/{resource}/route.ts` |
+| Lib modules | `lib/{module-name}.ts` |
+| Hooks | `hooks/use-{name}.ts` |
+| Types | `types/{domain}.ts` |
+| Validations | `lib/validations/{resource}.ts` |
+
+### Import Order
+
+Follow this import order:
+
+```typescript
+// 1. Node built-ins
+import { randomUUID } from 'node:crypto'
+
+// 2. External packages
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+
+// 3. Internal aliases
+import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/rbac'
+```
+
+## Error Handling Patterns
+
+### API Route Pattern
+
+```typescript
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const json = await request.json()
+    const parsed = Schema.safeParse(json)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid payload', details: parsed.error.flatten() },
+        { status: 400 }
+      )
+    }
+
+    // Business logic...
+
+    return NextResponse.json(result)
+  } catch (error) {
+    console.error('[API] Error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+```
+
+### Graceful Degradation Pattern
+
+Used throughout the platform for external services:
+
+```typescript
+// Tax calculator: falls back to zero tax
+// Shipping calculator: falls back to estimate rates
+// Email: silently skips if API key missing
+// Database: falls back to mock data for products
+```
+
+## Pre-Commit Hooks
+
+Husky runs pre-commit checks:
+
+```bash
+npm run pre-commit
+# Runs: lint-staged && npm run security:protect
+```
+
+This ensures:
+1. Code is formatted and linted
+2. No secrets are committed
+
+## Coverage Thresholds
+
+The project enforces minimum 60% coverage:
+
+```typescript
+thresholds: {
+  lines: 60,
+  functions: 60,
+  branches: 60,
+  statements: 60,
+}
+```
+
+## Quality Checklist
+
+- [ ] All API inputs validated with Zod
+- [ ] Error handling uses try/catch with narrowed `unknown` errors
+- [ ] No `any` types in application code (use `unknown` instead)
+- [ ] Tests exist for business logic
+- [ ] Lint passes without warnings
+- [ ] TypeScript compiles without errors
+- [ ] Pre-commit hooks are active
