@@ -64,6 +64,7 @@
   "author": "Jose Madrid Salsa",
   "license": "MIT",
   "dependencies": {
+    "@jose-madrid/shared-types": "*",
     "@amplitude/analytics-browser": "^2.33.1",
     "@amplitude/plugin-session-replay-browser": "^1.25.5",
     "@anthropic-ai/sdk": "^0.71.2",
