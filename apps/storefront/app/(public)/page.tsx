@@ -11,8 +11,7 @@ import { authOptions } from '@/lib/auth'
 import { LocationMapClient } from '@/components/store/location-map-client'
 import { getReviewsData, getCalendarEvents } from '@/lib/server/google-data'
 import { ActiveCampaignsGrid } from '@/components/fundraiser/active-campaigns-grid'
-import { HomeHero } from '@/components/store/home-hero'
-import { PersonalizedHero } from '@/components/store/personalized-hero'
+import { HeroWithFeatureFlag } from '@/components/growthbook/hero-with-feature-flag'
 import { FeaturedProductsSection } from '@/components/store/featured-products-section'
 import { FeaturedHeatIndexSection } from '@/components/store/featured-heat-index-section'
 
@@ -96,7 +95,7 @@ export default async function Home() {
     <ErrorBoundary>
       <main className="min-h-screen">
         {/* Hero — personalized for logged-in users, default for anonymous */}
-        {session ? <PersonalizedHero /> : <HomeHero />}
+        <HeroWithFeatureFlag hasSession={!!session} />
 
         {/* Featured Products — pulled from Prisma (isFeatured=true, inStock=true) */}
         <ErrorBoundary>
