@@ -40,7 +40,13 @@ export type AbandonedCartMetrics = {
 }
 
 export function toDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10)
+  // Use local date components so keys line up with the local-midnight
+  // day buckets below regardless of the server timezone.
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 export function formatDateLabel(date: Date): string {
@@ -51,7 +57,6 @@ export function formatDateLabel(date: Date): string {
 }
 
 const EMAIL_STAGE_LABELS: Record<number, string> = {
-  0: 'No email sent',
   1: '1 hour (Stage 1)',
   2: '24 hours (Stage 2)',
   3: '48 hours (Stage 3)',
@@ -73,7 +78,6 @@ export async function getAbandonedCartMetrics(range: AnalyticsRangeKey): Promise
 
   const [
     abandonedCarts,
-    recoveredCarts,
     emailStageGroups,
     recoveredOrders,
     topRecoveredProductsRaw,
@@ -85,17 +89,10 @@ export async function getAbandonedCartMetrics(range: AnalyticsRangeKey): Promise
       select: {
         id: true,
         createdAt: true,
-        recoveredAt: true,
         emailStage: true,
         emailSent: true,
       },
       orderBy: { createdAt: 'asc' },
-    }),
-    prisma.abandonedCart.count({
-      where: {
-        createdAt: createdAtRange,
-        recoveredAt: { not: null },
-      },
     }),
     prisma.abandonedCart.groupBy({
       by: ['emailStage'],
@@ -147,12 +144,27 @@ export async function getAbandonedCartMetrics(range: AnalyticsRangeKey): Promise
       : 0
 
   const totalAbandoned = abandonedCarts.length
-  const totalRecovered = recoveredCarts
+
+  // Count carts that converted into a paid order (attributed via
+  // abandonedCartId) rather than carts whose recovery link was merely
+  // clicked. recoveredAt is set on link-click before payment, so basing
+  // the recovery rate on it overstates recoveries.
+  const convertedCartIds = new Set(
+    (recoveredOrders as unknown as Array<{ abandonedCartId: string | null }>)
+      .map((order) => order.abandonedCartId)
+      .filter((id): id is string => Boolean(id))
+  )
+  const totalRecovered = convertedCartIds.size
   const recoveryRate = totalAbandoned === 0 ? 0 : (totalRecovered / totalAbandoned) * 100
 
   const attributedRevenue = recoveredOrders.reduce((sum, order) => sum + Number(order.total || 0), 0)
 
-  const emailsSent = emailStageGroups.reduce((sum, group) => sum + extractCount(group._count), 0)
+  // Each cart at stage N has received N emails in the sequence, so weight
+  // each group's count by its stage to count emails actually sent.
+  const emailsSent = emailStageGroups.reduce(
+    (sum, group) => sum + group.emailStage * extractCount(group._count),
+    0
+  )
 
   const emailsByStage: EmailStageCount[] = emailStageGroups.map((group) => ({
     stage: group.emailStage,
@@ -179,7 +191,7 @@ export async function getAbandonedCartMetrics(range: AnalyticsRangeKey): Promise
     const bucket = dayBuckets.get(key)
     if (bucket) {
       bucket.abandoned += 1
-      if (cart.recoveredAt) {
+      if (convertedCartIds.has(cart.id)) {
         bucket.recovered += 1
       }
     }

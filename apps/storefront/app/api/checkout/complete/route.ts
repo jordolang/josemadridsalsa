@@ -89,7 +89,11 @@ export async function POST(request: Request) {
     }
 
     if (order.paymentStatus === 'PAID') {
-      return NextResponse.json({ success: true })
+      const response = NextResponse.json({ success: true })
+      if (abandonedCartId) {
+        response.cookies.delete('abandonedCartId')
+      }
+      return response
     }
 
     if (!paymentConfirmation || paymentConfirmation.status !== 'SUCCEEDED') {
@@ -235,7 +239,14 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true })
+    // Clear the recovery attribution cookie now that this order is complete,
+    // so future unrelated orders from this browser aren't attributed to the
+    // same abandoned cart (the cookie otherwise lives for 30 days).
+    const response = NextResponse.json({ success: true })
+    if (abandonedCartId) {
+      response.cookies.delete('abandonedCartId')
+    }
+    return response
   } catch (error) {
     console.error('Checkout completion error:', error)
 
