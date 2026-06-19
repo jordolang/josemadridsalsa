@@ -1,0 +1,126 @@
+---
+title: Error Tracking
+description: Sentry integration for error monitoring and performance tracing
+---
+
+# Error Tracking
+
+José Madrid Salsa uses **Sentry** (`@sentry/nextjs`) for comprehensive error tracking across all Next.js runtimes.
+
+## Configuration Files
+
+Three configuration files initialize Sentry for each runtime:
+
+<Tabs items={['Client', 'Server', 'Edge']}>
+  <Tab value="Client">
+    ```ts title="sentry.client.config.ts"
+    import * as Sentry from "@sentry/nextjs";
+
+    Sentry.init({
+      dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+      tracesSampleRate: 0.1,
+      debug: false,
+      environment: process.env.VERCEL_ENV || "development",
+      enabled: process.env.NODE_ENV === "production",
+    });
+    ```
+  </Tab>
+  <Tab value="Server">
+    ```ts title="sentry.server.config.ts"
+    import * as Sentry from "@sentry/nextjs";
+
+    Sentry.init({
+      dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+      tracesSampleRate: 0.1,
+      debug: false,
+      environment: process.env.VERCEL_ENV || "development",
+      enabled: process.env.NODE_ENV === "production",
+    });
+    ```
+  </Tab>
+  <Tab value="Edge">
+    ```ts title="sentry.edge.config.ts"
+    import * as Sentry from "@sentry/nextjs";
+
+    Sentry.init({
+      dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+      tracesSampleRate: 0.1,
+      debug: false,
+      environment: process.env.VERCEL_ENV || "development",
+      enabled: process.env.NODE_ENV === "production",
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Next.js Integration
+
+Sentry wraps the Next.js config in `next.config.mjs`:
+
+```js title="next.config.mjs"
+import { withSentryConfig } from '@sentry/nextjs'
+
+const sentryWebpackPluginOptions = {
+  silent: true,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+}
+
+const sentryOptions = {
+  widenClientFileUpload: true,    // Better stack traces
+  disableLogger: true,            // Tree-shake logger for smaller bundle
+  hideSourceMaps: true,           // Don't expose source maps to clients
+  tunnelRoute: '/monitoring',     // Bypass ad-blockers
+  automaticVercelMonitors: true,  // Auto-instrument server components
+}
+
+export default withSentryConfig(nextConfig, sentryWebpackPluginOptions, sentryOptions)
+```
+
+## Key Features
+
+### Tunnel Route
+
+The `tunnelRoute: '/monitoring'` setting proxies Sentry requests through the application's own domain. This prevents ad-blockers from intercepting error reports, significantly improving capture rates.
+
+### Source Map Upload
+
+Source maps are uploaded to Sentry during build (`widenClientFileUpload: true`) but hidden from client bundles (`hideSourceMaps: true`). This gives readable stack traces in Sentry without exposing source code.
+
+### Automatic Vercel Monitors
+
+With `automaticVercelMonitors: true`, Sentry automatically instruments:
+- Server Components
+- API Routes
+- Server Actions
+- Edge Functions
+
+### Environment Tagging
+
+Errors are tagged with `VERCEL_ENV` (production, preview, or development), making it easy to filter in the Sentry dashboard.
+
+## Required Environment Variables
+
+```bash
+NEXT_PUBLIC_SENTRY_DSN="https://...@sentry.io/..."  # Public DSN (safe for client)
+SENTRY_AUTH_TOKEN="..."                               # Build-time source map upload
+SENTRY_ORG="josemadridsalsa"                         # Sentry organization slug
+SENTRY_PROJECT="javascript-nextjs"                    # Sentry project slug
+```
+
+<Callout type="warn" title="SENTRY_AUTH_TOKEN is build-time only">
+The auth token is used during `next build` to upload source maps. It is never included in the client bundle. Rotate it if compromised via the Sentry dashboard under **Settings > Auth Tokens**.
+</Callout>
+
+## Sampling Strategy
+
+The current `tracesSampleRate: 0.1` (10%) balances cost and visibility. Adjust based on traffic:
+
+| Monthly Page Views | Recommended Rate |
+|---|---|
+| < 10,000 | `1.0` (100%) |
+| 10,000 - 100,000 | `0.1` (10%) |
+| 100,000+ | `0.01` - `0.05` (1-5%) |
+
+Error events (exceptions) are always captured at 100% regardless of the trace sample rate.

@@ -1,0 +1,140 @@
+---
+title: Logging
+description: Logging and debugging in production on Vercel
+---
+
+# Logging
+
+Logging strategy for José Madrid Salsa in the Vercel serverless environment.
+
+## Log Levels by Environment
+
+The Prisma client configures logging based on the environment:
+
+```ts title="lib/prisma.ts"
+const logLevels = process.env.NODE_ENV === 'development'
+  ? ['query', 'error', 'warn']
+  : ['error']
+```
+
+| Environment | Prisma Logs | Application Logs |
+|---|---|---|
+| Development | `query`, `error`, `warn` | All `console.*` |
+| Production | `error` only | Errors + key lifecycle events |
+
+## Vercel Runtime Logs
+
+Vercel captures `console.log`, `console.error`, and `console.warn` output from serverless functions. Access logs from:
+
+1. **Vercel Dashboard** -- Project > Logs tab
+2. **Vercel CLI** -- `vercel logs <deployment-url>`
+
+<Callout type="warn" title="Log Retention">
+Vercel retains runtime logs for a limited period depending on your plan. For long-term log retention, forward logs to an external service via a Vercel Log Drain.
+</Callout>
+
+## Structured Log Patterns
+
+The codebase uses prefixed log messages for easy filtering:
+
+### Prisma Client
+
+```
+[Prisma] Creating client on first use
+[Prisma] Client initialized successfully with Accelerate
+[Prisma] DATABASE_URL not set, fell back to POSTGRES_URL
+[Prisma] Failed to initialize client: <error>
+```
+
+### Image Proxy
+
+```
+[image-proxy] Fetching image via Place ID: ChIJ...
+[image-proxy] Using cached photo URL for place: ChIJ...
+[image-proxy] Response status: 200
+[image-proxy] Rejected non-Google Places URL: ...
+```
+
+### General Pattern
+
+When adding new log statements, follow this convention:
+
+```ts
+// Good: Prefixed, structured, actionable
+console.log('[module-name] Operation description:', { key: value })
+console.error('[module-name] Error description:', error)
+
+// Avoid: Unprefixed, unstructured
+console.log('something happened')
+```
+
+## What Gets Logged in Production
+
+### Always Logged
+- Database connection failures and fallback attempts
+- Sentry initialization status
+- API route errors (via try/catch blocks)
+- Image proxy operations (request/response status)
+
+### Never Logged
+- Prisma queries (disabled in production)
+- User data or PII
+- Full request/response bodies
+- API keys (redacted in log output)
+
+## Debugging Production Issues
+
+<Steps>
+  <Step>
+    ### Check Vercel Logs
+
+    ```bash
+    vercel logs https://www.josemadrid.net --follow
+    ```
+
+    Or use the Vercel Dashboard Logs tab with filters for function name, status code, or time range.
+  </Step>
+  <Step>
+    ### Check Sentry
+
+    Sentry captures all unhandled exceptions with full stack traces. Filter by:
+    - `environment:production`
+    - Error type or message
+    - Affected URL or API route
+  </Step>
+  <Step>
+    ### Run Database Diagnostics
+
+    ```bash
+    # Pull production env locally
+    vercel env pull .env.vercel.production --environment=production --yes
+
+    # Run the diagnostic script
+    node scripts/diagnose-db-connection.js
+    ```
+  </Step>
+  <Step>
+    ### Reproduce Locally
+
+    ```bash
+    # Use production env vars with local dev server
+    cp .env.vercel.production .env.local
+    npm run dev
+    ```
+  </Step>
+</Steps>
+
+## Log Redaction
+
+The image proxy demonstrates proper log redaction for sensitive values:
+
+```ts
+console.log('[image-proxy] Rewritten URL:', rewrittenUrl.replace(/key=[^&]+/, 'key=***'))
+console.log('[image-proxy] API Key present:', !!GOOGLE_PLACES_API_KEY)
+```
+
+Always redact:
+- API keys and tokens
+- Database connection strings
+- User passwords or session tokens
+- Email addresses in bulk operations

@@ -1,0 +1,134 @@
+---
+title: Performance Optimization
+description: Image optimization, bundle management, caching, and performance tuning
+---
+
+# Performance Optimization
+
+Performance configuration for José Madrid Salsa covering images, bundles, and server-side optimization.
+
+## Image Optimization
+
+Next.js Image Optimization is configured with modern formats and responsive sizing:
+
+```js title="next.config.mjs"
+images: {
+  formats: ['image/avif', 'image/webp'],
+  deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+  imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  minimumCacheTTL: 60,
+  remotePatterns: [
+    { hostname: 'cdn11.bigcommerce.com' },
+    { hostname: 'images.unsplash.com' },
+    { hostname: 'maps.googleapis.com' },
+    { hostname: 'lh3.googleusercontent.com' },
+    { hostname: 'places.googleapis.com' },
+    { hostname: 'logo.clearbit.com' },
+    { hostname: 'www.google.com', pathname: '/s2/favicons/**' },
+    { hostname: 'utfs.io' },
+  ],
+}
+```
+
+### Format Priority
+
+Images are served as **AVIF** first (best compression), falling back to **WebP**, then the original format. AVIF provides ~50% smaller files than JPEG at comparable quality.
+
+### Remote Patterns
+
+Only images from whitelisted hostnames are optimized. This includes:
+- **BigCommerce CDN** -- Product images
+- **Unsplash** -- Editorial/marketing images
+- **Google Maps/Places** -- Location photos
+- **UploadThing** -- User-uploaded content
+
+## Bundle Size Management
+
+### Serverless Function Traces
+
+The `outputFileTracingExcludes` setting keeps functions under Vercel's 250 MB limit:
+
+```js
+outputFileTracingExcludes: {
+  '*': [
+    'data/**', 'docs/**', 'scripts/**', 'tests/**',
+    'public/Fundraiser Forms/**', 'public/samples/**',
+    'prisma/dev.db', 'prisma/seed*.ts', 'prisma/seeds/**',
+  ],
+}
+```
+
+Prisma Client is explicitly included for routes that need database access:
+
+```js
+outputFileTracingIncludes: {
+  '/api/**/*': [
+    './node_modules/.prisma/client/**/*',
+    './node_modules/@prisma/client/**/*',
+  ],
+}
+```
+
+### External Packages
+
+Server-heavy packages are marked as external to avoid bundling:
+
+```js
+serverExternalPackages: ['@react-email/render'],
+transpilePackages: ['@react-pdf/renderer'],
+```
+
+### Sentry Tree-Shaking
+
+Sentry logger statements are automatically removed from production bundles:
+
+```js
+disableLogger: true,  // in Sentry options
+```
+
+## Turbopack
+
+Development uses Turbopack for fast HMR:
+
+```json
+"dev": "next dev --turbo"
+```
+
+The `turbopack.root` is explicitly set to the project root to handle module resolution correctly:
+
+```js title="next.config.mjs"
+turbopack: {
+  root: projectRoot,
+}
+```
+
+## Build ID
+
+Each build generates a unique ID to force cache invalidation:
+
+```js
+generateBuildId: async () => {
+  return `build-${Date.now()}`
+}
+```
+
+This prevents stale cached pages from being served after a deployment.
+
+## Script Loading
+
+All third-party scripts (GTM, GA4) use `strategy="afterInteractive"` to avoid blocking the critical rendering path:
+
+```tsx
+<Script id="gtm-script" strategy="afterInteractive" ... />
+```
+
+## Performance Checklist
+
+- [ ] All product images use `next/image` with responsive `sizes`
+- [ ] Remote image patterns cover all external sources
+- [ ] Serverless functions stay under 250 MB unzipped
+- [ ] Prisma Client is included in API route traces
+- [ ] Development uses Turbopack (`--turbo`)
+- [ ] Third-party scripts load after interactive
+- [ ] Sentry logger tree-shaking is enabled
+- [ ] Build IDs are unique per deployment

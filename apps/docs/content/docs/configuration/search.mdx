@@ -1,0 +1,134 @@
+---
+title: Search Configuration
+description: Product and content search using PostgreSQL full-text capabilities
+---
+
+
+# Search Configuration
+
+Jose Madrid Salsa uses PostgreSQL-based search through Prisma queries rather than an external search service like Algolia or Meilisearch.
+
+## Search Architecture
+
+Product search is implemented directly against the PostgreSQL database using Prisma's `contains` and field filtering. The `Product` model includes a `searchKeywords` field for enhanced discoverability:
+
+```graphql title="prisma/schema.prisma"
+model Product {
+  name           String
+  slug           String    @unique
+  description    String?
+  ingredients    String[]
+  searchKeywords String[]   // Additional search terms
+  // ...
+}
+```
+
+## Search Fields
+
+When searching for products, the application typically queries across:
+
+| Field | Type | Search Method |
+|---|---|---|
+| `name` | String | Case-insensitive contains |
+| `description` | String | Case-insensitive contains |
+| `ingredients` | String[] | Array contains |
+| `searchKeywords` | String[] | Array contains |
+| `sku` | String | Exact match |
+| `slug` | String | Contains |
+
+## Category and Tag Filtering
+
+Products can be filtered through relationships:
+
+```graphql
+model Category {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+  // products Product[]
+}
+
+model ProductTag {
+  productId String
+  tagId     String
+  @@unique([productId, tagId])
+}
+```
+
+## Heat Level Filtering
+
+Salsa-specific filtering by heat level:
+
+```graphql
+enum HeatLevel {
+  MILD
+  MEDIUM
+  HOT
+  EXTRA_HOT
+}
+```
+
+## Stock Status Filtering
+
+Products include stock status with a dedicated index:
+
+```graphql
+model Product {
+  stockStatus StockStatus @default(IN_STOCK)
+  @@index([stockStatus])
+}
+
+enum StockStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+  DISCONTINUED
+}
+```
+
+## Recipe Search
+
+Recipes are searchable by title, category, and tags:
+
+```graphql
+model Recipe {
+  title       String @unique
+  slug        String @unique
+  description String
+  category    String
+  difficulty  String
+  ingredients String[]
+}
+```
+
+## Location Search
+
+The retail locations feature uses Google Places API for geographic search, configured via:
+
+```bash title=".env.local"
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your-key"
+GOOGLE_PLACES_API_KEY="your-key"
+```
+
+<Callout type="info">
+The application does not use a dedicated search engine. All search queries go directly to PostgreSQL via Prisma. For high-traffic scenarios, consider adding PostgreSQL full-text search indexes or an external search service.
+</Callout>
+
+## Database Indexes
+
+Key indexes that support search performance:
+
+```graphql
+model Product {
+  @@index([stockStatus])
+}
+
+model Category {
+  // name and slug are @unique (implicitly indexed)
+}
+
+model Tag {
+  slug String @unique
+  @@index([type])
+}
+```

@@ -1,0 +1,84 @@
+---
+title: Order History
+description: Customer-facing order history view with status tracking and order details
+---
+
+# Order History
+
+Authenticated customers can view their complete order history at `/account/orders`, with recent orders also shown on the account dashboard.
+
+## Architecture
+
+<Files>
+  <Folder name="app/(public)/account" defaultOpen>
+    <File name="page.tsx" />
+    <Folder name="orders">
+      <File name="page.tsx" />
+    </Folder>
+    <Folder name="settings">
+      <File name="page.tsx" />
+    </Folder>
+  </Folder>
+  <Folder name="components/account">
+    <File name="OrderCard.tsx" />
+  </Folder>
+</Files>
+
+## Account Dashboard
+
+The account page (`/account`) is a server component that:
+
+1. Validates the session via `getServerSession(authOptions)`
+2. Redirects unauthenticated users to `/auth/signin?callbackUrl=/account`
+3. Fetches the 5 most recent orders for the current user
+4. Renders each order with the `OrderCard` component
+
+```tsx
+const recentOrders = await prisma.order.findMany({
+  where: { userId },
+  orderBy: { createdAt: 'desc' },
+  take: 5,
+  select: {
+    id: true,
+    orderNumber: true,
+    status: true,
+    createdAt: true,
+    total: true,
+  },
+})
+```
+
+The dashboard also shows quick links to **View Orders**, **Account Settings**, and the **Fundraising Portal** (for users with the `FUNDRAISER` role).
+
+## Order History Page
+
+The `/account/orders` page lists all orders for the authenticated user, sorted newest first. Each order row displays:
+
+| Field | Format |
+| --- | --- |
+| Order number | `JMS-YYYYMMDD-XXXX` (falls back to last 6 chars of ID) |
+| Date | Formatted `createdAt` timestamp |
+| Status | Color-coded badge |
+| Total | USD currency format |
+
+### Status Badges
+
+Orders display color-coded status badges:
+
+| Status | Color |
+| --- | --- |
+| `PENDING` | Yellow |
+| `CONFIRMED` | Blue |
+| `PROCESSING` | Indigo |
+| `SHIPPED` | Purple |
+| `DELIVERED` | Green |
+| `CANCELLED` | Red |
+| `REFUNDED` | Gray |
+
+## Authentication
+
+Both the dashboard and order history pages require authentication. Unauthenticated access triggers a redirect to the sign-in page with a `callbackUrl` parameter so the user returns to their original destination after login.
+
+<Callout type="info">
+Order history is only available to authenticated users. Guest orders must be looked up separately by order number and email.
+</Callout>

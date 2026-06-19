@@ -1,0 +1,142 @@
+---
+title: Gift Certificates
+description: Gift certificate purchase, redemption, balance checking, themed designs, and CSV import
+---
+
+# Gift Certificates
+
+Customers can purchase digital gift certificates with themed designs, which recipients redeem as payment during checkout. The admin panel supports creating, managing, and bulk-importing certificates.
+
+## Architecture
+
+<Files>
+  <Folder name="app/(public)/gift-certificates" defaultOpen>
+    <File name="layout.tsx" />
+    <Folder name="purchase">
+      <File name="page.tsx" />
+    </Folder>
+    <Folder name="balance">
+      <File name="page.tsx" />
+    </Folder>
+    <Folder name="success">
+      <File name="page.tsx" />
+    </Folder>
+  </Folder>
+  <Folder name="app/api/gift-certificates" defaultOpen>
+    <Folder name="purchase">
+      <File name="route.ts" />
+    </Folder>
+    <Folder name="balance">
+      <File name="route.ts" />
+    </Folder>
+    <Folder name="complete">
+      <File name="route.ts" />
+    </Folder>
+  </Folder>
+  <Folder name="app/admin/gift-certificates">
+    <File name="page.tsx" />
+    <Folder name="[id]">
+      <File name="page.tsx" />
+    </Folder>
+  </Folder>
+  <Folder name="lib/gift-certificates">
+    <File name="import.ts" />
+  </Folder>
+</Files>
+
+## Purchase Flow
+
+<Steps>
+### Customer Fills Form
+
+The purchase page collects:
+- Purchaser name and email
+- Recipient name and email
+- Dollar amount (minimum $1)
+- Theme selection
+- Optional personal message
+- Non-refundable agreement checkbox
+
+All fields are validated with Zod:
+
+```ts
+const GiftCertificatePurchaseSchema = z.object({
+  purchaserName: z.string().min(1),
+  purchaserEmail: z.string().email(),
+  recipientName: z.string().min(1),
+  recipientEmail: z.string().email(),
+  amount: z.number().positive().min(1),
+  theme: z.enum(['BIRTHDAY', 'BOY_CELEBRATION', 'CHRISTMAS', 'GENERAL', 'GIRL']),
+  message: z.string().optional(),
+  nonRefundableAgreement: z.boolean().refine((val) => val === true),
+})
+```
+
+### Order Creation
+
+An order is created with order number format `JMS-GC-YYYYMMDD-XXXX`, zero shipping and tax, and the certificate amount as the total.
+
+### Payment
+
+Payment is processed through Stripe (the gift certificate amount becomes the PaymentIntent amount).
+
+### Certificate Generation
+
+On successful payment, a `GiftCertificate` record is created with a unique code in the format `JMS-GC-XXXX-XXXX` (alphanumeric, excluding ambiguous characters like O/0/I/1).
+
+### Delivery
+
+The certificate code and details are emailed to the recipient.
+</Steps>
+
+## Certificate Code Generation
+
+Codes use a collision-resistant format with retry loop:
+
+```ts
+async function generateGiftCertificateCode(): Promise<string> {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let exists = true
+  while (exists) {
+    const part1 = Array.from({ length: 4 }, () =>
+      chars[Math.floor(Math.random() * chars.length)]
+    ).join('')
+    const part2 = Array.from({ length: 4 }, () =>
+      chars[Math.floor(Math.random() * chars.length)]
+    ).join('')
+    code = `JMS-GC-${part1}-${part2}`
+    exists = !!(await prisma.giftCertificate.findUnique({ where: { code } }))
+  }
+  return code
+}
+```
+
+## Themes
+
+| Theme | Description |
+| --- | --- |
+| `GENERAL` | Default design |
+| `BIRTHDAY` | Birthday celebration |
+| `CHRISTMAS` | Holiday themed |
+| `BOY_CELEBRATION` | Boy-themed celebration |
+| `GIRL` | Girl-themed celebration |
+
+## Balance Check
+
+The `/gift-certificates/balance` page allows anyone to check remaining balance by entering their certificate code.
+
+## Checkout Redemption
+
+During checkout, customers can apply a gift certificate code via `POST /api/checkout/apply-gift-certificate`. The endpoint:
+1. Looks up the certificate by code
+2. Validates it is active and has remaining balance
+3. Deducts the applied amount from the certificate balance
+4. Reduces the order total accordingly
+
+## CSV Import
+
+The `importGiftCertificates()` function in `lib/gift-certificates/import.ts` supports bulk import from CSV with Zod validation per row. Failed rows are reported with row numbers and error messages without blocking successful imports.
+
+<Callout type="warn">
+Gift certificates are explicitly non-refundable. The purchase form requires agreement to this policy before proceeding.
+</Callout>

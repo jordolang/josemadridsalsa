@@ -1,0 +1,146 @@
+---
+title: Inventory Management
+description: Inventory tracking with reservations, alerts, transaction history, serializable transactions, and email notifications
+---
+
+# Inventory Management
+
+The inventory system tracks stock levels, handles reservations during checkout, creates transaction audit trails, and sends email alerts for low-stock and out-of-stock conditions. All critical operations use Serializable transaction isolation to prevent race conditions.
+
+## Architecture
+
+<Files>
+  <Folder name="lib" defaultOpen>
+    <File name="inventory-manager.ts" />
+  </Folder>
+  <Folder name="app/admin/inventory">
+    <File name="page.tsx" />
+    <File name="client-page.tsx" />
+  </Folder>
+</Files>
+
+## Stock Status
+
+Products have a computed `stockStatus` field:
+
+| Status | Condition |
+| --- | --- |
+| `IN_STOCK` | Available > lowStockThreshold |
+| `LOW_STOCK` | 0 < Available ≤ lowStockThreshold |
+| `OUT_OF_STOCK` | Available ≤ 0 |
+
+Where `Available = inventory - stockReserved`.
+
+## Core Operations
+
+### Adjust Inventory
+
+`adjustInventory()` changes a product's stock level and creates a transaction record:
+
+```ts
+interface InventoryAdjustment {
+  productId: string
+  quantity: number    // Positive to add, negative to remove
+  type: InventoryTransactionType
+  reason?: string
+  notes?: string
+  orderId?: string
+  userId?: string
+}
+```
+
+The function validates that:
+- New stock is not negative
+- New stock does not drop below reserved stock
+
+### Reserve Inventory
+
+`reserveInventory()` holds stock during checkout using **Serializable** transaction isolation:
+
+```ts
+export async function reserveInventory(reservation: InventoryReservation) {
+  return withSerializableRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        // Validate available stock
+        // Increment stockReserved
+        // Create RESERVATION transaction
+      },
+      { isolationLevel: 'Serializable' }
+    )
+  )
+}
+```
+
+### Reserve Multiple Products
+
+`reserveMultipleProducts()` atomically reserves stock for all items in a cart within a single Serializable transaction. If any product has insufficient stock, the entire reservation rolls back:
+
+<Steps>
+### Validate All
+
+Check every product has sufficient available stock.
+
+### Reserve All
+
+Only if all validations pass, reserve inventory for every product atomically.
+</Steps>
+
+### Release Inventory
+
+`releaseInventory()` reverses a reservation (e.g., order cancellation) by decrementing `stockReserved`.
+
+### Deduct Reserved Inventory
+
+`deductReservedInventory()` is called when an order is completed. It decreases both `stockReserved` and actual `inventory`, creating a `SALE` transaction record.
+
+## Serialization Conflict Retry
+
+All reservation operations retry up to 3 times on Prisma error code `P2034` (serialization conflict):
+
+```ts
+async function withSerializableRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error: any) {
+      if (error?.code === 'P2034' && attempt < maxRetries - 1) continue
+      throw error
+    }
+  }
+}
+```
+
+## Inventory Alerts
+
+The `checkAndUpdateAlerts()` function runs after every stock change:
+
+| Condition | Action |
+| --- | --- |
+| Stock normal (> threshold) | Resolve all active alerts |
+| Out of stock (= 0) | Create `OUT_OF_STOCK` alert if none exists |
+| Low stock (0 < stock ≤ threshold) | Create `LOW_STOCK` alert if none exists |
+
+### Email Notifications
+
+New alerts trigger email notifications to addresses in `INVENTORY_ALERT_EMAILS`:
+
+```ts
+const adminEmails = process.env.INVENTORY_ALERT_EMAILS?.split(',') || []
+```
+
+Emails include product name, SKU, current stock level, and a link to the product in the admin panel.
+
+## Transaction History
+
+Every stock change creates an `InventoryTransaction` record with:
+- Transaction type (`SALE`, `RESERVATION`, `RELEASE`, `ADJUSTMENT`, etc.)
+- Previous and new stock levels
+- Reason and notes
+- Associated order ID and user ID
+
+The `getInventoryHistory()` function retrieves the last 50 transactions for a product.
+
+<Callout type="warn">
+Alert syncing is non-critical -- if it fails after a successful stock change, the error is logged but the stock adjustment is not rolled back. The stock change has already been committed.
+</Callout>

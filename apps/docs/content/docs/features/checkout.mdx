@@ -1,0 +1,127 @@
+---
+title: Checkout Flow
+description: Multi-step checkout with address collection, shipping calculation, tax estimation, discount codes, gift certificates, and multi-provider payment
+---
+
+# Checkout
+
+The checkout page is a single client component that handles address collection, real-time shipping and tax calculation, discount code validation, gift certificate application, and payment processing across multiple providers.
+
+## Architecture
+
+<Files>
+  <Folder name="app/(public)/checkout" defaultOpen>
+    <File name="page.tsx" />
+    <File name="layout.tsx" />
+    <Folder name="success">
+      <File name="page.tsx" />
+    </Folder>
+    <Folder name="cancel">
+      <File name="page.tsx" />
+    </Folder>
+  </Folder>
+  <Folder name="app/api/checkout" defaultOpen>
+    <File name="route.ts" />
+    <Folder name="create-session"><File name="route.ts" /></Folder>
+    <Folder name="complete"><File name="route.ts" /></Folder>
+    <Folder name="calculate-shipping"><File name="route.ts" /></Folder>
+    <Folder name="calculate-tax"><File name="route.ts" /></Folder>
+    <Folder name="validate-discount"><File name="route.ts" /></Folder>
+    <Folder name="apply-gift-certificate"><File name="route.ts" /></Folder>
+    <Folder name="retry-payment"><File name="route.ts" /></Folder>
+    <Folder name="paypal"><File name="route.ts" /></Folder>
+    <Folder name="square"><File name="route.ts" /></Folder>
+  </Folder>
+  <Folder name="components/checkout" defaultOpen>
+    <File name="PaymentMethodSelector.tsx" />
+    <File name="PayPalProvider.tsx" />
+    <File name="PayPalButton.tsx" />
+    <File name="VenmoButton.tsx" />
+    <File name="CashAppButton.tsx" />
+  </Folder>
+</Files>
+
+## Checkout Flow
+
+<Steps>
+### Cart Review
+
+The checkout page reads items from the Zustand cart store. If the cart is empty, the user is redirected to the products page.
+
+### Customer Information
+
+The form collects:
+- First name, last name, email, phone
+- Shipping address (line1, line2, city, state, postal code)
+- Order notes (optional)
+
+### Shipping Calculation
+
+When the address fields are complete, the page calls `POST /api/checkout/calculate-shipping` which invokes `calculateShipping()` from `lib/shipping-calculator.ts`. The API returns multiple shipping options sorted by cost. The user selects their preferred option.
+
+### Tax Calculation
+
+After shipping is determined, the page calls `POST /api/checkout/calculate-tax` which invokes `calculateTax()` from `lib/tax-calculator.ts` via the Stripe Tax API. Tax is calculated based on the shipping address jurisdiction.
+
+### Discount Code (Optional)
+
+Users can enter a discount code, validated via `POST /api/checkout/validate-discount`. Supported types: `PERCENTAGE`, `FIXED_AMOUNT`, and `FREE_SHIPPING`.
+
+### Gift Certificate (Optional)
+
+Users can apply a gift certificate code via `POST /api/checkout/apply-gift-certificate`, which deducts from the certificate balance.
+
+### Payment
+
+The user selects a payment method from the `PaymentMethodSelector` component. Providers are lazy-loaded to minimize bundle size:
+
+| Method | Provider | Bundle Strategy |
+| --- | --- | --- |
+| Card, Apple Pay, Google Pay | Stripe | Always loaded (default) |
+| PayPal | PayPal | `dynamic()` import, SSR disabled |
+| Venmo | PayPal | `dynamic()` import, SSR disabled |
+| Cash App | Square | `dynamic()` import, SSR disabled |
+
+### Order Creation and Completion
+
+On submit, the page calls `POST /api/checkout/create-session` to create the order and payment intent, then `POST /api/checkout/complete` to finalize after payment confirmation.
+</Steps>
+
+## Order Completion
+
+The `/api/checkout/complete` endpoint:
+
+1. Validates the order ID and payment intent ID with Zod
+2. Confirms payment status with the provider via `getProvider('STRIPE').confirmPayment()`
+3. In a single Prisma transaction:
+   - Updates order status to `CONFIRMED` and payment status to `PAID`
+   - Deducts reserved inventory for each line item via `deductReservedInventoryInTx()`
+4. Fires inventory alerts for any low-stock products
+5. Returns the completed order for the success page redirect
+
+<Callout type="warn">
+If payment confirmation fails, reserved inventory is released via `releaseInventory()` to prevent stock being permanently locked.
+</Callout>
+
+## Payment Method Selector
+
+The `PaymentMethodSelector` component renders available payment methods as selectable cards. The default methods are:
+
+```ts
+const DEFAULT_METHODS = [
+  { id: 'card', label: 'Credit / Debit Card', icon: CreditCard },
+  { id: 'apple_pay', label: 'Apple Pay', icon: Apple },
+  { id: 'google_pay', label: 'Google Pay', icon: Smartphone },
+  { id: 'paypal', label: 'PayPal', icon: PaypalIcon },
+  { id: 'venmo', label: 'Venmo', icon: VenmoIcon },
+  { id: 'cashapp', label: 'Cash App', icon: CashAppIcon },
+]
+```
+
+## Stripe Elements
+
+For card payments, the checkout page wraps the form in Stripe's `<Elements>` provider and uses:
+
+- `<CardElement>` for card number, expiry, and CVC
+- `<ExpressCheckoutElement>` for Apple Pay and Google Pay
+- `<LinkAuthenticationElement>` for Stripe Link autofill

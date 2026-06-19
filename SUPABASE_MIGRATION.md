@@ -1,0 +1,129 @@
+# Database Migration: Neon → Supabase
+
+This is the one-time runbook for moving the production database off Neon and onto
+Supabase (PostgreSQL). The app stays on **Prisma + NextAuth** exactly as-is — only
+the database host changes.
+
+## Why this works without an app rewrite
+
+Neon and Supabase are both PostgreSQL hosts, and the app talks to PostgreSQL through
+Prisma. So the migration is: copy the data to Supabase, then point `DATABASE_URL` at
+Supabase. No query code, no auth code, and no schema code changes.
+
+> Note: `apps/storefront/lib/supabase/*` (browser/server/middleware clients) are
+> leftover scaffolding from an earlier "Supabase Auth" experiment. Nothing imports
+> them and they are **not** part of this migration. They can be deleted separately.
+
+## Target project
+
+- Supabase project: **jose-madrid-salsa**
+- Project ref: `tgmugnrixujmgshvfsac`
+- Region: `us-east-1`  → pooler host `aws-0-us-east-1.pooler.supabase.com`
+- Postgres engine: 17
+
+> These connection values (project ref, pooler host, role names) are specific to
+> **this** project. Don't copy them into other environments — pull each environment's
+> own values from its Supabase Dashboard.
+
+The schema already exists in this project, but **every table has 0 rows** and Prisma's
+`_prisma_migrations` history table is missing. The full dump-and-restore below fixes
+both: it makes Supabase an exact replica of Neon (schema + data + migration history),
+so `prisma migrate deploy` on the next Vercel build is a no-op instead of trying to
+recreate tables that already exist (the failure mode that blocked the previous attempt).
+
+## Prerequisites (run locally — NOT in the cloud session)
+
+The cloud agent environment blocks outbound Postgres connections, so the data copy must
+run from a machine that can reach both databases (your laptop is fine). Using the
+Docker `postgres:17` client avoids any client/server version mismatch.
+
+Set these two variables in your shell:
+
+```bash
+# Current Neon URL — copy from Vercel → Settings → Environment Variables → DATABASE_URL
+export NEON_URL='postgresql://...neon.tech/...?sslmode=require'
+
+# Supabase SESSION pooler (port 5432). Password: Supabase Dashboard →
+# Project Settings → Database → (reset/copy the database password).
+export SUPABASE_URL='postgresql://postgres.tgmugnrixujmgshvfsac:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:5432/postgres'
+```
+
+## Step 1 — Dump everything from Neon
+
+```bash
+docker run --rm postgres:17 pg_dump "$NEON_URL" \
+  --no-owner --no-privileges --schema=public \
+  > neon_public.sql
+
+# sanity check: should be a large SQL file with CREATE TABLE + COPY/INSERT statements
+head -40 neon_public.sql
+wc -l neon_public.sql
+```
+
+## Step 2 — Empty the Supabase `public` schema (and restore Supabase's default grants)
+
+> ⚠️ **This permanently wipes everything in the `public` schema of the target database.**
+> Only run it against the dedicated `jose-madrid-salsa` project confirmed above (which is
+> empty and exists solely for this migration) — never against a shared or in-use project.
+
+```bash
+docker run --rm -i postgres:17 psql "$SUPABASE_URL" <<'SQL'
+DROP SCHEMA IF EXISTS public CASCADE;
+CREATE SCHEMA public;
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL   ON SCHEMA public TO postgres, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES    TO postgres, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO postgres, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO postgres, anon, authenticated, service_role;
+SQL
+```
+
+## Step 3 — Restore into Supabase
+
+```bash
+docker run --rm -i postgres:17 psql "$SUPABASE_URL" -v ON_ERROR_STOP=1 < neon_public.sql
+```
+
+If it stops on an extension error (e.g. `CREATE EXTENSION`), note which extension and
+enable it in the Supabase Dashboard (Database → Extensions), then re-run Step 2 + 3.
+
+## Step 4 — Verify the copy
+
+```bash
+docker run --rm -i postgres:17 psql "$SUPABASE_URL" <<'SQL'
+SELECT count(*) AS prisma_migrations FROM _prisma_migrations;
+SELECT
+  (SELECT count(*) FROM users)    AS users,
+  (SELECT count(*) FROM orders)   AS orders,
+  (SELECT count(*) FROM products) AS products;
+SQL
+```
+
+Row counts should match Neon. `_prisma_migrations` (reported as `prisma_migrations` in the query above) should be non-zero.
+
+## Step 5 — Repoint Vercel to Supabase
+
+In Vercel → Project → Settings → Environment Variables (Production), set:
+
+| Variable | Value |
+| --- | --- |
+| `DATABASE_URL` | `postgresql://postgres.tgmugnrixujmgshvfsac:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1` |
+| `DATABASE_URL_UNPOOLED` | `postgresql://postgres.tgmugnrixujmgshvfsac:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:5432/postgres` |
+
+- `DATABASE_URL` uses the **transaction pooler (6543)** with `pgbouncer=true` — correct for serverless runtime.
+- `DATABASE_URL_UNPOOLED` uses the **session pooler (5432)** — used by Prisma `directUrl` for migrations.
+- **Remove or repoint** any leftover Neon-pointing `POSTGRES_URL` or `PRISMA_DATABASE_URL`
+  vars in Vercel — `lib/prisma.ts` falls back to those if `DATABASE_URL` is ever empty.
+
+Then redeploy. The build runs `prisma migrate deploy` (no-op against the restored DB),
+`prisma generate`, and the idempotent permissions seed.
+
+## Step 6 — After cutover
+
+- Smoke-test the live site: log in, view products, place a test order, load the admin.
+- Once confirmed, you can delete the Neon project so you stop paying / hitting its limits.
+- **Security follow-up:** the restored tables have RLS disabled (matching Neon). The app
+  is safe because it connects via Prisma using the pooler role (not the public anon key),
+  but if you ever expose the Supabase Data API, enable RLS or turn the Data API off.
+- **Perf follow-up:** `apps/storefront/app/(public)/layout.tsx` forces `dynamic` to dodge
+  the old Neon quota. With Supabase's higher limits you may revert that to restore caching.

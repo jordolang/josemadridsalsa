@@ -1,0 +1,159 @@
+---
+title: Next.js Configuration
+description: next.config.mjs settings for images, Sentry, Turbopack, and serverless optimization
+---
+
+
+# Next.js Configuration
+
+The Next.js configuration lives in `next.config.mjs` and is wrapped with `withSentryConfig` for error monitoring integration.
+
+## Build ID
+
+Each build gets a unique timestamp-based ID to force cache invalidation on Vercel:
+
+```js title="next.config.mjs"
+generateBuildId: async () => {
+  return `build-${Date.now()}`
+}
+```
+
+## Image Optimization
+
+The image configuration enables modern formats and defines allowed remote image sources:
+
+```js title="next.config.mjs"
+images: {
+  formats: ['image/avif', 'image/webp'],
+  deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+  imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  minimumCacheTTL: 60,
+  remotePatterns: [
+    { hostname: 'cdn11.bigcommerce.com' },
+    { hostname: 'images.unsplash.com' },
+    { hostname: 'maps.googleapis.com' },
+    { hostname: 'lh3.googleusercontent.com' },
+    { hostname: 'places.googleapis.com' },
+    { hostname: 'logo.clearbit.com' },
+    { hostname: 'www.google.com', pathname: '/s2/favicons/**' },
+    { hostname: 'utfs.io' },  // UploadThing CDN
+  ],
+}
+```
+
+<Callout type="info">
+All remote patterns use HTTPS only. The `utfs.io` domain is used by UploadThing for file uploads.
+</Callout>
+
+## Server External Packages
+
+React Email's render function runs on the server and needs to be treated as an external package:
+
+```js title="next.config.mjs"
+serverExternalPackages: ['@react-email/render'],
+```
+
+## Transpile Packages
+
+React PDF is transpiled to avoid Turbopack module resolution issues:
+
+```js title="next.config.mjs"
+transpilePackages: ['@react-pdf/renderer'],
+```
+
+## Server Actions
+
+Server actions are restricted to allowed origins:
+
+```js title="next.config.mjs"
+experimental: {
+  serverActions: {
+    allowedOrigins: ['localhost:3000'],
+  },
+},
+```
+
+## Serverless Function Optimization
+
+### Output File Tracing Excludes
+
+Large directories are excluded from serverless function bundles to stay under Vercel's 250 MB limit:
+
+```js title="next.config.mjs"
+outputFileTracingExcludes: {
+  '*': [
+    'data/**',
+    'docs/**',
+    'scripts/**',
+    'tests/**',
+    'public/Fundraiser Forms/**',
+    'public/samples/**',
+    'prisma/dev.db',
+    'prisma/seed*.ts',
+    'prisma/seeds/**',
+    'AGENTS.md',
+  ],
+},
+```
+
+### Output File Tracing Includes
+
+Critical files are explicitly included in serverless bundles:
+
+```js title="next.config.mjs"
+outputFileTracingIncludes: {
+  '/api/**/*': [
+    './node_modules/.prisma/client/**/*',
+    './node_modules/@prisma/client/**/*',
+  ],
+  '/find-us/**/*': ['./public/find-us-locally/**/*'],
+  '/recipes/**/*': ['./node_modules/.prisma/client/**/*', ...],
+  '/products/**/*': ['./node_modules/.prisma/client/**/*', ...],
+},
+```
+
+<Callout type="warn">
+Do **not** exclude `public/images/**` -- it prevents Next.js Image Optimization from working.
+</Callout>
+
+## Turbopack
+
+Turbopack is configured to resolve packages from the actual repo root:
+
+```js title="next.config.mjs"
+turbopack: {
+  root: projectRoot,
+},
+```
+
+The `projectRoot` is derived from the module URL:
+
+```js
+const projectRoot = path.dirname(fileURLToPath(import.meta.url))
+```
+
+## Sentry Integration
+
+The config is wrapped with `withSentryConfig` for error monitoring:
+
+```js title="next.config.mjs"
+export default withSentryConfig(nextConfig, sentryWebpackPluginOptions, sentryOptions)
+```
+
+Key Sentry options:
+
+| Option | Value | Purpose |
+|---|---|---|
+| `widenClientFileUpload` | `true` | Upload more source maps for better stack traces |
+| `disableLogger` | `true` | Tree-shake Sentry logger to reduce bundle size |
+| `hideSourceMaps` | `true` | Hide source maps from client bundles |
+| `tunnelRoute` | `/monitoring` | Route Sentry requests through Next.js to bypass ad-blockers |
+| `automaticVercelMonitors` | `true` | Auto-instrument server components on Vercel |
+
+### Required Sentry Environment Variables
+
+```bash
+SENTRY_ORG="your-org"
+SENTRY_PROJECT="your-project"
+SENTRY_AUTH_TOKEN="sntrys_..."
+```

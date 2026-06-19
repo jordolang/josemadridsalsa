@@ -1,0 +1,562 @@
+---
+title: Checkout Flow
+description: Complete checkout and order management process, including cart management, payment processing, webhook handling, and order confirmation
+---
+
+# Checkout Flow
+
+This guide covers the complete checkout and order management process, from cart initialization through order confirmation and webhook handling.
+
+## Overview
+
+The checkout flow consists of several key stages:
+1. **Cart Management** — Add/remove items, apply discounts, calculate totals
+2. **Checkout Page** — Display order summary, collect shipping address
+3. **Checkout API** — Process order and create payment intent
+4. **Payment Processing** — Confirm payment with Stripe/PayPal
+5. **Order Completion** — Mark order as paid, create shipment
+6. **Webhook Handling** — Update order status based on payment events
+7. **Order Confirmation** — Send confirmation email
+8. **Abandoned Cart Recovery** — Send reminder emails for unpaid orders
+
+## Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      CHECKOUT FLOW DIAGRAM                      │
+└─────────────────────────────────────────────────────────────────┘
+
+User Added to Cart
+       ↓
+┌──────────────────────┐
+│ Cart Page            │
+│ - View items         │
+│ - Adjust quantities  │
+│ - Apply discounts    │
+└──────────┬───────────┘
+           ↓
+    [Proceed to Checkout]
+           ↓
+┌──────────────────────┐
+│ Checkout Page        │
+│ - Shipping address   │
+│ - Billing address    │
+│ - Shipping method    │
+│ - Order summary      │
+└──────────┬───────────┘
+           ↓
+    [Submit Order]
+           ↓
+┌──────────────────────┐
+│ POST /api/checkout   │
+│ - Validate address   │
+│ - Calculate tax      │
+│ - Calculate shipping │
+│ - Create order       │
+│ - Create payment     │
+│   intent             │
+└──────────┬───────────┘
+           ↓
+  ┌─────────────────────┐
+  │ Stripe/PayPal       │
+  │ - Authenticate user │
+  │ - Confirm payment   │
+  │ - Return status     │
+  └────────┬────────────┘
+           ↓
+    ┌──────────────────┐
+    │ Payment          │
+    │ Succeeded?       │
+    └────┬─────────┬───┘
+         │         │
+        YES       NO
+         │         │
+         ↓         ↓
+    ┌────────┐  ┌──────────┐
+    │ Paid   │  │ Failed   │
+    │ Order  │  │ Order    │
+    └───┬────┘  └────┬─────┘
+        │            │
+        ↓            ↓
+   [Webhook]   [Webhook]
+   Updates     Updates
+   Order       Order
+        │            │
+        ↓            ↓
+   ┌──────────┐  ┌─────────┐
+   │ Shipment │  │ Remind  │
+   │ Created  │  │ Payment │
+   └────┬─────┘  └────┬────┘
+        │             │
+        ↓             ↓
+   [Confirmation]  [Reminder]
+   Email Sent      Email Sent
+```
+
+## Cart Management
+
+### Add Item to Cart
+
+**Client-side:**
+```typescript
+const handleAddToCart = (product: Product, quantity: number) => {
+  setCart(prev => {
+    const existing = prev.find(item => item.productId === product.id)
+    if (existing) {
+      return prev.map(item =>
+        item.productId === product.id
+          ? { ...item, quantity: item.quantity + quantity }
+          : item
+      )
+    }
+    return [...prev, { productId: product.id, quantity }]
+  })
+}
+```
+
+### Calculate Cart Totals
+
+**Server-side (in checkout API):**
+```typescript
+const calculateCartTotals = async (items: CartItem[]) => {
+  let subtotal = 0
+  const lineItems = []
+
+  for (const item of items) {
+    const product = await db.product.findUnique({
+      where: { id: item.productId }
+    })
+    const total = product.price * item.quantity
+    subtotal += total
+
+    lineItems.push({
+      price: product.stripeId,
+      quantity: item.quantity
+    })
+  }
+
+  return {
+    subtotal,
+    lineItems
+  }
+}
+```
+
+## Checkout Page
+
+The checkout page (`/checkout`) displays the order summary and collects required information.
+
+### Components
+
+- **OrderSummary** — Displays cart items, subtotal, tax, shipping, total
+- **ShippingForm** — Collects shipping address and method
+- **BillingForm** — Collects billing address (optional)
+- **PaymentMethod** — Displays payment options
+
+### Form Validation
+
+```typescript
+const schema = z.object({
+  firstName: z.string().min(1, 'First name required'),
+  lastName: z.string().min(1, 'Last name required'),
+  email: z.string().email('Invalid email'),
+  phone: z.string().min(10, 'Invalid phone number'),
+  address: z.string().min(5, 'Invalid address'),
+  city: z.string().min(2, 'Invalid city'),
+  state: z.string().min(2, 'Invalid state'),
+  postalCode: z.string().regex(/^\d{5}(-\d{4})?$/, 'Invalid postal code'),
+  country: z.string().default('US'),
+  shippingMethod: z.enum(['standard', 'express', 'overnight'])
+})
+```
+
+## Checkout API
+
+### Endpoint: POST /api/checkout
+
+**Request:**
+```typescript
+interface CheckoutRequest {
+  cartItems: CartItem[]
+  shippingAddress: Address
+  billingAddress?: Address
+  shippingMethod: 'standard' | 'express' | 'overnight'
+  couponCode?: string
+  email: string
+}
+```
+
+**Response:**
+```typescript
+interface CheckoutResponse {
+  orderId: string
+  clientSecret: string
+  total: number
+  tax: number
+  shipping: number
+}
+```
+
+### Implementation
+
+```typescript
+export async function POST(req: Request) {
+  const body = await req.json()
+
+  // Validate input
+  const validation = checkoutSchema.safeParse(body)
+  if (!validation.success) {
+    return Response.json(
+      { error: validation.error.flatten() },
+      { status: 400 }
+    )
+  }
+
+  const {
+    cartItems,
+    shippingAddress,
+    shippingMethod,
+    email
+  } = validation.data
+
+  try {
+    // Calculate totals
+    const { subtotal, lineItems } = await calculateCartTotals(cartItems)
+
+    // Calculate tax
+    const taxCalculation = await stripe.tax.calculations.create({
+      line_items: lineItems,
+      customer_details: {
+        address: {
+          country: shippingAddress.country,
+          postal_code: shippingAddress.postalCode,
+          state: shippingAddress.state
+        }
+      }
+    })
+
+    // Calculate shipping
+    const shippingCost = await calculateShipping(
+      shippingAddress,
+      shippingMethod
+    )
+
+    const total = subtotal + taxCalculation.tax_amount_exclusive + shippingCost
+
+    // Create order
+    const order = await db.order.create({
+      data: {
+        email,
+        subtotal,
+        tax: taxCalculation.tax_amount_exclusive,
+        shipping: shippingCost,
+        total,
+        status: 'pending_payment',
+        shippingAddress,
+        shippingMethod,
+        lineItems: {
+          create: cartItems.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity
+          }))
+        }
+      }
+    })
+
+    // Create Stripe payment intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(total * 100), // Convert to cents
+      currency: 'usd',
+      customer: email,
+      metadata: {
+        orderId: order.id
+      },
+      automatic_payment_methods: {
+        enabled: true
+      }
+    })
+
+    return Response.json({
+      orderId: order.id,
+      clientSecret: paymentIntent.client_secret,
+      total,
+      tax: taxCalculation.tax_amount_exclusive,
+      shipping: shippingCost
+    })
+  } catch (error) {
+    console.error('Checkout error:', error)
+    return Response.json(
+      { error: 'Checkout failed' },
+      { status: 500 }
+    )
+  }
+}
+```
+
+## Payment Processing
+
+### Client-side Payment Confirmation
+
+```typescript
+const handlePayment = async () => {
+  const { error } = await stripe.confirmCardPayment(clientSecret, {
+    payment_method: {
+      card: cardElement,
+      billing_details: {
+        name: formData.firstName + ' ' + formData.lastName,
+        email: formData.email
+      }
+    }
+  })
+
+  if (error) {
+    setError(error.message)
+    return
+  }
+
+  // Payment succeeded
+  router.push(`/order-confirmation?orderId=${orderId}`)
+}
+```
+
+### Payment Methods Supported
+
+| Method | Provider | Setup Required |
+|--------|----------|----------------|
+| Card (Visa, Mastercard, Amex) | Stripe | Stripe account |
+| Apple Pay | Stripe | Apple merchant ID |
+| Google Pay | Stripe | Google Pay merchant account |
+| PayPal | PayPal | PayPal business account |
+| Venmo | PayPal | PayPal SDK |
+| Cash App Pay | Square | Square account |
+
+## Order Completion
+
+### Mark Order as Paid
+
+When `payment_intent.succeeded` webhook is received:
+
+```typescript
+const order = await db.order.update({
+  where: { id: orderId },
+  data: {
+    status: 'paid',
+    paidAt: new Date(),
+    paymentIntentId: paymentIntentId
+  }
+})
+
+// Create shipment
+const shipment = await db.shipment.create({
+  data: {
+    orderId: order.id,
+    status: 'pending_fulfillment',
+    shippingMethod: order.shippingMethod
+  }
+})
+
+// Send confirmation email
+await sendConfirmationEmail(order)
+```
+
+## Webhook Handling
+
+### Webhook Endpoint: POST /api/webhooks/stripe
+
+```typescript
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+
+export async function POST(req: Request) {
+  const body = await req.text()
+  const sig = req.headers.get('stripe-signature')
+
+  let event: Stripe.Event
+
+  try {
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
+  } catch (error) {
+    return Response.json(
+      { error: 'Webhook signature verification failed' },
+      { status: 400 }
+    )
+  }
+
+  switch (event.type) {
+    case 'payment_intent.succeeded':
+      await handlePaymentIntentSucceeded(event.data.object)
+      break
+
+    case 'payment_intent.payment_failed':
+      await handlePaymentIntentFailed(event.data.object)
+      break
+
+    case 'charge.refunded':
+      await handleChargeRefunded(event.data.object)
+      break
+  }
+
+  return Response.json({ received: true })
+}
+```
+
+### Event Handlers
+
+**Payment Intent Succeeded:**
+```typescript
+const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.PaymentIntent) => {
+  const orderId = paymentIntent.metadata.orderId
+
+  await db.order.update({
+    where: { id: orderId },
+    data: {
+      status: 'paid',
+      paidAt: new Date()
+    }
+  })
+
+  // Create shipment
+  await db.shipment.create({
+    data: {
+      orderId,
+      status: 'pending_fulfillment'
+    }
+  })
+
+  // Send confirmation
+  const order = await db.order.findUnique({ where: { id: orderId } })
+  await sendConfirmationEmail(order)
+}
+```
+
+**Payment Intent Failed:**
+```typescript
+const handlePaymentIntentFailed = async (paymentIntent: Stripe.PaymentIntent) => {
+  const orderId = paymentIntent.metadata.orderId
+
+  await db.order.update({
+    where: { id: orderId },
+    data: {
+      status: 'payment_failed'
+    }
+  })
+
+  // Send retry email
+  const order = await db.order.findUnique({ where: { id: orderId } })
+  await sendPaymentFailedEmail(order)
+}
+```
+
+## Order Confirmation
+
+### Confirmation Email
+
+The confirmation email includes:
+- Order number
+- Order items (product name, quantity, price)
+- Shipping address
+- Total (subtotal, tax, shipping)
+- Estimated delivery date
+- Tracking link (once shipment is processed)
+
+**Template variables:**
+```typescript
+{
+  orderId: string
+  items: { name: string; quantity: number; price: number }[]
+  subtotal: number
+  tax: number
+  shipping: number
+  total: number
+  shippingAddress: Address
+  estimatedDelivery: Date
+  trackingUrl: string
+}
+```
+
+## Abandoned Cart Recovery
+
+### Send Reminder Email
+
+A cron job runs every 2 hours to find unpaid orders older than 1 hour:
+
+```typescript
+// api/cron/abandoned-cart
+export async function GET(req: Request) {
+  // Verify cron secret
+  const authHeader = req.headers.get('authorization')
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+
+  const unpaidOrders = await db.order.findMany({
+    where: {
+      status: 'pending_payment',
+      createdAt: { lt: oneHourAgo }
+    },
+    include: { lineItems: true }
+  })
+
+  for (const order of unpaidOrders) {
+    await sendAbandonedCartEmail(order)
+  }
+
+  return Response.json({ sent: unpaidOrders.length })
+}
+```
+
+### Scheduled in vercel.json
+
+```json
+{
+  "crons": [
+    {
+      "path": "/api/cron/abandoned-cart",
+      "schedule": "0 */2 * * *"
+    }
+  ]
+}
+```
+
+## Error Handling
+
+### Common Errors
+
+| Error | Cause | Resolution |
+|-------|-------|-----------|
+| `payment_intent_authentication_failure` | 3D Secure required | Retry with authentication |
+| `card_declined` | Card was declined | Try different card |
+| `rate_limit` | Too many requests | Retry with exponential backoff |
+| `api_connection_error` | Network issue | Retry with exponential backoff |
+
+### Retry Strategy
+
+```typescript
+const withRetry = async (fn: () => Promise<any>, maxRetries = 3) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn()
+    } catch (error) {
+      if (i === maxRetries - 1) throw error
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)))
+    }
+  }
+}
+
+// Usage
+await withRetry(() => stripe.paymentIntents.retrieve(intentId))
+```
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `app/checkout/page.tsx` | Checkout page component |
+| `app/api/checkout/route.ts` | Checkout API endpoint |
+| `app/api/webhooks/stripe/route.ts` | Stripe webhook handler |
+| `lib/stripe.ts` | Stripe client initialization |
+| `lib/shipping-calculator.ts` | Shipping cost calculation |
+| `emails/order-confirmation.tsx` | Confirmation email template |
+| `hooks/useCart.ts` | Cart state management |
+| `types/order.ts` | Order type definitions |

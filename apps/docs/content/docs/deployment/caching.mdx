@@ -1,0 +1,152 @@
+---
+title: Caching
+description: Vercel CDN caching, ISR, revalidation, and cache invalidation strategies
+---
+
+# Caching
+
+Caching configuration for Jose Madrid Salsa across the Vercel platform, Next.js, and application-level caches.
+
+## Vercel CDN Cache
+
+Vercel automatically caches static assets and pages at the edge. The cache behavior depends on the response headers and route type.
+
+### Static Pages
+
+Pages without dynamic data are pre-rendered at build time and served from the CDN indefinitely until the next deployment.
+
+### Dynamic Pages
+
+Pages with `revalidate` configured use Incremental Static Regeneration (ISR):
+
+```ts
+// Example from various API routes and pages
+export const revalidate = 3600 // Revalidate every hour
+```
+
+The project uses `revalidate` in multiple API routes and pages for data that changes infrequently (locations, forms, reviews).
+
+## Build Cache Invalidation
+
+Each build generates a unique build ID to force cache invalidation:
+
+```js title="next.config.mjs"
+generateBuildId: async () => {
+  return `build-${Date.now()}`
+}
+```
+
+This ensures that every deployment serves fresh content rather than stale cached pages from a previous build.
+
+## Image Caching
+
+### Next.js Image Optimization
+
+Optimized images are cached with a minimum TTL:
+
+```js title="next.config.mjs"
+images: {
+  minimumCacheTTL: 60,  // 60 seconds minimum
+}
+```
+
+### Image Proxy Cache
+
+The image proxy route (`/api/image-proxy`) sets explicit cache headers for Google Places photos:
+
+```ts
+headers: {
+  'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=3600',
+}
+```
+
+This caches proxied images for **24 hours** at both the CDN (`s-maxage`) and browser (`max-age`) levels, with a 1-hour stale-while-revalidate window.
+
+### In-Memory Photo Cache
+
+The image proxy also maintains a server-side in-memory cache for Place ID to photo URL mappings:
+
+```ts
+const placePhotoCache = new Map<string, { url: string; timestamp: number }>()
+const PHOTO_CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
+```
+
+<Callout type="warn" title="Serverless Memory">
+In-memory caches in serverless functions are per-instance and ephemeral. Each cold start creates a fresh cache. This cache reduces repeat API calls within a single function instance's lifetime but is not shared across instances.
+</Callout>
+
+## Prisma Accelerate Cache
+
+When Prisma Accelerate is enabled (via `prisma://` connection string), it provides query-level edge caching:
+
+- **Connection pooling** -- Reduces cold start latency
+- **Query caching** -- Frequently executed queries are cached at the edge
+- **Global distribution** -- Cache nodes close to users worldwide
+
+## Revalidation Patterns
+
+The project uses two revalidation approaches:
+
+### Time-Based Revalidation
+
+```ts
+// Page or route segment config
+export const revalidate = 3600 // 1 hour
+```
+
+Used for:
+- Location listings
+- Product catalogs
+- Google reviews
+- Form definitions
+
+### On-Demand Revalidation
+
+Server Actions and admin operations trigger revalidation when data changes:
+
+```ts
+import { revalidatePath, revalidateTag } from 'next/cache'
+
+// After updating a product
+revalidatePath('/products')
+
+// After updating locations
+revalidatePath('/find-us')
+```
+
+## Cache Debugging
+
+### Force Cache Bypass
+
+During development:
+
+```bash
+# Bypass cache with hard refresh
+Cmd+Shift+R (Mac) / Ctrl+Shift+R (Windows)
+```
+
+### Verify Cache Status
+
+Check the `x-vercel-cache` response header:
+
+| Value | Meaning |
+|---|---|
+| `HIT` | Served from CDN cache |
+| `MISS` | Not in cache, fetched from origin |
+| `STALE` | Served stale while revalidating |
+| `PRERENDER` | Pre-rendered at build time |
+
+```bash
+curl -I https://www.josemadrid.net/products | grep x-vercel-cache
+```
+
+## Cache Strategy Summary
+
+| Content Type | Cache Location | TTL | Invalidation |
+|---|---|---|---|
+| Static pages | Vercel CDN | Until redeployment | New build |
+| ISR pages | Vercel CDN | `revalidate` seconds | Time-based or on-demand |
+| Optimized images | Vercel CDN | 60s minimum | Automatic |
+| Proxied Google images | CDN + browser | 24 hours | TTL expiry |
+| Prisma queries | Accelerate edge | Configurable | Query-specific |
+| In-memory (photo URLs) | Function instance | 24 hours | Cold start |

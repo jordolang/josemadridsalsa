@@ -1,0 +1,128 @@
+---
+title: Shopping Cart
+description: Client-side shopping cart powered by Zustand with localStorage persistence, abandoned cart tracking, and quantity management
+---
+
+# Shopping Cart
+
+The cart system uses Zustand for client-side state management with localStorage persistence. Cart changes are debounced and tracked server-side for abandoned cart recovery.
+
+## Architecture
+
+<Files>
+  <Folder name="lib/store" defaultOpen>
+    <File name="cart.ts" />
+  </Folder>
+  <Folder name="components/store" defaultOpen>
+    <File name="cart-sidebar.tsx" />
+    <File name="cart-icon.tsx" />
+    <File name="add-to-cart-button.tsx" />
+  </Folder>
+  <Folder name="app/(public)/cart">
+    <File name="page.tsx" />
+  </Folder>
+  <Folder name="app/api/cart">
+    <File name="track/route.ts" />
+  </Folder>
+</Files>
+
+## Cart Store
+
+The cart store is defined in `lib/store/cart.ts` using Zustand with the `persist` middleware:
+
+```ts
+interface CartItem {
+  id: string
+  name: string
+  slug: string
+  price: number
+  image: string
+  quantity: number
+  sku: string
+  heatLevel: string
+  maxQuantity?: number  // Capped by product inventory
+}
+
+interface CartStore {
+  items: CartItem[]
+  isOpen: boolean
+  guestEmail?: string
+
+  addItem: (item: CartItem) => void
+  removeItem: (id: string) => void
+  updateQuantity: (id: string, quantity: number) => void
+  clearCart: () => void
+  openCart: () => void
+  closeCart: () => void
+  setGuestEmail: (email: string) => void
+
+  totalItems: () => number
+  totalPrice: () => number
+}
+```
+
+### Persistence
+
+The store persists `items` and `guestEmail` to `localStorage` under the key `cart-storage`. Only these fields are serialized (via `partialize`) -- UI state like `isOpen` resets on page load.
+
+```ts
+export const useCartStore = create<CartStore>()(
+  persist(cartStoreConfig, {
+    name: 'cart-storage',
+    storage: createJSONStorage(() => localStorage),
+    partialize: (state) => ({ items: state.items, guestEmail: state.guestEmail }),
+  })
+)
+```
+
+<Callout type="warn">
+The store checks `typeof window !== 'undefined'` before applying persistence to avoid SSR errors. On the server, a non-persisted store is created instead.
+</Callout>
+
+## Abandoned Cart Tracking
+
+Every cart mutation (add, remove, update quantity) triggers a debounced POST to `/api/cart/track` with a 2-second delay. This prevents excessive API calls during rapid quantity changes.
+
+```ts
+let trackingTimeout: NodeJS.Timeout | null = null
+
+async function trackCartChanges(items: CartItem[], guestEmail?: string) {
+  if (trackingTimeout) clearTimeout(trackingTimeout)
+  trackingTimeout = setTimeout(async () => {
+    await fetch('/api/cart/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items, guestEmail }),
+    })
+  }, 2000)
+}
+```
+
+The server-side tracking endpoint persists cart state for abandoned cart email recovery campaigns.
+
+## Add to Cart Button
+
+The `AddToCartButton` component (`components/store/add-to-cart-button.tsx`) supports three variants:
+
+| Variant | Usage |
+| --- | --- |
+| `default` | Text button with cart icon |
+| `icon` | Round icon-only button (used in hover overlays) |
+| `ghost` | Transparent background variant |
+
+The button automatically disables when `inventory <= 0` and caps quantity at `maxQuantity` (product inventory).
+
+## Cart Sidebar
+
+The `CartSidebar` component slides in from the right when `isOpen` is true. It shows:
+
+- Item list with images, heat level badges, SKU, and price
+- Quantity controls (plus/minus buttons)
+- Remove button per item
+- Subtotal calculation
+- Links to full cart page and checkout
+- Empty state with "Shop Salsas" CTA
+
+## Guest Email Capture
+
+The `setGuestEmail()` action stores a guest email for abandoned cart recovery. When set, subsequent cart tracking calls include the email, allowing the system to send recovery emails to unauthenticated users.

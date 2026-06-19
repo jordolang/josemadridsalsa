@@ -1,0 +1,132 @@
+---
+title: Environment Variables
+description: Complete reference of all environment variables used by Jose Madrid Salsa
+---
+
+
+# Environment Variables
+
+<PageInlineTOC>Jump to variable group</PageInlineTOC>
+
+Jose Madrid Salsa uses environment variables for all secrets, API keys, and runtime configuration. Variables prefixed with `NEXT_PUBLIC_` are exposed to the browser; all others are server-only.
+
+<Callout type="warn">
+Never commit `.env` files to version control. Use `.env.example` as a reference template and configure real values in Vercel or your local `.env.local` file.
+</Callout>
+
+## Database
+
+| Variable | Required | Description |
+|---|---|---|
+| `DATABASE_URL` | Yes | Primary PostgreSQL connection string (pooled). Falls back to `PRISMA_DATABASE_URL` then `POSTGRES_URL` if unset. |
+| `DATABASE_URL_UNPOOLED` | Recommended | Direct (non-pooled) connection for migrations. Used by Prisma `directUrl`. |
+| `PRISMA_DATABASE_URL` | No | Alias fallback for `DATABASE_URL`. |
+| `POSTGRES_URL` | No | Second fallback for `DATABASE_URL`. Vercel Postgres integration sets this automatically. |
+
+```bash title=".env.local"
+DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=..."
+DATABASE_URL_UNPOOLED="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/josemadridsalsa?sslmode=require"
+```
+
+## Authentication
+
+| Variable | Required | Description |
+|---|---|---|
+| `NEXTAUTH_URL` | Production | Canonical URL of the site. Auto-detected on Vercel in most cases. |
+| `NEXTAUTH_SECRET` | Yes | Secret used to sign JWT tokens. Generate with `openssl rand -base64 32`. |
+
+## OAuth Providers
+
+| Variable | Required | Description |
+|---|---|---|
+| `GOOGLE_CLIENT_ID` | For Google login | Google OAuth 2.0 client ID |
+| `GOOGLE_CLIENT_SECRET` | For Google login | Google OAuth 2.0 client secret |
+| `GITHUB_CLIENT_ID` | For GitHub login | GitHub OAuth App client ID |
+| `GITHUB_CLIENT_SECRET` | For GitHub login | GitHub OAuth App client secret |
+| `FACEBOOK_CLIENT_ID` | For Facebook login | Facebook App ID |
+| `FACEBOOK_CLIENT_SECRET` | For Facebook login | Facebook App secret |
+| `APPLE_CLIENT_ID` | For Apple login | Apple Services ID |
+| `APPLE_CLIENT_SECRET` | For Apple login | Apple client secret (JWT) |
+
+## Encryption
+
+| Variable | Required | Description |
+|---|---|---|
+| `MASTER_KEY` | Yes | 64-character hex string (32 bytes) for AES-256-GCM encryption of service keys. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. |
+| `ENCRYPTION_KEY` | Yes | Base64-encoded key for SMTP password encryption. Generate with `node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"`. |
+
+## Stripe Payments
+
+| Variable | Required | Description |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | Yes | Stripe secret key (`sk_test_...` or `sk_live_...`) |
+| `STRIPE_PUBLISHABLE_KEY` | Yes | Stripe publishable key for client-side (`pk_test_...`) |
+| `STRIPE_WEBHOOK_SECRET` | Yes | Webhook signing secret (`whsec_...`) |
+
+## Email (Resend)
+
+| Variable | Required | Description |
+|---|---|---|
+| `RESEND_API_KEY` | Yes | Resend API key (`re_...`) |
+| `FROM_EMAIL` | No | Default sender address. Defaults to `orders@josemadridsalsa.com`. |
+
+## Google Services
+
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Yes | Google Maps JavaScript API key (client-side) |
+| `GOOGLE_PLACES_API_KEY` | For reviews | Google Places API key (server-side) |
+| `NEXT_PUBLIC_GOOGLE_PLACE_ID` | No | Google Place ID for map accuracy |
+| `GOOGLE_PLACE_ID` | No | Server-side Google Place ID |
+| `GOOGLE_PLACE_NAME` | No | Business name fallback. Defaults to "Jose Madrid Salsa". |
+| `NEXT_PUBLIC_GOOGLE_STREETVIEW_PANO` | No | Specific Street View panorama ID |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | For calendar | Service account email |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | For calendar | Service account private key (include `\n` for newlines) |
+| `GOOGLE_CALENDAR_ID` | For schedule | Calendar ID for "Where is Jose" |
+
+## File Uploads
+
+| Variable | Required | Description |
+|---|---|---|
+| `UPLOADTHING_SECRET` | For uploads | UploadThing secret key |
+| `UPLOADTHING_APP_ID` | For uploads | UploadThing application ID |
+
+## Analytics
+
+| Variable | Required | Description |
+|---|---|---|
+| `GOOGLE_ANALYTICS_ID` | No | Google Analytics measurement ID (`G-XXXXXXXXXX`) |
+| `NEXT_PUBLIC_AMPLITUDE_API_KEY` | No | Amplitude analytics API key |
+
+## Shipping
+
+| Variable | Required | Description |
+|---|---|---|
+| `SHIPPING_PROVIDER` | No | Shipping rate provider: `easypost` or `shippo` |
+| `SHIPPING_API_KEY` | For rates | Shipping provider API key |
+| `SHIPPING_TEST_MODE` | No | Set to `"false"` for production |
+| `SHIPPING_ORIGIN_ADDRESS` | For rates | Origin street address |
+| `SHIPPING_ORIGIN_CITY` | For rates | Origin city |
+| `SHIPPING_ORIGIN_STATE` | For rates | Origin state (2-letter code) |
+| `SHIPPING_ORIGIN_ZIP` | For rates | Origin ZIP code |
+
+## Monitoring
+
+| Variable | Required | Description |
+|---|---|---|
+| `SENTRY_ORG` | For Sentry | Sentry organization slug |
+| `SENTRY_PROJECT` | For Sentry | Sentry project slug |
+| `SENTRY_AUTH_TOKEN` | For Sentry | Sentry auth token for source map uploads |
+
+## AI
+
+| Variable | Required | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | For AI chat | Anthropic API key for Claude |
+
+## Internal
+
+| Variable | Required | Description |
+|---|---|---|
+| `SERVICE_API_KEY` | No | Shared secret for internal service-to-service API calls |
+| `NEXT_PUBLIC_BASE_URL` | No | Public-facing base URL. Defaults to `https://josemadrid.net`. |

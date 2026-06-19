@@ -1,0 +1,103 @@
+---
+title: Monitoring
+description: Application monitoring with Sentry, Vercel Analytics, and Amplitude
+---
+
+# Monitoring
+
+José Madrid Salsa uses a multi-layered monitoring stack for error tracking, performance monitoring, and user analytics.
+
+## Monitoring Stack
+
+| Tool | Purpose | Scope |
+|---|---|---|
+| **Sentry** | Error tracking, performance traces | Server + Client + Edge |
+| **Vercel Analytics** | Web vitals, page performance | Client-side |
+| **Amplitude** | Product analytics, user behavior | Client-side |
+| **Google Analytics** | Traffic analytics, conversions | Client-side |
+| **Google Tag Manager** | Tag management, event routing | Client-side |
+
+## Sentry
+
+Sentry is configured across all three Next.js runtimes via `@sentry/nextjs`:
+
+- `sentry.client.config.ts` -- Browser errors and performance
+- `sentry.server.config.ts` -- Server-side errors (API routes, SSR)
+- `sentry.edge.config.ts` -- Edge runtime errors
+
+All three configs share the same structure:
+
+```ts
+Sentry.init({
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  tracesSampleRate: 0.1,  // 10% sampling
+  debug: false,
+  environment: process.env.VERCEL_ENV || 'development',
+  enabled: process.env.NODE_ENV === 'production',
+})
+```
+
+<Callout title="Cost Control">
+The 10% trace sample rate (`tracesSampleRate: 0.1`) keeps Sentry costs manageable while still capturing meaningful performance data. Adjust this based on traffic volume.
+</Callout>
+
+See [Error Tracking](/docs/deployment/error-tracking) for full Sentry integration details.
+
+## Vercel Analytics
+
+Vercel Analytics is included via `@vercel/analytics/react`:
+
+```tsx title="app/(public)/layout.tsx"
+import { Analytics } from '@vercel/analytics/react'
+
+// In the layout JSX:
+<Analytics />
+```
+
+This automatically tracks:
+- **Web Vitals** -- LCP, FID, CLS, TTFB, INP
+- **Page views** -- Route-level traffic
+- **Audiences** -- Geographic and device breakdown
+
+Data is available in the Vercel dashboard under the **Analytics** tab.
+
+## Amplitude
+
+Amplitude tracks product-level user behavior with session replay:
+
+```ts title="lib/analytics/amplitude.ts"
+amplitude.init(apiKey, {
+  defaultTracking: {
+    sessions: true,
+    pageViews: true,
+    formInteractions: true,
+    fileDownloads: true,
+  },
+})
+
+// Session replay plugin for visual debugging
+amplitude.add(sessionReplayPlugin())
+```
+
+Key capabilities:
+- **Auto-tracked events** -- Page views, sessions, form interactions, file downloads
+- **Session replay** -- Visual playback of user sessions
+- **Custom events** -- Via `trackEvent(name, properties)` utility
+- **User identification** -- Via `identifyUser(userId, properties)` utility
+
+See [Analytics](/docs/deployment/analytics) for implementation details.
+
+## Google Analytics + GTM
+
+Google Tag Manager (GTM) is loaded in the public layout with container ID `GTM-5KSQW4JJ`. GA4 runs alongside with a configurable measurement ID (default `G-HG4QV5GFKH`).
+
+The measurement ID is fetched server-side via `getPublicGoogleAnalyticsMeasurementId()`, allowing it to be changed without redeployment.
+
+## Health Checks
+
+Vercel automatically monitors:
+- **Function health** -- Error rates per serverless function
+- **Build status** -- Build success/failure notifications
+- **Deployment status** -- Automatic rollback on failed deployments
+
+For custom health monitoring, the API routes provide implicit health signals through Sentry error tracking.

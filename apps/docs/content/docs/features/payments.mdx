@@ -1,0 +1,123 @@
+---
+title: Payment Processing
+description: Multi-provider payment system with Stripe, PayPal, and Square adapters behind a unified provider interface
+---
+
+# Payment Processing
+
+The platform uses a provider-agnostic payment architecture. All payment operations (create, confirm, refund) go through a common `PaymentProviderAdapter` interface, with a registry that routes requests to the correct provider based on payment method type.
+
+## Architecture
+
+<Files>
+  <Folder name="lib/payments" defaultOpen>
+    <File name="index.ts" />
+    <File name="types.ts" />
+    <File name="registry.ts" />
+    <Folder name="providers" defaultOpen>
+      <File name="stripe.ts" />
+      <File name="paypal.ts" />
+      <File name="square.ts" />
+    </Folder>
+  </Folder>
+</Files>
+
+## Provider Registry
+
+The registry (`lib/payments/registry.ts`) maps payment method types to providers:
+
+```ts
+const METHOD_PROVIDER_MAP: Record<PaymentMethodType, PaymentProvider> = {
+  CARD: 'STRIPE',
+  ACH: 'STRIPE',
+  APPLE_PAY: 'STRIPE',
+  GOOGLE_PAY: 'STRIPE',
+  PAYPAL: 'PAYPAL',
+  SQUARE_TERMINAL: 'SQUARE',
+}
+```
+
+Providers are auto-registered on import based on available environment variables:
+
+```ts
+// Always available
+registerProvider(new StripeAdapter())
+
+// Conditional registration
+if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) {
+  registerProvider(new PayPalAdapter())
+}
+if (process.env.SQUARE_ACCESS_TOKEN) {
+  registerProvider(new SquareAdapter())
+}
+```
+
+## PaymentProviderAdapter Interface
+
+Every provider adapter implements this interface:
+
+```ts
+interface PaymentProviderAdapter {
+  readonly provider: PaymentProvider
+
+  createPayment(request: CreatePaymentRequest): Promise<PaymentResult>
+  confirmPayment(providerPaymentId: string): Promise<PaymentResult>
+  refund(request: RefundRequest): Promise<RefundResult>
+  createCustomer(email: string, name: string): Promise<CustomerResult>
+  listPaymentMethods(customerId: string): Promise<SavedPaymentMethod[]>
+  detachPaymentMethod(paymentMethodId: string): Promise<void>
+  verifyWebhookSignature(request: WebhookVerificationRequest): Promise<boolean>
+}
+```
+
+## Core Types
+
+### CreatePaymentRequest
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `amount` | `number` | Amount in cents (e.g., 4299 = $42.99) |
+| `currency` | `string` | ISO 4217 code (e.g., `usd`) |
+| `orderId` | `string` | Internal order CUID |
+| `orderNumber` | `string` | Human-readable (e.g., `JMS-20260331-1234`) |
+| `customerEmail` | `string` | For receipts |
+| `methodType` | `PaymentMethodType` | Routes to correct provider |
+| `channel` | `PaymentChannel` | `ONLINE` or `POS` |
+| `setupFutureUsage` | `boolean?` | Save payment method for reuse |
+
+### PaymentResult
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `success` | `boolean` | Operation completed without error |
+| `provider` | `PaymentProvider` | Which provider processed it |
+| `providerPaymentId` | `string` | Provider-specific ID |
+| `clientSecret` | `string?` | For Stripe client-side confirmation |
+| `approvalUrl` | `string?` | For PayPal redirect flow |
+| `status` | `enum` | `REQUIRES_ACTION`, `PROCESSING`, `SUCCEEDED`, `FAILED` |
+
+## Usage
+
+```ts
+import { getProvider, getProviderForMethod } from '@/lib/payments'
+
+// Get adapter by provider name
+const stripe = getProvider('STRIPE')
+
+// Get adapter by payment method (auto-routes)
+const adapter = getProviderForMethod('PAYPAL')
+
+// Create a payment
+const result = await adapter.createPayment({
+  amount: 4299,
+  currency: 'usd',
+  orderId: 'clx...',
+  orderNumber: 'JMS-20260408-1234',
+  customerEmail: 'customer@example.com',
+  customerName: 'Jane Doe',
+})
+```
+
+<Callout type="info">
+For provider-specific details, see the [Stripe](/docs/features/stripe), [PayPal](/docs/features/paypal), and [Square](/docs/features/square) pages.
+</Callout>

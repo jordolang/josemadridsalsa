@@ -1,0 +1,630 @@
+---
+title: Payment Architecture
+description: Multi-provider payment system architecture covering Stripe, PayPal, and Square integration for online and POS payments
+---
+
+# Payment Architecture
+
+Multi-provider payment system architecture for Jose Madrid Salsa, covering online payments and point-of-sale (POS) operations.
+
+## Overview
+
+The platform uses a provider-agnostic payment architecture that routes each payment request to the correct processor based on the payment method type. This allows the system to support:
+
+- **Online payments** via Stripe (cards, ACH, Apple Pay, Google Pay)
+- **Online payments** via PayPal (PayPal wallet)
+- **In-person payments** via Square (terminal, POS)
+
+All providers implement a common `PaymentProviderAdapter` interface, registered in a central registry that resolves the correct adapter at runtime.
+
+```
+                    +-------------------+
+                    | Checkout / POS    |
+                    | (method type)     |
+                    +--------+----------+
+                             |
+                    +--------v----------+
+                    | Provider Registry |
+                    | METHOD_PROVIDER   |
+                    | _MAP lookup       |
+                    +--------+----------+
+                             |
+              +--------------+--------------+
+              |              |              |
+     +--------v---+  +------v-----+  +-----v------+
+     |   Stripe   |  |   PayPal   |  |   Square   |
+     |  Adapter   |  |  Adapter   |  |  Adapter   |
+     +------------+  +------------+  +------------+
+     | CARD       |  | PAYPAL     |  | SQUARE_    |
+     | ACH        |  |            |  | TERMINAL   |
+     | APPLE_PAY  |  |            |  |            |
+     | GOOGLE_PAY |  |            |  |            |
+     +------------+  +------------+  +------------+
+```
+
+## Provider Abstraction Layer
+
+**File:** `lib/payments/types.ts`
+
+### Core Types
+
+#### PaymentProvider
+```
+'STRIPE' | 'SQUARE' | 'PAYPAL'
+```
+
+#### PaymentMethodType
+```
+'CARD' | 'ACH' | 'APPLE_PAY' | 'GOOGLE_PAY' | 'PAYPAL' | 'SQUARE_TERMINAL'
+```
+
+#### PaymentChannel
+```
+'ONLINE' | 'POS'
+```
+
+### Request / Response Types
+
+| Type | Purpose | Key Fields |
+|------|---------|------------|
+| `CreatePaymentRequest` | Initiate a payment | `amount` (cents), `currency`, `orderId`, `orderNumber`, `customerEmail`, `customerName`, `methodType`, `channel`, `shippingAddress`, `setupFutureUsage` |
+| `PaymentResult` | Payment creation result | `provider`, `providerPaymentId`, `clientSecret` (Stripe), `approvalUrl` (PayPal), `status` |
+| `RefundRequest` | Initiate a refund | `providerPaymentId`, `amount` (cents, optional for partial), `reason` |
+| `RefundResult` | Refund result | `provider`, `providerRefundId`, `amount`, `status` |
+| `CustomerResult` | Customer creation result | `providerId`, `provider` |
+| `SavedPaymentMethod` | Stored payment method | `id`, `provider`, `type`, `brand`, `last4`, `expMonth`, `expYear` |
+
+### PaymentResult Status Values
+
+| Status | Description |
+|--------|-------------|
+| `REQUIRES_ACTION` | Customer action needed (3D Secure, redirect) |
+| `REQUIRES_CONFIRMATION` | Server-side confirmation needed |
+| `PROCESSING` | Payment is being processed |
+| `SUCCEEDED` | Payment completed successfully |
+| `FAILED` | Payment failed |
+
+## Adapter Pattern
+
+**File:** `lib/payments/types.ts`
+
+Every payment provider implements the `PaymentProviderAdapter` interface:
+
+```
+interface PaymentProviderAdapter {
+  readonly provider: PaymentProvider
+
+  createPayment(request: CreatePaymentRequest): Promise<PaymentResult>
+  confirmPayment(providerPaymentId: string): Promise<PaymentResult>
+  refund(request: RefundRequest): Promise<RefundResult>
+  createCustomer(email, name, metadata?): Promise<CustomerResult>
+  listPaymentMethods(customerId: string): Promise<SavedPaymentMethod[]>
+  detachPaymentMethod(paymentMethodId: string): Promise<void>
+}
+```
+
+### Adapter Responsibilities
+
+| Method | Behavior |
+|--------|----------|
+| `createPayment` | Creates a payment with the provider and returns a result with provider-specific data (client secret for Stripe, approval URL for PayPal) |
+| `confirmPayment` | Server-side confirmation of a payment (e.g., after 3D Secure) |
+| `refund` | Processes full or partial refund. Amount in cents; omit for full refund |
+| `createCustomer` | Creates a customer record with the provider for saved payment methods |
+| `listPaymentMethods` | Lists saved payment methods for a customer |
+| `detachPaymentMethod` | Removes a saved payment method |
+
+## Method-to-Provider Mapping
+
+**File:** `lib/payments/registry.ts`
+
+Each payment method type maps to exactly one provider:
+
+| Payment Method | Provider | Channel | Description |
+|---------------|----------|---------|-------------|
+| `CARD` | Stripe | Online | Credit/debit card via Stripe Elements |
+| `ACH` | Stripe | Online | ACH bank transfer |
+| `APPLE_PAY` | Stripe | Online | Apple Pay via Stripe Express Checkout |
+| `GOOGLE_PAY` | Stripe | Online | Google Pay via Stripe Express Checkout |
+| `PAYPAL` | PayPal | Online | PayPal wallet (redirect-based flow) |
+| `SQUARE_TERMINAL` | Square | POS | Square Terminal for in-person payments |
+
+When a payment request specifies a `methodType`, the registry resolves the correct adapter automatically via `getProviderForMethod()`.
+
+## Provider Registry
+
+**File:** `lib/payments/registry.ts`
+
+The registry is a singleton `Map<PaymentProvider, PaymentProviderAdapter>` with these operations:
+
+| Function | Description |
+|----------|-------------|
+| `registerProvider(adapter)` | Register an adapter instance at app startup |
+| `getProvider(provider)` | Get adapter by provider name. Throws if not registered |
+| `getProviderForMethod(methodType)` | Look up provider via `METHOD_PROVIDER_MAP`, then get adapter |
+| `getRegisteredProviders()` | List all registered provider names |
+
+### Registration Pattern
+
+Adapters should be registered during app initialization:
+
+```
+import { registerProvider } from '@/lib/payments/registry'
+import { StripeAdapter } from '@/lib/payments/adapters/stripe'
+
+registerProvider(new StripeAdapter())
+```
+
+## Database Schema
+
+The `Payment` model (table: `payments`) supports all three providers with unified and provider-specific fields.
+
+### Unified Fields
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | String (CUID) | Primary key |
+| `amount` | Int | Amount in cents |
+| `currency` | String | Currency code (default: `usd`) |
+| `status` | PaymentStatus | PENDING, SUCCEEDED, FAILED, REFUNDED, PARTIALLY_REFUNDED, CANCELED |
+| `paymentMethod` | String | Method descriptor (e.g., `card`, `paypal`) |
+| `orderId` | String | FK to Order |
+| `provider` | PaymentProvider | STRIPE, SQUARE, or PAYPAL (default: STRIPE) |
+| `providerPaymentId` | String | Unified provider payment reference |
+| `channel` | PaymentChannel | ONLINE or POS (default: ONLINE) |
+| `methodType` | String | CARD, ACH, APPLE_PAY, etc. |
+| `metadata` | JSON | Arbitrary provider metadata |
+| `paidAt` | DateTime | When payment was confirmed |
+
+### Provider-Specific Fields
+
+| Column | Provider | Description |
+|--------|----------|-------------|
+| `stripePaymentIntentId` | Stripe | PaymentIntent ID (unique) |
+| `stripeCheckoutSessionId` | Stripe | Checkout Session ID (unique) |
+| `stripeCustomerId` | Stripe | Stripe Customer ID |
+| `squarePaymentId` | Square | Square Payment ID (unique) |
+| `squareTerminalCheckoutId` | Square | Terminal Checkout ID (unique) |
+| `paypalOrderId` | PayPal | PayPal Order ID (unique) |
+| `paypalCaptureId` | PayPal | PayPal Capture ID (unique) |
+
+### Indexes
+
+- `orderId` - Fast lookup by order
+- `status` - Filter by payment status
+- `provider` - Filter by provider
+
+## Provider Configuration
+
+### Stripe
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `STRIPE_SECRET_KEY` | Yes | Server-side secret key (`sk_live_*` or `sk_test_*`) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Yes | Client-side publishable key (`pk_live_*` or `pk_test_*`) |
+| `STRIPE_WEBHOOK_SECRET` | Yes | Webhook signing secret (`whsec_*`) |
+
+Alternative: `STRIPE_SECRET` accepted as fallback for `STRIPE_SECRET_KEY`.
+
+SDK configuration (from `lib/stripe.ts`):
+- API version: `2025-10-29.clover`
+- Max retries: 2
+- Timeout: 30 seconds
+
+### PayPal
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PAYPAL_CLIENT_ID` | Yes | PayPal REST API client ID |
+| `PAYPAL_CLIENT_SECRET` | Yes | PayPal REST API client secret |
+| `PAYPAL_SANDBOX` | No | Set to `false` for production; defaults to sandbox |
+| `PAYPAL_RETURN_URL` | No | Customer return URL after PayPal approval (defaults to `{NEXT_PUBLIC_BASE_URL}/checkout/paypal/return`) |
+| `PAYPAL_CANCEL_URL` | No | Customer cancel URL (defaults to `{NEXT_PUBLIC_BASE_URL}/checkout/paypal/cancel`) |
+| `PAYPAL_WEBHOOK_ID` | Yes (for webhooks) | PayPal webhook ID for signature verification |
+| `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | Yes (for client) | Client-side PayPal client ID for the PayPal JS SDK |
+
+SDK: `@paypal/checkout-server-sdk` (server), `@paypal/react-paypal-js` (client).
+
+### Square
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SQUARE_ACCESS_TOKEN` | Yes | Square API access token |
+| `SQUARE_LOCATION_ID` | Yes | Square location ID for POS transactions |
+| `SQUARE_ENVIRONMENT` | No | `sandbox` (default) or `production` |
+| `SQUARE_TERMINAL_DEVICE_ID` | For POS | Square Terminal device ID |
+| `NEXT_PUBLIC_SQUARE_APP_ID` | Yes (for client) | Client-side Square application ID |
+| `NEXT_PUBLIC_SQUARE_LOCATION_ID` | Yes (for client) | Client-side Square location ID |
+
+SDK: `react-square-web-payments-sdk` (client). Server adapter not yet implemented.
+
+## Stripe (Online Payments)
+
+Stripe is the fully implemented provider, handling all online payment methods.
+
+### Supported Methods
+- Credit/debit cards (via `CardElement`)
+- Apple Pay (via `ExpressCheckoutElement`)
+- Google Pay (via `ExpressCheckoutElement`)
+- ACH bank transfers (type definition ready)
+
+### Flow
+See `docs/payment-integration.md` for the complete Stripe payment flow, webhook handling, and refund process.
+
+## PayPal (Online Payments)
+
+PayPal uses a redirect/popup-based flow where the customer authorizes payment through PayPal, then the server captures it.
+
+**File:** `lib/payments/providers/paypal.ts`
+
+### Adapter Implementation
+
+The `PayPalAdapter` implements the full `PaymentProviderAdapter` interface:
+
+| Method | Behavior |
+|--------|----------|
+| `createPayment` | Creates a PayPal Order via the Orders API with `intent: CAPTURE`. Returns `approvalUrl` for customer redirect. Amounts are converted from cents to dollars (`amount / 100`). |
+| `confirmPayment` | Checks the PayPal Order status. If `APPROVED`, captures the payment via the Orders Capture API. |
+| `refund` | Refunds a captured payment via `CapturesRefundRequest`. Supports partial refunds by specifying an amount. |
+| `createCustomer` | No-op (returns empty `providerId`). PayPal identifies customers via their PayPal account during checkout. |
+| `listPaymentMethods` | Returns empty array. PayPal Vault API integration is not yet implemented. |
+| `detachPaymentMethod` | No-op. |
+
+### Registration
+
+The PayPal adapter is conditionally registered at app startup in `lib/payments/index.ts`:
+
+```
+if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) {
+  registerProvider(new PayPalAdapter())
+}
+```
+
+### Client-Side Flow
+
+1. `PayPalProvider` wraps the checkout page with `PayPalScriptProvider` (from `@paypal/react-paypal-js`)
+2. Customer selects PayPal or Venmo in the `PaymentMethodSelector`
+3. `PayPalButton` or `VenmoButton` renders the corresponding `PayPalButtons` component
+4. On click, `createOrder` calls `POST /api/checkout/paypal/create-order` to create a PayPal Order
+5. Customer authorizes payment in the PayPal popup
+6. On approval, `onApprove` calls `POST /api/checkout/paypal/capture-order` to capture the payment
+7. On success, the client redirects to the order confirmation page
+
+### Venmo
+
+Venmo is enabled as a funding source within the PayPal SDK (`enableFunding: 'venmo'` in `PayPalProvider`). The `VenmoButton` component uses the same PayPal order creation and capture endpoints with `fundingSource: FUNDING.VENMO`.
+
+### Webhook Handling
+
+**File:** `app/api/webhooks/paypal/route.ts`
+
+PayPal webhook events are received at `POST /api/webhooks/paypal`.
+
+#### Signature Verification
+
+1. Extracts PayPal signature headers (`paypal-transmission-id`, `paypal-transmission-sig`, etc.)
+2. Obtains an access token via the PayPal OAuth2 API
+3. Calls PayPal's webhook verification endpoint (`/v1/notifications/verify-webhook-signature`)
+4. Requires `PAYPAL_WEBHOOK_ID` environment variable
+
+#### Handled Events
+
+| Event | Action |
+|-------|--------|
+| `PAYMENT.CAPTURE.COMPLETED` | Order -> `CONFIRMED`/`SUCCEEDED`, creates Payment record with `paypalOrderId` and `paypalCaptureId`, sends confirmation email |
+| `PAYMENT.CAPTURE.REFUNDED` | Creates Refund record, updates Payment status. Full refund: Order -> `REFUNDED`. Partial: Payment -> `PARTIALLY_REFUNDED` |
+
+#### Idempotency
+
+Uses the same `WebhookEvent` table as Stripe, with `provider: 'PAYPAL'` and `providerEventId` tracking.
+
+## Square (POS and Cash App Pay)
+
+Square powers in-person payment processing via Square Terminal and online payments via Cash App Pay.
+
+### Cash App Pay (Online)
+
+**Files:** `components/checkout/CashAppButton.tsx`, `components/checkout/SquareProvider.tsx`
+
+Cash App Pay is available when `NEXT_PUBLIC_SQUARE_APP_ID` and `NEXT_PUBLIC_SQUARE_LOCATION_ID` are configured.
+
+#### Client-Side Flow
+
+1. `SquareProvider` wraps the Cash App button with Square's `PaymentForm` from `react-square-web-payments-sdk`
+2. Customer selects Cash App Pay in the `PaymentMethodSelector`
+3. `CashAppButton` renders Square's `CashAppPay` component
+4. On authorization, the `PaymentForm` tokenizes the payment and calls `POST /api/checkout/square/process-payment`
+5. Server processes the payment using the Square Payments API
+
+#### SquareProvider Configuration
+
+The `SquareProvider` component initializes the Square Web Payments SDK:
+- `applicationId`: From `NEXT_PUBLIC_SQUARE_APP_ID`
+- `locationId`: From `NEXT_PUBLIC_SQUARE_LOCATION_ID`
+- Payment request: `countryCode: 'US'`, `currencyCode: 'USD'`
+
+### POS Hardware Setup (Planned)
+
+| Component | Purpose |
+|-----------|---------|
+| iPad | Runs the POS admin interface (web-based) |
+| Square Terminal | Accepts card tap/dip/swipe and displays payment amount |
+| Barcode Scanner | Scans product barcodes to add items to the POS order |
+| Thermal Printer | Prints receipts after payment completion |
+
+### Expected POS Flow (When Implemented)
+
+1. Operator scans product barcodes on iPad to build the order
+2. System creates an order in the database (channel: `POS`)
+3. Server calls `createPayment()` on Square adapter with `channel: 'POS'` and `methodType: 'SQUARE_TERMINAL'`
+4. Square adapter creates a Terminal Checkout via the Square Terminal API
+5. Square Terminal displays the payment amount to the customer
+6. Customer taps/inserts card on the Square Terminal
+7. Square sends payment confirmation
+8. Server marks order as paid, fires inventory deduction
+9. Thermal printer prints receipt
+
+### Square Terminal API Integration Points (Planned)
+
+- **Create Terminal Checkout** - Sends payment request to a specific terminal device
+- **Get Terminal Checkout** - Polls for payment status
+- **Cancel Terminal Checkout** - Cancels a pending terminal payment
+- **Refund** - Processes refund through Square
+
+## Payment Retry Flow
+
+**File:** `app/api/checkout/retry-payment/route.ts`
+
+Allows customers to retry failed payments on existing orders.
+
+### Endpoint: `POST /api/checkout/retry-payment`
+
+### Request
+```json
+{
+  "orderId": "clxxx..."
+}
+```
+
+### Eligibility
+- Payment status must be `FAILED` or `PENDING`
+- Order status must not be `CANCELLED` or `REFUNDED`
+- Authenticated user must own the order (if userId is set)
+
+### Retry Strategy
+
+1. If existing PaymentIntent is still retryable (`requires_payment_method`, `requires_confirmation`, `requires_action`), reuse its `clientSecret`
+2. If existing PaymentIntent is in a terminal state (`canceled`), create a new PaymentIntent
+3. If existing PaymentIntent succeeded, return error (already paid)
+4. Update order's `stripePaymentId` and reset `paymentStatus` to `PENDING`
+5. If order was cancelled due to payment failure, reset `status` to `PENDING`
+
+### Response
+```json
+{
+  "success": true,
+  "clientSecret": "pi_xxx_secret_xxx",
+  "orderId": "clxxx...",
+  "amount": 42.99,
+  "reused": true
+}
+```
+
+## Unified Payment API
+
+**File:** `app/api/payments/create/route.ts`
+
+A provider-agnostic endpoint for creating payments on existing orders.
+
+### Endpoint: `POST /api/payments/create`
+
+### Request
+
+```json
+{
+  "orderId": "clxxx...",
+  "provider": "PAYPAL",
+  "methodType": "PAYPAL",
+  "channel": "ONLINE",
+  "guestEmail": "guest@example.com"
+}
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `orderId` | Yes | CUID of the order to pay |
+| `provider` | No | Explicit provider override (`STRIPE`, `PAYPAL`, `SQUARE`) |
+| `methodType` | No | Payment method type (used for provider routing via `METHOD_PROVIDER_MAP`) |
+| `channel` | No | `ONLINE` (default) or `POS` |
+| `guestEmail` | No | Required for guest orders (ownership verification) |
+
+### Provider Resolution
+
+The adapter is resolved in priority order:
+1. Explicit `provider` parameter
+2. `methodType` lookup via `METHOD_PROVIDER_MAP`
+3. Default: `STRIPE`
+
+### Ownership Verification
+
+- Authenticated users: `user.id` must match `order.userId`
+- Guest orders: `guestEmail` must match `order.guestEmail` (case-insensitive)
+
+### Response
+
+```json
+{
+  "success": true,
+  "provider": "PAYPAL",
+  "providerPaymentId": "5O190127TN364715T",
+  "clientSecret": null,
+  "approvalUrl": "https://www.paypal.com/checkoutnow?token=...",
+  "status": "REQUIRES_ACTION"
+}
+```
+
+## Payment Methods API
+
+**File:** `app/api/payments/methods/route.ts`
+
+Lists all enabled payment methods and their providers.
+
+### Endpoint: `GET /api/payments/methods`
+
+### Response
+
+```json
+{
+  "success": true,
+  "methods": [
+    { "method": "CARD", "provider": "STRIPE", "enabled": true },
+    { "method": "PAYPAL", "provider": "PAYPAL", "enabled": true }
+  ],
+  "providers": [
+    { "provider": "STRIPE", "isActive": true, "testMode": true },
+    { "provider": "PAYPAL", "isActive": true, "testMode": true }
+  ]
+}
+```
+
+Method availability is determined by:
+1. `PaymentProviderConfig` records in the database (if any exist)
+2. Fallback: all methods from registered providers (via `METHOD_PROVIDER_MAP`)
+
+## Payment Method Selector
+
+**File:** `components/checkout/PaymentMethodSelector.tsx`
+
+Client component that renders available payment methods as selectable radio buttons.
+
+### Available Methods
+
+| Method ID | Label | Provider | Enabled When |
+|-----------|-------|----------|-------------|
+| `card` | Credit / Debit Card | Stripe | Always |
+| `paypal` | PayPal | PayPal | `NEXT_PUBLIC_PAYPAL_CLIENT_ID` is set |
+| `venmo` | Venmo | PayPal | `NEXT_PUBLIC_PAYPAL_CLIENT_ID` is set |
+| `cashapp` | Cash App Pay | Square | `NEXT_PUBLIC_SQUARE_APP_ID` and `NEXT_PUBLIC_SQUARE_LOCATION_ID` are set |
+| `link` | Link (by Stripe) | Stripe | Disabled (coming soon) |
+
+Disabled methods are shown in a "Coming soon" section. If only one method is enabled, the selector is hidden.
+
+## Admin Payment Settings
+
+**File:** `app/admin/settings/payments/page.tsx`
+
+Server-rendered admin page showing the connection status of each payment provider.
+
+### Provider Status
+
+Each provider shows one of three states:
+- **Connected** (green) - All required API keys are configured
+- **Partial setup** (yellow) - Some but not all keys are configured
+- **Not configured** (gray) - No keys configured; setup instructions shown
+
+### Settings API
+
+**File:** `app/api/admin/settings/payments/route.ts`
+
+| Method | Permission | Description |
+|--------|-----------|-------------|
+| `GET` | `settings:read` | Lists all `PaymentProviderConfig` records (credentials stripped) |
+| `PUT` | `settings:write` | Upserts provider config (active state, test mode, supported methods) |
+
+## Validation Schemas
+
+**File:** `lib/validations/payment.ts`
+
+Zod schemas for payment operations (currently Stripe-specific):
+
+| Schema | Purpose |
+|--------|---------|
+| `PaymentMethodSchema` | Card details, billing details. Types: `card`, `us_bank_account`, `link` |
+| `CreatePaymentIntentSchema` | `amount`, `currency`, `orderId`, `customerEmail`, `shipping` |
+| `ConfirmPaymentSchema` | `paymentIntentId` (must start with `pi_`), `paymentMethodId`, `orderId` |
+| `UpdatePaymentStatusSchema` | Status enum: PENDING, PROCESSING, SUCCEEDED, FAILED, CANCELED |
+| `RefundRequestSchema` | `orderId`, `paymentIntentId`, `amount?`, `reason` (duplicate/fraudulent/requested_by_customer) |
+| `StripeWebhookEventSchema` | Event ID (must start with `evt_`), `type`, `data.object`, `created`, `livemode` |
+| `PaymentMetadataSchema` | `orderId`, `orderNumber`, `customerName?`, `customerId?`, `notes?` (max 500 chars) |
+| `PaymentAmountSchema` | Integer, positive, max $999,999.99 (99999999 cents) |
+| `CreateStripeCustomerSchema` | `email`, `name`, `phone?`, `address?`, `metadata?` |
+
+## Implementation Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Provider abstraction types | Complete | `lib/payments/types.ts` |
+| Provider registry | Complete | `lib/payments/registry.ts` |
+| Method-to-provider mapping | Complete | All 6 methods mapped |
+| Database schema | Complete | Multi-provider Payment model with provider-specific columns |
+| Stripe adapter | Complete | `lib/payments/providers/stripe.ts` - full adapter pattern |
+| PayPal adapter | Complete | `lib/payments/providers/paypal.ts` - Orders API, capture, refund |
+| PayPal client components | Complete | `PayPalButton`, `VenmoButton`, `PayPalProvider` |
+| PayPal webhooks | Complete | `app/api/webhooks/paypal/route.ts` - capture + refund events |
+| Square adapter (server) | Not started | Types and DB columns ready |
+| Square client (Cash App Pay) | Complete | `CashAppButton`, `SquareProvider` via `react-square-web-payments-sdk` |
+| POS interface | Not started | DB schema supports `POS` channel |
+| Payment method selector | Complete | `components/checkout/PaymentMethodSelector.tsx` |
+| Unified payment API | Complete | `app/api/payments/create/route.ts` - provider-agnostic payment creation |
+| Payment methods API | Complete | `app/api/payments/methods/route.ts` - lists enabled methods/providers |
+| Admin payment settings | Complete | `app/admin/settings/payments/page.tsx` - provider status dashboard |
+| Admin settings API | Complete | `app/api/admin/settings/payments/route.ts` - CRUD for provider configs |
+| Payment retry | Complete | `app/api/checkout/retry-payment/route.ts` |
+
+## Key Files
+
+### Provider Abstraction
+
+| File | Purpose |
+|------|---------|
+| `lib/payments/types.ts` | Provider-agnostic payment types and adapter interface |
+| `lib/payments/registry.ts` | Provider registry and method-to-provider mapping |
+| `lib/payments/index.ts` | Auto-registration of adapters and public exports |
+| `lib/payments/providers/stripe.ts` | Stripe adapter implementation |
+| `lib/payments/providers/paypal.ts` | PayPal adapter implementation |
+
+### Stripe
+
+| File | Purpose |
+|------|---------|
+| `lib/stripe.ts` | Stripe SDK client singleton |
+| `lib/stripe/types.ts` | Stripe-specific type definitions |
+| `lib/stripe/webhooks.ts` | Stripe webhook handler functions |
+| `app/api/webhooks/stripe/route.ts` | Stripe webhook endpoint |
+
+### PayPal
+
+| File | Purpose |
+|------|---------|
+| `app/api/webhooks/paypal/route.ts` | PayPal webhook endpoint with signature verification |
+| `components/checkout/PayPalProvider.tsx` | Client-side PayPal SDK wrapper |
+| `components/checkout/PayPalButton.tsx` | PayPal payment button component |
+| `components/checkout/VenmoButton.tsx` | Venmo payment button component (via PayPal SDK) |
+
+### Square
+
+| File | Purpose |
+|------|---------|
+| `components/checkout/SquareProvider.tsx` | Client-side Square Web Payments SDK wrapper |
+| `components/checkout/CashAppButton.tsx` | Cash App Pay button component |
+
+### Unified Payment APIs
+
+| File | Purpose |
+|------|---------|
+| `app/api/payments/create/route.ts` | Provider-agnostic payment creation endpoint |
+| `app/api/payments/methods/route.ts` | Lists enabled payment methods and providers |
+| `app/api/admin/settings/payments/route.ts` | Admin API for provider configuration (GET/PUT) |
+| `app/admin/settings/payments/page.tsx` | Admin UI for provider connection status |
+
+### Checkout and Orders
+
+| File | Purpose |
+|------|---------|
+| `app/api/checkout/route.ts` | Checkout API (order + payment creation) |
+| `app/api/checkout/complete/route.ts` | Order completion after payment |
+| `app/api/checkout/retry-payment/route.ts` | Payment retry for failed orders |
+| `app/api/admin/orders/[id]/refund/route.ts` | Admin refund processing |
+| `components/checkout/PaymentMethodSelector.tsx` | Payment method selection UI |
+| `lib/validations/payment.ts` | Zod validation schemas for payment operations |
+| `prisma/schema.prisma` | Payment model, PaymentProvider and PaymentChannel enums |

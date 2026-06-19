@@ -1,0 +1,122 @@
+---
+title: Lead Generation
+description: Automated lead scraping with Google Search, Playwright browser automation, campaign management, and email outreach
+---
+
+# Lead Generation
+
+The lead generation system automates finding school athletic department contacts via Google Search scraping, extracting contact information from school websites, and sending targeted email campaigns. It is designed for B2B outreach to school fundraising programs.
+
+## Architecture
+
+<Files>
+  <Folder name="lib/scraper" defaultOpen>
+    <File name="google-search.ts" />
+    <File name="website-parser.ts" />
+    <File name="school-config.ts" />
+    <File name="event-bus.ts" />
+    <File name="scraper-events.ts" />
+  </Folder>
+  <Folder name="lib/email">
+    <File name="campaign-sender.ts" />
+  </Folder>
+  <Folder name="app/admin/lead-generation" defaultOpen>
+    <File name="page.tsx" />
+    <File name="create-campaign-dialog.tsx" />
+    <Folder name="[id]">
+      <File name="page.tsx" />
+    </Folder>
+  </Folder>
+</Files>
+
+## Campaign Lifecycle
+
+<Steps>
+### Create Campaign
+
+Admin creates a campaign via the dialog at `/admin/lead-generation`, specifying:
+- Target city and state
+- School type (high school, middle school)
+- District name (optional)
+- Sport focus (optional)
+
+### Google Search Scraping
+
+`runGoogleSearchScraper()` uses Playwright to search Google for school athletic department pages:
+
+```ts
+const browser = await chromium.launch({ headless: true })
+// Construct query from templates
+let query = SEARCH_QUERY_TEMPLATES.by_city
+  .replace('{city}', campaign.city)
+  .replace('{state}', campaign.state)
+```
+
+The scraper:
+- Navigates Google search results across multiple pages (configurable via `MAX_SEARCH_PAGES`)
+- Filters out excluded domains (social media, news sites, etc.)
+- Extracts school website URLs
+- Adds random delays (1-2 seconds) to avoid detection
+
+### Website Parsing
+
+`website-parser.ts` visits each discovered school website to extract:
+- Athletic director names and emails
+- Coach contact information
+- Sport programs offered
+- School address (city, state)
+
+### Contact Discovery
+
+Extracted contacts are saved as `Lead` records with status `CONTACT_FOUND`, linked to the campaign.
+
+### Email Outreach
+
+`runCampaignSender()` sends personalized emails to discovered leads using the campaign template. Variables are substituted:
+
+| Variable | Source |
+| --- | --- |
+| `{{school_name}}` | Lead school name |
+| `{{contact_name}}` | Lead contact name |
+| `{{title}}` | Lead title (e.g., "Athletic Director") |
+| `{{sport}}` | Lead sport |
+| `{{sport_pitch}}` | Sport-specific pitch from `SPORT_PITCHES` config |
+| `{{city}}` | Lead city |
+| `{{state}}` | Lead state |
+</Steps>
+
+## Campaign Statuses
+
+| Status | Description |
+| --- | --- |
+| `CREATED` | Campaign created, not yet started |
+| `SCRAPING` | Google search scraping in progress |
+| `PARSING` | Extracting contacts from school websites |
+| `SENDING_EMAILS` | Email outreach in progress |
+| `COMPLETED` | All steps finished |
+| `PAUSED` | Manually paused by admin |
+
+## Real-Time Progress
+
+The scraper event bus (`lib/scraper/event-bus.ts`) emits progress events during scraping and email sending. The admin detail page (`/admin/lead-generation/[id]`) subscribes to these events for live progress updates.
+
+```ts
+emitScraperEvent(campaignId, 'info', 'email',
+  `[${idx + 1}/${leads.length}] Sending to ${lead.email}`,
+  lead.schoolName || ''
+)
+```
+
+## School Configuration
+
+`lib/scraper/school-config.ts` defines:
+
+- **Search query templates** by city, district, and school type
+- **Max search pages** for Google pagination
+- **Excluded domains** (facebook.com, twitter.com, etc.)
+- **Sport-specific pitches** for personalized email content
+- **Subject line templates** for outreach emails
+
+<Callout type="warn">
+The Google Search scraper uses Playwright headless Chrome. It requires the `playwright` dependency and a Chromium installation on the server. Rate limiting and random delays are built in to minimize detection risk.
+</Callout>

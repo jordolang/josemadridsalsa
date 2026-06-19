@@ -1,0 +1,174 @@
+---
+title: API Routes
+description: API route patterns, middleware wrappers, and authentication helpers
+---
+
+
+# API Routes
+
+Jose Madrid Salsa uses Next.js App Router API routes (`app/api/`) with composable middleware wrappers for authentication, authorization, and rate limiting.
+
+## Route Structure
+
+```
+app/api/
+  auth/
+    [...nextauth]/    # NextAuth.js handler
+    register/         # User registration
+    forgot-password/  # Password reset request
+    reset-password/   # Password reset execution
+    verify-reset-token/
+    fundraiser-register/
+  account/            # User account management
+  admin/              # Admin panel endpoints
+  ai-chat/            # AI chatbot
+  cart/               # Shopping cart
+  checkout/           # Checkout flow
+  cron/               # Scheduled tasks
+  developer/          # Developer portal APIs
+  forms/              # Form submissions
+  fundraiser/         # Fundraiser management
+  gift-certificates/  # Gift certificate CRUD
+  locations/          # Store locations
+  loyalty/            # Loyalty program
+  newsletter/         # Newsletter subscriptions
+  orders/             # Order management
+  payment/            # Payment processing
+  payments/           # Payment webhooks
+  products/           # Product catalog
+  recipes/            # Recipe CRUD
+  reviews/            # Product reviews
+  send-email/         # Email sending
+  shopify/            # Shopify sync
+  social/             # Social media management
+  track/              # Analytics tracking
+  unsubscribe/        # Email unsubscribe
+  uploadthing/        # File uploads
+  webhooks/           # Webhook handlers
+  wishlist/           # Wishlist management
+```
+
+## Middleware Wrappers
+
+The `lib/middleware/api-helpers.ts` module provides composable wrappers for API route handlers.
+
+### withAuth
+
+Wraps a handler with authentication and authorization checks:
+
+```ts title="lib/middleware/api-helpers.ts"
+export function withAuth(
+  handler: ApiHandler,
+  options: AuthOptions = {}
+): ApiHandler
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `required` | `boolean` | `true` | Require authentication |
+| `roles` | `UserRole[]` | - | Allowed roles |
+| `permission` | `string` | - | Required permission string |
+
+**Usage:**
+
+```ts title="app/api/admin/example/route.ts"
+import { withAuth } from '@/lib/middleware/api-helpers'
+import { UserRole } from '@prisma/client'
+
+export const GET = withAuth(async (request) => {
+  return NextResponse.json({ data: '...' })
+}, { roles: [UserRole.ADMIN] })
+```
+
+### withRateLimit
+
+Wraps a handler with rate limiting:
+
+```ts title="lib/middleware/api-helpers.ts"
+export function withRateLimit(
+  handler: ApiHandler,
+  options: RateLimitOptions
+): ApiHandler
+```
+
+Returns a `429 Too Many Requests` response when the limit is exceeded, with `X-RateLimit-*` headers.
+
+### compose
+
+Composes multiple middleware wrappers (applied right to left):
+
+```ts title="app/api/example/route.ts"
+import { compose, withAuth, withRateLimit } from '@/lib/middleware/api-helpers'
+import { RATE_LIMITS } from '@/lib/rate-limiter'
+
+export const POST = compose(
+  (h) => withAuth(h, { roles: [UserRole.ADMIN] }),
+  (h) => withRateLimit(h, RATE_LIMITS.API_GENERAL)
+)(async (request) => {
+  return NextResponse.json({ success: true })
+})
+```
+
+## Common Presets
+
+### Authentication Presets
+
+```ts
+import { commonAuth } from '@/lib/middleware/api-helpers'
+
+export const GET = commonAuth.required(handler)  // Any authenticated user
+export const GET = commonAuth.optional(handler)   // Auth optional
+export const GET = commonAuth.admin(handler)       // ADMIN only
+export const GET = commonAuth.staff(handler)       // ADMIN, DEVELOPER, or STAFF
+```
+
+### Rate Limit Presets
+
+```ts
+import { commonRateLimits } from '@/lib/middleware/api-helpers'
+
+export const GET = commonRateLimits.standard(handler)      // 100 req/min
+export const POST = commonRateLimits.aiChat(handler)       // 20 req/min (guests)
+export const POST = commonRateLimits.auth(handler)          // 5 per 15 min
+export const POST = commonRateLimits.passwordReset(handler) // 3 per hour
+```
+
+## Partner API Authentication
+
+External partners authenticate via `X-API-Key` header. Keys are SHA-256 hashed and stored in the `PartnerApiKey` table with scope-based access control:
+
+```ts title="lib/api/partner-keys.ts"
+export async function requirePartner(
+  request: NextRequest,
+  scope: string,
+): Promise<PartnerAuthSuccess | PartnerAuthError> {
+  const apiKey = request.headers.get('x-api-key')
+  const keyHash = hashApiKey(apiKey)
+  const partner = await prisma.partnerApiKey.findUnique({ where: { keyHash } })
+
+  if (!partner || !partner.isActive) {
+    return { error: NextResponse.json({ error: 'Invalid API key' }, { status: 401 }) }
+  }
+
+  if (scope && partner.scopes.length > 0 && !partner.scopes.includes(scope)) {
+    return { error: NextResponse.json({ error: 'Insufficient scope' }, { status: 403 }) }
+  }
+}
+```
+
+## Mobile App Bypass
+
+The rate limiter bypasses limits for the proprietary mobile app based on the User-Agent header:
+
+```ts
+const userAgent = request.headers.get('user-agent') || ''
+if (userAgent.includes('JoseMadridSalsaMobileApp')) {
+  return await handler(request, context)
+}
+```
+
+<Callout type="info">
+All API routes return JSON responses with consistent error shapes: `{ error: "message" }` with appropriate HTTP status codes.
+</Callout>
