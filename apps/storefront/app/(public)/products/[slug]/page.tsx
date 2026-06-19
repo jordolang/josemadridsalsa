@@ -7,6 +7,7 @@ import { VariantSelector } from '@/components/products/VariantSelector'
 import { NutritionalInfo } from '@/components/products/NutritionalInfo'
 import { ProductReviews } from '@/components/reviews/product-reviews'
 import { AddToCartButton } from '@/components/store/add-to-cart-button'
+import { YouMayAlsoLike } from '@/components/store/product-recommendations'
 import { buildProductSchema } from '@/lib/seo/schema-generator'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
@@ -265,6 +266,9 @@ export default async function ProductDetailPage({ params }: Props) {
           initialReviewCount={reviewStats._count.rating ?? 0}
           isSignedIn={Boolean(viewer)}
         />
+
+        {/* You May Also Like Recommendations */}
+        <YouMayAlsoLike productId={product.id} />
       </div>
     </main>
   )
