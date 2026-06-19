@@ -8,6 +8,7 @@ import { render } from '@react-email/render'
 import React from 'react'
 import { OrderConfirmationEmail } from '@/emails/order-confirmation'
 import { OrderItem } from '@/emails/components/OrderItemsTable'
+import { RecommendedProduct } from '@/emails/components/RecommendedProducts'
 
 describe('OrderConfirmationEmail', () => {
   const mockItems: OrderItem[] = [
@@ -285,6 +286,93 @@ describe('OrderConfirmationEmail', () => {
 
       expect(html).toContain('Free Sample')
       expect(html).toContain('$0.00')
+    })
+  })
+
+  describe('recommended products', () => {
+    const mockRecommendedProducts: RecommendedProduct[] = [
+      {
+        name: 'Jalapeño Verde Salsa',
+        slug: 'jalapeno-verde',
+        price: 9.99,
+        imageUrl: 'https://example.com/jalapeno-verde.jpg',
+        heatLevel: 'Medium',
+      },
+      {
+        name: 'Habanero Hot Salsa',
+        slug: 'habanero-hot',
+        price: 10.99,
+        imageUrl: 'https://example.com/habanero-hot.jpg',
+        heatLevel: 'Hot',
+      },
+    ]
+
+    it('should render recommended products when provided', async () => {
+      const html = await render(
+        <OrderConfirmationEmail
+          {...baseProps}
+          recommendedProducts={mockRecommendedProducts}
+        />
+      )
+
+      expect(html).toContain('You Might Also Like')
+      expect(html).toContain('Jalapeño Verde Salsa')
+      expect(html).toContain('Habanero Hot Salsa')
+    })
+
+    it('should not render recommended products section when empty', async () => {
+      const html = await render(
+        <OrderConfirmationEmail
+          {...baseProps}
+          recommendedProducts={[]}
+        />
+      )
+
+      expect(html).not.toContain('You Might Also Like')
+    })
+
+    it('should not render recommended products section when undefined', async () => {
+      const html = await render(<OrderConfirmationEmail {...baseProps} />)
+
+      expect(html).not.toContain('You Might Also Like')
+    })
+
+    it('should include heat level badges in recommendations', async () => {
+      const html = await render(
+        <OrderConfirmationEmail
+          {...baseProps}
+          recommendedProducts={mockRecommendedProducts}
+        />
+      )
+
+      expect(html).toContain('Medium')
+      expect(html).toContain('Hot')
+      expect(html).toContain('text-transform:uppercase')
+    })
+
+    it('should include product prices in recommendations', async () => {
+      const html = await render(
+        <OrderConfirmationEmail
+          {...baseProps}
+          recommendedProducts={mockRecommendedProducts}
+        />
+      )
+
+      expect(html).toContain('9.99')
+      expect(html).toContain('10.99')
+    })
+
+    it('should include shop now buttons for recommendations', async () => {
+      const html = await render(
+        <OrderConfirmationEmail
+          {...baseProps}
+          recommendedProducts={mockRecommendedProducts}
+        />
+      )
+
+      expect(html).toContain('Shop Now')
+      expect(html).toContain('/products/jalapeno-verde')
+      expect(html).toContain('/products/habanero-hot')
     })
   })
 })

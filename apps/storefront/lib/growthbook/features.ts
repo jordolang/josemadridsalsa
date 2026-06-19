@@ -7,6 +7,8 @@
  */
 export interface AppFeatures {
   'homepage-announcement-banner': boolean
+  'personalized-homepage-hero': boolean
+  'personalized-email-recommendations': boolean
 }
 
 export type AppFeatureKey = keyof AppFeatures

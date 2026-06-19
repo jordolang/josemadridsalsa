@@ -4,6 +4,7 @@ import { EmailHeader } from './components/EmailHeader';
 import { EmailFooter } from './components/EmailFooter';
 import { OrderItemsTable, OrderItem } from './components/OrderItemsTable';
 import { Button } from './components/Button';
+import { RecommendedProducts, RecommendedProduct } from './components/RecommendedProducts';
 import { bodyContent } from './styles';
 
 interface OrderConfirmationEmailProps {
@@ -14,6 +15,7 @@ interface OrderConfirmationEmailProps {
   items: OrderItem[];
   shippingAddress: string;
   trackingLink?: string;
+  recommendedProducts?: RecommendedProduct[];
   unsubscribeUrl?: string;
 }
 
@@ -25,6 +27,7 @@ export const OrderConfirmationEmail = ({
   items = [],
   shippingAddress,
   trackingLink,
+  recommendedProducts = [],
   unsubscribeUrl = '#',
 }: OrderConfirmationEmailProps) => {
   const previewText = `Order #${orderNumber} confirmed - Thanks for your order!`;
@@ -114,6 +117,16 @@ export const OrderConfirmationEmail = ({
               Track Order
             </Button>
           </Section>
+        )}
+
+        {/* Recommended Products */}
+        {recommendedProducts && recommendedProducts.length > 0 && (
+          <>
+            <Hr style={divider} />
+            <Section style={section}>
+              <RecommendedProducts products={recommendedProducts} />
+            </Section>
+          </>
         )}
 
         {/* Support Message */}

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import type { HeatLevel } from '@prisma/client'
 
 export interface RecommendedProduct {
   id: string
@@ -118,8 +119,8 @@ export async function getFrequentlyBoughtTogether(
  * Get "You May Also Like" recommendations based on product similarity.
  *
  * Scores candidates by:
- * - Same category (+0.5)
- * - Same heat level (+0.3)
+ * - Same heat level (+0.4)
+ * - Same category (+0.4)
  * - Price within 30% of the source product (+0.2)
  *
  * @param {string} productId - The ID of the source product.
@@ -193,11 +194,11 @@ export async function getYouMayAlsoLike(
       .map(p => {
         let score = 0
 
-        // Same category = +0.5
-        if (p.categoryId === product.categoryId) score += 0.5
+        // Same heat level = +0.4 (prioritized for better recommendations)
+        if (p.heatLevel === product.heatLevel) score += 0.4
 
-        // Same heat level = +0.3
-        if (p.heatLevel === product.heatLevel) score += 0.3
+        // Same category = +0.4 (flavor profile matching)
+        if (p.categoryId === product.categoryId) score += 0.4
 
         // Similar price range (within 30%) = +0.2
         const priceDiff = Math.abs(Number(p.price) - Number(product.price))
@@ -224,6 +225,12 @@ export async function getYouMayAlsoLike(
   }
 }
 
+export interface PersonalizedRecommendationsOptions {
+  limit?: number
+  heatLevels?: string[]
+  categoryIds?: string[]
+}
+
 /**
  * Get personalised product recommendations for an authenticated user.
  *
@@ -231,14 +238,26 @@ export async function getYouMayAlsoLike(
  * last 10 paid orders, then surfaces in-stock products matching those
  * preferences that the user has not yet purchased.
  *
+ * Optionally accepts browsing behavior filters (heatLevels, categoryIds) which
+ * override purchase history preferences to support real-time personalization.
+ *
  * @param {string} userId - The authenticated user's ID.
- * @param {number} [limit=8] - Maximum number of recommendations to return.
+ * @param {number | PersonalizedRecommendationsOptions} [limitOrOptions=8] - Maximum number of recommendations or options object.
  * @returns {Promise<RecommendedProduct[]>} Personalised recommendations with a fixed confidence score of 0.8.
  */
 export async function getPersonalizedRecommendations(
   userId: string,
-  limit: number = 8
+  limitOrOptions: number | PersonalizedRecommendationsOptions = 8
 ): Promise<RecommendedProduct[]> {
+  // Parse options for backwards compatibility
+  const options: PersonalizedRecommendationsOptions =
+    typeof limitOrOptions === 'number'
+      ? { limit: limitOrOptions }
+      : limitOrOptions
+
+  const limit = options.limit ?? 8
+  const browsingHeatLevels = options.heatLevels
+  const browsingCategoryIds = options.categoryIds
   const isDev = process.env.NODE_ENV === 'development'
   try {
     const startTime = isDev ? Date.now() : 0
@@ -299,9 +318,41 @@ export async function getPersonalizedRecommendations(
       })
     })
 
-    // Get top preferences
-    const topCategory = Array.from(categories.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
-    const topHeatLevel = Array.from(heatLevels.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
+    // Determine preferences: use browsing behavior if provided, otherwise use purchase history
+    let targetCategories: string[] | undefined
+    let targetHeatLevels: string[] | undefined
+
+    if (browsingCategoryIds && browsingCategoryIds.length > 0) {
+      targetCategories = browsingCategoryIds
+    } else {
+      const topCategory = Array.from(categories.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
+      if (topCategory) {
+        targetCategories = [topCategory]
+      }
+    }
+
+    if (browsingHeatLevels && browsingHeatLevels.length > 0) {
+      targetHeatLevels = browsingHeatLevels
+    } else {
+      const topHeatLevel = Array.from(heatLevels.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
+      if (topHeatLevel) {
+        targetHeatLevels = [topHeatLevel]
+      }
+    }
+
+    // Build OR conditions based on available preferences
+    const orConditions = []
+    if (targetCategories && targetCategories.length > 0) {
+      orConditions.push({ categoryId: { in: targetCategories } })
+    }
+    if (targetHeatLevels && targetHeatLevels.length > 0) {
+      orConditions.push({ heatLevel: { in: targetHeatLevels as HeatLevel[] } })
+    }
+
+    // If no preferences available, return empty array
+    if (orConditions.length === 0) {
+      return []
+    }
 
     // Find products matching preferences
     const recommendationsStartTime = isDev ? Date.now() : 0
@@ -310,10 +361,7 @@ export async function getPersonalizedRecommendations(
         id: { notIn: Array.from(purchasedProductIds) }, // Exclude already purchased
         isActive: true,
         inventory: { gt: 0 },
-        OR: [
-          { categoryId: topCategory },
-          { heatLevel: topHeatLevel as any },
-        ],
+        OR: orConditions,
       },
       select: {
         id: true,
@@ -343,6 +391,157 @@ export async function getPersonalizedRecommendations(
     }))
   } catch (error) {
     console.error('Error getting personalized recommendations:', error)
+    return []
+  }
+}
+
+/**
+ * Get complementary product recommendations for post-purchase emails.
+ *
+ * Suggests products with different heat levels but similar categories to expand
+ * the customer's flavor exploration while staying within familiar categories.
+ *
+ * Scores candidates by:
+ * - Different heat level (+0.5)
+ * - Same category as purchased products (+0.5)
+ *
+ * @param {string[]} productIds - Array of purchased product IDs.
+ * @param {number} [limit=4] - Maximum number of recommendations to return.
+ * @returns {Promise<RecommendedProduct[]>} Complementary recommendations, sorted by score descending.
+ */
+export async function getComplementaryRecommendations(
+  productIds: string[],
+  limit: number = 4
+): Promise<RecommendedProduct[]> {
+  const isDev = process.env.NODE_ENV === 'development'
+  try {
+    // Return early if no products provided
+    if (productIds.length === 0) {
+      return []
+    }
+
+    const startTime = isDev ? Date.now() : 0
+    if (isDev) {
+      console.log('[Recommendations] getComplementaryRecommendations: Starting query for productIds:', productIds)
+    }
+
+    // Fetch purchased products to analyze their attributes
+    const purchasedProducts = await prisma.product.findMany({
+      where: {
+        id: { in: productIds },
+      },
+      select: {
+        id: true,
+        categoryId: true,
+        heatLevel: true,
+      },
+    })
+
+    if (isDev) {
+      const duration = Date.now() - startTime
+      console.log(`[Recommendations] getComplementaryRecommendations: Purchased products query completed in ${duration}ms (${purchasedProducts.length} products)`)
+    }
+
+    // Extract categories and heat levels from purchased products
+    const purchasedCategories = new Set<string>()
+    const purchasedHeatLevels = new Set<string>()
+
+    purchasedProducts.forEach(product => {
+      if (product.categoryId) {
+        purchasedCategories.add(product.categoryId)
+      }
+      if (product.heatLevel) {
+        purchasedHeatLevels.add(product.heatLevel)
+      }
+    })
+
+    // Return early if no valid categories or heat levels
+    if (purchasedCategories.size === 0 && purchasedHeatLevels.size === 0) {
+      return []
+    }
+
+    // Find complementary products
+    const complementaryStartTime = isDev ? Date.now() : 0
+    const complementaryProducts = await prisma.product.findMany({
+      where: {
+        id: { notIn: productIds }, // Exclude already purchased
+        isActive: true,
+        inventory: { gt: 0 },
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        price: true,
+        featuredImage: true,
+        heatLevel: true,
+        sku: true,
+        inventory: true,
+        categoryId: true,
+      },
+      take: limit * 3, // Fetch more to allow filtering
+    })
+
+    if (isDev) {
+      const complementaryDuration = Date.now() - complementaryStartTime
+      const totalDuration = Date.now() - startTime
+      console.log(`[Recommendations] getComplementaryRecommendations: Complementary products query completed in ${complementaryDuration}ms (${complementaryProducts.length} results)`)
+      console.log(`[Recommendations] getComplementaryRecommendations: Total execution time ${totalDuration}ms`)
+    }
+
+    // Score and filter complementary products
+    const scoredProducts = complementaryProducts
+      .map(p => {
+        let score = 0
+
+        // Only recommend products with DIFFERENT heat levels (complementary variety)
+        if (p.heatLevel && purchasedHeatLevels.has(p.heatLevel)) {
+          return null // Filter out same heat levels
+        }
+
+        // Different heat level = +0.5 (core requirement for complementary)
+        if (p.heatLevel) {
+          score += 0.5
+        }
+
+        // Same category = +0.5 (familiar flavor profile)
+        if (p.categoryId && purchasedCategories.has(p.categoryId)) {
+          score += 0.5
+        }
+
+        return {
+          id: p.id,
+          name: p.name,
+          slug: p.slug,
+          price: Number(p.price),
+          featuredImage: p.featuredImage,
+          heatLevel: p.heatLevel as string | null,
+          sku: p.sku,
+          inventory: p.inventory,
+          score,
+        }
+      })
+      .filter(
+        (
+          p,
+        ): p is {
+          id: string
+          name: string
+          slug: string
+          price: number
+          featuredImage: string | null
+          heatLevel: string | null
+          sku: string
+          inventory: number
+          score: number
+        } => p !== null,
+      ) // Remove filtered products
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+
+    return scoredProducts as RecommendedProduct[]
+  } catch (error) {
+    console.error('Error getting complementary recommendations:', error)
     return []
   }
 }
