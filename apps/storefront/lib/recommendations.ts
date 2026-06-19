@@ -118,8 +118,8 @@ export async function getFrequentlyBoughtTogether(
  * Get "You May Also Like" recommendations based on product similarity.
  *
  * Scores candidates by:
- * - Same category (+0.5)
- * - Same heat level (+0.3)
+ * - Same heat level (+0.4)
+ * - Same category (+0.4)
  * - Price within 30% of the source product (+0.2)
  *
  * @param {string} productId - The ID of the source product.
@@ -193,11 +193,11 @@ export async function getYouMayAlsoLike(
       .map(p => {
         let score = 0
 
-        // Same category = +0.5
-        if (p.categoryId === product.categoryId) score += 0.5
+        // Same heat level = +0.4 (prioritized for better recommendations)
+        if (p.heatLevel === product.heatLevel) score += 0.4
 
-        // Same heat level = +0.3
-        if (p.heatLevel === product.heatLevel) score += 0.3
+        // Same category = +0.4 (flavor profile matching)
+        if (p.categoryId === product.categoryId) score += 0.4
 
         // Similar price range (within 30%) = +0.2
         const priceDiff = Math.abs(Number(p.price) - Number(product.price))

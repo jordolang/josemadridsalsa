@@ -269,23 +269,17 @@ describe('getYouMayAlsoLike', () => {
 
     expect(result).toHaveLength(3)
 
-    // First product should have highest score: same category (0.5) + same heat (0.3) + similar price (0.2) = 1.0
-    expect(result[0]).toMatchObject({
-      id: 'prod-2',
-      score: 1.0,
-    })
+    // First product should have highest score: same heat (0.4) + same category (0.4) + similar price (0.2) = 1.0
+    expect(result[0].id).toBe('prod-2')
+    expect(result[0].score).toBeCloseTo(1.0, 5)
 
-    // Second product should have: same category (0.5) + similar price (0.2) = 0.7
-    expect(result[1]).toMatchObject({
-      id: 'prod-4',
-      score: 0.7,
-    })
+    // Second product should have: same category (0.4) + similar price (0.2) = 0.6
+    expect(result[1].id).toBe('prod-4')
+    expect(result[1].score).toBeCloseTo(0.6, 5)
 
-    // Third product should have: same heat level (0.3) = 0.3
-    expect(result[2]).toMatchObject({
-      id: 'prod-3',
-      score: 0.3,
-    })
+    // Third product should have: same heat level (0.4) = 0.4
+    expect(result[2].id).toBe('prod-3')
+    expect(result[2].score).toBeCloseTo(0.4, 5)
   })
 
   it('should calculate price similarity correctly', async () => {
