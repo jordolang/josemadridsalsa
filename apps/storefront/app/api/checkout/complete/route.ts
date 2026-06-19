@@ -135,7 +135,7 @@ export async function POST(request: Request) {
             status: 'CONFIRMED',
             stripePaymentId: paymentIntentId,
             abandonedCartId: abandonedCartId || undefined,
-          },
+          } as Parameters<typeof tx.order.update>[0]['data'],
         })
 
         // Mark abandoned cart as recovered
