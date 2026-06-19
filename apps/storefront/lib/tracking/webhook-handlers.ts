@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma'
+import { sendOrderShippedEmail, sendOrderDeliveredEmail } from '@/lib/email/automation'
 
 /**
  * Webhook Event Handler Types
@@ -105,19 +106,18 @@ export async function handleTrackerUpdated(
     tracker.status
   )
 
-  // TODO: Trigger notification emails based on status
-  // This will be integrated in phase-4 (email notifications)
-  // if (tracker.status === 'in_transit' && updates.shippedAt) {
-  //   sendOrderShippedEmail(shippingLabel.orderId).catch((error) => {
-  //     console.error('Failed to send shipped email', { orderId: shippingLabel.orderId, error })
-  //   })
-  // }
-  //
-  // if (tracker.status === 'delivered' && updates.deliveredAt) {
-  //   sendOrderDeliveredEmail(shippingLabel.orderId).catch((error) => {
-  //     console.error('Failed to send delivered email', { orderId: shippingLabel.orderId, error })
-  //   })
-  // }
+  // Trigger notification emails based on status
+  if (tracker.status === 'in_transit' && updates.shippedAt) {
+    sendOrderShippedEmail(shippingLabel.orderId).catch((error) => {
+      console.error('Failed to send shipped email', { orderId: shippingLabel.orderId, error })
+    })
+  }
+
+  if (tracker.status === 'delivered' && updates.deliveredAt) {
+    sendOrderDeliveredEmail(shippingLabel.orderId).catch((error) => {
+      console.error('Failed to send delivered email', { orderId: shippingLabel.orderId, error })
+    })
+  }
 
   return {
     success: true,
