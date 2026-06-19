@@ -3,37 +3,53 @@ import { POST } from '@/app/api/orders/[id]/ship/route'
 import { NextRequest } from 'next/server'
 
 // Mock dependencies
-const mockFindUnique = vi.fn()
-const mockUpdate = vi.fn()
-const mockCreate = vi.fn()
-const mockCreateAuditLog = vi.fn()
-const mockGetSession = vi.fn()
-const mockCreateShipment = vi.fn()
-const mockBuyShipmentLabel = vi.fn()
-
 vi.mock('@/lib/prisma', () => ({
   default: {
     order: {
-      findUnique: mockFindUnique,
-      update: mockUpdate,
+      findUnique: vi.fn(),
+      update: vi.fn(),
     },
     shippingLabel: {
-      create: mockCreate,
+      create: vi.fn(),
     },
     auditLog: {
-      create: mockCreateAuditLog,
+      create: vi.fn(),
     },
   },
 }))
 
 vi.mock('@/lib/auth', () => ({
-  getServerSession: mockGetSession,
+  authOptions: {},
+}))
+
+vi.mock('next-auth', () => ({
+  getServerSession: vi.fn(),
 }))
 
 vi.mock('@/lib/shipping-api', () => ({
-  createShipment: mockCreateShipment,
-  buyShipmentLabel: mockBuyShipmentLabel,
+  createShipment: vi.fn(),
+  buyShipmentLabel: vi.fn(),
 }))
+
+vi.mock('@/lib/rbac', () => ({
+  hasPermission: vi.fn(),
+}))
+
+vi.mock('@/lib/audit', () => ({
+  logAudit: vi.fn(() => Promise.resolve()),
+}))
+
+// Get mock references after mocking
+import prisma from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { createShipment, buyShipmentLabel } from '@/lib/shipping-api'
+import { hasPermission } from '@/lib/rbac'
+
+const mockPrisma = prisma as any
+const mockGetSession = getServerSession as any
+const mockCreateShipment = createShipment as any
+const mockBuyShipmentLabel = buyShipmentLabel as any
+const mockHasPermission = hasPermission as any
 
 describe('POST /api/orders/[id]/ship - Integration Tests', () => {
   beforeEach(() => {
@@ -50,6 +66,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
         role: 'ADMIN',
       },
     })
+    mockHasPermission.mockResolvedValue(true)
 
     // Mock order with shipping address
     const mockOrder = {
@@ -74,7 +91,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
       ],
     }
 
-    mockFindUnique.mockResolvedValue(mockOrder)
+    mockPrisma.order.findUnique.mockResolvedValue(mockOrder)
 
     // Mock shipment creation
     mockCreateShipment.mockResolvedValue({
@@ -99,7 +116,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
       service: 'Priority',
     })
 
-    mockUpdate.mockResolvedValue({
+    mockPrisma.order.update.mockResolvedValue({
       ...mockOrder,
       status: 'SHIPPED',
       easypostShipmentId: 'shp_test123',
@@ -108,7 +125,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
       shippedAt: new Date(),
     })
 
-    mockCreate.mockResolvedValue({
+    mockPrisma.shippingLabel.create.mockResolvedValue({
       id: 'label-1',
       orderId: 'order-1',
       easypostShipmentId: 'shp_test123',
@@ -134,11 +151,19 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
             width: 8,
             height: 6,
           },
+          fromAddress: {
+            name: 'Jose Madrid Salsa Company',
+            street1: '123 Business St',
+            city: 'Portland',
+            state: 'OR',
+            zip: '97201',
+            country: 'US',
+          },
         }),
       }
     )
 
-    const response = await POST(request, { params: { id: 'order-1' } })
+    const response = await POST(request, { params: Promise.resolve({ id: 'order-1' } })
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -151,7 +176,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
     })
 
     // Verify database updates
-    expect(mockUpdate).toHaveBeenCalledWith({
+    expect(mockPrisma.order.update).toHaveBeenCalledWith({
       where: { id: 'order-1' },
       data: expect.objectContaining({
         status: 'SHIPPED',
@@ -162,7 +187,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
       }),
     })
 
-    expect(mockCreate).toHaveBeenCalledWith({
+    expect(mockPrisma.shippingLabel.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         orderId: 'order-1',
         easypostShipmentId: 'shp_test123',
@@ -173,7 +198,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
     })
 
     // Verify audit log
-    expect(mockCreateAuditLog).toHaveBeenCalledWith({
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         action: 'ORDER_SHIPPED',
         entityType: 'ORDER',
@@ -192,6 +217,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
         role: 'CUSTOMER',
       },
     })
+    mockHasPermission.mockResolvedValue(false)
 
     const request = new NextRequest(
       'http://localhost:3000/api/orders/order-1/ship',
@@ -200,15 +226,22 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
         body: JSON.stringify({
           rateId: 'rate_test1',
           parcel: { weight: 1, length: 5, width: 5, height: 5 },
+          fromAddress: {
+            street1: '123 St',
+            city: 'Portland',
+            state: 'OR',
+            zip: '97201',
+            country: 'US',
+          },
         }),
       }
     )
 
-    const response = await POST(request, { params: { id: 'order-1' } })
+    const response = await POST(request, { params: Promise.resolve({ id: 'order-1' }) })
 
     expect(response.status).toBe(403)
     const data = await response.json()
-    expect(data.error).toBe('Unauthorized')
+    expect(data.error).toBe('Forbidden')
   })
 
   it('validates request body with Zod schema', async () => {
@@ -218,6 +251,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
         role: 'ADMIN',
       },
     })
+    mockHasPermission.mockResolvedValue(true)
 
     // Invalid request - missing required fields
     const request = new NextRequest(
@@ -231,7 +265,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
       }
     )
 
-    const response = await POST(request, { params: { id: 'order-1' } })
+    const response = await POST(request, { params: Promise.resolve({ id: 'order-1' } })
 
     expect(response.status).toBe(400)
     const data = await response.json()
@@ -246,8 +280,9 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
         role: 'ADMIN',
       },
     })
+    mockHasPermission.mockResolvedValue(true)
 
-    mockFindUnique.mockResolvedValue(null)
+    mockPrisma.order.findUnique.mockResolvedValue(null)
 
     const request = new NextRequest(
       'http://localhost:3000/api/orders/invalid-order/ship',
@@ -256,11 +291,18 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
         body: JSON.stringify({
           rateId: 'rate_test1',
           parcel: { weight: 1, length: 5, width: 5, height: 5 },
+          fromAddress: {
+            street1: '123 St',
+            city: 'Portland',
+            state: 'OR',
+            zip: '97201',
+            country: 'US',
+          },
         }),
       }
     )
 
-    const response = await POST(request, { params: { id: 'invalid-order' } })
+    const response = await POST(request, { params: Promise.resolve({ id: 'invalid-order' } })
 
     expect(response.status).toBe(404)
     const data = await response.json()
@@ -274,8 +316,9 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
         role: 'ADMIN',
       },
     })
+    mockHasPermission.mockResolvedValue(true)
 
-    mockFindUnique.mockResolvedValue({
+    mockPrisma.order.findUnique.mockResolvedValue({
       id: 'order-1',
       status: 'PAID',
       shippingAddress: {},
@@ -293,11 +336,18 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
         body: JSON.stringify({
           rateId: 'rate_test1',
           parcel: { weight: 1, length: 5, width: 5, height: 5 },
+          fromAddress: {
+            street1: '123 St',
+            city: 'Portland',
+            state: 'OR',
+            zip: '97201',
+            country: 'US',
+          },
         }),
       }
     )
 
-    const response = await POST(request, { params: { id: 'order-1' } })
+    const response = await POST(request, { params: Promise.resolve({ id: 'order-1' } })
 
     expect(response.status).toBe(500)
     const data = await response.json()

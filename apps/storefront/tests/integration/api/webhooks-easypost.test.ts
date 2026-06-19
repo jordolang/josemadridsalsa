@@ -2,33 +2,37 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { POST } from '@/app/api/webhooks/easypost/route'
 import { createHmac } from 'crypto'
 
-// Mock dependencies
-const mockFindUnique = vi.fn()
-const mockCreate = vi.fn()
-const mockUpdate = vi.fn()
-const mockHandleTrackerUpdated = vi.fn()
+// Hoist mock dependencies
+const { mockHeadersGet } = vi.hoisted(() => ({
+  mockHeadersGet: vi.fn(),
+}))
 
 vi.mock('@/lib/prisma', () => ({
   default: {
     webhookEvent: {
-      findUnique: mockFindUnique,
-      create: mockCreate,
-      update: mockUpdate,
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
     },
   },
 }))
 
 vi.mock('@/lib/tracking/webhook-handlers', () => ({
-  handleTrackerUpdated: mockHandleTrackerUpdated,
+  handleTrackerUpdated: vi.fn(),
 }))
 
-const mockHeadersGet = vi.fn()
-
-vi.mock('next/headers', () => ({
-  headers: () => ({
+vi.mock('next/headers', async () => ({
+  headers: vi.fn(async () => ({
     get: mockHeadersGet,
-  }),
+  })),
 }))
+
+// Get mock references after mocking
+import prisma from '@/lib/prisma'
+import { handleTrackerUpdated } from '@/lib/tracking/webhook-handlers'
+
+const mockPrisma = prisma as any
+const mockHandleTrackerUpdated = handleTrackerUpdated as any
 
 describe('POST /api/webhooks/easypost - Integration Tests', () => {
   const webhookSecret = 'test_webhook_secret'
@@ -61,8 +65,8 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
     const signature = signWebhook(body)
 
     mockHeadersGet.mockReturnValue(signature)
-    mockFindUnique.mockResolvedValue(null)
-    mockCreate.mockResolvedValue({
+    mockPrisma.webhookEvent.findUnique.mockResolvedValue(null)
+    mockPrisma.webhookEvent.create.mockResolvedValue({
       id: 'webhook-1',
       providerEventId: 'evt_test123',
       type: 'tracker.updated',
@@ -75,7 +79,7 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
       method: 'POST',
       body,
       headers: {
-        'X-Easypost-Hmac-Signature': signature,
+        'x-webhook-signature': signature,
       },
     })
 
@@ -96,13 +100,13 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
     const body = JSON.stringify(webhookPayload)
     const invalidSignature = 'invalid_signature'
 
-    mockHeadersGet.mockReturnValue(invalidSignature)
+    mockHeaders().get.mockReturnValue(invalidSignature)
 
     const request = new Request('http://localhost:3000/api/webhooks/easypost', {
       method: 'POST',
       body,
       headers: {
-        'X-Easypost-Hmac-Signature': invalidSignature,
+        'x-webhook-signature': invalidSignature,
       },
     })
 
@@ -141,8 +145,8 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
     const signature = signWebhook(body)
 
     mockHeadersGet.mockReturnValue(signature)
-    mockFindUnique.mockResolvedValue(null)
-    mockCreate.mockResolvedValue({
+    mockPrisma.webhookEvent.findUnique.mockResolvedValue(null)
+    mockPrisma.webhookEvent.create.mockResolvedValue({
       id: 'webhook-1',
       providerEventId: 'evt_test123',
       type: 'tracker.updated',
@@ -155,7 +159,7 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
       method: 'POST',
       body,
       headers: {
-        'X-Easypost-Hmac-Signature': signature,
+        'x-webhook-signature': signature,
       },
     })
 
@@ -163,7 +167,7 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
 
     expect(response.status).toBe(200)
     expect(mockHandleTrackerUpdated).toHaveBeenCalledWith(trackerData)
-    expect(mockUpdate).toHaveBeenCalledWith({
+    expect(mockPrisma.webhookEvent.update).toHaveBeenCalledWith({
       where: { providerEventId: 'evt_test123' },
       data: { processed: true },
     })
@@ -185,7 +189,7 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
 
     mockHeadersGet.mockReturnValue(signature)
     // Webhook event already exists
-    mockFindUnique.mockResolvedValue({
+    mockPrisma.webhookEvent.findUnique.mockResolvedValue({
       id: 'webhook-1',
       providerEventId: 'evt_duplicate',
       type: 'tracker.updated',
@@ -197,7 +201,7 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
       method: 'POST',
       body,
       headers: {
-        'X-Easypost-Hmac-Signature': signature,
+        'x-webhook-signature': signature,
       },
     })
 
@@ -209,7 +213,7 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
 
     // Should not process duplicate
     expect(mockHandleTrackerUpdated).not.toHaveBeenCalled()
-    expect(mockCreate).not.toHaveBeenCalled()
+    expect(mockPrisma.webhookEvent.create).not.toHaveBeenCalled()
   })
 
   it('handles tracker.created events', async () => {
@@ -227,8 +231,8 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
     const signature = signWebhook(body)
 
     mockHeadersGet.mockReturnValue(signature)
-    mockFindUnique.mockResolvedValue(null)
-    mockCreate.mockResolvedValue({
+    mockPrisma.webhookEvent.findUnique.mockResolvedValue(null)
+    mockPrisma.webhookEvent.create.mockResolvedValue({
       id: 'webhook-1',
       providerEventId: 'evt_created',
       type: 'tracker.created',
@@ -240,7 +244,7 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
       method: 'POST',
       body,
       headers: {
-        'X-Easypost-Hmac-Signature': signature,
+        'x-webhook-signature': signature,
       },
     })
 
@@ -266,8 +270,8 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
     const signature = signWebhook(body)
 
     mockHeadersGet.mockReturnValue(signature)
-    mockFindUnique.mockResolvedValue(null)
-    mockCreate.mockResolvedValue({
+    mockPrisma.webhookEvent.findUnique.mockResolvedValue(null)
+    mockPrisma.webhookEvent.create.mockResolvedValue({
       id: 'webhook-1',
       providerEventId: 'evt_error',
       type: 'tracker.updated',
@@ -284,7 +288,7 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
       method: 'POST',
       body,
       headers: {
-        'X-Easypost-Hmac-Signature': signature,
+        'x-webhook-signature': signature,
       },
     })
 
@@ -295,7 +299,7 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
 
     // Should mark as processed even if handler fails
     // (prevents infinite retry loops)
-    expect(mockUpdate).toHaveBeenCalledWith({
+    expect(mockPrisma.webhookEvent.update).toHaveBeenCalledWith({
       where: { providerEventId: 'evt_error' },
       data: { processed: true },
     })
@@ -314,7 +318,7 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
       method: 'POST',
       body: JSON.stringify(webhookPayload),
       headers: {
-        'X-Easypost-Hmac-Signature': 'any_signature',
+        'x-webhook-signature': 'any_signature',
       },
     })
 
