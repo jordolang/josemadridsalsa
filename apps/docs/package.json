@@ -29,14 +29,14 @@
     "tailwind-merge": "^3.5.0"
   },
   "overrides": {
-    "esbuild": "0.24.2"
+    "esbuild": "0.28.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "esbuild": "0.24.2",
+    "esbuild": "0.28.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "react-medium-image-zoom": "^5.4.3",
