@@ -21,6 +21,10 @@ Supabase. No query code, no auth code, and no schema code changes.
 - Region: `us-east-1`  → pooler host `aws-0-us-east-1.pooler.supabase.com`
 - Postgres engine: 17
 
+> These connection values (project ref, pooler host, role names) are specific to
+> **this** project. Don't copy them into other environments — pull each environment's
+> own values from its Supabase Dashboard.
+
 The schema already exists in this project, but **every table has 0 rows** and Prisma's
 `_prisma_migrations` history table is missing. The full dump-and-restore below fixes
 both: it makes Supabase an exact replica of Neon (schema + data + migration history),
@@ -58,6 +62,10 @@ wc -l neon_public.sql
 
 ## Step 2 — Empty the Supabase `public` schema (and restore Supabase's default grants)
 
+> ⚠️ **This permanently wipes everything in the `public` schema of the target database.**
+> Only run it against the dedicated `jose-madrid-salsa` project confirmed above (which is
+> empty and exists solely for this migration) — never against a shared or in-use project.
+
 ```bash
 docker run --rm -i postgres:17 psql "$SUPABASE_URL" <<'SQL'
 DROP SCHEMA IF EXISTS public CASCADE;
@@ -91,7 +99,7 @@ SELECT
 SQL
 ```
 
-Row counts should match Neon. `prisma_migrations` should be non-zero.
+Row counts should match Neon. `_prisma_migrations` (reported as `prisma_migrations` in the query above) should be non-zero.
 
 ## Step 5 — Repoint Vercel to Supabase
 
