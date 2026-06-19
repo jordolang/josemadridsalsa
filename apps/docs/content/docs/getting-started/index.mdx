@@ -1,0 +1,107 @@
+---
+title: Getting Started
+description: Set up your Jose Madrid Salsa development environment
+---
+
+<Callout title="Prerequisites">
+Before you begin, make sure you have **Node.js 24 LTS**, **npm**, **PostgreSQL**, and **Git** installed on your machine.
+</Callout>
+
+<PageInlineTOC>On this page</PageInlineTOC>
+
+## Quick Start
+
+<Steps>
+  <Step>
+    ### Environment Setup
+
+    Follow the [Environment Setup Guide](/docs/getting-started/environment-setup) to configure your development environment with all required API keys and credentials.
+  </Step>
+  <Step>
+    ### Database Setup
+
+    Initialize your PostgreSQL database using the [Database Guide](/docs/getting-started/database-setup). The platform uses **Prisma** as the ORM with **Neon** serverless Postgres.
+
+    ```bash title="Database setup"
+    npx prisma migrate dev
+    npx prisma db seed
+    ```
+  </Step>
+  <Step>
+    ### Install & Run
+
+    <Tabs items={['npm', 'pnpm']}>
+      <Tab value="npm">
+        ```bash title="Terminal"
+        npm install
+        npm run dev
+        ```
+      </Tab>
+      <Tab value="pnpm">
+        ```bash title="Terminal"
+        pnpm install
+        pnpm dev
+        ```
+      </Tab>
+    </Tabs>
+
+    The application will be available at [http://localhost:3000](http://localhost:3000).
+  </Step>
+</Steps>
+
+## Core Directories
+
+<Files>
+  <Folder name="app" defaultOpen>
+    <File name="layout.tsx" />
+    <Folder name="(public)">
+      <File name="products/" />
+      <File name="recipes/" />
+      <File name="checkout/" />
+    </Folder>
+    <Folder name="admin">
+      <File name="orders/" />
+      <File name="products/" />
+      <File name="users/" />
+    </Folder>
+    <Folder name="api">
+      <File name="auth/" />
+      <File name="products/" />
+      <File name="orders/" />
+    </Folder>
+  </Folder>
+  <Folder name="components">
+    <File name="store/" />
+    <File name="ui/" />
+    <File name="admin/" />
+  </Folder>
+  <Folder name="lib">
+    <File name="auth.ts" />
+    <File name="prisma.ts" />
+    <File name="stripe.ts" />
+    <File name="shipping-calculator.ts" />
+  </Folder>
+  <Folder name="prisma">
+    <File name="schema.prisma" />
+    <File name="migrations/" />
+  </Folder>
+  <Folder name="emails">
+    <File name="order-confirmation.tsx" />
+    <File name="welcome.tsx" />
+  </Folder>
+  <File name="package.json" />
+  <File name="next.config.mjs" />
+  <File name="tailwind.config.ts" />
+</Files>
+
+## Next Steps
+
+<Cards>
+  <Card title="API Documentation" href="/docs/api" description="Understand available REST endpoints and authentication" />
+  <Card title="Features" href="/docs/features" description="Explore checkout, payments, shipping, and more" />
+  <Card title="Configuration" href="/docs/configuration" description="Environment variables and advanced setup" />
+</Cards>
+
+<Callout type="warn" title="Authentication Providers">
+The platform supports Google, GitHub, Facebook, and Apple OAuth in addition to email/password credentials. You'll need to configure OAuth app credentials for each provider you want to enable. See the [OAuth Setup Guide](https://github.com/jordolang/josemadridsalsa/blob/main/docs/OAUTH-SETUP-GUIDE.md) for details.
+</Callout>

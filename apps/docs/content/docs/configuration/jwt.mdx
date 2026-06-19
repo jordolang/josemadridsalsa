@@ -1,0 +1,116 @@
+---
+title: JWT Configuration
+description: JWT session strategy, token contents, and session management
+---
+
+
+# JWT Configuration
+
+Jose Madrid Salsa uses JWT (JSON Web Token) sessions exclusively -- there is no database session table. The JWT is signed with `NEXTAUTH_SECRET` and stored in an HTTP-only cookie.
+
+## Session Strategy
+
+```ts title="lib/auth.ts"
+session: {
+  strategy: 'jwt',
+  maxAge: 30 * 24 * 60 * 60, // 30 days
+},
+```
+
+- **Strategy**: `jwt` (no database adapter)
+- **Max age**: 30 days
+- **Storage**: HTTP-only, secure cookie in production
+
+## Token Contents
+
+The JWT token is enriched in the `jwt` callback with application-specific fields:
+
+| Field | Type | Source | Description |
+|---|---|---|---|
+| `id` | `string` | Database | User's CUID from the `users` table |
+| `email` | `string` | NextAuth | User's email address |
+| `name` | `string?` | NextAuth | User's display name |
+| `role` | `UserRole` | Database | One of: CUSTOMER, ADMIN, DEVELOPER, STAFF, WHOLESALE, FUNDRAISER |
+| `fundraiserId` | `string?` | Database | Fundraiser ID if the user has role FUNDRAISER |
+| `avatar` | `string?` | OAuth | Profile picture URL from Google/GitHub/Facebook |
+
+## Session Object
+
+The session callback maps token fields to `session.user`:
+
+```ts title="lib/auth.ts"
+async session({ session, token }) {
+  if (session.user) {
+    session.user.id = token.id
+    session.user.role = token.role
+    if (token.fundraiserId) session.user.fundraiserId = token.fundraiserId
+    if (token.avatar) session.user.image = token.avatar
+  }
+  return session
+}
+```
+
+### Accessing the Session
+
+**Server-side** (Server Components, API routes):
+
+```ts
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+const session = await getServerSession(authOptions)
+const userId = session?.user?.id
+const role = session?.user?.role
+```
+
+**Client-side** (Client Components):
+
+```tsx
+import { useSession } from 'next-auth/react'
+
+function MyComponent() {
+  const { data: session } = useSession()
+  const role = session?.user?.role
+}
+```
+
+## Cookie Configuration
+
+| Setting | Development | Production |
+|---|---|---|
+| `useSecureCookies` | `false` | `true` |
+| Cookie name | `next-auth.session-token` | `__Secure-next-auth.session-token` |
+| HttpOnly | Yes | Yes |
+| SameSite | Lax | Lax |
+
+## Token Refresh Behavior
+
+The JWT callback runs on every request that needs session data. The token enrichment follows this flow:
+
+1. **Initial sign-in**: User data (id, role) is added from the credentials provider or OAuth upsert
+2. **Subsequent requests**: Token already contains role; no database call needed
+3. **Missing role fallback**: If `token.role` is somehow missing, queries the database by email
+
+This design minimizes database calls -- most requests use the cached role from the token.
+
+<Callout type="info">
+Since the JWT contains the user's role, role changes in the database will not take effect until the user's current session expires or they sign out and back in.
+</Callout>
+
+## Signing Secret
+
+The JWT is signed with `NEXTAUTH_SECRET`:
+
+```ts
+secret: process.env.NEXTAUTH_SECRET,
+```
+
+Generate a strong secret:
+
+```bash
+openssl rand -base64 32
+```
+
+<Callout type="error">
+The `NEXTAUTH_SECRET` must be set in all environments. The application will throw an error in development if it is missing, and authentication will fail silently in production.
+</Callout>

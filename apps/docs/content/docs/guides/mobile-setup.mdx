@@ -1,0 +1,239 @@
+---
+title: Mobile App Setup
+description: Overview and setup guide for the Jose Madrid Salsa React Native mobile app
+---
+
+# Mobile App Setup
+
+The Jose Madrid Salsa mobile app is built with Expo and React Native, providing a native mobile experience for customers and point-of-sale operations.
+
+## Tech Stack
+
+| Technology | Purpose |
+|-----------|---------|
+| Expo | React Native framework and build system |
+| Expo Router | File-based navigation |
+| React Native | Cross-platform mobile UI |
+| Stripe React Native | Payment processing |
+| Stripe Terminal | In-person POS card reading |
+| Expo Secure Store | Secure credential storage |
+
+## Project Structure
+
+<Files>
+  <Folder name="mobile" defaultOpen>
+    <File name="app.config.ts" />
+    <File name="package.json" />
+    <File name="tsconfig.json" />
+    <Folder name="app">
+      <File name="..." />
+    </Folder>
+    <Folder name="components">
+      <File name="..." />
+    </Folder>
+    <Folder name="hooks">
+      <File name="..." />
+    </Folder>
+    <Folder name="lib">
+      <File name="..." />
+    </Folder>
+    <Folder name="store">
+      <File name="..." />
+    </Folder>
+    <Folder name="assets">
+      <File name="icon.png" />
+      <File name="splash-icon.png" />
+    </Folder>
+    <Folder name="ios">
+      <File name="..." />
+    </Folder>
+    <Folder name="ios-native">
+      <File name="..." />
+    </Folder>
+  </Folder>
+</Files>
+
+## Getting Started
+
+<Steps>
+<Step>
+### Install Dependencies
+
+```bash
+cd mobile
+npm install
+```
+
+The mobile app has its own `package.json` separate from the main web app.
+</Step>
+
+<Step>
+### Configure Environment
+
+Create environment variables for the mobile app:
+
+```bash
+# Stripe
+STRIPE_PUBLISHABLE_KEY="pk_test_..."
+
+# EAS Build (for publishing)
+EAS_PROJECT_ID="your-eas-project-id"
+```
+
+These are loaded via `app.config.ts`:
+
+```typescript
+extra: {
+  stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY ?? '',
+  eas: {
+    projectId: process.env.EAS_PROJECT_ID ?? '',
+  },
+},
+```
+</Step>
+
+<Step>
+### Start Development
+
+```bash
+npx expo start
+```
+
+This launches the Expo dev server. You can run the app on:
+- **iOS Simulator**: Press `i`
+- **Android Emulator**: Press `a`
+- **Physical Device**: Scan the QR code with Expo Go
+</Step>
+</Steps>
+
+## App Configuration
+
+The Expo config in `app.config.ts` defines the app metadata and plugins:
+
+```typescript
+export default ({ config }: ConfigContext): ExpoConfig => ({
+  name: 'Jose Madrid Salsa',
+  slug: 'jose-madrid-salsa',
+  version: '1.0.0',
+  scheme: 'josemadridsalsa',
+  orientation: 'portrait',
+  newArchEnabled: true,
+  ios: {
+    supportsTablet: true,
+    bundleIdentifier: 'com.anonymous.mobile',
+  },
+  android: {
+    edgeToEdgeEnabled: true,
+  },
+  plugins: [
+    'expo-router',
+    'expo-secure-store',
+    ['@stripe/stripe-react-native', {
+      merchantIdentifier: 'merchant.com.josemadridsalsa',
+    }],
+    ['@stripe/stripe-terminal-react-native', {
+      bluetoothBackgroundMode: 'Required to connect to Stripe Terminal bluetooth readers.',
+      locationAlwaysAndWhenInUsePermission: 'Location required to process transactions.',
+    }],
+  ],
+})
+```
+
+## Key Features
+
+### Stripe Payments
+
+The app integrates Stripe React Native for mobile payments:
+
+```typescript
+import { StripeProvider } from '@stripe/stripe-react-native'
+
+// Wrap your app with StripeProvider
+<StripeProvider publishableKey={stripePublishableKey}>
+  {children}
+</StripeProvider>
+```
+
+### Point of Sale (POS)
+
+The Stripe Terminal integration enables in-person card reading:
+
+- Bluetooth card reader support
+- Location-based transaction processing
+- Real-time payment confirmation
+
+<Callout type="info" title="Stripe Terminal">
+The POS system requires a physical Stripe Terminal card reader. In development, you can use the simulated reader for testing.
+</Callout>
+
+### Secure Storage
+
+Sensitive data (tokens, credentials) is stored using Expo Secure Store:
+
+```typescript
+import * as SecureStore from 'expo-secure-store'
+
+// Store a value
+await SecureStore.setItemAsync('authToken', token)
+
+// Retrieve a value
+const token = await SecureStore.getItemAsync('authToken')
+```
+
+## API Communication
+
+The mobile app communicates with the same backend as the web app. API calls go to the deployed API:
+
+```typescript
+const API_BASE_URL = 'https://josemadrid.net/api'
+
+const response = await fetch(`${API_BASE_URL}/products?featured=true`)
+const products = await response.json()
+```
+
+## Building for Production
+
+### iOS Build
+
+```bash
+# Using EAS Build
+npx eas build --platform ios
+```
+
+### Android Build
+
+```bash
+npx eas build --platform android
+```
+
+### Over-the-Air Updates
+
+Expo supports OTA updates for JavaScript changes without a full app store release:
+
+```bash
+npx eas update --branch production
+```
+
+## Native Modules
+
+The app has both Expo-managed and native iOS code:
+
+- `ios/` - Standard Expo iOS project
+- `ios-native/` - Custom native Swift/Objective-C modules
+
+<Callout type="warn" title="Native Builds">
+After installing native module dependencies or modifying native code, you need to rebuild the native project. Expo Go will not work with custom native modules -- use a development build instead.
+</Callout>
+
+## Relationship to Web App
+
+The mobile app and web app are independent projects that share a backend:
+
+| Aspect | Web App | Mobile App |
+|--------|---------|------------|
+| Location | Project root | `mobile/` directory |
+| Framework | Next.js | Expo / React Native |
+| Package manager | npm (root) | npm (mobile/) |
+| Components | Not shared | Not shared |
+| API | Direct Prisma access | HTTP API calls |
+| Auth | NextAuth.js cookies | Token-based |

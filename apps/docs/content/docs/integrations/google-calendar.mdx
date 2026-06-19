@@ -1,0 +1,118 @@
+---
+title: Google Calendar
+description: Google Calendar API integration for displaying upcoming events and schedule
+---
+
+
+# Google Calendar Integration
+
+The Google Calendar integration fetches upcoming events from a public Google Calendar and displays them on the website. No OAuth or service account is required -- it uses a simple API key with a publicly shared calendar.
+
+## Architecture
+
+Two implementations exist:
+
+1. **`lib/google-calendar.ts`** -- Standalone module with in-memory caching (5-minute TTL)
+2. **`lib/server/google-data.ts`** -- Server component data fetcher using Next.js ISR (5-minute revalidation)
+
+Both call the Google Calendar v3 REST API directly via `fetch()`.
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `GOOGLE_CALENDAR_API_KEY` | Google Cloud API key with Calendar API enabled | Yes |
+| `GOOGLE_CALENDAR_ID` | Calendar ID (e.g., `mike@josemadridsalsa.com`) | Yes |
+
+<Callout type="warn">
+The target calendar must be set to "Make available to public" in Google Calendar settings. No OAuth consent screen or service account is needed.
+</Callout>
+
+## Setup
+
+<Steps>
+
+### Enable the Calendar API
+
+In Google Cloud Console, enable the **Google Calendar API** for your project.
+
+### Create an API key
+
+Create an API key and optionally restrict it to the Calendar API.
+
+### Make the calendar public
+
+In Google Calendar settings, find the calendar and enable "Make available to public".
+
+### Configure environment variables
+
+```bash
+GOOGLE_CALENDAR_API_KEY=AIza...
+GOOGLE_CALENDAR_ID=mike@josemadridsalsa.com
+```
+
+</Steps>
+
+## Data Types
+
+The `ScheduleEvent` type represents a calendar event:
+
+```ts
+type ScheduleEvent = {
+  id: string
+  title: string
+  start: string | null
+  end: string | null
+  location: string | null
+  description: string | null
+  link: string | null
+  isAllDay: boolean
+}
+```
+
+All-day events are detected by the presence of `start.date` without `start.dateTime`.
+
+## API Call
+
+Both implementations call the same endpoint:
+
+```
+GET https://www.googleapis.com/calendar/v3/calendars/{calendarId}/events
+  ?key={apiKey}
+  &timeMin={now}
+  &maxResults=25
+  &singleEvents=true
+  &orderBy=startTime
+```
+
+- `singleEvents=true` expands recurring events into individual instances
+- `orderBy=startTime` returns events in chronological order
+- Only future events are returned (`timeMin` is set to the current time)
+
+## Caching
+
+### Standalone Module (`lib/google-calendar.ts`)
+
+Uses an in-memory cache with a 5-minute TTL:
+
+```ts
+const CACHE_TTL_MS = 1000 * 60 * 5
+```
+
+The cache can be manually cleared with `clearCalendarCache()`.
+
+### Server Component Fetcher (`lib/server/google-data.ts`)
+
+Uses Next.js ISR with `next: { revalidate: 300 }` (5 minutes). Data is embedded in the HTML at render time -- no client-side fetch needed.
+
+## Error Handling
+
+The `GoogleCalendarNotConfiguredError` is thrown when either `GOOGLE_CALENDAR_API_KEY` or `GOOGLE_CALENDAR_ID` is missing. The server component fetcher returns an empty array instead of throwing on configuration errors.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/google-calendar.ts` | Calendar API module with in-memory cache |
+| `lib/server/google-data.ts` | Server component data fetcher (ISR) |
+| `app/api/calendar/` | Calendar API route handler |

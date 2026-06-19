@@ -1,0 +1,244 @@
+---
+title: Debugging Guide
+description: Techniques and tools for debugging issues in the Jose Madrid Salsa platform
+---
+
+# Debugging Guide
+
+This guide covers debugging techniques for common issues in the Jose Madrid Salsa platform, from database connectivity to payment processing.
+
+## Server-Side Logging
+
+The platform uses namespaced console logging throughout. Look for these prefixes:
+
+| Prefix | Module |
+|--------|--------|
+| `[Prisma]` | Database client initialization |
+| `[Auth]` | NextAuth.js authentication |
+| `[RBAC]` | Permission checks |
+| `[Tax Calculator]` | Stripe Tax calculations |
+| `[Shipping Calculator]` | Shipping rate lookups |
+| `[Orders API]` | Order creation and queries |
+| `[NextAuth Error]` | Authentication errors |
+
+## Database Debugging
+
+### Connection Issues
+
+Run the built-in diagnostic script:
+
+```bash
+node scripts/diagnose-db-connection.js
+```
+
+This checks:
+- Environment variable presence
+- URL format validity
+- Actual database connectivity
+
+### Prisma Studio
+
+Open the database GUI for direct inspection:
+
+```bash
+npm run db:studio
+```
+
+This opens a browser-based interface at `http://localhost:5555` where you can browse and edit records.
+
+### Query Logging
+
+In development, Prisma logs all queries. Check your terminal for SQL output:
+
+```typescript
+// In lib/prisma.ts - dev mode enables query logging
+const logLevels = process.env.NODE_ENV === 'development'
+  ? ['query', 'error', 'warn']
+  : ['error']
+```
+
+<Callout type="info" title="Disable Query Logs">
+If query logs are too noisy during development, temporarily change `logLevels` to `['error']` in `lib/prisma.ts`.
+</Callout>
+
+## Authentication Debugging
+
+NextAuth.js has built-in debug mode enabled in development:
+
+```typescript
+// In lib/auth.ts
+debug: process.env.NODE_ENV === 'development',
+logger: {
+  error(code, metadata) {
+    console.error('[NextAuth Error]', code, metadata)
+  },
+  warn(code) {
+    console.warn('[NextAuth Warn]', code)
+  },
+}
+```
+
+### Common Auth Issues
+
+<Tabs items={['NEXTAUTH_SECRET', 'Session Missing', 'CSRF Error']}>
+<Tab value="NEXTAUTH_SECRET">
+If `NEXTAUTH_SECRET` is missing, auth will fail silently in production. The app validates this at startup:
+
+```typescript
+if (!process.env.NEXTAUTH_SECRET) {
+  console.error('[Auth] CRITICAL: NEXTAUTH_SECRET is not set')
+}
+```
+
+Generate one with: `openssl rand -base64 32`
+</Tab>
+<Tab value="Session Missing">
+If `getCurrentUser()` returns null:
+
+1. Check browser cookies for `next-auth.session-token`
+2. Verify `NEXTAUTH_URL` matches your actual URL
+3. Check JWT expiration (30 days default)
+4. Look for `[NextAuth Error]` in server logs
+</Tab>
+<Tab value="CSRF Error">
+CSRF errors usually indicate mismatched `NEXTAUTH_URL`:
+
+```bash
+# Must match the URL you access the app from
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+For production behind a proxy, ensure `useSecureCookies` is set correctly.
+</Tab>
+</Tabs>
+
+## Payment Debugging
+
+### Stripe Issues
+
+Check the Stripe Dashboard logs at `dashboard.stripe.com/logs` for API call details.
+
+Common issues:
+- **PaymentIntent creation fails**: Check `STRIPE_SECRET_KEY` is valid
+- **Webhook signature invalid**: Verify `STRIPE_WEBHOOK_SECRET` matches your endpoint
+- **Tax calculation returns 0**: Run `validateTaxConfiguration()` to test Stripe Tax setup
+
+### Testing Payments Locally
+
+Use Stripe CLI to forward webhooks:
+
+```bash
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+```
+
+## Email Debugging
+
+If emails are not sending:
+
+1. Check `RESEND_API_KEY` is set (missing key = silent skip with warning)
+2. Check server logs for `Failed to send email` messages
+3. Check Resend dashboard at `resend.com/emails` for delivery status
+4. Verify `FROM_EMAIL` matches a verified domain in Resend
+
+```typescript
+// All email functions check for the API key first
+if (!resendApiKey) {
+  console.warn('RESEND_API_KEY not set; skipping email send')
+  return { skipped: true }
+}
+```
+
+## Permission Debugging
+
+The RBAC system logs fallback warnings when permission tables are missing:
+
+```
+[RBAC] No persisted permission "orders:read" for role STAFF.
+  Falling back to default map.
+```
+
+This is expected on first setup before running `tsx prisma/seed.permissions.ts`.
+
+To debug permission issues:
+
+```typescript
+import { getUserPermissions } from '@/lib/rbac'
+
+const user = await getCurrentUser()
+const permissions = await getUserPermissions(user)
+console.log('User permissions:', permissions)
+```
+
+## API Route Debugging
+
+### Rate Limiting
+
+If you get 429 responses, check the rate limit configuration:
+
+```typescript
+// lib/rate-limiter.ts
+API_GENERAL:   { maxRequests: 100, windowSeconds: 60 }
+AUTH_LOGIN:    { maxRequests: 5,   windowSeconds: 900 }
+PASSWORD_RESET:{ maxRequests: 3,   windowSeconds: 3600 }
+```
+
+Rate limit headers are included in responses:
+- `X-RateLimit-Limit` - Current count
+- `X-RateLimit-Remaining` - Requests left
+- `X-RateLimit-Reset` - Seconds until reset
+
+### Debugging with Node Inspector
+
+```bash
+npm run dev:debug
+```
+
+Then open `chrome://inspect` in Chrome to connect to the Node.js debugger.
+
+## Shipping Debugging
+
+The shipping calculator logs detailed error information:
+
+```
+[Shipping Calculator] Authentication error - check SHIPPING_API_KEY
+[Shipping Calculator] Network error - carrier API may be unavailable
+[Shipping Calculator] No rates returned from API, using estimates
+[Shipping Calculator] PO Box detected - filtering to USPS only
+```
+
+If you always see "Falling back to estimate-based rates", check:
+1. `SHIPPING_API_KEY` is set and valid
+2. Origin address environment variables are configured
+3. The carrier API endpoint is reachable
+
+## Audit Log Inspection
+
+All admin actions are logged. Query the audit log for debugging:
+
+```typescript
+const logs = await prisma.auditLog.findMany({
+  where: {
+    entityType: 'Order',
+    action: 'create',
+  },
+  orderBy: { createdAt: 'desc' },
+  take: 10,
+})
+```
+
+The audit log includes: userId, action, entityType, entityId, changes (JSON), ipAddress, and userAgent.
+
+## Build Errors
+
+If the build fails:
+
+```bash
+npm run clean          # Clear caches
+npm run db:generate    # Regenerate Prisma client
+npm run type-check     # Check for type errors
+npm run build          # Retry build
+```
+
+<Callout type="warn" title="Build Without Database">
+The Prisma client is designed to initialize without a database URL during build time. It will log warnings but allow the build to succeed. Runtime access will fail if `DATABASE_URL` is not available.
+</Callout>

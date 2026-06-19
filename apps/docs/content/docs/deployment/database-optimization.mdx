@@ -1,0 +1,146 @@
+---
+title: Database Optimization
+description: Query optimization, indexes, and connection pooling for Neon Postgres
+---
+
+# Database Optimization
+
+Performance tuning for the Neon serverless Postgres database backing José Madrid Salsa.
+
+## Connection Pooling
+
+### Neon Built-in Pooler
+
+Neon provides PgBouncer-based connection pooling out of the box. The pooled URL is set as `DATABASE_URL`:
+
+```bash
+DATABASE_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require"
+```
+
+This is critical for serverless environments where each Vercel function invocation may open a new connection.
+
+### Prisma Accelerate
+
+For additional pooling and edge caching, the project supports Prisma Accelerate:
+
+```ts title="lib/prisma.ts"
+import { withAccelerate } from '@prisma/extension-accelerate'
+
+const usesAccelerate = databaseUrl.startsWith('prisma://')
+if (usesAccelerate) {
+  const baseClient = new PrismaClient({ log: logLevels })
+  return baseClient.$extends(withAccelerate())
+}
+```
+
+When enabled, Accelerate sits between the application and Neon, providing:
+- Connection pooling at the edge
+- Query-level caching with configurable TTL
+- Reduced cold start latency
+
+### Lazy Initialization
+
+The Prisma client uses lazy initialization via a Proxy to avoid creating connections at module load time:
+
+```ts title="lib/prisma.ts"
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(target, prop) {
+    const client = getPrismaClient()
+    const value = (client as any)[prop]
+    return typeof value === 'function' ? value.bind(client) : value
+  }
+})
+```
+
+This ensures the client is only created on first database access, which matters in serverless where `DATABASE_URL` may not be available at module evaluation time.
+
+## Indexes
+
+The migration `20260321084406_add_ecommerce_indexes` adds performance indexes for the most common query patterns:
+
+### Key Index Categories
+
+**Product queries:**
+- Products by category, status, and price range
+- Product search by name (text pattern matching)
+- Inventory lookups by SKU
+
+**Order queries:**
+- Orders by user, status, and date
+- Order items by product
+- Payment status filtering
+
+**User queries:**
+- User lookup by email (unique index from schema)
+- User role filtering
+
+**Location queries:**
+- Locations by coordinates (for geo-proximity queries)
+- Locations by state/city
+
+## Query Optimization Tips
+
+### Avoid N+1 Queries
+
+Use Prisma's `include` and `select` to fetch related data in a single query:
+
+```ts
+// Bad: N+1
+const orders = await prisma.order.findMany()
+for (const order of orders) {
+  const items = await prisma.orderItem.findMany({ where: { orderId: order.id } })
+}
+
+// Good: Single query with include
+const orders = await prisma.order.findMany({
+  include: { items: true }
+})
+```
+
+### Use `select` to Limit Fields
+
+Only fetch the columns you need:
+
+```ts
+const users = await prisma.user.findMany({
+  select: {
+    id: true,
+    email: true,
+    name: true,
+    // Omit password, sensitive fields
+  }
+})
+```
+
+### Pagination
+
+All list queries should use cursor-based or offset pagination:
+
+```ts
+const products = await prisma.product.findMany({
+  take: 20,
+  skip: page * 20,
+  orderBy: { createdAt: 'desc' },
+})
+```
+
+## Logging
+
+In development, the Prisma client logs all queries:
+
+```ts
+const logLevels = process.env.NODE_ENV === 'development'
+  ? ['query', 'error', 'warn']
+  : ['error']
+```
+
+In production, only errors are logged to avoid noise and performance overhead.
+
+## Monitoring Slow Queries
+
+Use the Neon dashboard to monitor:
+- **Query duration** -- Identify queries taking >100ms
+- **Connection count** -- Verify pooling is working
+- **Compute usage** -- Track autoscaling behavior
+
+Prisma Accelerate (when enabled) also provides query-level metrics in the Prisma Data Platform dashboard.

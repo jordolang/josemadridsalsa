@@ -1,0 +1,180 @@
+---
+title: Key Management
+description: API key management for partners and service integrations
+---
+
+
+# Key Management
+
+Jose Madrid Salsa manages three types of keys: **partner API keys** for external integrations, **service keys** for third-party credentials, and **internal service keys** for service-to-service communication.
+
+## Partner API Keys
+
+Partners authenticate with the API using keys sent in the `X-API-Key` header. Keys are SHA-256 hashed before storage.
+
+### Database Model
+
+```graphql title="prisma/schema.prisma"
+model PartnerApiKey {
+  id         String    @id @default(cuid())
+  name       String
+  keyHash    String    @unique  // SHA-256 hash
+  scopes     String[]  @default([])
+  isActive   Boolean   @default(true)
+  userId     String?
+  lastUsedAt DateTime?
+}
+```
+
+### Key Hashing
+
+```ts title="lib/api/api-key-utils.ts"
+import crypto from 'crypto'
+
+export const hashApiKey = (token: string) =>
+  crypto.createHash('sha256').update(token).digest('hex')
+```
+
+### Authentication Flow
+
+```ts title="lib/api/partner-keys.ts"
+export async function requirePartner(request: NextRequest, scope: string) {
+  const apiKey = request.headers.get('x-api-key')
+  if (!apiKey) return { error: 'Missing X-API-Key header' }
+
+  const keyHash = hashApiKey(apiKey)
+  const partner = await prisma.partnerApiKey.findUnique({ where: { keyHash } })
+
+  if (!partner || !partner.isActive) return { error: 'Invalid API key' }
+
+  // Check scope-based access
+  if (scope && partner.scopes.length > 0 && !partner.scopes.includes(scope)) {
+    return { error: 'Insufficient scope' }
+  }
+
+  // Update last used timestamp
+  await prisma.partnerApiKey.update({
+    where: { id: partner.id },
+    data: { lastUsedAt: new Date() },
+  })
+
+  return { partner }
+}
+```
+
+### Scopes
+
+Partner keys support scope-based access control. Common scopes:
+
+| Scope | Description |
+|---|---|
+| `forms.read` | Read form submissions |
+| `forms.write` | Submit forms |
+| `products.read` | Read product catalog |
+| `orders.read` | Read order data |
+
+An empty `scopes` array grants access to all endpoints.
+
+### Audit Logging
+
+Partner API calls are logged to the `AuditLog` table:
+
+```ts title="lib/api/partner-keys.ts"
+export async function logPartnerApiCall(
+  partner: PartnerApiKey,
+  request: NextRequest,
+  status: number,
+  metadata?: Record<string, unknown>,
+) {
+  await prisma.auditLog.create({
+    data: {
+      userId: partner.userId,
+      action: 'forms.api',
+      entityType: 'PartnerApiKey',
+      entityId: partner.id,
+      changes: { path: request.nextUrl.pathname, method: request.method, status },
+    },
+  })
+}
+```
+
+## Service Keys
+
+Third-party API credentials (Stripe tokens, OAuth secrets, etc.) are stored encrypted in the `ServiceKey` table.
+
+### Database Model
+
+```graphql title="prisma/schema.prisma"
+model ServiceKey {
+  id             String  @id @default(cuid())
+  serviceName    String  // e.g., "stripe", "meta", "google_calendar"
+  keyName        String  // e.g., "api_key", "access_token"
+  encryptedValue String  @db.Text
+  iv             String  // AES-GCM initialization vector
+  isActive       Boolean @default(true)
+  @@unique([serviceName, keyName])
+}
+```
+
+### Reading Service Keys
+
+```ts title="lib/service-keys.ts"
+export async function getDecryptedServiceKeyValue(
+  serviceName: string,
+  keyName: string,
+): Promise<string | null> {
+  const record = await prisma.serviceKey.findUnique({
+    where: { serviceName_keyName: { serviceName, keyName } },
+  })
+
+  if (!record || !record.isActive) return null
+  if (!record.encryptedValue || !record.iv) return null
+
+  return decryptSecret(record.encryptedValue, record.iv)
+}
+```
+
+### Checking Key Existence
+
+```ts
+export async function hasActiveServiceKey(
+  serviceName: string,
+  keyName?: string,
+): Promise<boolean>
+```
+
+## Internal Service API Key
+
+For service-to-service communication (e.g., cron jobs calling internal endpoints), a shared secret is used:
+
+```ts title="lib/email/rate-limit.ts"
+export function validateServiceApiKey(request: Request): boolean {
+  const apiKey = request.headers.get('x-api-key')
+  const expectedKey = process.env.SERVICE_API_KEY
+  if (!expectedKey) {
+    console.warn('SERVICE_API_KEY not configured - denying request')
+    return false
+  }
+  return apiKey === expectedKey
+}
+```
+
+Set in environment variables:
+
+```bash title=".env.local"
+SERVICE_API_KEY="your-internal-service-key"
+```
+
+<Callout type="warn">
+The `SERVICE_API_KEY` is a simple shared secret. It should only be used for internal service-to-service calls, not for external partner access. Use `PartnerApiKey` for external integrations.
+</Callout>
+
+## Key Lifecycle
+
+| Action | Partner Keys | Service Keys |
+|---|---|---|
+| **Create** | Admin panel generates key, stores hash | Admin panel encrypts with MASTER_KEY |
+| **Authenticate** | Hash incoming key, lookup by hash | Decrypt with MASTER_KEY on read |
+| **Rotate** | Generate new key, deactivate old one | Update encrypted value and IV |
+| **Revoke** | Set `isActive = false` | Set `isActive = false` |
+| **Audit** | Logged in `AuditLog` table | Accessed via `getDecryptedServiceKeyValue` |

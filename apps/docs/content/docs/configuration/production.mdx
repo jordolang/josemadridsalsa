@@ -1,0 +1,159 @@
+---
+title: Production Configuration
+description: Production deployment checklist and configuration requirements
+---
+
+
+# Production Configuration
+
+This checklist covers everything needed to deploy Jose Madrid Salsa to production on Vercel.
+
+## Required Environment Variables
+
+These must be set in Vercel > Settings > Environment Variables for the Production environment:
+
+### Critical (app will not start without these)
+
+| Variable | How to Generate |
+|---|---|
+| `DATABASE_URL` | Neon pooled connection string |
+| `DATABASE_URL_UNPOOLED` | Neon direct connection string |
+| `NEXTAUTH_SECRET` | `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | `https://www.josemadrid.net` |
+| `MASTER_KEY` | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `ENCRYPTION_KEY` | `node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"` |
+
+### Payments
+
+| Variable | Source |
+|---|---|
+| `STRIPE_SECRET_KEY` | Stripe Dashboard > API keys (use `sk_live_...`) |
+| `STRIPE_PUBLISHABLE_KEY` | Stripe Dashboard > API keys (use `pk_live_...`) |
+| `STRIPE_WEBHOOK_SECRET` | Stripe Dashboard > Webhooks > Signing secret |
+
+### Email
+
+| Variable | Source |
+|---|---|
+| `RESEND_API_KEY` | Resend Dashboard |
+| `FROM_EMAIL` | Verified sender domain in Resend |
+
+### Google Services
+
+| Variable | Source |
+|---|---|
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Google Cloud Console |
+| `GOOGLE_PLACES_API_KEY` | Google Cloud Console |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Google Cloud Console > Service Accounts |
+| `GOOGLE_CALENDAR_ID` | Google Calendar settings |
+
+### Monitoring
+
+| Variable | Source |
+|---|---|
+| `SENTRY_ORG` | Sentry organization settings |
+| `SENTRY_PROJECT` | Sentry project settings |
+| `SENTRY_AUTH_TOKEN` | Sentry > Settings > Auth Tokens |
+
+## Pre-Deployment Checklist
+
+<Steps>
+### Verify Database
+
+Ensure all migrations are applied:
+
+```bash
+DATABASE_URL_UNPOOLED="..." npx prisma migrate deploy
+```
+
+Check migration status:
+
+```bash
+npx prisma migrate status
+```
+
+### Verify Environment Variables
+
+All required variables should be set in Vercel for the Production environment. Double-check there are no trailing whitespace or newline characters (a common issue with copy-paste into Vercel).
+
+### Verify Stripe Webhooks
+
+Ensure the production webhook endpoint is configured in Stripe:
+
+- **URL**: `https://www.josemadrid.net/api/webhooks/stripe`
+- **Events**: `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`
+
+### Verify Email Sender Domain
+
+Ensure your sending domain is verified in Resend with proper DNS records (SPF, DKIM, DMARC).
+
+### Verify OAuth Redirect URIs
+
+Update all OAuth providers with production callback URLs:
+
+- Google: `https://www.josemadrid.net/api/auth/callback/google`
+- GitHub: `https://www.josemadrid.net/api/auth/callback/github`
+- Facebook: `https://www.josemadrid.net/api/auth/callback/facebook`
+- Apple: `https://www.josemadrid.net/api/auth/callback/apple`
+
+### Deploy
+
+```bash
+vercel --prod
+```
+
+Or push to `main` if Git integration is configured.
+
+### Verify Deployment
+
+Check Vercel deployment logs for any errors. Verify:
+
+- Homepage loads
+- Authentication works (sign in, sign out)
+- Products display correctly
+- Checkout flow completes
+- Emails are sent (test with a real order)
+</Steps>
+
+## Security Checklist
+
+- [ ] `NEXTAUTH_SECRET` is a strong random value (not a simple password)
+- [ ] `MASTER_KEY` is a cryptographically random 64-character hex string
+- [ ] `ENCRYPTION_KEY` is a cryptographically random base64 string
+- [ ] Stripe uses live keys (not test keys)
+- [ ] OAuth apps are configured for the production domain
+- [ ] No test/debug environment variables leak into production
+- [ ] Sentry source maps are uploading (check Sentry releases)
+
+## Vercel Configuration
+
+### Serverless Function Limits
+
+The `next.config.mjs` is optimized to stay under Vercel's 250 MB unzipped function limit:
+
+- Large directories excluded via `outputFileTracingExcludes`
+- Prisma client explicitly included via `outputFileTracingIncludes`
+
+### Secure Cookies
+
+Secure cookies are automatically enabled in production:
+
+```ts title="lib/auth.ts"
+useSecureCookies: process.env.NODE_ENV === 'production',
+```
+
+### Debug Mode
+
+Debug logging is disabled in production:
+
+```ts title="lib/auth.ts"
+debug: process.env.NODE_ENV === 'development',
+```
+
+## Domain Configuration
+
+Configure your custom domain in Vercel:
+
+1. Add `josemadrid.net` and `www.josemadrid.net` in Vercel > Domains
+2. Update DNS records to point to Vercel
+3. Enable automatic HTTPS (Vercel handles TLS certificates)

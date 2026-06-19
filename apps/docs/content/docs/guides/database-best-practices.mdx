@@ -1,0 +1,320 @@
+---
+title: Database Best Practices
+description: Database design patterns and best practices used in the Jose Madrid Salsa platform
+---
+
+# Database Best Practices
+
+This guide covers the database design patterns, naming conventions, and best practices used in the Jose Madrid Salsa platform's Prisma schema.
+
+## Schema Design Patterns
+
+### ID Strategy
+
+All models use CUID (Collision-resistant Unique Identifiers) for primary keys:
+
+```graphql
+model Product {
+  id String @id @default(cuid())
+}
+```
+
+CUIDs are sortable by creation time, URL-safe, and horizontally scalable without coordination.
+
+### Table Naming
+
+Prisma models use PascalCase names with `@@map` directives for snake_case table names:
+
+```graphql
+model ProductVariant {
+  // ...
+  @@map("product_variants")
+}
+
+model NutritionalInfo {
+  // ...
+  @@map("nutritional_info")
+}
+```
+
+This gives clean TypeScript types while maintaining database naming conventions.
+
+### Timestamps
+
+Every model includes standard timestamp fields:
+
+```graphql
+model Product {
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+```
+
+`@updatedAt` automatically updates on every save.
+
+## Relationship Patterns
+
+### One-to-Many
+
+Products belong to categories:
+
+```graphql
+model Category {
+  id       String    @id @default(cuid())
+  products Product[]
+}
+
+model Product {
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+}
+```
+
+### One-to-One
+
+Each product has optional nutritional info:
+
+```graphql
+model Product {
+  nutritionalInfo NutritionalInfo?
+}
+
+model NutritionalInfo {
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+```
+
+### Many-to-Many (Explicit Join Table)
+
+Products and tags use an explicit join table with additional fields:
+
+```graphql
+model ProductTag {
+  id        String  @id @default(cuid())
+  productId String
+  tagId     String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, tagId])
+}
+```
+
+### Self-Referential Cascades
+
+Cascade deletes are used where child records should not outlive the parent:
+
+```graphql
+model CartItem {
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+```
+
+Use `onDelete: SetNull` for records that should survive parent deletion:
+
+```graphql
+model Conversation {
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+```
+
+## Indexing Strategy
+
+### Composite Indexes
+
+For frequently filtered combinations:
+
+```graphql
+model ShopListing {
+  @@index([shopPlatform, status])
+  @@index([productId])
+}
+```
+
+### Unique Constraints
+
+Enforce business rules at the database level:
+
+```graphql
+model Product {
+  slug String @unique
+  sku  String @unique
+}
+
+model CartItem {
+  @@unique([userId, productId])  // One cart entry per product per user
+}
+
+model WishlistItem {
+  @@unique([userId, productId])
+}
+```
+
+### Singleton Pattern
+
+For global settings, use a singleton constraint:
+
+```graphql
+model ShippingSettings {
+  singleton String @unique @default("singleton")
+}
+```
+
+Query with:
+
+```typescript
+const settings = await prisma.shippingSettings.findUnique({
+  where: { singleton: 'singleton' },
+})
+```
+
+## Enum Usage
+
+Use Prisma enums for fixed value sets:
+
+```graphql
+enum UserRole {
+  ADMIN
+  DEVELOPER
+  STAFF
+  CUSTOMER
+  WHOLESALE
+  FUNDRAISER
+}
+
+enum HeatLevel {
+  MILD
+  MEDIUM
+  HOT
+  EXTRA_HOT
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+```
+
+<Callout type="info" title="Adding Enum Values">
+Adding a new enum value requires a migration. Removing or renaming values requires a data migration to update existing records first.
+</Callout>
+
+## Decimal Handling
+
+Monetary values use `Decimal` type with explicit precision:
+
+```graphql
+price          Decimal  @db.Decimal(10, 2)
+compareAtPrice Decimal? @db.Decimal(10, 2)
+costPrice      Decimal? @db.Decimal(10, 2)
+```
+
+In application code, always convert for JSON serialization:
+
+```typescript
+price: parseFloat(String(product.price))
+```
+
+## JSON Fields
+
+Use JSON fields for flexible, schema-less data:
+
+```graphql
+model Product {
+  dimensions Json?  // {length, width, height}
+}
+
+model AbandonedCart {
+  cartData Json    // {items: CartItem[], totalItems, totalPrice}
+}
+```
+
+<Callout type="warn" title="JSON Trade-offs">
+JSON fields cannot be indexed or queried as efficiently as structured columns. Use them for data that does not need direct filtering or joining. Prefer structured columns for commonly queried fields.
+</Callout>
+
+## Migration Best Practices
+
+### Development
+
+```bash
+npm run db:migrate    # Create and apply migration
+npm run db:push       # Push schema changes without migration (dev only)
+```
+
+### Production
+
+```bash
+prisma migrate deploy  # Apply pending migrations (forward-only)
+```
+
+Never use `db:push` or `db:reset` in production.
+
+### Migration Naming
+
+Use descriptive migration names:
+
+```bash
+npx prisma migrate dev --name add-nutritional-info-table
+npx prisma migrate dev --name add-stock-status-index
+```
+
+## Soft Deletes vs Hard Deletes
+
+The platform uses `isActive` flags for soft deletes on user-facing entities:
+
+```graphql
+model Product {
+  isActive Boolean @default(true)
+}
+
+model DiscountCode {
+  isActive Boolean @default(true)
+}
+```
+
+Hard deletes are used for ephemeral data:
+
+```typescript
+// Cart items are hard-deleted after order creation
+await prisma.cartItem.deleteMany({
+  where: { id: { in: cartItemIds }, userId: user.id },
+})
+```
+
+## Connection Management
+
+The Prisma client uses a singleton pattern with lazy initialization:
+
+```typescript
+const globalForPrisma = globalThis as unknown as {
+  prisma?: PrismaClient
+}
+
+function getPrismaClient(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient()
+  }
+  return globalForPrisma.prisma
+}
+```
+
+This prevents connection exhaustion during development hot reloads and ensures a single connection pool in production.
+
+## Checklist
+
+- [ ] All monetary fields use `Decimal(10, 2)`
+- [ ] All models have `createdAt` and `updatedAt` timestamps
+- [ ] Unique constraints enforce business rules
+- [ ] Indexes exist for common WHERE clauses
+- [ ] Cascade deletes are intentional and documented
+- [ ] Enums are used for fixed value sets
+- [ ] Table names use `@@map` for snake_case

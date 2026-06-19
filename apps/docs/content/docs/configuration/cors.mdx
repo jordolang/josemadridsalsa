@@ -1,0 +1,81 @@
+---
+title: CORS Configuration
+description: Cross-origin resource sharing settings for API routes
+---
+
+
+# CORS Configuration
+
+Jose Madrid Salsa runs as a Next.js application deployed on Vercel. Since the API routes and frontend are served from the same origin, CORS is generally not needed for standard browser requests.
+
+## Default Behavior
+
+Next.js API routes do not add CORS headers by default. Requests from the same origin (`josemadrid.net`) work without any CORS configuration. This is the most secure default.
+
+## Server Actions
+
+Server actions are restricted to allowed origins in `next.config.mjs`:
+
+```js title="next.config.mjs"
+experimental: {
+  serverActions: {
+    allowedOrigins: ['localhost:3000'],
+  },
+},
+```
+
+This prevents CSRF attacks on server actions from unauthorized origins.
+
+## Partner API Access
+
+External partners authenticate using API keys via the `X-API-Key` header rather than relying on CORS. This is a more secure pattern for server-to-server communication:
+
+```ts title="Example: Partner API call"
+const response = await fetch('https://www.josemadrid.net/api/forms/submissions', {
+  headers: {
+    'X-API-Key': 'partner-api-key-here',
+    'Content-Type': 'application/json',
+  },
+})
+```
+
+## Mobile App Access
+
+The mobile app accesses the same API endpoints and identifies itself via the `User-Agent` header (`JoseMadridSalsaMobileApp`). Since mobile apps are not subject to browser CORS restrictions, no CORS headers are needed.
+
+## Adding CORS Headers
+
+If you need to enable CORS for a specific API route (e.g., for a third-party widget), add headers manually:
+
+```ts title="app/api/public/route.ts"
+export async function GET(request: NextRequest) {
+  const data = { /* ... */ }
+
+  return NextResponse.json(data, {
+    headers: {
+      'Access-Control-Allow-Origin': 'https://trusted-domain.com',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  })
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': 'https://trusted-domain.com',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  })
+}
+```
+
+<Callout type="warn">
+Never use `Access-Control-Allow-Origin: *` on authenticated endpoints. Always specify the exact trusted origin.
+</Callout>
+
+## Vercel Edge Network
+
+Vercel's edge network handles TLS termination and provides the `X-Forwarded-For` and `X-Real-IP` headers used by the rate limiter. No additional CORS configuration is needed at the Vercel level for same-origin requests.

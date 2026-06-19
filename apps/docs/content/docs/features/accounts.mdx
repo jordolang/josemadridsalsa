@@ -1,0 +1,101 @@
+---
+title: User Accounts
+description: User registration, authentication, profiles, and role-based access with NextAuth.js
+---
+
+# User Accounts
+
+User accounts are managed with NextAuth.js for authentication, Prisma for persistence, and role-based access control (RBAC) for admin and fundraiser features.
+
+## Architecture
+
+<Files>
+  <Folder name="app/(public)/account" defaultOpen>
+    <File name="page.tsx" />
+    <File name="layout.tsx" />
+    <Folder name="orders">
+      <File name="page.tsx" />
+    </Folder>
+    <Folder name="settings">
+      <File name="page.tsx" />
+    </Folder>
+  </Folder>
+  <Folder name="app/api/auth">
+    <File name="[...nextauth]/route.ts" />
+  </Folder>
+  <Folder name="app/api/account">
+    <File name="route.ts" />
+  </Folder>
+  <Folder name="lib" defaultOpen>
+    <File name="auth.ts" />
+    <File name="rbac.ts" />
+    <File name="admin-auth.ts" />
+  </Folder>
+</Files>
+
+## Authentication
+
+Authentication is handled by NextAuth.js with the Prisma adapter. The configuration lives in `lib/auth.ts` and is exposed at `/api/auth/[...nextauth]`.
+
+### Session Access
+
+Server components use `getServerSession(authOptions)` to access the session:
+
+```tsx
+const session = await getServerSession(authOptions)
+if (!session?.user?.id) {
+  redirect('/auth/signin?callbackUrl=/account')
+}
+```
+
+Client components use the `useSession()` hook from `next-auth/react`.
+
+## User Roles
+
+The `UserRole` enum defines access levels:
+
+| Role | Access |
+| --- | --- |
+| `USER` | Standard customer account |
+| `FUNDRAISER` | Customer + fundraising portal |
+| `STAFF` | Limited admin access |
+| `ADMIN` | Full admin panel access |
+| `SUPER_ADMIN` | All permissions including user management |
+
+Role-based access is enforced via `getCurrentUser()` and `hasPermission()` from `lib/rbac.ts`.
+
+## Account Dashboard
+
+The `/account` page displays:
+
+- Welcome message with user name and email
+- User role badge
+- 5 most recent orders with `OrderCard` component
+- Quick links to:
+  - **View Orders** -- full order history
+  - **Account Settings** -- profile management
+  - **Fundraising Portal** -- visible for `FUNDRAISER` role users
+
+## Account Settings
+
+The `/account/settings` page allows users to:
+- Update display name
+- Change email address
+- Manage notification preferences
+
+## Wholesale Accounts
+
+Users can apply for wholesale accounts which, when approved with a resale number, grant tax-exempt status. The wholesale account relationship is checked during tax calculation:
+
+```ts
+const user = await prisma.user.findUnique({
+  where: { email: customerEmail },
+  include: { wholesaleAccount: true },
+})
+```
+
+## Protected Routes
+
+<Callout type="info">
+All `/account/*` routes redirect unauthenticated users to `/auth/signin` with a `callbackUrl` parameter. Admin routes (`/admin/*`) additionally check for `ADMIN` or `SUPER_ADMIN` roles via `lib/admin-auth.ts`.
+</Callout>

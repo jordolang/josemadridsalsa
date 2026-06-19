@@ -1,0 +1,133 @@
+---
+title: Analytics
+description: Analytics integration with Amplitude, Google Analytics, session replay, and admin reporting dashboard
+---
+
+# Analytics
+
+The platform integrates Amplitude for behavioral analytics with session replay, Google Analytics for traffic tracking, and a custom admin analytics dashboard with sales and order reports.
+
+## Architecture
+
+<Files>
+  <Folder name="lib/analytics" defaultOpen>
+    <File name="amplitude.ts" />
+    <File name="google-analytics.tsx" />
+    <File name="date-range.ts" />
+  </Folder>
+  <Folder name="app/admin/analytics" defaultOpen>
+    <File name="page.tsx" />
+    <File name="loading.tsx" />
+    <Folder name="orders">
+      <File name="page.tsx" />
+    </Folder>
+  </Folder>
+</Files>
+
+## Amplitude
+
+The Amplitude integration (`lib/analytics/amplitude.ts`) provides:
+
+### Initialization
+
+```ts
+export const initAmplitude = () => {
+  const apiKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY
+  if (!apiKey) {
+    console.warn('Amplitude API key not found. Analytics will not be tracked.')
+    return
+  }
+
+  amplitude.init(apiKey, {
+    defaultTracking: {
+      sessions: true,
+      pageViews: true,
+      formInteractions: true,
+      fileDownloads: true,
+    },
+  })
+
+  // Session replay for visual debugging
+  amplitude.add(sessionReplayPlugin())
+}
+```
+
+### Event Tracking
+
+```ts
+export const trackEvent = (
+  eventName: string,
+  eventProperties?: Record<string, any>
+) => {
+  amplitude.track(eventName, eventProperties)
+}
+```
+
+### User Identification
+
+```ts
+export const identifyUser = (
+  userId: string,
+  userProperties?: Record<string, any>
+) => {
+  amplitude.setUserId(userId)
+  if (userProperties) {
+    const identifyEvent = new amplitude.Identify()
+    Object.entries(userProperties).forEach(([key, value]) => {
+      identifyEvent.set(key, value)
+    })
+    amplitude.identify(identifyEvent)
+  }
+}
+```
+
+### Default Tracking
+
+Amplitude automatically tracks:
+- **Sessions** -- session start/end with duration
+- **Page Views** -- every route navigation
+- **Form Interactions** -- form submissions and field focus
+- **File Downloads** -- any file download clicks
+
+### Session Replay
+
+The `@amplitude/plugin-session-replay-browser` plugin records user sessions for visual replay and debugging in the Amplitude dashboard.
+
+## Google Analytics
+
+The `google-analytics.tsx` component loads the Google Analytics script and provides the global tracking tag. It is included in the root layout for site-wide tracking.
+
+## Admin Analytics Dashboard
+
+The admin analytics page (`/admin/analytics`) provides:
+
+### Sales Reports
+
+- Revenue over time (daily, weekly, monthly)
+- Order volume trends
+- Average order value
+
+### Order Analytics
+
+- Orders by status breakdown
+- Top-selling products by quantity and revenue
+- Order source tracking
+
+### Date Range Filtering
+
+The `lib/analytics/date-range.ts` utility provides predefined date ranges:
+- Today, Yesterday
+- Last 7 days, Last 30 days
+- This month, Last month
+- Custom range
+
+## Environment Variables
+
+| Variable | Description |
+| --- | --- |
+| `NEXT_PUBLIC_AMPLITUDE_API_KEY` | Amplitude browser SDK key |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Google Analytics measurement ID |
+
+<Callout type="info">
+Analytics initialization is guarded by API key checks. If keys are not configured, tracking silently degrades without errors in the console (except a single warning for Amplitude).
+</Callout>

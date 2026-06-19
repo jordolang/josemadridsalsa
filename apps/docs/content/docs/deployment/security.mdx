@@ -1,0 +1,137 @@
+---
+title: Security
+description: Security hardening, headers, input validation, and access control
+---
+
+# Security
+
+Security practices for the José Madrid Salsa production deployment.
+
+## Authentication
+
+The application uses **NextAuth.js v4** with the Prisma adapter for session management. Authentication supports:
+
+- **Credentials** -- Email/password with bcrypt hashing
+- **Google OAuth** -- Optional social login
+
+```bash
+NEXTAUTH_URL="https://www.josemadrid.net"
+NEXTAUTH_SECRET="..."  # 32+ char hex string
+```
+
+## RBAC Permissions
+
+The application uses a role-based access control system with six roles:
+
+| Role | Access Level |
+|---|---|
+| `CUSTOMER` | Public storefront, own orders, profile |
+| `STAFF` | Order management, basic admin |
+| `WHOLESALE` | Wholesale pricing, bulk orders |
+| `FUNDRAISER` | Fundraiser management, custom forms |
+| `DEVELOPER` | Developer tools, API access |
+| `ADMIN` | Full access to all features |
+
+Permissions are seeded on every build via `prisma/seed.permissions.ts` and checked at the API route level.
+
+## API Security
+
+### Image Proxy
+
+The image proxy at `/api/image-proxy` demonstrates the security model used across API routes:
+
+- **URL whitelisting** -- Only Google Places URLs are allowed (prevents SSRF)
+- **HTTPS enforcement** -- Non-HTTPS URLs are rejected
+- **Input validation** -- Zod schema validates all query parameters
+- **Timeout protection** -- 10-second `AbortSignal` prevents hanging requests
+- **Security headers** -- Responses include `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: no-referrer`
+
+### Server Actions
+
+Server Actions are restricted to allowed origins:
+
+```js title="next.config.mjs"
+experimental: {
+  serverActions: {
+    allowedOrigins: ['localhost:3000'],
+  },
+}
+```
+
+<Callout type="warn" title="Update allowedOrigins for production">
+The `allowedOrigins` list currently only includes `localhost:3000`. For production with custom domains, the production domain should be added to prevent CSRF issues with Server Actions.
+</Callout>
+
+## Source Map Protection
+
+Sentry receives source maps for debugging, but they are hidden from client bundles:
+
+```js
+hideSourceMaps: true,  // Sentry config
+```
+
+This prevents attackers from reading the original source code through browser DevTools.
+
+## Encryption
+
+Two encryption keys protect sensitive data:
+
+| Key | Purpose | Generation |
+|---|---|---|
+| `MASTER_KEY` | Legacy admin panel encryption | `openssl rand -hex 32` |
+| `ENCRYPTION_KEY` | SMTP passwords, sensitive config | `node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"` |
+
+## Secret Scanning
+
+The project uses **Gitleaks** for pre-commit secret detection:
+
+```json title="package.json"
+{
+  "security:scan": "gitleaks detect --source . --verbose --redact",
+  "security:protect": "gitleaks protect --verbose --redact --staged",
+  "pre-commit": "lint-staged && npm run security:protect"
+}
+```
+
+<Callout title="Pre-commit Hook">
+The `security:protect` command runs automatically on every commit via the Husky pre-commit hook. It scans staged files for API keys, passwords, and other secrets before they reach the repository.
+</Callout>
+
+## Dependency Security
+
+### Overrides
+
+The `package.json` includes security-motivated dependency overrides:
+
+```json
+"overrides": {
+  "tar": ">=7.5.10",
+  "minimatch": ">=10.2.3",
+  "@vercel/node": { "undici": "6.24.1", "path-to-regexp": "6.3.0" }
+}
+```
+
+These pin transitive dependencies to versions with known vulnerability fixes.
+
+### Audit
+
+Run `npm audit` regularly and before deployments to check for known vulnerabilities in the dependency tree.
+
+## Environment Variable Security
+
+- **Never use `NEXT_PUBLIC_` prefix** for secrets (Stripe secret key, database URL, encryption keys)
+- **Rotate secrets** immediately if exposed in logs or commits
+- **Scope variables** to the appropriate Vercel environment (Production, Preview, Development)
+- The Prisma client sanitizes `DATABASE_URL` at runtime to strip accidental whitespace
+
+See [Secrets Management](/docs/deployment/secrets) for detailed key rotation procedures.
+
+## Security Checklist
+
+- [ ] `NEXTAUTH_SECRET` is a strong random value (not shared across environments)
+- [ ] Stripe uses live keys in production, test keys in preview
+- [ ] Gitleaks pre-commit hook is active
+- [ ] No secrets in `NEXT_PUBLIC_` variables
+- [ ] `ENCRYPTION_KEY` and `MASTER_KEY` are unique per environment
+- [ ] Dependency overrides are current
+- [ ] Source maps are hidden from clients

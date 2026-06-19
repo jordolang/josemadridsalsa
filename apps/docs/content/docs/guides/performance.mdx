@@ -1,0 +1,274 @@
+---
+title: Performance Optimization
+description: Tips and techniques for optimizing the Jose Madrid Salsa platform performance
+---
+
+# Performance Optimization
+
+This guide covers performance optimization strategies used throughout the Jose Madrid Salsa platform.
+
+## Database Performance
+
+### Prisma Accelerate
+
+The platform supports Prisma Accelerate for connection pooling and caching. When the `DATABASE_URL` starts with `prisma://`, the client automatically enables the Accelerate extension:
+
+```typescript
+// In lib/prisma.ts
+const usesAccelerate = databaseUrl.startsWith('prisma://')
+  || databaseUrl.startsWith('prisma+postgres://')
+
+if (usesAccelerate) {
+  const baseClient = new PrismaClient({ log: logLevels })
+  return baseClient.$extends(withAccelerate()) as unknown as PrismaClient
+}
+```
+
+### Lazy Client Initialization
+
+The Prisma client uses a Proxy for lazy initialization, creating the database connection only when first accessed:
+
+```typescript
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(target, prop) {
+    const client = getPrismaClient()
+    const value = (client as any)[prop]
+    return typeof value === 'function' ? value.bind(client) : value
+  },
+})
+```
+
+This avoids unnecessary database connections during build time and cold starts.
+
+### Database Indexes
+
+The schema includes indexes on frequently queried fields:
+
+```graphql
+model Product {
+  @@index([stockStatus])
+}
+
+model Order {
+  @@index([userId])
+  @@index([status])
+}
+
+model CartItem {
+  @@unique([userId, productId])
+}
+```
+
+When adding new queries, verify that appropriate indexes exist for your WHERE and ORDER BY clauses.
+
+### Query Optimization Tips
+
+<Tabs items={['Select Only What You Need', 'Batch Operations', 'Avoid N+1']}>
+<Tab value="Select Only What You Need">
+```typescript
+// Bad: fetches all columns
+const products = await prisma.product.findMany()
+
+// Good: select only needed fields
+const products = await prisma.product.findMany({
+  select: {
+    id: true,
+    name: true,
+    price: true,
+    featuredImage: true,
+  },
+})
+```
+</Tab>
+<Tab value="Batch Operations">
+```typescript
+// Bad: individual updates in a loop
+for (const item of items) {
+  await prisma.product.update({ where: { id: item.id }, data: { ... } })
+}
+
+// Good: batch with transaction
+await prisma.$transaction(
+  items.map(item =>
+    prisma.product.update({ where: { id: item.id }, data: { ... } })
+  )
+)
+```
+</Tab>
+<Tab value="Avoid N+1">
+```typescript
+// Bad: N+1 query
+const orders = await prisma.order.findMany()
+for (const order of orders) {
+  const items = await prisma.orderItem.findMany({
+    where: { orderId: order.id }
+  })
+}
+
+// Good: eager loading with include
+const orders = await prisma.order.findMany({
+  include: {
+    items: {
+      include: { product: true },
+    },
+  },
+})
+```
+</Tab>
+</Tabs>
+
+## API Performance
+
+### Rate Limiting
+
+The in-memory rate limiter prevents API abuse without external dependencies:
+
+```typescript
+const RATE_LIMITS = {
+  AI_CHAT:       { maxRequests: 20,  windowSeconds: 60 },
+  AI_CHAT_USER:  { maxRequests: 50,  windowSeconds: 60 },
+  API_GENERAL:   { maxRequests: 100, windowSeconds: 60 },
+  AUTH_LOGIN:    { maxRequests: 5,   windowSeconds: 900 },
+  PASSWORD_RESET:{ maxRequests: 3,   windowSeconds: 3600 },
+}
+```
+
+The store automatically cleans expired entries every 5 minutes.
+
+<Callout type="info" title="Multi-Server Deployment">
+The in-memory rate limiter is per-process. For multi-server deployments, switch to Redis-based rate limiting to ensure consistent limits across instances.
+</Callout>
+
+### Shipping Cost Caching
+
+The shipping calculator checks free shipping eligibility before making any API calls. For orders over the threshold, zero-cost shipping is returned immediately without a carrier API round-trip.
+
+### Tax Exemption Short-Circuit
+
+Tax-exempt customers (approved wholesale accounts) skip the Stripe Tax API call entirely, returning zero tax immediately.
+
+## Frontend Performance
+
+### Turbopack
+
+Development uses Turbopack for fast HMR:
+
+```bash
+npm run dev  # uses next dev --turbo
+```
+
+### Image Optimization
+
+Use `next/image` for automatic optimization:
+
+```tsx
+import Image from 'next/image'
+
+<Image
+  src={product.featuredImage}
+  alt={product.name}
+  width={800}
+  height={800}
+  priority={isFeatured}  // LCP images
+/>
+```
+
+### Client State with Zustand
+
+Zustand provides lightweight client-side state without the overhead of larger state management libraries:
+
+```typescript
+import { create } from 'zustand'
+
+const useCartStore = create((set) => ({
+  items: [],
+  addItem: (item) => set((state) => ({
+    items: [...state.items, item],
+  })),
+}))
+```
+
+## Build Optimization
+
+### Production Build
+
+The build script sets `NODE_ENV=production` explicitly via `cross-env`:
+
+```bash
+cross-env NODE_ENV=production next build
+```
+
+### Bundle Analysis
+
+Analyze bundle size to identify heavy dependencies:
+
+```bash
+npm run analyze
+```
+
+### Code Splitting
+
+The App Router automatically code-splits by route. For large components, use dynamic imports:
+
+```typescript
+import dynamic from 'next/dynamic'
+
+const HeavyChart = dynamic(
+  () => import('@/components/analytics/HeavyChart'),
+  { ssr: false }
+)
+```
+
+## Inventory Operations
+
+The inventory manager uses serializable transactions with automatic retry on write conflicts:
+
+```typescript
+async function withSerializableRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3
+): Promise<T> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error: any) {
+      if (error?.code === 'P2034' && attempt < maxRetries - 1) {
+        continue // retry on serialization conflict
+      }
+      throw error
+    }
+  }
+}
+```
+
+This prevents race conditions on inventory updates during high-traffic periods.
+
+## Monitoring
+
+### Sentry Error Tracking
+
+The platform includes Sentry integration for error monitoring:
+
+```typescript
+// sentry.client.config.ts - Client-side errors
+// sentry.server.config.ts - Server-side errors
+// sentry.edge.config.ts   - Edge runtime errors
+```
+
+### Vercel Analytics
+
+```typescript
+import { Analytics } from '@vercel/analytics/react'
+
+// Included in the root layout for automatic page view tracking
+```
+
+## Checklist
+
+- [ ] Database indexes exist for common query patterns
+- [ ] API routes use `withRateLimit` wrapper
+- [ ] Heavy components use dynamic imports with `ssr: false`
+- [ ] Images use `next/image` with appropriate `sizes`
+- [ ] Prisma queries use `select` to limit fetched columns
+- [ ] Serializable transactions use retry logic
+- [ ] Free shipping and tax exemption checks happen before API calls

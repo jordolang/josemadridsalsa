@@ -1,0 +1,158 @@
+---
+title: Rate Limiting
+description: API rate limits per endpoint category, response headers, and best practices for handling rate-limited requests
+---
+
+# Rate Limiting
+
+The API enforces rate limits to prevent abuse and ensure fair usage. Limits are applied per client IP address by default, or per authenticated user ID for certain endpoints.
+
+<Callout type="warn" title="In-Memory Store">
+Rate limit state is stored **in-memory** on the server process. In a multi-server deployment, each server maintains its own rate limit counters independently. This means effective limits may be higher than documented when requests are distributed across multiple servers.
+</Callout>
+
+## Rate Limit Tiers
+
+| Tier | Max Requests | Window | Identifier | Endpoints |
+|------|-------------|--------|------------|-----------|
+| **General API** | 100 | 60 seconds | IP address | Most API endpoints |
+| **AI Chat** | 20 | 60 seconds | IP address | `/api/chat`, AI-powered endpoints |
+| **AI Chat (Authenticated)** | 50 | 60 seconds | User ID | `/api/chat` (logged-in users) |
+| **Auth Login** | 5 | 15 minutes | IP address | `/api/auth/callback/credentials` |
+| **Password Reset** | 3 | 60 minutes | IP address | `/api/auth/forgot-password`, `/api/auth/reset-password` |
+
+### How Tiers Work
+
+- **General API (100/min)**: The default tier applied to most endpoints using the `withRateLimit` middleware or `commonRateLimits.standard` preset.
+- **AI Chat (20/min guest, 50/min user)**: AI endpoints use a stricter limit for unauthenticated users. When `useUserId` is enabled, authenticated users are tracked by their user ID instead of IP, giving them a higher allowance.
+- **Auth Login (5/15min)**: Protects against brute-force password attacks. Applies per IP address.
+- **Password Reset (3/hr)**: Prevents abuse of password reset emails. Applies per IP address.
+
+## Response Headers
+
+Every rate-limited response includes these headers:
+
+| Header | Description | Example |
+|--------|-------------|---------|
+| `X-RateLimit-Limit` | Current request count in the window | `15` |
+| `X-RateLimit-Remaining` | Requests remaining before throttling | `85` |
+| `X-RateLimit-Reset` | Seconds until the current window resets | `42` |
+
+These headers are included on **both successful and rejected responses**, so clients can proactively track their usage.
+
+## Rate Limit Exceeded Response
+
+When a client exceeds the rate limit, the API returns:
+
+```json title="429 Too Many Requests"
+{
+  "error": "Rate limit exceeded",
+  "retryAfter": 42
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `error` | `string` | Always `"Rate limit exceeded"` |
+| `retryAfter` | `number` | Seconds until the rate limit window resets |
+
+The response also includes the standard rate limit headers with `X-RateLimit-Remaining: 0`.
+
+## Client Identification
+
+The rate limiter identifies clients using the following priority:
+
+<Steps>
+  <Step>
+    ### X-Forwarded-For Header
+    If present (typical behind a proxy or load balancer), the **first IP** in the comma-separated list is used.
+  </Step>
+  <Step>
+    ### X-Real-IP Header
+    If `X-Forwarded-For` is not set, the `X-Real-IP` header is used.
+  </Step>
+  <Step>
+    ### Fallback
+    If neither header is present, a generic `unknown-ip` identifier is used. This means all clients without identifiable IPs share a single rate limit bucket.
+  </Step>
+</Steps>
+
+For endpoints configured with `useUserId: true`, authenticated users are tracked by `user-{userId}` instead of their IP address, giving each user an independent rate limit.
+
+## Mobile App Bypass
+
+<Callout title="Mobile App Traffic">
+Requests with a `User-Agent` header containing `JoseMadridSalsaMobileApp` bypass rate limiting entirely. This allows the proprietary mobile app to make unlimited API requests without being throttled.
+</Callout>
+
+## Applying Rate Limits
+
+Rate limits are applied to API route handlers using the `withRateLimit` middleware wrapper.
+
+### Direct Usage
+
+```ts title="Custom rate limit"
+import { withRateLimit } from '@/lib/middleware/api-helpers'
+
+export const POST = withRateLimit(async (request) => {
+  return NextResponse.json({ success: true })
+}, {
+  maxRequests: 10,
+  windowSeconds: 60,
+  useUserId: false,
+})
+```
+
+### Using Presets
+
+| Preset | Limit | Description |
+|--------|-------|-------------|
+| `commonRateLimits.standard` | 100/min | Standard API endpoints |
+| `commonRateLimits.aiChat` | 20/min (guest) or 50/min (user) | AI chat endpoints, tracks by user ID |
+| `commonRateLimits.auth` | 5/15min | Authentication endpoints |
+| `commonRateLimits.passwordReset` | 3/hr | Password reset endpoints |
+
+```ts title="Using a preset"
+import { commonRateLimits } from '@/lib/middleware/api-helpers'
+
+export const POST = commonRateLimits.auth(async (request) => {
+  // This handler is limited to 5 requests per 15 minutes per IP
+  return NextResponse.json({ success: true })
+})
+```
+
+### Composing with Authentication
+
+Rate limiting can be combined with authentication using the `compose` helper:
+
+```ts title="Auth + rate limiting"
+import { compose, withAuth, withRateLimit } from '@/lib/middleware/api-helpers'
+import { RATE_LIMITS } from '@/lib/rate-limiter'
+import { UserRole } from '@prisma/client'
+
+export const POST = compose(
+  (h) => withAuth(h, { roles: [UserRole.ADMIN] }),
+  (h) => withRateLimit(h, RATE_LIMITS.API_GENERAL)
+)(async (request) => {
+  return NextResponse.json({ success: true })
+})
+```
+
+Middleware is applied right to left: the request hits rate limiting first, then authentication.
+
+## Best Practices
+
+<Cards>
+  <Card title="Track Headers Proactively">
+    Monitor `X-RateLimit-Remaining` on every response. Begin throttling client-side before hitting zero to avoid rejected requests.
+  </Card>
+  <Card title="Implement Exponential Backoff">
+    When you receive a `429`, wait for `retryAfter` seconds before retrying. If the retry also fails, increase the delay exponentially.
+  </Card>
+  <Card title="Authenticate for Higher Limits">
+    AI chat endpoints grant 2.5x more requests to authenticated users (50/min vs 20/min). Sign in to get a higher rate limit.
+  </Card>
+  <Card title="Use User-Scoped Limits">
+    For endpoints behind authentication, enable `useUserId: true` so that each user gets an independent rate limit bucket rather than sharing one with all users behind the same IP.
+  </Card>
+</Cards>

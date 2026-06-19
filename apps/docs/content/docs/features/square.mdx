@@ -1,0 +1,112 @@
+---
+title: Square Integration
+description: Square payment adapter for in-person POS terminal payments and Cash App Pay
+---
+
+# Square Integration
+
+Square handles in-person point-of-sale (POS) terminal payments and Cash App Pay. It is conditionally registered when the `SQUARE_ACCESS_TOKEN` environment variable is set.
+
+## Architecture
+
+<Files>
+  <Folder name="lib/payments/providers">
+    <File name="square.ts" />
+  </Folder>
+  <Folder name="app/api/checkout">
+    <Folder name="square">
+      <File name="route.ts" />
+    </Folder>
+  </Folder>
+  <Folder name="components/checkout">
+    <File name="CashAppButton.tsx" />
+  </Folder>
+</Files>
+
+## SquareAdapter
+
+The `SquareAdapter` class implements `PaymentProviderAdapter` using the official `square` Node.js SDK.
+
+### Conditional Registration
+
+```ts
+if (process.env.SQUARE_ACCESS_TOKEN) {
+  registerProvider(new SquareAdapter())
+}
+```
+
+### Client Initialization
+
+The adapter lazily creates a singleton `SquareClient`:
+
+```ts
+const squareClient = new SquareClient({
+  token: config.accessToken,
+  environment: config.sandbox
+    ? SquareEnvironment.Sandbox
+    : SquareEnvironment.Production,
+})
+```
+
+### Payment Method Routing
+
+Square handles the `SQUARE_TERMINAL` payment method type, used for in-person POS transactions:
+
+```ts
+METHOD_PROVIDER_MAP = {
+  // ...
+  SQUARE_TERMINAL: 'SQUARE',
+}
+```
+
+### createPayment
+
+Creates a Square payment with:
+- Idempotency key via `randomUUID()` to prevent duplicate charges
+- Location ID from `SQUARE_LOCATION_ID`
+- Amount in cents with USD currency
+- Order metadata in the note field
+
+### Status Mapping
+
+```ts
+function mapSquareStatus(status: string | undefined): PaymentResult['status'] {
+  switch (status) {
+    case 'COMPLETED':   return 'SUCCEEDED'
+    case 'APPROVED':
+    case 'PENDING':     return 'PROCESSING'
+    case 'CANCELED':
+    case 'FAILED':      return 'FAILED'
+    default:            return 'REQUIRES_ACTION'
+  }
+}
+```
+
+### Error Handling
+
+Square errors are extracted from `SquareError` instances with a fallback for generic errors:
+
+```ts
+function getSquareErrorMessage(error: unknown): string {
+  if (error instanceof SquareError) return error.message || 'Square API error'
+  if (error instanceof Error) return error.message
+  return 'Unknown Square error'
+}
+```
+
+## Webhook Verification
+
+The adapter verifies Square webhook signatures using `WebhooksHelper` from the Square SDK against the `SQUARE_WEBHOOK_SIGNATURE_KEY`.
+
+## Environment Variables
+
+| Variable | Description |
+| --- | --- |
+| `SQUARE_ACCESS_TOKEN` | Square API access token |
+| `SQUARE_LOCATION_ID` | Square location for POS payments |
+| `SQUARE_SANDBOX` | `"true"` (default) or `"false"` for production |
+| `SQUARE_WEBHOOK_SIGNATURE_KEY` | Webhook signing key |
+
+<Callout type="info">
+Cash App Pay is rendered as a separate button in the checkout UI but routes through the Square payment adapter on the server side.
+</Callout>

@@ -1,0 +1,120 @@
+---
+title: Encryption
+description: AES-256-GCM encryption for sensitive data like SMTP passwords and service keys
+---
+
+
+# Encryption
+
+Jose Madrid Salsa uses AES-256-GCM encryption for protecting sensitive data at rest. There are two encryption modules that serve different purposes.
+
+## Two Encryption Systems
+
+### 1. ENCRYPTION_KEY (lib/encryption.ts)
+
+Used for encrypting SMTP passwords and other configuration values stored in the `EmailConfiguration` table.
+
+- **Algorithm**: AES-256-GCM
+- **Key derivation**: scrypt from `ENCRYPTION_KEY` env var with a fixed salt
+- **Output format**: `base64(iv):base64(authTag):base64(ciphertext)`
+
+```ts title="lib/encryption.ts"
+const ALGORITHM = 'aes-256-gcm'
+const IV_LENGTH = 16  // 16 bytes for AES
+const AUTH_TAG_LENGTH = 16  // 16 bytes for GCM authentication tag
+
+function getEncryptionKey(): Buffer {
+  const key = process.env.ENCRYPTION_KEY
+  if (!key) throw new Error('ENCRYPTION_KEY environment variable is required')
+
+  const salt = crypto.createHash('sha256').update('jose-madrid-salsa-v1').digest()
+  return crypto.scryptSync(key, salt, 32)
+}
+```
+
+### 2. MASTER_KEY (lib/crypto.ts)
+
+Used for encrypting service keys in the `ServiceKey` table (API tokens, OAuth secrets, etc.).
+
+- **Algorithm**: AES-256-GCM
+- **Key format**: 64-character hex string (32 bytes) used directly
+- **Output format**: hex(ciphertext + authTag) with separate hex IV
+
+```ts title="lib/crypto.ts"
+function getMasterKey(): Buffer {
+  const masterKey = process.env.MASTER_KEY
+  if (!masterKey) throw new Error('MASTER_KEY environment variable is not set')
+  // Expects a 64-character hex string
+  return Buffer.from(masterKey, 'hex')
+}
+```
+
+## Encryption Functions
+
+### lib/encryption.ts
+
+| Function | Purpose |
+|---|---|
+| `encrypt(plaintext)` | Encrypt a string, returns `iv:authTag:ciphertext` |
+| `decrypt(encryptedData)` | Decrypt an encrypted string |
+| `isEncrypted(value)` | Check if a string matches the encrypted format |
+| `generateEncryptionKey()` | Generate a new random key for `ENCRYPTION_KEY` |
+| `testEncryption()` | Roundtrip test to verify encryption works |
+
+### lib/crypto.ts
+
+| Function | Purpose |
+|---|---|
+| `encryptSecret(plaintext)` | Encrypt a secret, returns `{ encryptedValue, iv }` |
+| `decryptSecret(encryptedValue, iv)` | Decrypt a secret |
+| `generateMasterKey()` | Generate a new 64-char hex key for `MASTER_KEY` |
+| `hashValue(value)` | One-way SHA-256 hash |
+
+## Generating Keys
+
+### ENCRYPTION_KEY
+
+```bash
+node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"
+```
+
+### MASTER_KEY
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+## Where Encryption is Used
+
+| Data | Table | Module | Key |
+|---|---|---|---|
+| SMTP passwords | `EmailConfiguration.smtpPassword` | `lib/encryption.ts` | `ENCRYPTION_KEY` |
+| Service API keys | `ServiceKey.encryptedValue` | `lib/crypto.ts` | `MASTER_KEY` |
+| Social account tokens | `SocialAccount.accessToken` | `lib/crypto.ts` | `MASTER_KEY` |
+| Payment provider credentials | `PaymentProviderConfig.credentials` | `lib/crypto.ts` | `MASTER_KEY` |
+
+## Security Properties
+
+Both modules use AES-256-GCM, which provides:
+
+- **Confidentiality**: Data is encrypted with a 256-bit key
+- **Integrity**: GCM authentication tag detects tampering
+- **Unique IVs**: Each encryption generates a random 16-byte initialization vector
+
+<Callout type="warn">
+Never reuse or share encryption keys between environments. Generate unique keys for development, staging, and production.
+</Callout>
+
+## Key Rotation
+
+To rotate encryption keys:
+
+1. Generate a new key
+2. Decrypt all existing values with the old key
+3. Re-encrypt with the new key
+4. Update the environment variable
+5. Deploy
+
+<Callout type="error">
+Changing `MASTER_KEY` or `ENCRYPTION_KEY` without re-encrypting existing data will make that data permanently unreadable.
+</Callout>

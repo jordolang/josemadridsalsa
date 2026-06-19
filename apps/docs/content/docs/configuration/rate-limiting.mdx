@@ -1,0 +1,170 @@
+---
+title: Rate Limiting
+description: In-memory rate limiting for API endpoints
+---
+
+
+# Rate Limiting
+
+Jose Madrid Salsa uses in-memory rate limiting to protect API endpoints from abuse. Two rate limiting modules exist for different use cases.
+
+## Primary Rate Limiter (lib/rate-limiter.ts)
+
+The main rate limiter uses a Map-based sliding window with configurable limits per endpoint type.
+
+### Configuration Interface
+
+```ts title="lib/rate-limiter.ts"
+export interface RateLimitConfig {
+  maxRequests: number    // Maximum requests allowed in the window
+  windowSeconds: number  // Window duration in seconds
+  identifier: string     // Unique ID (IP address, user ID, etc.)
+}
+
+export interface RateLimitResult {
+  allowed: boolean       // Whether the request is allowed
+  remaining: number      // Requests remaining in the window
+  resetIn: number        // Seconds until window resets
+  current: number        // Current request count
+}
+```
+
+### Built-in Presets
+
+```ts title="lib/rate-limiter.ts"
+export const RATE_LIMITS = {
+  // AI Chat: 20 requests per minute per IP
+  AI_CHAT: {
+    maxRequests: 20,
+    windowSeconds: 60,
+  },
+
+  // AI Chat (authenticated): 50 requests per minute
+  AI_CHAT_USER: {
+    maxRequests: 50,
+    windowSeconds: 60,
+  },
+
+  // General API: 100 requests per minute
+  API_GENERAL: {
+    maxRequests: 100,
+    windowSeconds: 60,
+  },
+
+  // Authentication: 5 login attempts per 15 minutes
+  AUTH_LOGIN: {
+    maxRequests: 5,
+    windowSeconds: 15 * 60,
+  },
+
+  // Password reset: 3 requests per hour
+  PASSWORD_RESET: {
+    maxRequests: 3,
+    windowSeconds: 60 * 60,
+  },
+}
+```
+
+### Usage
+
+```ts
+import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limiter'
+
+const identifier = getClientIdentifier(request)
+const result = checkRateLimit({
+  ...RATE_LIMITS.API_GENERAL,
+  identifier,
+})
+
+if (!result.allowed) {
+  return NextResponse.json(
+    { error: 'Rate limit exceeded', retryAfter: result.resetIn },
+    { status: 429 }
+  )
+}
+```
+
+### Response Headers
+
+Rate limit information is included in response headers:
+
+| Header | Description |
+|---|---|
+| `X-RateLimit-Limit` | Current request count |
+| `X-RateLimit-Remaining` | Requests remaining |
+| `X-RateLimit-Reset` | Seconds until window resets |
+
+### Cleanup
+
+Expired entries are cleaned up every 5 minutes:
+
+```ts
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, record] of rateLimitStore.entries()) {
+    if (now > record.resetTime) {
+      rateLimitStore.delete(key)
+    }
+  }
+}, 5 * 60 * 1000)
+```
+
+## Simple Rate Limiter (lib/rateLimit.ts)
+
+A simpler sliding-window rate limiter used for specific endpoints:
+
+```ts title="lib/rateLimit.ts"
+export function rateLimit(key: string, limit: number, windowMs: number) {
+  // Returns { allowed: boolean, retryAfterMs: number }
+}
+```
+
+## Email Rate Limiter (lib/email/rate-limit.ts)
+
+A dedicated rate limiter for email API endpoints with service API key validation:
+
+```ts title="lib/email/rate-limit.ts"
+export function checkRateLimit(
+  key: string,
+  { maxRequests = 10, windowMs = 60_000 } = {}
+): { allowed: boolean; retryAfterMs?: number }
+
+export function validateServiceApiKey(request: Request): boolean {
+  const apiKey = request.headers.get('x-api-key')
+  return apiKey === process.env.SERVICE_API_KEY
+}
+```
+
+## Client Identification
+
+The rate limiter extracts the client IP from request headers, supporting reverse proxies:
+
+```ts title="lib/rate-limiter.ts"
+export function getClientIdentifier(request: Request): string {
+  // 1. Check X-Forwarded-For (proxy/load balancer)
+  const forwardedFor = request.headers.get('x-forwarded-for')
+  if (forwardedFor) return forwardedFor.split(',')[0].trim()
+
+  // 2. Check X-Real-IP
+  const realIp = request.headers.get('x-real-ip')
+  if (realIp) return realIp
+
+  // 3. Fallback
+  return 'unknown-ip'
+}
+```
+
+<Callout type="info">
+The rate limiter is in-memory and does not persist across serverless function invocations. On Vercel, each function instance maintains its own rate limit state. For strict rate limiting across instances, consider using Vercel KV or an external store.
+</Callout>
+
+## SMTP Rate Limits
+
+The `EmailConfiguration` model also includes per-configuration rate limits:
+
+| Field | Default | Description |
+|---|---|---|
+| `maxPerHour` | 1000 | Max emails per hour for this SMTP config |
+| `maxPerDay` | 10000 | Max emails per day for this SMTP config |
+
+These are enforced at the application level during campaign sends.

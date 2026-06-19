@@ -1,0 +1,165 @@
+---
+title: OAuth Providers
+description: Configure Google, GitHub, Facebook, and Apple OAuth for social login
+---
+
+
+# OAuth Providers
+
+Jose Madrid Salsa supports four OAuth providers for social login. Each creates or links a user account automatically on first sign-in.
+
+## Configured Providers
+
+```ts title="lib/auth.ts"
+providers: [
+  GoogleProvider({
+    clientId: process.env.GOOGLE_CLIENT_ID!,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+  }),
+  GitHubProvider({
+    clientId: process.env.GITHUB_CLIENT_ID!,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+  }),
+  FacebookProvider({
+    clientId: process.env.FACEBOOK_CLIENT_ID!,
+    clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+  }),
+  AppleProvider({
+    clientId: process.env.APPLE_CLIENT_ID!,
+    clientSecret: process.env.APPLE_CLIENT_SECRET!,
+  }),
+]
+```
+
+## User Upsert on OAuth Login
+
+When a user signs in via any OAuth provider, the JWT callback checks if the email exists in the database:
+
+- **Existing user**: Loads their `id` and `role` from the database.
+- **New user**: Creates a new `User` record with `role: 'CUSTOMER'` and `isEmailVerified: true`.
+
+```ts title="lib/auth.ts (JWT callback)"
+if (account?.provider && oauthProviders.includes(account.provider) && token.email) {
+  const normalizedEmail = (token.email as string).toLowerCase().trim()
+  let dbUser = await prisma.user.findUnique({ where: { email: normalizedEmail } })
+  if (!dbUser) {
+    dbUser = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        name: token.name ?? null,
+        isEmailVerified: true,
+        role: 'CUSTOMER',
+      },
+    })
+  }
+  token.id = dbUser.id
+  token.role = dbUser.role
+}
+```
+
+<Callout type="info">
+OAuth users do not have a `password` field set. They can only sign in via their OAuth provider unless they later set a password through the account settings.
+</Callout>
+
+## Google OAuth Setup
+
+<Steps>
+### Create a Google Cloud Project
+
+Go to [console.cloud.google.com](https://console.cloud.google.com) and create a new project or select an existing one.
+
+### Configure OAuth Consent Screen
+
+Navigate to APIs & Services > OAuth consent screen. Set the app name, support email, and authorized domains (e.g., `josemadrid.net`).
+
+### Create OAuth 2.0 Credentials
+
+Go to APIs & Services > Credentials > Create Credentials > OAuth 2.0 Client ID:
+
+- **Application type**: Web application
+- **Authorized redirect URIs**: `https://www.josemadrid.net/api/auth/callback/google` and `http://localhost:3000/api/auth/callback/google`
+
+### Set Environment Variables
+
+```bash title=".env.local"
+GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="GOCSPX-..."
+```
+</Steps>
+
+## GitHub OAuth Setup
+
+<Steps>
+### Register a GitHub OAuth App
+
+Go to [github.com/settings/applications/new](https://github.com/settings/applications/new):
+
+- **Homepage URL**: `https://www.josemadrid.net`
+- **Authorization callback URL**: `https://www.josemadrid.net/api/auth/callback/github`
+
+### Set Environment Variables
+
+```bash title=".env.local"
+GITHUB_CLIENT_ID="Iv1.abc123..."
+GITHUB_CLIENT_SECRET="..."
+```
+</Steps>
+
+## Facebook OAuth Setup
+
+<Steps>
+### Create a Facebook App
+
+Go to [developers.facebook.com](https://developers.facebook.com) and create a new app. Add the Facebook Login product.
+
+### Configure Valid OAuth Redirect URIs
+
+Under Facebook Login > Settings:
+
+`https://www.josemadrid.net/api/auth/callback/facebook`
+
+### Set Environment Variables
+
+```bash title=".env.local"
+FACEBOOK_CLIENT_ID="123456789..."
+FACEBOOK_CLIENT_SECRET="..."
+```
+</Steps>
+
+## Apple OAuth Setup
+
+<Steps>
+### Register an App ID
+
+In [developer.apple.com](https://developer.apple.com), create an App ID with Sign in with Apple enabled.
+
+### Create a Services ID
+
+Create a Services ID (this becomes your `APPLE_CLIENT_ID`). Configure the return URL:
+
+`https://www.josemadrid.net/api/auth/callback/apple`
+
+### Generate a Client Secret
+
+Apple requires a JWT-based client secret. Generate it using your private key, team ID, and key ID.
+
+### Set Environment Variables
+
+```bash title=".env.local"
+APPLE_CLIENT_ID="com.josemadrid.web"
+APPLE_CLIENT_SECRET="eyJhbGciOi..."
+```
+</Steps>
+
+## Callback URLs
+
+All providers use the same NextAuth.js callback pattern:
+
+| Provider | Callback URL |
+|---|---|
+| Google | `/api/auth/callback/google` |
+| GitHub | `/api/auth/callback/github` |
+| Facebook | `/api/auth/callback/facebook` |
+| Apple | `/api/auth/callback/apple` |
+
+In production, prepend `https://www.josemadrid.net` to each path. For local development, use `http://localhost:3000`.

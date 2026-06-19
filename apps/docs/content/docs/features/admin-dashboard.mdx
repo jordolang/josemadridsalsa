@@ -1,0 +1,133 @@
+---
+title: Admin Dashboard
+description: Admin panel with sales overview, order management, inventory alerts, customer growth, and quick actions
+---
+
+# Admin Dashboard
+
+The admin dashboard at `/admin` provides a comprehensive overview of business operations including sales metrics, order status breakdowns, inventory alerts, customer growth, and quick action shortcuts.
+
+## Architecture
+
+<Files>
+  <Folder name="app/admin" defaultOpen>
+    <File name="page.tsx" />
+    <File name="layout.tsx" />
+    <File name="loading.tsx" />
+    <File name="error.tsx" />
+  </Folder>
+  <Folder name="components/admin" defaultOpen>
+    <File name="StatsCard.tsx" />
+    <File name="SalesOverview.tsx" />
+    <Folder name="dashboard" defaultOpen>
+      <File name="RecentActivityFeed.tsx" />
+      <File name="TopProductsTable.tsx" />
+      <File name="OrderStatusBreakdown.tsx" />
+      <File name="InventoryAlertWidget.tsx" />
+      <File name="CustomerGrowthChart.tsx" />
+      <File name="QuickActionsGrid.tsx" />
+    </Folder>
+  </Folder>
+</Files>
+
+## Dashboard Stats
+
+The dashboard fetches all stats in parallel using `Promise.all` for optimal load time:
+
+```ts
+const [
+  totalOrders,
+  totalUsers,
+  totalProducts,
+  totalLocations,
+  totalReviews,
+  recentOrders,
+  lowStockProducts,
+  recentUsers,
+  ordersByStatus,
+] = await Promise.all([
+  prisma.order.count(),
+  prisma.user.count(),
+  prisma.product.count(),
+  prisma.retailLocation.count(),
+  prisma.review.count(),
+  // ... detail queries
+])
+```
+
+## Dashboard Widgets
+
+### Stats Cards
+
+Top-level KPIs displayed as `StatsCard` components:
+
+| Metric | Source |
+| --- | --- |
+| Total Revenue | `SUM(total)` from non-cancelled orders |
+| Total Orders | `COUNT(*)` from orders |
+| Total Customers | `COUNT(*)` from users |
+| Total Products | `COUNT(*)` from products |
+| Retail Locations | `COUNT(*)` from retail locations |
+| Average Rating | `AVG(rating)` from reviews |
+| New Users This Month | Users created since start of current month |
+
+### Sales Overview
+
+The `SalesOverview` component renders a 6-month sales trend chart using raw SQL:
+
+```sql
+SELECT
+  to_char(date_trunc('month', "createdAt"), 'Mon') AS month,
+  SUM(CASE WHEN status != 'CANCELLED' THEN total ELSE 0 END) AS sales,
+  COUNT(*) AS orders
+FROM orders
+WHERE "createdAt" ≥ date_trunc('month', NOW()) - interval '6 months'
+GROUP BY date_trunc('month', "createdAt")
+ORDER BY date_trunc('month', "createdAt") ASC
+```
+
+### Top Products Table
+
+Shows the 5 best-selling products by unit quantity, with revenue totals.
+
+### Order Status Breakdown
+
+Groups orders by status with counts, rendered as a breakdown chart.
+
+### Inventory Alert Widget
+
+Displays the 5 products with lowest stock (inventory ≤ 10, active only), sorted ascending by inventory count.
+
+### Customer Growth Chart
+
+Visualizes new customer registrations over time.
+
+### Recent Activity Feed
+
+Shows the 3 most recent orders with customer name and total.
+
+### Quick Actions Grid
+
+Shortcuts to common admin tasks (create product, view orders, manage inventory, etc.).
+
+## Admin Sections
+
+The admin layout provides navigation to:
+
+| Section | Route | Description |
+| --- | --- | --- |
+| Dashboard | `/admin` | Overview and KPIs |
+| Orders | `/admin/orders` | Order management |
+| Products | `/admin/products` | Product CRUD |
+| Categories | `/admin/categories` | Category management |
+| Inventory | `/admin/inventory` | Stock levels and alerts |
+| Users | `/admin/users` | Customer management |
+| Analytics | `/admin/analytics` | Sales and traffic reports |
+| Email Campaigns | `/admin/email-campaigns` | Campaign management |
+| Gift Certificates | `/admin/gift-certificates` | Certificate CRUD |
+| Lead Generation | `/admin/lead-generation` | Lead scraping campaigns |
+| Settings | `/admin/settings` | Site configuration |
+
+<Callout type="info">
+Admin access requires the `ADMIN` or `SUPER_ADMIN` role. The `getCurrentUser()` and `hasPermission()` functions from `lib/rbac.ts` enforce this on every admin page load.
+</Callout>

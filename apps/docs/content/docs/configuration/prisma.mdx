@@ -1,0 +1,202 @@
+---
+title: Prisma Configuration
+description: Prisma schema structure, client setup, and ORM patterns
+---
+
+
+# Prisma Configuration
+
+The Prisma schema at `prisma/schema.prisma` defines over 50 models that power the entire application -- from e-commerce (products, orders, payments) to fundraising, loyalty programs, email campaigns, and social media management.
+
+## Generator and Datasource
+
+```graphql title="prisma/schema.prisma"
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+```
+
+- `binaryTargets` includes `rhel-openssl-3.0.x` for Vercel serverless functions.
+- `directUrl` is used for migrations (bypasses Prisma Accelerate pooling).
+
+## Core Models
+
+### User
+
+The `User` model is the central identity model. Users have a role-based access system:
+
+```graphql
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String?
+  password        String?  // bcrypt hash, null for OAuth-only users
+  role            UserRole @default(CUSTOMER)
+  isEmailVerified Boolean  @default(false)
+  stripeCustomerId String? @unique
+  // ... relations to orders, reviews, cart, loyalty, etc.
+  @@map("users")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  DEVELOPER
+  STAFF
+  WHOLESALE
+  FUNDRAISER
+}
+```
+
+### Product
+
+Products include salsa-specific fields like `heatLevel` and `ingredients`:
+
+```graphql
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  heatLevel   HeatLevel
+  ingredients String[]
+  price       Decimal   @db.Decimal(10, 2)
+  sku         String    @unique
+  inventory   Int       @default(0)
+  stockStatus StockStatus @default(IN_STOCK)
+  // ... images, SEO fields, variants, nutritional info
+  @@map("products")
+}
+
+enum HeatLevel {
+  MILD
+  MEDIUM
+  HOT
+  EXTRA_HOT
+}
+```
+
+### Order and Payment
+
+Orders support multiple payment providers and channels:
+
+```graphql
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  status          OrderStatus @default(PENDING)
+  paymentProvider PaymentProvider? @default(STRIPE)
+  paymentChannel  PaymentChannel?  @default(ONLINE)
+  // ... pricing, shipping, fundraiser attribution
+  @@map("orders")
+}
+
+enum PaymentProvider {
+  STRIPE
+  SQUARE
+  PAYPAL
+}
+
+enum PaymentChannel {
+  ONLINE
+  POS
+}
+```
+
+### Email System
+
+The email system includes templates, campaigns, configurations, and recipients:
+
+```graphql
+model EmailTemplate {
+  id       String @id @default(cuid())
+  key      String @unique  // e.g., "order_confirmation"
+  name     String
+  subject  String
+  html     String @db.Text
+  category EmailTemplateCategory @default(TRANSACTIONAL)
+  @@map("email_templates")
+}
+
+model EmailConfiguration {
+  id         String  @id @default(cuid())
+  name       String
+  smtpHost   String?
+  smtpPort   Int?    @default(587)
+  smtpPassword String? @db.Text  // Encrypted with ENCRYPTION_KEY
+  fromEmail  String
+  isDefault  Boolean @default(false)
+  useResend  Boolean @default(true)
+  maxPerHour Int     @default(1000)
+  maxPerDay  Int     @default(10000)
+  @@map("email_configurations")
+}
+```
+
+### Service Keys
+
+Encrypted key-value store for third-party credentials:
+
+```graphql
+model ServiceKey {
+  id             String @id @default(cuid())
+  serviceName    String // e.g., "stripe", "meta"
+  keyName        String // e.g., "api_key", "access_token"
+  encryptedValue String @db.Text
+  iv             String // AES-GCM initialization vector
+  isActive       Boolean @default(true)
+  @@unique([serviceName, keyName])
+  @@map("service_keys")
+}
+```
+
+### Partner API Keys
+
+SHA-256 hashed API keys with scope-based access control:
+
+```graphql
+model PartnerApiKey {
+  id       String   @id @default(cuid())
+  name     String
+  keyHash  String   @unique
+  scopes   String[] @default([])
+  isActive Boolean  @default(true)
+  userId   String?
+  @@map("partner_api_keys")
+}
+```
+
+## Table Mapping
+
+All models use `@@map()` to map Prisma model names (PascalCase) to snake_case table names in the database. For example, `model CartItem` maps to the `cart_items` table.
+
+## Indexes
+
+The schema uses strategic indexes on columns frequently used in queries:
+
+- `@@index([userId])` on orders, cart items, addresses
+- `@@index([status])` on orders, payments, campaigns
+- `@@index([createdAt])` on analytics, point transactions
+- `@@index([stockStatus])` on products
+
+## Postinstall Hook
+
+The Prisma client is regenerated automatically on `npm install`:
+
+```json title="package.json"
+{
+  "scripts": {
+    "postinstall": "prisma generate"
+  }
+}
+```
+
+<Callout type="info">
+This ensures the generated client stays in sync with `schema.prisma` across all environments, including Vercel builds.
+</Callout>

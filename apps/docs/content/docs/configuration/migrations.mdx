@@ -1,0 +1,150 @@
+---
+title: Database Migrations
+description: Prisma Migrate workflow for schema changes
+---
+
+
+# Database Migrations
+
+Jose Madrid Salsa uses Prisma Migrate for database schema management. Migrations are SQL files generated from changes to `prisma/schema.prisma`.
+
+## Migration History
+
+Migrations live in `prisma/migrations/` and are applied in chronological order:
+
+```
+prisma/migrations/
+  20260317000000_baseline/
+  20260320192351_add_fundraiser_messages/
+  20260320193323_add_fundraiser_social_features/
+  20260321084406_add_ecommerce_indexes/
+  20260321090406_advanced_fundraiser_profiles/
+  20260321171014_add_mailing_lists/
+  20260321180727_add_lead_generation_models/
+  20260321204913_update_leads_for_sports/
+  20260325070000_add_shipping_settings_singleton/
+  20260326200851_extend_fundraiser_battle_arena/
+  20260331000000_add_multi_payment_provider/
+  20260402120744_add_developer_blog_posts_and_contact_submissions/
+  migration_lock.toml
+```
+
+Each migration directory contains a `migration.sql` file with the DDL statements.
+
+## Development Workflow
+
+<Steps>
+### Edit the Schema
+
+Make changes to `prisma/schema.prisma`:
+
+```graphql
+model Product {
+  // Add a new field
+  isOrganic Boolean @default(false)
+}
+```
+
+### Create a Migration
+
+```bash
+npx prisma migrate dev --name add_organic_flag
+```
+
+This will:
+1. Generate a new SQL migration file
+2. Apply it to your local database
+3. Regenerate the Prisma client
+
+### Review the SQL
+
+Check the generated migration in `prisma/migrations/<timestamp>_add_organic_flag/migration.sql`:
+
+```sql
+ALTER TABLE "products" ADD COLUMN "isOrganic" BOOLEAN NOT NULL DEFAULT false;
+```
+
+### Commit the Migration
+
+```bash
+git add prisma/schema.prisma prisma/migrations/
+git commit -m "feat: add organic flag to products"
+```
+</Steps>
+
+## Production Deployment
+
+In production, migrations are applied with `prisma migrate deploy`:
+
+```bash
+npx prisma migrate deploy
+```
+
+This applies all pending migrations without generating new ones. It uses the `directUrl` (unpooled connection) from the schema:
+
+```graphql title="prisma/schema.prisma"
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+```
+
+<Callout type="warn">
+Always use the unpooled `DATABASE_URL_UNPOOLED` for migrations. Pooled connections (Prisma Accelerate, PgBouncer) do not support DDL statements reliably.
+</Callout>
+
+## Common Commands
+
+| Command | Purpose |
+|---|---|
+| `npx prisma migrate dev` | Create and apply a new migration (development) |
+| `npx prisma migrate deploy` | Apply pending migrations (production) |
+| `npx prisma migrate status` | Check migration status |
+| `npx prisma migrate reset` | Reset database and reapply all migrations + seed |
+| `npx prisma db push` | Push schema changes without creating a migration file |
+| `npx prisma generate` | Regenerate the Prisma client |
+
+## Baseline Migration
+
+The first migration (`20260317000000_baseline`) was created as a baseline from the existing database schema. This is common when adopting Prisma Migrate for an existing project.
+
+## Migration Lock
+
+The `migration_lock.toml` file records the database provider:
+
+```toml title="prisma/migrations/migration_lock.toml"
+provider = "postgresql"
+```
+
+This prevents accidentally applying migrations to a different database type.
+
+## Troubleshooting
+
+### Migration Drift
+
+If the database schema drifts from the migration history:
+
+```bash
+npx prisma migrate diff --from-migrations ./prisma/migrations --to-schema-datamodel ./prisma/schema.prisma
+```
+
+### Reset Development Database
+
+```bash
+npx prisma migrate reset
+```
+
+This drops all tables, reapplies all migrations, and runs the seed script.
+
+<Callout type="error">
+Never run `prisma migrate reset` against a production database.
+</Callout>
+
+### Diagnose Connection Issues
+
+The project includes a diagnostic script:
+
+```bash
+node scripts/diagnose-db-connection.js
+```

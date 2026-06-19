@@ -1,0 +1,143 @@
+---
+title: Caching Strategies
+description: Caching configuration for builds, images, and data
+---
+
+
+# Caching Strategies
+
+Jose Madrid Salsa uses several caching layers provided by Next.js and Vercel. There is no external cache store (like Redis) -- caching is handled through framework-level mechanisms.
+
+## Build Cache Invalidation
+
+Each build generates a unique timestamp-based ID, ensuring Vercel does not serve stale content from previous builds:
+
+```js title="next.config.mjs"
+generateBuildId: async () => {
+  return `build-${Date.now()}`
+}
+```
+
+## Image Cache
+
+Optimized images are cached with a minimum TTL:
+
+```js title="next.config.mjs"
+images: {
+  minimumCacheTTL: 60, // seconds
+}
+```
+
+Vercel's CDN caches optimized images at the edge, serving them globally with low latency. The actual cache duration is often longer than the minimum, based on demand.
+
+## Prisma Client Singleton
+
+The Prisma client is cached globally to avoid creating multiple database connections in development (where hot module reloading would otherwise create a new client on each reload):
+
+```ts title="lib/prisma.ts"
+const globalForPrisma = globalThis as unknown as {
+  prisma?: PrismaClient
+}
+
+function getPrismaClient(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient()
+  }
+  return globalForPrisma.prisma
+}
+```
+
+In production (serverless), each function instance maintains its own client via the global cache.
+
+## Prisma Accelerate
+
+When using a `prisma://` connection URL, Prisma Accelerate provides:
+
+- **Connection pooling**: Reduces database connection overhead
+- **Query caching**: Cache query results at the edge
+- **Global distribution**: Route queries through the nearest Prisma Accelerate node
+
+```ts title="lib/prisma.ts"
+if (usesAccelerate) {
+  const baseClient = new PrismaClient({ log: logLevels })
+  return baseClient.$extends(withAccelerate())
+}
+```
+
+## Stripe Client Singleton
+
+The Stripe client is also cached as a singleton:
+
+```ts title="lib/stripe.ts"
+let stripeClient: Stripe | null = null
+
+export const getStripe = () => {
+  if (!stripeClient) {
+    stripeClient = new Stripe(secretKey, {
+      apiVersion: '2025-10-29.clover',
+      maxNetworkRetries: 2,
+      timeout: 30000,
+    })
+  }
+  return stripeClient
+}
+```
+
+## Auth Prisma Client Cache
+
+The auth module caches its Prisma client reference separately:
+
+```ts title="lib/auth.ts"
+let prismaClient: any = null
+
+async function getPrisma() {
+  if (!prismaClient) {
+    const { prisma } = await import('@/lib/prisma')
+    prismaClient = prisma
+  }
+  return prismaClient
+}
+```
+
+## Encryption Key Cache
+
+The encryption module caches the derived key to avoid repeated scrypt calls:
+
+```ts title="lib/encryption.ts"
+let keyCache: Buffer | null = null
+
+function getEncryptionKey(): Buffer {
+  if (keyCache) return keyCache
+  // ... derive key with scrypt
+  keyCache = derivedKey
+  return keyCache
+}
+```
+
+## Rate Limiter Cache
+
+Rate limit records are stored in an in-memory Map with automatic cleanup:
+
+```ts title="lib/rate-limiter.ts"
+const rateLimitStore = new Map<string, RateLimitRecord>()
+
+// Cleanup expired entries every 5 minutes
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, record] of rateLimitStore.entries()) {
+    if (now > record.resetTime) rateLimitStore.delete(key)
+  }
+}, 5 * 60 * 1000)
+```
+
+<Callout type="info">
+In-memory caches (rate limits, singletons) do not persist across serverless function invocations on Vercel. Each cold start creates fresh instances. For persistent caching, consider Vercel KV.
+</Callout>
+
+## Sentry Tunnel
+
+Sentry requests are routed through a Next.js rewrite to bypass ad-blockers, effectively caching the Sentry endpoint path:
+
+```js title="next.config.mjs"
+tunnelRoute: '/monitoring',
+```
