@@ -17,8 +17,8 @@ vi.mock('@/lib/prisma', () => {
   }
 })
 
-// Mock email service
-vi.mock('@/lib/email', () => ({
+// Mock email service (automation.ts imports sendEmail from @/lib/email/client)
+vi.mock('@/lib/email/client', () => ({
   sendEmail: vi.fn(),
 }))
 
@@ -37,7 +37,7 @@ describe('Email Automation - Shipping Notifications', () => {
     // Import fresh instances
     const prismaModule = await import('@/lib/prisma')
     prisma = prismaModule.prisma || prismaModule.default
-    const emailLib = await import('@/lib/email')
+    const emailLib = await import('@/lib/email/client')
     sendEmail = emailLib.sendEmail
     const emailAutomation = await import('@/lib/email/automation')
     sendOrderShippedEmail = emailAutomation.sendOrderShippedEmail
@@ -87,12 +87,8 @@ describe('Email Automation - Shipping Notifications', () => {
       expect(prisma.order.findUnique).toHaveBeenCalledWith({
         where: { id: 'order-1' },
         include: {
-          user: true,
-          items: {
-            include: {
-              product: true,
-            },
-          },
+          items: true,
+          user: { select: { name: true, email: true } },
         },
       })
 
@@ -177,6 +173,8 @@ describe('Email Automation - Shipping Notifications', () => {
         guestEmail: 'customer@example.com',
         user: null,
         trackingNumber: 'TRACK123456',
+        createdAt: new Date('2026-06-15T10:00:00Z'),
+        total: 27.97,
         deliveredAt: new Date('2026-06-20T16:30:00Z'),
         items: [
           {
@@ -200,12 +198,8 @@ describe('Email Automation - Shipping Notifications', () => {
       expect(prisma.order.findUnique).toHaveBeenCalledWith({
         where: { id: 'order-1' },
         include: {
-          user: true,
-          items: {
-            include: {
-              product: true,
-            },
-          },
+          items: true,
+          user: { select: { name: true, email: true } },
         },
       })
 
@@ -227,6 +221,8 @@ describe('Email Automation - Shipping Notifications', () => {
         guestEmail: 'customer@example.com',
         user: null,
         trackingNumber: 'TRACK123456',
+        createdAt: new Date('2026-06-15T10:00:00Z'),
+        total: 27.97,
         deliveredAt: new Date('2026-06-20T16:30:00Z'),
         items: [],
       }
@@ -261,6 +257,8 @@ describe('Email Automation - Shipping Notifications', () => {
         guestEmail: 'customer@example.com',
         user: null,
         trackingNumber: 'TRACK123456',
+        createdAt: new Date('2026-06-15T10:00:00Z'),
+        total: 27.97,
         deliveredAt: new Date('2026-06-20T16:30:00Z'),
         items: [],
       }

@@ -365,10 +365,13 @@ class EasyPostShippingClient implements ShippingClient {
     try {
       const client = getEasyPostClient()
 
-      // Buy shipment with selected rate
-      // @ts-expect-error - EasyPost SDK types are incomplete for retrieve method
-      const shipment = await client.Shipment.retrieve(shipmentId)
-      const boughtShipment = await shipment.buy(rateId)
+      // EasyPost v8 exposes a service-style API: Shipment.buy purchases the
+      // shipment with the given rate. It accepts a rate id string (or a Rate
+      // object) and wraps it as { rate: { id } } internally. The objects
+      // returned by retrieve() don't carry an instance .buy() method, so we
+      // must call the service method here.
+      // @ts-expect-error - EasyPost SDK types only declare Shipment.create
+      const boughtShipment = await client.Shipment.buy(shipmentId, rateId)
 
       // Get postage label
       const labelUrl = boughtShipment.postage_label?.label_url

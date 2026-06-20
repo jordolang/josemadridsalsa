@@ -12,7 +12,7 @@ export type WebhookHandlerResult = {
 /**
  * EasyPost Tracker Result Type
  */
-type TrackerResult = {
+export type TrackerResult = {
   id: string
   object: string
   mode: string

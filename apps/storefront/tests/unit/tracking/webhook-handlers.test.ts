@@ -258,5 +258,75 @@ describe('EasyPost Webhook Handlers', () => {
       expect(sendOrderShippedEmail).not.toHaveBeenCalled()
       expect(sendOrderDeliveredEmail).not.toHaveBeenCalled()
     })
+
+    it('does not resend the shipped email when shippedAt is already set', async () => {
+      const mockShippingLabel = {
+        id: 'label-1',
+        orderId: 'order-1',
+        trackingCode: 'TRACK123',
+        order: {
+          id: 'order-1',
+          orderNumber: 'ORD-001',
+          status: 'SHIPPED',
+          shippedAt: new Date('2026-06-19T10:00:00Z'),
+        },
+      }
+
+      prisma.shippingLabel.findFirst.mockResolvedValue(mockShippingLabel)
+      prisma.shippingLabel.update.mockResolvedValue(mockShippingLabel)
+
+      const trackerData = {
+        tracking_code: 'TRACK123',
+        status: 'in_transit',
+        tracking_details: [
+          {
+            status: 'in_transit',
+            message: 'Still in transit',
+            datetime: '2026-06-19T18:00:00Z',
+          },
+        ],
+      }
+
+      await handleTrackerUpdated(trackerData)
+
+      // Status still updates, but the shipped email is not sent a second time
+      expect(prisma.shippingLabel.update).toHaveBeenCalled()
+      expect(sendOrderShippedEmail).not.toHaveBeenCalled()
+    })
+
+    it('does not resend the delivered email when deliveredAt is already set', async () => {
+      const mockShippingLabel = {
+        id: 'label-1',
+        orderId: 'order-1',
+        trackingCode: 'TRACK123',
+        order: {
+          id: 'order-1',
+          orderNumber: 'ORD-001',
+          status: 'DELIVERED',
+          shippedAt: new Date('2026-06-19T10:00:00Z'),
+          deliveredAt: new Date('2026-06-20T16:30:00Z'),
+        },
+      }
+
+      prisma.shippingLabel.findFirst.mockResolvedValue(mockShippingLabel)
+      prisma.shippingLabel.update.mockResolvedValue(mockShippingLabel)
+
+      const trackerData = {
+        tracking_code: 'TRACK123',
+        status: 'delivered',
+        tracking_details: [
+          {
+            status: 'delivered',
+            message: 'Delivered (duplicate event)',
+            datetime: '2026-06-20T16:30:00Z',
+          },
+        ],
+      }
+
+      await handleTrackerUpdated(trackerData)
+
+      expect(prisma.shippingLabel.update).toHaveBeenCalled()
+      expect(sendOrderDeliveredEmail).not.toHaveBeenCalled()
+    })
   })
 })

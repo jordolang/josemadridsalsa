@@ -7,6 +7,7 @@ const originalEnv = { ...process.env }
 // Mock implementations
 const mockShipmentCreate = vi.fn()
 const mockShipmentRetrieve = vi.fn()
+const mockShipmentBuy = vi.fn()
 const mockTrackerCreate = vi.fn()
 
 // Mock EasyPost SDK
@@ -19,6 +20,7 @@ vi.mock('@easypost/api', () => {
       this.Shipment = {
         create: mockShipmentCreate,
         retrieve: mockShipmentRetrieve,
+        buy: mockShipmentBuy,
       }
       this.Tracker = {
         create: mockTrackerCreate,
@@ -37,6 +39,7 @@ describe('Shipping API - EasyPost Integration', () => {
     vi.clearAllMocks()
     mockShipmentCreate.mockClear()
     mockShipmentRetrieve.mockClear()
+    mockShipmentBuy.mockClear()
     mockTrackerCreate.mockClear()
     // Reset environment variables
     process.env = { ...originalEnv }
@@ -202,30 +205,25 @@ describe('Shipping API - EasyPost Integration', () => {
 
   describe('buyShipmentLabel', () => {
     it('purchases label with selected rate', async () => {
-      const mockShipment = {
+      mockShipmentBuy.mockResolvedValue({
         id: 'shp_test123',
-        buy: vi.fn().mockResolvedValue({
-          id: 'shp_test123',
-          tracking_code: 'TRACK123456',
-          postage_label: {
-            label_url: 'https://easypost.com/labels/test.pdf',
-          },
-          tracker: {
-            id: 'trk_test',
-            public_url: 'https://track.easypost.com/TRACK123456',
-          },
-          selected_rate: {
-            carrier: 'USPS',
-            service: 'Priority',
-            rate: '10.50',
-            currency: 'USD',
-          },
-          status: 'purchased',
-          created_at: '2026-06-19T10:00:00Z',
-        }),
-      }
-
-      mockShipmentRetrieve.mockResolvedValue(mockShipment)
+        tracking_code: 'TRACK123456',
+        postage_label: {
+          label_url: 'https://easypost.com/labels/test.pdf',
+        },
+        tracker: {
+          id: 'trk_test',
+          public_url: 'https://track.easypost.com/TRACK123456',
+        },
+        selected_rate: {
+          carrier: 'USPS',
+          service: 'Priority',
+          rate: '10.50',
+          currency: 'USD',
+        },
+        status: 'purchased',
+        created_at: '2026-06-19T10:00:00Z',
+      })
 
       const { buyShipmentLabel } = await import('@/lib/shipping-api')
 
@@ -237,21 +235,16 @@ describe('Shipping API - EasyPost Integration', () => {
       expect(result.labelUrl).toBe('https://easypost.com/labels/test.pdf')
       expect(result.carrier).toBe('USPS')
 
-      expect(mockShipmentRetrieve).toHaveBeenCalledWith('shp_test123')
-      expect(mockShipment.buy).toHaveBeenCalledWith('rate_test1')
+      // EasyPost v8 service method: buy(shipmentId, rateId)
+      expect(mockShipmentBuy).toHaveBeenCalledWith('shp_test123', 'rate_test1')
     })
 
     it('throws error when label URL is not available', async () => {
-      const mockShipment = {
+      mockShipmentBuy.mockResolvedValue({
         id: 'shp_test123',
-        buy: vi.fn().mockResolvedValue({
-          id: 'shp_test123',
-          tracking_code: 'TRACK123456',
-          postage_label: null, // No label available
-        }),
-      }
-
-      mockShipmentRetrieve.mockResolvedValue(mockShipment)
+        tracking_code: 'TRACK123456',
+        postage_label: null, // No label available
+      })
 
       const { buyShipmentLabel } = await import('@/lib/shipping-api')
 

@@ -73,13 +73,30 @@ export default async function TrackingPage({ params }: PageProps) {
   const trackingUrl = order.trackingUrl ?? null;
   const trackingStatus = shippingLabel?.status ?? order.status;
 
-  // Parse tracking history from JSON
-  const trackingHistory = order.trackingHistory as Array<{
+  // Parse tracking history from JSON. The webhook stores EasyPost
+  // tracking_details, so derive a flat `location` string from the nested
+  // tracking_location object for display.
+  const rawTrackingHistory = order.trackingHistory as Array<{
     status: string;
     message: string;
     datetime: string;
-    location?: string;
+    tracking_location?: {
+      city?: string;
+      state?: string;
+      country?: string;
+      zip?: string;
+    };
   }> | null;
+
+  const trackingHistory = rawTrackingHistory?.map((event) => ({
+    status: event.status,
+    message: event.message,
+    datetime: event.datetime,
+    location:
+      [event.tracking_location?.city, event.tracking_location?.state, event.tracking_location?.country]
+        .filter(Boolean)
+        .join(', ') || undefined,
+  })) ?? null;
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { createHmac } from 'crypto'
 import prisma from '@/lib/prisma'
+import { handleTrackerUpdated, type TrackerResult } from '@/lib/tracking/webhook-handlers'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -45,28 +46,7 @@ export async function POST(request: Request) {
     mode: string
     created_at: string
     updated_at: string
-    result?: {
-      id: string
-      object: string
-      mode: string
-      tracking_code?: string
-      status?: string
-      carrier?: string
-      tracking_details?: Array<{
-        object: string
-        message: string
-        status: string
-        datetime: string
-        tracking_location?: {
-          city?: string
-          state?: string
-          country?: string
-          zip?: string
-        }
-      }>
-      est_delivery_date?: string
-      shipment_id?: string
-    }
+    result?: TrackerResult
   }
 
   try {
@@ -109,87 +89,14 @@ export async function POST(request: Request) {
     switch (event.description) {
       case 'tracker.created':
       case 'tracker.updated': {
-        const tracker = event.result
-
-        if (!tracker) {
+        if (!event.result) {
           console.warn('EasyPost webhook event missing tracker data:', event.id)
-          return NextResponse.json({ received: true })
+          break
         }
 
-        const trackingCode = tracker.tracking_code
-        if (!trackingCode) {
-          console.warn('EasyPost tracker missing tracking_code:', event.id)
-          return NextResponse.json({ received: true })
-        }
-
-        // Find order by tracking code via ShippingLabel
-        const shippingLabel = await prisma.shippingLabel.findFirst({
-          where: { trackingCode },
-          include: { order: true },
-        })
-
-        if (!shippingLabel) {
-          console.warn(
-            'No order found for EasyPost tracking code:',
-            trackingCode
-          )
-          return NextResponse.json({ received: true })
-        }
-
-        // Update order with tracking information
-        const trackingHistory = tracker.tracking_details || []
-        const latestEvent = trackingHistory[0] // Most recent event
-
-        const updates: {
-          lastTrackingUpdate?: Date
-          trackingHistory?: object
-          shippedAt?: Date | null
-          deliveredAt?: Date | null
-        } = {
-          lastTrackingUpdate: new Date(),
-          trackingHistory: trackingHistory as object,
-        }
-
-        // Update shipped/delivered timestamps based on status
-        if (tracker.status === 'in_transit' && !shippingLabel.order.shippedAt) {
-          updates.shippedAt = latestEvent?.datetime
-            ? new Date(latestEvent.datetime)
-            : new Date()
-        }
-
-        if (tracker.status === 'delivered' && !shippingLabel.order.deliveredAt) {
-          updates.deliveredAt = latestEvent?.datetime
-            ? new Date(latestEvent.datetime)
-            : new Date()
-        }
-
-        await prisma.order.update({
-          where: { id: shippingLabel.orderId },
-          data: updates,
-        })
-
-        // Update ShippingLabel status
-        await prisma.shippingLabel.update({
-          where: { id: shippingLabel.id },
-          data: { status: tracker.status || 'unknown' },
-        })
-
-        console.log(
-          'Order tracking updated via EasyPost webhook:',
-          shippingLabel.orderId,
-          'Status:',
-          tracker.status
-        )
-
-        // TODO: Trigger notification emails based on status
-        // This will be handled in phase-4 (email notifications)
-        // if (tracker.status === 'in_transit') {
-        //   sendOrderShippedEmail(shippingLabel.orderId)
-        // }
-        // if (tracker.status === 'delivered') {
-        //   sendOrderDeliveredEmail(shippingLabel.orderId)
-        // }
-
+        // Delegate to the shared handler so tracking updates and the
+        // shipped/delivered notification emails stay in one place.
+        await handleTrackerUpdated(event.result)
         break
       }
 
