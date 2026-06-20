@@ -317,9 +317,10 @@ function NavigationContent() {
             isHome ? "h-[103px]" : "h-[72px]",
           )}
         >
-          {/* Wordmark */}
+          {/* Wordmark — always returns to the main marketing site, regardless of
+             which app/domain (e.g. the fundraiser deployment) is serving this header. */}
           <Link
-            href="/"
+            href="https://www.josemadrid.net"
             className={cn("group flex items-center justify-self-start", isHome ? "gap-4" : "gap-3")}
             onClick={() => closeGroup()}
           >
