@@ -5,6 +5,7 @@ import { hasActiveServiceKey } from '@/lib/service-keys'
 import { getGoogleAnalyticsDashboard } from '@/lib/google-analytics-reports'
 import { RANGE_OPTIONS, type AnalyticsRangeKey } from '@/lib/analytics/date-range'
 import { getAnalyticsData } from '@/lib/analytics/data-fetching'
+import { getAbandonedCartMetrics } from '@/lib/analytics/abandoned-cart-metrics'
 import { AnalyticsHeader } from './_components/AnalyticsHeader'
 import { AnalyticsNavigation } from './_components/AnalyticsNavigation'
 import { GoogleAnalyticsConfig } from './_components/GoogleAnalyticsConfig'
@@ -17,6 +18,7 @@ import { OrderFunnelCard } from './_components/OrderFunnelCard'
 import { TopProductsTable } from './_components/TopProductsTable'
 import { TrafficSourcesCard } from './_components/TrafficSourcesCard'
 import { RecentActivityTable } from './_components/RecentActivityTable'
+import { AbandonedCartMetrics } from './_components/AbandonedCartMetrics'
 
 type SearchParams = {
   range?: string
@@ -44,14 +46,16 @@ export default async function AnalyticsPage({
   const gaDashboardPromise = getGoogleAnalyticsDashboard(activeRange)
   const serviceAccountPromise = hasActiveServiceKey('google_analytics', 'service_account')
   const canManageGaPromise = hasPermission(user, 'analytics:export')
+  const abandonedCartMetricsPromise = getAbandonedCartMetrics(activeRange)
 
-  const [data, gaSettings, gaDashboard, serviceAccountConfigured, canManageGa] =
+  const [data, gaSettings, gaDashboard, serviceAccountConfigured, canManageGa, abandonedCartMetrics] =
     await Promise.all([
       dataPromise,
       gaSettingsPromise,
       gaDashboardPromise,
       serviceAccountPromise,
       canManageGaPromise,
+      abandonedCartMetricsPromise,
     ])
 
   const gaStatusIsReady = gaDashboard.status === 'ready'
@@ -83,6 +87,8 @@ export default async function AnalyticsPage({
         sessions={data.summary.sessions}
         conversionRate={data.summary.conversionRate}
       />
+
+      <AbandonedCartMetrics metrics={abandonedCartMetrics} />
 
       <AnalyticsChartsGrid chartData={data.chart} topProducts={data.topProducts} />
 

@@ -1,0 +1,162 @@
+---
+title: Production Database
+description: Neon serverless Postgres production setup for José Madrid Salsa
+---
+
+# Production Database
+
+José Madrid Salsa uses **Neon serverless Postgres** in production, connected through **Prisma ORM** with optional **Prisma Accelerate** for connection pooling and edge caching.
+
+## Architecture
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Vercel          │────▶│  Neon Postgres    │◀────│  Prisma Studio  │
+│  (Serverless)    │     │  (Serverless)     │     │  (Development)  │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+        │                        ▲
+        │                        │
+        ▼                        │
+┌─────────────────┐     ┌──────────────────┐
+│  Prisma Client   │────▶│  Connection Pool  │
+│  + Accelerate    │     │  (Neon/Prisma)    │
+└─────────────────┘     └──────────────────┘
+```
+
+## Prisma Schema Configuration
+
+```graphql title="prisma/schema.prisma"
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+```
+
+<Callout title="Binary Targets">
+The `rhel-openssl-3.0.x` target is required for Vercel's Lambda runtime (Amazon Linux 2023). The `native` target supports local development.
+</Callout>
+
+## Connection URLs
+
+Neon provides two connection strings:
+
+| Variable | Purpose | Format |
+|---|---|---|
+| `DATABASE_URL` | Pooled connection (runtime queries) | `postgresql://...@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require` |
+| `DATABASE_URL_UNPOOLED` | Direct connection (migrations) | `postgresql://...@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require` |
+
+The pooled URL goes through Neon's built-in connection pooler (PgBouncer). The direct URL bypasses it and is used by `prisma migrate deploy` during builds.
+
+## Prisma Accelerate
+
+When the `DATABASE_URL` starts with `prisma://` or `prisma+postgres://`, the client automatically enables Prisma Accelerate:
+
+```ts title="lib/prisma.ts"
+const usesAccelerate = databaseUrl.startsWith('prisma://') || databaseUrl.startsWith('prisma+postgres://')
+
+if (usesAccelerate) {
+  const baseClient = new PrismaClient({ log: logLevels })
+  const acceleratedClient = baseClient.$extends(withAccelerate())
+  return acceleratedClient
+}
+```
+
+Accelerate provides:
+- **Global connection pooling** -- Reduces cold start connection overhead
+- **Edge caching** -- Cache query results at the edge
+- **Query optimization** -- Automatic query batching
+
+## Migration Workflow
+
+### During Vercel Build
+
+The `vercel-build` script runs migrations automatically:
+
+```bash
+prisma migrate deploy && prisma generate && tsx prisma/seed.permissions.ts && next build
+```
+
+This applies any pending migrations from the `prisma/migrations/` directory.
+
+### Creating New Migrations
+
+<Steps>
+  <Step>
+    ### Modify the schema
+
+    Edit `prisma/schema.prisma` with your changes.
+  </Step>
+  <Step>
+    ### Generate the migration
+
+    ```bash
+    npm run db:migrate
+    # or: npx prisma migrate dev --name descriptive_name
+    ```
+  </Step>
+  <Step>
+    ### Test locally
+
+    Verify the migration works against your local or development Neon branch.
+  </Step>
+  <Step>
+    ### Push to main
+
+    The migration SQL file in `prisma/migrations/` is committed to git. On the next Vercel build, `prisma migrate deploy` applies it to production.
+  </Step>
+</Steps>
+
+## Existing Migrations
+
+The migration history starts with a baseline from March 2026:
+
+| Migration | Description |
+|---|---|
+| `20260317000000_baseline` | Initial schema with users, orders, products, reviews, loyalty, discounts |
+| `20260320192351_add_fundraiser_messages` | Fundraiser messaging system |
+| `20260321084406_add_ecommerce_indexes` | Performance indexes for e-commerce queries |
+| `20260321180727_add_lead_generation_models` | Lead scraper and CRM models |
+| `20260325070000_add_shipping_settings_singleton` | Configurable shipping settings |
+| `20260331000000_add_multi_payment_provider` | Square + multi-provider payment support |
+| `20260402120744_add_developer_blog_posts_and_contact_submissions` | Blog and contact form models |
+
+## Seeding
+
+Production seeding is limited to the permissions system, which runs on every build:
+
+```bash
+tsx prisma/seed.permissions.ts
+```
+
+Full data seeding scripts are available for development:
+
+```bash
+npm run db:seed              # Main seed
+npm run db:seed:recipes      # Recipe data
+npm run db:seed:nutrition    # Nutrition ingredients
+npm run db:seed:email-templates  # Email templates
+```
+
+<Callout type="warn" title="Never run full seeds in production">
+Scripts like `db:seed`, `db:seed:recipes`, and `db:reset` modify or delete data. Only `seed.permissions.ts` is safe and intended for production use.
+</Callout>
+
+## Diagnostic Tools
+
+If database connectivity issues arise:
+
+```bash
+# Run the connection diagnostic
+node scripts/diagnose-db-connection.js
+
+# Pull production env vars and test locally
+npm run db:production:pull-env
+```
+
+The Prisma client in `lib/prisma.ts` logs detailed diagnostics when `DATABASE_URL` is missing, including which fallback variables are available and the current Vercel environment.

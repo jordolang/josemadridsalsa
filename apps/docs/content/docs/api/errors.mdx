@@ -1,0 +1,236 @@
+---
+title: Error Responses
+description: API error response format, common error codes, and error handling patterns
+---
+
+# Error Responses
+
+All API endpoints return errors in a consistent JSON format. This page documents the error envelope, status codes, and common error scenarios you will encounter.
+
+## Error Response Format
+
+Every error response follows this structure:
+
+```json title="Error envelope"
+{
+  "error": "Human-readable error message",
+  "details": {
+    // Optional — present for validation errors
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `error` | `string` | A human-readable description of what went wrong |
+| `details` | `object \| undefined` | Additional context, typically Zod validation errors. Only present on `400` responses with validation failures |
+
+<Callout title="Success Responses">
+Success responses do **not** include an `error` field. They return the data directly as the JSON body, with no wrapping envelope. Paginated responses include a `pagination` object alongside the `data` array.
+</Callout>
+
+## HTTP Status Codes
+
+### Client Errors (4xx)
+
+| Status | Name | When It Occurs |
+|--------|------|----------------|
+| `400` | Bad Request | Invalid request body, missing required fields, or validation failure |
+| `401` | Unauthorized | No valid session token, or session has expired |
+| `402` | Payment Required | Credit card declined or payment processing failure (Stripe) |
+| `403` | Forbidden | Authenticated but lacking the required role or permission |
+| `404` | Not Found | Requested resource does not exist |
+| `409` | Conflict | Duplicate resource (e.g., registering with an existing email, creating a product with a duplicate SKU) |
+| `429` | Too Many Requests | Rate limit exceeded. See [Rate Limiting](/docs/api/rate-limiting) |
+
+### Server Errors (5xx)
+
+| Status | Name | When It Occurs |
+|--------|------|----------------|
+| `500` | Internal Server Error | Unhandled exception, database error, or external service failure |
+
+## Common Error Scenarios
+
+<Tabs items={['Authentication', 'Authorization', 'Validation', 'Business Logic']}>
+  <Tab value="Authentication">
+    ### 401 Unauthorized
+
+    Returned when a request lacks a valid session or the session has expired.
+
+    ```json title="Missing session"
+    {
+      "error": "Unauthorized - authentication required"
+    }
+    ```
+
+    **Common causes:**
+    - No `next-auth.session-token` cookie present
+    - Session token has expired (sessions last 30 days)
+    - Cookie was not included in the request headers
+
+    **Resolution:** Sign in again via `/api/auth/callback/credentials` or an OAuth provider to obtain a fresh session token.
+  </Tab>
+  <Tab value="Authorization">
+    ### 403 Forbidden
+
+    Returned when the user is authenticated but does not have the required role or permission.
+
+    ```json title="Insufficient role"
+    {
+      "error": "Forbidden - requires one of: ADMIN"
+    }
+    ```
+
+    ```json title="Insufficient permission"
+    {
+      "error": "Forbidden - requires permission: products:write"
+    }
+    ```
+
+    **Common causes:**
+    - A `CUSTOMER` user attempting to access an admin endpoint
+    - A `STAFF` user attempting an action that requires `ADMIN` role
+    - Accessing another user's resource (orders, cart items)
+
+    **Resolution:** Ensure the user has the appropriate role or permission. See [Authentication - RBAC](/docs/api/authentication#role-based-access-control-rbac) for the full permission matrix.
+  </Tab>
+  <Tab value="Validation">
+    ### 400 Bad Request (Validation)
+
+    Returned when request data fails Zod schema validation. Includes a `details` object with field-level errors.
+
+    ```json title="Validation error (registration)"
+    {
+      "error": "Invalid registration data.",
+      "details": {
+        "fieldErrors": {
+          "email": ["Invalid email"],
+          "password": ["String must contain at least 8 character(s)"]
+        },
+        "formErrors": []
+      }
+    }
+    ```
+
+    ```json title="Missing required fields"
+    {
+      "error": "Missing required fields: name, slug, sku, price"
+    }
+    ```
+
+    **Common causes:**
+    - Missing required fields in the request body
+    - Invalid field types (string where number expected)
+    - Values outside allowed ranges (e.g., password too short)
+
+    **Resolution:** Check the `details.fieldErrors` object for specific field issues and correct your request payload.
+  </Tab>
+  <Tab value="Business Logic">
+    ### 409 Conflict
+
+    Returned when a request would create a duplicate resource.
+
+    ```json title="Duplicate email"
+    {
+      "error": "An account with this email already exists."
+    }
+    ```
+
+    ```json title="Duplicate SKU"
+    {
+      "error": "A product with this SKU already exists"
+    }
+    ```
+
+    ### 400 Bad Request (Business Rule)
+
+    Returned when a request violates a business rule.
+
+    ```json title="Invalid bulk operation"
+    {
+      "error": "productIds must be a non-empty array"
+    }
+    ```
+
+    ```json title="Already paid"
+    {
+      "error": "Order already paid"
+    }
+    ```
+
+    ### 402 Payment Required
+
+    Returned when a payment is declined by Stripe.
+
+    ```json title="Card declined"
+    {
+      "error": "Your card was declined."
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Error Handling Helpers
+
+The API uses a set of helper functions from `lib/api.ts` to generate consistent error responses.
+
+| Helper | Default Status | Default Message |
+|--------|---------------|-----------------|
+| `fail(message, status?, details?)` | `400` | _(required)_ |
+| `unauthorized(message?)` | `401` | `"Unauthorized"` |
+| `forbidden(message?)` | `403` | `"Forbidden"` |
+| `notFound(message?)` | `404` | `"Not found"` |
+| `serverError(message?, error?)` | `500` | `"Internal server error"` |
+
+### tryCatch Wrapper
+
+The `tryCatch` utility function automatically maps thrown error messages to the appropriate status code:
+
+- Errors containing `"Unauthorized"` return `401`
+- Errors containing `"Forbidden"` return `403`
+- Errors containing `"Not found"` return `404`
+- All other errors return `500`
+
+This means `requireRole` and `requirePermission` from the RBAC module throw errors with these keywords, which `tryCatch` translates into the correct HTTP responses.
+
+<Callout type="warn" title="Error Messages in Production">
+Error messages from `500` responses use a generic message and do not expose internal details. The actual error is logged server-side. Never rely on `500` error message text for client-side logic.
+</Callout>
+
+## Rate Limit Errors
+
+Rate limit exceeded errors include a `retryAfter` field indicating when the client can retry:
+
+```json title="429 response"
+{
+  "error": "Rate limit exceeded",
+  "retryAfter": 45
+}
+```
+
+The `retryAfter` value is in seconds. See [Rate Limiting](/docs/api/rate-limiting) for full details on limits and response headers.
+
+## Best Practices for Error Handling
+
+<Steps>
+  <Step>
+    ### Check the Status Code First
+    Use the HTTP status code to determine the category of error before parsing the response body.
+  </Step>
+  <Step>
+    ### Parse the Error Body
+    Read the `error` field for a human-readable message. Check `details` for field-level validation errors on `400` responses.
+  </Step>
+  <Step>
+    ### Handle 401 by Re-Authenticating
+    When you receive a `401`, redirect the user to sign in or refresh the session.
+  </Step>
+  <Step>
+    ### Handle 429 with Backoff
+    When rate limited, wait for the number of seconds in `retryAfter` (or the `X-RateLimit-Reset` header) before retrying.
+  </Step>
+  <Step>
+    ### Do Not Parse 500 Messages
+    Internal server errors are generic by design. Log the error for debugging but show a generic message to users.
+  </Step>
+</Steps>

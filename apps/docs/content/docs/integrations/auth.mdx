@@ -1,0 +1,160 @@
+---
+title: Authentication Providers
+description: NextAuth.js authentication with credentials, Google, GitHub, Facebook, and Apple OAuth
+---
+
+
+# Authentication Providers
+
+The platform uses [NextAuth.js](https://next-auth.js.org/) for authentication with five providers: credentials (email/password), Google, GitHub, Facebook, and Apple. Sessions are JWT-based with role-based access control.
+
+## Architecture
+
+**File:** `lib/auth.ts`
+
+```
+Sign In Request -> NextAuth Provider -> JWT Callback -> Session Callback
+                                          |
+                                    Prisma User Lookup/Create
+                                          |
+                                    Token enriched with role, fundraiserId
+```
+
+Sessions use JWT strategy (no database sessions) with a 30-day max age. The Prisma client is lazily loaded to prevent module-load crashes when the database is unavailable.
+
+## Providers
+
+### Credentials
+
+Email/password authentication with bcrypt verification:
+
+```ts
+CredentialsProvider({
+  name: 'Credentials',
+  credentials: {
+    email: { label: 'Email', type: 'email' },
+    password: { label: 'Password', type: 'password' },
+  },
+  authorize: async (credentials) => {
+    // Normalizes email to lowercase
+    // Verifies password with bcrypt.compare()
+    // Returns user with id, email, name, role
+  },
+})
+```
+
+### Google OAuth
+
+```ts
+GoogleProvider({
+  clientId: process.env.GOOGLE_CLIENT_ID!,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+})
+```
+
+### GitHub OAuth
+
+```ts
+GitHubProvider({
+  clientId: process.env.GITHUB_CLIENT_ID!,
+  clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+})
+```
+
+### Facebook OAuth
+
+```ts
+FacebookProvider({
+  clientId: process.env.FACEBOOK_CLIENT_ID!,
+  clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+})
+```
+
+### Apple Sign In
+
+```ts
+AppleProvider({
+  clientId: process.env.APPLE_CLIENT_ID!,
+  clientSecret: process.env.APPLE_CLIENT_SECRET!,
+})
+```
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXTAUTH_SECRET` | Session signing secret | Yes |
+| `NEXTAUTH_URL` | Application base URL | Yes (production) |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID | Yes |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Yes |
+| `GITHUB_CLIENT_ID` | GitHub OAuth App client ID | Yes |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth App client secret | Yes |
+| `FACEBOOK_CLIENT_ID` | Facebook App client ID | Yes |
+| `FACEBOOK_CLIENT_SECRET` | Facebook App client secret | Yes |
+| `APPLE_CLIENT_ID` | Apple Services ID | Yes |
+| `APPLE_CLIENT_SECRET` | Apple client secret (JWT) | Yes |
+
+<Callout type="warn">
+`NEXTAUTH_SECRET` is validated at module load time. In development, a missing secret throws immediately. In production, authentication will fail gracefully but all sign-in attempts will be rejected.
+</Callout>
+
+## JWT Callbacks
+
+### OAuth User Upsert
+
+When a user signs in via any OAuth provider (Google, GitHub, Facebook, Apple), the JWT callback:
+
+1. Normalizes the email to lowercase
+2. Looks up the user by email in the database
+3. Creates a new user with `role: 'CUSTOMER'` if none exists
+4. Stores the user ID, role, and profile picture in the token
+
+### Fundraiser Account Lookup
+
+For users with role `FUNDRAISER`, the callback fetches the associated `fundraiserAccount.fundraiserId` and stores it in the token. This enables fundraiser-specific features without additional database lookups.
+
+### Token Enrichment
+
+The final JWT token contains:
+
+| Field | Source |
+|-------|--------|
+| `id` | User ID from database |
+| `role` | User role (CUSTOMER, ADMIN, FUNDRAISER) |
+| `fundraiserId` | Fundraiser account ID (if applicable) |
+| `avatar` | Profile picture URL from OAuth provider |
+
+## Session Object
+
+The session callback maps token fields to the session user:
+
+```ts
+session.user.id = token.id
+session.user.role = token.role
+session.user.fundraiserId = token.fundraiserId
+session.user.image = token.avatar
+```
+
+## Custom Pages
+
+| Page | Path |
+|------|------|
+| Sign In | `/auth/signin` |
+| Error | `/auth/error` |
+
+## Security
+
+- **Secure cookies** enabled in production (`useSecureCookies: true`)
+- **Debug mode** enabled only in development
+- **Case-insensitive email matching** via `toLowerCase().trim()`
+- **bcrypt** password hashing (credentials provider)
+- **Lazy Prisma loading** prevents crashes on database unavailability
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/auth.ts` | NextAuth configuration and callbacks |
+| `app/api/auth/[...nextauth]/route.ts` | NextAuth API route handler |
+| `app/auth/signin/page.tsx` | Custom sign-in page |
+| `app/auth/error/page.tsx` | Custom error page |

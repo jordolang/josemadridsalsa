@@ -57,14 +57,14 @@ function main() {
 // Read production database URL
   const envContent = fs.readFileSync(envPath, 'utf8');
 
-  // Prefer standard DATABASE_URL (Neon, most providers),
+  // Prefer standard DATABASE_URL (Supabase, most providers),
   // but fall back to legacy POSTGRES_URL if present.
   const dbUrlMatch =
     envContent.match(/DATABASE_URL=(.*)/) || envContent.match(/POSTGRES_URL=(.*)/);
   
   if (!dbUrlMatch) {
     log('❌ Error: DATABASE_URL or POSTGRES_URL not found in .env.vercel.production', 'red');
-    log('   Make sure your Vercel project has a PostgreSQL/Neon database connected', 'yellow');
+    log('   Make sure your Vercel project has a PostgreSQL/Supabase database connected', 'yellow');
     process.exit(1);
   }
   

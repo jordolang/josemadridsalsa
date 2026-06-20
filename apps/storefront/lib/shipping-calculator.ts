@@ -97,7 +97,7 @@ const SHIPPING_RATES = {
 
 /**
  * Default origin address for shipping calculations
- * TODO: Make this configurable in admin settings
+ * Configurable via environment variables
  */
 const DEFAULT_ORIGIN_ADDRESS: ShippingAddress = {
   street1: process.env.SHIPPING_ORIGIN_ADDRESS || '123 Main St',

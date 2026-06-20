@@ -1,0 +1,357 @@
+---
+title: Custom Components
+description: Creating and using custom React components in the Jose Madrid Salsa platform
+---
+
+# Custom Components
+
+This guide covers how to create custom React components that follow the patterns established in the Jose Madrid Salsa codebase.
+
+## Component Organization
+
+Components are organized by domain:
+
+<Files>
+  <Folder name="components" defaultOpen>
+    <Folder name="ui">
+      <File name="button.tsx" />
+      <File name="card.tsx" />
+      <File name="dialog.tsx" />
+    </Folder>
+    <Folder name="admin">
+      <File name="sidebar.tsx" />
+      <File name="data-table.tsx" />
+    </Folder>
+    <Folder name="store">
+      <File name="product-card.tsx" />
+      <File name="cart-drawer.tsx" />
+    </Folder>
+    <Folder name="checkout">
+      <File name="payment-form.tsx" />
+    </Folder>
+    <Folder name="products">
+      <File name="product-grid.tsx" />
+      <File name="heat-level-badge.tsx" />
+    </Folder>
+  </Folder>
+</Files>
+
+## UI Component Library
+
+The project uses shadcn/ui components based on Radix UI primitives, configured via `components.json`:
+
+```bash
+# To add a new shadcn/ui component
+npx shadcn@latest add [component-name]
+```
+
+Installed primitives include:
+- Accordion, Alert Dialog, Avatar
+- Checkbox, Dialog, Dropdown Menu
+- Label, Navigation Menu, Progress
+- Select, Separator, Switch, Tabs, Toast
+
+### Styling Approach
+
+Components use Tailwind CSS with the `cn()` utility for conditional classes:
+
+```typescript
+import { cn } from '@/lib/utils'
+
+interface BadgeProps {
+  variant: 'default' | 'success' | 'warning' | 'danger'
+  children: React.ReactNode
+}
+
+function Badge({ variant, children }: BadgeProps) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium',
+        {
+          'bg-gray-100 text-gray-700': variant === 'default',
+          'bg-green-100 text-green-700': variant === 'success',
+          'bg-yellow-100 text-yellow-700': variant === 'warning',
+          'bg-red-100 text-red-700': variant === 'danger',
+        }
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+```
+
+## Creating a Server Component
+
+Server Components are the default in the App Router. They can fetch data directly:
+
+```typescript
+// components/products/product-grid.tsx
+import { prisma } from '@/lib/prisma'
+
+interface ProductGridProps {
+  categorySlug?: string
+  limit?: number
+}
+
+export async function ProductGrid({ categorySlug, limit }: ProductGridProps) {
+  const products = await prisma.product.findMany({
+    where: {
+      isActive: true,
+      ...(categorySlug && {
+        category: { slug: categorySlug },
+      }),
+    },
+    take: limit,
+    orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }],
+  })
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  )
+}
+```
+
+## Creating a Client Component
+
+Add `'use client'` at the top for components that need interactivity:
+
+```typescript
+'use client'
+
+import { useState } from 'react'
+
+interface QuantitySelectorProps {
+  initialQuantity?: number
+  max: number
+  onChange: (quantity: number) => void
+}
+
+export function QuantitySelector({
+  initialQuantity = 1,
+  max,
+  onChange,
+}: QuantitySelectorProps) {
+  const [quantity, setQuantity] = useState(initialQuantity)
+
+  const handleChange = (newQty: number) => {
+    const clamped = Math.max(1, Math.min(max, newQty))
+    setQuantity(clamped)
+    onChange(clamped)
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => handleChange(quantity - 1)}
+        disabled={quantity <= 1}
+        className="px-3 py-1 border rounded disabled:opacity-50"
+      >
+        -
+      </button>
+      <span className="w-8 text-center">{quantity}</span>
+      <button
+        onClick={() => handleChange(quantity + 1)}
+        disabled={quantity >= max}
+        className="px-3 py-1 border rounded disabled:opacity-50"
+      >
+        +
+      </button>
+    </div>
+  )
+}
+```
+
+<Callout type="warn" title="Client vs Server Boundary">
+Only add `'use client'` when the component needs browser APIs (useState, useEffect, onClick, etc.). Server Components are more performant because they render on the server and send zero JavaScript to the client.
+</Callout>
+
+## Component Patterns
+
+### Props Interface Pattern
+
+Always define a named interface for component props:
+
+```typescript
+interface HeatLevelBadgeProps {
+  level: 'MILD' | 'MEDIUM' | 'HOT' | 'EXTRA_HOT'
+  size?: 'sm' | 'md' | 'lg'
+}
+
+function HeatLevelBadge({ level, size = 'md' }: HeatLevelBadgeProps) {
+  const colors = {
+    MILD: 'bg-green-100 text-green-800',
+    MEDIUM: 'bg-yellow-100 text-yellow-800',
+    HOT: 'bg-orange-100 text-orange-800',
+    EXTRA_HOT: 'bg-red-100 text-red-800',
+  }
+
+  return (
+    <span className={cn('rounded-full px-2 py-0.5', colors[level])}>
+      {level.replace('_', ' ')}
+    </span>
+  )
+}
+```
+
+### Composition Pattern
+
+Build complex components from smaller pieces:
+
+```typescript
+function ProductCard({ product }: { product: Product }) {
+  return (
+    <div className="rounded-lg border p-4">
+      <ProductImage src={product.featuredImage} alt={product.name} />
+      <div className="mt-3">
+        <h3 className="font-semibold">{product.name}</h3>
+        <HeatLevelBadge level={product.heatLevel} />
+        <PriceDisplay
+          price={product.price}
+          compareAtPrice={product.compareAtPrice}
+        />
+      </div>
+    </div>
+  )
+}
+```
+
+### Loading States
+
+Use Suspense boundaries for async Server Components:
+
+```typescript
+import { Suspense } from 'react'
+
+export default function ProductsPage() {
+  return (
+    <div>
+      <h1>Our Salsas</h1>
+      <Suspense fallback={<ProductGridSkeleton />}>
+        <ProductGrid />
+      </Suspense>
+    </div>
+  )
+}
+
+function ProductGridSkeleton() {
+  return (
+    <div className="grid grid-cols-3 gap-6">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="h-64 rounded-lg bg-gray-200 animate-pulse" />
+      ))}
+    </div>
+  )
+}
+```
+
+## Using Framer Motion
+
+The project includes Framer Motion for animations:
+
+```typescript
+'use client'
+
+import { motion } from 'framer-motion'
+
+function AnimatedCard({ children }: { children: React.ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+```
+
+## Using Lucide Icons
+
+The project uses Lucide React for icons:
+
+```typescript
+import { ShoppingCart, Heart, Star } from 'lucide-react'
+
+function ActionBar() {
+  return (
+    <div className="flex gap-2">
+      <button><ShoppingCart className="h-5 w-5" /></button>
+      <button><Heart className="h-5 w-5" /></button>
+    </div>
+  )
+}
+```
+
+## State Management with Zustand
+
+For client-side state that spans multiple components, use Zustand:
+
+```typescript
+// store/cart-store.ts
+import { create } from 'zustand'
+
+interface CartState {
+  items: CartItem[]
+  addItem: (item: CartItem) => void
+  removeItem: (productId: string) => void
+  clearCart: () => void
+}
+
+export const useCartStore = create<CartState>((set) => ({
+  items: [],
+  addItem: (item) =>
+    set((state) => ({
+      items: [...state.items, item],
+    })),
+  removeItem: (productId) =>
+    set((state) => ({
+      items: state.items.filter((i) => i.productId !== productId),
+    })),
+  clearCart: () => set({ items: [] }),
+}))
+```
+
+## Form Handling
+
+Use React Hook Form with Zod validation:
+
+```typescript
+'use client'
+
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { CreateNewFeatureSchema, type CreateNewFeature } from '@/lib/validations/new-feature'
+
+function NewFeatureForm() {
+  const form = useForm<CreateNewFeature>({
+    resolver: zodResolver(CreateNewFeatureSchema),
+    defaultValues: { name: '', description: '' },
+  })
+
+  const onSubmit = async (data: CreateNewFeature) => {
+    const response = await fetch('/api/new-feature', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    // handle response
+  }
+
+  return (
+    <form onSubmit={form.handleSubmit(onSubmit)}>
+      <input {...form.register('name')} />
+      {form.formState.errors.name && (
+        <p className="text-red-500">{form.formState.errors.name.message}</p>
+      )}
+      <button type="submit">Create</button>
+    </form>
+  )
+}
+```

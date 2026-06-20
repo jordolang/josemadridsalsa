@@ -1,0 +1,126 @@
+---
+title: Email Marketing
+description: Email campaign management with automation engine, template library, suppression lists, rate limiting, and trigger-based workflows
+---
+
+# Email Marketing
+
+The email marketing system supports campaign sending, automation workflows, template management, suppression lists, and rate-limited delivery. It handles both marketing campaigns and transactional emails (order confirmation, shipping notifications, etc.).
+
+## Architecture
+
+<Files>
+  <Folder name="lib/email" defaultOpen>
+    <File name="client.ts" />
+    <File name="sender.ts" />
+    <File name="types.ts" />
+    <File name="campaign-sender.ts" />
+    <File name="automation-engine.ts" />
+    <File name="automation.ts" />
+    <File name="suppression.ts" />
+    <File name="rate-limit.ts" />
+    <File name="queue.ts" />
+    <File name="template-library.ts" />
+    <File name="templates.ts" />
+    <File name="logger.ts" />
+    <Folder name="templates">
+      <File name="..." />
+    </Folder>
+    <Folder name="blocks">
+      <File name="..." />
+    </Folder>
+  </Folder>
+  <Folder name="app/admin/email-campaigns" defaultOpen>
+    <File name="page.tsx" />
+    <File name="actions.ts" />
+    <Folder name="new">
+      <File name="page.tsx" />
+    </Folder>
+    <Folder name="[id]">
+      <File name="page.tsx" />
+    </Folder>
+  </Folder>
+</Files>
+
+## Email Types
+
+The system handles these email categories:
+
+| Type | Description |
+| --- | --- |
+| `order-confirmation` | Sent after successful payment |
+| `shipping-notification` | Sent when order ships with tracking |
+| `delivery-confirmation` | Sent on delivery with feedback link |
+| `contact-form` | Internal notification for contact submissions |
+| `welcome` | New user registration |
+| `newsletter` | Marketing newsletter |
+| `abandoned-cart` | Cart recovery email |
+| `fundraiser-followup` | Fundraiser campaign follow-up |
+
+## Automation Engine
+
+The automation engine (`lib/email/automation-engine.ts`) processes trigger-based email workflows. Supported triggers:
+
+```ts
+type AutomationTriggerType =
+  | 'USER_REGISTERED'
+  | 'ORDER_PLACED'
+  | 'ORDER_SHIPPED'
+  | 'ORDER_DELIVERED'
+  | 'ABANDONED_CART'
+  | 'LOYALTY_POINTS_EARNED'
+  | 'LOYALTY_TIER_UPGRADE'
+  | 'SUBSCRIPTION_CREATED'
+  | 'BIRTHDAY'
+  | 'REENGAGEMENT'
+  | 'LOW_STOCK'
+  | 'CUSTOM'
+```
+
+### Enrollment Flow
+
+<Steps>
+### Trigger Fires
+
+An event occurs (e.g., `ORDER_PLACED`) and calls `enrollInAutomation()`.
+
+### Find Matching Automations
+
+The engine queries all active automations for the trigger type.
+
+### Create Enrollment
+
+For each matching automation, an `AutomationEnrollment` record is created (or reactivated if previously completed). The first step's delay is calculated.
+
+### Process Steps
+
+A cron job calls `processDueAutomationSteps()` to send emails for enrollments whose `nextStepAt` has passed. After sending, it advances to the next step or marks the enrollment as completed.
+</Steps>
+
+### Delay Support
+
+Each automation step has a configurable `delayHours` property. The engine calculates `nextStepAt` by adding the delay to the current time.
+
+## Campaign Sender
+
+The `runCampaignSender()` function (`lib/email/campaign-sender.ts`) processes lead-generation email campaigns:
+
+1. Loads the campaign and its template
+2. Fetches leads with status `CONTACT_FOUND` and valid email
+3. For each lead:
+   - Substitutes template variables (`{{school_name}}`, `{{contact_name}}`, `{{sport}}`, etc.)
+   - Sends the email via the email sender
+   - Updates lead status to `EMAIL_SENT` or `EMAIL_FAILED`
+   - Emits progress events via the scraper event bus
+
+## Suppression Lists
+
+The `checkSuppression()` function (`lib/email/suppression.ts`) checks whether an email address should be excluded from sending (unsubscribed, bounced, or complained).
+
+## Rate Limiting
+
+The `lib/email/rate-limit.ts` module enforces sending rate limits to prevent provider throttling and maintain deliverability.
+
+<Callout type="info">
+Campaign progress is emitted in real-time via the scraper event bus, allowing the admin UI to show live sending status with per-lead progress updates.
+</Callout>

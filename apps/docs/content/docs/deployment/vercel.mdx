@@ -1,0 +1,162 @@
+---
+title: Vercel Deployment
+description: Deploy José Madrid Salsa to Vercel with project linking, build configuration, and production settings
+---
+
+# Vercel Deployment
+
+José Madrid Salsa is deployed on **Vercel** as a Next.js 16 application. The project is linked as `josemadridsalsa` with Node.js 22.x runtime.
+
+<Callout title="Production URL">
+The live site is at **https://www.josemadrid.net**. Vercel handles automatic deployments from the `main` branch.
+</Callout>
+
+## Project Configuration
+
+The Vercel project is configured with these settings (from `.vercel/project.json`):
+
+```json title=".vercel/project.json"
+{
+  "projectId": "prj_nIiFWHw02sC3GVSWBgq3TNlF3SWs",
+  "orgId": "team_Z6nRFlQ52tNNRugc8YGDPRbw",
+  "projectName": "josemadridsalsa",
+  "settings": {
+    "framework": "nextjs",
+    "nodeVersion": "22.x"
+  }
+}
+```
+
+No custom `vercel.json` is used. Vercel auto-detects the Next.js framework and applies sensible defaults.
+
+## Build Pipeline
+
+The project uses a custom `vercel-build` script that runs database migrations before the Next.js build:
+
+```json title="package.json (scripts)"
+{
+  "postinstall": "prisma generate",
+  "vercel-build": "prisma migrate deploy && prisma generate && tsx prisma/seed.permissions.ts && next build",
+  "prebuild": "node scripts/sync-findus.js"
+}
+```
+
+<Steps>
+  <Step>
+    ### Prisma Migrate Deploy
+
+    Runs pending database migrations against the production Neon database. This uses `migrate deploy` (not `migrate dev`) to apply only committed migrations without generating new ones.
+  </Step>
+  <Step>
+    ### Prisma Generate
+
+    Regenerates the Prisma Client with the correct binary targets including `rhel-openssl-3.0.x` for the Vercel Lambda runtime.
+  </Step>
+  <Step>
+    ### Seed Permissions
+
+    Runs `prisma/seed.permissions.ts` to upsert the RBAC permission definitions and role-to-permission mappings. This ensures the permission system stays in sync with code changes.
+  </Step>
+  <Step>
+    ### Next.js Build
+
+    Builds the production Next.js application. The `prebuild` script (`sync-findus.js`) runs automatically before this step.
+  </Step>
+</Steps>
+
+## Serverless Function Size
+
+Vercel imposes a **250 MB unzipped limit** on serverless functions. The `next.config.mjs` manages bundle size through trace exclusions and inclusions:
+
+```js title="next.config.mjs"
+outputFileTracingExcludes: {
+  '*': [
+    'data/**',
+    'docs/**',
+    'scripts/**',
+    'tests/**',
+    'public/Fundraiser Forms/**',
+    'public/samples/**',
+    'prisma/dev.db',
+    'prisma/seed*.ts',
+    'prisma/seeds/**',
+    'AGENTS.md',
+  ],
+},
+outputFileTracingIncludes: {
+  '/api/**/*': [
+    './node_modules/.prisma/client/**/*',
+    './node_modules/@prisma/client/**/*',
+  ],
+},
+```
+
+<Callout type="warn" title="Do not exclude public/images">
+The `public/images/` directory must remain in the trace for Next.js Image Optimization to work.
+</Callout>
+
+## Project Linking
+
+<Steps>
+  <Step>
+    ### Install the Vercel CLI
+
+    ```bash
+    npm install -g vercel
+    ```
+  </Step>
+  <Step>
+    ### Authenticate
+
+    ```bash
+    vercel login
+    ```
+  </Step>
+  <Step>
+    ### Link to the project
+
+    ```bash
+    vercel link
+    ```
+
+    Select the `josemadridsalsa` project when prompted.
+  </Step>
+  <Step>
+    ### Pull environment variables
+
+    ```bash
+    vercel env pull .env.vercel.production --environment=production --yes
+    ```
+  </Step>
+</Steps>
+
+## Automated Setup Script
+
+The project includes an interactive setup script at `scripts/setup-vercel-env.sh`:
+
+```bash
+npm run vercel:setup-env
+```
+
+This script walks through Vercel login, project linking, and setting all required environment variables for production.
+
+## CI/CD Pipeline
+
+The project uses GitHub Actions (`.github/workflows/ci.yml`) for continuous integration on pushes and PRs to `main` and `develop`:
+
+1. **Lint** -- ESLint check
+2. **Type Check** -- TypeScript compilation
+3. **Unit Tests** -- Vitest with coverage
+4. **Build** -- Production build with `SKIP_ENV_VALIDATION=true`
+5. **E2E Tests** -- Playwright with Chromium
+
+Vercel handles the actual deployment automatically when changes land on `main`.
+
+## Deployment Environments
+
+| Environment | Branch | URL |
+|---|---|---|
+| Production | `main` | `https://www.josemadrid.net` |
+| Preview | Any PR branch | `https://<branch>-josemadridsalsa.vercel.app` |
+
+Preview deployments receive their own isolated URL. Environment variables can be scoped to Preview, Production, or Development independently in the Vercel dashboard.

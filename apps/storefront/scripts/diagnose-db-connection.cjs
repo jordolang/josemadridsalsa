@@ -183,7 +183,7 @@ async function provideSolutions() {
   log('\nFor Local Development:', colors.bright)
   log('1. Create .env.local file:', colors.cyan)
   log('   cp .env.example .env.local', colors.blue)
-  log('2. Update DATABASE_URL with your Neon or local PostgreSQL URL', colors.cyan)
+  log('2. Update DATABASE_URL with your Supabase or local PostgreSQL URL', colors.cyan)
   log('3. Run migrations:', colors.cyan)
   log('   npx prisma migrate dev', colors.blue)
 

@@ -1,0 +1,117 @@
+---
+title: Tax Calculation
+description: Automated sales tax calculation via Stripe Tax API with jurisdiction breakdowns, wholesale exemptions, and graceful fallback
+---
+
+# Tax Calculation
+
+Sales tax is calculated using the Stripe Tax API, which automatically determines applicable rates based on the shipping address jurisdiction. The system supports tax exemptions for wholesale accounts and gracefully falls back to zero tax if the API fails.
+
+## Architecture
+
+<Files>
+  <Folder name="lib" defaultOpen>
+    <File name="tax-calculator.ts" />
+    <File name="stripe.ts" />
+  </Folder>
+  <Folder name="app/api/checkout">
+    <Folder name="calculate-tax">
+      <File name="route.ts" />
+    </Folder>
+  </Folder>
+</Files>
+
+## How It Works
+
+### Tax Calculation Input
+
+```ts
+interface TaxCalculationInput {
+  lineItems: Array<{
+    amount: number      // Amount in cents
+    reference: string   // Product ID or SKU
+    taxCode?: string    // Stripe Tax Code (default: txcd_99999999)
+  }>
+  shippingAddress: {
+    line1: string
+    city: string
+    state: string
+    postalCode: string
+    country: string
+  }
+  customerEmail?: string  // For tax exemption lookup
+}
+```
+
+### Tax Calculation Result
+
+```ts
+interface TaxCalculationResult {
+  taxAmount: number          // Total tax in cents
+  taxAmountDecimal: number   // Total tax in dollars
+  taxRate: number            // Effective rate as percentage
+  taxBreakdown: Array<{
+    jurisdiction: string     // e.g., "California", "San Francisco County"
+    rate: number             // Jurisdiction-specific rate
+    amount: number           // Tax from this jurisdiction
+  }>
+  taxExempt: boolean         // Whether customer is exempt
+}
+```
+
+## Tax Exemptions
+
+Before calling Stripe Tax, the system checks if the customer has a wholesale account with tax-exempt status:
+
+```ts
+async function checkTaxExemption(customerEmail?: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { email: customerEmail },
+    include: { wholesaleAccount: true },
+  })
+
+  return (
+    user?.wholesaleAccount?.status === 'APPROVED' &&
+    !!user.wholesaleAccount.resaleNumber
+  )
+}
+```
+
+Tax-exempt customers receive a result with `taxAmount: 0` and `taxExempt: true`.
+
+## Stripe Tax API
+
+The calculator creates a Stripe Tax calculation with:
+- Line items with amounts and tax codes
+- Customer shipping address as the tax jurisdiction
+- `address_source: 'shipping'` for destination-based taxation
+- Expanded `line_items.data.tax_breakdown` for jurisdiction details
+
+```ts
+const calculation = await stripe.tax.calculations.create({
+  currency: 'usd',
+  line_items: input.lineItems.map((item) => ({
+    amount: item.amount,
+    reference: item.reference,
+    tax_code: item.taxCode || 'txcd_99999999', // General tangible goods
+  })),
+  customer_details: {
+    address: { ... },
+    address_source: 'shipping',
+  },
+})
+```
+
+## Frontend Estimate
+
+The `getTaxEstimate()` function provides a simplified estimate for real-time UI updates as the user types their address. It calls the full `calculateTax()` with a placeholder street address since tax is determined by city/state/ZIP.
+
+## Error Handling
+
+<Callout type="warn">
+If Stripe Tax returns an error, the calculator returns zero tax rather than blocking checkout. This ensures the checkout flow is never interrupted by tax calculation failures. Errors are logged for admin review.
+</Callout>
+
+## Configuration Validation
+
+The `validateTaxConfiguration()` function performs a test calculation against a known US address (San Francisco, CA 94111). It can be called during app startup or health checks to surface Stripe Tax misconfiguration early.

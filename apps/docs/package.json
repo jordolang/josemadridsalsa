@@ -1,0 +1,46 @@
+{
+  "name": "@jose-madrid/docs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3003",
+    "build": "next build",
+    "start": "next start --port 3003",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@radix-ui/react-accordion": "^1.2.12",
+    "@radix-ui/react-collapsible": "^1.1.12",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "class-variance-authority": "^0.7.1",
+    "d3-force": "^3.0.0",
+    "framer-motion": "^12.38.0",
+    "fumadocs-core": "^16.7.11",
+    "fumadocs-mdx": "^14.2.11",
+    "fumadocs-openapi": "^10.6.7",
+    "fumadocs-typescript": "^5.2.6",
+    "fumadocs-ui": "^16.7.11",
+    "lucide-react": "^1.7.0",
+    "mermaid": "^11.14.0",
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-force-graph-2d": "^1.29.1",
+    "tailwind-merge": "^3.5.0"
+  },
+  "overrides": {
+    "esbuild": "0.28.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "esbuild": "^0.28.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.3",
+    "react-medium-image-zoom": "^5.4.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

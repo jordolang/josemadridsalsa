@@ -1,0 +1,591 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/ruby.css";
+@import "fumadocs-ui/css/preset.css";
+
+@source '../node_modules/fumadocs-ui/dist/**/*.js';
+
+/* ═══════════════════════════════════════════
+   Jose Madrid Salsa — Docs Theme Override
+   Salsa red / Chile amber / Warm neutrals
+   ═══════════════════════════════════════════ */
+
+@theme {
+  --color-fd-background: hsl(30, 15%, 97%);
+  --color-fd-foreground: hsl(0, 0%, 5%);
+  --color-fd-muted: hsl(25, 12%, 92%);
+  --color-fd-muted-foreground: hsl(0, 0%, 28%);
+  --color-fd-popover: hsl(30, 20%, 99%);
+  --color-fd-popover-foreground: hsl(0, 0%, 5%);
+  --color-fd-card: hsl(30, 15%, 98%);
+  --color-fd-card-foreground: hsl(0, 0%, 5%);
+  --color-fd-border: hsl(20, 10%, 82%);
+  --color-fd-primary: hsl(0, 75%, 50%);
+  --color-fd-primary-foreground: hsl(0, 0%, 100%);
+  --color-fd-secondary: hsl(25, 15%, 93%);
+  --color-fd-secondary-foreground: hsl(15, 25%, 8%);
+  --color-fd-accent: hsl(20, 18%, 90%);
+  --color-fd-accent-foreground: hsl(0, 72%, 45%);
+  --color-fd-ring: hsl(0, 75%, 50%);
+
+  /* Shiki code block backgrounds */
+  --shiki-light-bg: hsl(25, 18%, 95%);
+  --shiki-dark-bg: hsl(15, 20%, 10%);
+}
+
+.dark {
+  --color-fd-background: hsl(15, 18%, 6%);
+  --color-fd-foreground: hsl(0, 0%, 95%);
+  --color-fd-muted: hsl(15, 12%, 12%);
+  --color-fd-muted-foreground: hsl(0, 0%, 68%);
+  --color-fd-popover: hsl(15, 15%, 9%);
+  --color-fd-popover-foreground: hsl(0, 0%, 93%);
+  --color-fd-card: hsl(15, 14%, 9%);
+  --color-fd-card-foreground: hsl(0, 0%, 95%);
+  --color-fd-border: hsl(15, 10%, 18%);
+  --color-fd-primary: hsl(0, 72%, 58%);
+  --color-fd-primary-foreground: hsl(0, 0%, 100%);
+  --color-fd-secondary: hsl(15, 12%, 14%);
+  --color-fd-secondary-foreground: hsl(30, 15%, 92%);
+  --color-fd-accent: hsl(0, 50%, 18%);
+  --color-fd-accent-foreground: hsl(0, 85%, 72%);
+  --color-fd-ring: hsl(0, 72%, 58%);
+}
+
+/* ─── GLOBAL TEXT READABILITY ─── */
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* All body text — heavier weight, darker, more line height */
+body {
+  font-weight: 450;
+  color: hsl(0 0% 5%);
+  line-height: 1.7;
+}
+
+.dark body {
+  color: hsl(0 0% 95%);
+}
+
+/* All paragraph text */
+p, li, td, dd, figcaption, label, span {
+  color: hsl(0 0% 10%);
+  font-weight: 430;
+}
+
+.dark p, .dark li, .dark td, .dark dd, .dark figcaption, .dark label, .dark span {
+  color: hsl(0 0% 90%);
+}
+
+/* Headings — extra bold, near-black */
+h1, h2, h3, h4, h5, h6 {
+  color: hsl(0 0% 2%) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+}
+
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+  color: hsl(0 0% 97%) !important;
+}
+
+/* Nav links and sidebar text — readable weight */
+nav, nav a, nav span, nav button {
+  font-weight: 480;
+  color: hsl(0 0% 12%);
+}
+
+.dark nav, .dark nav a, .dark nav span, .dark nav button {
+  color: hsl(0 0% 88%);
+}
+
+/* Descriptions and secondary text — not too faded */
+[data-fd-description], .text-muted-foreground, .text-fd-muted-foreground {
+  color: hsl(0 0% 30%) !important;
+  font-weight: 430;
+}
+
+.dark [data-fd-description], .dark .text-muted-foreground, .dark .text-fd-muted-foreground {
+  color: hsl(0 0% 65%) !important;
+}
+
+/* ─── LAYOUT BACKGROUND ─── */
+
+body {
+  background:
+    radial-gradient(ellipse 80% 60% at 5% 5%, hsl(0 70% 50% / 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 95% 90%, hsl(35 90% 50% / 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, hsl(140 50% 40% / 0.015) 0%, transparent 60%),
+    var(--color-fd-background);
+}
+
+.dark body {
+  background:
+    radial-gradient(ellipse 80% 60% at 5% 5%, hsl(0 70% 40% / 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 95% 90%, hsl(35 90% 45% / 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, hsl(140 50% 30% / 0.03) 0%, transparent 60%),
+    var(--color-fd-background);
+}
+
+/* Subtle dot grid pattern over the whole page */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.3;
+  background-image: radial-gradient(circle, hsl(0 60% 50% / 0.08) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.dark body::before {
+  opacity: 0.15;
+  background-image: radial-gradient(circle, hsl(0 60% 60% / 0.12) 1px, transparent 1px);
+}
+
+/* ─── SIDEBAR ─── */
+
+[data-fd-sidebar] {
+  background: hsl(30 20% 97% / 0.85) !important;
+  backdrop-filter: blur(16px) saturate(1.4);
+  border-right: 1px solid hsl(0 60% 50% / 0.08) !important;
+}
+
+.dark [data-fd-sidebar] {
+  background: hsl(15 18% 6% / 0.9) !important;
+  border-right-color: hsl(0 60% 50% / 0.15) !important;
+}
+
+/* Active sidebar item — red pill */
+[data-active="true"] {
+  color: hsl(0 75% 48%) !important;
+  font-weight: 600;
+  background: hsl(0 75% 50% / 0.08) !important;
+  border-radius: 0.5rem;
+}
+
+.dark [data-active="true"] {
+  color: hsl(0 80% 68%) !important;
+  background: hsl(0 70% 50% / 0.12) !important;
+}
+
+/* Sidebar folder headers — bold, high contrast, prominent */
+[data-fd-sidebar] summary {
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  color: hsl(15 25% 12%) !important;
+  text-transform: uppercase;
+}
+
+.dark [data-fd-sidebar] summary {
+  color: hsl(30 15% 88%) !important;
+}
+
+/* Sidebar section labels / category headings */
+[data-fd-sidebar] [data-fd-separator] {
+  font-weight: 800 !important;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.06em !important;
+  color: hsl(0 60% 40%) !important;
+  text-transform: uppercase;
+}
+
+.dark [data-fd-sidebar] [data-fd-separator] {
+  color: hsl(0 65% 65%) !important;
+}
+
+/* All sidebar links — strong contrast */
+[data-fd-sidebar] a {
+  color: hsl(0 0% 12%) !important;
+  font-weight: 480;
+}
+
+.dark [data-fd-sidebar] a {
+  color: hsl(0 0% 82%) !important;
+}
+
+/* ─── CODE BLOCKS ─── */
+
+/* Inline code */
+:where(.prose) code:not(pre code) {
+  background: hsl(0 70% 50% / 0.07);
+  color: hsl(0 60% 40%);
+  border: 1px solid hsl(0 70% 50% / 0.12);
+  border-radius: 6px;
+  padding: 0.2em 0.4em;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.dark :where(.prose) code:not(pre code) {
+  background: hsl(0 70% 50% / 0.14);
+  color: hsl(0 75% 72%);
+  border-color: hsl(0 70% 50% / 0.22);
+}
+
+/* Code block container — warm tinted background */
+pre {
+  background: hsl(25 18% 95%) !important;
+  border: 1px solid hsl(20 12% 88%) !important;
+  border-radius: 0.75rem !important;
+  box-shadow:
+    0 2px 8px hsl(0 50% 40% / 0.04),
+    inset 0 1px 0 hsl(0 0% 100% / 0.6);
+}
+
+.dark pre {
+  background: hsl(15 20% 10%) !important;
+  border-color: hsl(0 40% 25% / 0.3) !important;
+  box-shadow:
+    0 2px 12px hsl(0 60% 20% / 0.15),
+    inset 0 1px 0 hsl(0 0% 100% / 0.03);
+}
+
+/* Code block title bar */
+[data-fd-codeblock] figcaption {
+  background: hsl(0 60% 50% / 0.06) !important;
+  border-bottom: 1px solid hsl(0 60% 50% / 0.1) !important;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: hsl(0 50% 40%);
+}
+
+.dark [data-fd-codeblock] figcaption {
+  background: hsl(0 60% 40% / 0.1) !important;
+  border-bottom-color: hsl(0 60% 40% / 0.15) !important;
+  color: hsl(0 60% 70%);
+}
+
+/* Copy button */
+[data-fd-codeblock] button[data-copy] {
+  color: hsl(0 60% 50%);
+  opacity: 0.5;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+[data-fd-codeblock] button[data-copy]:hover {
+  opacity: 1;
+  color: hsl(0 75% 50%);
+}
+
+/* Line highlighting in code blocks */
+[data-highlighted-line] {
+  background: hsl(0 70% 50% / 0.06) !important;
+  border-left: 3px solid hsl(0 75% 50%) !important;
+}
+
+.dark [data-highlighted-line] {
+  background: hsl(0 70% 50% / 0.1) !important;
+}
+
+/* ─── CALLOUTS ─── */
+
+[data-callout] {
+  border-radius: 0.75rem !important;
+  border-width: 1px !important;
+  border-left-width: 4px !important;
+}
+
+[data-callout="info"] {
+  border-color: hsl(0 70% 50% / 0.3) !important;
+  background: hsl(0 70% 50% / 0.04) !important;
+}
+
+[data-callout="info"]::before {
+  color: hsl(0 75% 50%);
+}
+
+[data-callout="warn"], [data-callout="warning"] {
+  border-color: hsl(38 90% 50% / 0.4) !important;
+  background: hsl(38 90% 50% / 0.04) !important;
+}
+
+[data-callout="error"] {
+  border-color: hsl(0 85% 60% / 0.4) !important;
+  background: hsl(0 85% 60% / 0.06) !important;
+}
+
+.dark [data-callout="info"] {
+  border-color: hsl(0 70% 55% / 0.4) !important;
+  background: hsl(0 70% 50% / 0.08) !important;
+}
+
+.dark [data-callout="warn"], .dark [data-callout="warning"] {
+  background: hsl(38 90% 50% / 0.08) !important;
+}
+
+.dark [data-callout="error"] {
+  background: hsl(0 85% 60% / 0.1) !important;
+}
+
+/* ─── CARDS ─── */
+
+[data-fd-card] {
+  border-radius: 0.75rem !important;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease !important;
+}
+
+[data-fd-card]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px hsl(0 60% 40% / 0.08);
+  border-color: hsl(0 70% 50% / 0.25) !important;
+}
+
+.dark [data-fd-card]:hover {
+  box-shadow: 0 8px 28px hsl(0 70% 30% / 0.2);
+  border-color: hsl(0 70% 50% / 0.35) !important;
+}
+
+/* ─── STEPS ─── */
+
+[data-fd-steps] [data-fd-step]::before {
+  background: hsl(0 75% 50%) !important;
+  color: white !important;
+  font-weight: 700;
+}
+
+/* ─── TABS ─── */
+
+[role="tablist"] {
+  border-bottom-color: hsl(0 60% 50% / 0.15) !important;
+}
+
+[role="tab"][data-state="active"] {
+  color: hsl(0 75% 48%) !important;
+  border-bottom-color: hsl(0 75% 50%) !important;
+  font-weight: 600;
+}
+
+.dark [role="tab"][data-state="active"] {
+  color: hsl(0 80% 68%) !important;
+  border-bottom-color: hsl(0 75% 60%) !important;
+}
+
+/* ─── TOC (Table of Contents) ─── */
+
+[data-fd-toc] a {
+  transition: color 0.2s, border-color 0.2s;
+}
+
+[data-fd-toc] a[data-active="true"] {
+  color: hsl(0 75% 48%) !important;
+  border-left-color: hsl(0 75% 50%) !important;
+  font-weight: 600;
+}
+
+.dark [data-fd-toc] a[data-active="true"] {
+  color: hsl(0 80% 68%) !important;
+  border-left-color: hsl(0 75% 60%) !important;
+}
+
+/* ─── SEARCH DIALOG ─── */
+
+[data-dialog] {
+  backdrop-filter: blur(8px);
+}
+
+[data-dialog] input:focus {
+  border-color: hsl(0 75% 50%) !important;
+  box-shadow: 0 0 0 3px hsl(0 75% 50% / 0.15) !important;
+}
+
+[data-dialog] [data-active="true"] {
+  background: hsl(0 70% 50% / 0.08) !important;
+  border-color: hsl(0 70% 50% / 0.2) !important;
+}
+
+.dark [data-dialog] [data-active="true"] {
+  background: hsl(0 70% 50% / 0.12) !important;
+}
+
+/* ─── PROSE CONTENT ─── */
+
+/* Links */
+:where(.prose) a {
+  color: hsl(0 72% 45%);
+  text-decoration-color: hsl(0 70% 50% / 0.3);
+  text-underline-offset: 3px;
+  transition: all 0.2s ease;
+}
+
+:where(.prose) a:hover {
+  color: hsl(0 80% 38%);
+  text-decoration-color: hsl(0 75% 50%);
+}
+
+.dark :where(.prose) a {
+  color: hsl(0 78% 66%);
+}
+
+.dark :where(.prose) a:hover {
+  color: hsl(0 85% 75%);
+}
+
+/* Headings */
+:where(.prose) h2 {
+  border-bottom: 2px solid hsl(0 70% 50% / 0.12);
+  padding-bottom: 0.6rem;
+  margin-top: 2.5rem;
+}
+
+.dark :where(.prose) h2 {
+  border-bottom-color: hsl(0 70% 50% / 0.2);
+}
+
+:where(.prose) h2,
+:where(.prose) h3,
+:where(.prose) h4 {
+  scroll-margin-top: 5rem;
+}
+
+/* Blockquote */
+:where(.prose) blockquote {
+  border-left: 4px solid hsl(0 70% 50% / 0.35);
+  background: hsl(0 70% 50% / 0.03);
+  border-radius: 0 0.75rem 0.75rem 0;
+  padding: 1rem 1.5rem;
+  font-style: normal;
+}
+
+.dark :where(.prose) blockquote {
+  border-left-color: hsl(0 70% 55% / 0.4);
+  background: hsl(0 70% 50% / 0.06);
+}
+
+/* Tables */
+:where(.prose) table {
+  border: 1px solid var(--color-fd-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+:where(.prose) th {
+  background: hsl(0 60% 50% / 0.05);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.75em;
+  letter-spacing: 0.05em;
+  color: hsl(0 50% 40%);
+}
+
+.dark :where(.prose) th {
+  background: hsl(0 60% 50% / 0.1);
+  color: hsl(0 60% 70%);
+}
+
+:where(.prose) tr:nth-child(even) td {
+  background: hsl(0 40% 50% / 0.02);
+}
+
+.dark :where(.prose) tr:nth-child(even) td {
+  background: hsl(0 40% 50% / 0.04);
+}
+
+/* Horizontal rule */
+:where(.prose) hr {
+  border-color: hsl(0 60% 50% / 0.15);
+  border-style: dashed;
+}
+
+/* ─── SCROLLBAR ─── */
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(0 60% 50% / 0.25);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(0 65% 50% / 0.45);
+}
+
+/* ─── PAGE TRANSITIONS ─── */
+
+article {
+  animation: pageIn 0.35s ease-out;
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── NAV BAR ─── */
+
+nav[data-fd-nav] {
+  backdrop-filter: blur(16px) saturate(1.4) !important;
+  border-bottom: 1px solid hsl(0 50% 50% / 0.06) !important;
+}
+
+.dark nav[data-fd-nav] {
+  border-bottom-color: hsl(0 50% 50% / 0.12) !important;
+}
+
+/* ─── FILE TREE COMPONENT ─── */
+
+[data-fd-files] {
+  border-radius: 0.75rem !important;
+  border-color: hsl(0 50% 50% / 0.12) !important;
+}
+
+/* ─── GRADIENT TEXT ANIMATION ─── */
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ─── ACCORDION ─── */
+
+[data-fd-accordion] {
+  border-color: hsl(0 50% 50% / 0.1) !important;
+}
+
+[data-fd-accordion] summary {
+  font-weight: 600;
+}
+
+[data-fd-accordion][open] summary {
+  color: hsl(0 75% 48%);
+}
+
+.dark [data-fd-accordion][open] summary {
+  color: hsl(0 80% 68%);
+}
+
+/* ─── FOOTER NAV (prev/next) ─── */
+
+[data-fd-footer] a {
+  border-radius: 0.75rem !important;
+  transition: all 0.25s ease !important;
+}
+
+[data-fd-footer] a:hover {
+  border-color: hsl(0 70% 50% / 0.3) !important;
+  box-shadow: 0 4px 16px hsl(0 60% 40% / 0.08);
+  transform: translateY(-2px);
+}
+
+.dark [data-fd-footer] a:hover {
+  border-color: hsl(0 70% 55% / 0.35) !important;
+  box-shadow: 0 4px 20px hsl(0 70% 30% / 0.15);
+}
