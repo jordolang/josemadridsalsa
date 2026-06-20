@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -42,7 +42,6 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useWishlistStore } from "@/lib/store/wishlist";
 import { cn } from "@/lib/utils";
 import { CartIcon } from "@/components/store/cart-icon";
-import { LiveNavLink, LiveNavMobileLink } from "@/components/store/live-nav-link";
 
 interface NavSubItem {
   name: string;
@@ -358,8 +357,8 @@ function NavigationContent() {
               const isOpen = openGroupId === group.id;
               const isActive = isGroupActive(group, pathname || "");
               return (
-                <Fragment key={group.id}>
                 <div
+                  key={group.id}
                   className="relative"
                   onMouseEnter={() => openGroup(group.id)}
                 >
@@ -398,9 +397,6 @@ function NavigationContent() {
                     />
                   </button>
                 </div>
-                {/* Live tab sits immediately after Shop */}
-                {group.id === "shop" && <LiveNavLink isHome={isHome} />}
-                </Fragment>
               );
             })}
           </nav>
@@ -595,8 +591,7 @@ function NavigationContent() {
 
                   <nav className="space-y-3">
                     {NAV_GROUPS.map((group) => (
-                      <Fragment key={group.id}>
-                      <div>
+                      <div key={group.id}>
                         <p className="px-1 pb-1 text-[11px] font-bold uppercase tracking-[0.22em] text-salsa-600">
                           {group.title}
                         </p>
@@ -623,10 +618,6 @@ function NavigationContent() {
                           ))}
                         </div>
                       </div>
-                      {group.id === "shop" && (
-                        <LiveNavMobileLink onNavigate={() => setIsMobileMenuOpen(false)} />
-                      )}
-                      </Fragment>
                     ))}
                   </nav>
 

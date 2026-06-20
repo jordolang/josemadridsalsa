@@ -13,6 +13,7 @@ vi.mock('@/lib/prisma', () => {
       update: vi.fn(),
     },
     abandonedCart: {
+      update: vi.fn(),
       updateMany: vi.fn(),
     },
     inventoryTransaction: {
@@ -33,26 +34,43 @@ vi.mock('@/lib/prisma', () => {
   }
 })
 
-const mockRetrievePayment = vi.fn()
-const mockConfirmPayment = vi.fn(() => Promise.resolve({ success: true }))
+// The route reads the abandonedCartId attribution cookie via next/headers.
+const mockCookieGet = vi.fn<(name: string) => { value: string } | undefined>(() => undefined)
+vi.mock('next/headers', () => ({
+  cookies: vi.fn(async () => ({
+    get: mockCookieGet,
+  })),
+}))
+
+// The route confirms payment through the provider adapter's confirmPayment().
+const mockConfirmPayment = vi.fn(() => Promise.resolve({ status: 'SUCCEEDED' }))
 
 vi.mock('@/lib/payments', () => ({
   getProvider: vi.fn(() => ({
-    retrievePayment: mockRetrievePayment,
     confirmPayment: mockConfirmPayment,
   })),
 }))
 
+// Inventory is deducted inside the transaction and alerts fire afterwards.
+const mockDeductReservedInventoryInTx = vi.fn(() =>
+  Promise.resolve({ newInventory: 10, product: { lowStockThreshold: 5 } })
+)
+
 vi.mock('@/lib/inventory-manager', () => ({
+  deductReservedInventoryInTx: (...args: unknown[]) => mockDeductReservedInventoryInTx(...args),
   releaseInventory: vi.fn(() => Promise.resolve()),
-  confirmReservation: vi.fn(() => Promise.resolve()),
+  checkAndUpdateAlerts: vi.fn(() => Promise.resolve()),
 }))
 
 describe('Checkout Complete API Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockRetrievePayment.mockClear()
-    mockConfirmPayment.mockClear()
+    mockCookieGet.mockReturnValue(undefined)
+    mockConfirmPayment.mockResolvedValue({ status: 'SUCCEEDED' })
+    mockDeductReservedInventoryInTx.mockResolvedValue({
+      newInventory: 10,
+      product: { lowStockThreshold: 5 },
+    })
   })
 
   const mockOrder = {
@@ -60,9 +78,11 @@ describe('Checkout Complete API Integration Tests', () => {
     orderNumber: 'JMS-20260105-1234',
     userId: null,
     guestEmail: 'test@example.com',
-    guestPhone: '555-1234',
     paymentStatus: 'PENDING',
     status: 'PENDING',
+    total: 30.97,
+    participantId: null,
+    fundraiserId: null,
     items: [
       {
         id: 'clxxx1234567890item1',
@@ -70,8 +90,6 @@ describe('Checkout Complete API Integration Tests', () => {
         quantity: 2,
         unitPrice: 8.99,
         totalPrice: 17.98,
-        productName: 'Test Salsa',
-        productSku: 'TEST-001',
       },
       {
         id: 'clxxx1234567890item2',
@@ -79,94 +97,81 @@ describe('Checkout Complete API Integration Tests', () => {
         quantity: 1,
         unitPrice: 12.99,
         totalPrice: 12.99,
-        productName: 'Spicy Salsa',
-        productSku: 'TEST-002',
       },
     ],
   }
 
-  const mockPaymentResult = {
-    success: true,
-    status: 'succeeded',
-    amount: 2947,
-    currency: 'usd',
-    paymentIntentId: 'pi_test123',
-  }
+  const buildTx = () => ({
+    order: {
+      update: vi.fn().mockResolvedValue({ ...mockOrder, paymentStatus: 'PAID', status: 'CONFIRMED' }),
+    },
+    abandonedCart: {
+      update: vi.fn().mockResolvedValue({ count: 1 }),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    },
+    fundraiser: {
+      findUnique: vi.fn().mockResolvedValue(null),
+    },
+    fundraiserParticipant: {
+      update: vi.fn().mockResolvedValue({}),
+    },
+  })
+
+  const makeRequest = (body: Record<string, unknown>) =>
+    new Request('http://localhost/api/checkout/complete', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
 
   describe('Payment Completion Flow', () => {
     it('should complete payment and update order status', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
-      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
-      const mockTx = {
-        order: {
-          update: vi.fn().mockResolvedValue({ ...mockOrder, paymentStatus: 'PAID', status: 'CONFIRMED' }),
-        },
-        product: {
-          update: vi.fn().mockResolvedValue({}),
-        },
-        abandonedCart: {
-          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
-        },
-      }
-
+      const mockTx = buildTx()
       vi.mocked(prisma.$transaction).mockImplementation((callback: any) => callback(mockTx))
 
-      const request = new Request('http://localhost/api/checkout/complete', {
-        method: 'POST',
-        body: JSON.stringify({
-          orderId: 'clxxx1234567890order',
-          paymentIntentId: 'pi_test123',
-        }),
-      })
-
-      const response = await POST(request)
+      const response = await POST(makeRequest({
+        orderId: 'clxxx1234567890order',
+        paymentIntentId: 'pi_test123',
+      }))
       const data = await response.json()
 
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
 
-      // Verify payment intent was retrieved
-      expect(mockRetrievePayment).toHaveBeenCalledWith('pi_test123')
+      // Payment was confirmed via the provider adapter
+      expect(mockConfirmPayment).toHaveBeenCalledWith('pi_test123')
 
-      // Verify order was found
-      expect(prisma.order.findUnique).toHaveBeenCalledWith({
-        where: { id: 'clxxx1234567890order' },
-        include: { items: true },
-      })
+      // Order was looked up by id
+      expect(prisma.order.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'clxxx1234567890order' } })
+      )
 
-      // Verify order status was updated
-      expect(mockTx.order.update).toHaveBeenCalledWith({
-        where: { id: 'clxxx1234567890order' },
-        data: {
-          paymentStatus: 'PAID',
-          status: 'CONFIRMED',
-          stripePaymentId: 'pi_test123',
-        },
-      })
+      // Order was marked paid/confirmed inside the transaction
+      expect(mockTx.order.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'clxxx1234567890order' },
+          data: expect.objectContaining({
+            paymentStatus: 'PAID',
+            status: 'CONFIRMED',
+            stripePaymentId: 'pi_test123',
+          }),
+        })
+      )
 
-      // Verify inventory was decremented for all items
-      expect(mockTx.product.update).toHaveBeenCalledWith({
-        where: { id: 'clxxx1234567890prod' },
-        data: {
-          inventory: {
-            decrement: 2,
-          },
-        },
-      })
+      // Reserved inventory was deducted for every item
+      expect(mockDeductReservedInventoryInTx).toHaveBeenCalledWith(
+        expect.objectContaining({ productId: 'clxxx1234567890prod', quantity: 2 }),
+        expect.anything()
+      )
+      expect(mockDeductReservedInventoryInTx).toHaveBeenCalledWith(
+        expect.objectContaining({ productId: 'clxxx1234567890prd2', quantity: 1 }),
+        expect.anything()
+      )
 
-      expect(mockTx.product.update).toHaveBeenCalledWith({
-        where: { id: 'clxxx1234567890prd2' },
-        data: {
-          inventory: {
-            decrement: 1,
-          },
-        },
-      })
-
-      // Verify abandoned cart was marked as recovered
+      // Guest abandoned carts were marked recovered (fallback path, no cookie)
       expect(mockTx.abandonedCart.updateMany).toHaveBeenCalledWith({
         where: {
           guestEmail: 'test@example.com',
@@ -187,38 +192,21 @@ describe('Checkout Complete API Integration Tests', () => {
         guestEmail: null,
       }
 
-      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(authenticatedOrder as any)
 
-      const mockTx = {
-        order: {
-          update: vi.fn().mockResolvedValue({ ...authenticatedOrder, paymentStatus: 'PAID' }),
-        },
-        product: {
-          update: vi.fn().mockResolvedValue({}),
-        },
-        abandonedCart: {
-          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
-        },
-      }
-
+      const mockTx = buildTx()
       vi.mocked(prisma.$transaction).mockImplementation((callback: any) => callback(mockTx))
 
-      const request = new Request('http://localhost/api/checkout/complete', {
-        method: 'POST',
-        body: JSON.stringify({
-          orderId: 'clxxx1234567890order',
-          paymentIntentId: 'pi_test123',
-        }),
-      })
-
-      const response = await POST(request)
+      const response = await POST(makeRequest({
+        orderId: 'clxxx1234567890order',
+        paymentIntentId: 'pi_test123',
+      }))
       const data = await response.json()
 
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
 
-      // Verify abandoned cart recovery by userId
+      // Abandoned cart recovery by userId (fallback path)
       expect(mockTx.abandonedCart.updateMany).toHaveBeenCalledWith({
         where: {
           userId: 'clxxx1234567890user1',
@@ -230,6 +218,32 @@ describe('Checkout Complete API Integration Tests', () => {
       })
     })
 
+    it('should attribute a specific abandoned cart from the recovery cookie', async () => {
+      const { default: prisma } = await import('@/lib/prisma')
+
+      mockCookieGet.mockReturnValue({ value: 'clxxx1234567890cart1' })
+      vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
+
+      const mockTx = buildTx()
+      vi.mocked(prisma.$transaction).mockImplementation((callback: any) => callback(mockTx))
+
+      const response = await POST(makeRequest({
+        orderId: 'clxxx1234567890order',
+        paymentIntentId: 'pi_test123',
+      }))
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.success).toBe(true)
+
+      // The specific cart from the cookie is updated, not the email fallback
+      expect(mockTx.abandonedCart.update).toHaveBeenCalledWith({
+        where: { id: 'clxxx1234567890cart1' },
+        data: { recoveredAt: expect.any(Date) },
+      })
+      expect(mockTx.abandonedCart.updateMany).not.toHaveBeenCalled()
+    })
+
     it('should handle already paid orders idempotently', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
@@ -239,24 +253,18 @@ describe('Checkout Complete API Integration Tests', () => {
         status: 'CONFIRMED',
       }
 
-      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(paidOrder as any)
 
-      const request = new Request('http://localhost/api/checkout/complete', {
-        method: 'POST',
-        body: JSON.stringify({
-          orderId: 'clxxx1234567890order',
-          paymentIntentId: 'pi_test123',
-        }),
-      })
-
-      const response = await POST(request)
+      const response = await POST(makeRequest({
+        orderId: 'clxxx1234567890order',
+        paymentIntentId: 'pi_test123',
+      }))
       const data = await response.json()
 
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
 
-      // Verify transaction was not executed
+      // Transaction was not executed for an already-paid order
       expect(prisma.$transaction).not.toHaveBeenCalled()
     })
 
@@ -270,12 +278,7 @@ describe('Checkout Complete API Integration Tests', () => {
       ]
 
       for (const payload of invalidPayloads) {
-        const request = new Request('http://localhost/api/checkout/complete', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        })
-
-        const response = await POST(request)
+        const response = await POST(makeRequest(payload))
         const data = await response.json()
 
         expect(response.status).toBe(400)
@@ -286,18 +289,12 @@ describe('Checkout Complete API Integration Tests', () => {
     it('should handle order not found', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
-      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(null)
 
-      const request = new Request('http://localhost/api/checkout/complete', {
-        method: 'POST',
-        body: JSON.stringify({
-          orderId: 'clxxx9999999999none',
-          paymentIntentId: 'pi_test123',
-        }),
-      })
-
-      const response = await POST(request)
+      const response = await POST(makeRequest({
+        orderId: 'clxxx9999999999none',
+        paymentIntentId: 'pi_test123',
+      }))
       const data = await response.json()
 
       expect(response.status).toBe(404)
@@ -307,65 +304,45 @@ describe('Checkout Complete API Integration Tests', () => {
     it('should handle payment not succeeded', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
-      const pendingPaymentResult = {
-        ...mockPaymentResult,
-        status: 'processing',
-      }
-
-      mockRetrievePayment.mockResolvedValue(pendingPaymentResult)
+      mockConfirmPayment.mockResolvedValue({ status: 'PROCESSING' })
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
-      const request = new Request('http://localhost/api/checkout/complete', {
-        method: 'POST',
-        body: JSON.stringify({
-          orderId: 'clxxx1234567890order',
-          paymentIntentId: 'pi_test123',
-        }),
-      })
-
-      const response = await POST(request)
+      const response = await POST(makeRequest({
+        orderId: 'clxxx1234567890order',
+        paymentIntentId: 'pi_test123',
+      }))
       const data = await response.json()
 
       expect(response.status).toBe(400)
       expect(data.error).toBe('Payment has not been confirmed.')
     })
 
-    it('should handle payment intent not found', async () => {
+    it('should handle payment confirmation not found', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
-      mockRetrievePayment.mockResolvedValue(null)
+      mockConfirmPayment.mockResolvedValue(null as any)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
-      const request = new Request('http://localhost/api/checkout/complete', {
-        method: 'POST',
-        body: JSON.stringify({
-          orderId: 'clxxx1234567890order',
-          paymentIntentId: 'pi_invalid',
-        }),
-      })
-
-      const response = await POST(request)
+      const response = await POST(makeRequest({
+        orderId: 'clxxx1234567890order',
+        paymentIntentId: 'pi_invalid',
+      }))
       const data = await response.json()
 
       expect(response.status).toBe(400)
       expect(data.error).toBe('Payment has not been confirmed.')
     })
 
-    it('should handle Stripe API errors', async () => {
+    it('should handle payment provider errors', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
-      mockRetrievePayment.mockRejectedValue(new Error('Stripe API error'))
+      mockConfirmPayment.mockRejectedValue(new Error('Stripe API error'))
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
-      const request = new Request('http://localhost/api/checkout/complete', {
-        method: 'POST',
-        body: JSON.stringify({
-          orderId: 'clxxx1234567890order',
-          paymentIntentId: 'pi_test123',
-        }),
-      })
-
-      const response = await POST(request)
+      const response = await POST(makeRequest({
+        orderId: 'clxxx1234567890order',
+        paymentIntentId: 'pi_test123',
+      }))
       const data = await response.json()
 
       expect(response.status).toBe(500)
@@ -375,26 +352,20 @@ describe('Checkout Complete API Integration Tests', () => {
     it('should handle database transaction errors', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
-      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
       vi.mocked(prisma.$transaction).mockRejectedValue(new Error('Database error'))
 
-      const request = new Request('http://localhost/api/checkout/complete', {
-        method: 'POST',
-        body: JSON.stringify({
-          orderId: 'clxxx1234567890order',
-          paymentIntentId: 'pi_test123',
-        }),
-      })
-
-      const response = await POST(request)
+      const response = await POST(makeRequest({
+        orderId: 'clxxx1234567890order',
+        paymentIntentId: 'pi_test123',
+      }))
       const data = await response.json()
 
       expect(response.status).toBe(500)
       expect(data.error).toBe('Unable to finalize checkout.')
     })
 
-    it('should properly decrement inventory for large quantities', async () => {
+    it('should deduct reserved inventory for large quantities', async () => {
       const { default: prisma } = await import('@/lib/prisma')
 
       const largeQuantityOrder = {
@@ -407,46 +378,25 @@ describe('Checkout Complete API Integration Tests', () => {
         ],
       }
 
-      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(largeQuantityOrder as any)
 
-      const mockTx = {
-        order: {
-          update: vi.fn().mockResolvedValue({ ...largeQuantityOrder, paymentStatus: 'PAID' }),
-        },
-        product: {
-          update: vi.fn().mockResolvedValue({}),
-        },
-        abandonedCart: {
-          updateMany: vi.fn().mockResolvedValue({ count: 0 }),
-        },
-      }
-
+      const mockTx = buildTx()
       vi.mocked(prisma.$transaction).mockImplementation((callback: any) => callback(mockTx))
 
-      const request = new Request('http://localhost/api/checkout/complete', {
-        method: 'POST',
-        body: JSON.stringify({
-          orderId: 'clxxx1234567890order',
-          paymentIntentId: 'pi_test123',
-        }),
-      })
-
-      const response = await POST(request)
+      const response = await POST(makeRequest({
+        orderId: 'clxxx1234567890order',
+        paymentIntentId: 'pi_test123',
+      }))
       const data = await response.json()
 
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
 
-      // Verify large quantity was decremented correctly
-      expect(mockTx.product.update).toHaveBeenCalledWith({
-        where: { id: 'clxxx1234567890prod' },
-        data: {
-          inventory: {
-            decrement: 50,
-          },
-        },
-      })
+      // Large quantity was deducted correctly
+      expect(mockDeductReservedInventoryInTx).toHaveBeenCalledWith(
+        expect.objectContaining({ productId: 'clxxx1234567890prod', quantity: 50 }),
+        expect.anything()
+      )
     })
 
     it('should handle orders with no abandoned carts to recover', async () => {
@@ -458,38 +408,22 @@ describe('Checkout Complete API Integration Tests', () => {
         guestEmail: null, // No email to match abandoned carts
       }
 
-      mockRetrievePayment.mockResolvedValue(mockPaymentResult)
       vi.mocked(prisma.order.findUnique).mockResolvedValue(orderNoRecovery as any)
 
-      const mockTx = {
-        order: {
-          update: vi.fn().mockResolvedValue({ ...orderNoRecovery, paymentStatus: 'PAID' }),
-        },
-        product: {
-          update: vi.fn().mockResolvedValue({}),
-        },
-        abandonedCart: {
-          updateMany: vi.fn().mockResolvedValue({ count: 0 }),
-        },
-      }
-
+      const mockTx = buildTx()
       vi.mocked(prisma.$transaction).mockImplementation((callback: any) => callback(mockTx))
 
-      const request = new Request('http://localhost/api/checkout/complete', {
-        method: 'POST',
-        body: JSON.stringify({
-          orderId: 'clxxx1234567890order',
-          paymentIntentId: 'pi_test123',
-        }),
-      })
-
-      const response = await POST(request)
+      const response = await POST(makeRequest({
+        orderId: 'clxxx1234567890order',
+        paymentIntentId: 'pi_test123',
+      }))
       const data = await response.json()
 
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
 
-      // Abandoned cart update should not be called if no userId or guestEmail
+      // No cookie, no userId and no guestEmail -> no abandoned cart recovery
+      expect(mockTx.abandonedCart.update).not.toHaveBeenCalled()
       expect(mockTx.abandonedCart.updateMany).not.toHaveBeenCalled()
     })
   })

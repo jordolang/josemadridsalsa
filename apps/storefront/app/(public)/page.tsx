@@ -3,13 +3,15 @@ import Link from 'next/link'
 import nextDynamic from 'next/dynamic'
 import type { Metadata } from 'next'
 import { ArrowRight } from 'lucide-react'
+import { getServerSession } from 'next-auth'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { createMetadata } from '@/lib/metadata'
+import { authOptions } from '@/lib/auth'
 import { LocationMapClient } from '@/components/store/location-map-client'
 import { getReviewsData, getCalendarEvents } from '@/lib/server/google-data'
 import { ActiveCampaignsGrid } from '@/components/fundraiser/active-campaigns-grid'
-import { HomeHero } from '@/components/store/home-hero'
+import { HeroWithFeatureFlag } from '@/components/growthbook/hero-with-feature-flag'
 import { FeaturedProductsSection } from '@/components/store/featured-products-section'
 import { FeaturedHeatIndexSection } from '@/components/store/featured-heat-index-section'
 
@@ -82,8 +84,9 @@ const FUNDRAISING_STATS = [
 // Zero Google API calls happen in the browser on load. The Refresh button
 // on the schedule map is the only path that ever triggers a client fetch.
 export default async function Home() {
-  // Both fetches run in parallel — total overhead is max(t_reviews, t_calendar)
-  const [reviewsData, calendarEvents] = await Promise.all([
+  // Fetch all data in parallel — session, reviews, and calendar
+  const [session, reviewsData, calendarEvents] = await Promise.all([
+    getServerSession(authOptions),
     getReviewsData(),
     getCalendarEvents(),
   ])
@@ -91,8 +94,8 @@ export default async function Home() {
   return (
     <ErrorBoundary>
       <main className="min-h-screen">
-        {/* Hero */}
-        <HomeHero />
+        {/* Hero — personalized for logged-in users, default for anonymous */}
+        <HeroWithFeatureFlag hasSession={!!session} />
 
         {/* Featured Products — pulled from Prisma (isFeatured=true, inStock=true) */}
         <ErrorBoundary>

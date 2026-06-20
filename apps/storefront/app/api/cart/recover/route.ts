@@ -58,10 +58,23 @@ export async function GET(request: NextRequest) {
       data: { recoveredAt: new Date() },
     })
 
-    return NextResponse.json({
+    // Create response with cart data
+    const response = NextResponse.json({
       success: true,
       cart: cartData,
     })
+
+    // Store abandonedCartId in cookie for checkout attribution
+    // Cookie expires in 30 days (same as cart expiration)
+    response.cookies.set('abandonedCartId', abandonedCart.id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
+      path: '/',
+    })
+
+    return response
   } catch (error) {
     console.error('Cart recovery error:', error)
     return NextResponse.json(
