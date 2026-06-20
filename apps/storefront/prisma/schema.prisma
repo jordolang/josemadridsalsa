@@ -1980,24 +1980,37 @@ model ShippingCarrier {
   config       Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  labels       ShippingLabel[]
 
   @@map("shipping_carriers")
 }
 
 model ShippingLabel {
-  id                 String   @id @default(cuid())
+  id                 String           @id @default(cuid())
   orderId            String
-  easypostShipmentId String   @unique
-  trackingCode       String
+  // Legacy carrier-based fields (used by the admin shipping-label endpoint).
+  // Optional so EasyPost labels can be created without a ShippingCarrier.
+  carrierId          String?
+  trackingNumber     String?
   labelUrl           String?
-  carrierName        String
-  serviceName        String
-  status             String
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  order              Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  cost               Decimal?         @db.Decimal(10, 2)
+  shipDate           DateTime?
+  estimatedDelivery  DateTime?
+  carrierResponse    Json?
+  createdById        String?
+  // EasyPost shipment fields (order tracking + shipment notifications).
+  easypostShipmentId String?          @unique
+  trackingCode       String?
+  carrierName        String?
+  serviceName        String?
+  status             String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime?        @updatedAt
+  carrier            ShippingCarrier? @relation(fields: [carrierId], references: [id])
+  order              Order            @relation(fields: [orderId], references: [id])
 
   @@index([orderId])
+  @@index([trackingNumber])
   @@index([trackingCode])
   @@map("shipping_labels")
 }
