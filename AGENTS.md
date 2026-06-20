@@ -48,7 +48,6 @@ josemadridsalsa/
 - Route-specific layouts stay close to their application pages.
 - Existing storefront modules live under `apps/storefront/components/store/`.
 - New backend route logic belongs in `apps/backend/`.
-- The fundraising and admin deployment boundaries live in the [josemadridsalsa-fundraising](https://github.com/jordolang/josemadridsalsa-fundraising) and [josemadridsalsa-admin](https://github.com/jordolang/josemadridsalsa-admin) repositories.
 - Shared cross-application contracts belong in `packages/`.
 - See `TURBOREPO_ARCHITECTURE.md` in the [salsadocs](https://github.com/jordolang/salsadocs) repository before moving legacy routes.
 

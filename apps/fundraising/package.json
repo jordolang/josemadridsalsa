@@ -1,0 +1,27 @@
+{
+  "name": "@jose-madrid/fundraising",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf .next"
+  },
+  "dependencies": {
+    "@jose-madrid/shared-types": "*",
+    "next": "16.2.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.4",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.1",
+    "eslint": "^9.37.0",
+    "eslint-config-next": "^15.5.4",
+    "typescript": "^5.9.3"
+  }
+}
