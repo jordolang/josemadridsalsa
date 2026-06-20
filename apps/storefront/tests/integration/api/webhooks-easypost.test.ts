@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { POST } from '@/app/api/webhooks/easypost/route'
-import { createHmac } from 'crypto'
 
-// Hoist mock dependencies
-const { mockHeadersGet } = vi.hoisted(() => ({
-  mockHeadersGet: vi.fn(),
+// The route verifies + parses the body via EasyPost's Utils.validateWebhook,
+// reached through getEasyPostClient(). Mock that to control verification.
+const { mockValidateWebhook } = vi.hoisted(() => ({ mockValidateWebhook: vi.fn() }))
+
+vi.mock('@/lib/shipping-api', () => ({
+  getEasyPostClient: vi.fn(() => ({
+    Utils: { validateWebhook: mockValidateWebhook },
+  })),
 }))
 
 vi.mock('@/lib/prisma', () => ({
@@ -21,13 +25,10 @@ vi.mock('@/lib/tracking/webhook-handlers', () => ({
   handleTrackerUpdated: vi.fn(),
 }))
 
-vi.mock('next/headers', async () => ({
-  headers: vi.fn(async () => ({
-    get: mockHeadersGet,
-  })),
+vi.mock('next/headers', () => ({
+  headers: vi.fn(async () => new Headers({ 'x-hmac-signature': 'hmac-sha256-hex=test' })),
 }))
 
-// Get mock references after mocking
 import prisma from '@/lib/prisma'
 import { handleTrackerUpdated } from '@/lib/tracking/webhook-handlers'
 
@@ -35,101 +36,41 @@ const mockPrisma = prisma as any
 const mockHandleTrackerUpdated = handleTrackerUpdated as any
 
 describe('POST /api/webhooks/easypost - Integration Tests', () => {
-  const webhookSecret = 'test_webhook_secret'
-
   beforeEach(() => {
     vi.clearAllMocks()
-    process.env.EASYPOST_WEBHOOK_SECRET = webhookSecret
+    process.env.EASYPOST_WEBHOOK_SECRET = 'test_webhook_secret'
     mockPrisma.webhookEvent.findFirst.mockResolvedValue(null)
     mockPrisma.webhookEvent.create.mockResolvedValue({ id: 'webhook-1' })
     mockPrisma.webhookEvent.updateMany.mockResolvedValue({ count: 1 })
     mockHandleTrackerUpdated.mockResolvedValue({ success: true })
   })
 
-  function signWebhook(body: string): string {
-    return createHmac('sha256', webhookSecret).update(body).digest('hex')
-  }
-
-  function buildRequest(body: string, signature?: string): Request {
-    const headers: Record<string, string> = {}
-    if (signature !== undefined) headers['x-webhook-signature'] = signature
-    // The route reads the signature via next/headers, so reflect it there too
-    mockHeadersGet.mockReturnValue(signature)
+  function buildRequest(body: unknown): Request {
     return new Request('http://localhost:3000/api/webhooks/easypost', {
       method: 'POST',
-      body,
-      headers,
+      body: typeof body === 'string' ? body : JSON.stringify(body),
     })
   }
 
-  it('verifies webhook signature correctly', async () => {
-    const body = JSON.stringify({
-      id: 'evt_test123',
-      description: 'tracker.updated',
-      mode: 'test',
-      result: { id: 'trk_test', tracking_code: 'TRACK123456', status: 'in_transit', tracking_details: [] },
-    })
-    const signature = signWebhook(body)
-
-    const response = await POST(buildRequest(body, signature))
-    const data = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(data.received).toBe(true)
-  })
-
-  it('rejects webhook with a missing signature header', async () => {
-    const body = JSON.stringify({ id: 'evt_nosig', description: 'tracker.updated', result: {} })
-
-    const response = await POST(buildRequest(body, undefined))
-
-    expect(response.status).toBe(400)
-    const data = await response.json()
-    expect(data.error).toBe('Missing x-webhook-signature header')
-    expect(mockHandleTrackerUpdated).not.toHaveBeenCalled()
-  })
-
-  it('rejects webhook with an invalid signature', async () => {
-    const body = JSON.stringify({ id: 'evt_test123', description: 'tracker.updated', result: {} })
-
-    const response = await POST(buildRequest(body, 'invalid_signature'))
-
-    expect(response.status).toBe(400)
-    const data = await response.json()
-    expect(data.error).toBe('Webhook signature verification failed')
-    expect(mockHandleTrackerUpdated).not.toHaveBeenCalled()
-  })
-
-  it('returns 400 when the body is not valid JSON', async () => {
-    const body = '{ not valid json'
-    const signature = signWebhook(body)
-
-    const response = await POST(buildRequest(body, signature))
-
-    expect(response.status).toBe(400)
-    const data = await response.json()
-    expect(data.error).toContain('Invalid JSON')
-  })
-
-  it('processes tracker.updated events and delegates to the handler', async () => {
+  it('processes a verified tracker.updated event and delegates to the handler', async () => {
     const trackerData = {
       tracking_code: 'TRACK123456',
       status: 'delivered',
       tracking_details: [
-        {
-          status: 'delivered',
-          message: 'Package delivered',
-          datetime: '2026-06-20T16:30:00Z',
-          tracking_location: { city: 'New York', state: 'NY' },
-        },
+        { status: 'delivered', message: 'Delivered', datetime: '2026-06-20T16:30:00Z' },
       ],
     }
-    const body = JSON.stringify({ id: 'evt_test123', description: 'tracker.updated', mode: 'test', result: trackerData })
-    const signature = signWebhook(body)
+    mockValidateWebhook.mockReturnValue({
+      id: 'evt_test123',
+      description: 'tracker.updated',
+      result: trackerData,
+    })
 
-    const response = await POST(buildRequest(body, signature))
+    const response = await POST(buildRequest({}))
+    const data = await response.json()
 
     expect(response.status).toBe(200)
+    expect(data.received).toBe(true)
     expect(mockHandleTrackerUpdated).toHaveBeenCalledWith(trackerData)
     expect(mockPrisma.webhookEvent.updateMany).toHaveBeenCalledWith({
       where: { providerEventId: 'evt_test123' },
@@ -137,23 +78,57 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
     })
   })
 
+  it('returns 400 when the signature cannot be verified', async () => {
+    mockValidateWebhook.mockImplementation(() => {
+      throw new Error('Webhook does not match expected signature')
+    })
+
+    const response = await POST(buildRequest({ id: 'evt_bad', description: 'tracker.updated' }))
+
+    expect(response.status).toBe(400)
+    const data = await response.json()
+    expect(data.error).toBe('Webhook signature verification failed')
+    expect(mockHandleTrackerUpdated).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 when the body is invalid (validator throws)', async () => {
+    mockValidateWebhook.mockImplementation(() => {
+      throw new Error('Unexpected token in JSON')
+    })
+
+    const response = await POST(buildRequest('{ not valid json'))
+
+    expect(response.status).toBe(400)
+    const data = await response.json()
+    expect(data.error).toBe('Webhook signature verification failed')
+  })
+
+  it('fails closed with 500 when no webhook secret is configured', async () => {
+    delete process.env.EASYPOST_WEBHOOK_SECRET
+
+    const response = await POST(buildRequest({ id: 'evt_x', description: 'tracker.updated' }))
+
+    expect(response.status).toBe(500)
+    const data = await response.json()
+    expect(data.error).toBe('Webhook secret not configured')
+    // Verification is never even attempted without a secret
+    expect(mockValidateWebhook).not.toHaveBeenCalled()
+    expect(mockHandleTrackerUpdated).not.toHaveBeenCalled()
+  })
+
   it('prevents duplicate event processing with an idempotency check', async () => {
-    const body = JSON.stringify({
+    mockValidateWebhook.mockReturnValue({
       id: 'evt_duplicate',
       description: 'tracker.updated',
-      mode: 'test',
       result: { tracking_code: 'TRACK123456', status: 'in_transit' },
     })
-    const signature = signWebhook(body)
-
-    // Event already processed
     mockPrisma.webhookEvent.findFirst.mockResolvedValue({
       id: 'webhook-1',
       providerEventId: 'evt_duplicate',
       processed: true,
     })
 
-    const response = await POST(buildRequest(body, signature))
+    const response = await POST(buildRequest({}))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -162,55 +137,31 @@ describe('POST /api/webhooks/easypost - Integration Tests', () => {
     expect(mockPrisma.webhookEvent.create).not.toHaveBeenCalled()
   })
 
-  it('handles tracker.created events without triggering the handler', async () => {
-    const body = JSON.stringify({
+  it('handles tracker.created events by delegating to the handler', async () => {
+    mockValidateWebhook.mockReturnValue({
       id: 'evt_created',
       description: 'tracker.created',
-      mode: 'test',
       result: { tracking_code: 'TRACK789', status: 'pre_transit' },
     })
-    const signature = signWebhook(body)
 
-    const response = await POST(buildRequest(body, signature))
+    const response = await POST(buildRequest({}))
 
     expect(response.status).toBe(200)
-    // tracker.created shares the same case and still delegates to the handler
     expect(mockHandleTrackerUpdated).toHaveBeenCalled()
   })
 
-  it('still acknowledges receipt when the handler throws', async () => {
-    const body = JSON.stringify({
+  it('returns 500 when the handler throws', async () => {
+    mockValidateWebhook.mockReturnValue({
       id: 'evt_error',
       description: 'tracker.updated',
-      mode: 'test',
       result: { tracking_code: 'TRACK_ERROR', status: 'in_transit' },
     })
-    const signature = signWebhook(body)
-
     mockHandleTrackerUpdated.mockRejectedValue(new Error('Database connection failed'))
 
-    const response = await POST(buildRequest(body, signature))
+    const response = await POST(buildRequest({}))
 
-    // A handler failure surfaces as a 500 so EasyPost retries
     expect(response.status).toBe(500)
     const data = await response.json()
     expect(data.error).toBe('Webhook processing failed')
-  })
-
-  it('skips signature verification when no secret is configured', async () => {
-    delete process.env.EASYPOST_WEBHOOK_SECRET
-
-    const body = JSON.stringify({
-      id: 'evt_nosecret',
-      description: 'tracker.updated',
-      mode: 'test',
-      result: { tracking_code: 'TRACK123', status: 'in_transit' },
-    })
-
-    // No signature provided; verification is skipped entirely
-    const response = await POST(buildRequest(body, undefined))
-
-    expect(response.status).toBe(200)
-    expect(mockHandleTrackerUpdated).toHaveBeenCalled()
   })
 })

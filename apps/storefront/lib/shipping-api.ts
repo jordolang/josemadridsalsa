@@ -32,7 +32,7 @@ function getShippingConfig() {
  */
 let easyPostClientInstance: InstanceType<typeof EasyPostClient> | null = null
 
-function getEasyPostClient(): InstanceType<typeof EasyPostClient> {
+export function getEasyPostClient(): InstanceType<typeof EasyPostClient> {
   const config = getShippingConfig()
 
   if (!config.apiKey) {

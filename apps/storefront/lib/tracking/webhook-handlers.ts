@@ -1,3 +1,4 @@
+import { OrderStatus } from '@prisma/client'
 import prisma from '@/lib/prisma'
 import { sendOrderShippedEmail, sendOrderDeliveredEmail } from '@/lib/email/automation'
 
@@ -69,23 +70,28 @@ export async function handleTrackerUpdated(
     trackingHistory?: object
     shippedAt?: Date | null
     deliveredAt?: Date | null
+    status?: OrderStatus
   } = {
     lastTrackingUpdate: new Date(),
     trackingHistory: trackingHistory as object,
   }
 
-  // Update shipped timestamp on first in_transit event (idempotency)
+  // Update shipped timestamp and move the order to SHIPPED on the first
+  // in_transit event (idempotent via the shippedAt guard).
   if (tracker.status === 'in_transit' && !shippingLabel.order.shippedAt) {
     updates.shippedAt = latestEvent?.datetime
       ? new Date(latestEvent.datetime)
       : new Date()
+    updates.status = OrderStatus.SHIPPED
   }
 
-  // Update delivered timestamp on delivered event (idempotency)
+  // Update delivered timestamp and move the order to DELIVERED on the first
+  // delivered event (idempotent via the deliveredAt guard).
   if (tracker.status === 'delivered' && !shippingLabel.order.deliveredAt) {
     updates.deliveredAt = latestEvent?.datetime
       ? new Date(latestEvent.datetime)
       : new Date()
+    updates.status = OrderStatus.DELIVERED
   }
 
   await prisma.order.update({

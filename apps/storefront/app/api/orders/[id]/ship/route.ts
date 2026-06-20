@@ -72,6 +72,19 @@ export async function POST(
       return NextResponse.json({ error: 'Order has no shipping address' }, { status: 400 })
     }
 
+    // Guard against buying a duplicate label if the order was already shipped
+    // (e.g. a retry after a timeout or a double-click).
+    if (order.easypostShipmentId || order.trackingNumber) {
+      return NextResponse.json(
+        {
+          error: 'Order already has a shipping label',
+          easypostShipmentId: order.easypostShipmentId,
+          trackingNumber: order.trackingNumber,
+        },
+        { status: 409 }
+      )
+    }
+
     // Create shipment request
     const shipmentRequest: ShipmentRequest = {
       fromAddress,

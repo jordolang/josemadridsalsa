@@ -100,6 +100,14 @@ describe('EasyPost Webhook Handlers', () => {
         },
       })
 
+      // Order moves to SHIPPED
+      expect(prisma.order.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'order-1' },
+          data: expect.objectContaining({ status: 'SHIPPED' }),
+        })
+      )
+
       expect(sendOrderShippedEmail).toHaveBeenCalledWith('order-1')
     })
 
@@ -146,6 +154,14 @@ describe('EasyPost Webhook Handlers', () => {
           status: 'delivered',
         },
       })
+
+      // Order moves to DELIVERED
+      expect(prisma.order.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'order-1' },
+          data: expect.objectContaining({ status: 'DELIVERED' }),
+        })
+      )
 
       expect(sendOrderDeliveredEmail).toHaveBeenCalledWith('order-1')
     })

@@ -35,7 +35,9 @@ export const OrderShippedEmail = ({
 
   return (
     <EmailLayout previewText={previewText}>
-      <EmailHeader headerImage="order-shipped.png" headerAlt="Order Shipped" />
+      {/* No dedicated order-shipped.png asset exists yet; reuse the generic
+          order-update header so the email doesn't render a broken image. */}
+      <EmailHeader headerImage="order-update.png" headerAlt="Order Shipped" />
 
       <Section style={bodyContent}>
         {/* Greeting */}

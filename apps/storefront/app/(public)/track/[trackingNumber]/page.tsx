@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { createMetadata } from "@/lib/metadata";
 
 export const dynamic = 'force-dynamic'
@@ -24,10 +23,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   });
 }
 
-function formatCurrency(v: number) {
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(v);
-}
-
 function formatDate(date: Date | null | undefined) {
   if (!date) return "N/A";
   return new Date(date).toLocaleDateString(undefined, {
@@ -42,7 +37,9 @@ function formatDate(date: Date | null | undefined) {
 export default async function TrackingPage({ params }: PageProps) {
   const { trackingNumber } = await params;
 
-  // Find order by tracking number - check both Order.trackingNumber and ShippingLabel.trackingCode
+  // Find order by tracking number - check both Order.trackingNumber and ShippingLabel.trackingCode.
+  // This page is public (only a tracking number is required), so select ONLY
+  // non-sensitive tracking fields — never items, shipping address, or totals.
   const order = await prisma.order.findFirst({
     where: {
       OR: [
@@ -50,10 +47,21 @@ export default async function TrackingPage({ params }: PageProps) {
         { shippingLabels: { some: { trackingCode: trackingNumber } } }
       ]
     },
-    include: {
-      items: { include: { product: true } },
-      shippingAddress: true,
-      shippingLabels: true,
+    select: {
+      id: true,
+      orderNumber: true,
+      status: true,
+      carrierName: true,
+      trackingNumber: true,
+      trackingUrl: true,
+      shippedAt: true,
+      estimatedDelivery: true,
+      deliveredAt: true,
+      lastTrackingUpdate: true,
+      trackingHistory: true,
+      shippingLabels: {
+        select: { trackingCode: true, carrierName: true, status: true },
+      },
     },
   });
 
@@ -62,13 +70,12 @@ export default async function TrackingPage({ params }: PageProps) {
   }
 
   const orderNum = order.orderNumber ?? order.id.slice(-6).toUpperCase();
-  const subtotal = Number(order.subtotal ?? 0);
-  const shipping = Number(order.shippingCost ?? 0);
-  const tax = Number(order.tax ?? 0);
-  const total = Number(order.total);
 
-  // Get tracking details from order or first shipping label
-  const shippingLabel = order.shippingLabels?.[0];
+  // An order can have multiple shipments; show the label matching the tracking
+  // number from the URL, falling back to the first.
+  const shippingLabel =
+    order.shippingLabels?.find((l) => l.trackingCode === trackingNumber) ??
+    order.shippingLabels?.[0];
   const carrier = order.carrierName ?? shippingLabel?.carrierName ?? "Carrier";
   const trackingUrl = order.trackingUrl ?? null;
   const trackingStatus = shippingLabel?.status ?? order.status;
@@ -199,82 +206,6 @@ export default async function TrackingPage({ params }: PageProps) {
             </div>
           </Card>
         )}
-
-        <Card className="p-6">
-          <h2 className="font-medium text-lg mb-4">Order Summary</h2>
-          <div className="space-y-4">
-            <div className="text-sm">
-              <div className="flex justify-between py-2">
-                <span className="text-muted-foreground">Order placed:</span>
-                <span>{formatDate(order.createdAt)}</span>
-              </div>
-              {order.shippingAddress && (
-                <div className="py-2">
-                  <p className="text-muted-foreground mb-1">Shipping to:</p>
-                  <address className="not-italic text-sm">
-                    <div>{order.shippingAddress.firstName} {order.shippingAddress.lastName}</div>
-                    <div>{order.shippingAddress.street}</div>
-                    <div>
-                      {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}
-                    </div>
-                  </address>
-                </div>
-              )}
-            </div>
-
-            <Separator />
-
-            <div className="text-sm">
-              <div className="flex justify-between py-1">
-                <span>Subtotal</span>
-                <span>{formatCurrency(subtotal)}</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span>Shipping</span>
-                <span>{formatCurrency(shipping)}</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span>Tax</span>
-                <span>{formatCurrency(tax)}</span>
-              </div>
-              <Separator className="my-2" />
-              <div className="flex justify-between py-1 font-medium">
-                <span>Total</span>
-                <span>{formatCurrency(total)}</span>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h3 className="font-medium mb-2">Items ({order.items.length})</h3>
-              <div className="space-y-2">
-                {order.items.map(item => {
-                  const price = Number(item.unitPrice ?? 0);
-                  const lineTotal = Number(item.totalPrice ?? price * item.quantity);
-                  return (
-                    <div key={item.id} className="flex items-center justify-between text-sm py-2 border-b last:border-b-0">
-                      <div className="flex items-center gap-3 flex-1">
-                        {item.productImage && (
-                          <img
-                            src={item.productImage}
-                            alt={item.productName}
-                            className="w-12 h-12 object-cover rounded"
-                          />
-                        )}
-                        <div>
-                          <p className="font-medium">{item.productName}</p>
-                          <p className="text-muted-foreground">Qty: {item.quantity}</p>
-                        </div>
-                      </div>
-                      <p className="font-medium">{formatCurrency(lineTotal)}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </Card>
 
         <div className="text-center text-sm text-muted-foreground">
           <p>Questions about your order?</p>

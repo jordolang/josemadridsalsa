@@ -45,7 +45,7 @@ describe('Email Automation - Shipping Notifications', () => {
 
     // Reset mock counters
     mockOrderFindUnique.mockClear()
-  })
+  }, 30000) // resetModules + react-email re-import is slow; allow more time
 
   afterEach(() => {
     process.env = originalEnv
@@ -89,6 +89,7 @@ describe('Email Automation - Shipping Notifications', () => {
         include: {
           items: true,
           user: { select: { name: true, email: true } },
+          shippingAddress: true,
         },
       })
 
@@ -200,6 +201,7 @@ describe('Email Automation - Shipping Notifications', () => {
         include: {
           items: true,
           user: { select: { name: true, email: true } },
+          shippingAddress: true,
         },
       })
 

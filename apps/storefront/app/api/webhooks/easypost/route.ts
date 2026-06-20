@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import { createHmac } from 'crypto'
 import prisma from '@/lib/prisma'
+import { getEasyPostClient } from '@/lib/shipping-api'
 import { handleTrackerUpdated, type TrackerResult } from '@/lib/tracking/webhook-handlers'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+type EasyPostWebhookEvent = {
+  id: string
+  object?: string
+  description: string
+  mode?: string
+  created_at?: string
+  updated_at?: string
+  result?: TrackerResult
+}
 
 // EasyPost webhook handler
 export async function POST(request: Request) {
@@ -13,49 +23,47 @@ export async function POST(request: Request) {
   const headersList = await headers()
   const webhookSecret = process.env.EASYPOST_WEBHOOK_SECRET
 
-  // EasyPost webhook signature verification
-  // Note: EasyPost uses HMAC-SHA256 signature in the X-Webhook-Signature header
-  if (webhookSecret) {
-    const signature = headersList.get('x-webhook-signature')
-
-    if (!signature) {
-      return NextResponse.json(
-        { error: 'Missing x-webhook-signature header' },
-        { status: 400 }
-      )
-    }
-
-    // Verify webhook signature using HMAC-SHA256
-    const expectedSignature = createHmac('sha256', webhookSecret)
-      .update(body)
-      .digest('hex')
-
-    if (signature !== expectedSignature) {
-      console.error('EasyPost webhook signature verification failed')
-      return NextResponse.json(
-        { error: 'Webhook signature verification failed' },
-        { status: 400 }
-      )
-    }
-  }
-
-  let event: {
-    id: string
-    object: string
-    description: string
-    mode: string
-    created_at: string
-    updated_at: string
-    result?: TrackerResult
-  }
-
-  try {
-    event = JSON.parse(body)
-  } catch (err) {
-    const error = err as Error
-    console.error('Failed to parse EasyPost webhook body:', error.message)
+  // Fail closed: never process unsigned webhooks. Without a configured secret,
+  // anyone who guesses a tracking code could forge tracker events and mutate
+  // order tracking data.
+  if (!webhookSecret) {
+    console.error('EASYPOST_WEBHOOK_SECRET is not configured; rejecting webhook')
     return NextResponse.json(
-      { error: `Invalid JSON: ${error.message}` },
+      { error: 'Webhook secret not configured' },
+      { status: 500 }
+    )
+  }
+
+  // Verify the signature and parse the body using EasyPost's own validator.
+  // EasyPost signs with the `X-Hmac-Signature` header (value prefixed
+  // `hmac-sha256-hex=` over the body using the NFKD-normalized secret), so a
+  // bare hex comparison would reject every real webhook.
+  let event: EasyPostWebhookEvent
+  try {
+    const headerObject = Object.fromEntries(headersList.entries())
+    // The EasyPost SDK's published types don't surface Utils on the client
+    // instance, so reach it through a narrow cast.
+    const client = getEasyPostClient() as unknown as {
+      Utils: {
+        validateWebhook: (
+          body: Buffer,
+          headers: Record<string, unknown>,
+          secret: string
+        ) => unknown
+      }
+    }
+    event = client.Utils.validateWebhook(
+      Buffer.from(body),
+      headerObject,
+      webhookSecret
+    ) as EasyPostWebhookEvent
+  } catch (err) {
+    console.error(
+      'EasyPost webhook signature verification failed:',
+      (err as Error).message
+    )
+    return NextResponse.json(
+      { error: 'Webhook signature verification failed' },
       { status: 400 }
     )
   }

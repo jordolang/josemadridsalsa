@@ -678,12 +678,33 @@ export async function sendAdminNewOrderNotification(orderId: string) {
   return { success: true, message: 'Admin notification sent' }
 }
 
+type ShipmentEmailAddress = {
+  firstName?: string | null
+  lastName?: string | null
+  street?: string | null
+  city?: string | null
+  state?: string | null
+  zipCode?: string | null
+} | null
+
+/** Build a single-line "Name, Street, City, ST ZIP" string for shipment emails. */
+function formatShipmentAddress(address: ShipmentEmailAddress, fallback: string): string {
+  if (!address) return fallback
+  const name = [address.firstName, address.lastName].filter(Boolean).join(' ')
+  const cityLine = [address.city, [address.state, address.zipCode].filter(Boolean).join(' ')]
+    .filter(Boolean)
+    .join(', ')
+  const formatted = [name, address.street, cityLine].filter(Boolean).join(', ')
+  return formatted || fallback
+}
+
 export async function sendOrderShippedEmail(orderId: string) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
       items: true,
       user: { select: { name: true, email: true } },
+      shippingAddress: true,
     },
   })
 
@@ -706,13 +727,14 @@ export async function sendOrderShippedEmail(orderId: string) {
   const items = order.items.map((item) => ({
     productName: item.productName,
     productSku: item.productSku,
-    totalPrice: `$${Number(item.totalPrice).toFixed(2)}`,
+    totalPrice: Number(item.totalPrice),
     quantity: item.quantity,
   }))
 
-  const shippingAddress =
-    order.shippingMethod ||
-    'Standard shipping'
+  const shippingAddress = formatShipmentAddress(
+    order.shippingAddress,
+    order.shippingMethod || 'Standard shipping'
+  )
 
   const trackingLink = `${defaultAppUrl}/track/${order.trackingNumber}`
 
@@ -723,7 +745,7 @@ export async function sendOrderShippedEmail(orderId: string) {
     orderNumber: order.orderNumber,
     shippedDate: order.shippedAt ? format(order.shippedAt, 'MMMM d, yyyy') : format(new Date(), 'MMMM d, yyyy'),
     trackingNumber: order.trackingNumber,
-    carrier: 'USPS',
+    carrier: order.carrierName || 'USPS',
     estimatedDelivery: order.estimatedDelivery ? format(order.estimatedDelivery, 'MMMM d, yyyy') : undefined,
     items,
     shippingAddress,
@@ -750,6 +772,7 @@ export async function sendOrderDeliveredEmail(orderId: string) {
     include: {
       items: true,
       user: { select: { name: true, email: true } },
+      shippingAddress: true,
     },
   })
 
@@ -767,13 +790,14 @@ export async function sendOrderDeliveredEmail(orderId: string) {
   const items = order.items.map((item) => ({
     productName: item.productName,
     productSku: item.productSku,
-    totalPrice: `$${Number(item.totalPrice).toFixed(2)}`,
+    totalPrice: Number(item.totalPrice),
     quantity: item.quantity,
   }))
 
-  const shippingAddress =
-    order.shippingMethod ||
-    'Standard shipping'
+  const shippingAddress = formatShipmentAddress(
+    order.shippingAddress,
+    order.shippingMethod || 'Standard shipping'
+  )
 
   const orderHistoryLink = `${defaultAppUrl}/account/orders`
 

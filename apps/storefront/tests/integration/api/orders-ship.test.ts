@@ -204,6 +204,32 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
     )
   })
 
+  it('rejects with 409 when the order already has a shipping label', async () => {
+    mockGetSession.mockResolvedValue({
+      user: { id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' },
+    })
+    mockHasPermission.mockResolvedValue(true)
+    mockPrisma.order.findUnique.mockResolvedValue({
+      id: 'order-1',
+      status: 'PROCESSING',
+      easypostShipmentId: 'shp_existing',
+      trackingNumber: 'TRACK_EXISTING',
+      shippingAddress: { firstName: 'John', lastName: 'Doe', street: '1 A St', city: 'NY', state: 'NY', zipCode: '10001', country: 'US' },
+      items: [],
+    })
+
+    const response = await POST(buildRequest(validBody), {
+      params: Promise.resolve({ id: 'order-1' }),
+    })
+
+    expect(response.status).toBe(409)
+    const data = await response.json()
+    expect(data.error).toBe('Order already has a shipping label')
+    // No new shipment/label should be purchased
+    expect(mockCreateShipment).not.toHaveBeenCalled()
+    expect(mockBuyShipmentLabel).not.toHaveBeenCalled()
+  })
+
   it('requires admin permissions', async () => {
     mockGetSession.mockResolvedValue({
       user: { id: 'user-1', email: 'user@example.com', role: 'CUSTOMER' },
