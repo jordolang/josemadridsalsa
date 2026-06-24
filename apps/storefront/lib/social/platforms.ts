@@ -38,7 +38,12 @@ const TIKTOK_OAUTH_SCOPES = [
 ]
 
 export function getSocialBaseUrl(): string {
-  return process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  const raw = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  // Trim stray whitespace and trailing slashes. NEXTAUTH_URL pasted into a host
+  // like Vercel often picks up a trailing "/" or newline; left as-is it produces
+  // a double slash in the callback ("...net//api/social/oauth/callback") that no
+  // OAuth console has registered, causing Google's redirect_uri_mismatch error.
+  return raw.trim().replace(/\/+$/, '')
 }
 
 /**
