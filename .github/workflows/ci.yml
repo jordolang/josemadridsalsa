@@ -43,7 +43,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
-          path: apps/storefront/coverage/
+          path: |
+            apps/storefront/coverage/
+            apps/backend/coverage/
+            apps/fundraising/coverage/
+            apps/admin/coverage/
           retention-days: 30
 
       - name: Post coverage report to PR
@@ -87,4 +91,6 @@ jobs:
           name: build-artifacts
           path: |
             apps/storefront/.next
+            apps/fundraising/.next
+            apps/admin/.next
           retention-days: 7

@@ -12,6 +12,8 @@
     "dev:fast": "npm run dev:fast --workspace=@jose-madrid/storefront",
     "dev:debug": "npm run dev:debug --workspace=@jose-madrid/storefront",
     "dev:storefront": "turbo run dev --filter=@jose-madrid/storefront --env-mode=loose",
+    "dev:fundraising": "turbo run dev --filter=@jose-madrid/fundraising --env-mode=loose",
+    "dev:admin": "turbo run dev --filter=@jose-madrid/admin --env-mode=loose",
     "dev:docs": "turbo run dev --filter=@jose-madrid/docs --env-mode=loose",
     "start": "npm run start --workspace=@jose-madrid/storefront",
     "build": "turbo run build --env-mode=loose",
