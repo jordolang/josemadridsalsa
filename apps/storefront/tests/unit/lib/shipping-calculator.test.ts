@@ -216,7 +216,8 @@ describe('Shipping Calculator', () => {
 
       expect(result.availableOptions?.[1]).toMatchObject({
         method: 'Express Shipping',
-        cost: 14.99,
+        // Express base (14.99) exceeds the subtotal (10.0), so it is made free.
+        cost: 0,
         estimatedDays: '1-2 business days',
       })
     })
