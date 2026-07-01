@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import type { SocialMediaPlatform, SocialMediaPostStatus } from '@prisma/client'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
 
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
@@ -182,7 +182,13 @@ async function getSocialMediaData() {
 export default async function SocialMediaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; connected?: string; error?: string }>
+  searchParams: Promise<{
+    tab?: string
+    connected?: string
+    igAccounts?: string
+    notice?: string
+    error?: string
+  }>
 }) {
   const user = await getCurrentUser()
 
@@ -209,6 +215,8 @@ export default async function SocialMediaPage({
   const params = await searchParams
   const initialTab = (params.tab as DashboardTab) || 'overview'
   const connectedPlatform = params.connected
+  const linkedInstagramCount = params.igAccounts ? Number(params.igAccounts) : 0
+  const noticeMessage = params.notice
   const errorMessage = params.error
 
   return (
@@ -237,7 +245,23 @@ export default async function SocialMediaPage({
           <AlertDescription>
             Successfully connected {connectedPlatform}! You can now publish
             directly to this platform.
+            {linkedInstagramCount > 0 && connectedPlatform !== 'instagram' && (
+              <>
+                {' '}
+                We also linked {linkedInstagramCount} Instagram{' '}
+                {linkedInstagramCount === 1 ? 'account' : 'accounts'}.
+              </>
+            )}
           </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Notice banner — honest, non-error feedback (e.g. Facebook connected but
+          no Instagram Business account found, or publish permission missing). */}
+      {noticeMessage && (
+        <Alert className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200 [&>svg]:text-amber-600">
+          <AlertTriangle className="size-4" />
+          <AlertDescription>{decodeURIComponent(noticeMessage)}</AlertDescription>
         </Alert>
       )}
 
