@@ -15,6 +15,7 @@ import {
   Facebook,
   CheckCircle,
   ShoppingBag,
+  Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -40,6 +41,9 @@ const BUSINESS = {
   phoneHref: 'tel:+14195342074',
   mapsUrl:
     'https://www.google.com/maps/search/?api=1&query=La+Perla+Tortilla+Factory+2742+Hill+Ave+Toledo+OH+43607',
+  // Google Business "write a review" dialog for La Perla Tortilla Factory.
+  reviewUrl:
+    'https://search.google.com/local/writereview?placeid=ChIJRcp3DJR4PIgR_uzQ8MR_NSI',
   facebookUrl: 'https://www.facebook.com/search/top?q=Laperla%20Tortilla%20Factory',
 };
 
@@ -150,7 +154,14 @@ export default function LaPerlaTortillaFactoryPage() {
                   className="bg-white text-chile-700 hover:bg-salsa-50 font-semibold"
                   asChild
                 >
-                  <Link href="#visit">Visit the Factory</Link>
+                  <a
+                    href={BUSINESS.reviewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Star className="w-4 h-4 fill-current" />
+                    Leave a Google Review
+                  </a>
                 </Button>
                 <Button
                   size="lg"
