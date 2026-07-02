@@ -15,6 +15,14 @@ const nextConfig = {
   generateBuildId: async () => {
     return `build-${Date.now()}`
   },
+  // Permanent redirect from the old La Perla page URL
+  redirects: async () => [
+    {
+      source: '/la-perla-ave',
+      destination: '/laperla',
+      permanent: true,
+    },
+  ],
   // Security headers applied to all routes
   headers: async () => {
     const isProd = process.env.NODE_ENV === 'production'

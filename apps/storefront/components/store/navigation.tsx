@@ -80,7 +80,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: "About",
     items: [
       { name: "Our Story", href: "/our-story", description: "From Clovis, NM to Zanesville, OH" },
-      { name: "La Perla Tortilla Factory", href: "/la-perla-ave", description: "Our tortilla chip maker in Toledo, OH" },
+      { name: "La Perla Tortilla Factory", href: "/laperla", description: "Our tortilla chip maker in Toledo, OH" },
       { name: "The Heat Index", href: "/heat-index", description: "Stories, recipes, road notes, and salsa lore" },
       { name: "Recipes", href: "/recipes", description: "Cooking with our salsas" },
       { name: "Find Us", href: "/find-us", description: "Retailers near you" },

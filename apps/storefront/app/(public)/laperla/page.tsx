@@ -25,7 +25,7 @@ export const metadata: Metadata = createMetadata({
   title: 'La Perla Tortilla Factory - Toledo, OH | Maker of Jose Madrid Chips',
   description:
     'La Perla Tortilla Factory at 2742 Hill Ave in Toledo, Ohio makes fresh corn tortillas, tortilla chips, and Mexican ingredients — including the stone-ground white corn chips paired with Jose Madrid Salsa. Open to the public.',
-  pathname: '/la-perla-ave',
+  pathname: '/laperla',
 });
 
 // Real business details from La Perla Tortilla Factory's listing.
