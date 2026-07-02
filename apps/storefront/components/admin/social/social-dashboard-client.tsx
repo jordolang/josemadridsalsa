@@ -8,7 +8,6 @@ import { SocialComposer } from './social-composer'
 import { SocialCalendar } from './social-calendar'
 import { SocialAccounts } from './social-accounts'
 import { SocialAnalytics } from './social-analytics'
-import { SocialShops } from './social-shops'
 import type {
   DashboardTab,
   SocialComposerState,
@@ -96,8 +95,6 @@ export function SocialDashboardClient({
       {activeTab === 'accounts' && (
         <SocialAccounts accounts={accounts} platformConfig={platformConfig} ayrshare={ayrshare} />
       )}
-
-      {activeTab === 'shops' && <SocialShops accounts={accounts} />}
 
       {activeTab === 'analytics' && <SocialAnalytics metrics={metrics} />}
     </div>

@@ -247,7 +247,7 @@ export const PLATFORM_CONFIGS: Record<SocialMediaPlatform, PlatformConfig> = {
   },
 }
 
-export type DashboardTab = 'overview' | 'compose' | 'calendar' | 'accounts' | 'shops' | 'analytics'
+export type DashboardTab = 'overview' | 'compose' | 'calendar' | 'accounts' | 'analytics'
 
 // Shop types
 export type ShopListingInfo = {
