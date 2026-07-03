@@ -16,29 +16,32 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       rules: [],
     }
 
+    // Everything after the first colon (URLs and paths may themselves contain colons)
+    const valueOf = (line: string) => line.slice(line.indexOf(':') + 1).trim()
+
     let currentRule: { userAgent?: string | string[]; allow?: string | string[]; disallow?: string | string[]; crawlDelay?: number } = {}
     for (const line of lines) {
       if (line.startsWith('User-agent:')) {
         if (currentRule.userAgent) {
           (parsed.rules as any[]).push(currentRule)
         }
-        currentRule = { userAgent: line.split(':')[1].trim() }
+        currentRule = { userAgent: valueOf(line) }
       } else if (line.startsWith('Allow:')) {
         if (!currentRule.allow) {
           currentRule.allow = []
         }
         if (Array.isArray(currentRule.allow)) {
-          currentRule.allow.push(line.split(':')[1].trim())
+          currentRule.allow.push(valueOf(line))
         }
       } else if (line.startsWith('Disallow:')) {
         if (!currentRule.disallow) {
           currentRule.disallow = []
         }
         if (Array.isArray(currentRule.disallow)) {
-          currentRule.disallow.push(line.split(':')[1].trim())
+          currentRule.disallow.push(valueOf(line))
         }
       } else if (line.startsWith('Sitemap:')) {
-        parsed.sitemap = line.split(':')[1].trim()
+        parsed.sitemap = valueOf(line)
       }
     }
 

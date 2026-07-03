@@ -1854,6 +1854,9 @@ model SeoConfiguration {
   locationDescTemplate  String?
   robotsTxt             String?
   sitemapPriorities     Json?
+  googleSiteVerification String?
+  gscProperty            String?
+  gscServiceAccountJson  String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 

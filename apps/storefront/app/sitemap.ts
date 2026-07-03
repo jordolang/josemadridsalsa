@@ -2,13 +2,16 @@ import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://www.josemadridsalsa.com'
+  let baseUrl = 'https://www.josemadridsalsa.com'
   let seoConfig = null
   let priorities: Record<string, number> = {}
 
   try {
     seoConfig = await prisma.seoConfiguration.findFirst()
     priorities = (seoConfig?.sitemapPriorities as Record<string, number>) || {}
+    if (seoConfig?.siteUrl) {
+      baseUrl = seoConfig.siteUrl.replace(/\/+$/, '')
+    }
   } catch (error) {
     console.error('Failed to fetch SEO config for sitemap, using defaults:', error)
   }
