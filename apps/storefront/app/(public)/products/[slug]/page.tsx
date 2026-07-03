@@ -9,6 +9,7 @@ import { ProductReviews } from '@/components/reviews/product-reviews'
 import { AddToCartButton } from '@/components/store/add-to-cart-button'
 import { YouMayAlsoLike } from '@/components/store/product-recommendations'
 import { buildProductSchema } from '@/lib/seo/schema-generator'
+import { buildTemplatedMeta } from '@/lib/seo/metadata'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
 import { Metadata } from 'next'
@@ -38,11 +39,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .slice(0, 5)
     .join(', ')
 
-  const metaDescription = product.description
+  const fallbackDescription = product.description
     || `Buy ${product.name} - Premium handcrafted salsa from Jose Madrid Salsa.${ingredientNames ? ` Made with ${ingredientNames}.` : ''}`
 
+  const { title, description: metaDescription } = await buildTemplatedMeta({
+    entity: 'product',
+    variables: {
+      product_name: product.name,
+      category: product.category?.name ?? '',
+      heat_level: getHeatLevelText(product.heatLevel),
+      price: formatPrice(product.price),
+    },
+    overrideTitle: product.metaTitle,
+    overrideDescription: product.metaDescription,
+    fallbackTitle: `${product.name} | Jose Madrid Salsa`,
+    fallbackDescription,
+  })
+
   return {
-    title: `${product.name} | Jose Madrid Salsa`,
+    title,
     description: metaDescription,
     openGraph: {
       title: product.name,
@@ -76,14 +91,17 @@ export default async function ProductDetailPage({ params }: Props) {
     notFound()
   }
 
-  // Fetch review stats for structured data (AggregateRating)
-  const [reviewStats, viewer] = await Promise.all([
+  // Fetch review stats for structured data (AggregateRating) and any admin-edited schema override
+  const [reviewStats, viewer, schemaOverride] = await Promise.all([
     prisma.review.aggregate({
       where: { productId: product.id, status: 'APPROVED' },
       _avg: { rating: true },
       _count: { rating: true },
     }),
     getCurrentUser(),
+    prisma.structuredData.findUnique({
+      where: { entityType_entityId: { entityType: 'PRODUCT', entityId: product.id } },
+    }),
   ])
 
   const isOutOfStock = product.inventory <= 0
@@ -93,30 +111,32 @@ export default async function ProductDetailPage({ params }: Props) {
     ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
     : 0
 
-  // Build JSON-LD structured data
-  const jsonLd = buildProductSchema({
-    id: product.id,
-    name: product.name,
-    slug: product.slug,
-    description: product.description,
-    price: product.price,
-    compareAtPrice: product.compareAtPrice,
-    featuredImage: product.featuredImage,
-    images: product.images || [],
-    sku: product.sku,
-    inventory: product.inventory,
-    heatLevel: product.heatLevel,
-    weight: product.weight,
-    ingredients: product.ingredients,
-    nutritionalInfo: product.nutritionalInfo,
-    productIngredients: product.productIngredients,
-    reviewStats: reviewStats._count.rating > 0
-      ? {
-          averageRating: reviewStats._avg.rating ?? 0,
-          reviewCount: reviewStats._count.rating,
-        }
-      : null,
-  })
+  // Build JSON-LD structured data (admin-edited override wins when active)
+  const jsonLd = schemaOverride?.isActive
+    ? schemaOverride.jsonLd
+    : buildProductSchema({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        description: product.description,
+        price: product.price,
+        compareAtPrice: product.compareAtPrice,
+        featuredImage: product.featuredImage,
+        images: product.images || [],
+        sku: product.sku,
+        inventory: product.inventory,
+        heatLevel: product.heatLevel,
+        weight: product.weight,
+        ingredients: product.ingredients,
+        nutritionalInfo: product.nutritionalInfo,
+        productIngredients: product.productIngredients,
+        reviewStats: reviewStats._count.rating > 0
+          ? {
+              averageRating: reviewStats._avg.rating ?? 0,
+              reviewCount: reviewStats._count.rating,
+            }
+          : null,
+      })
 
   return (
     <main className="min-h-screen bg-background">
