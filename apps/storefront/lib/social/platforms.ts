@@ -330,12 +330,22 @@ export async function getValidAccessToken(accountId: string): Promise<string | n
   return getAccountAccessToken(accountId)
 }
 
-export function getExpectedAccountPlatformForShop(shopPlatform: ShopPlatform): SocialMediaPlatform {
+/**
+ * Which connected social account platform a shop export must target, or null
+ * for platforms that authenticate with server credentials instead of a
+ * connected social account (Amazon SP-API, Google Merchant Center).
+ */
+export function getExpectedAccountPlatformForShop(
+  shopPlatform: ShopPlatform,
+): SocialMediaPlatform | null {
   switch (shopPlatform) {
     case 'FACEBOOK_SHOP':
     case 'FACEBOOK_MARKETPLACE':
       return 'FACEBOOK'
     case 'TIKTOK_SHOP':
       return 'TIKTOK'
+    case 'AMAZON':
+    case 'GOOGLE_SHOPPING':
+      return null
   }
 }

@@ -2591,6 +2591,8 @@ enum ShopPlatform {
   FACEBOOK_SHOP
   FACEBOOK_MARKETPLACE
   TIKTOK_SHOP
+  AMAZON
+  GOOGLE_SHOPPING
 }
 
 enum ShopListingStatus {
