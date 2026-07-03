@@ -213,6 +213,10 @@ export default async function SocialMediaPage({
   const ayrshare = await getAyrshareStatus()
 
   const params = await searchParams
+  // Shops moved to the Feeds section — keep old deep links working.
+  if (params.tab === 'shops') {
+    redirect('/admin/feeds?tab=shops')
+  }
   const initialTab = (params.tab as DashboardTab) || 'overview'
   const connectedPlatform = params.connected
   const linkedInstagramCount = params.igAccounts ? Number(params.igAccounts) : 0
@@ -226,8 +230,8 @@ export default async function SocialMediaPage({
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Social Media</h1>
           <p className="text-sm text-muted-foreground">
-            Manage content, shops, and commerce across Facebook, X, TikTok,
-            Instagram & Google Business.
+            Manage content across Facebook, X, TikTok, Instagram & Google
+            Business. Shop catalogs and product feeds live under Feeds.
           </p>
         </div>
         {(canSchedule || canPublish) && (

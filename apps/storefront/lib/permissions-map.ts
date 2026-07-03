@@ -178,6 +178,12 @@ export const adminNavigation: NavItem[] = [
     permission: 'social_media:compose',
   },
   {
+    label: 'Feeds',
+    href: '/admin/feeds',
+    icon: 'Rss',
+    permission: 'social_media:compose',
+  },
+  {
     label: 'Financials',
     href: '/admin/financials',
     icon: 'DollarSign',

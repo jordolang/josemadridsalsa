@@ -426,7 +426,7 @@ export function SocialShops({ accounts }: Props) {
                 </div>
                 {!isConnected && (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Connect {platform === 'TIKTOK_SHOP' ? 'TikTok' : 'Facebook'} in Accounts tab first
+                    Connect {platform === 'TIKTOK_SHOP' ? 'TikTok' : 'Facebook'} in Social Media → Accounts first
                   </p>
                 )}
               </div>
@@ -867,7 +867,7 @@ export function SocialShops({ accounts }: Props) {
             <p className="font-medium text-foreground">TikTok Shop</p>
             <ul className="mt-1 list-inside list-disc space-y-1 text-muted-foreground">
               <li>Create and approve the shop in TikTok Seller Center first</li>
-              <li>Connect the matching TikTok account in the Accounts tab</li>
+              <li>Connect the matching TikTok account in Social Media → Accounts</li>
               <li>Enable Product API access in your developer app</li>
               <li>Enter your Shop ID when adding products</li>
               <li>Products sync via TikTok Open API</li>
