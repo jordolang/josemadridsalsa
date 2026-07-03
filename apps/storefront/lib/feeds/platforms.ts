@@ -76,7 +76,7 @@ export const FEED_PLATFORMS: FeedPlatformInfo[] = [
       'Open Seller Central → Catalog → Add Products via Upload',
       'Upload the file as an Inventory Loader feed',
       'Amazon matches rows to existing ASINs by UPC; products without a UPC only update SKUs already in your account',
-      'Creating brand-new ASINs still requires the category listing template in Seller Central',
+      'Prefer push-style syncing? Use the Shops tab — with SP-API credentials configured, listings sync directly via the Selling Partner API',
     ],
   },
   {

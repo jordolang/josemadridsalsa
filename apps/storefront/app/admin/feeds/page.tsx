@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { isAmazonSyncConfigured } from '@/lib/social/amazon-sp-api'
+import { isGoogleShoppingSyncConfigured } from '@/lib/social/google-content-api'
 import { FeedsDashboardClient } from '@/components/admin/feeds/feeds-dashboard-client'
 import type { SocialAccountInfo } from '@/types/social'
 import type { FeedsTab } from '@/types/feeds'
@@ -67,7 +69,14 @@ export default async function FeedsPage({
         </p>
       </div>
 
-      <FeedsDashboardClient accounts={accounts} initialTab={initialTab} />
+      <FeedsDashboardClient
+        accounts={accounts}
+        syncProviderStatus={{
+          AMAZON: isAmazonSyncConfigured(),
+          GOOGLE_SHOPPING: isGoogleShoppingSyncConfigured(),
+        }}
+        initialTab={initialTab}
+      />
     </div>
   )
 }

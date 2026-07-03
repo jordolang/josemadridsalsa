@@ -10,10 +10,11 @@ import type { SocialAccountInfo } from '@/types/social'
 
 type Props = {
   accounts: SocialAccountInfo[]
+  syncProviderStatus: { AMAZON: boolean; GOOGLE_SHOPPING: boolean }
   initialTab?: FeedsTab
 }
 
-export function FeedsDashboardClient({ accounts, initialTab = 'feeds' }: Props) {
+export function FeedsDashboardClient({ accounts, syncProviderStatus, initialTab = 'feeds' }: Props) {
   const [activeTab, setActiveTab] = useState<FeedsTab>(initialTab)
 
   return (
@@ -22,7 +23,9 @@ export function FeedsDashboardClient({ accounts, initialTab = 'feeds' }: Props) 
 
       {activeTab === 'feeds' && <ProductFeeds />}
 
-      {activeTab === 'shops' && <SocialShops accounts={accounts} />}
+      {activeTab === 'shops' && (
+        <SocialShops accounts={accounts} syncProviderStatus={syncProviderStatus} />
+      )}
 
       {activeTab === 'live' && <FeedsLive />}
     </div>

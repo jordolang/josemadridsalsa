@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { Prisma, ShopPlatform } from '@prisma/client'
+import { Prisma, ShopPlatform, type SocialMediaPlatform } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
@@ -15,7 +15,9 @@ import { logAudit } from '@/lib/audit'
 const createListingSchema = z.object({
   productId: z.string().min(1),
   shopPlatform: z.nativeEnum(ShopPlatform),
-  socialAccountId: z.string().min(1),
+  // Optional for platforms that sync with server credentials (Amazon, Google
+  // Shopping) instead of a connected social account.
+  socialAccountId: z.string().min(1).optional(),
   catalogId: z.string().trim().optional(),
   titleOverride: z.string().trim().optional(),
   descriptionOverride: z.string().trim().optional(),
@@ -34,7 +36,7 @@ const bulkSyncSchema = z.object({
 const bulkCreateSchema = z.object({
   productIds: z.array(z.string().min(1)).min(1),
   shopPlatform: z.nativeEnum(ShopPlatform),
-  socialAccountId: z.string().min(1),
+  socialAccountId: z.string().min(1).optional(),
   catalogId: z.string().trim().optional(),
 })
 
@@ -183,15 +185,26 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Product not found' }, { status: 404 })
       }
 
-      const accountResult = await getValidatedSocialAccount(data.socialAccountId, data.shopPlatform)
-      if ('error' in accountResult) {
-        return NextResponse.json({ error: accountResult.error }, { status: 400 })
+      const requiresAccount = getExpectedAccountPlatformForShop(data.shopPlatform) !== null
+      let accountPlatform: SocialMediaPlatform | null = null
+      if (requiresAccount) {
+        if (!data.socialAccountId) {
+          return NextResponse.json(
+            { error: 'Choose the connected account that should own this export.' },
+            { status: 400 },
+          )
+        }
+        const accountResult = await getValidatedSocialAccount(data.socialAccountId, data.shopPlatform)
+        if ('error' in accountResult) {
+          return NextResponse.json({ error: accountResult.error }, { status: 400 })
+        }
+        accountPlatform = accountResult.account.platform
       }
 
       const configValidation = validateShopExportConfiguration({
         shopPlatform: data.shopPlatform,
-        socialAccountId: data.socialAccountId,
-        socialAccountPlatform: accountResult.account.platform,
+        socialAccountId: data.socialAccountId ?? null,
+        socialAccountPlatform: accountPlatform,
         catalogId: data.catalogId,
       })
       if (!configValidation.valid) {
@@ -208,7 +221,7 @@ export async function POST(request: Request) {
         create: {
           productId: data.productId,
           shopPlatform: data.shopPlatform,
-          socialAccountId: data.socialAccountId,
+          socialAccountId: data.socialAccountId ?? null,
           catalogId: data.catalogId?.trim() || null,
           titleOverride: data.titleOverride || null,
           descriptionOverride: data.descriptionOverride || null,
@@ -220,7 +233,7 @@ export async function POST(request: Request) {
           status: 'PENDING',
         },
         update: {
-          socialAccountId: data.socialAccountId,
+          socialAccountId: data.socialAccountId ?? null,
           catalogId: data.catalogId?.trim() || null,
           titleOverride: data.titleOverride || null,
           descriptionOverride: data.descriptionOverride || null,
@@ -291,15 +304,26 @@ export async function POST(request: Request) {
       }
 
       const data = parsed.data
-      const accountResult = await getValidatedSocialAccount(data.socialAccountId, data.shopPlatform)
-      if ('error' in accountResult) {
-        return NextResponse.json({ error: accountResult.error }, { status: 400 })
+      const requiresAccount = getExpectedAccountPlatformForShop(data.shopPlatform) !== null
+      let accountPlatform: SocialMediaPlatform | null = null
+      if (requiresAccount) {
+        if (!data.socialAccountId) {
+          return NextResponse.json(
+            { error: 'Choose the connected account that should own these exports.' },
+            { status: 400 },
+          )
+        }
+        const accountResult = await getValidatedSocialAccount(data.socialAccountId, data.shopPlatform)
+        if ('error' in accountResult) {
+          return NextResponse.json({ error: accountResult.error }, { status: 400 })
+        }
+        accountPlatform = accountResult.account.platform
       }
 
       const configValidation = validateShopExportConfiguration({
         shopPlatform: data.shopPlatform,
-        socialAccountId: data.socialAccountId,
-        socialAccountPlatform: accountResult.account.platform,
+        socialAccountId: data.socialAccountId ?? null,
+        socialAccountPlatform: accountPlatform,
         catalogId: data.catalogId,
       })
       if (!configValidation.valid) {
@@ -318,12 +342,12 @@ export async function POST(request: Request) {
           create: {
             productId,
             shopPlatform: data.shopPlatform,
-            socialAccountId: data.socialAccountId,
+            socialAccountId: data.socialAccountId ?? null,
             catalogId: data.catalogId?.trim() || null,
             status: 'PENDING',
           },
           update: {
-            socialAccountId: data.socialAccountId,
+            socialAccountId: data.socialAccountId ?? null,
             catalogId: data.catalogId?.trim() || null,
           },
         })

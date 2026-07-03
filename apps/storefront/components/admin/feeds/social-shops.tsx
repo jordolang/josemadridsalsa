@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Facebook,
+  Globe,
   Music2,
   ShoppingBag,
+  ShoppingCart,
   Store,
   Package,
   RefreshCw,
@@ -61,13 +63,32 @@ const SHOP_ICONS: Record<ShopPlatform, React.ElementType> = {
   FACEBOOK_SHOP: ShoppingBag,
   FACEBOOK_MARKETPLACE: Store,
   TIKTOK_SHOP: Music2,
+  AMAZON: ShoppingCart,
+  GOOGLE_SHOPPING: Globe,
+}
+
+const ALL_PLATFORMS: ShopPlatform[] = [
+  'FACEBOOK_SHOP',
+  'FACEBOOK_MARKETPLACE',
+  'TIKTOK_SHOP',
+  'AMAZON',
+  'GOOGLE_SHOPPING',
+]
+
+/** Env-var hints for platforms that sync with server credentials. */
+const CREDENTIAL_HINTS: Partial<Record<ShopPlatform, string>> = {
+  AMAZON: 'Set the AMAZON_SP_API_* environment variables to enable syncing',
+  GOOGLE_SHOPPING:
+    'Set GOOGLE_MERCHANT_CENTER_ID and the GOOGLE_SHOPPING_SERVICE_ACCOUNT_* environment variables to enable syncing',
 }
 
 type Props = {
   accounts: SocialAccountInfo[]
+  /** Whether server credentials exist for platforms that don't use a connected social account. */
+  syncProviderStatus: { AMAZON: boolean; GOOGLE_SHOPPING: boolean }
 }
 
-export function SocialShops({ accounts }: Props) {
+export function SocialShops({ accounts, syncProviderStatus }: Props) {
   const [listings, setListings] = useState<ShopListingInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState<string | null>(null)
@@ -90,10 +111,24 @@ export function SocialShops({ accounts }: Props) {
 
   const hasFacebook = accounts.some((a) => a.platform === 'FACEBOOK')
   const hasTikTok = accounts.some((a) => a.platform === 'TIKTOK')
-  const accountPlatformForShop: Record<ShopPlatform, SocialMediaPlatform> = {
+  // null = the platform syncs with server credentials, not a connected account.
+  const accountPlatformForShop: Record<ShopPlatform, SocialMediaPlatform | null> = {
     FACEBOOK_SHOP: 'FACEBOOK',
     FACEBOOK_MARKETPLACE: 'FACEBOOK',
     TIKTOK_SHOP: 'TIKTOK',
+    AMAZON: null,
+    GOOGLE_SHOPPING: null,
+  }
+  const addPlatformNeedsAccount = accountPlatformForShop[addPlatform] !== null
+  const isPlatformReady = (platform: ShopPlatform): boolean => {
+    switch (accountPlatformForShop[platform]) {
+      case 'FACEBOOK':
+        return hasFacebook
+      case 'TIKTOK':
+        return hasTikTok
+      default:
+        return syncProviderStatus[platform as 'AMAZON' | 'GOOGLE_SHOPPING']
+    }
   }
   const matchingAccounts = useMemo(
     () => accounts.filter((account) => account.platform === accountPlatformForShop[addPlatform]),
@@ -157,7 +192,7 @@ export function SocialShops({ accounts }: Props) {
 
   const handleAddProducts = async () => {
     if (selectedProducts.size === 0) return
-    if (!selectedAccountId) {
+    if (addPlatformNeedsAccount && !selectedAccountId) {
       setError('Choose the connected account that should own these exports.')
       return
     }
@@ -170,7 +205,7 @@ export function SocialShops({ accounts }: Props) {
           action: 'bulk_create',
           productIds: Array.from(selectedProducts),
           shopPlatform: addPlatform,
-          socialAccountId: selectedAccountId,
+          socialAccountId: addPlatformNeedsAccount ? selectedAccountId : undefined,
           catalogId: catalogId || undefined,
         }),
       })
@@ -368,12 +403,12 @@ export function SocialShops({ accounts }: Props) {
       </div>
 
       {/* Platform cards with bulk actions */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        {(['FACEBOOK_SHOP', 'FACEBOOK_MARKETPLACE', 'TIKTOK_SHOP'] as ShopPlatform[]).map((platform) => {
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {ALL_PLATFORMS.map((platform) => {
           const config = SHOP_PLATFORM_CONFIG[platform]
           const Icon = SHOP_ICONS[platform]
           const ps = platformStats[platform] || { total: 0, active: 0 }
-          const isConnected = platform === 'TIKTOK_SHOP' ? hasTikTok : hasFacebook
+          const isConnected = isPlatformReady(platform)
 
           return (
             <Card key={platform} className="overflow-hidden">
@@ -426,7 +461,8 @@ export function SocialShops({ accounts }: Props) {
                 </div>
                 {!isConnected && (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Connect {platform === 'TIKTOK_SHOP' ? 'TikTok' : 'Facebook'} in Social Media → Accounts first
+                    {CREDENTIAL_HINTS[platform] ??
+                      `Connect ${platform === 'TIKTOK_SHOP' ? 'TikTok' : 'Facebook'} in Social Media → Accounts first`}
                   </p>
                 )}
               </div>
@@ -452,6 +488,15 @@ export function SocialShops({ accounts }: Props) {
             </Button>
           </div>
 
+          {!addPlatformNeedsAccount && (
+            <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+              {addPlatform === 'AMAZON'
+                ? 'Amazon exports sync through the Selling Partner API using the server credentials — no connected account or catalog ID needed. Products are matched to Amazon’s catalog by UPC (product barcode).'
+                : 'Google Shopping exports sync through the Content API using the configured Merchant Center service account — no connected account or catalog ID needed.'}
+            </div>
+          )}
+
+          {addPlatformNeedsAccount && (
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <div className="space-y-1.5">
               <label className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -501,6 +546,7 @@ export function SocialShops({ accounts }: Props) {
               </p>
             </div>
           </div>
+          )}
 
           {addPlatform === 'FACEBOOK_SHOP' && (
             <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4">
@@ -651,6 +697,8 @@ export function SocialShops({ accounts }: Props) {
                 <SelectItem value="FACEBOOK_SHOP">Facebook Shop</SelectItem>
                 <SelectItem value="FACEBOOK_MARKETPLACE">Marketplace</SelectItem>
                 <SelectItem value="TIKTOK_SHOP">TikTok Shop</SelectItem>
+                <SelectItem value="AMAZON">Amazon</SelectItem>
+                <SelectItem value="GOOGLE_SHOPPING">Google Shopping</SelectItem>
               </SelectContent>
             </Select>
             <Select
@@ -737,7 +785,10 @@ export function SocialShops({ accounts }: Props) {
                       <TableCell>
                         <div className="text-xs">
                           <p className="font-medium text-foreground">
-                            {listing.targetAccountName || 'Not selected'}
+                            {listing.targetAccountName ||
+                              (accountPlatformForShop[listing.shopPlatform] === null
+                                ? 'API credentials'
+                                : 'Not selected')}
                           </p>
                           {(listing.targetAccountHandle || listing.targetAccountPlatform) && (
                             <p className="text-muted-foreground">
@@ -844,7 +895,7 @@ export function SocialShops({ accounts }: Props) {
       {/* Setup guide */}
       <Card className="border-border bg-muted/50 p-5">
         <h4 className="font-semibold text-foreground">Shop Integration Setup</h4>
-        <div className="mt-3 grid gap-4 text-sm text-muted-foreground sm:grid-cols-3">
+        <div className="mt-3 grid gap-4 text-sm text-muted-foreground sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <p className="font-medium text-foreground">Facebook Shop</p>
             <ul className="mt-1 list-inside list-disc space-y-1 text-muted-foreground">
@@ -871,6 +922,24 @@ export function SocialShops({ accounts }: Props) {
               <li>Enable Product API access in your developer app</li>
               <li>Enter your Shop ID when adding products</li>
               <li>Products sync via TikTok Open API</li>
+            </ul>
+          </div>
+          <div>
+            <p className="font-medium text-foreground">Amazon</p>
+            <ul className="mt-1 list-inside list-disc space-y-1 text-muted-foreground">
+              <li>Create a self-authorized SP-API app in Seller Central → Develop Apps</li>
+              <li>Set AMAZON_SP_API_CLIENT_ID, _CLIENT_SECRET, _REFRESH_TOKEN, and _SELLER_ID env vars</li>
+              <li>Products match Amazon&apos;s catalog by UPC (product barcode)</li>
+              <li>Listings sync via the SP-API Listings Items API</li>
+            </ul>
+          </div>
+          <div>
+            <p className="font-medium text-foreground">Google Shopping</p>
+            <ul className="mt-1 list-inside list-disc space-y-1 text-muted-foreground">
+              <li>Create a Google Cloud service account and enable the Content API for Shopping</li>
+              <li>Add the service account email as a user in Merchant Center settings</li>
+              <li>Set GOOGLE_MERCHANT_CENTER_ID and GOOGLE_SHOPPING_SERVICE_ACCOUNT_EMAIL / _PRIVATE_KEY env vars</li>
+              <li>Products sync via the Content API; the scheduled feed URL keeps working as a fallback</li>
             </ul>
           </div>
         </div>

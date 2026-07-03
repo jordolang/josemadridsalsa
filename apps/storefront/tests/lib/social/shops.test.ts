@@ -51,4 +51,22 @@ describe('validateShopExportConfiguration', () => {
       }),
     ).toEqual({ valid: true })
   })
+
+  it('accepts amazon exports without a connected account or catalog id', () => {
+    expect(
+      validateShopExportConfiguration({
+        shopPlatform: 'AMAZON',
+        socialAccountId: null,
+      }),
+    ).toEqual({ valid: true })
+  })
+
+  it('accepts google shopping exports without a connected account or catalog id', () => {
+    expect(
+      validateShopExportConfiguration({
+        shopPlatform: 'GOOGLE_SHOPPING',
+        socialAccountId: null,
+      }),
+    ).toEqual({ valid: true })
+  })
 })
