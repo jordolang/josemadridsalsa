@@ -43,6 +43,7 @@
     "vercel:setup-env": "bash scripts/setup-vercel-env.sh",
     "create-admin": "tsx scripts/create-admin.ts",
     "create-developer": "tsx scripts/promote-developer.ts",
+    "credentials:grant-access": "tsx scripts/grant-credential-access.ts",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
     "fresh": "npm run clean && npm install && npm run dev",
     "security:scan": "gitleaks detect --source . --verbose --redact",
