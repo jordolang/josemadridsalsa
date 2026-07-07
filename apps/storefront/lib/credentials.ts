@@ -29,6 +29,11 @@ export async function checkCredentialAccess(
   email: string,
   role: UserRole
 ): Promise<'read' | 'write' | null> {
+  // The super admin always has full access, matching the admin page bypass
+  if (isSuperAdmin(email)) {
+    return 'write'
+  }
+
   try {
     const grant = await prisma.credentialAccessGrant.findUnique({
       where: { email },
@@ -66,6 +71,11 @@ export async function checkCredentialAccess(
 export async function getGrantPermissions(
   email: string
 ): Promise<CredentialGrantPermissions | null> {
+  // The super admin always has full access, matching the admin page bypass
+  if (isSuperAdmin(email)) {
+    return { canView: true, canAdd: true, canEdit: true, canDelete: true, canUpload: true }
+  }
+
   try {
     const grant = await prisma.credentialAccessGrant.findUnique({
       where: { email },
