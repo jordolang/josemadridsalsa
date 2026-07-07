@@ -30,7 +30,7 @@ const robotoMono = Roboto_Mono({
   preload: false, // Only preload critical fonts
 })
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.josemadridsalsa.com'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.josemadrid.net'
 
 export const metadata: Metadata = {
   title: {
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://josemadridsalsa.com',
+    url: siteUrl,
     siteName: 'Jose Madrid Salsa',
     title: 'Jose Madrid Salsa - Premium Gourmet Salsa',
     description: 'Premium gourmet salsas made with the finest ingredients. Order online for delivery.',
