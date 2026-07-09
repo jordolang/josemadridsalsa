@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { eventBus } from './event-bus';
 import { emitScraperEvent } from './scraper-events';
-import { connectBrowser, createPage } from './browser';
+import { connectBrowser, createPage, browserProviderName } from './browser';
 import {
   SEARCH_QUERY_TEMPLATES,
   MAX_SEARCH_PAGES,
@@ -34,15 +34,15 @@ export async function runGoogleSearchScraper(campaignId: string) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     emitScraperEvent(campaignId, 'error', 'system', `Failed to connect to browser: ${msg}`);
-    emitScraperEvent(campaignId, 'error', 'system', process.env.BROWSERLESS_TOKEN
-      ? 'Browserless.io connection failed. Check your BROWSERLESS_TOKEN.'
-      : 'No BROWSERLESS_TOKEN set and local Chromium unavailable. Set BROWSERLESS_TOKEN in your environment variables.');
+    emitScraperEvent(campaignId, 'error', 'system', process.env.BROWSERLESS_TOKEN || process.env.BRIGHTDATA_BROWSER_URL
+      ? `${browserProviderName()} connection failed. Check your credentials.`
+      : 'No BRIGHTDATA_BROWSER_URL or BROWSERLESS_TOKEN set and local Chromium unavailable. Set one in your environment variables.');
     await prisma.leadCampaign.update({ where: { id: campaignId }, data: { status: 'FAILED' } });
     eventBus.emit({ type: 'campaign:status_changed', data: { campaignId, status: 'FAILED', message: 'Browser connection failed' } });
     return;
   }
 
-  emitScraperEvent(campaignId, 'success', 'system', `Browser connected (${process.env.BROWSERLESS_TOKEN ? 'Browserless.io' : 'local Chromium'})`);
+  emitScraperEvent(campaignId, 'success', 'system', `Browser connected (${browserProviderName()})`);
 
   const page = await createPage(browser);
 

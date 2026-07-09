@@ -3077,6 +3077,7 @@ enum LeadType {
   SCHOOL_ATHLETICS
   LOCAL_BUSINESS
   LOCAL_SCHOOL
+  FUNDRAISER_ORG
 }
 
 enum LeadCampaignStatus {

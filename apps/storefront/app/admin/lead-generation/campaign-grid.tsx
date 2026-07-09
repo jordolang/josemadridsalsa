@@ -31,19 +31,22 @@ interface CampaignGridProps {
   campaigns: Campaign[]
 }
 
-type FilterTab = 'ALL' | 'SCHOOL_ATHLETICS' | 'LOCAL_BUSINESS' | 'LOCAL_SCHOOL'
+type FilterTab = 'ALL' | 'SCHOOL_ATHLETICS' | 'LOCAL_BUSINESS' | 'LOCAL_SCHOOL' | 'FUNDRAISER_ORG'
 
 const TAB_LABELS: Record<FilterTab, string> = {
   ALL: 'All',
   SCHOOL_ATHLETICS: 'School Athletics',
   LOCAL_BUSINESS: 'Local Businesses',
   LOCAL_SCHOOL: 'Local Schools',
+  FUNDRAISER_ORG: 'Fundraiser Orgs',
 }
 
 const COMPLETED_STATUSES = ['COMPLETED', 'SCRAPE_COMPLETED', 'PARSING_COMPLETED']
 
 function getEntityLabel(leadType: string): string {
-  return leadType === 'LOCAL_BUSINESS' ? 'businesses' : 'schools'
+  if (leadType === 'LOCAL_BUSINESS') return 'businesses'
+  if (leadType === 'FUNDRAISER_ORG') return 'organizations'
+  return 'schools'
 }
 
 export function CampaignGrid({ campaigns }: CampaignGridProps) {

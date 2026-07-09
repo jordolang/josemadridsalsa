@@ -5,6 +5,9 @@ import { getJson } from 'serpapi'
 import { eventBus } from '@/lib/scraper/event-bus'
 import { emitScraperEvent } from '@/lib/scraper/scraper-events'
 import { EXCLUDED_DOMAINS } from '@/lib/scraper/school-config'
+import { fundraiserQueriesForCategory } from '@/lib/scraper/fundraiser-config'
+import * as brightData from '@/lib/scraper/brightdata'
+import type { SerpResponse, SerpParams } from '@/lib/scraper/brightdata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -63,9 +66,9 @@ export async function POST(
       }
 
       try {
-        if (!SERPAPI_KEY) {
-          emit('error', 'system', 'SERPAPI_KEY environment variable is not set. Add it to your Vercel environment variables.')
-          emit('error', 'system', 'Get a free API key at https://serpapi.com (100 searches/month free)')
+        if (!hasSerpProvider()) {
+          emit('error', 'system', 'No search provider configured. Set BRIGHTDATA_API_KEY (Bright Data SERP) or SERPAPI_KEY.')
+          emit('error', 'system', 'Bright Data: https://brightdata.com/products/serp-api — or SerpAPI free tier: https://serpapi.com')
           await prisma.leadCampaign.update({ where: { id: campaignId }, data: { status: 'FAILED' } })
           controller.close()
           return
@@ -81,10 +84,12 @@ export async function POST(
           data: { campaignId, status: 'SCRAPING', message: 'Started scraping' },
         })
 
-        emit('info', 'system', 'Using SerpAPI for Google search (no browser needed, no CAPTCHA)')
+        emit('info', 'system', `Using ${brightData.isSerpConfigured() ? 'Bright Data SERP API' : 'SerpAPI'} for Google search (no browser needed, no CAPTCHA)`)
 
         if (campaign.leadType === 'LOCAL_BUSINESS') {
           await runBusinessSearch(campaignId, campaign, emit)
+        } else if (campaign.leadType === 'FUNDRAISER_ORG') {
+          await runFundraiserOrgSearch(campaignId, campaign, emit)
         } else {
           await runSchoolSearch(campaignId, campaign, emit)
         }
@@ -112,35 +117,32 @@ export async function POST(
 
 type EmitFn = (level: LogEntry['level'], stage: LogEntry['stage'], message: string) => void
 
-interface SerpOrganicResult {
-  title?: string
-  link?: string
-  snippet?: string
-  displayed_link?: string
+/** True when at least one SERP provider (Bright Data or SerpAPI) is configured. */
+function hasSerpProvider(): boolean {
+  return brightData.isSerpConfigured() || Boolean(SERPAPI_KEY)
 }
 
-interface SerpLocalResult {
-  title?: string
-  address?: string
-  phone?: string
-  website?: string
-  rating?: number
-  reviews?: number
-  type?: string
-  gps_coordinates?: { latitude: number; longitude: number }
-  place_id?: string
-  links?: { directions?: string }
-  thumbnail?: string
+/**
+ * Unified structured search. Prefers Bright Data's SERP API when configured;
+ * falls back to SerpAPI if Bright Data errors or returns nothing usable.
+ */
+async function serpSearch(params: SerpParams): Promise<SerpResponse> {
+  if (brightData.isSerpConfigured()) {
+    try {
+      const data = await brightData.serpSearch(params)
+      const hasResults =
+        (data.organic_results?.length || 0) > 0 ||
+        (data.local_results?.places?.length || 0) > 0
+      if (hasResults || !SERPAPI_KEY) return data
+    } catch {
+      // Fall through to SerpAPI if it's available.
+      if (!SERPAPI_KEY) throw new Error('Bright Data SERP request failed and no SerpAPI fallback is configured')
+    }
+  }
+  return serpApiSearch(params)
 }
 
-interface SerpResponse {
-  organic_results?: SerpOrganicResult[]
-  local_results?: { places?: SerpLocalResult[] }
-  search_information?: { total_results?: number }
-  error?: string
-}
-
-async function serpSearch(params: Record<string, string | number>): Promise<SerpResponse> {
+async function serpApiSearch(params: SerpParams): Promise<SerpResponse> {
   return new Promise((resolve, reject) => {
     getJson({
       api_key: SERPAPI_KEY!,
@@ -418,5 +420,118 @@ async function runBusinessSearch(
   eventBus.emit({
     type: 'campaign:status_changed',
     data: { campaignId, status: 'SCRAPE_COMPLETED', message: `Completed with ${totalFound} businesses found` },
+  })
+}
+
+async function runFundraiserOrgSearch(
+  campaignId: string,
+  campaign: { city: string; state: string; businessCategory: string | null; searchQuery: string | null; limit: number | null },
+  emit: EmitFn,
+) {
+  // A custom query overrides the curated set; otherwise expand the category
+  // (or every category, when none is chosen) into Google Maps searches.
+  const templates = campaign.searchQuery
+    ? [campaign.searchQuery.includes('{city}') ? campaign.searchQuery : `${campaign.searchQuery} {city} {state}`]
+    : fundraiserQueriesForCategory(campaign.businessCategory)
+
+  const limit = campaign.limit || 50
+  let totalFound = 0
+  const seen = new Set<string>()
+
+  emit('info', 'search', `Targeting fundraiser organizations${campaign.businessCategory ? ` — ${campaign.businessCategory}` : ''} in ${campaign.city}, ${campaign.state}`)
+  emit('info', 'search', `Running up to ${templates.length} search queries...`)
+
+  for (const template of templates) {
+    if (totalFound >= limit) break
+
+    const query = template
+      .replace('{city}', campaign.city)
+      .replace('{state}', campaign.state)
+      .trim()
+      .replace(/\s+/g, ' ')
+
+    emit('info', 'search', `Query: "${query}"`)
+
+    let data: SerpResponse
+    try {
+      data = await serpSearch({ engine: 'google_maps', q: query, hl: 'en', type: 'search' })
+    } catch (err) {
+      emit('warn', 'search', `Query failed: ${err instanceof Error ? err.message : String(err)}`)
+      continue
+    }
+
+    const places = data.local_results?.places || []
+    emit('info', 'search', `Found ${places.length} listings`)
+
+    const rows: Array<{
+      campaignId: string
+      schoolName: string
+      businessName: string
+      businessCategory: string | null
+      address: string | null
+      phone: string | null
+      website: string | null
+      rating: number | null
+      reviewCount: number | null
+      googleMapsUrl: string | null
+      placeId: string | null
+      city: string
+      state: string
+      status: 'SCRAPED'
+    }> = []
+    const messages: string[] = []
+
+    for (const place of places) {
+      if (!place.title) continue
+
+      const dedupeKey = `${place.title}|${place.address || ''}`.toLowerCase()
+      if (seen.has(dedupeKey)) continue
+
+      const isExcluded = EXCLUDED_DOMAINS.some(d => (place.website || '').includes(d))
+      if (isExcluded) continue
+      seen.add(dedupeKey)
+
+      rows.push({
+        campaignId,
+        schoolName: place.title,
+        businessName: place.title,
+        businessCategory: campaign.businessCategory || place.type || null,
+        address: place.address || null,
+        phone: place.phone || null,
+        website: place.website || null,
+        rating: place.rating || null,
+        reviewCount: place.reviews || null,
+        googleMapsUrl: place.links?.directions || null,
+        placeId: place.place_id || null,
+        city: campaign.city,
+        state: campaign.state,
+        status: 'SCRAPED',
+      })
+      messages.push(
+        `Org found: ${place.title}${place.rating ? ` (${place.rating}★ · ${place.reviews || 0} reviews)` : ''}${place.address ? ` — ${place.address}` : ''}`,
+      )
+
+      totalFound++
+      if (totalFound >= limit) break
+    }
+
+    if (rows.length > 0) {
+      await prisma.lead.createMany({ data: rows, skipDuplicates: true })
+      for (const msg of messages) emit('success', 'search', msg)
+    }
+
+    emit('info', 'search', `Progress: ${totalFound}/${limit} organizations`)
+  }
+
+  emit('success', 'search', `Search complete — ${totalFound} organizations found`)
+
+  await prisma.leadCampaign.update({
+    where: { id: campaignId },
+    data: { status: 'SCRAPE_COMPLETED', totalFound },
+  })
+
+  eventBus.emit({
+    type: 'campaign:status_changed',
+    data: { campaignId, status: 'SCRAPE_COMPLETED', message: `Completed with ${totalFound} organizations found` },
   })
 }
