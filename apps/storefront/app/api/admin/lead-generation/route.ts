@@ -5,7 +5,7 @@ import { ok, fail, parsePagination } from '@/lib/api'
 import { z } from 'zod'
 
 const filterSchema = z.object({
-  leadType: z.enum(['SCHOOL_ATHLETICS', 'LOCAL_BUSINESS', 'LOCAL_SCHOOL']).optional(),
+  leadType: z.enum(['SCHOOL_ATHLETICS', 'LOCAL_BUSINESS', 'LOCAL_SCHOOL', 'FUNDRAISER_ORG']).optional(),
   status: z.enum([
     'DRAFT', 'SCRAPING', 'SCRAPE_COMPLETED', 'PARSING_CONTACTS',
     'PARSING_COMPLETED', 'SENDING_EMAILS', 'COMPLETED', 'FAILED',

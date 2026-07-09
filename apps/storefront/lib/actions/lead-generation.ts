@@ -13,7 +13,7 @@ interface CreateLeadCampaignInput {
   name: string
   city: string
   state: string
-  leadType: 'SCHOOL_ATHLETICS' | 'LOCAL_BUSINESS' | 'LOCAL_SCHOOL'
+  leadType: 'SCHOOL_ATHLETICS' | 'LOCAL_BUSINESS' | 'LOCAL_SCHOOL' | 'FUNDRAISER_ORG'
   district?: string
   schoolType?: string
   businessCategory?: string

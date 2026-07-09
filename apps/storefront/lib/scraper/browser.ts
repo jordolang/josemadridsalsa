@@ -1,4 +1,5 @@
 import { chromium, type Browser } from 'playwright'
+import { brightDataBrowserEndpoint } from './brightdata'
 
 const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN
 
@@ -10,7 +11,21 @@ const LAUNCH_ARGS = JSON.stringify({
   headless: 'new',
 })
 
+/** Human-readable name of the active browser provider, for activity logs. */
+export function browserProviderName(): string {
+  if (brightDataBrowserEndpoint()) return 'Bright Data Scraping Browser'
+  if (BROWSERLESS_TOKEN) return 'Browserless.io'
+  return 'local Chromium'
+}
+
 export async function connectBrowser(): Promise<Browser> {
+  // Prefer Bright Data's Scraping Browser when configured — it bypasses
+  // CAPTCHAs and bot detection for both Google search and target sites.
+  const brightDataEndpoint = brightDataBrowserEndpoint()
+  if (brightDataEndpoint) {
+    return chromium.connectOverCDP(brightDataEndpoint)
+  }
+
   if (BROWSERLESS_TOKEN) {
     const wsEndpoint = `wss://production-sfo.browserless.io/chromium?token=${BROWSERLESS_TOKEN}&launch=${encodeURIComponent(LAUNCH_ARGS)}&blockAds=true`
     return chromium.connectOverCDP(wsEndpoint)
