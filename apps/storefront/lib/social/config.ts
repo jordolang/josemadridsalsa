@@ -103,7 +103,7 @@ export const PLATFORM_SETUP: Record<SocialMediaPlatform, PlatformSetup> = {
       'Enable the "Business Profile API" for the project and request API access from Google.',
       'Make sure your Google account manages the Business Profile you want to post to.',
     ],
-    note: 'Google gates the Business Profile API behind an access-request/quota approval — apply early, it can take time.',
+    note: 'Seeing "Error 400: redirect_uri_mismatch"? The exact Redirect URI shown below must be added to your OAuth client\'s "Authorized redirect URIs" in Google Cloud Console — it is a different path than the Sign-in-with-Google login callback, so adding it separately is required. Also, Google gates the Business Profile API behind an access-request/quota approval — apply early, it can take time.',
   },
 }
 
