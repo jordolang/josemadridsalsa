@@ -129,7 +129,7 @@ function ProductCardComponent({ product }: ProductCardProps) {
                 width={400}
                 height={400}
                 className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 onError={() => setImageError(true)}
               />
               
@@ -283,7 +283,7 @@ function ProductCardComponent({ product }: ProductCardProps) {
               alt={product.name}
               fill
               className="object-contain"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              sizes="(max-width: 768px) 100vw, 50vw"
             />
           </div>
 

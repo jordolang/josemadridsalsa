@@ -163,7 +163,7 @@ export default async function ProductDetailPage({ params }: Props) {
           <div className="space-y-6">
             {/* Badges */}
             <div>
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex flex-wrap items-center gap-2 mb-3">
                 <Badge className={getHeatLevelColor(product.heatLevel)}>
                   {getHeatLevelText(product.heatLevel)}
                 </Badge>
@@ -184,17 +184,17 @@ export default async function ProductDetailPage({ params }: Props) {
               </div>
 
               {/* Product Name */}
-              <h1 className="text-3xl font-bold text-foreground mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
                 {product.name}
               </h1>
 
               {/* Price */}
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-2xl font-bold text-foreground">
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <span className="text-2xl sm:text-3xl font-bold text-foreground">
                   {formatPrice(product.price)}
                 </span>
                 {hasDiscount && (
-                  <span className="text-xl text-muted-foreground line-through">
+                  <span className="text-lg sm:text-xl text-muted-foreground line-through">
                     {formatPrice(product.compareAtPrice!)}
                   </span>
                 )}
@@ -203,7 +203,7 @@ export default async function ProductDetailPage({ params }: Props) {
 
             {/* Description */}
             {product.description && (
-              <p className="text-muted-foreground text-lg leading-relaxed">
+              <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
                 {product.description}
               </p>
             )}
@@ -278,6 +278,45 @@ export default async function ProductDetailPage({ params }: Props) {
             {isLowStock && (
               <div className="text-orange-600 text-sm font-medium">
                 ⚠️ Only {product.inventory} left in stock!
+              </div>
+            )}
+
+            {/* Add to Cart Button - Mobile optimized with 44px min height */}
+            <div className="pt-4 border-t">
+              <AddToCartButton
+                product={{
+                  id: product.id,
+                  name: product.name,
+                  slug: product.slug,
+                  price: product.price,
+                  featuredImage: product.featuredImage,
+                  sku: product.sku,
+                  heatLevel: product.heatLevel,
+                  inventory: product.inventory,
+                }}
+                quantity={1}
+                size="lg"
+                className="w-full sm:w-auto min-h-[44px] text-base font-semibold"
+              />
+            </div>
+
+            {/* Reviews Section */}
+            {reviewStats._count.rating > 0 && (
+              <div className="pt-6 border-t">
+                <div className="flex items-center gap-2 mb-4">
+                  <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+                    Customer Reviews
+                  </h2>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      {reviewStats._avg.rating?.toFixed(1)}
+                    </span>
+                    <span>({reviewStats._count.rating} reviews)</span>
+                  </div>
+                </div>
+                <p className="text-muted-foreground text-base leading-relaxed">
+                  Reviews are coming soon! Check back later to see what customers are saying.
+                </p>
               </div>
             )}
           </div>

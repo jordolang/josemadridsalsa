@@ -118,17 +118,17 @@ export default async function Home() {
         </ErrorBoundary>
 
         {/* Heat-Level Categories */}
-        <section className="bg-muted/30 py-20">
+        <section className="bg-muted/30 py-12 sm:py-16 md:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <ScrollReveal>
-              <div className="mb-16 text-center">
+              <div className="mb-12 sm:mb-16 text-center">
                 <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-salsa-600">
                   Heat Levels
                 </span>
-                <h2 className="mb-4 font-serif text-4xl font-bold tracking-[-0.02em] text-foreground md:text-5xl">
+                <h2 className="mb-4 font-serif text-3xl sm:text-4xl font-bold tracking-[-0.02em] text-foreground md:text-5xl">
                   Built for Every <span className="text-gradient">Palate</span>
                 </h2>
-                <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+                <p className="mx-auto max-w-2xl text-base sm:text-lg text-muted-foreground">
                   From those who like it mild to the heat seekers — we have the perfect salsa for everyone.
                 </p>
               </div>
@@ -172,49 +172,49 @@ export default async function Home() {
         </ErrorBoundary>
 
         {/* What Sets Us Apart */}
-        <section className="py-20">
+        <section className="py-12 sm:py-16 md:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-center gap-12 sm:gap-16 lg:grid-cols-2">
               <ScrollReveal className="scroll-reveal-left">
                 <div>
                   <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-salsa-600">
                     What Sets Us Apart
                   </span>
-                  <h2 className="mb-6 font-serif text-4xl font-bold tracking-[-0.02em] text-foreground">
+                  <h2 className="mb-6 font-serif text-3xl sm:text-4xl font-bold tracking-[-0.02em] text-foreground">
                     More Than Just <span className="text-gradient">Great Taste</span>
                   </h2>
-                  <div className="space-y-8">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-salsa-100 dark:bg-salsa-900/30">
-                        <span className="text-xl text-salsa-600" aria-hidden>🏪</span>
+                  <div className="space-y-6 sm:space-y-8">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className="flex h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0 items-center justify-center rounded-lg bg-salsa-100 dark:bg-salsa-900/30">
+                        <span className="text-lg sm:text-xl text-salsa-600" aria-hidden>🏪</span>
                       </div>
                       <div>
-                        <h3 className="mb-2 text-xl font-semibold text-foreground">Fundraising Made Easy</h3>
-                        <p className="text-muted-foreground">
+                        <h3 className="mb-2 text-lg sm:text-xl font-semibold text-foreground">Fundraising Made Easy</h3>
+                        <p className="text-sm sm:text-base text-muted-foreground">
                           Perfect for schools, churches, and organizations. High-profit margins and products people actually want.
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-verde-100 dark:bg-verde-900/30">
-                        <span className="text-xl text-verde-600" aria-hidden>🏭</span>
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className="flex h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0 items-center justify-center rounded-lg bg-verde-100 dark:bg-verde-900/30">
+                        <span className="text-lg sm:text-xl text-verde-600" aria-hidden>🏭</span>
                       </div>
                       <div>
-                        <h3 className="mb-2 text-xl font-semibold text-foreground">Wholesale Options</h3>
-                        <p className="text-muted-foreground">
+                        <h3 className="mb-2 text-lg sm:text-xl font-semibold text-foreground">Wholesale Options</h3>
+                        <p className="text-sm sm:text-base text-muted-foreground">
                           Stock our premium salsas in your store. Competitive pricing with excellent support.
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-chile-100 dark:bg-chile-900/30">
-                        <span className="text-xl text-chile-600" aria-hidden>📍</span>
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className="flex h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0 items-center justify-center rounded-lg bg-chile-100 dark:bg-chile-900/30">
+                        <span className="text-lg sm:text-xl text-chile-600" aria-hidden>📍</span>
                       </div>
                       <div>
-                        <h3 className="mb-2 text-xl font-semibold text-foreground">Local Presence</h3>
-                        <p className="text-muted-foreground">
+                        <h3 className="mb-2 text-lg sm:text-xl font-semibold text-foreground">Local Presence</h3>
+                        <p className="text-sm sm:text-base text-muted-foreground">
                           Find us at local stores throughout Ohio, or order online for delivery anywhere.
                         </p>
                       </div>
@@ -225,7 +225,7 @@ export default async function Home() {
 
               <ScrollReveal className="scroll-reveal-right">
                 <div className="relative">
-                  <div className="relative h-96 w-full lg:h-[500px]">
+                  <div className="relative h-64 sm:h-80 md:h-96 w-full lg:h-[500px]">
                     <Image
                       src="/images/shared/salsa-bowl.png"
                       alt="Fresh ingredients for salsa"
@@ -241,17 +241,17 @@ export default async function Home() {
         </section>
 
         {/* Where Is Jose — Live Schedule Map */}
-        <section className="py-16">
+        <section className="py-12 sm:py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <ScrollReveal>
-              <div className="mx-auto mb-10 max-w-3xl text-center">
+              <div className="mx-auto mb-8 sm:mb-10 max-w-3xl text-center">
                 <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-salsa-600">
                   On the Move
                 </span>
-                <h2 className="mb-4 font-serif text-4xl font-bold tracking-[-0.02em] text-foreground">
+                <h2 className="mb-4 font-serif text-3xl sm:text-4xl font-bold tracking-[-0.02em] text-foreground">
                   Where Is <span className="text-gradient">Jose?</span>
                 </h2>
-                <p className="text-lg text-muted-foreground">
+                <p className="text-base sm:text-lg text-muted-foreground">
                   Follow Jose Madrid Salsa to farmers markets, retail demos, and special events — updated live from our calendar.
                 </p>
               </div>
@@ -270,32 +270,32 @@ export default async function Home() {
         </section>
 
         {/* Fundraising */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-verde-50 to-salsa-50 py-20 dark:from-verde-950/20 dark:to-salsa-950/20">
+        <section className="relative overflow-hidden bg-gradient-to-br from-verde-50 to-salsa-50 py-12 sm:py-16 md:py-20 dark:from-verde-950/20 dark:to-salsa-950/20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <ScrollReveal>
-              <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
+              <div className="grid grid-cols-1 items-center gap-8 sm:gap-12 lg:grid-cols-2">
                 <div>
                   <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-salsa-600">
                     Earn 50% Profit
                   </span>
-                  <h2 className="mb-4 font-serif text-4xl font-bold leading-tight tracking-[-0.02em] text-foreground md:text-5xl">
+                  <h2 className="mb-4 font-serif text-3xl sm:text-4xl font-bold leading-tight tracking-[-0.02em] text-foreground md:text-5xl">
                     Fundraise With <span className="text-gradient">Jose!</span>
                   </h2>
-                  <p className="mb-6 max-w-md text-lg leading-relaxed text-muted-foreground">
+                  <p className="mb-6 max-w-md text-base sm:text-lg leading-relaxed text-muted-foreground">
                     Looking for a fundraiser people actually want to buy? Our premium handcrafted salsas
                     sell themselves — trusted by 500+ schools, teams, and nonprofits.
                   </p>
 
                   {/* Punchy 3-up stat blocks with Volkhov numerals */}
-                  <dl className="mb-7 grid grid-cols-3 gap-4">
+                  <dl className="mb-7 grid grid-cols-3 gap-2 sm:gap-4">
                     {FUNDRAISING_STATS.map((stat) => (
                       <div
                         key={stat.label}
-                        className="rounded-xl border border-border bg-card p-4 text-center surface-shadow"
+                        className="rounded-xl border border-border bg-card p-3 sm:p-4 text-center surface-shadow"
                       >
                         <dt className="sr-only">{stat.label}</dt>
-                        <dd className="font-serif text-2xl font-bold text-salsa-600">{stat.value}</dd>
-                        <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <dd className="font-serif text-xl sm:text-2xl font-bold text-salsa-600">{stat.value}</dd>
+                        <p className="mt-1 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                           {stat.label}
                         </p>
                       </div>
@@ -320,19 +320,19 @@ export default async function Home() {
                 </div>
 
                 <div className="relative flex justify-center lg:justify-start">
-                  <div className="relative w-72 lg:w-96" style={{ aspectRatio: '1000 / 733' }}>
+                  <div className="relative w-56 sm:w-72 lg:w-96" style={{ aspectRatio: '1000 / 733' }}>
                     <Image
                       src="/images/shared/fundraising-icon.png"
                       alt="Jose Madrid Salsa Fundraising"
                       fill
                       className="object-contain drop-shadow-xl"
-                      sizes="(max-width: 768px) 288px, 384px"
+                      sizes="(max-width: 640px) 224px, (max-width: 768px) 288px, 384px"
                     />
                   </div>
                   {/* Floating "average raised" badge — signature kit element */}
-                  <div className="absolute -right-2 -top-4 rotate-3 rounded-2xl bg-salsa-500 p-4 text-white shadow-xl lg:-right-4">
-                    <div className="font-serif text-2xl font-bold leading-tight">$3,500+</div>
-                    <div className="text-xs">average raised</div>
+                  <div className="absolute right-0 top-0 sm:-right-2 sm:-top-4 rotate-3 rounded-2xl bg-salsa-500 p-3 sm:p-4 text-white shadow-xl lg:-right-4">
+                    <div className="font-serif text-xl sm:text-2xl font-bold leading-tight">$3,500+</div>
+                    <div className="text-[10px] sm:text-xs">average raised</div>
                   </div>
                 </div>
               </div>
@@ -360,7 +360,7 @@ export default async function Home() {
         <AnimatedTestimonials reviewsData={reviewsData} />
 
         {/* CTA — hero gradient, eyebrow, serif + text-gradient accent */}
-        <section className="hero-gradient relative overflow-hidden py-20 text-white">
+        <section className="hero-gradient relative overflow-hidden py-12 sm:py-16 md:py-20 text-white">
           <div aria-hidden className="absolute inset-0 bg-black/15" />
           <div
             aria-hidden
@@ -374,11 +374,11 @@ export default async function Home() {
             <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-chile-200">
               Made With Love, Served With Pride
             </span>
-            <h2 className="mb-5 font-serif text-4xl font-bold leading-tight tracking-[-0.02em] md:text-5xl">
+            <h2 className="mb-5 font-serif text-3xl sm:text-4xl font-bold leading-tight tracking-[-0.02em] md:text-5xl">
               Ready to Taste the
               <span className="block italic text-chile-200">Difference?</span>
             </h2>
-            <p className="mx-auto mb-8 max-w-xl text-lg text-white/90 leading-relaxed">
+            <p className="mx-auto mb-8 max-w-xl text-base sm:text-lg text-white/90 leading-relaxed">
               Join thousands of families who made Jose Madrid Salsa their go-to jar.
               From Mike&apos;s kitchen in Zanesville, Ohio — straight to your table.
             </p>

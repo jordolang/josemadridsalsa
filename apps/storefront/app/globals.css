@@ -13,6 +13,7 @@
   body {
     font-feature-settings: 'rlig' 1, 'calt' 1;
     font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+    font-size: 16px; /* Minimum 16px to prevent iOS Safari auto-zoom on inputs */
   }
   :root {
     --background: 0 0% 100%;

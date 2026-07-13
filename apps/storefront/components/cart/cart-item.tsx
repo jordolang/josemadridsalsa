@@ -59,7 +59,7 @@ export function CartItem({ item, onUpdateQuantity, onRemove, onNavigate }: CartI
           <Button
             variant="outline"
             size="icon"
-            className="h-7 w-7"
+            className="h-11 w-11 min-h-[44px] min-w-[44px]"
             onClick={handleDecrease}
             disabled={item.quantity <= 1}
             aria-label="Decrease quantity"
@@ -72,7 +72,7 @@ export function CartItem({ item, onUpdateQuantity, onRemove, onNavigate }: CartI
           <Button
             variant="outline"
             size="icon"
-            className="h-7 w-7"
+            className="h-11 w-11 min-h-[44px] min-w-[44px]"
             onClick={handleIncrease}
             disabled={isAtMaxQuantity}
             aria-label="Increase quantity"
@@ -82,7 +82,7 @@ export function CartItem({ item, onUpdateQuantity, onRemove, onNavigate }: CartI
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 ml-auto"
+            className="h-11 w-11 min-h-[44px] min-w-[44px] ml-auto"
             onClick={handleRemove}
             aria-label="Remove item"
           >

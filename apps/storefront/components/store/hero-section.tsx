@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Star, Flame } from "lucide-react";
@@ -57,6 +58,8 @@ export function HeroSection({
   className,
   showStats = true,
 }: HeroSectionProps) {
+  const [imageError, setImageError] = useState(false);
+
   const sizeClasses = {
     compact: "py-12 lg:py-16",
     default: "py-16 lg:py-24",
@@ -79,7 +82,7 @@ export function HeroSection({
       )}
     >
       {/* Background Image */}
-      {backgroundImage && (
+      {backgroundImage && !imageError && (
         <div className="absolute inset-0 z-0">
           <Image
             src={backgroundImage}
@@ -88,6 +91,7 @@ export function HeroSection({
             className="object-cover"
             priority
             sizes="100vw"
+            onError={() => setImageError(true)}
           />
           <div className="absolute inset-0 bg-black/40" />
         </div>

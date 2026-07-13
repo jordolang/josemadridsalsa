@@ -108,6 +108,24 @@ const config: Config = {
   				'monospace'
   			]
   		},
+  		fontSize: {
+  			// Fluid typography using clamp() for responsive scaling
+  			// Format: [fontSize, { lineHeight, letterSpacing }]
+  			// Mobile-first: ensures min 16px for body text
+  			'xs': ['clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', { lineHeight: '1.5', letterSpacing: '0.01em' }],
+  			'sm': ['clamp(0.875rem, 0.825rem + 0.25vw, 1rem)', { lineHeight: '1.5', letterSpacing: '0.01em' }],
+  			'base': ['clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', { lineHeight: '1.6', letterSpacing: '0' }],
+  			'lg': ['clamp(1.125rem, 1.05rem + 0.375vw, 1.25rem)', { lineHeight: '1.6', letterSpacing: '0' }],
+  			'xl': ['clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem)', { lineHeight: '1.5', letterSpacing: '-0.01em' }],
+  			'2xl': ['clamp(1.5rem, 1.35rem + 0.75vw, 1.875rem)', { lineHeight: '1.4', letterSpacing: '-0.02em' }],
+  			'3xl': ['clamp(1.875rem, 1.65rem + 1.125vw, 2.25rem)', { lineHeight: '1.3', letterSpacing: '-0.02em' }],
+  			'4xl': ['clamp(2.25rem, 1.95rem + 1.5vw, 3rem)', { lineHeight: '1.2', letterSpacing: '-0.03em' }],
+  			'5xl': ['clamp(3rem, 2.55rem + 2.25vw, 3.75rem)', { lineHeight: '1.1', letterSpacing: '-0.03em' }],
+  			'6xl': ['clamp(3.75rem, 3.15rem + 3vw, 4.5rem)', { lineHeight: '1.1', letterSpacing: '-0.04em' }],
+  			'7xl': ['clamp(4.5rem, 3.75rem + 3.75vw, 6rem)', { lineHeight: '1', letterSpacing: '-0.04em' }],
+  			'8xl': ['clamp(6rem, 4.95rem + 5.25vw, 8rem)', { lineHeight: '1', letterSpacing: '-0.05em' }],
+  			'9xl': ['clamp(8rem, 6.6rem + 7vw, 10rem)', { lineHeight: '1', letterSpacing: '-0.05em' }],
+  		},
   		animation: {
   			'fade-in': 'fadeIn 0.5s ease-in-out',
   			'slide-up': 'slideUp 0.5s ease-out',
