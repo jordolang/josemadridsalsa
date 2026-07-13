@@ -59,11 +59,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description: metaDescription,
+    alternates: {
+      canonical: `/products/${slug}`,
+    },
     openGraph: {
       title: product.name,
       description: metaDescription,
       images: product.featuredImage ? [product.featuredImage] : undefined,
       type: 'website',
+      url: `/products/${slug}`,
     },
     twitter: {
       card: 'summary_large_image',

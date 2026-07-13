@@ -52,10 +52,12 @@ const ACTIVE_STATUSES = ['SCRAPING', 'PARSING_CONTACTS', 'SENDING_EMAILS']
 
 function getLeadTypeLabels(leadType: string) {
   const isBusiness = leadType === 'LOCAL_BUSINESS'
+  const isFundraiser = leadType === 'FUNDRAISER_ORG'
   const defaultTpl = isBusiness ? BUSINESS_OUTREACH_TEMPLATE : SCHOOL_FUNDRAISING_TEMPLATE
+  const entityLabel = isBusiness ? 'Businesses' : isFundraiser ? 'Organizations' : 'Schools'
   return {
-    entityLabel: isBusiness ? 'Businesses' : 'Schools',
-    searchStep: isBusiness ? '1. Search Businesses' : '1. Search Schools',
+    entityLabel,
+    searchStep: `1. Search ${entityLabel}`,
     defaultSubject: defaultTpl.subject,
     defaultBody: defaultTpl.htmlContent,
     templateVars: isBusiness

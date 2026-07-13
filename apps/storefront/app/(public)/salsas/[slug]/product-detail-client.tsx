@@ -155,7 +155,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
   const allImages = [product.featuredImage, ...product.images]
   const heatRating = getSalsaHeatRating(product.name, product.heatLevel)
-  const productUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://josemadridsalsa.com'}/salsas/${product.slug}`
+  const productUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.josemadrid.net'}/salsas/${product.slug}`
   const shareContent: ShareContent = {
     title: product.name,
     description: product.description,

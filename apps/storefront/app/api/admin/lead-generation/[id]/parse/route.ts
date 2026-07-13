@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
-import { connectBrowser } from '@/lib/scraper/browser'
+import { connectBrowser, browserProviderName } from '@/lib/scraper/browser'
 import { eventBus } from '@/lib/scraper/event-bus'
+import { isUnlockerConfigured, fetchViaUnlocker } from '@/lib/scraper/brightdata'
 import {
   STAFF_TITLE_PATTERNS,
 } from '@/lib/scraper/school-config'
+import { FUNDRAISER_TITLE_PATTERNS } from '@/lib/scraper/fundraiser-config'
 import type { Browser, Page } from 'playwright'
 
 export const dynamic = 'force-dynamic'
@@ -135,7 +137,7 @@ export async function POST(
         emit('info', 'system', 'Reconnecting to browser...')
         try {
           const b = await connectBrowser()
-          emit('success', 'system', `Browser reconnected (${process.env.BROWSERLESS_TOKEN ? 'Browserless.io' : 'local'})`)
+          emit('success', 'system', `Browser reconnected (${browserProviderName()})`)
           return b
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
@@ -196,15 +198,15 @@ export async function POST(
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
           emit('error', 'system', `Failed to connect to browser: ${msg}`)
-          emit('error', 'system', process.env.BROWSERLESS_TOKEN
-            ? 'Browserless.io connection failed.'
-            : 'No BROWSERLESS_TOKEN set. Add it to environment variables.')
+          emit('error', 'system', process.env.BROWSERLESS_TOKEN || process.env.BRIGHTDATA_BROWSER_URL
+            ? `${browserProviderName()} connection failed.`
+            : 'No BRIGHTDATA_BROWSER_URL or BROWSERLESS_TOKEN set. Add one to environment variables.')
           await prisma.leadCampaign.update({ where: { id: campaignId }, data: { status: 'FAILED' } })
           controller.close()
           return
         }
 
-        emit('success', 'system', `Browser connected (${process.env.BROWSERLESS_TOKEN ? 'Browserless.io' : 'local'})`)
+        emit('success', 'system', `Browser connected (${browserProviderName()})`)
 
         let totalEmailsFound = campaign.totalEmailsFound || 0
         const startTime = Date.now()
@@ -262,6 +264,27 @@ export async function POST(
               .catch((err: unknown) => err instanceof Error ? err.message : String(err))
             if (mainNavError) {
               emit('warn', 'parse', `Could not load ${domain}: ${mainNavError}`)
+
+              // Bright Data Web Unlocker rescue: the browser was blocked, but
+              // the Unlocker can often still fetch the page HTML behind the
+              // block. Try it before giving up on this domain.
+              if (isUnlockerConfigured()) {
+                emit('info', 'parse', `Retrying ${domain} via Bright Data Web Unlocker...`)
+                const rescued = await unlockerRescue(representativeUrl).catch(() => new Map<string, string>())
+                if (rescued.size > 0) {
+                  const rescuedContacts: ParsedContact[] = []
+                  for (const [email, surrounding] of rescued) {
+                    rescuedContacts.push(extractContactInfo(email, surrounding, campaign.leadType))
+                  }
+                  emit('success', 'parse', `Web Unlocker recovered ${rescuedContacts.length} emails from ${domain}`)
+                  totalEmailsFound += await persistDomainContacts(rescuedContacts, domainLeads, campaignId, emit)
+                  consecutiveFailures = 0
+                  await context.close().catch(() => {})
+                  continue
+                }
+                emit('warn', 'parse', `Web Unlocker found no emails on ${domain}`)
+              }
+
               emitErrorPause(representativeName, domain, mainNavError)
               consecutiveFailures++
               await context.close().catch(() => {})
@@ -428,52 +451,7 @@ export async function POST(
 
             // STEP 5: Assign contacts to leads from this domain
             if (contacts.length > 0) {
-              let contactIdx = 0
-              for (const lead of domainLeads) {
-                if (contactIdx >= contacts.length) break
-                const c = contacts[contactIdx]
-
-                await prisma.lead.update({
-                  where: { id: lead.id },
-                  data: {
-                    contactName: c.name || null,
-                    title: c.title || null,
-                    email: c.email,
-                    sport: c.sport || null,
-                    status: 'CONTACT_FOUND',
-                  },
-                })
-
-                const nameDisplay = c.name ? `${c.name} ` : ''
-                emit('success', 'parse', `Contact assigned: ${nameDisplay}(${c.email})${c.title ? ` — ${c.title}` : ''} → ${lead.schoolName}`)
-                totalEmailsFound++
-                contactIdx++
-              }
-
-              // Create new leads for remaining contacts
-              for (let j = contactIdx; j < contacts.length; j++) {
-                const c = contacts[j]
-                const refLead = domainLeads[0]
-                await prisma.lead.create({
-                  data: {
-                    campaignId,
-                    schoolName: refLead.schoolName,
-                    schoolUrl: refLead.schoolUrl,
-                    businessName: refLead.businessName,
-                    website: refLead.website,
-                    city: refLead.city,
-                    state: refLead.state,
-                    district: refLead.district,
-                    contactName: c.name || null,
-                    title: c.title || null,
-                    email: c.email,
-                    sport: c.sport || null,
-                    status: 'CONTACT_FOUND',
-                  },
-                })
-                emit('success', 'parse', `Extra contact: ${c.name || ''} (${c.email})`)
-                totalEmailsFound++
-              }
+              totalEmailsFound += await persistDomainContacts(contacts, domainLeads, campaignId, emit)
             } else {
               emit('info', 'parse', `No contacts found on ${domain}`)
             }
@@ -567,6 +545,10 @@ function extractContactInfo(email: string, surrounding: string, leadType: string
     for (const [t, p] of titlePatterns) {
       if (p.test(surrounding)) { title = t; break }
     }
+  } else if (leadType === 'FUNDRAISER_ORG') {
+    for (const [t, p] of FUNDRAISER_TITLE_PATTERNS) {
+      if (p.test(surrounding)) { title = t; break }
+    }
   } else {
     const titleMatch = surrounding.match(/(?:owner|manager|director|founder|ceo|president|partner|general\s+manager)/i)
     if (titleMatch) title = titleMatch[0]
@@ -585,4 +567,116 @@ function extractContactInfo(email: string, surrounding: string, leadType: string
   }
 
   return { name, title, email, sport: sport || undefined }
+}
+
+// Minimal shape of the leads we assign contacts to (subset of the Prisma Lead).
+interface DomainLead {
+  id: string
+  schoolName: string
+  schoolUrl: string | null
+  businessName: string | null
+  website: string | null
+  city: string | null
+  state: string | null
+  district: string | null
+}
+
+/**
+ * Assign parsed contacts to the leads sharing a domain: fill the existing leads
+ * first, then spin up new leads for any surplus contacts. Returns how many
+ * contacts were persisted so the caller can advance its running total.
+ */
+async function persistDomainContacts(
+  contacts: ParsedContact[],
+  domainLeads: DomainLead[],
+  campaignId: string,
+  emit: EmitFn,
+): Promise<number> {
+  let persisted = 0
+  let contactIdx = 0
+
+  for (const lead of domainLeads) {
+    if (contactIdx >= contacts.length) break
+    const c = contacts[contactIdx]
+
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: {
+        contactName: c.name || null,
+        title: c.title || null,
+        email: c.email,
+        sport: c.sport || null,
+        status: 'CONTACT_FOUND',
+      },
+    })
+
+    const nameDisplay = c.name ? `${c.name} ` : ''
+    emit('success', 'parse', `Contact assigned: ${nameDisplay}(${c.email})${c.title ? ` — ${c.title}` : ''} → ${lead.schoolName}`)
+    persisted++
+    contactIdx++
+  }
+
+  for (let j = contactIdx; j < contacts.length; j++) {
+    const c = contacts[j]
+    const refLead = domainLeads[0]
+    await prisma.lead.create({
+      data: {
+        campaignId,
+        schoolName: refLead.schoolName,
+        schoolUrl: refLead.schoolUrl,
+        businessName: refLead.businessName,
+        website: refLead.website,
+        city: refLead.city,
+        state: refLead.state,
+        district: refLead.district,
+        contactName: c.name || null,
+        title: c.title || null,
+        email: c.email,
+        sport: c.sport || null,
+        status: 'CONTACT_FOUND',
+      },
+    })
+    emit('success', 'parse', `Extra contact: ${c.name || ''} (${c.email})`)
+    persisted++
+  }
+
+  return persisted
+}
+
+/**
+ * Fetch a site's main page plus common contact paths through the Bright Data
+ * Web Unlocker and return a map of email → surrounding HTML (for title/name
+ * inference). Used to rescue domains the headless browser cannot reach.
+ */
+async function unlockerRescue(representativeUrl: string): Promise<Map<string, string>> {
+  const emailContexts = new Map<string, string>()
+
+  let origin = ''
+  try { origin = new URL(representativeUrl).origin } catch { /* keep only main url */ }
+
+  const urls = [representativeUrl]
+  if (origin) {
+    for (const path of ['/contact', '/contact-us', '/about', '/staff', '/team', '/our-team']) {
+      urls.push(`${origin}${path}`)
+    }
+  }
+
+  for (const url of urls) {
+    let html: string
+    try {
+      html = await fetchViaUnlocker(url)
+    } catch {
+      continue
+    }
+    for (const email of extractEmails(html)) {
+      if (emailContexts.has(email)) continue
+      const idx = html.indexOf(email)
+      const surrounding = idx >= 0
+        ? html.substring(Math.max(0, idx - 400), idx + email.length + 400)
+        : ''
+      emailContexts.set(email, surrounding)
+    }
+  }
+
+  return emailContexts
 }

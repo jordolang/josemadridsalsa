@@ -24,13 +24,28 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-type LeadType = 'SCHOOL_ATHLETICS' | 'LOCAL_BUSINESS' | 'LOCAL_SCHOOL'
+type LeadType = 'SCHOOL_ATHLETICS' | 'LOCAL_BUSINESS' | 'LOCAL_SCHOOL' | 'FUNDRAISER_ORG'
 
 const LEAD_TYPE_LABELS: Record<LeadType, string> = {
   SCHOOL_ATHLETICS: 'School Athletics',
   LOCAL_BUSINESS: 'Local Businesses',
   LOCAL_SCHOOL: 'Local Schools',
+  FUNDRAISER_ORG: 'Fundraiser Orgs',
 }
+
+// Organization types that commonly run fundraisers. Must match the labels in
+// lib/scraper/fundraiser-config.ts so the search stage can expand them.
+const FUNDRAISER_CATEGORIES = [
+  'Youth Sports Leagues',
+  'Booster Clubs & PTA/PTO',
+  'Bands & Performing Arts',
+  'Cheer, Dance & Gymnastics',
+  'Scouts & Youth Clubs',
+  'Churches & Faith Groups',
+  'Nonprofits & Charities',
+  'Schools & Preschools',
+  'Civic & Community',
+] as const
 
 const BUSINESS_CATEGORIES = [
   'Restaurants',
@@ -94,6 +109,7 @@ export function CreateCampaignDialog() {
 
   const isSchoolType = leadType === 'SCHOOL_ATHLETICS' || leadType === 'LOCAL_SCHOOL'
   const isBusinessType = leadType === 'LOCAL_BUSINESS'
+  const isFundraiserType = leadType === 'FUNDRAISER_ORG'
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -223,6 +239,29 @@ export function CreateCampaignDialog() {
                   </Select>
                 </div>
               </>
+            )}
+
+            {/* Fundraiser-org-specific fields */}
+            {isFundraiserType && (
+              <div className="grid gap-2">
+                <Label>Organization Type (Optional)</Label>
+                <Select value={businessCategory} onValueChange={setBusinessCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All fundraiser organizations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FUNDRAISER_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Leave unset to search every fundraiser-prone organization type
+                  (booster clubs, PTAs, youth sports, bands, scouts, churches, nonprofits, and more).
+                </p>
+              </div>
             )}
 
             {/* Custom Search Query (all types) */}
