@@ -1,0 +1,101 @@
+---
+title: GitHub
+description: GitHub OAuth integration for authentication and repository setup
+---
+
+
+# GitHub Integration
+
+<PageInlineTOC>On this page</PageInlineTOC>
+
+## Project Repository
+
+<GithubInfo owner="jordolang" repo="josemadridsalsa" />
+
+GitHub is integrated as an OAuth authentication provider via NextAuth.js. Users can sign in with their GitHub account, which creates or links a user record in the database.
+
+## Authentication Provider
+
+**File:** `lib/auth.ts`
+
+GitHub is configured as a NextAuth.js OAuth provider:
+
+```ts
+import GitHubProvider from 'next-auth/providers/github'
+
+GitHubProvider({
+  clientId: process.env.GITHUB_CLIENT_ID!,
+  clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+})
+```
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `GITHUB_CLIENT_ID` | GitHub OAuth App client ID | Yes |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth App client secret | Yes |
+
+## Setup
+
+### Create a GitHub OAuth App
+
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Click "New OAuth App"
+3. Set the Authorization callback URL to `https://your-domain.com/api/auth/callback/github`
+4. Copy the Client ID and generate a Client Secret
+
+### Configure environment variables
+
+```bash
+GITHUB_CLIENT_ID=Iv1.abc...
+GITHUB_CLIENT_SECRET=abc123...
+```
+
+## OAuth Flow
+
+When a user signs in with GitHub:
+
+1. NextAuth redirects to GitHub's OAuth authorization page
+2. GitHub returns an authorization code to the callback URL
+3. The JWT callback in `lib/auth.ts` handles the OAuth sign-in:
+   - Looks up the user by email in the database
+   - If no user exists, creates one with `role: 'CUSTOMER'` and `isEmailVerified: true`
+   - Stores the user ID and role in the JWT token
+   - Stores the GitHub profile picture as `avatar` in the token
+
+```ts
+if (account?.provider === 'github' && token.email) {
+  let dbUser = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+  })
+  if (!dbUser) {
+    dbUser = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        name: token.name,
+        isEmailVerified: true,
+        role: 'CUSTOMER',
+      },
+    })
+  }
+}
+```
+
+<Callout type="info">
+GitHub OAuth users do not have a password set. They can only sign in via the GitHub OAuth flow unless they also set up a password through the account settings.
+</Callout>
+
+## Repository Setup
+
+The project repository is hosted on GitHub. The codebase uses:
+- GitHub Actions for CI/CD (via Vercel integration)
+- GitHub as the source of truth for version control
+- Branch protection rules on `main`
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/auth.ts` | NextAuth configuration with GitHub provider |
+| `app/api/auth/[...nextauth]/route.ts` | NextAuth API route |

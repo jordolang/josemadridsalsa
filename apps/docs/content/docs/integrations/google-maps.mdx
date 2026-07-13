@@ -1,0 +1,119 @@
+---
+title: Google Maps
+description: Google Maps Platform integration for interactive store location maps
+---
+
+
+# Google Maps Integration
+
+Google Maps provides the interactive map on the Find Us page, displaying all retail locations where Jose Madrid Salsa products are available. The integration uses the Google Maps JavaScript API with both the new Advanced Markers API and classic Markers API as a fallback.
+
+## Architecture
+
+The map component lives at `app/(public)/find-us/_components/LocationsMap.tsx`. It is a client component (`'use client'`) that:
+
+1. Receives location data from a server component
+2. Geocodes addresses without coordinates using the Geocoding API
+3. Renders an interactive Google Map with custom markers
+4. Displays info windows with business details on marker click
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Google Maps JavaScript API key (client-side) | Yes |
+
+<Callout type="warn">
+This key is exposed to the browser. Restrict it in Google Cloud Console to your domain and the Maps JavaScript API, Geocoding API, and Places API.
+</Callout>
+
+## Setup
+
+<Steps>
+
+### Enable required APIs
+
+In Google Cloud Console, enable:
+- Maps JavaScript API
+- Geocoding API
+- Places API (for photo URLs and search)
+
+### Create an API key
+
+Create a key restricted to your production domain and the APIs above.
+
+### Add to environment
+
+```bash
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIza...
+```
+
+</Steps>
+
+## Map Component
+
+### Script Loading
+
+The component dynamically loads the Google Maps script if not already present:
+
+```ts
+script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker&loading=async`
+```
+
+It checks for existing scripts and waits for `window.google.maps` to be available before initializing.
+
+### Geocoding
+
+Locations with `latitude` and `longitude` in the database are used directly. Locations without coordinates are geocoded in batches of 10 with a 200ms delay between batches to respect rate limits:
+
+```ts
+const response = await fetch(
+  `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${apiKey}`
+)
+```
+
+### Markers
+
+The component attempts to use the new **Advanced Markers API** (`AdvancedMarkerElement`) first, falling back to the classic `Marker` API if unavailable.
+
+Custom markers display a 2-letter city abbreviation (e.g., "CO" for Columbus). When multiple locations share a city, the marker shows the city abbreviation plus the first word of the business name (e.g., "CO - Kroger").
+
+Marker styling:
+- Red circular badges (`#dc2626`) with white text
+- 40px diameter with white border and drop shadow
+- Hover effect scales to 115%
+
+### Info Windows
+
+Clicking a marker opens an info window showing:
+- Business name
+- Full address
+- Distance in miles (when proximity search is active)
+- Phone number (clickable tel: link)
+- Website link
+
+### Map Configuration
+
+```ts
+{
+  zoom: 6,
+  mapId: '9873b6859aa7ba6a2c1fdcdf',
+  disableDefaultUI: false,
+  zoomControl: true,
+  mapTypeControl: true,
+  scaleControl: true,
+  streetViewControl: true,
+  rotateControl: true,
+  fullscreenControl: true,
+}
+```
+
+The map uses `fitBounds()` with 50px padding to automatically frame all location markers.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `app/(public)/find-us/_components/LocationsMap.tsx` | Interactive map component |
+| `components/store/google-schedule-map.tsx` | Schedule + map for store pages |
+| `lib/locations/query.ts` | Location data queries |

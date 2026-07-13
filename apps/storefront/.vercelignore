@@ -1,0 +1,106 @@
+# Test files
+*.test.ts
+*.test.tsx
+*.test.js
+*.test.jsx
+*.spec.ts
+*.spec.tsx
+tests/
+__tests__/
+coverage/
+
+# Documentation (keep minimal)
+docs/
+!README.md
+!docs/AI_CHATBOT_QUICK_START.md
+!docs/PRODUCTION_DATABASE.md
+!DEPLOYMENT_COMPLETE.md
+*.md
+!CHANGELOG.md
+!public/find-us-locally/find-us-locally.md
+
+# Backstage
+backstage/
+josemadridsalsa/
+catalog-info.yaml
+mkdocs.yml
+
+# Development files
+.vscode/
+.idea/
+.DS_Store
+*.log
+
+# Git
+.git/
+.github/
+
+# Local env
+.env.local
+.env*.local
+
+# Scripts (keep only essential ones)
+scripts/seed-*.ts
+!scripts/seed-nutrition-ingredients.ts
+scripts/import-*.ts
+
+# Examples
+examples/
+
+# Yarn
+.yarn/
+.pnp.*
+yarn.lock
+
+# Database backup
+*.bak
+db_dump.bak
+data/backups/
+
+# Large/unused assets
+public/Fundraiser Forms/
+public/images/Hero-Image-5.png
+public/images/Hero-Image-Burnt.png
+public/images/Hero-Image-Mike-Standout-Transparent.png
+public/images/Hero-Image-Mike-Transparent.png
+public/images/Hero-Image-Mike-Watermark-Dark.png
+public/images/Hero-Image-Mike-Watermark.png
+public/images/Jose-*.png
+# Note: Hero-Image-Mike.png is used and should be deployed
+
+# Heavy development/AI directories
+.claude
+.auto-claude/
+.project-analysis/
+.smart-env/
+.smtcmp_json_db/
+.smtcmp_vector_db.tar.gz
+.claude/
+.obsidian/
+Chats/
+/logs/
+mnt/
+/Users/
+piecesdb.json
+.claude-worktrees/
+.omc/
+.remember/
+.zenflow/
+.integration/
+.pi/
+.qwen/
+.playwright-mcp/
+.agents/
+skills/
+
+# Node / Next.js build artifacts (Vercel rebuilds these)
+node_modules/
+.next/
+.vercel/
+.ruff_cache/
+
+# iOS build artifacts
+mobile/**/.build/
+
+# Mobile project (not part of web deploy)
+/mobile/

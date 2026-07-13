@@ -1,0 +1,144 @@
+---
+title: SMTP Configuration
+description: Configure SMTP email sending with database-stored credentials
+---
+
+
+# SMTP Configuration
+
+Jose Madrid Salsa supports SMTP email sending alongside Resend. SMTP configurations are stored in the database and managed through the admin panel. Passwords are encrypted at rest.
+
+## Database Model
+
+SMTP settings are stored in the `EmailConfiguration` table:
+
+```graphql title="prisma/schema.prisma"
+model EmailConfiguration {
+  id           String  @id @default(cuid())
+  name         String  // e.g., "Primary SMTP", "Backup Server"
+
+  smtpHost     String?
+  smtpPort     Int?    @default(587)
+  smtpUsername String?
+  smtpPassword String? @db.Text  // Encrypted with ENCRYPTION_KEY
+
+  fromEmail    String
+  fromName     String?
+  replyToEmail String?
+
+  isDefault    Boolean @default(false)
+  isActive     Boolean @default(true)
+  useResend    Boolean @default(true)  // Fallback to Resend on failure
+
+  maxPerHour   Int     @default(1000)
+  maxPerDay    Int     @default(10000)
+
+  pluginConfig Json?
+}
+```
+
+## Connection Setup
+
+The SMTP transporter is created using Nodemailer:
+
+```ts title="lib/email/sender.ts"
+const transporter = nodemailer.createTransport({
+  host: config.smtpHost,
+  port: config.smtpPort || 587,
+  secure: port === 465,  // Port 465 = implicit TLS, 587 = STARTTLS
+  auth: {
+    user: config.smtpUsername,
+    pass: decryptedPassword,
+  },
+})
+```
+
+### Port Behavior
+
+| Port | Protocol | `secure` Value |
+|---|---|---|
+| 465 | Implicit TLS (SMTPS) | `true` |
+| 587 | STARTTLS | `false` |
+| 25 | Plain (not recommended) | `false` |
+
+## Password Encryption
+
+SMTP passwords are encrypted before storage and decrypted at send time:
+
+```ts title="lib/email/sender.ts"
+const decryptedPassword = config.smtpPassword
+  ? isEncrypted(config.smtpPassword)
+    ? decrypt(config.smtpPassword)
+    : config.smtpPassword  // Legacy plaintext fallback
+  : null
+```
+
+The `isEncrypted()` function checks if the value matches the `base64:base64:base64` format used by the encryption module. Legacy plaintext passwords (from seed data or early configurations) are handled gracefully.
+
+<Callout type="warn">
+Always encrypt SMTP passwords before storing them in production. Use the admin panel or the `encrypt()` function from `lib/encryption.ts`.
+</Callout>
+
+## Fallback to Resend
+
+When `useResend` is enabled on the configuration (default: `true`), failed SMTP sends automatically fall back to Resend:
+
+```ts title="lib/email/sender.ts"
+try {
+  await transporter.sendMail({ ... })
+} catch (smtpError) {
+  if (config.useResend && resendApiKey) {
+    // Fall back to Resend
+    const resend = new Resend(resendApiKey)
+    await resend.emails.send({ ... })
+  } else {
+    throw smtpError
+  }
+}
+```
+
+## Rate Limiting
+
+Each SMTP configuration defines its own rate limits:
+
+| Setting | Default | Description |
+|---|---|---|
+| `maxPerHour` | 1000 | Maximum emails per hour |
+| `maxPerDay` | 10000 | Maximum emails per day |
+
+## Setting Up SMTP
+
+<Steps>
+### Navigate to Admin Panel
+
+Go to the Email section of the admin dashboard.
+
+### Create Configuration
+
+Add a new email configuration with your SMTP server details:
+
+- **Name**: A descriptive name (e.g., "Gmail SMTP", "SendGrid")
+- **Host**: Your SMTP server hostname
+- **Port**: Usually 587 (STARTTLS) or 465 (SSL)
+- **Username**: SMTP authentication username
+- **Password**: Will be encrypted before storage
+- **From Email**: Sender email address
+- **From Name**: Display name for the sender
+
+### Set as Default
+
+Toggle "Default" to make this the primary SMTP configuration for campaign emails.
+
+### Test the Connection
+
+Send a test email to verify the configuration works before using it for campaigns.
+</Steps>
+
+## Common SMTP Providers
+
+| Provider | Host | Port | Notes |
+|---|---|---|---|
+| Gmail | `smtp.gmail.com` | 587 | Requires App Password |
+| SendGrid | `smtp.sendgrid.net` | 587 | Use API key as password |
+| Mailgun | `smtp.mailgun.org` | 587 | Domain-specific credentials |
+| Amazon SES | `email-smtp.us-east-1.amazonaws.com` | 587 | IAM SMTP credentials |

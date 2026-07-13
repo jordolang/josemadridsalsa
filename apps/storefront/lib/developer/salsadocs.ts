@@ -1,0 +1,437 @@
+/**
+ * Salsadocs integration — manages documentation in the salsadocs repository
+ * (Fumadocs site at salsadocs.vercel.app) through the GitHub contents API, so
+ * the Developer can publish docs from the admin panel without touching GitHub
+ * or Vercel directly.
+ */
+
+export interface SalsadocsConfig {
+  token: string
+  repo: string
+  branch: string
+  contentDir: string
+}
+
+export class SalsadocsError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'SalsadocsError'
+    this.status = status
+  }
+}
+
+export function salsadocsConfigured(): boolean {
+  return Boolean(process.env.SALSADOCS_GITHUB_TOKEN)
+}
+
+export function getSalsadocsConfig(): SalsadocsConfig {
+  const token = process.env.SALSADOCS_GITHUB_TOKEN
+  if (!token) {
+    throw new SalsadocsError(
+      'Salsadocs publishing disabled: SALSADOCS_GITHUB_TOKEN is not configured. ' +
+        'Create a GitHub token with write access to the salsadocs repository.',
+      503,
+    )
+  }
+
+  return {
+    token,
+    repo: process.env.SALSADOCS_GITHUB_REPO || 'jordolang/salsadocs',
+    branch: process.env.SALSADOCS_GITHUB_BRANCH || 'main',
+    contentDir: (process.env.SALSADOCS_CONTENT_DIR || 'content/docs').replace(/^\/+|\/+$/g, ''),
+  }
+}
+
+async function githubRequest<T>(
+  config: SalsadocsConfig,
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  const res = await fetch(`https://api.github.com${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${config.token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...init?.headers,
+    },
+    cache: 'no-store',
+  })
+
+  if (!res.ok) {
+    let detail = ''
+    try {
+      const body = (await res.json()) as { message?: string }
+      detail = body.message ? `: ${body.message}` : ''
+    } catch {
+      // ignore unparseable error bodies
+    }
+    throw new SalsadocsError(`GitHub API error (${res.status})${detail}`, res.status)
+  }
+
+  return (await res.json()) as T
+}
+
+export interface SalsadocsDoc {
+  name: string
+  path: string
+}
+
+export interface SalsadocsSection {
+  slug: string
+  docs: SalsadocsDoc[]
+  hasMeta: boolean
+}
+
+export interface SalsadocsTree {
+  repo: string
+  branch: string
+  contentDir: string
+  rootDocs: SalsadocsDoc[]
+  sections: SalsadocsSection[]
+}
+
+interface GitTreeEntry {
+  path: string
+  type: 'blob' | 'tree' | 'commit'
+}
+
+/**
+ * List the documentation tree of the salsadocs repository (sections are the
+ * first-level directories under the Fumadocs content dir).
+ */
+export async function listSalsadocsTree(): Promise<SalsadocsTree> {
+  const config = getSalsadocsConfig()
+  const data = await githubRequest<{ tree: GitTreeEntry[] }>(
+    config,
+    `/repos/${config.repo}/git/trees/${encodeURIComponent(config.branch)}?recursive=1`,
+  )
+
+  const prefix = `${config.contentDir}/`
+  const rootDocs: SalsadocsDoc[] = []
+  const sections = new Map<string, SalsadocsSection>()
+
+  for (const entry of data.tree) {
+    if (!entry.path.startsWith(prefix)) continue
+    const relative = entry.path.slice(prefix.length)
+    const segments = relative.split('/')
+
+    if (entry.type === 'tree' && segments.length === 1) {
+      if (!sections.has(segments[0])) {
+        sections.set(segments[0], { slug: segments[0], docs: [], hasMeta: false })
+      }
+      continue
+    }
+
+    if (entry.type !== 'blob') continue
+
+    if (segments.length === 1) {
+      if (/\.mdx?$/.test(segments[0])) {
+        rootDocs.push({ name: segments[0], path: entry.path })
+      }
+      continue
+    }
+
+    const sectionSlug = segments[0]
+    if (!sections.has(sectionSlug)) {
+      sections.set(sectionSlug, { slug: sectionSlug, docs: [], hasMeta: false })
+    }
+    const section = sections.get(sectionSlug)!
+    const fileName = segments.slice(1).join('/')
+    if (fileName === 'meta.json') {
+      section.hasMeta = true
+    } else if (/\.mdx?$/.test(fileName)) {
+      section.docs.push({ name: fileName, path: entry.path })
+    }
+  }
+
+  const sortDocs = (docs: SalsadocsDoc[]) => docs.sort((a, b) => a.name.localeCompare(b.name))
+  sortDocs(rootDocs)
+  const sortedSections = Array.from(sections.values()).sort((a, b) =>
+    a.slug.localeCompare(b.slug),
+  )
+  sortedSections.forEach((section) => sortDocs(section.docs))
+
+  return {
+    repo: config.repo,
+    branch: config.branch,
+    contentDir: config.contentDir,
+    rootDocs,
+    sections: sortedSections,
+  }
+}
+
+/**
+ * Validate that a path stays inside the configured Fumadocs content dir.
+ */
+function assertContentPath(config: SalsadocsConfig, path: string): void {
+  const valid =
+    path.startsWith(`${config.contentDir}/`) &&
+    !path.split('/').some((segment) => segment === '..' || segment === '')
+  if (!valid) {
+    throw new SalsadocsError('Invalid documentation path', 400)
+  }
+}
+
+export interface SalsadocsFile {
+  path: string
+  content: string
+  sha: string
+}
+
+/**
+ * Fetch a file from the salsadocs repository.
+ */
+export async function getSalsadocsFile(path: string): Promise<SalsadocsFile> {
+  const config = getSalsadocsConfig()
+  assertContentPath(config, path)
+
+  const data = await githubRequest<{ content: string; sha: string; encoding: string }>(
+    config,
+    `/repos/${config.repo}/contents/${encodeURIComponent(path).replace(/%2F/g, '/')}?ref=${encodeURIComponent(config.branch)}`,
+  )
+
+  return {
+    path,
+    content: Buffer.from(data.content, 'base64').toString('utf-8'),
+    sha: data.sha,
+  }
+}
+
+async function getExistingSha(config: SalsadocsConfig, path: string): Promise<string | null> {
+  try {
+    const data = await githubRequest<{ sha: string }>(
+      config,
+      `/repos/${config.repo}/contents/${encodeURIComponent(path).replace(/%2F/g, '/')}?ref=${encodeURIComponent(config.branch)}`,
+    )
+    return data.sha
+  } catch (error) {
+    if (error instanceof SalsadocsError && error.status === 404) {
+      return null
+    }
+    throw error
+  }
+}
+
+export interface SalsadocsPublishResult {
+  path: string
+  htmlUrl: string | null
+  created: boolean
+}
+
+/**
+ * Create or update a file in the salsadocs repository.
+ */
+export async function putSalsadocsFile(
+  path: string,
+  content: string,
+  message: string,
+): Promise<SalsadocsPublishResult> {
+  const config = getSalsadocsConfig()
+  assertContentPath(config, path)
+
+  const sha = await getExistingSha(config, path)
+  const data = await githubRequest<{ content: { html_url: string | null } | null }>(
+    config,
+    `/repos/${config.repo}/contents/${encodeURIComponent(path).replace(/%2F/g, '/')}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({
+        message,
+        branch: config.branch,
+        content: Buffer.from(content, 'utf-8').toString('base64'),
+        ...(sha ? { sha } : {}),
+      }),
+    },
+  )
+
+  return {
+    path,
+    htmlUrl: data.content?.html_url ?? null,
+    created: sha === null,
+  }
+}
+
+/**
+ * Create a new documentation section (a folder with a Fumadocs meta.json).
+ */
+export async function createSalsadocsSection(
+  slug: string,
+  title: string,
+): Promise<SalsadocsPublishResult> {
+  const config = getSalsadocsConfig()
+  const metaPath = `${config.contentDir}/${slug}/meta.json`
+  assertContentPath(config, metaPath)
+
+  const existing = await getExistingSha(config, metaPath)
+  if (existing) {
+    throw new SalsadocsError(`Section "${slug}" already exists`, 409)
+  }
+
+  return putSalsadocsFile(
+    metaPath,
+    `${JSON.stringify({ title }, null, 2)}\n`,
+    `Docs: add ${slug} section`,
+  )
+}
+
+/**
+ * Slugify a document or section name for use in salsadocs paths.
+ */
+export function slugifyDocName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\.mdx?$/, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 100)
+}
+
+export interface FumadocsConversion {
+  title: string
+  description: string
+  mdx: string
+}
+
+interface ProtectedContent {
+  text: string
+  segments: string[]
+}
+
+const CODE_PLACEHOLDER = (index: number) => `@@SALSADOCS_CODE_${index}@@`
+
+function protectCodeSegments(markdown: string): ProtectedContent {
+  const segments: string[] = []
+  // Fenced code blocks first, then inline code spans.
+  let text = markdown.replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, (match) => {
+    segments.push(match)
+    return CODE_PLACEHOLDER(segments.length - 1)
+  })
+  text = text.replace(/`[^`\n]+`/g, (match) => {
+    segments.push(match)
+    return CODE_PLACEHOLDER(segments.length - 1)
+  })
+  return { text, segments }
+}
+
+function restoreCodeSegments(text: string, segments: string[]): string {
+  return text.replace(/@@SALSADOCS_CODE_(\d+)@@/g, (_, index: string) => {
+    return segments[Number(index)] ?? ''
+  })
+}
+
+function stripInlineMarkdown(text: string): string {
+  return text
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1') // images -> alt text
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1') // links -> label
+    .replace(/[*_~]+/g, '')
+    .replace(/`+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function readYamlScalar(frontmatter: string, key: string): string | null {
+  const match = frontmatter.match(new RegExp(`^${key}:[ \\t]*(.+)$`, 'm'))
+  if (!match) return null
+  const raw = match[1].trim()
+  if (raw.startsWith('"') && raw.endsWith('"')) {
+    try {
+      return JSON.parse(raw) as string
+    } catch {
+      return raw.slice(1, -1)
+    }
+  }
+  if (raw.startsWith("'") && raw.endsWith("'")) {
+    return raw.slice(1, -1).replace(/''/g, "'")
+  }
+  return raw || null
+}
+
+/**
+ * Convert a repository Markdown document into a Fumadocs-compatible MDX page:
+ * reuses (and replaces) existing YAML frontmatter, extracts the first H1 as
+ * the title, and derives a description from the first paragraph. Plain
+ * Markdown additionally gets HTML comments stripped and MDX-hostile syntax
+ * escaped outside of code blocks; MDX input is passed through untouched so
+ * JSX tags and expressions keep working.
+ */
+export function convertMarkdownToFumadocs(
+  markdown: string,
+  options: { fallbackTitle: string; mdxInput?: boolean },
+): FumadocsConversion {
+  let source = markdown.replace(/\r\n/g, '\n')
+
+  // Strip existing frontmatter and reuse its title/description, so the
+  // generated block replaces it instead of stacking a second one.
+  let existingTitle: string | null = null
+  let existingDescription: string | null = null
+  const frontmatterMatch = source.match(/^---\n([\s\S]*?)\n---\n?/)
+  if (frontmatterMatch) {
+    existingTitle = readYamlScalar(frontmatterMatch[1], 'title')
+    existingDescription = readYamlScalar(frontmatterMatch[1], 'description')
+    source = source.slice(frontmatterMatch[0].length)
+  }
+
+  const { text: protectedText, segments } = protectCodeSegments(source)
+
+  // Strip HTML comments from plain Markdown — MDX does not support them.
+  let body = options.mdxInput ? protectedText : protectedText.replace(/<!--[\s\S]*?-->/g, '')
+
+  // Extract the first H1 as the page title (Fumadocs renders the frontmatter
+  // title, so leaving the heading in place would duplicate it).
+  let extractedTitle: string | null = null
+  const titleMatch = body.match(/^#[ \t]+(.+)$/m)
+  if (titleMatch) {
+    extractedTitle = stripInlineMarkdown(
+      restoreCodeSegments(titleMatch[1], segments).replace(/`/g, ''),
+    )
+    body = body.replace(titleMatch[0], '')
+  }
+  const title = existingTitle ?? extractedTitle ?? options.fallbackTitle
+
+  // Derive a description from the first plain paragraph.
+  let description = ''
+  for (const block of body.split(/\n{2,}/)) {
+    const line = block.trim()
+    if (
+      !line ||
+      /^[#>\-*|]|^\d+\./.test(line) ||
+      line.includes('@@SALSADOCS_CODE_') ||
+      line.startsWith('<') ||
+      line.startsWith('{')
+    ) {
+      continue
+    }
+    description = stripInlineMarkdown(line)
+    break
+  }
+  description = existingDescription ?? description
+  if (description.length > 160) {
+    const cut = description.slice(0, 157)
+    description = `${cut.slice(0, Math.max(cut.lastIndexOf(' '), 100))}…`
+  }
+
+  if (!options.mdxInput) {
+    // Convert Markdown autolinks (<https://…>) to standard links before escaping.
+    body = body.replace(/<(https?:\/\/[^>\s]+)>/g, '[$1]($1)')
+
+    // Escape MDX expression and JSX-hostile characters outside code.
+    body = body
+      .replace(/\{/g, '\\{')
+      .replace(/\}/g, '\\}')
+      .replace(/<(?![a-zA-Z/])/g, '\\<')
+  }
+
+  body = restoreCodeSegments(body, segments).replace(/^\n+/, '').replace(/\n{3,}/g, '\n\n')
+
+  const frontmatter = [
+    '---',
+    `title: ${JSON.stringify(title)}`,
+    `description: ${JSON.stringify(description)}`,
+    '---',
+  ].join('\n')
+
+  return { title, description, mdx: `${frontmatter}\n\n${body.trimEnd()}\n` }
+}

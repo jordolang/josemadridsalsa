@@ -1,0 +1,121 @@
+---
+title: Shopify Webhooks
+description: Shopify webhook handling for order updates, fulfillment tracking, and status sync
+---
+
+
+# Shopify Webhooks
+
+Shopify sends webhooks to notify the platform of order updates, fulfillment changes, and cancellations. The webhook handler at `app/api/webhooks/shopify/route.ts` verifies signatures and syncs Shopify state back to the Prisma database.
+
+## Endpoint
+
+```
+POST /api/webhooks/shopify
+```
+
+## Signature Verification
+
+**File:** `lib/shopify/webhook.ts`
+
+Shopify signs webhook payloads with HMAC-SHA256. The handler verifies the `x-shopify-hmac-sha256` header using `crypto.timingSafeEqual()` to prevent timing attacks:
+
+```ts
+const expected = crypto
+  .createHmac('sha256', secret)
+  .update(payload)
+  .digest('base64')
+
+// Constant-time comparison
+crypto.timingSafeEqual(
+  Buffer.from(expected, 'utf8'),
+  Buffer.from(signature, 'utf8')
+)
+```
+
+The webhook secret is read from `SHOPIFY_WEBHOOK_SECRET`.
+
+<Callout type="warn">
+Invalid signatures return HTTP 401. Missing topic headers return HTTP 400.
+</Callout>
+
+## Handled Topics
+
+| Topic | Handler |
+|-------|---------|
+| `orders/create` | `handleOrderPayload()` |
+| `orders/updated` | `handleOrderPayload()` |
+| `orders/paid` | `handleOrderPayload()` |
+| `orders/cancelled` | `handleOrderPayload()` |
+| `fulfillments/create` | `handleFulfillmentPayload()` |
+| `fulfillments/update` | `handleFulfillmentPayload()` |
+
+Unhandled topics are logged and ignored with a `200` response.
+
+## Order Matching
+
+Orders are matched by two identifiers:
+
+1. **`shopifyOrderId`** -- Searched first via `prisma.order.findFirst()`
+2. **`orderNumber`** -- Extracted from `note_attributes` and searched via `prisma.order.findUnique()`
+
+The `orderNumber` is embedded during order sync (see [Shopify Integration](/docs/integrations/shopify)).
+
+## Order Updates (`handleOrderPayload`)
+
+When an order webhook arrives, the handler updates:
+
+| Shopify Field | Prisma Field | Notes |
+|---------------|--------------|-------|
+| `id` | `shopifyOrderId` | Stored as string |
+| `name` | `shopifyOrderName` | e.g., "#1234" |
+| `financial_status` | `paymentStatus` | Mapped via `mapShopifyFinancialStatusToPrisma()` |
+| `fulfillment_status` | `status` | Mapped via `mapShopifyFulfillmentStatusToPrisma()` |
+| `cancelled_at` | `status: CANCELLED` | Also updates payment status |
+| `fulfillments[].tracking_number` | `trackingNumber` | From latest fulfillment |
+
+### Financial Status Mapping
+
+| Shopify Status | Prisma PaymentStatus |
+|---------------|---------------------|
+| `pending` / `authorized` / `partially_paid` | `PENDING` |
+| `paid` | `PAID` |
+| `partially_refunded` | `PARTIALLY_REFUNDED` |
+| `refunded` | `REFUNDED` |
+| `voided` | `FAILED` |
+
+### Fulfillment Status Mapping
+
+| Shopify Status | Prisma OrderStatus |
+|---------------|-------------------|
+| `fulfilled` | `SHIPPED` |
+| `partial` / `restocked` | `PROCESSING` |
+| `cancelled` | `CANCELLED` |
+| (null/undefined) | `PENDING` |
+
+### Timestamp Updates
+
+- **`shippedAt`**: Set when fulfillment_status becomes `fulfilled` and `shippedAt` was previously null
+- **`deliveredAt`**: Set when `closed_at` is present and `deliveredAt` was previously null
+
+## Fulfillment Updates (`handleFulfillmentPayload`)
+
+Fulfillment-specific webhooks update:
+
+- `trackingNumber` from `tracking_number` or `tracking_numbers[0]`
+- `shopifyFulfillmentStatus`
+- Order status: `SHIPPED` for active fulfillments, `CANCELLED` for cancelled ones
+- `shippedAt` and `deliveredAt` timestamps
+
+## Error Handling
+
+- Unknown orders are logged as warnings but return `200` (acknowledged)
+- Processing errors return `500` with a generic error message
+- All database operations are individual updates (not transactions) for resilience
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `app/api/webhooks/shopify/route.ts` | Webhook HTTP endpoint and routing |
+| `lib/shopify/webhook.ts` | Signature verification and status mapping |

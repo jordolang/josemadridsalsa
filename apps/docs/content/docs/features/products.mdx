@@ -1,0 +1,116 @@
+---
+title: Product Catalog
+description: Product catalog with categories, heat levels, filtering, search, comparison, and quick view for the Jose Madrid Salsa storefront
+---
+
+# Product Catalog
+
+The product catalog powers the public storefront, admin product management, and the Shopify sync pipeline. Products support categories, heat levels, nutritional info, compare-at pricing, and tag-based organization.
+
+## Architecture
+
+<Files>
+  <Folder name="app/(public)/products" defaultOpen>
+    <File name="page.tsx" />
+    <File name="products-client.tsx" />
+    <Folder name="[slug]">
+      <File name="page.tsx" />
+    </Folder>
+    <Folder name="search">
+      <File name="page.tsx" />
+    </Folder>
+  </Folder>
+  <Folder name="components/store" defaultOpen>
+    <File name="product-card.tsx" />
+    <File name="product-grid.tsx" />
+    <File name="product-comparison.tsx" />
+    <File name="product-recommendations.tsx" />
+    <File name="quick-view-modal.tsx" />
+    <File name="heat-gauge.tsx" />
+  </Folder>
+  <Folder name="lib/db">
+    <File name="products.ts" />
+  </Folder>
+</Files>
+
+## Data Model
+
+Each product record includes:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `name` | `string` | Display name |
+| `slug` | `string` | URL-safe identifier |
+| `sku` | `string` | Stock keeping unit |
+| `price` | `Decimal` | Current price |
+| `compareAtPrice` | `Decimal?` | Original price for sale badges |
+| `heatLevel` | `enum` | MILD, MEDIUM, HOT, EXTRA_HOT |
+| `inventory` | `int` | Units in stock |
+| `featuredImage` | `string?` | Primary image URL |
+| `ingredients` | `string[]` | Ingredient list |
+| `nutritionalInfo` | `JSON?` | Calories, sodium, fat, carbs, etc. |
+| `isFeatured` | `boolean` | Show on homepage |
+| `isActive` | `boolean` | Visible in storefront |
+| `categoryId` | `string?` | FK to Category |
+
+## Product Card
+
+The `ProductCard` component (`components/store/product-card.tsx`) renders each product with:
+
+- **Featured** and **% OFF** badges computed from `compareAtPrice`
+- **Heat level badge** with color coding via `getHeatLevelColor()`
+- **Out of stock** indicator when `inventory <= 0`
+- **Low stock warning** when `inventory <= 5`
+- **Quick view** modal (eye icon on hover) with full details and add-to-cart
+- **Wishlist** toggle (heart icon, requires authentication)
+- **Comparison** toggle (scale icon, max 4 products)
+
+```tsx
+// Product interface used by ProductCard
+interface Product {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  price: number
+  compareAtPrice?: number | null
+  featuredImage: string | null
+  heatLevel: string
+  sku: string
+  inventory: number
+  isFeatured: boolean
+  ingredients: string[] | null
+  nutritionalInfo?: { calories: number; sodiumMg: number; ... } | null
+}
+```
+
+## Filtering and Search
+
+The products page (`app/(public)/products/page.tsx`) is a server component that accepts URL search params:
+
+| Param | Description |
+| --- | --- |
+| `category` | Filter by category slug |
+| `heatLevel` | Filter by heat level |
+| `search` | Full-text search |
+| `view` | `grid` or `list` layout |
+
+The server component calls `getProducts()` from `lib/db/products.ts` with these filters, then passes results to the `ProductsClient` component for interactive filtering and view toggling.
+
+<Callout type="info">
+Search params are async in Next.js 15+. The page awaits `searchParams` before passing them to the query layer.
+</Callout>
+
+## Product Comparison
+
+Users can compare up to 4 products side-by-side using the comparison store (`lib/store/comparison.ts`). The comparison panel shows:
+
+- Price differences
+- Heat level comparison
+- Ingredient lists
+- Nutritional info (when available)
+- Weight and dimensions
+
+## Admin Product Management
+
+Admin users manage products at `/admin/products` with CRUD operations, image upload via UploadThing, category assignment, and inventory adjustments. Product changes can optionally sync to Shopify via `lib/shopify/sync.ts`.

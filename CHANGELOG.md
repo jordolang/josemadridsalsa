@@ -8,15 +8,32 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
+
 ### Added
+- **Developer Console (super admin)** — The DEVELOPER role is now the platform super admin with exclusive `developer:*` permissions and a dedicated `/admin/developer` console: a blob file explorer for the `josemadridsalsa-blob` store (browse, upload, delete — Developer-only), developer blog post management, a public developer page content editor with section visibility controls, and a Salsadocs manager that imports repository Markdown, converts it to Fumadocs MDX, and publishes pages and sections to the salsadocs repository directly from the admin panel. The designated developer account is auto-promoted to DEVELOPER at sign-in, with an `npm run create-developer` script for manual promotion.
+- **Homepage Heat Index bento** — The storefront home page now features the three newest Heat Index posts in a responsive editorial bento section.
+- **Playable fundraiser battle arena** — The `/arena/[period]` view is now an interactive graphic arena with controllable player movement, team sprites in a shared level, local arena messages, sound toggles, support links, and purchase-triggered damage effects inferred from live HP and sales updates.
+- **Heat Index blog concept page** — Added a new public editorial landing page with acrylic bento story cards for salsa posts, fictional Jose Madrid lore, expo dispatches, recipes, and developer notes.
+- **Contact form message inbox** — Contact form submissions now create admin message conversations so staff can track, read, and reply from the renamed Contact Form Messages page.
 - **Facebook + TikTok social commerce hardening** — Admin social integrations now use a verified OAuth session flow, support choosing the exact connected destination account for each export, and can create Meta catalogs from the admin panel when Business Manager access is available.
 
 ### Changed
+- **Preview deployment policy** now disables Vercel Git deployments for non-`main` branches to stop recurring failed preview checks while keeping production deploys enabled.
+- **Claude Code Review workflow** is now manual-only until `CLAUDE_CODE_OAUTH_TOKEN` is rotated; the previous automatic PR run failed with `401 Invalid bearer token`.
 - **Shop listings** now target a selected connected Facebook Page or TikTok account instead of blindly exporting to the first active account.
 - **Social commerce setup UX** now makes the platform boundary explicit: Facebook catalog creation can be started from the admin panel, while TikTok Shop onboarding remains a Seller Center prerequisite before API-based product export.
 - **Front-page analytics loading** now stays quiet unless optional Amplitude and Vercel Analytics settings are configured.
 
+### Security
+- Patched dependency vulnerabilities by upgrading Next.js, Axios, next-intl, PostCSS, and Vercel; removed the unused `workflow` package; and pinned vulnerable transitive packages to fixed versions.
+- Removed hard-coded database and Google API fallback credentials from maintenance scripts.
+
 ### Fixed
+- **Storefront console noise** — Google Maps assets now have the required CSP sources, and desktop navigation moves focus before hiding an open menu to prevent Chromium accessibility warnings.
+- **Vercel Toolbar console errors** — The storefront CSP now permits the official Vercel Toolbar resources used for deployment feedback and inspection.
+- **Heat Index post pages on Vercel** — Heat Index routes now include Prisma client files in the serverless trace to prevent post detail pages from failing with a missing Prisma module at runtime.
+- **Vercel production deploys** — Scoped the mobile app ignore rule to `/mobile/` so `components/admin/mobile/*` is included in web builds.
 - **Front-page hydration stability** — Event ticker dates and review selection no longer render with client/server-only randomness that can trigger React hydration text mismatches.
 - **Header logo preload warning** — Removed the forced priority preload for the small navigation logo.
 

@@ -1,0 +1,145 @@
+---
+title: Google Analytics
+description: GA4 integration with consent-aware tracking, server-side reporting, and customizable admin dashboards
+---
+
+
+# Google Analytics Integration
+
+The platform integrates Google Analytics 4 (GA4) at two levels: client-side event tracking with cookie consent, and server-side reporting via the GA4 Data API for the admin dashboard.
+
+## Client-Side Tracking
+
+### Component
+
+**File:** `lib/analytics/google-analytics.tsx`
+
+The `<GoogleAnalytics />` component is placed in the root layout and loads the gtag.js script. It only initializes when:
+
+1. `NEXT_PUBLIC_GA4_MEASUREMENT_ID` is set
+2. The user has accepted cookies (`cookie-consent` in localStorage)
+
+```tsx
+import { GoogleAnalytics } from '@/lib/analytics/google-analytics'
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <GoogleAnalytics />
+        {children}
+      </body>
+    </html>
+  )
+}
+```
+
+The component listens for consent changes across tabs (via `StorageEvent`) and within the same tab (via a custom `cookie-consent-change` event).
+
+### Environment Variables (Client)
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXT_PUBLIC_GA4_MEASUREMENT_ID` | GA4 Measurement ID (G-XXXXXXXXXX) | Yes |
+
+### Tracking Functions
+
+**`trackEvent(eventName, eventParams)`** -- Sends a custom event to GA4. Checks consent before firing.
+
+```ts
+trackEvent('add_to_cart', {
+  item_id: 'SALSA-001',
+  item_name: 'Mild Salsa',
+  price: 8.99,
+})
+```
+
+**`trackPageView(url)`** -- Tracks a page view for SPA navigation. Uses the current pathname if no URL is provided.
+
+**`isGoogleAnalyticsEnabled()`** -- Returns whether GA4 is active (measurement ID configured and consent granted).
+
+## Server-Side Reporting
+
+### Architecture
+
+**File:** `lib/google-analytics-reports.ts`
+
+The admin dashboard fetches GA4 data server-side using the `@google-analytics/data` package (`BetaAnalyticsDataClient`). Authentication uses a Google Cloud service account stored as an encrypted secret in the database.
+
+```
+Admin Dashboard -> getGoogleAnalyticsDashboard(range)
+  -> fetchSummaryCards() -- aggregate metrics
+  -> fetchCustomCharts() -- chart data per definition
+```
+
+### Authentication
+
+The service account JSON is stored via the Service Keys system (`lib/service-keys.ts`). The key is decrypted at runtime:
+
+```ts
+const secret = await getDecryptedServiceKeyValue('google_analytics', 'service_account')
+```
+
+The JSON must contain `client_email` and `private_key` fields.
+
+### Environment Variables (Server)
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID` | Fallback measurement ID | No |
+
+<Callout type="info">
+The GA4 property ID and measurement ID are stored in the database via the `AnalyticsSetting` model, not in environment variables. They are configured through the admin UI.
+</Callout>
+
+### Summary Cards
+
+Six default metrics are fetched as summary cards:
+
+| Metric | Format | Description |
+|--------|--------|-------------|
+| `sessions` | Number | Total visits |
+| `totalUsers` | Number | Unique users |
+| `newUsers` | Number | First-time visitors |
+| `engagedSessions` | Number | Sessions > 10s or with conversions |
+| `bounceRate` | Percent | Sessions without interactions |
+| `averageSessionDuration` | Duration | Average session length |
+
+### Custom Charts
+
+Chart definitions are stored in the `AnalyticsSetting` model as JSON. Each definition specifies:
+
+- **Metric**: sessions, totalUsers, eventCount, purchaseRevenue, etc.
+- **Dimension**: date, sessionSourceMedium, deviceCategory, country, pageTitle, etc.
+- **Chart type**: bar, line, or pie
+- **Limit**: Maximum data points
+- **Color**: indigo, emerald, amber, or rose
+
+Default charts include:
+1. Sessions by Source/Medium (bar chart)
+2. Engaged Sessions Over Time (line chart)
+3. Users by Device Category (pie chart)
+
+Charts can be added and removed through the admin UI via `addGoogleAnalyticsChartDefinition()` and `deleteGoogleAnalyticsChartDefinition()`.
+
+## Configuration Management
+
+**File:** `lib/google-analytics-config.ts`
+
+Analytics settings are managed through these functions:
+
+| Function | Purpose |
+|----------|---------|
+| `getGoogleAnalyticsSettings()` | Load settings from DB (with fallback) |
+| `saveGoogleAnalyticsSettings()` | Update measurement ID, property ID, data stream ID |
+| `addGoogleAnalyticsChartDefinition()` | Add a custom chart |
+| `deleteGoogleAnalyticsChartDefinition()` | Remove a chart |
+| `getPublicGoogleAnalyticsMeasurementId()` | Get measurement ID for client-side |
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/analytics/google-analytics.tsx` | Client-side GA4 component and tracking |
+| `lib/google-analytics-config.ts` | Settings CRUD and chart definitions |
+| `lib/google-analytics-reports.ts` | Server-side GA4 Data API reporting |

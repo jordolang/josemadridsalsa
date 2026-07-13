@@ -1,0 +1,222 @@
+---
+title: Tax Configuration
+description: Configure tax calculation using Stripe Tax with automatic jurisdiction rates
+---
+
+# Tax Configuration
+
+Jose Madrid Salsa uses the Stripe Tax API for automatic, jurisdiction-aware tax calculation. Tax rates are determined by the customer's shipping address and product type, with built-in support for tax exemptions.
+
+## How Tax Calculation Works
+
+The tax system in `lib/tax-calculator.ts` follows this flow:
+
+<Steps>
+<Step>
+### Check Tax Exemption
+
+Before calculating tax, the system checks if the customer has a wholesale account with an approved resale number:
+
+```typescript
+async function checkTaxExemption(customerEmail?: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { email: customerEmail },
+    include: { wholesaleAccount: true },
+  })
+
+  return (
+    user?.wholesaleAccount?.status === 'APPROVED' &&
+    !!user.wholesaleAccount.resaleNumber
+  )
+}
+```
+
+Tax-exempt customers receive zero tax on all orders.
+</Step>
+
+<Step>
+### Call Stripe Tax API
+
+For non-exempt customers, the system creates a tax calculation via Stripe:
+
+```typescript
+const calculation = await stripe.tax.calculations.create({
+  currency: 'usd',
+  line_items: input.lineItems.map((item) => ({
+    amount: item.amount,       // in cents
+    reference: item.reference, // product ID
+    tax_code: item.taxCode || 'txcd_99999999', // general tangible goods
+  })),
+  customer_details: {
+    address: {
+      line1: input.shippingAddress.line1,
+      city: input.shippingAddress.city,
+      state: input.shippingAddress.state,
+      postal_code: input.shippingAddress.postalCode,
+      country: input.shippingAddress.country,
+    },
+    address_source: 'shipping',
+  },
+})
+```
+</Step>
+
+<Step>
+### Return Breakdown
+
+The result includes total tax, effective rate, and per-jurisdiction breakdown:
+
+```typescript
+interface TaxCalculationResult {
+  taxAmount: number          // Total tax in cents
+  taxAmountDecimal: number   // Total tax in dollars
+  taxRate: number            // Effective rate (e.g., 8.5)
+  taxBreakdown: Array<{
+    jurisdiction: string     // e.g., "California", "San Francisco County"
+    rate: number
+    amount: number
+  }>
+  taxExempt: boolean
+}
+```
+</Step>
+</Steps>
+
+## Tax Codes
+
+The platform uses Stripe Tax Codes to determine product taxability:
+
+| Tax Code | Description | Use For |
+|----------|-------------|---------|
+| `txcd_30011000` | Prepared food | Salsa products (used in order creation) |
+| `txcd_99999999` | General tangible goods | Default fallback |
+
+<Callout type="info" title="Food Tax Rules">
+Food products have varying tax rules across US states. Some states exempt grocery items while taxing prepared food. Stripe Tax handles these rules automatically based on the tax code you assign.
+</Callout>
+
+## Setting Up Stripe Tax
+
+<Steps>
+<Step>
+### Enable Stripe Tax
+
+Enable Stripe Tax in your [Stripe Dashboard](https://dashboard.stripe.com/tax) and configure your business address and tax registration.
+</Step>
+
+<Step>
+### Set Environment Variables
+
+```bash
+STRIPE_SECRET_KEY="sk_live_..."  # or sk_test_... for development
+```
+
+The tax calculator uses the same Stripe client as payments, configured in `lib/stripe.ts`.
+</Step>
+
+<Step>
+### Validate Configuration
+
+Run the built-in validation to confirm Stripe Tax is working:
+
+```typescript
+import { validateTaxConfiguration } from '@/lib/tax-calculator'
+
+const result = await validateTaxConfiguration()
+if (!result.configured) {
+  console.error('Tax config error:', result.error)
+}
+```
+
+This performs a test calculation against a known US address (San Francisco, CA) to verify the integration.
+</Step>
+</Steps>
+
+## Frontend Tax Estimates
+
+For real-time tax previews as the user types their address:
+
+```typescript
+import { getTaxEstimate } from '@/lib/tax-calculator'
+
+const taxEstimate = await getTaxEstimate({
+  subtotal: 25.99,  // dollars
+  city: 'San Francisco',
+  state: 'CA',
+  postalCode: '94111',
+})
+// Returns estimated tax in dollars
+```
+
+## Tax Exemptions
+
+Tax exemptions are managed through wholesale accounts:
+
+1. A customer applies for a wholesale account
+2. Admin reviews and approves the account
+3. Admin enters the resale number
+4. The tax calculator automatically exempts the customer
+
+```graphql
+model WholesaleAccount {
+  id           String @id @default(cuid())
+  userId       String @unique
+  companyName  String
+  resaleNumber String?
+  status       String // PENDING, APPROVED, REJECTED
+}
+```
+
+## Error Handling
+
+The tax calculator never blocks checkout. If Stripe Tax returns an error, the system returns zero tax and logs the error:
+
+```typescript
+catch (error) {
+  console.error('[Tax Calculator] Error:', error)
+  return {
+    taxAmount: 0,
+    taxAmountDecimal: 0,
+    taxRate: 0,
+    taxBreakdown: [],
+    taxExempt: false,
+  }
+}
+```
+
+<Callout type="warn" title="Monitor Tax Errors">
+While the fallback ensures checkout works, zero-tax orders may indicate a Stripe Tax configuration issue. Monitor your server logs for `[Tax Calculator]` errors and fix them promptly to avoid under-collecting tax.
+</Callout>
+
+## Integration with Orders
+
+Tax calculation is integrated into the order creation flow in `app/api/orders/route.ts`:
+
+```typescript
+const taxResult = await calculateTax({
+  lineItems: orderItems.map((item) => ({
+    amount: Math.round(Number(item.totalPrice) * 100),
+    reference: item.productId,
+    taxCode: 'txcd_30011000',
+  })),
+  shippingAddress: {
+    line1: shippingAddress.address1,
+    city: shippingAddress.city,
+    state: shippingAddress.state,
+    postalCode: shippingAddress.postalCode,
+    country: shippingAddress.country,
+  },
+  customerEmail: user.email,
+})
+
+const total = subtotal + taxResult.taxAmountDecimal + shippingCost
+```
+
+## Key Files
+
+<Files>
+  <Folder name="lib" defaultOpen>
+    <File name="tax-calculator.ts" />
+    <File name="stripe.ts" />
+  </Folder>
+</Files>

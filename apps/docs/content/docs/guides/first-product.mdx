@@ -1,0 +1,231 @@
+---
+title: Add Your First Product
+description: Step-by-step guide to adding a product to the Jose Madrid Salsa catalog
+---
+
+# Add Your First Product
+
+This guide walks you through creating your first product in the Jose Madrid Salsa platform, from the admin panel to the database schema.
+
+<Callout title="Prerequisites">
+You need an ADMIN or STAFF role with `products:write` permission. See [User Management](/docs/guides/user-management) for role setup.
+</Callout>
+
+## Product Data Model
+
+Every product in the catalog is backed by the `Product` model in Prisma. Here are the key fields:
+
+```graphql
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+
+  // Salsa-specific
+  heatLevel   HeatLevel
+  ingredients String[]
+
+  // Pricing
+  price          Decimal  @db.Decimal(10, 2)
+  compareAtPrice Decimal? @db.Decimal(10, 2)
+  costPrice      Decimal? @db.Decimal(10, 2)
+  taxCode        String?
+
+  // Inventory
+  sku               String      @unique
+  inventory         Int         @default(0)
+  stockStatus       StockStatus @default(IN_STOCK)
+  lowStockThreshold Int         @default(5)
+
+  // Images
+  images        String[]
+  featuredImage String?
+
+  // Display
+  isActive   Boolean @default(true)
+  isFeatured Boolean @default(false)
+}
+```
+
+The `HeatLevel` enum supports: `MILD`, `MEDIUM`, `HOT`, `EXTRA_HOT`.
+
+## Adding a Product via Admin Panel
+
+<Steps>
+<Step>
+### Navigate to Admin Products
+
+Go to `/admin/products` in your browser. Click the **New Product** button to open the creation form at `/admin/products/new`.
+</Step>
+
+<Step>
+### Fill in Basic Information
+
+Enter the product details:
+
+- **Name**: e.g., "Ghost of Clovis"
+- **Slug**: auto-generated from name, e.g., `ghost-of-clovis`
+- **Description**: Product description displayed on the storefront
+- **Heat Level**: Select from MILD, MEDIUM, HOT, or EXTRA_HOT
+- **Category**: Select an existing category (e.g., "Salsas")
+</Step>
+
+<Step>
+### Set Pricing
+
+- **Price**: Retail price (e.g., `9.49`)
+- **Compare At Price**: Optional original price for showing discounts (e.g., `11.49`)
+- **Cost Price**: Your cost for margin tracking
+- **Tax Code**: Stripe tax code. Use `txcd_30011000` for prepared food products or `txcd_99999999` for general tangible goods
+</Step>
+
+<Step>
+### Configure Inventory
+
+- **SKU**: Unique identifier like `JMS-HOT-001`
+- **Inventory**: Starting stock count
+- **Low Stock Threshold**: Alert threshold (default: 5 units)
+</Step>
+
+<Step>
+### Upload Images
+
+Upload product images via UploadThing. The first image is automatically set as the featured image. Recommended size: 800x800px minimum.
+</Step>
+
+<Step>
+### Add SEO Metadata
+
+- **Meta Title**: Page title for search engines
+- **Meta Description**: Search result snippet
+- **Search Keywords**: Array of keywords for internal search
+</Step>
+
+<Step>
+### Publish
+
+Toggle **Is Active** to make the product visible on the storefront. Toggle **Is Featured** to display it on the homepage.
+</Step>
+</Steps>
+
+## Adding a Product via API
+
+You can also create products programmatically through the admin API:
+
+```typescript
+const response = await fetch('/api/admin/products', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    name: 'Ghost of Clovis',
+    slug: 'ghost-of-clovis',
+    description: 'Smoky ghost peppers for heat lovers.',
+    heatLevel: 'HOT',
+    price: 9.49,
+    compareAtPrice: 11.49,
+    sku: 'JMS-HOT-001',
+    inventory: 80,
+    categoryId: 'clxx_salsa_category_id',
+    ingredients: ['Ghost Peppers', 'Tomatoes', 'Onions', 'Garlic'],
+    isActive: true,
+    isFeatured: true,
+  }),
+})
+```
+
+## Adding a Product via Prisma Directly
+
+For seed scripts or migrations, use Prisma directly:
+
+```typescript
+import { prisma } from '@/lib/prisma'
+
+const product = await prisma.product.create({
+  data: {
+    name: 'Ghost of Clovis',
+    slug: 'ghost-of-clovis',
+    description: 'Smoky ghost peppers for heat lovers.',
+    heatLevel: 'HOT',
+    price: 9.49,
+    compareAtPrice: 11.49,
+    sku: 'JMS-HOT-001',
+    inventory: 80,
+    lowStockThreshold: 5,
+    ingredients: ['Ghost Peppers', 'Tomatoes', 'Onions'],
+    isActive: true,
+    isFeatured: true,
+    categoryId: 'your_category_id',
+  },
+})
+```
+
+## Adding Variants
+
+Products can have variants for different sizes or flavors:
+
+```typescript
+await prisma.productVariant.create({
+  data: {
+    productId: product.id,
+    name: '16 oz',
+    type: 'size',
+    price: 12.99,      // overrides base price
+    sku: 'JMS-HOT-001-16OZ',
+    inStock: true,
+  },
+})
+```
+
+## Adding Nutritional Info
+
+Each product can have one `NutritionalInfo` record:
+
+```typescript
+await prisma.nutritionalInfo.create({
+  data: {
+    productId: product.id,
+    servingSize: '2 Tbsp (30ml)',
+    servingsPerContainer: 13,
+    calories: 10,
+    sodiumMg: 180,
+    sodiumDV: 8,
+    totalCarbG: 2,
+    sugarsG: 1,
+  },
+})
+```
+
+## Bulk Import via CSV
+
+Use the CSV import script for bulk product creation:
+
+```bash
+npm run products:transform    # Transform CSV to import format
+npm run products:test-import  # Test the import
+```
+
+<Callout type="warn" title="SKU Uniqueness">
+Every product must have a unique `sku` value. The import will fail if a duplicate SKU is detected. Use the `products:ensure-category` script to verify categories exist before importing.
+</Callout>
+
+## Key Files
+
+<Files>
+  <Folder name="app/admin/products" defaultOpen>
+    <File name="page.tsx" />
+    <Folder name="new">
+      <File name="page.tsx" />
+    </Folder>
+    <Folder name="[id]">
+      <File name="page.tsx" />
+    </Folder>
+  </Folder>
+  <Folder name="app/api/products">
+    <File name="route.ts" />
+  </Folder>
+  <Folder name="prisma">
+    <File name="schema.prisma" />
+    <File name="seed.ts" />
+  </Folder>
+</Files>
