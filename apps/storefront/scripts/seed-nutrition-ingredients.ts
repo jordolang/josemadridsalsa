@@ -87,7 +87,6 @@ const nutritionData: Record<string, NutritionEntry> = {
   'original-hot': { ...redSalsaBase },
   'original-x-hot': { ...redSalsaBase },
   'ghost-of-clovis': { ...redSalsaBase, calories: 5 },
-  'ghost-of-clovis-hot': { ...redSalsaBase, calories: 5 },
 
   // ─── Black Bean Corn Poblano ─────────────────────
   'black-bean-corn-poblano': {
@@ -126,6 +125,7 @@ const nutritionData: Record<string, NutritionEntry> = {
   'jamaican-jerk-salsa': { ...redSalsaBase },
 
   // ─── Fruit salsas ──────────────────────────────
+  'blueberry-mild-salsa': { ...fruitSalsaBase },
   'cherry-mild-salsa': { ...fruitSalsaBase },
   'cherry-hot': { ...fruitSalsaBase },
   'cherry-chocolate-hot': {
@@ -254,6 +254,20 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     { name: 'Cooking Sherry' },
   ],
 
+  'blueberry-mild-salsa': [
+    { name: 'Diced Tomatoes', qualifier: 'Tomatoes, Citric Acid, Calcium Chloride' },
+    { name: 'Crushed Tomatoes', qualifier: 'Tomatoes, Citric Acid' },
+    { name: 'Blueberries' },
+    { name: 'Chilies', qualifier: 'Salt, Vinegar, Calcium Chloride' },
+    { name: 'Onions' },
+    { name: 'Cider Vinegar' },
+    { name: 'Water' },
+    { name: 'Honey' },
+    { name: 'Garlic' },
+    { name: 'Spices' },
+    { name: 'Lime Juice', qualifier: 'From Concentrate' },
+  ],
+
   'cherry-mild-salsa': [
     { name: 'Diced Tomatoes', qualifier: 'Tomatoes, Citric Acid, Calcium Chloride' },
     { name: 'Crushed Tomatoes', qualifier: 'Tomatoes, Citric Acid' },
@@ -341,19 +355,6 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     { name: 'Water' },
     { name: 'Garlic' },
     { name: 'Ghost Pepper' },
-    { name: 'Lime Juice', qualifier: 'From Concentrate' },
-    { name: 'Spices' },
-  ],
-
-  'ghost-of-clovis-hot': [
-    { name: 'Diced Tomatoes', qualifier: 'Tomatoes, Citric Acid, Calcium Chloride' },
-    { name: 'Crushed Tomatoes', qualifier: 'Tomatoes, Citric Acid' },
-    { name: 'Chilies', qualifier: 'Salt, Vinegar, Calcium Chloride' },
-    { name: 'Onions' },
-    { name: 'Water' },
-    { name: 'Garlic' },
-    { name: 'Ghost Pepper' },
-    { name: 'Habanero Peppers' },
     { name: 'Lime Juice', qualifier: 'From Concentrate' },
     { name: 'Spices' },
   ],

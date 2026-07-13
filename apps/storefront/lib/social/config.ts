@@ -57,9 +57,10 @@ export const PLATFORM_SETUP: Record<SocialMediaPlatform, PlatformSetup> = {
       'Instagram uses the same Facebook app — no separate credentials needed.',
       'Convert your Instagram account to a Business or Creator account.',
       'Link that Instagram account to your Facebook Page (Page Settings → Linked accounts).',
-      'Connect Facebook here first; the linked Instagram account is detected automatically.',
+      'To post without Meta App Review, add the person who connects (e.g. the Facebook account that owns the Instagram) as an Admin, Developer, or Tester on the Meta app (App dashboard → App roles). Development mode then grants the Instagram publishing permissions for your own accounts.',
+      'Connect Facebook or Instagram here; the linked Instagram account is detected automatically and you must approve the Instagram permissions during login.',
     ],
-    note: 'Requires instagram_content_publish, approved via Meta App Review for production use.',
+    note: 'Publishing needs instagram_content_publish. For your own business accounts you can get this in Development mode by making the connecting account an app Admin/Developer/Tester; opening it up to other users requires Meta App Review.',
   },
   TWITTER: {
     platform: 'TWITTER',

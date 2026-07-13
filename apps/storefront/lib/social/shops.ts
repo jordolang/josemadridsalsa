@@ -6,6 +6,8 @@ import {
   getExpectedAccountPlatformForShop,
   getSocialBaseUrl,
 } from './platforms'
+import { putAmazonListing } from './amazon-sp-api'
+import { upsertGoogleShoppingProduct } from './google-content-api'
 
 type SyncResult = {
   success: boolean
@@ -28,11 +30,18 @@ type ShopExportConfiguration = {
 export function validateShopExportConfiguration(
   config: ShopExportConfiguration,
 ): { valid: true } | { valid: false; error: string } {
+  const expectedPlatform = getExpectedAccountPlatformForShop(config.shopPlatform)
+
+  // Amazon and Google Shopping authenticate with server credentials, not a
+  // connected social account; their sync clients validate configuration.
+  if (expectedPlatform === null) {
+    return { valid: true }
+  }
+
   if (!config.socialAccountId) {
     return { valid: false, error: 'Choose the connected account that should own this export.' }
   }
 
-  const expectedPlatform = getExpectedAccountPlatformForShop(config.shopPlatform)
   if (config.socialAccountPlatform && config.socialAccountPlatform !== expectedPlatform) {
     return {
       valid: false,
@@ -574,6 +583,53 @@ export async function syncShopListing(listingId: string): Promise<SyncResult> {
         { shopId: listing.catalogId!, product: productData, overrides },
         token,
         listing.externalId,
+      )
+      break
+    }
+    case 'AMAZON': {
+      result = await putAmazonListing(
+        {
+          name: productData.name,
+          description: productData.description,
+          sku: productData.sku,
+          price: productData.price,
+          images: productData.images,
+          featuredImage: productData.featuredImage,
+          inventory: productData.inventory,
+          gtin: listing.product.barcode?.trim() || null,
+          weightOz: productData.weight,
+        },
+        {
+          title: overrides.title,
+          description: overrides.description,
+          price: overrides.price,
+          category: overrides.category,
+        },
+      )
+      break
+    }
+    case 'GOOGLE_SHOPPING': {
+      result = await upsertGoogleShoppingProduct(
+        {
+          name: productData.name,
+          description: productData.description,
+          sku: productData.sku,
+          price: productData.price,
+          compareAtPrice: productData.compareAtPrice,
+          images: productData.images,
+          featuredImage: productData.featuredImage,
+          inventory: productData.inventory,
+          url: productData.url,
+          gtin: listing.product.barcode?.trim() || null,
+          weightOz: productData.weight,
+        },
+        {
+          title: overrides.title,
+          description: overrides.description,
+          price: overrides.price,
+          availability: overrides.availability,
+          category: overrides.category,
+        },
       )
       break
     }

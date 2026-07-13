@@ -1,4 +1,6 @@
+import { cache } from 'react'
 import { prisma } from '@/lib/prisma'
+import { encrypt, decrypt } from '@/lib/encryption'
 
 export interface SeoConfig {
   siteName: string
@@ -18,6 +20,20 @@ export interface SeoConfig {
   locationDescTemplate?: string
   robotsTxt?: string
   sitemapPriorities?: Record<string, number>
+  googleSiteVerification?: string
+  gscProperty?: string
+  /** True when a Search Console service account is stored. The JSON itself is never returned. */
+  hasGscCredentials?: boolean
+}
+
+/** Fields accepted on update. gscServiceAccountJson is write-only and encrypted at rest. */
+export type SeoConfigUpdate = Partial<Omit<SeoConfig, 'hasGscCredentials'>> & {
+  gscServiceAccountJson?: string | null
+}
+
+export interface GscServiceAccount {
+  client_email: string
+  private_key: string
 }
 
 export async function getSeoConfiguration(): Promise<SeoConfig | null> {
@@ -42,16 +58,42 @@ export async function getSeoConfiguration(): Promise<SeoConfig | null> {
     locationDescTemplate: config.locationDescTemplate || undefined,
     robotsTxt: config.robotsTxt || undefined,
     sitemapPriorities: config.sitemapPriorities as Record<string, number> || {},
+    googleSiteVerification: config.googleSiteVerification || undefined,
+    gscProperty: config.gscProperty || undefined,
+    hasGscCredentials: Boolean(config.gscServiceAccountJson),
   }
 }
 
-export async function updateSeoConfiguration(data: Partial<SeoConfig>): Promise<void> {
+/**
+ * Request-deduped SEO configuration lookup for use in generateMetadata and
+ * server components. Returns null (instead of throwing) when the DB is unreachable.
+ */
+export const getCachedSeoConfiguration = cache(async (): Promise<SeoConfig | null> => {
+  try {
+    return await getSeoConfiguration()
+  } catch (error) {
+    console.error('Failed to fetch SEO configuration:', error)
+    return null
+  }
+})
+
+export async function updateSeoConfiguration(data: SeoConfigUpdate): Promise<void> {
+  const { gscServiceAccountJson, ...rest } = data
+
+  const payload: Record<string, unknown> = { ...rest }
+  if (gscServiceAccountJson !== undefined) {
+    // Empty string / null clears the stored credentials
+    payload.gscServiceAccountJson = gscServiceAccountJson
+      ? encrypt(gscServiceAccountJson)
+      : null
+  }
+
   const existing = await prisma.seoConfiguration.findFirst()
 
   if (existing) {
     await prisma.seoConfiguration.update({
       where: { id: existing.id },
-      data: data as any,
+      data: payload as any,
     })
   } else {
     await prisma.seoConfiguration.create({
@@ -59,16 +101,32 @@ export async function updateSeoConfiguration(data: Partial<SeoConfig>): Promise<
         siteName: data.siteName || 'Jose Madrid Salsa',
         siteDescription: data.siteDescription || '',
         siteUrl: data.siteUrl || '',
-        ...data,
+        ...payload,
       } as any,
     })
   }
 }
 
-export function applyMetadataTemplate(template: string, variables: Record<string, string>): string {
-  let result = template
-  for (const [key, value] of Object.entries(variables)) {
-    result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value)
+/**
+ * Decrypt and parse the stored Search Console service account.
+ * Returns null when not configured or invalid.
+ */
+export async function getGscServiceAccount(): Promise<GscServiceAccount | null> {
+  const config = await prisma.seoConfiguration.findFirst({
+    select: { gscServiceAccountJson: true },
+  })
+  if (!config?.gscServiceAccountJson) return null
+
+  try {
+    const parsed = JSON.parse(decrypt(config.gscServiceAccountJson))
+    if (typeof parsed.client_email === 'string' && typeof parsed.private_key === 'string') {
+      return parsed as GscServiceAccount
+    }
+    return null
+  } catch (error) {
+    console.error('Failed to decrypt/parse GSC service account:', error)
+    return null
   }
-  return result
 }
+
+export { applyMetadataTemplate } from './templates'

@@ -2,6 +2,7 @@ import type { ShopPlatform, SocialMediaPlatform } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { encryptSecret, decryptSecret } from '@/lib/crypto'
 import { getProviderCredentials, type SocialProvider } from './credentials'
+import { FACEBOOK_OAUTH_SCOPES } from './scopes'
 
 /** Map a publishing platform to the credential provider that powers it. */
 export function platformToProvider(platform: SocialMediaPlatform): SocialProvider {
@@ -18,18 +19,8 @@ export function platformToProvider(platform: SocialMediaPlatform): SocialProvide
   }
 }
 
-// Trimmed to scopes available without App Review so the connect flow completes.
-// Restore the posting/Instagram scopes once the Instagram product is added and
-// Meta App Review + business verification are done:
-//   'pages_manage_posts', 'instagram_basic', 'instagram_content_publish',
-//   'instagram_manage_insights'
-const FACEBOOK_OAUTH_SCOPES = [
-  'pages_read_engagement',
-  'pages_show_list',
-  'pages_manage_metadata',
-  'catalog_management',
-  'business_management',
-]
+// Facebook + Instagram request scopes live in ./scopes (single source of truth,
+// shared with the OAuth callback that records which of them were actually granted).
 
 const TIKTOK_OAUTH_SCOPES = [
   'user.info.basic',
@@ -344,12 +335,22 @@ export async function getValidAccessToken(accountId: string): Promise<string | n
   return getAccountAccessToken(accountId)
 }
 
-export function getExpectedAccountPlatformForShop(shopPlatform: ShopPlatform): SocialMediaPlatform {
+/**
+ * Which connected social account platform a shop export must target, or null
+ * for platforms that authenticate with server credentials instead of a
+ * connected social account (Amazon SP-API, Google Merchant Center).
+ */
+export function getExpectedAccountPlatformForShop(
+  shopPlatform: ShopPlatform,
+): SocialMediaPlatform | null {
   switch (shopPlatform) {
     case 'FACEBOOK_SHOP':
     case 'FACEBOOK_MARKETPLACE':
       return 'FACEBOOK'
     case 'TIKTOK_SHOP':
       return 'TIKTOK'
+    case 'AMAZON':
+    case 'GOOGLE_SHOPPING':
+      return null
   }
 }

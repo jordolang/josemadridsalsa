@@ -2,13 +2,16 @@ import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://www.josemadridsalsa.com'
+  let baseUrl = 'https://www.josemadrid.net'
   let seoConfig = null
   let priorities: Record<string, number> = {}
 
   try {
     seoConfig = await prisma.seoConfiguration.findFirst()
     priorities = (seoConfig?.sitemapPriorities as Record<string, number>) || {}
+    if (seoConfig?.siteUrl) {
+      baseUrl = seoConfig.siteUrl.replace(/\/+$/, '')
+    }
   } catch (error) {
     console.error('Failed to fetch SEO config for sitemap, using defaults:', error)
   }
@@ -124,6 +127,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${baseUrl}/shipping`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
+    {
+      url: `${baseUrl}/returns`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.4,
@@ -272,24 +281,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   } catch (error) {
     console.error('Failed to fetch heat-index categories for sitemap:', error)
-  }
-
-  try {
-    const salsas = await prisma.product.findMany({
-      where: { isActive: true },
-      select: { slug: true, updatedAt: true },
-    })
-
-    salsas.forEach((salsa) => {
-      urls.push({
-        url: `${baseUrl}/salsas/${salsa.slug}`,
-        lastModified: salsa.updatedAt,
-        changeFrequency: 'weekly',
-        priority: priorities.product || 0.8,
-      })
-    })
-  } catch (error) {
-    console.error('Failed to fetch salsas for sitemap:', error)
   }
 
   try {

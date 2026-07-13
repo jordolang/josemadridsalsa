@@ -9,6 +9,11 @@ import React from 'react'
 import { ShippingNotificationEmail } from '@/emails/shipping-notification'
 import { OrderItem } from '@/emails/components/OrderItemsTable'
 
+// React 19 / @react-email/render insert empty `<!-- -->` marker comments between
+// adjacent text nodes (e.g. `Hi {name},` renders as `Hi <!-- -->there<!-- -->,`).
+// Strip them so substring assertions match the logical rendered text.
+const stripMarkers = (html: string) => html.replace(/<!--.*?-->/g, '')
+
 describe('ShippingNotificationEmail', () => {
   const mockItems: OrderItem[] = [
     {
@@ -76,7 +81,7 @@ describe('ShippingNotificationEmail', () => {
     it('should use default name when not provided', async () => {
       const html = await render(<ShippingNotificationEmail {...baseProps} />)
 
-      expect(html).toContain('Hi there,')
+      expect(stripMarkers(html)).toContain('Hi there,')
     })
 
     it('should use custom name when provided', async () => {
@@ -87,7 +92,7 @@ describe('ShippingNotificationEmail', () => {
         />
       )
 
-      expect(html).toContain('Hi Jane Doe,')
+      expect(stripMarkers(html)).toContain('Hi Jane Doe,')
     })
 
     it('should include unsubscribe URL when provided', async () => {
@@ -228,8 +233,8 @@ describe('ShippingNotificationEmail', () => {
     it('should handle many items', async () => {
       const manyItems: OrderItem[] = Array.from({ length: 15 }, (_, i) => ({
         quantity: i + 1,
-        name: `Product ${i + 1}`,
-        sku: `SKU-${i + 1}`,
+        productName: `Product ${i + 1}`,
+        productSku: `SKU-${i + 1}`,
         totalPrice: `$${(i + 1) * 9.99}`,
       }))
 

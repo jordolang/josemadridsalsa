@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "LeadType" ADD VALUE 'FUNDRAISER_ORG';

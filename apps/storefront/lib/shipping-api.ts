@@ -32,7 +32,7 @@ function getShippingConfig() {
  */
 let easyPostClientInstance: InstanceType<typeof EasyPostClient> | null = null
 
-function getEasyPostClient(): InstanceType<typeof EasyPostClient> {
+export function getEasyPostClient(): InstanceType<typeof EasyPostClient> {
   const config = getShippingConfig()
 
   if (!config.apiKey) {
@@ -113,12 +113,69 @@ export interface ShipmentRates {
 }
 
 /**
+ * Created shipment response
+ */
+export interface CreatedShipment {
+  id: string // EasyPost shipment ID
+  rates: ShippingRate[]
+  fromAddress: ShippingAddress
+  toAddress: ShippingAddress
+  parcel: Parcel
+  reference?: string
+}
+
+/**
+ * Purchased shipping label response
+ */
+export interface ShippingLabel {
+  id: string // EasyPost shipment ID
+  trackingCode: string
+  trackingUrl?: string
+  labelUrl: string
+  carrier: string
+  service: string
+  rate: number
+  currency: string
+  status: string
+  createdAt: Date
+}
+
+/**
+ * Tracking event from carrier
+ */
+export interface TrackingEvent {
+  status: string
+  message: string
+  city?: string
+  state?: string
+  country?: string
+  zip?: string
+  timestamp: Date
+}
+
+/**
+ * Tracking details response
+ */
+export interface TrackingDetails {
+  trackingCode: string
+  carrier: string
+  status: string
+  estimatedDeliveryDate?: Date
+  events: TrackingEvent[]
+  signedBy?: string
+  weight?: number
+}
+
+/**
  * Shipping API client interface
  */
 interface ShippingClient {
   provider: string
   testMode: boolean
   getRates(request: ShipmentRequest): Promise<ShipmentRates>
+  createShipment(request: ShipmentRequest): Promise<CreatedShipment>
+  buyShipmentLabel(shipmentId: string, rateId: string): Promise<ShippingLabel>
+  getTrackingDetails(trackingCode: string, carrier?: string): Promise<TrackingDetails>
 }
 
 /**
@@ -239,6 +296,171 @@ class EasyPostShippingClient implements ShippingClient {
       }
     }
   }
+
+  async createShipment(request: ShipmentRequest): Promise<CreatedShipment> {
+    try {
+      const client = getEasyPostClient()
+
+      // Create shipment
+      const shipment = await client.Shipment.create({
+        from_address: {
+          name: request.fromAddress.name,
+          company: request.fromAddress.company,
+          street1: request.fromAddress.street1,
+          street2: request.fromAddress.street2,
+          city: request.fromAddress.city,
+          state: request.fromAddress.state,
+          zip: request.fromAddress.zip,
+          country: request.fromAddress.country,
+          phone: request.fromAddress.phone,
+          email: request.fromAddress.email,
+        },
+        to_address: {
+          name: request.toAddress.name,
+          company: request.toAddress.company,
+          street1: request.toAddress.street1,
+          street2: request.toAddress.street2,
+          city: request.toAddress.city,
+          state: request.toAddress.state,
+          zip: request.toAddress.zip,
+          country: request.toAddress.country,
+          phone: request.toAddress.phone,
+          email: request.toAddress.email,
+        },
+        parcel: {
+          length: request.parcel.length,
+          width: request.parcel.width,
+          height: request.parcel.height,
+          weight: request.parcel.weight,
+        },
+        reference: request.reference,
+      })
+
+      // Map rates
+      const rates = (shipment.rates || []).map(mapEasyPostRate)
+      rates.sort((a, b) => a.rate - b.rate)
+
+      return {
+        id: shipment.id,
+        rates,
+        fromAddress: request.fromAddress,
+        toAddress: request.toAddress,
+        parcel: request.parcel,
+        reference: request.reference,
+      }
+    } catch (error) {
+      console.error('[EasyPost] Error creating shipment:', error)
+      throw new Error(
+        error instanceof Error
+          ? `Failed to create shipment: ${error.message}`
+          : 'Failed to create shipment'
+      )
+    }
+  }
+
+  async buyShipmentLabel(
+    shipmentId: string,
+    rateId: string
+  ): Promise<ShippingLabel> {
+    try {
+      const client = getEasyPostClient()
+
+      // EasyPost v8 exposes a service-style API: Shipment.buy purchases the
+      // shipment with the given rate. It accepts a rate id string (or a Rate
+      // object) and wraps it as { rate: { id } } internally. The objects
+      // returned by retrieve() don't carry an instance .buy() method, so we
+      // must call the service method here.
+      // @ts-expect-error - EasyPost SDK types only declare Shipment.create
+      const boughtShipment = await client.Shipment.buy(shipmentId, rateId)
+
+      // Get postage label
+      const labelUrl = boughtShipment.postage_label?.label_url
+      if (!labelUrl) {
+        throw new Error('Label URL not available after purchase')
+      }
+
+      // Get tracking info
+      const trackingCode = boughtShipment.tracking_code || ''
+      const trackingUrl = boughtShipment.tracker?.public_url
+
+      // Get selected rate info
+      const selectedRate = boughtShipment.selected_rate
+      if (!selectedRate) {
+        throw new Error('Selected rate not available after purchase')
+      }
+
+      return {
+        id: boughtShipment.id,
+        trackingCode,
+        trackingUrl,
+        labelUrl,
+        carrier: selectedRate.carrier || 'Unknown',
+        service: selectedRate.service || 'Standard',
+        rate: parseFloat(selectedRate.rate || '0'),
+        currency: selectedRate.currency || 'USD',
+        status: boughtShipment.status || 'purchased',
+        createdAt: new Date(boughtShipment.created_at || Date.now()),
+      }
+    } catch (error) {
+      console.error('[EasyPost] Error buying shipment label:', error)
+      throw new Error(
+        error instanceof Error
+          ? `Failed to purchase label: ${error.message}`
+          : 'Failed to purchase label'
+      )
+    }
+  }
+
+  async getTrackingDetails(
+    trackingCode: string,
+    carrier?: string
+  ): Promise<TrackingDetails> {
+    try {
+      const client = getEasyPostClient()
+
+      // Create or retrieve tracker
+      // @ts-expect-error - EasyPost SDK types are incomplete for Tracker API
+      const tracker = await client.Tracker.create({
+        tracking_code: trackingCode,
+        carrier: carrier,
+      })
+
+      // Map tracking events
+      const events: TrackingEvent[] = (tracker.tracking_details || []).map(
+        (detail: any) => ({
+          status: detail.status || 'unknown',
+          message: detail.message || '',
+          city: detail.tracking_location?.city,
+          state: detail.tracking_location?.state,
+          country: detail.tracking_location?.country,
+          zip: detail.tracking_location?.zip,
+          timestamp: new Date(detail.datetime || Date.now()),
+        })
+      )
+
+      // Sort events by timestamp (newest first)
+      events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+
+      return {
+        trackingCode: tracker.tracking_code || trackingCode,
+        carrier: tracker.carrier || carrier || 'Unknown',
+        status: tracker.status || 'unknown',
+        estimatedDeliveryDate: tracker.est_delivery_date
+          ? new Date(tracker.est_delivery_date)
+          : undefined,
+        events,
+        signedBy: tracker.signed_by,
+        weight: tracker.weight,
+      }
+    } catch (error) {
+      console.error('[EasyPost] Error fetching tracking details:', error)
+      throw new Error(
+        error instanceof Error
+          ? `Failed to get tracking details: ${error.message}`
+          : 'Failed to get tracking details'
+      )
+    }
+  }
 }
 
 /**
@@ -301,6 +523,30 @@ class ShippoClient implements ShippingClient {
           ]
         : undefined,
     }
+  }
+
+  async createShipment(request: ShipmentRequest): Promise<CreatedShipment> {
+    // Shippo API integration
+    // TODO: Install shippo and implement real API calls
+    throw new Error('Shippo createShipment not yet implemented')
+  }
+
+  async buyShipmentLabel(
+    shipmentId: string,
+    rateId: string
+  ): Promise<ShippingLabel> {
+    // Shippo API integration
+    // TODO: Install shippo and implement real API calls
+    throw new Error('Shippo buyShipmentLabel not yet implemented')
+  }
+
+  async getTrackingDetails(
+    trackingCode: string,
+    carrier?: string
+  ): Promise<TrackingDetails> {
+    // Shippo API integration
+    // TODO: Install shippo and implement real API calls
+    throw new Error('Shippo getTrackingDetails not yet implemented')
   }
 }
 
@@ -382,6 +628,100 @@ export async function getShippingRates(
         },
       ],
     }
+  }
+}
+
+/**
+ * Create a shipment and get available rates
+ *
+ * High-level helper function that handles errors gracefully
+ *
+ * @param request Shipment request parameters
+ * @returns Created shipment with available rates
+ */
+export async function createShipment(
+  request: ShipmentRequest
+): Promise<CreatedShipment> {
+  try {
+    const client = getShippingClient()
+    const shipment = await client.createShipment(request)
+    return shipment
+  } catch (error) {
+    console.error('[Shipping API] Error creating shipment:', error)
+
+    if (error instanceof Error) {
+      console.error('[Shipping API] Error details:', error.message)
+    }
+
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : 'Failed to create shipment. Please try again.'
+    )
+  }
+}
+
+/**
+ * Purchase a shipping label for a shipment
+ *
+ * High-level helper function that handles errors gracefully
+ *
+ * @param shipmentId EasyPost shipment ID
+ * @param rateId Rate ID to purchase
+ * @returns Purchased shipping label with tracking info
+ */
+export async function buyShipmentLabel(
+  shipmentId: string,
+  rateId: string
+): Promise<ShippingLabel> {
+  try {
+    const client = getShippingClient()
+    const label = await client.buyShipmentLabel(shipmentId, rateId)
+    return label
+  } catch (error) {
+    console.error('[Shipping API] Error buying label:', error)
+
+    if (error instanceof Error) {
+      console.error('[Shipping API] Error details:', error.message)
+    }
+
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : 'Failed to purchase shipping label. Please try again.'
+    )
+  }
+}
+
+/**
+ * Get tracking details for a tracking code
+ *
+ * High-level helper function that handles errors gracefully
+ *
+ * @param trackingCode Tracking code to look up
+ * @param carrier Optional carrier name for faster lookup
+ * @returns Tracking details with event history
+ */
+export async function getTrackingDetails(
+  trackingCode: string,
+  carrier?: string
+): Promise<TrackingDetails> {
+  try {
+    const client = getShippingClient()
+    const tracking = await client.getTrackingDetails(trackingCode, carrier)
+    return tracking
+  } catch (error) {
+    console.error('[Shipping API] Error fetching tracking details:', error)
+
+    if (error instanceof Error) {
+      console.error('[Shipping API] Error details:', error.message)
+    }
+
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : 'Failed to get tracking details. Please try again.'
+    )
   }
 }
 

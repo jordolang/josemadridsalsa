@@ -9,22 +9,12 @@ import {
 } from '@/lib/social/oauth'
 import { getSocialBaseUrl, upsertSocialAccount } from '@/lib/social/platforms'
 import { getProviderCredentials } from '@/lib/social/credentials'
+import {
+  FACEBOOK_PAGE_SCOPES,
+  INSTAGRAM_SCOPES,
+  filterGrantedScopes,
+} from '@/lib/social/scopes'
 import { logAudit } from '@/lib/audit'
-
-const FACEBOOK_SCOPES = [
-  'pages_manage_posts',
-  'pages_read_engagement',
-  'pages_show_list',
-  'pages_manage_metadata',
-  'catalog_management',
-  'business_management',
-]
-
-const INSTAGRAM_SCOPES = [
-  'instagram_basic',
-  'instagram_content_publish',
-  'instagram_manage_insights',
-]
 
 const TIKTOK_SCOPES = ['user.info.basic', 'video.publish', 'video.upload']
 const TWITTER_SCOPES = ['tweet.read', 'tweet.write', 'users.read', 'offline.access']
@@ -50,6 +40,25 @@ async function exchangeFacebookToken(code: string, redirectUri: string) {
   const longData = await longRes.json()
   if (longData.error) throw new Error(longData.error.message)
 
+  // Ask Meta which permissions were actually granted, so we record only real
+  // scopes on each account (an admin/tester in Development mode gets them all;
+  // otherwise the posting/Instagram scopes need App Review). `null` = the
+  // permissions lookup failed, so we can't tell — callers stay optimistic then.
+  let grantedPermissions: string[] | null = null
+  try {
+    const permsRes = await fetch(
+      `https://graph.facebook.com/v21.0/me/permissions?access_token=${longData.access_token}`,
+    )
+    const permsData = await permsRes.json().catch(() => null)
+    if (Array.isArray(permsData?.data)) {
+      grantedPermissions = (permsData.data as Array<{ permission: string; status?: string }>)
+        .filter((p) => p.status === 'granted')
+        .map((p) => p.permission)
+    }
+  } catch (permError) {
+    console.warn('[SOCIAL_OAUTH] Failed to read granted Facebook permissions:', permError)
+  }
+
   const pagesRes = await fetch(
     `https://graph.facebook.com/v21.0/me/accounts?access_token=${longData.access_token}&fields=id,name,access_token,picture,username`,
   )
@@ -62,6 +71,7 @@ async function exchangeFacebookToken(code: string, redirectUri: string) {
   return {
     userToken: longData.access_token as string,
     expiresIn: longData.expires_in ?? 5184000,
+    grantedPermissions,
     pages: pagesData.data as Array<{
       id: string
       name: string
@@ -292,6 +302,20 @@ export async function GET(request: Request) {
       case 'FACEBOOK':
       case 'INSTAGRAM': {
         const fbData = await exchangeFacebookToken(code, redirectUri)
+        // Record only the scopes Meta actually granted; when the permissions
+        // lookup failed (null) fall back to the requested set rather than
+        // wiping an account's scopes over a transient error.
+        const fbScopes = fbData.grantedPermissions
+          ? filterGrantedScopes(FACEBOOK_PAGE_SCOPES, fbData.grantedPermissions)
+          : [...FACEBOOK_PAGE_SCOPES]
+        const igScopes = fbData.grantedPermissions
+          ? filterGrantedScopes(INSTAGRAM_SCOPES, fbData.grantedPermissions)
+          : [...INSTAGRAM_SCOPES]
+        // Known-false only when we successfully read permissions and it's absent.
+        const igPublishGranted = fbData.grantedPermissions
+          ? fbData.grantedPermissions.includes('instagram_content_publish')
+          : true
+
         let instagramAccounts = 0
 
         for (const page of fbData.pages) {
@@ -304,7 +328,7 @@ export async function GET(request: Request) {
             accessToken: page.access_token,
             refreshToken: fbData.userToken,
             tokenExpiresAt: new Date(Date.now() + fbData.expiresIn * 1000),
-            scopes: FACEBOOK_SCOPES,
+            scopes: fbScopes,
             connectedById: user.id,
           })
 
@@ -325,7 +349,7 @@ export async function GET(request: Request) {
                 accessToken: page.access_token,
                 refreshToken: fbData.userToken,
                 tokenExpiresAt: new Date(Date.now() + fbData.expiresIn * 1000),
-                scopes: INSTAGRAM_SCOPES,
+                scopes: igScopes,
                 connectedById: user.id,
               })
               instagramAccounts++
@@ -346,9 +370,38 @@ export async function GET(request: Request) {
             platform: 'FACEBOOK',
             pages: fbData.pages.length,
             instagramAccounts,
+            instagramPublishGranted: igPublishGranted,
           },
         })
-        break
+
+        // Give honest feedback about the Instagram side, which is the part that
+        // silently failed before: no linked IG account, or the account linked
+        // but the publish permission wasn't granted.
+        if (instagramAccounts === 0) {
+          if (platform === 'INSTAGRAM') {
+            return redirectToAdmin(baseUrl, {
+              connected: 'facebook',
+              notice:
+                'Connected your Facebook Page, but no Instagram Business account was found. In Instagram, switch to a Business or Creator account and link it to this Facebook Page (Page settings → Linked accounts), approve the Instagram permissions during login, then reconnect.',
+            })
+          }
+          // Plain Facebook connect with no Instagram linked — nothing to flag.
+          return redirectToAdmin(baseUrl, { connected: 'facebook' })
+        }
+
+        if (!igPublishGranted) {
+          return redirectToAdmin(baseUrl, {
+            connected: platform.toLowerCase(),
+            igAccounts: String(instagramAccounts),
+            notice:
+              'Instagram account linked, but the publishing permission (instagram_content_publish) was not granted, so posts to Instagram will fail. Add the connecting account as an Admin, Developer, or Tester on your Meta app (App dashboard → App roles) to enable posting in Development mode without App Review, then reconnect.',
+          })
+        }
+
+        return redirectToAdmin(baseUrl, {
+          connected: platform.toLowerCase(),
+          igAccounts: String(instagramAccounts),
+        })
       }
 
       case 'TWITTER': {

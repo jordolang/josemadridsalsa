@@ -247,7 +247,7 @@ export const PLATFORM_CONFIGS: Record<SocialMediaPlatform, PlatformConfig> = {
   },
 }
 
-export type DashboardTab = 'overview' | 'compose' | 'calendar' | 'accounts' | 'shops' | 'analytics'
+export type DashboardTab = 'overview' | 'compose' | 'calendar' | 'accounts' | 'analytics'
 
 // Shop types
 export type ShopListingInfo = {
@@ -321,6 +321,24 @@ export const SHOP_PLATFORM_CONFIG: Record<ShopPlatform, {
     bgColor: 'bg-black',
     textColor: 'text-black',
     borderColor: 'border-black',
+  },
+  AMAZON: {
+    label: 'Amazon',
+    shortLabel: 'Amazon',
+    description: 'Push listings straight to Amazon via the Selling Partner API — price, inventory, and images stay in sync.',
+    color: '#FF9900',
+    bgColor: 'bg-[#FF9900]',
+    textColor: 'text-[#B45309]',
+    borderColor: 'border-[#FF9900]',
+  },
+  GOOGLE_SHOPPING: {
+    label: 'Google Shopping',
+    shortLabel: 'Google',
+    description: 'Push products into Google Merchant Center for free listings and Shopping ads via the Content API.',
+    color: '#4285F4',
+    bgColor: 'bg-[#4285F4]',
+    textColor: 'text-[#4285F4]',
+    borderColor: 'border-[#4285F4]',
   },
 }
 

@@ -33,7 +33,7 @@ const socialLinks = [
 const aboutLinks = [
   { text: 'About Jose', href: '/about' },
   { text: 'Our Story', href: '/our-story' },
-  { text: 'La Perla Tortilla Factory (Our Chips)', href: '/la-perla-ave' },
+  { text: 'La Perla Tortilla Factory (Our Chips)', href: '/laperla' },
   { text: 'Find Us Locally', href: '/find-us' },
   { text: 'Where is Jose?', href: '/where-is-jose' },
   { text: 'Recipes', href: '/recipes' },
@@ -58,6 +58,7 @@ const helpfulLinks = [
 ]
 
 const legalLinks = [
+  { text: 'Return Policy', href: '/returns' },
   { text: 'Privacy Policy', href: '/privacy' },
   { text: 'Terms of Service', href: '/terms' },
   { text: 'Cookie Policy', href: '/cookies' },

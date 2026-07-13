@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   Store,
@@ -14,6 +15,7 @@ import {
   Facebook,
   CheckCircle,
   ShoppingBag,
+  Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -25,7 +27,7 @@ export const metadata: Metadata = createMetadata({
   title: 'La Perla Tortilla Factory - Toledo, OH | Maker of Jose Madrid Chips',
   description:
     'La Perla Tortilla Factory at 2742 Hill Ave in Toledo, Ohio makes fresh corn tortillas, tortilla chips, and Mexican ingredients — including the stone-ground white corn chips paired with Jose Madrid Salsa. Open to the public.',
-  pathname: '/la-perla-ave',
+  pathname: '/laperla',
 });
 
 // Real business details from La Perla Tortilla Factory's listing.
@@ -39,6 +41,9 @@ const BUSINESS = {
   phoneHref: 'tel:+14195342074',
   mapsUrl:
     'https://www.google.com/maps/search/?api=1&query=La+Perla+Tortilla+Factory+2742+Hill+Ave+Toledo+OH+43607',
+  // Google Business "write a review" dialog for La Perla Tortilla Factory.
+  reviewUrl:
+    'https://search.google.com/local/writereview?placeid=ChIJRcp3DJR4PIgR_uzQ8MR_NSI',
   facebookUrl: 'https://www.facebook.com/search/top?q=Laperla%20Tortilla%20Factory',
 };
 
@@ -78,74 +83,39 @@ const chipFacts = [
   { label: 'Total Carbohydrate', value: '22g (7% DV)' },
 ];
 
-function LaPerlaBadge({ className = '' }: { className?: string }) {
+function StorefrontPostcard({ className = '' }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 200 200"
-      role="img"
-      aria-label="La Perla Tortilla Factory emblem"
-      className={className}
-    >
-      <defs>
-        <radialGradient id="pearl" cx="42%" cy="38%" r="65%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="55%" stopColor="#f6efdc" />
-          <stop offset="100%" stopColor="#d9c9a3" />
-        </radialGradient>
-      </defs>
-
-      {/* Rings */}
-      <circle cx="100" cy="100" r="98" fill="#B0271F" />
-      <circle cx="100" cy="100" r="92" fill="none" stroke="#E0A92E" strokeWidth="2" />
-      <circle cx="100" cy="100" r="86" fill="#1E7A3D" />
-      <circle cx="100" cy="100" r="74" fill="#F4E7C9" />
-
-      {/* Top curved title */}
-      <path id="laPerlaArc" d="M 38 100 A 62 62 0 0 1 162 100" fill="none" />
-      <text
-        fill="#1E7A3D"
-        fontSize="12.5"
-        fontFamily="Georgia, 'Times New Roman', serif"
-        fontWeight="700"
-        letterSpacing="2"
-      >
-        <textPath href="#laPerlaArc" startOffset="50%" textAnchor="middle">
-          TORTILLA · FACTORY
-        </textPath>
-      </text>
-
-      {/* Center pearl */}
-      <circle cx="100" cy="82" r="13" fill="url(#pearl)" stroke="#E0A92E" strokeWidth="1.5" />
-
-      {/* Wordmark */}
-      <text
-        x="100"
-        y="120"
-        textAnchor="middle"
-        fill="#B0271F"
-        fontFamily="Georgia, 'Times New Roman', serif"
-        fontStyle="italic"
-        fontWeight="700"
-        fontSize="28"
-      >
-        La Perla
-      </text>
-
-      {/* Ribbon banner */}
-      <path d="M 30 146 L 170 146 L 162 160 L 170 174 L 30 174 L 38 160 Z" fill="#B0271F" />
-      <text
-        x="100"
-        y="164"
-        textAnchor="middle"
-        fill="#F4E7C9"
-        fontFamily="Georgia, 'Times New Roman', serif"
-        fontWeight="700"
-        fontSize="11"
-        letterSpacing="1.5"
-      >
-        OPEN TO THE PUBLIC
-      </text>
-    </svg>
+    <figure className={`relative rotate-2 ${className}`}>
+      {/* Weathered tape strip */}
+      <div
+        aria-hidden="true"
+        className="absolute -top-2.5 left-1/2 -translate-x-1/2 -rotate-3 w-24 h-6 bg-amber-50/50 shadow-sm z-10"
+      />
+      <div className="bg-[#f6efdc] p-3 pb-2.5 rounded-sm shadow-2xl ring-1 ring-black/25">
+        <div className="relative overflow-hidden rounded-[2px]">
+          <Image
+            src="/images/laperla/la-perla-storefront.jpg"
+            alt="The La Perla Tortilla Factory storefront at 2742 Hill Ave in Toledo, Ohio"
+            width={915}
+            height={885}
+            className="w-full h-auto sepia-[.35] contrast-105 saturate-[.8]"
+          />
+          {/* Aged-photo vignette and warm wash */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 pointer-events-none shadow-[inset_0_0_45px_rgba(62,39,10,0.4)] bg-gradient-to-t from-amber-900/20 via-transparent to-amber-100/15 mix-blend-multiply"
+          />
+        </div>
+        <figcaption className="pt-2 text-center">
+          <span className="block font-serif italic text-sm text-stone-700">
+            2742 Hill Ave — Toledo, Ohio
+          </span>
+          <span className="block text-[10px] tracking-[0.3em] uppercase text-stone-500 mt-0.5">
+            41.63° N · 83.61° W
+          </span>
+        </figcaption>
+      </div>
+    </figure>
   );
 }
 
@@ -156,8 +126,15 @@ export default function LaPerlaTortillaFactoryPage() {
       <section className="relative bg-gradient-to-r from-chile-700 via-chile-600 to-verde-700 text-white">
         <div className="absolute inset-0 bg-black/25"></div>
         <div className="relative container mx-auto px-4 py-20 lg:py-28">
-          <div className="max-w-5xl mx-auto grid lg:grid-cols-[auto,1fr] items-center gap-10 lg:gap-14">
-            <LaPerlaBadge className="w-40 h-40 lg:w-52 lg:h-52 mx-auto drop-shadow-xl" />
+          <div className="max-w-6xl mx-auto grid lg:grid-cols-[auto_1fr_auto] items-center gap-10 lg:gap-12">
+            <Image
+              src="/images/laperla/la-perla-logo.webp"
+              alt="La Perla Tortilla Factory — Open to Public"
+              width={900}
+              height={883}
+              priority
+              className="w-44 lg:w-56 h-auto mx-auto drop-shadow-2xl"
+            />
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-4 py-1.5 mb-6 text-sm font-medium">
                 <MapPin className="w-4 h-4" />
@@ -177,7 +154,14 @@ export default function LaPerlaTortillaFactoryPage() {
                   className="bg-white text-chile-700 hover:bg-salsa-50 font-semibold"
                   asChild
                 >
-                  <Link href="#visit">Visit the Factory</Link>
+                  <a
+                    href={BUSINESS.reviewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Star className="w-4 h-4 fill-current" />
+                    Leave a Google Review
+                  </a>
                 </Button>
                 <Button
                   size="lg"
@@ -189,6 +173,7 @@ export default function LaPerlaTortillaFactoryPage() {
                 </Button>
               </div>
             </div>
+            <StorefrontPostcard className="w-60 lg:w-64 mx-auto" />
           </div>
         </div>
       </section>

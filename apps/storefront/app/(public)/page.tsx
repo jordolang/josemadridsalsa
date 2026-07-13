@@ -7,6 +7,8 @@ import { getServerSession } from 'next-auth'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { createMetadata } from '@/lib/metadata'
+import { getCachedSeoConfiguration } from '@/lib/seo/configuration'
+import { OrganizationJsonLd } from '@/components/seo/organization-jsonld'
 import { authOptions } from '@/lib/auth'
 import { LocationMapClient } from '@/components/store/location-map-client'
 import { getReviewsData, getCalendarEvents } from '@/lib/server/google-data'
@@ -33,12 +35,22 @@ const ScheduleMapWrapper = nextDynamic(
   { loading: () => <div className="h-[520px] animate-pulse bg-muted rounded-3xl" /> }
 )
 
-export const metadata: Metadata = createMetadata({
-  title: 'Jose Madrid Salsa - Premium Gourmet Salsa',
-  description:
-    'Premium handcrafted salsa from Zanesville, Ohio — 25+ small-batch flavors from mild to fiery hot, family-owned since 1987.',
-  pathname: '/',
-})
+export async function generateMetadata(): Promise<Metadata> {
+  const base = createMetadata({
+    title: 'Jose Madrid Salsa - Premium Gourmet Salsa',
+    description:
+      'Premium handcrafted salsa from Zanesville, Ohio — 25+ small-batch flavors from mild to fiery hot, family-owned since 1987.',
+    pathname: '/',
+  })
+
+  // Google Search Console HTML-tag verification, configured in /admin/seo
+  const seoConfig = await getCachedSeoConfiguration()
+  if (seoConfig?.googleSiteVerification) {
+    base.verification = { google: seoConfig.googleSiteVerification }
+  }
+
+  return base
+}
 
 const CATEGORY_TILES = [
   {
@@ -94,6 +106,9 @@ export default async function Home() {
   return (
     <ErrorBoundary>
       <main className="min-h-screen">
+        {/* Organization JSON-LD for rich results */}
+        <OrganizationJsonLd />
+
         {/* Hero — personalized for logged-in users, default for anonymous */}
         <HeroWithFeatureFlag hasSession={!!session} />
 
