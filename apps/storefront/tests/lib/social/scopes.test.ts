@@ -7,19 +7,20 @@ import {
 } from '@/lib/social/scopes'
 
 describe('lib/social/scopes', () => {
-  it('requests only review-free scopes (posting/Instagram scopes trigger Meta "Invalid Scopes" pre-review)', () => {
-    // Requesting these before App Review makes Meta reject the whole authorize
-    // request, blocking the connect. They are re-added once App Review is done.
-    expect(FACEBOOK_OAUTH_SCOPES).not.toContain('instagram_basic')
-    expect(FACEBOOK_OAUTH_SCOPES).not.toContain('instagram_content_publish')
-    expect(FACEBOOK_OAUTH_SCOPES).not.toContain('instagram_manage_insights')
-    expect(FACEBOOK_OAUTH_SCOPES).not.toContain('pages_manage_posts')
+  it('requests the Instagram scopes (instagram_basic is required to even discover the linked account)', () => {
+    // Without instagram_basic, Meta omits the Page's instagram_business_account
+    // field and Instagram discovery silently finds nothing after connect.
+    expect(FACEBOOK_OAUTH_SCOPES).toContain('instagram_basic')
+    expect(FACEBOOK_OAUTH_SCOPES).toContain('instagram_content_publish')
+    expect(FACEBOOK_OAUTH_SCOPES).toContain('instagram_manage_insights')
+    expect(FACEBOOK_OAUTH_SCOPES).toContain('pages_manage_posts')
   })
 
-  it('requests the review-free subset of the page scopes', () => {
-    expect(FACEBOOK_OAUTH_SCOPES).toEqual(
-      FACEBOOK_PAGE_SCOPES.filter((scope) => scope !== 'pages_manage_posts'),
-    )
+  it('requests exactly the page + Instagram scope sets', () => {
+    expect(FACEBOOK_OAUTH_SCOPES).toEqual([
+      ...FACEBOOK_PAGE_SCOPES,
+      ...INSTAGRAM_SCOPES,
+    ])
   })
 
   it('filterGrantedScopes keeps only granted scopes, preserving request order', () => {

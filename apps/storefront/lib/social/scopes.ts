@@ -35,22 +35,20 @@ export const INSTAGRAM_SCOPES = [
 ] as const
 
 /**
- * What the Facebook authorize dialog actually requests. Trimmed to the scopes
- * Meta grants WITHOUT App Review: requesting the posting/Instagram scopes
- * (`pages_manage_posts` + the `instagram_*` set) before the app has App Review —
- * or before the connecting user holds an app role in Development mode — makes
- * Meta reject the whole request with "Invalid Scopes", which blocks the connect
- * entirely. Re-add `pages_manage_posts` and `...INSTAGRAM_SCOPES` here once Meta
- * App Review + business verification are complete to enable Page/Instagram
- * publishing. `FACEBOOK_PAGE_SCOPES`/`INSTAGRAM_SCOPES` stay defined above as the
- * reference the callback filters granted permissions against.
+ * What the Facebook authorize dialog actually requests: the full page +
+ * Instagram set. The Instagram scopes are required even just to DISCOVER the
+ * linked Instagram account — without `instagram_basic` on the token, Meta
+ * omits the Page's `instagram_business_account` field and the callback reports
+ * "no Instagram Business account was found" regardless of linking.
+ *
+ * Grant rules: in Development mode these are granted to users who hold a role
+ * on the Meta app (Admin/Developer/Tester) — which is how this store connects.
+ * A user with NO role on the app gets the whole request rejected with
+ * "Invalid Scopes"; App Review + business verification lifts that for Live mode.
  */
 export const FACEBOOK_OAUTH_SCOPES: string[] = [
-  'pages_show_list',
-  'pages_read_engagement',
-  'pages_manage_metadata',
-  'business_management',
-  'catalog_management',
+  ...FACEBOOK_PAGE_SCOPES,
+  ...INSTAGRAM_SCOPES,
 ]
 
 /**
