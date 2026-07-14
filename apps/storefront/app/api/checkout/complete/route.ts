@@ -6,10 +6,13 @@ import { getProvider } from '@/lib/payments'
 import { Prisma, PaymentStatus, OrderStatus } from '@prisma/client'
 import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
+import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
 
 const CompleteSchema = z.object({
   orderId: z.string().cuid(),
-  paymentIntentId: z.string().min(1),
+  // Absent when a gift certificate covered the order in full: there is no charge, so
+  // there is no PaymentIntent. Only accepted when the order's total is actually zero.
+  paymentIntentId: z.string().min(1).optional(),
 })
 
 type OrderWithItems = {
@@ -20,6 +23,10 @@ type OrderWithItems = {
   paymentStatus: PaymentStatus
   status: OrderStatus
   total: Prisma.Decimal
+  discountCode: string | null
+  discountAmount: Prisma.Decimal
+  giftCertificateCode: string | null
+  giftCertificateAmount: Prisma.Decimal
   participantId: string | null
   fundraiserId: string | null
   items: {
@@ -64,6 +71,10 @@ export async function POST(request: Request) {
           paymentStatus: true,
           status: true,
           total: true,
+          discountCode: true,
+          discountAmount: true,
+          giftCertificateCode: true,
+          giftCertificateAmount: true,
           participantId: true,
           fundraiserId: true,
           items: {
@@ -77,7 +88,7 @@ export async function POST(request: Request) {
           },
         },
       }),
-      paymentAdapter.confirmPayment(paymentIntentId),
+      paymentIntentId ? paymentAdapter.confirmPayment(paymentIntentId) : Promise.resolve(null),
     ])
 
     order = fetchedOrder
@@ -97,7 +108,21 @@ export async function POST(request: Request) {
       return response
     }
 
-    if (!paymentConfirmation || paymentConfirmation.status !== 'SUCCEEDED') {
+    // A gift certificate can cover the order in full, so there is nothing to charge and
+    // no PaymentIntent to verify. This is only allowed when the order's own total — which
+    // was computed server-side — is actually zero, so it cannot be used to skip payment
+    // on an order that owes money.
+    const expectedTotalInCents = Math.round(Number(order.total) * 100)
+    const isFullyCoveredByGiftCertificate = expectedTotalInCents === 0
+
+    if (!isFullyCoveredByGiftCertificate && !paymentIntentId) {
+      return NextResponse.json(
+        { error: 'Payment has not been confirmed.' },
+        { status: 400 }
+      )
+    }
+
+    if (!isFullyCoveredByGiftCertificate && (!paymentConfirmation || paymentConfirmation.status !== 'SUCCEEDED')) {
       // Release reserved inventory for all items in parallel since payment failed
       const releaseResults = await Promise.allSettled(
         order.items.map((item) =>
@@ -125,31 +150,31 @@ export async function POST(request: Request) {
     // The PaymentIntent must belong to this order and cover its full total. Without
     // both checks a succeeded PaymentIntent from any earlier order could be replayed
     // against a different, unpaid order to mark it paid without charging for it.
-    const expectedTotalInCents = Math.round(Number(order.total) * 100)
+    if (!isFullyCoveredByGiftCertificate) {
+      if (paymentConfirmation!.orderId !== order.id) {
+        console.error('[Checkout Complete] PaymentIntent does not belong to order', {
+          orderId: order.id,
+          paymentIntentId,
+          paymentIntentOrderId: paymentConfirmation!.orderId,
+        })
+        return NextResponse.json(
+          { error: 'Payment does not match this order.' },
+          { status: 400 }
+        )
+      }
 
-    if (paymentConfirmation.orderId !== order.id) {
-      console.error('[Checkout Complete] PaymentIntent does not belong to order', {
-        orderId: order.id,
-        paymentIntentId,
-        paymentIntentOrderId: paymentConfirmation.orderId,
-      })
-      return NextResponse.json(
-        { error: 'Payment does not match this order.' },
-        { status: 400 }
-      )
-    }
-
-    if (paymentConfirmation.amount !== expectedTotalInCents) {
-      console.error('[Checkout Complete] PaymentIntent amount does not match order total', {
-        orderId: order.id,
-        paymentIntentId,
-        paidAmount: paymentConfirmation.amount,
-        expectedTotalInCents,
-      })
-      return NextResponse.json(
-        { error: 'Payment does not match this order.' },
-        { status: 400 }
-      )
+      if (paymentConfirmation!.amount !== expectedTotalInCents) {
+        console.error('[Checkout Complete] PaymentIntent amount does not match order total', {
+          orderId: order.id,
+          paymentIntentId,
+          paidAmount: paymentConfirmation!.amount,
+          expectedTotalInCents,
+        })
+        return NextResponse.json(
+          { error: 'Payment does not match this order.' },
+          { status: 400 }
+        )
+      }
     }
 
     // Collect deduction results for post-transaction alert firing
@@ -271,6 +296,20 @@ export async function POST(request: Request) {
             lowStockThreshold: result.product.lowStockThreshold,
           })
         }
+
+        // Redeem the codes now that the order is paid. Deferring redemption to this
+        // point means an abandoned checkout never burns a gift balance or consumes a
+        // discount's usage allowance. Both helpers are idempotent on orderId, because
+        // the Stripe webhook completes the same order in parallel.
+        await redeemOrderCodesInTx(tx, {
+          orderId: order!.id,
+          userId: order!.userId,
+          discountCode: order!.discountCode,
+          discountAmount: Number(order!.discountAmount),
+          giftCertificateCode: order!.giftCertificateCode,
+          giftCertificateAmount: Number(order!.giftCertificateAmount),
+          orderTotal: Number(order!.total),
+        })
       },
       { isolationLevel: 'Serializable' }
     )

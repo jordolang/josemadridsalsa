@@ -164,11 +164,13 @@ type ExpressCheckoutProps = {
   items: any[]
   formState: CheckoutFormState
   total: number
+  discountCode?: string
+  giftCertificateCode?: string
   onSuccess: () => void
   onError: (message: string) => void
 }
 
-function ExpressCheckout({ items, formState, total, onSuccess, onError }: ExpressCheckoutProps) {
+function ExpressCheckout({ items, formState, total, discountCode, giftCertificateCode, onSuccess, onError }: ExpressCheckoutProps) {
   const stripe = useStripe()
   const router = useRouter()
   const [isProcessing, setIsProcessing] = useState(false)
@@ -208,6 +210,10 @@ function ExpressCheckout({ items, formState, total, onSuccess, onError }: Expres
             postalCode: shippingAddress?.postal_code || formState.postalCode || '',
           },
           notes: formState.notes || undefined,
+          // Codes only; the server revalidates and recomputes the amounts. Without these
+          // the order would be created at full price while the summary showed a discount.
+          discountCode,
+          giftCertificateCode,
         }),
       })
 
@@ -314,6 +320,17 @@ function CheckoutForm() {
   const [availableShippingOptions, setAvailableShippingOptions] = useState<ShippingOption[]>([])
   const [selectedShippingOption, setSelectedShippingOption] = useState<ShippingOption | null>(null)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodId>('card')
+  // Discount and gift certificate codes. These are quotes only — the server revalidates
+  // each code and recomputes the amounts when the order is created, so nothing here is
+  // trusted for pricing.
+  const [discountInput, setDiscountInput] = useState('')
+  const [appliedDiscount, setAppliedDiscount] = useState<{ code: string; amount: number } | null>(null)
+  const [discountError, setDiscountError] = useState<string | null>(null)
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false)
+  const [giftInput, setGiftInput] = useState('')
+  const [appliedGift, setAppliedGift] = useState<{ code: string; amount: number; balance: number } | null>(null)
+  const [giftError, setGiftError] = useState<string | null>(null)
+  const [isApplyingGift, setIsApplyingGift] = useState(false)
   const [linkEmail, setLinkEmail] = useState('')
   const [linkComplete, setLinkComplete] = useState(false)
   const [isRecoveringCart, setIsRecoveringCart] = useState(false)
@@ -329,6 +346,102 @@ function CheckoutForm() {
   )
 
   const hasCartItems = items.length > 0
+
+  // Mirrors the server's arithmetic in /api/checkout: discount comes off the goods, then
+  // shipping and tax, then the gift certificate is applied against everything owed.
+  const discountAmount = Math.min(appliedDiscount?.amount ?? 0, subtotal)
+  const amountDue = Math.max(subtotal - discountAmount + shippingCost + taxAmount, 0)
+  const giftCertificateAmount = Math.min(appliedGift?.amount ?? 0, amountDue)
+  const orderTotal = Math.max(amountDue - giftCertificateAmount, 0)
+
+  // PayPal, Venmo and Cash App create their orders through their own endpoints, which do
+  // not apply discount or gift certificate codes. Offering them with a code applied would
+  // charge the customer the undiscounted total while the summary showed a discount, so
+  // they are disabled until the code is removed.
+  const hasCodeApplied = Boolean(appliedDiscount || appliedGift)
+  const paymentMethods = useMemo(
+    () =>
+      DEFAULT_METHODS.map((method) =>
+        hasCodeApplied && method.id !== 'card' && method.id !== 'link'
+          ? { ...method, enabled: false }
+          : method
+      ),
+    [hasCodeApplied]
+  )
+
+  // A wallet method selected before a code was applied would otherwise stay selected and
+  // charge the undiscounted total.
+  useEffect(() => {
+    if (hasCodeApplied && selectedPaymentMethod !== 'card' && selectedPaymentMethod !== 'link') {
+      setSelectedPaymentMethod('card')
+    }
+  }, [hasCodeApplied, selectedPaymentMethod])
+
+  const handleApplyDiscount = async () => {
+    const code = discountInput.trim()
+    if (!code) return
+
+    setIsApplyingDiscount(true)
+    setDiscountError(null)
+
+    try {
+      const response = await fetch('/api/checkout/validate-discount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, cartTotal: subtotal }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.valid) {
+        setAppliedDiscount(null)
+        setDiscountError(data.error || 'This discount code could not be applied.')
+        return
+      }
+
+      setAppliedDiscount({ code: data.discountCode.code, amount: data.discountAmount ?? 0 })
+      setDiscountInput('')
+    } catch {
+      setDiscountError('Could not check that code. Please try again.')
+    } finally {
+      setIsApplyingDiscount(false)
+    }
+  }
+
+  const handleApplyGiftCertificate = async () => {
+    const code = giftInput.trim()
+    if (!code) return
+
+    setIsApplyingGift(true)
+    setGiftError(null)
+
+    try {
+      const response = await fetch('/api/checkout/apply-gift-certificate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, cartTotal: amountDue }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        setAppliedGift(null)
+        setGiftError(data.error || 'This gift certificate could not be applied.')
+        return
+      }
+
+      setAppliedGift({
+        code: data.code,
+        amount: parseFloat(data.applicableAmount),
+        balance: parseFloat(data.balance),
+      })
+      setGiftInput('')
+    } catch {
+      setGiftError('Could not check that certificate. Please try again.')
+    } finally {
+      setIsApplyingGift(false)
+    }
+  }
 
   // Calculate tax when address is complete
   const calculateTaxEstimate = async () => {
@@ -601,6 +714,9 @@ function CheckoutForm() {
           notes: formState.notes || undefined,
           shippingMethod: selectedShippingOption?.method,
           shippingCost: selectedShippingOption?.cost,
+          // Codes only. The server revalidates them and recomputes the amounts.
+          discountCode: appliedDiscount?.code,
+          giftCertificateCode: appliedGift?.code,
           referralCode: referralCode || undefined,
           paymentMethod: selectedPaymentMethod === 'link' ? 'link' : undefined,
         }),
@@ -611,7 +727,28 @@ function CheckoutForm() {
         throw new Error(error.error || 'Unable to create payment.')
       }
 
-      const { clientSecret, orderId, orderAccessToken } = await checkoutResponse.json()
+      const { clientSecret, orderId, orderAccessToken, requiresPayment } =
+        await checkoutResponse.json()
+
+      // A gift certificate can cover the order in full, leaving nothing to charge. There
+      // is no PaymentIntent to confirm, so complete the order directly.
+      if (requiresPayment === false) {
+        const freeCompletion = await fetch('/api/checkout/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId }),
+        })
+
+        if (!freeCompletion.ok) {
+          const error = await freeCompletion.json()
+          throw new Error(error.error || 'Unable to complete your order.')
+        }
+
+        clearCart()
+        setSuccessMessage('Payment successful!')
+        router.push(`/order-confirmation/${orderId}?token=${orderAccessToken}`)
+        return
+      }
 
       let paymentResult
 
@@ -910,7 +1047,9 @@ function CheckoutForm() {
                   <ExpressCheckout
                     items={items}
                     formState={formState}
-                    total={subtotal + shippingCost + taxAmount}
+                    total={orderTotal}
+                    discountCode={appliedDiscount?.code}
+                    giftCertificateCode={appliedGift?.code}
                     onSuccess={() => {
                       clearCart()
                       setSuccessMessage('Payment successful!')
@@ -930,7 +1069,7 @@ function CheckoutForm() {
 
                   {/* Payment Method Selector */}
                   <PaymentMethodSelector
-                    methods={DEFAULT_METHODS}
+                    methods={paymentMethods}
                     selectedMethod={selectedPaymentMethod}
                     onSelect={setSelectedPaymentMethod}
                   />
@@ -1038,7 +1177,7 @@ function CheckoutForm() {
                         state: formState.state,
                         postalCode: formState.postalCode,
                       }}
-                      total={subtotal + shippingCost + taxAmount}
+                      total={orderTotal}
                       notes={formState.notes || undefined}
                       shippingMethod={selectedShippingOption?.method}
                       referralCode={getReferralCodeFromCookie() || undefined}
@@ -1112,11 +1251,107 @@ function CheckoutForm() {
                   </div>
                 ))}
               </div>
-              <div className="border-t pt-4 space-y-2 text-sm">
+              <div className="border-t pt-4 space-y-3 text-sm">
+                <div className="space-y-2">
+                  <label htmlFor="discount-code" className="text-xs font-medium text-gray-700">
+                    Discount code
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="discount-code"
+                      value={discountInput}
+                      onChange={(event) => setDiscountInput(event.target.value)}
+                      placeholder="Enter code"
+                      disabled={isApplyingDiscount}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          handleApplyDiscount()
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleApplyDiscount}
+                      disabled={isApplyingDiscount || !discountInput.trim()}
+                    >
+                      {isApplyingDiscount ? 'Checking...' : 'Apply'}
+                    </Button>
+                  </div>
+                  {discountError && <p className="text-xs text-red-600">{discountError}</p>}
+                  {appliedDiscount && (
+                    <p className="text-xs text-green-600">
+                      Code {appliedDiscount.code} applied.{' '}
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => {
+                          setAppliedDiscount(null)
+                          setDiscountError(null)
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="gift-code" className="text-xs font-medium text-gray-700">
+                    Gift certificate
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="gift-code"
+                      value={giftInput}
+                      onChange={(event) => setGiftInput(event.target.value)}
+                      placeholder="Enter certificate code"
+                      disabled={isApplyingGift}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          handleApplyGiftCertificate()
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleApplyGiftCertificate}
+                      disabled={isApplyingGift || !giftInput.trim()}
+                    >
+                      {isApplyingGift ? 'Checking...' : 'Apply'}
+                    </Button>
+                  </div>
+                  {giftError && <p className="text-xs text-red-600">{giftError}</p>}
+                  {appliedGift && (
+                    <p className="text-xs text-green-600">
+                      Certificate {appliedGift.code} applied ({formatPrice(appliedGift.balance)} balance).{' '}
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => {
+                          setAppliedGift(null)
+                          setGiftError(null)
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex items-center justify-between text-gray-600">
                   <span>Subtotal</span>
                   <span>{formatPrice(subtotal)}</span>
                 </div>
+                {discountAmount > 0 && (
+                  <div className="flex items-center justify-between text-green-600">
+                    <span>Discount{appliedDiscount ? ` (${appliedDiscount.code})` : ''}</span>
+                    <span>-{formatPrice(discountAmount)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-gray-600">
                   <span>Shipping {isCalculatingShipping && <span className="text-xs">(calculating...)</span>}</span>
                   <span>{shippingCost === 0 && availableShippingOptions.length > 0 ? 'FREE' : formatPrice(shippingCost)}</span>
@@ -1125,6 +1360,12 @@ function CheckoutForm() {
                   <span>Tax {isCalculatingTax && <span className="text-xs">(calculating...)</span>}</span>
                   <span>{formatPrice(taxAmount)}</span>
                 </div>
+                {giftCertificateAmount > 0 && (
+                  <div className="flex items-center justify-between text-green-600">
+                    <span>Gift certificate{appliedGift ? ` (${appliedGift.code})` : ''}</span>
+                    <span>-{formatPrice(giftCertificateAmount)}</span>
+                  </div>
+                )}
                 {shippingCost === 0 && availableShippingOptions.length > 0 && (
                   <p className="text-xs text-green-600 font-medium">
                     Free shipping applied!
@@ -1139,7 +1380,7 @@ function CheckoutForm() {
             </CardContent>
             <CardFooter className="flex items-center justify-between border-t text-base sm:text-lg font-semibold px-4 sm:px-6">
               <span>Total due now</span>
-              <span>{formatPrice(subtotal + shippingCost + taxAmount)}</span>
+              <span>{formatPrice(orderTotal)}</span>
             </CardFooter>
           </Card>
         </aside>

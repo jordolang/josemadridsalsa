@@ -450,6 +450,13 @@ model Order {
   shippingCost             Decimal                @default(0) @db.Decimal(10, 2)
   tax                      Decimal                @default(0) @db.Decimal(10, 2)
   discountAmount           Decimal                @default(0) @db.Decimal(10, 2)
+  // Codes applied at checkout. Recorded on the order so that completion (which may run
+  // in the Stripe webhook, with no request context) knows what to redeem. Redemption is
+  // deferred to payment success so an abandoned checkout cannot burn a gift balance or
+  // consume a discount's usage allowance.
+  discountCode             String?
+  giftCertificateCode      String?
+  giftCertificateAmount    Decimal                @default(0) @db.Decimal(10, 2)
   total                    Decimal                @db.Decimal(10, 2)
   shippingMethod           String?
   trackingNumber           String?
