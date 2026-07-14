@@ -11,6 +11,8 @@ import { logAuditWithRequest } from '@/lib/audit'
 import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manager'
 import { getReferralFromCode } from '@/lib/fundraising/referral-tracker'
 import { createOrderAccessToken } from '@/lib/orders/access-token'
+import { validateDiscountCode } from '@/lib/discounts'
+import { validateGiftCertificate } from '@/lib/gift-certificates'
 
 const CheckoutSchema = z.object({
   items: z
@@ -35,7 +37,10 @@ const CheckoutSchema = z.object({
     postalCode: z.string().min(1),
   }),
   notes: z.string().optional(),
+  // Only codes are accepted. The discount and gift certificate amounts are always
+  // recomputed server-side, for the same reason shippingCost is not accepted below.
   discountCode: z.string().optional(),
+  giftCertificateCode: z.string().optional(),
   recoveryToken: z.string().optional(),
   shippingMethod: z.string().optional(),
   // NOTE: shippingCost is intentionally NOT accepted from the client.
@@ -45,6 +50,8 @@ const CheckoutSchema = z.object({
 
 const toDecimal = (value: number) =>
   new Prisma.Decimal(value.toFixed(2))
+
+const round2 = (value: number) => Math.round(value * 100) / 100
 
 const generateOrderNumber = () => {
   const now = new Date()
@@ -71,7 +78,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, customer, shipping, notes, discountCode, recoveryToken, shippingMethod, referralCode } = parsed.data
+    const { items, customer, shipping, notes, discountCode, giftCertificateCode, recoveryToken, shippingMethod, referralCode } = parsed.data
 
     const productIds = items.map((item) => item.productId)
     const products = await prisma.product.findMany({
@@ -109,6 +116,32 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Validate the discount code against the server-computed subtotal. The client sends
+    // only a code; the amount is derived here so it cannot be tampered with.
+    let discountAmount = 0
+    let appliedDiscountCode: string | null = null
+    let discountGivesFreeShipping = false
+
+    if (discountCode) {
+      const discountResult = await validateDiscountCode(discountCode, subtotal, user?.id)
+
+      if (!discountResult.valid) {
+        return NextResponse.json(
+          { error: discountResult.error || 'Invalid discount code' },
+          { status: 400 }
+        )
+      }
+
+      appliedDiscountCode = discountResult.discountCode!.code
+      // A discount can never exceed the value of the goods.
+      discountAmount = Math.min(discountResult.discountAmount ?? 0, subtotal)
+      discountGivesFreeShipping = discountResult.discountCode!.type === 'FREE_SHIPPING'
+    }
+
+    // Tax and shipping are assessed on what the customer actually pays for the goods.
+    // With no discount this equals subtotal, so undiscounted orders are unaffected.
+    const discountedSubtotal = subtotal - discountAmount
+
     // Reserve inventory for all items atomically before proceeding with checkout.
     // reserveMultipleProducts uses a single Serializable transaction: if any item
     // has insufficient stock the entire reservation is rolled back automatically.
@@ -134,9 +167,13 @@ export async function POST(request: NextRequest) {
     // Calculate tax using Stripe Tax API
     let taxAmount = 0
     try {
+      // Spread the discount across the line items proportionally, so tax is assessed on
+      // what the customer actually pays. With no discount this factor is 1.
+      const taxableFactor = subtotal > 0 ? discountedSubtotal / subtotal : 1
+
       const taxResult = await calculateTax({
         lineItems: orderItems.map((item) => ({
-          amount: Math.round(Number(item.totalPrice) * 100), // Convert to cents
+          amount: Math.round(Number(item.totalPrice) * taxableFactor * 100), // cents
           reference: item.productId,
           taxCode: 'txcd_30011000', // Food & beverage - Packaged food
         })),
@@ -188,7 +225,7 @@ export async function POST(request: NextRequest) {
           postalCode: shipping.postalCode,
           country: 'US',
         },
-        subtotal,
+        subtotal: discountedSubtotal,
       })
 
       // If the client selected a specific shipping method, try to match it
@@ -229,7 +266,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const total = subtotal + taxAmount + finalShippingCost
+    // A FREE_SHIPPING code carries no dollar discount; it zeroes the shipping line.
+    if (discountGivesFreeShipping) {
+      finalShippingCost = 0
+    }
+
+    const amountDue = discountedSubtotal + taxAmount + finalShippingCost
+
+    // A gift certificate is stored value, applied last against everything owed. It is
+    // recorded on the order but only redeemed once payment succeeds.
+    let giftCertificateAmount = 0
+    let appliedGiftCertificateCode: string | null = null
+
+    if (giftCertificateCode) {
+      const giftResult = await validateGiftCertificate(giftCertificateCode, amountDue)
+
+      if (!giftResult.valid) {
+        return NextResponse.json(
+          { error: giftResult.error || 'Invalid gift certificate code' },
+          { status: 400 }
+        )
+      }
+
+      appliedGiftCertificateCode = giftResult.code!
+      giftCertificateAmount = giftResult.applicableAmount ?? 0
+    }
+
+    const total = Math.max(round2(amountDue - giftCertificateAmount), 0)
 
     // If recovery token provided, mark abandoned cart as recovered
     if (recoveryToken) {
@@ -284,7 +347,10 @@ export async function POST(request: NextRequest) {
         subtotal: toDecimal(subtotal),
         shippingCost: toDecimal(finalShippingCost),
         tax: toDecimal(taxAmount),
-        discountAmount: toDecimal(0),
+        discountAmount: toDecimal(discountAmount),
+        discountCode: appliedDiscountCode,
+        giftCertificateCode: appliedGiftCertificateCode,
+        giftCertificateAmount: toDecimal(giftCertificateAmount),
         total: toDecimal(total),
         paymentStatus: 'PENDING',
         status: 'PENDING',
@@ -326,6 +392,19 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('[Checkout] Failed to queue Shopify sync:', error)
       // Don't block checkout if Shopify sync fails
+    }
+
+    // A gift certificate can cover the order in full, leaving nothing to charge. Stripe
+    // rejects a zero-amount PaymentIntent, so skip payment entirely and let the client
+    // complete the order directly.
+    if (total <= 0) {
+      return NextResponse.json({
+        clientSecret: null,
+        requiresPayment: false,
+        orderId: order.id,
+        orderAccessToken: createOrderAccessToken(order.id),
+        amount: 0,
+      })
     }
 
     const paymentAdapter = getProvider('STRIPE')

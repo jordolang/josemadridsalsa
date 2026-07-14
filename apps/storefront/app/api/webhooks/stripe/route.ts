@@ -6,6 +6,7 @@ import prisma from '@/lib/prisma'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { deductReservedInventoryInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
+import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -175,7 +176,17 @@ export async function POST(request: Request) {
             }
           }
 
-          // Gift certificates are already created, no additional action needed
+          // Redeem the codes recorded on the order. Idempotent on orderId, because
+          // /api/checkout/complete completes the same order in parallel.
+          await redeemOrderCodesInTx(tx, {
+            orderId: order.id,
+            userId: order.userId,
+            discountCode: order.discountCode,
+            discountAmount: Number(order.discountAmount),
+            giftCertificateCode: order.giftCertificateCode,
+            giftCertificateAmount: Number(order.giftCertificateAmount),
+            orderTotal: Number(order.total),
+          })
 
           return deductionResults
         })
