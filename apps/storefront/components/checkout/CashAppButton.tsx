@@ -31,7 +31,7 @@ interface CashAppButtonProps {
   notes?: string
   shippingMethod?: string
   referralCode?: string
-  onSuccess: (orderId: string) => void
+  onSuccess: (orderId: string, orderAccessToken: string) => void
   onError: (message: string) => void
   disabled?: boolean
 }
@@ -83,7 +83,7 @@ export function CashAppButton({ items, customer, shipping, total, notes, shippin
       }
 
       const result = await paymentResponse.json()
-      onSuccess(result.orderId)
+      onSuccess(result.orderId, result.orderAccessToken)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Cash App payment failed'
       onError(message)
