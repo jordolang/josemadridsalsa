@@ -8,6 +8,8 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+  # Allows re-running the pipeline on demand without an empty commit.
+  workflow_dispatch:
 
 jobs:
   ci:
