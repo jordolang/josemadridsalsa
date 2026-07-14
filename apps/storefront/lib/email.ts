@@ -48,6 +48,14 @@ export async function sendAdminReplyEmail(
   return { data }
 }
 
+// The reset link is built from NEXTAUTH_URL. Interpolating it unguarded means that if the
+// variable is ever missing the email ships a dead `undefined/auth/reset-password?...` link
+// to a customer who is already locked out — a failure nobody would see until they complain.
+const passwordResetBaseUrl = () =>
+  process.env.NEXTAUTH_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  'https://www.josemadrid.net'
+
 export async function sendPasswordResetEmail(email: string, token: string) {
   if (!resend) {
     console.warn('RESEND_API_KEY not set; skipping password reset email')
@@ -64,7 +72,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
       where: { key: 'password_reset' },
     })
     if (tpl) {
-      const resetUrl = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${token}`
+      const resetUrl = `${passwordResetBaseUrl()}/auth/reset-password?token=${token}`
       subject = tpl.subject || subject
       html = tpl.html
         .replace(/\{\{\s*resetUrl\s*\}\}/g, resetUrl)
@@ -76,7 +84,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
   }
 
   if (!html) {
-    const resetUrl = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${token}`
+    const resetUrl = `${passwordResetBaseUrl()}/auth/reset-password?token=${token}`
     html = buildPasswordResetHtml(resetUrl)
   }
 
