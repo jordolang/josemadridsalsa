@@ -73,11 +73,10 @@ export async function POST(
     // Get Stripe client
     const stripe = getStripe();
 
-    // Retrieve the payment intent to get the charge ID
-    const paymentIntent = await stripe.paymentIntents.retrieve(
-      order.stripePaymentId,
-      { expand: ['charges'] }
-    ) as any;
+    // Retrieve the payment intent to get the charge ID. `charges` was removed from
+    // PaymentIntent in Stripe API 2022-11-15 (replaced by `latest_charge`); expanding it
+    // makes Stripe reject the whole call, which failed every refund from admin.
+    const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentId);
 
     const latestCharge = typeof paymentIntent.latest_charge === 'string'
       ? paymentIntent.latest_charge
@@ -89,13 +88,11 @@ export async function POST(
 
     const chargeId = latestCharge;
 
-    // Retrieve the charge to check existing refunds
+    // The Charge no longer auto-expands its refunds either, so charge.refunds was always
+    // empty and totalRefunded always 0 — meaning the "exceeds refundable amount" guard
+    // below could not see prior refunds. amount_refunded is always present and authoritative.
     const charge = await stripe.charges.retrieve(chargeId);
-    const existingRefunds = charge.refunds?.data || [];
-    const totalRefunded = existingRefunds.reduce(
-      (sum: number, refund: any) => sum + refund.amount,
-      0
-    ) / 100; // Convert from cents to dollars
+    const totalRefunded = (charge.amount_refunded ?? 0) / 100; // Convert from cents to dollars
 
     // Calculate remaining refundable amount
     const refundableAmount = totalPaid - totalRefunded;

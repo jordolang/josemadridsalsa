@@ -75,6 +75,16 @@ vi.mock('@/lib/stripe', () => ({
     webhooks: {
       constructEvent: mockWebhooksConstructEvent,
     },
+    // charge.refunded resolves orderId from the PaymentIntent (Stripe does not copy its
+    // metadata onto the Charge) and lists refunds explicitly (the Charge stopped
+    // auto-expanding them in API 2022-11-15). Both return nothing here, so the charges in
+    // these tests still fall through to the skip paths they are asserting.
+    paymentIntents: {
+      retrieve: vi.fn(async () => ({ metadata: {} })),
+    },
+    refunds: {
+      list: vi.fn(async () => ({ data: [] })),
+    },
   })),
 }))
 
@@ -489,7 +499,7 @@ describe('Stripe Webhook Integration Tests', () => {
     expect(data.received).toBe(true)
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Skipping refund processing: no refund found in charge:',
+      'Skipping refund processing: no refund found for charge:',
       'ch_no_refund'
     )
 
@@ -546,7 +556,7 @@ describe('Stripe Webhook Integration Tests', () => {
     expect(data.received).toBe(true)
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Skipping refund processing: charge missing orderId in metadata:',
+      'Skipping refund processing: cannot resolve orderId for charge:',
       'ch_no_order'
     )
 

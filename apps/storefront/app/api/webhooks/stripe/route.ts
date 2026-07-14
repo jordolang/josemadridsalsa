@@ -279,18 +279,41 @@ export async function POST(request: Request) {
 
       case 'charge.refunded': {
         const charge = event.data.object as Stripe.Charge
-        const orderId = charge.metadata?.orderId
+        const stripe = getStripe()
+
+        const chargePaymentIntentId =
+          typeof charge.payment_intent === 'string'
+            ? charge.payment_intent
+            : charge.payment_intent?.id
+
+        // orderId lives on the PaymentIntent's metadata (set in StripeProvider.createPayment).
+        // Stripe does not copy PaymentIntent metadata onto the Charge, so charge.metadata is
+        // empty here and this handler used to bail on every refund. Fall back to the intent.
+        let orderId = charge.metadata?.orderId
+
+        if (!orderId && chargePaymentIntentId) {
+          const chargeIntent = await stripe.paymentIntents.retrieve(chargePaymentIntentId)
+          orderId = chargeIntent.metadata?.orderId
+        }
 
         if (!orderId) {
-          console.warn('Skipping refund processing: charge missing orderId in metadata:', charge.id)
+          console.warn('Skipping refund processing: cannot resolve orderId for charge:', charge.id)
           return NextResponse.json({ received: true })
         }
 
         const isFullRefund = charge.amount_refunded === charge.amount
-        const stripeRefund = charge.refunds?.data[0]
+
+        // Since Stripe API 2022-11-15 the Charge no longer auto-expands its refunds, so
+        // charge.refunds is absent on the webhook payload and this was skipping every refund.
+        let stripeRefund = charge.refunds?.data?.[0]
 
         if (!stripeRefund) {
-          console.warn('Skipping refund processing: no refund found in charge:', charge.id)
+          const refunds = await stripe.refunds.list({ charge: charge.id, limit: 1 })
+          stripeRefund = refunds.data[0]
+        }
+
+        if (!stripeRefund) {
+          console.warn('Skipping refund processing: no refund found for charge:', charge.id)
           return NextResponse.json({ received: true })
         }
 

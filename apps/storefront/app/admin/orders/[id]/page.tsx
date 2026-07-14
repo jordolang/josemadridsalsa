@@ -65,9 +65,10 @@ async function getRefundableAmount(order: {
 
   try {
     const stripe = getStripe()
-    const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentId, {
-      expand: ['charges']
-    }) as any
+    // `charges` was removed from PaymentIntent in Stripe API 2022-11-15 (replaced by
+    // `latest_charge`). Expanding it makes Stripe reject the call, which was caught below
+    // and reported as $0 refundable on every order.
+    const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentId)
 
     const chargeId = typeof paymentIntent.latest_charge === 'string'
       ? paymentIntent.latest_charge

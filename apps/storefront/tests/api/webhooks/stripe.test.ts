@@ -40,6 +40,15 @@ vi.mock('@/lib/stripe', () => ({
     webhooks: {
       constructEvent: mockWebhooksConstructEvent,
     },
+    // charge.refunded resolves the orderId from the PaymentIntent (Stripe does not copy
+    // its metadata onto the Charge) and lists refunds explicitly (the Charge stopped
+    // auto-expanding them in API 2022-11-15).
+    paymentIntents: {
+      retrieve: vi.fn(async () => ({ metadata: { orderId: 'order-payment' } })),
+    },
+    refunds: {
+      list: vi.fn(async () => ({ data: [{ id: 're_test', amount: 1000, reason: null }] })),
+    },
   })),
 }))
 
