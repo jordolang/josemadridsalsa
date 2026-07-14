@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma'
 import { getProvider } from '@/lib/payments'
 import { Prisma, PaymentStatus, OrderStatus } from '@prisma/client'
 import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
+import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
 
 const CompleteSchema = z.object({
   orderId: z.string().cuid(),
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
       )
     }
 
-    if (order.paymentStatus === 'PAID') {
+    if (isPaid(order.paymentStatus)) {
       const response = NextResponse.json({ success: true })
       if (abandonedCartId) {
         response.cookies.delete('abandonedCartId')
@@ -121,6 +122,36 @@ export async function POST(request: Request) {
       )
     }
 
+    // The PaymentIntent must belong to this order and cover its full total. Without
+    // both checks a succeeded PaymentIntent from any earlier order could be replayed
+    // against a different, unpaid order to mark it paid without charging for it.
+    const expectedTotalInCents = Math.round(Number(order.total) * 100)
+
+    if (paymentConfirmation.orderId !== order.id) {
+      console.error('[Checkout Complete] PaymentIntent does not belong to order', {
+        orderId: order.id,
+        paymentIntentId,
+        paymentIntentOrderId: paymentConfirmation.orderId,
+      })
+      return NextResponse.json(
+        { error: 'Payment does not match this order.' },
+        { status: 400 }
+      )
+    }
+
+    if (paymentConfirmation.amount !== expectedTotalInCents) {
+      console.error('[Checkout Complete] PaymentIntent amount does not match order total', {
+        orderId: order.id,
+        paymentIntentId,
+        paidAmount: paymentConfirmation.amount,
+        expectedTotalInCents,
+      })
+      return NextResponse.json(
+        { error: 'Payment does not match this order.' },
+        { status: 400 }
+      )
+    }
+
     // Collect deduction results for post-transaction alert firing
     const itemDeductions: Array<{
       productId: string
@@ -135,7 +166,7 @@ export async function POST(request: Request) {
         await tx.order.update({
           where: { id: order!.id },
           data: {
-            paymentStatus: 'PAID',
+            paymentStatus: PAID_PAYMENT_STATUS,
             status: 'CONFIRMED',
             stripePaymentId: paymentIntentId,
             abandonedCartId: abandonedCartId || undefined,
@@ -205,8 +236,25 @@ export async function POST(request: Request) {
           }
         }
 
-        // Deduct reserved inventory for each item inside the same transaction
+        // Deduct reserved inventory for each item inside the same transaction.
+        // The Stripe webhook completes the same order in parallel and deducts the
+        // same items, so skip any item it already recorded. deductReservedInventoryInTx
+        // is not idempotent on its own: without this guard a second deduction either
+        // throws (the reservation is gone) or silently consumes another customer's
+        // reservation, overselling the product.
         for (const item of order!.items) {
+          const existingDeduction = await tx.inventoryTransaction.findFirst({
+            where: {
+              productId: item.productId,
+              orderId: order!.id,
+              reason: 'ORDER_COMPLETION',
+            },
+          })
+
+          if (existingDeduction) {
+            continue
+          }
+
           const result = await deductReservedInventoryInTx(
             {
               productId: item.productId,
@@ -251,7 +299,7 @@ export async function POST(request: Request) {
     console.error('Checkout completion error:', error)
 
     // Release reserved inventory in parallel if order exists and hasn't been paid
-    if (order && order.items && order.paymentStatus !== 'PAID') {
+    if (order && order.items && !isPaid(order.paymentStatus)) {
       const releaseResults = await Promise.allSettled(
         order.items.map((item) =>
           releaseInventory({

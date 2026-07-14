@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import prisma from '@/lib/prisma'
 import { getProvider } from '@/lib/payments'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
+import { PAID_PAYMENT_STATUS } from '@/lib/payments/status'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -122,7 +123,7 @@ export async function POST(request: Request) {
           await tx.order.update({
             where: { id: order.id },
             data: {
-              paymentStatus: 'SUCCEEDED',
+              paymentStatus: PAID_PAYMENT_STATUS,
               status: 'CONFIRMED',
               providerPaymentId: squarePaymentId,
               paymentProvider: 'SQUARE',

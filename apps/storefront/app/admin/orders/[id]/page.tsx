@@ -31,6 +31,8 @@ import BuyShippingLabelDialog from '@/components/admin/BuyShippingLabelDialog'
 import { MobileOrderDetail } from '@/components/admin/mobile/MobileOrderDetail'
 import { getStripe } from '@/lib/stripe'
 import { Decimal } from '@prisma/client/runtime/library'
+import type { PaymentStatus } from '@prisma/client'
+import { isPaid } from '@/lib/payments/status'
 
 async function getOrder(id: string) {
   const order = await prisma.order.findUnique({
@@ -52,12 +54,12 @@ async function getOrder(id: string) {
 
 async function getRefundableAmount(order: {
   stripePaymentId: string | null
-  paymentStatus: string
+  paymentStatus: PaymentStatus
   total: number | Decimal
 }): Promise<number> {
   // If order can't be refunded, return 0
   if (!order.stripePaymentId) return 0
-  if (order.paymentStatus !== 'PAID' && order.paymentStatus !== 'PARTIALLY_REFUNDED') {
+  if (!isPaid(order.paymentStatus) && order.paymentStatus !== 'PARTIALLY_REFUNDED') {
     return 0
   }
 
@@ -454,7 +456,7 @@ export default async function OrderDetailPage({
                   <span className="text-muted-foreground">Status</span>
                   <Badge
                     variant={
-                      order.paymentStatus === 'PAID' ? 'default' : 'outline'
+                      isPaid(order.paymentStatus) ? 'default' : 'outline'
                     }
                   >
                     {order.paymentStatus}

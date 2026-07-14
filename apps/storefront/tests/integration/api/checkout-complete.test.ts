@@ -43,7 +43,12 @@ vi.mock('next/headers', () => ({
 }))
 
 // The route confirms payment through the provider adapter's confirmPayment().
-const mockConfirmPayment = vi.fn(() => Promise.resolve({ status: 'SUCCEEDED' }))
+// Stripe always returns the PaymentIntent's amount and its metadata.orderId (set in
+// StripeProvider.createPayment), and the route now verifies the payment is bound to
+// this order and covers its full total.
+const mockConfirmPayment = vi.fn(() =>
+  Promise.resolve({ status: 'SUCCEEDED', orderId: 'clxxx1234567890order', amount: 3097 })
+)
 
 vi.mock('@/lib/payments', () => ({
   getProvider: vi.fn(() => ({
@@ -66,7 +71,11 @@ describe('Checkout Complete API Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCookieGet.mockReturnValue(undefined)
-    mockConfirmPayment.mockResolvedValue({ status: 'SUCCEEDED' })
+    mockConfirmPayment.mockResolvedValue({
+      status: 'SUCCEEDED',
+      orderId: 'clxxx1234567890order',
+      amount: 3097,
+    })
     mockDeductReservedInventoryInTx.mockResolvedValue({
       newInventory: 10,
       product: { lowStockThreshold: 5 },
@@ -114,6 +123,10 @@ describe('Checkout Complete API Integration Tests', () => {
     },
     fundraiserParticipant: {
       update: vi.fn().mockResolvedValue({}),
+    },
+    // The route skips items the Stripe webhook already deducted. No prior deduction here.
+    inventoryTransaction: {
+      findFirst: vi.fn().mockResolvedValue(null),
     },
   })
 

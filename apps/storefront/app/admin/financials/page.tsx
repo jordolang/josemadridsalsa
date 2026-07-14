@@ -16,6 +16,7 @@ import { formatPrice } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { FinancialUploadPanel } from '@/components/admin/financials/financial-upload-panel'
+import { PAID_PAYMENT_STATUSES } from '@/lib/payments/status'
 import {
   financialIntegrations,
   mapIntegrationStatus,
@@ -154,7 +155,7 @@ async function getFinancialOverview(range: RangeKey): Promise<FinancialOverview>
       where: {
         ...orderFilter,
         status: { notIn: ['CANCELLED', 'REFUNDED'] },
-        paymentStatus: { in: ['PAID', 'PARTIALLY_REFUNDED'] },
+        paymentStatus: { in: [...PAID_PAYMENT_STATUSES, 'PARTIALLY_REFUNDED'] },
       },
     }),
     prisma.order.aggregate({

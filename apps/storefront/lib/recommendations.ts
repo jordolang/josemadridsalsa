@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import type { HeatLevel } from '@prisma/client'
+import { PAID_PAYMENT_STATUSES } from '@/lib/payments/status'
 
 export interface RecommendedProduct {
   id: string
@@ -269,7 +270,7 @@ export async function getPersonalizedRecommendations(
     const userOrders = await prisma.order.findMany({
       where: {
         userId,
-        paymentStatus: 'PAID',
+        paymentStatus: { in: PAID_PAYMENT_STATUSES },
       },
       include: {
         items: {

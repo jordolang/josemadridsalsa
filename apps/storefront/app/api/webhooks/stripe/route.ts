@@ -5,6 +5,7 @@ import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { deductReservedInventoryInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
+import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
         }
 
         // Skip if already paid
-        if (order.paymentStatus === 'SUCCEEDED') {
+        if (isPaid(order.paymentStatus)) {
           console.log('Order already marked as paid:', orderId)
           return NextResponse.json({ received: true })
         }
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
           await tx.order.update({
             where: { id: order.id },
             data: {
-              paymentStatus: 'SUCCEEDED',
+              paymentStatus: PAID_PAYMENT_STATUS,
               status: 'CONFIRMED',
               stripePaymentId: paymentIntent.id,
             },

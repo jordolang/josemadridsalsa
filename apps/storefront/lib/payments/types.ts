@@ -81,6 +81,10 @@ export interface PaymentResult {
   approvalUrl?: string
   /** Current payment status */
   status: 'REQUIRES_ACTION' | 'REQUIRES_CONFIRMATION' | 'PROCESSING' | 'SUCCEEDED' | 'FAILED'
+  /** Amount authorized by the provider, in cents. Used to verify the payment matches the order total. */
+  amount?: number
+  /** Order this payment was created for, as recorded with the provider. Used to verify the payment belongs to the order. */
+  orderId?: string
   /** Error message if the operation failed */
   error?: string
 }
