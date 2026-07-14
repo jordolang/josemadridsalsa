@@ -141,6 +141,8 @@ export class StripeAdapter implements PaymentProviderAdapter {
       providerPaymentId: paymentIntent.id,
       clientSecret: paymentIntent.client_secret ?? undefined,
       status: mapStripeStatus(paymentIntent.status),
+      amount: paymentIntent.amount,
+      orderId: paymentIntent.metadata?.orderId ?? undefined,
     }
   }
 

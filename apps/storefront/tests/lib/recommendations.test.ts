@@ -680,7 +680,9 @@ describe('getPersonalizedRecommendations', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           userId: 'user-1',
-          paymentStatus: 'PAID',
+          // SUCCEEDED is the legacy value for paid orders written before the
+          // webhook and checkout-complete paths were reconciled onto PAID.
+          paymentStatus: { in: ['PAID', 'SUCCEEDED'] },
         }),
       })
     )

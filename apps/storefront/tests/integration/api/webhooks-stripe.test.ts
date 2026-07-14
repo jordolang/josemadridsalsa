@@ -789,10 +789,12 @@ describe('Stripe Webhook Integration Tests', () => {
       },
     })
 
+    // The webhook writes PAID, the same terminal status as /api/checkout/complete,
+    // so the two paths recognize each other's work.
     expect(mockOrderUpdate).toHaveBeenCalledWith({
       where: { id: 'order-payment' },
       data: {
-        paymentStatus: 'SUCCEEDED',
+        paymentStatus: 'PAID',
         status: 'CONFIRMED',
         stripePaymentId: 'pi_payment',
       },

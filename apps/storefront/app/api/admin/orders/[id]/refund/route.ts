@@ -4,6 +4,7 @@ import { ok, fail } from '@/lib/api';
 import { logAuditWithRequest } from '@/lib/audit';
 import prisma from '@/lib/prisma';
 import { getStripe } from '@/lib/stripe';
+import { isPaid } from '@/lib/payments/status';
 
 /**
  * POST /api/admin/orders/[id]/refund
@@ -44,8 +45,9 @@ export async function POST(
       return fail('Order not found', 404);
     }
 
-    // Check payment status
-    if (order.paymentStatus !== 'PAID' && order.paymentStatus !== 'PARTIALLY_REFUNDED') {
+    // Check payment status. isPaid covers orders finalized as SUCCEEDED before the
+    // webhook and checkout-complete paths were reconciled onto PAID.
+    if (!isPaid(order.paymentStatus) && order.paymentStatus !== 'PARTIALLY_REFUNDED') {
       return fail(
         `Cannot refund order with payment status: ${order.paymentStatus}`,
         400

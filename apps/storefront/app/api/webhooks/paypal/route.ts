@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import prisma from '@/lib/prisma'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { getPayPalAccessToken } from '@/lib/payments/providers/paypal'
+import { PAID_PAYMENT_STATUS } from '@/lib/payments/status'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -181,7 +182,7 @@ export async function POST(request: Request) {
           await tx.order.update({
             where: { id: order.id },
             data: {
-              paymentStatus: 'SUCCEEDED',
+              paymentStatus: PAID_PAYMENT_STATUS,
               status: 'CONFIRMED',
               providerPaymentId: orderId,
               paymentProvider: 'PAYPAL',
