@@ -10,6 +10,7 @@ import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
 import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manager'
 import { getReferralFromCode } from '@/lib/fundraising/referral-tracker'
+import { createOrderAccessToken } from '@/lib/orders/access-token'
 
 const CheckoutSchema = z.object({
   items: z
@@ -382,6 +383,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         clientSecret: paymentResult.clientSecret,
         orderId: order.id,
+        // Lets a guest (who has no account to authenticate against) read back this
+        // one order on the confirmation page.
+        orderAccessToken: createOrderAccessToken(order.id),
         amount: total,
       })
     } catch (postReservationError) {

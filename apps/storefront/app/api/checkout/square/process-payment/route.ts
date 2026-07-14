@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client'
 import { getCurrentUser } from '@/lib/rbac'
 import { deductReservedInventoryInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
+import { createOrderAccessToken } from '@/lib/orders/access-token'
 
 const ProcessPaymentSchema = z.object({
   sourceId: z.string().min(1, 'Payment source token is required'),
@@ -247,6 +248,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       orderId: order.id,
+      orderAccessToken: createOrderAccessToken(order.id),
       orderNumber: order.orderNumber,
       squarePaymentId,
     })

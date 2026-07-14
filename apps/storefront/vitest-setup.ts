@@ -10,6 +10,8 @@
 process.env.RESEND_API_KEY = 'test_resend_api_key_12345'
 process.env.FROM_EMAIL = 'Jose Madrid Salsa <mike@josemadridsalsa.com>'
 process.env.NEXT_PUBLIC_BASE_URL = 'https://josemadrid.net'
+// Required in production (NextAuth, and the guest order access tokens derived from it).
+process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test_nextauth_secret_12345'
 
 import '@testing-library/jest-dom/vitest' // Note: /vitest sub-export, not main export
 import { cleanup } from '@testing-library/react'

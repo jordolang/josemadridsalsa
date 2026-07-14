@@ -5,6 +5,7 @@ import { getProvider } from '@/lib/payments'
 import { Prisma, PaymentStatus, OrderStatus } from '@prisma/client'
 import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
+import { createOrderAccessToken } from '@/lib/orders/access-token'
 
 const CaptureSchema = z.object({
   paypalOrderId: z.string().min(1, 'PayPal order ID is required'),
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         orderId: order.id,
+        orderAccessToken: createOrderAccessToken(order.id),
         orderNumber: order.orderNumber,
       })
     }
@@ -245,6 +247,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       orderId: order.id,
+      orderAccessToken: createOrderAccessToken(order.id),
       orderNumber: order.orderNumber,
     })
   } catch (error) {

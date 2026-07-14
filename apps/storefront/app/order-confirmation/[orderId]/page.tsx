@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useCartStore } from '@/lib/store/cart'
@@ -57,10 +57,14 @@ interface Order {
   }
 }
 
-export default function OrderConfirmationPage() {
+function OrderConfirmationContent() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const orderId = params?.orderId as string
+  // Guests have no account to authenticate against; the token issued at checkout is
+  // what lets them read back the order they just placed.
+  const accessToken = searchParams?.get('token')
   const clearCart = useCartStore((state) => state.clearCart)
 
   const [order, setOrder] = useState<Order | null>(null)
@@ -81,7 +85,8 @@ export default function OrderConfirmationPage() {
       }
 
       try {
-        const response = await fetch(`/api/orders/${orderId}`, {
+        const query = accessToken ? `?token=${encodeURIComponent(accessToken)}` : ''
+        const response = await fetch(`/api/orders/${orderId}${query}`, {
           signal: controller.signal,
         })
 
@@ -119,7 +124,7 @@ export default function OrderConfirmationPage() {
       active = false
       controller.abort()
     }
-  }, [orderId, clearCart])
+  }, [orderId, accessToken, clearCart])
 
   if (loading) {
     return (
@@ -322,5 +327,23 @@ export default function OrderConfirmationPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// useSearchParams (used to read the guest access token) requires a Suspense boundary.
+export default function OrderConfirmationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container mx-auto px-4 py-16">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading your order...</p>
+          </div>
+        </div>
+      }
+    >
+      <OrderConfirmationContent />
+    </Suspense>
   )
 }

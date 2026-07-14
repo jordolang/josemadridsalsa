@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
+import { verifyOrderAccessToken } from '@/lib/orders/access-token'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,15 +18,7 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
-    // Require authentication
     const user = await getCurrentUser()
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
 
     // Extract orderId from route params
     const { orderId } = await params
@@ -34,6 +27,20 @@ export async function GET(
       return NextResponse.json(
         { error: 'Order ID is required' },
         { status: 400 }
+      )
+    }
+
+    // Guest orders have no userId, so the owner check below can never pass for them.
+    // A token issued when the order was created stands in for the missing account.
+    const hasOrderAccessToken = verifyOrderAccessToken(
+      orderId,
+      request.nextUrl.searchParams.get('token')
+    )
+
+    if (!user && !hasOrderAccessToken) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
       )
     }
 
@@ -63,8 +70,12 @@ export async function GET(
       )
     }
 
-    // Verify order belongs to authenticated user (or user is admin/developer)
-    if (order.userId !== user.id && user.role !== 'ADMIN' && user.role !== 'DEVELOPER') {
+    // A valid access token is proof enough on its own: it is scoped to this one order
+    // and can only have come from whoever placed it.
+    const isOwner = !!user && order.userId === user.id
+    const isStaff = !!user && (user.role === 'ADMIN' || user.role === 'DEVELOPER')
+
+    if (!hasOrderAccessToken && !isOwner && !isStaff) {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }

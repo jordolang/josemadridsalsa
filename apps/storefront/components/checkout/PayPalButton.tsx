@@ -29,7 +29,7 @@ interface PayPalButtonProps {
   notes?: string
   shippingMethod?: string
   referralCode?: string
-  onSuccess: (orderId: string) => void
+  onSuccess: (orderId: string, orderAccessToken: string) => void
   onError: (message: string) => void
   disabled?: boolean
 }
@@ -93,7 +93,7 @@ export function PayPalButton({ items, customer, shipping, notes, shippingMethod,
             }
 
             const result = await response.json()
-            onSuccess(result.orderId)
+            onSuccess(result.orderId, result.orderAccessToken)
           } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Payment capture failed'
             onError(message)

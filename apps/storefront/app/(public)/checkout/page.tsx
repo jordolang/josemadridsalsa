@@ -216,14 +216,14 @@ function ExpressCheckout({ items, formState, total, onSuccess, onError }: Expres
         throw new Error(error.error || 'Unable to create payment.')
       }
 
-      const { clientSecret, orderId } = await checkoutResponse.json()
+      const { clientSecret, orderId, orderAccessToken } = await checkoutResponse.json()
 
       // Confirm the payment with the client secret
       const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
         elements: event.elements,
         clientSecret,
         confirmParams: {
-          return_url: `${window.location.origin}/order-confirmation/${orderId}`,
+          return_url: `${window.location.origin}/order-confirmation/${orderId}?token=${orderAccessToken}`,
         },
         redirect: 'if_required',
       })
@@ -254,7 +254,7 @@ function ExpressCheckout({ items, formState, total, onSuccess, onError }: Expres
       }
 
       onSuccess()
-      router.push(`/order-confirmation/${orderId}`)
+      router.push(`/order-confirmation/${orderId}?token=${orderAccessToken}`)
     } catch (error) {
       onError(
         error instanceof Error
@@ -611,7 +611,7 @@ function CheckoutForm() {
         throw new Error(error.error || 'Unable to create payment.')
       }
 
-      const { clientSecret, orderId } = await checkoutResponse.json()
+      const { clientSecret, orderId, orderAccessToken } = await checkoutResponse.json()
 
       let paymentResult
 
@@ -620,7 +620,7 @@ function CheckoutForm() {
         paymentResult = await stripe.confirmPayment({
           clientSecret,
           confirmParams: {
-            return_url: `${window.location.origin}/order-confirmation/${orderId}`,
+            return_url: `${window.location.origin}/order-confirmation/${orderId}?token=${orderAccessToken}`,
             payment_method_data: {
               billing_details: {
                 name: `${formState.firstName} ${formState.lastName}`.trim(),
@@ -671,7 +671,7 @@ function CheckoutForm() {
 
       clearCart()
       setSuccessMessage('Payment successful!')
-      router.push(`/order-confirmation/${orderId}`)
+      router.push(`/order-confirmation/${orderId}?token=${orderAccessToken}`)
     } catch (error) {
       console.error(error)
       setErrorMessage(
@@ -982,10 +982,10 @@ function CheckoutForm() {
                           shippingMethod={selectedShippingOption?.method}
                           referralCode={getReferralCodeFromCookie() || undefined}
                           disabled={isProcessing}
-                          onSuccess={(orderId) => {
+                          onSuccess={(orderId, orderAccessToken) => {
                             clearCart()
                             setSuccessMessage('Payment successful!')
-                            router.push(`/order-confirmation/${orderId}`)
+                            router.push(`/order-confirmation/${orderId}?token=${orderAccessToken}`)
                           }}
                           onError={(message) => setErrorMessage(message)}
                         />
@@ -1010,10 +1010,10 @@ function CheckoutForm() {
                           shippingMethod={selectedShippingOption?.method}
                           referralCode={getReferralCodeFromCookie() || undefined}
                           disabled={isProcessing}
-                          onSuccess={(orderId) => {
+                          onSuccess={(orderId, orderAccessToken) => {
                             clearCart()
                             setSuccessMessage('Payment successful!')
-                            router.push(`/order-confirmation/${orderId}`)
+                            router.push(`/order-confirmation/${orderId}?token=${orderAccessToken}`)
                           }}
                           onError={(message) => setErrorMessage(message)}
                         />
@@ -1043,10 +1043,10 @@ function CheckoutForm() {
                       shippingMethod={selectedShippingOption?.method}
                       referralCode={getReferralCodeFromCookie() || undefined}
                       disabled={isProcessing}
-                      onSuccess={(orderId) => {
+                      onSuccess={(orderId, orderAccessToken) => {
                         clearCart()
                         setSuccessMessage('Payment successful!')
-                        router.push(`/order-confirmation/${orderId}`)
+                        router.push(`/order-confirmation/${orderId}?token=${orderAccessToken}`)
                       }}
                       onError={(message) => setErrorMessage(message)}
                     />
