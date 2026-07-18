@@ -1,0 +1,44 @@
+name: Publish scheduled blog posts
+
+# Triggers the Heat Index scheduled-post publisher. We use GitHub Actions instead
+# of a Vercel Cron because the Vercel Hobby (free) plan caps cron jobs at a daily
+# cadence and a small fixed count — this repo already uses that quota. GitHub
+# Actions runs free on public repos and gives real 15-minute granularity, so
+# posts scheduled in the admin panel actually go live near their chosen time.
+#
+# Zero setup required to work against production. Optional hardening: set a
+# CRON_SECRET in Vercel (Project → Settings → Environment Variables) AND add a
+# matching GitHub Actions secret named CRON_SECRET — the request below sends it.
+# Override the target with a repository variable CRON_TARGET_URL if your domain
+# differs.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+# This job only makes an outbound curl request; it needs no access to the repo,
+# so drop all GITHUB_TOKEN permissions (CodeQL-recommended hardening).
+permissions: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call scheduled-post publisher
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          TARGET_URL: ${{ vars.CRON_TARGET_URL }}
+        run: |
+          url="${TARGET_URL:-https://www.josemadrid.net/api/cron/publish-scheduled-posts}"
+          echo "Calling $url"
+          code=$(curl -sS -o /tmp/resp.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "$url" || echo "000")
+          echo "HTTP $code"
+          cat /tmp/resp.json || true
+          # Don't fail the workflow on transient/non-2xx responses; the next run
+          # (15 min later) retries. Only a hard curl failure (000) is an error.
+          if [ "$code" = "000" ]; then
+            echo "Request did not complete"; exit 1
+          fi
