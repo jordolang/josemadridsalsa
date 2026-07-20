@@ -43,14 +43,19 @@ async function getActiveDiscountCodes() {
   })
 }
 
-export default async function NewCampaignPage() {
+export default async function NewCampaignPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ templateId?: string }>
+}) {
   const user = await getCurrentUser()
 
   if (!user || !(await hasAnyPermission(user, ['content:write']))) {
     redirect('/admin')
   }
 
-  const [templates, mailingLists, discountCodes] = await Promise.all([
+  const [{ templateId }, templates, mailingLists, discountCodes] = await Promise.all([
+    searchParams,
     getTemplates(),
     getMailingLists(),
     getActiveDiscountCodes(),
@@ -69,6 +74,7 @@ export default async function NewCampaignPage() {
         templates={templates}
         mailingLists={mailingLists}
         discountCodes={discountCodes}
+        initialTemplateId={templateId}
       />
     </div>
   )
