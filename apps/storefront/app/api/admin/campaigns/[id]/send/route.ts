@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
-import { processCampaign } from '@/lib/email/queue'
+import { triggerCampaignContinuation } from '@/lib/email/queue'
 
 export async function POST(
   request: NextRequest,
@@ -23,10 +23,18 @@ export async function POST(
       )
     }
 
-    // Start processing asynchronously (don't await)
-    processCampaign({ campaignId: id }).catch((err) =>
-      console.error(`Campaign ${id} processing error:`, err)
-    )
+    // Recover any recipients left mid-flight by a previously interrupted run.
+    await prisma.emailRecipient.updateMany({
+      where: { campaignId: id, status: 'SENDING' },
+      data: { status: 'PENDING' },
+    })
+    await prisma.emailCampaign.update({
+      where: { id },
+      data: { status: 'SENDING', startedAt: campaign.startedAt ?? new Date() },
+    })
+
+    // Start the self-continuing send chain (survives serverless freezes).
+    await triggerCampaignContinuation(id)
 
     return NextResponse.json({ success: true, message: 'Campaign sending started' })
   } catch (error) {

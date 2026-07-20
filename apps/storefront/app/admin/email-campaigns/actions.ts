@@ -5,7 +5,7 @@ import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
 import { parseCSV, parseTextList } from '@/lib/email/sender'
-import { processCampaign } from '@/lib/email/queue'
+import { triggerCampaignContinuation } from '@/lib/email/queue'
 import {
   parseVariableMappings,
   resolveVariablesForRecipient,
@@ -224,10 +224,20 @@ export async function launchCampaign(campaignId: string) {
       return { error: 'Campaign must be in DRAFT status to launch' }
     }
 
-    // Launch campaign asynchronously via the queue processor
-    processCampaign({ campaignId }).catch((error) => {
-      console.error('Campaign send error:', error)
+    // Recover any recipients left mid-flight by a previously interrupted run.
+    await prisma.emailRecipient.updateMany({
+      where: { campaignId, status: 'SENDING' },
+      data: { status: 'PENDING' },
     })
+
+    // Mark SENDING up front so the UI reflects it immediately…
+    await prisma.emailCampaign.update({
+      where: { id: campaignId },
+      data: { status: 'SENDING', startedAt: campaign.startedAt ?? new Date() },
+    })
+
+    // …then start the self-continuing send chain (drains the whole list).
+    await triggerCampaignContinuation(campaignId)
 
     revalidatePath('/admin/email-campaigns')
     revalidatePath(`/admin/email-campaigns/${campaignId}`)
@@ -259,10 +269,19 @@ export async function resumeCampaign(campaignId: string) {
       return { error: 'Campaign must be PAUSED to resume' }
     }
 
-    // Resume via the queue processor (it accepts PAUSED status)
-    processCampaign({ campaignId }).catch((error) => {
-      console.error('Campaign resume error:', error)
+    // Recover any recipients left mid-flight before pausing.
+    await prisma.emailRecipient.updateMany({
+      where: { campaignId, status: 'SENDING' },
+      data: { status: 'PENDING' },
     })
+
+    await prisma.emailCampaign.update({
+      where: { id: campaignId },
+      data: { status: 'SENDING' },
+    })
+
+    // Restart the self-continuing send chain.
+    await triggerCampaignContinuation(campaignId)
 
     revalidatePath('/admin/email-campaigns')
     revalidatePath(`/admin/email-campaigns/${campaignId}`)
