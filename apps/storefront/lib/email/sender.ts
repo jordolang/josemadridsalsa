@@ -391,17 +391,17 @@ export async function retryCampaignFailures(campaignId: string): Promise<{
     },
   })
 
-  // Set campaign back to a state the queue processor accepts
+  // Mark SENDING so the queue processor drains the requeued failures.
   await prisma.emailCampaign.update({
     where: { id: campaignId },
-    data: { status: 'PAUSED' },
+    data: { status: 'SENDING' },
   })
 
-  // Import dynamically to avoid circular dependency
-  const { processCampaign } = await import('./queue')
-  processCampaign({ campaignId }).catch((err) => {
-    console.error('Retry processCampaign error:', err)
-  })
+  // Import dynamically to avoid a circular dependency (queue imports sender).
+  // Kicks the self-continuing send chain rather than a fire-and-forget loop
+  // that a serverless freeze would kill.
+  const { triggerCampaignContinuation } = await import('./queue')
+  await triggerCampaignContinuation(campaignId)
 
   return { success: true, retriableCount: failedRecipients.length }
 }
