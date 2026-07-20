@@ -232,7 +232,9 @@ export function CampaignForm({
               <SelectTrigger id="templateId">
                 <SelectValue placeholder="Select a template..." />
               </SelectTrigger>
-              <SelectContent>
+              {/* Cap the list to ~8 rows (each ≈2rem tall) so a long template
+                  list scrolls instead of running off the page. */}
+              <SelectContent className="max-h-[17rem]">
                 {templates.map((template) => (
                   <SelectItem key={template.id} value={template.id}>
                     {template.name} ({template.category})
