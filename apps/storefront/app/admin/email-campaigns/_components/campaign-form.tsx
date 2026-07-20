@@ -56,6 +56,7 @@ interface CampaignFormProps {
   templates: Template[]
   mailingLists: MailingList[]
   discountCodes: DiscountCodeOption[]
+  initialTemplateId?: string
 }
 
 type RecipientsSource = 'list' | 'csv' | 'text' | 'paste'
@@ -75,20 +76,37 @@ export function CampaignForm({
   templates,
   mailingLists,
   discountCodes,
+  initialTemplateId,
 }: CampaignFormProps) {
   const router = useRouter()
+  const initialTemplate =
+    templates.find((t) => t.id === initialTemplateId) ?? null
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [parseErrors, setParseErrors] = useState<string[]>([])
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
+    initialTemplate,
+  )
   const [recipientsSource, setRecipientsSource] = useState<RecipientsSource>(
     mailingLists.length > 0 ? 'list' : 'csv',
   )
   const [selectedListId, setSelectedListId] = useState<string>('')
   const [fileContent, setFileContent] = useState('')
   const [fileName, setFileName] = useState('')
-  const [variableMappings, setVariableMappings] = useState<VariableMappings>({})
-  const [customSubject, setCustomSubject] = useState<string>('')
+  const [variableMappings, setVariableMappings] = useState<VariableMappings>(
+    initialTemplate
+      ? defaultMappingsForVariables(
+          extractVariables(
+            initialTemplate.html,
+            initialTemplate.subject,
+            initialTemplate.text ?? undefined,
+          ),
+        )
+      : {},
+  )
+  const [customSubject, setCustomSubject] = useState<string>(
+    initialTemplate?.subject ?? '',
+  )
 
   const detectedVariables = useMemo(() => {
     if (!selectedTemplate) return [] as string[]
@@ -205,7 +223,12 @@ export function CampaignForm({
 
           <div className="space-y-1.5">
             <Label htmlFor="templateId">Email Template *</Label>
-            <Select name="templateId" required onValueChange={handleTemplateChange}>
+            <Select
+              name="templateId"
+              required
+              defaultValue={initialTemplate?.id}
+              onValueChange={handleTemplateChange}
+            >
               <SelectTrigger id="templateId">
                 <SelectValue placeholder="Select a template..." />
               </SelectTrigger>

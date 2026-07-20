@@ -146,6 +146,7 @@ export const adminNavigation: NavItem[] = [
       { label: 'Campaigns', href: '/admin/email-campaigns', permission: 'content:write' },
       { label: 'Automations', href: '/admin/email-marketing/automations', permission: 'content:write' },
       { label: 'Templates', href: '/admin/emails', permission: 'content:read' },
+      { label: 'Upload HTML', href: '/admin/email-marketing/upload', permission: 'content:write' },
       { label: 'Mailing Lists', href: '/admin/communications/lists', permission: 'messaging:read' },
       { label: 'Suppression List', href: '/admin/communications/suppressions', permission: 'content:write' },
       { label: 'Email Logs', href: '/admin/email-marketing/logs', permission: 'content:read' },
