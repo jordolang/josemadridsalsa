@@ -7,14 +7,15 @@ import { z } from 'zod'
 
 const EventSchema = z.object({
   title: z.string().min(1),
-  description: z.string().optional(),
-  location: z.string().optional(),
+  description: z.string().nullish(),
+  location: z.string().nullish(),
   startDate: z.string(),
-  endDate: z.string().optional(),
+  endDate: z.string().nullish(),
   featuredFrom: z.string(),
-  featuredTo: z.string().optional(),
+  featuredTo: z.string().nullish(),
   isWhereIsJose: z.boolean().default(false),
-  customDescription: z.string().optional(),
+  customDescription: z.string().nullish(),
+  displayPriority: z.number().int().optional(),
   tags: z.array(z.string()).optional(),
 })
 
@@ -40,6 +41,8 @@ export async function GET(request: NextRequest) {
           tag: true,
         },
       },
+      manifest: { select: { status: true } },
+      _count: { select: { staff: true, contacts: true } },
     },
     orderBy: { startDate: 'asc' },
   })
@@ -73,6 +76,8 @@ export async function POST(request: NextRequest) {
         featuredTo: validated.featuredTo ? new Date(validated.featuredTo) : null,
         isWhereIsJose: validated.isWhereIsJose,
         customDescription: validated.customDescription,
+        displayPriority: validated.displayPriority ?? 0,
+        manuallyModified: true,
       },
     })
 

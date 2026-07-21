@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Calendar, MapPin, Plus, RefreshCw, Edit, Trash2, ExternalLink } from 'lucide-react'
+import { Calendar, MapPin, Plus, RefreshCw, Edit, Trash2, ExternalLink, ClipboardList, Users } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +21,8 @@ interface FeaturedEvent {
   googleEventId?: string
   manuallyModified: boolean
   displayPriority: number
+  manifest?: { status: string } | null
+  _count?: { staff: number; contacts: number }
 }
 
 export default function EventsPage() {
@@ -65,11 +68,20 @@ export default function EventsPage() {
       const response = await fetch('/api/admin/events/calendar-sync', {
         method: 'POST',
       })
+      const data = await response.json().catch(() => null)
       if (response.ok) {
+        toast.success(
+          `Calendar synced: ${data?.created ?? 0} added, ${data?.updated ?? 0} updated${
+            data?.skipped ? `, ${data.skipped} skipped (manually edited)` : ''
+          }`
+        )
         await fetchEvents()
+      } else {
+        toast.error(data?.error || 'Failed to sync calendar')
       }
     } catch (error) {
       console.error('Failed to sync calendar:', error)
+      toast.error('Failed to sync calendar')
     } finally {
       setSyncing(false)
     }
@@ -177,12 +189,19 @@ function EventCard({ event, onRefresh }: { event: FeaturedEvent; onRefresh: () =
         method: 'DELETE',
       })
       if (response.ok) {
+        toast.success('Event deleted')
         onRefresh()
+      } else {
+        toast.error('Failed to delete event')
       }
     } catch (error) {
       console.error('Failed to delete event:', error)
+      toast.error('Failed to delete event')
     }
   }
+
+  const staffCount = event._count?.staff ?? 0
+  const contactCount = event._count?.contacts ?? 0
 
   return (
     <div className="border rounded-lg p-4 hover:bg-muted/50">
@@ -201,11 +220,16 @@ function EventCard({ event, onRefresh }: { event: FeaturedEvent; onRefresh: () =
                 Modified
               </Badge>
             )}
+            {event.manifest && (
+              <Badge variant="outline" className="text-xs">
+                Manifest: {event.manifest.status}
+              </Badge>
+            )}
           </div>
           {event.description && (
             <p className="text-sm text-muted-foreground mb-2">{event.description}</p>
           )}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
               {new Date(event.startDate).toLocaleDateString()}
@@ -216,15 +240,26 @@ function EventCard({ event, onRefresh }: { event: FeaturedEvent; onRefresh: () =
                 {event.location}
               </span>
             )}
+            {(staffCount > 0 || contactCount > 0) && (
+              <span className="flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                {staffCount} staff · {contactCount} contacts
+              </span>
+            )}
           </div>
         </div>
         <div className="flex gap-2 ml-4">
+          <Link href={`/admin/events/${event.id}/manifest`}>
+            <Button size="sm" variant="ghost" title="Product manifest">
+              <ClipboardList className="h-4 w-4" />
+            </Button>
+          </Link>
           <Link href={`/admin/events/${event.id}/edit`}>
-            <Button size="sm" variant="ghost">
+            <Button size="sm" variant="ghost" title="Edit event">
               <Edit className="h-4 w-4" />
             </Button>
           </Link>
-          <Button size="sm" variant="ghost" onClick={handleDelete}>
+          <Button size="sm" variant="ghost" onClick={handleDelete} title="Delete event">
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
