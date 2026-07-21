@@ -128,7 +128,9 @@ model Product {
   categoryId             String
   stockReserved          Int                     @default(0)
   stockStatus            StockStatus             @default(IN_STOCK)
+  unitsPerCase           Int                     @default(12)
   cartItems              CartItem[]
+  eventManifestItems     EventManifestItem[]
   fundraiserProducts     FundraiserProduct[]
   fundraiserTeamProducts FundraiserTeamProduct[]
   inventoryAlerts        InventoryAlert[]
@@ -1067,10 +1069,86 @@ model FeaturedEvent {
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
   eventTags         EventTag[]
+  staff             EventStaff[]
+  contacts          EventContact[]
+  manifest          EventManifest?
 
   @@index([isWhereIsJose])
   @@index([featuredFrom, featuredTo])
   @@map("featured_events")
+}
+
+/// People from our team assigned to attend/work an event.
+model EventStaff {
+  id               String        @id @default(cuid())
+  eventId          String
+  name             String
+  role             String?
+  phone            String?
+  email            String?
+  isPrimaryContact Boolean       @default(false)
+  notes            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  event            FeaturedEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@map("event_staff")
+}
+
+/// Point-of-contact personnel on file for an event (organizer, venue, coordinator).
+model EventContact {
+  id           String        @id @default(cuid())
+  eventId      String
+  name         String
+  organization String?
+  role         String?
+  phone        String?
+  email        String?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  event        FeaturedEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@map("event_contacts")
+}
+
+/// Product manifest for an event: what we pack out and what returns.
+model EventManifest {
+  id         String              @id @default(cuid())
+  eventId    String              @unique
+  status     EventManifestStatus @default(DRAFT)
+  packedAt   DateTime?
+  returnedAt DateTime?
+  notes      String?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  event      FeaturedEvent       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  items      EventManifestItem[]
+
+  @@map("event_manifests")
+}
+
+/// One product line on an event manifest. Quantities are tracked as cases + loose
+/// jars for both what is taken and what returns; units sold is derived from the two.
+model EventManifestItem {
+  id             String        @id @default(cuid())
+  manifestId     String
+  productId      String
+  expirationDate DateTime?
+  takenCases     Int           @default(0)
+  takenJars      Int           @default(0)
+  returnedCases  Int           @default(0)
+  returnedJars   Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  manifest       EventManifest @relation(fields: [manifestId], references: [id], onDelete: Cascade)
+  product        Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([manifestId, productId])
+  @@index([manifestId])
+  @@map("event_manifest_items")
 }
 
 model EventTag {
@@ -1083,6 +1161,12 @@ model EventTag {
 
   @@unique([eventId, tagId])
   @@map("event_tags")
+}
+
+enum EventManifestStatus {
+  DRAFT
+  PACKED
+  RETURNED
 }
 
 model ServiceKey {
