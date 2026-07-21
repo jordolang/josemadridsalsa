@@ -32,6 +32,7 @@ export const templatePayloadSchema = z.object({
   sections: z.array(sectionSchema).min(1, 'Include at least one section'),
   status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).default('DRAFT'),
   changelogNotes: z.string().max(500).optional(),
+  density: z.enum(['default', 'compact']).optional(),
 })
 
 export type TemplatePayloadInput = z.infer<typeof templatePayloadSchema>

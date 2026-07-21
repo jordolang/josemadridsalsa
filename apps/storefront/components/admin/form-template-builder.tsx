@@ -213,7 +213,9 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
 
   const transformTemplateFromServer = (template: unknown): BuilderTemplate => {
     const t = template as Record<string, unknown>
-    const structure = t.structure as { sections?: unknown[] } | undefined
+    const structure = t.structure as
+      | { sections?: unknown[]; density?: 'default' | 'compact' }
+      | undefined
     return {
       id: t.id as string,
       name: t.name as string,
@@ -223,6 +225,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
       estimatedCompletion: (t.estimatedCompletion as string | undefined) ?? '',
       recommendedUses: Array.isArray(t.recommendedUses) ? t.recommendedUses as string[] : [],
       sections: Array.isArray(structure?.sections) ? structure.sections as BusinessFormSection[] : [],
+      density: structure?.density,
       publicSlug: (t.slug as string | undefined) ?? '',
       status: t.status as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | undefined,
       version: t.version as number | undefined,
@@ -266,6 +269,7 @@ export function FormTemplateBuilder({ templates, categories, blockLibrary, curre
           status,
           changelogNotes:
             status === 'PUBLISHED' && changelogNotes.trim().length > 0 ? changelogNotes.trim() : undefined,
+          density: selectedTemplate.density,
         }
 
         const result =

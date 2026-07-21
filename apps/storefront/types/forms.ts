@@ -38,4 +38,6 @@ export type BusinessFormTemplate = {
   version?: number
   source?: 'library' | 'saved'
   updatedAt?: string
+  /** 'compact' tightens spacing so long forms still print on a single sheet, front and back. */
+  density?: 'default' | 'compact'
 }

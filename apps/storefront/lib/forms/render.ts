@@ -198,6 +198,123 @@ const baseStyles = `
   }
 `
 
+// Tightens spacing so a long operational form still lands on a single
+// sheet, front and back. Opt in per template with density: 'compact'.
+const compactStyles = `
+  @page {
+    size: letter;
+    margin: 0.35in;
+  }
+
+  body.density-compact {
+    font-size: 11px;
+    padding: 12px;
+  }
+
+  .density-compact .form-wrapper {
+    max-width: none;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .density-compact header {
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+  }
+
+  .density-compact header h1 {
+    font-size: 19px;
+  }
+
+  .density-compact header p {
+    font-size: 11px;
+  }
+
+  .density-compact section {
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+  }
+
+  .density-compact section.section-atomic {
+    break-inside: avoid;
+  }
+
+  /* Long tables may split across the sheet; repeat the header when they do. */
+  .density-compact table.form-table thead {
+    display: table-header-group;
+  }
+
+  .density-compact section h2 {
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+
+  .density-compact section p.section-description {
+    margin-bottom: 6px;
+    font-size: 10px;
+  }
+
+  .density-compact .form-field {
+    margin-bottom: 6px;
+  }
+
+  /* Short inputs sit beside their label instead of stacking. */
+  .density-compact .field-inline {
+    display: grid;
+    grid-template-columns: minmax(90px, 26%) 1fr;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .density-compact .field-inline .field-label {
+    margin-bottom: 0;
+  }
+
+  .density-compact .input-line {
+    height: 15px;
+  }
+
+  .density-compact .long-input {
+    height: 54px;
+  }
+
+  .density-compact .field-helper {
+    margin-top: 2px;
+    font-size: 9px;
+  }
+
+  .density-compact table.form-table {
+    border-radius: 6px;
+  }
+
+  .density-compact table.form-table th,
+  .density-compact table.form-table td {
+    padding: 2px 5px;
+    font-size: 10px;
+  }
+
+  .density-compact table.form-table td {
+    height: 17px;
+  }
+
+  .density-compact .signature-line {
+    margin-top: 12px;
+  }
+
+  .density-compact .signature-label {
+    margin-top: 3px;
+    font-size: 10px;
+  }
+
+  .density-compact footer {
+    margin-top: 12px;
+    padding-top: 8px;
+    font-size: 10px;
+  }
+`
+
 function renderField(field: BusinessFormField): string {
   const helper = field.helperText
     ? `<p class="field-helper">${field.helperText}</p>`
@@ -208,7 +325,7 @@ function renderField(field: BusinessFormField): string {
     case 'number':
     case 'date':
       return `
-        <div class="form-field">
+        <div class="form-field field-inline">
           <span class="field-label">${field.label}</span>
           <div class="input-line"></div>
           ${helper}
@@ -278,8 +395,11 @@ function renderSection(section: BusinessFormSection): string {
     ? `<p class="section-description">${section.description}</p>`
     : ''
 
+  // Tables are free to break across pages; anything shorter should stay whole.
+  const atomic = section.fields.every((field) => field.type !== 'table')
+
   return `
-    <section>
+    <section${atomic ? ' class="section-atomic"' : ''}>
       <h2>${section.label}</h2>
       ${description}
       ${section.fields.map(renderField).join('')}
@@ -299,6 +419,7 @@ export function renderFormHtml(template: BusinessFormTemplate, options: RenderOp
 
   const today = new Date().toLocaleDateString()
 
+  const isCompact = template.density === 'compact'
 
   return `
     <!DOCTYPE html>
@@ -307,9 +428,9 @@ export function renderFormHtml(template: BusinessFormTemplate, options: RenderOp
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>${title ?? template.name}</title>
-        <style>${baseStyles}</style>
+        <style>${baseStyles}${isCompact ? compactStyles : ''}</style>
       </head>
-      <body>
+      <body class="${isCompact ? 'density-compact' : ''}">
         <div class="form-wrapper">
           <header>
             <div class="branding">

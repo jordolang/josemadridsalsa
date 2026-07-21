@@ -519,7 +519,6 @@ const showSalesFlavors = [
   'Cranberry Chipotle',
   'Cherry Hot',
   'Blueberry',
-  'Total Cases',
 ]
 
 const showDetailsSection: BusinessFormSection = {
@@ -535,6 +534,21 @@ const showDetailsSection: BusinessFormSection = {
   ],
 }
 
+// Two flavors per printed row, mirroring the two-column paper form, so the
+// full list fits the front of one sheet.
+const showInventoryRows = (() => {
+  const entries = [...showSalesFlavors, 'Total Cases']
+  const half = Math.ceil(entries.length / 2)
+  return Array.from({ length: half }, (_, index) => [
+    entries[index] ?? '',
+    '',
+    '',
+    '',
+    '',
+    entries[index + half] ?? '',
+  ])
+})()
+
 const showInventorySection: BusinessFormSection = {
   id: 'show-inventory',
   label: 'Inventory by Flavor',
@@ -545,9 +559,20 @@ const showInventorySection: BusinessFormSection = {
       id: 'show-inventory-table',
       label: 'Case Counts',
       type: 'table',
-      columns: ['Flavor', 'Beginning Inv.', 'Added Inv.', 'Ending Inv.', 'Cases Sold'],
-      rows: showSalesFlavors.map((flavor) => [flavor]),
-      defaultRows: showSalesFlavors.length,
+      columns: [
+        'Flavor',
+        'Beg. Inv',
+        'Added',
+        'Ending',
+        'Sold',
+        'Flavor',
+        'Beg. Inv',
+        'Added',
+        'Ending',
+        'Sold',
+      ],
+      rows: showInventoryRows,
+      defaultRows: showInventoryRows.length,
     },
     { id: 'total-jars-at-show', label: 'Total Jars at Show', type: 'number' },
     { id: 'total-jars-sold', label: 'Total Jars Sold', type: 'number' },
@@ -647,7 +672,7 @@ const employeeHoursLogSection: BusinessFormSection = {
         'Description of Duties',
       ],
       defaultRows: 14,
-      rowHeight: 46,
+      rowHeight: 40,
     },
   ],
 }
@@ -698,6 +723,7 @@ export const businessFormTemplates: BusinessFormTemplate[] = [
       showSalesAuditSection,
     ],
     publicSlug: 'show-sales-form',
+    density: 'compact',
   }),
   buildTemplate({
     id: 'employee-hours-tracker',
@@ -714,6 +740,7 @@ export const businessFormTemplates: BusinessFormTemplate[] = [
     ],
     sections: [employeeInfoSection, employeeHoursLogSection, employeeHoursSummarySection],
     publicSlug: 'employee-hours-tracker',
+    density: 'compact',
   }),
   buildTemplate({
     id: 'wholesale-order-form',

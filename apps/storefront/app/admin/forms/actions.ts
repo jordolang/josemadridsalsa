@@ -36,8 +36,9 @@ export async function createFormTemplate(rawPayload: unknown) {
   const structure = JSON.parse(
     JSON.stringify({
       sections: payload.sections,
+      density: payload.density,
     }),
-  ) as { sections: BusinessFormSection[] }
+  ) as { sections: BusinessFormSection[]; density?: 'default' | 'compact' }
 
   const changelogNotes = payload.changelogNotes?.trim() || ''
 
@@ -107,8 +108,9 @@ export async function updateFormTemplate(id: string, rawPayload: unknown) {
   const structure = JSON.parse(
     JSON.stringify({
       sections: payload.sections,
+      density: payload.density,
     }),
-  ) as { sections: BusinessFormSection[] }
+  ) as { sections: BusinessFormSection[]; density?: 'default' | 'compact' }
 
   const changelogNotes = payload.changelogNotes?.trim() || ''
 

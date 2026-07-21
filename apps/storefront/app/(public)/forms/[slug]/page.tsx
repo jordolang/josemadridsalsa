@@ -33,6 +33,7 @@ const mapSavedTemplate = (template: any): CatalogTemplate => ({
   estimatedCompletion: template.estimatedCompletion ?? '—',
   recommendedUses: template.recommendedUses ?? [],
   sections: Array.isArray((template.structure as any)?.sections) ? (template.structure as any).sections : [],
+  density: (template.structure as any)?.density,
   publicSlug: template.slug,
   status: template.status,
   version: template.version,
