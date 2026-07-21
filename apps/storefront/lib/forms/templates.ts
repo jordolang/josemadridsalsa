@@ -524,7 +524,6 @@ const showSalesFlavors = [
 const showDetailsSection: BusinessFormSection = {
   id: 'show-details',
   label: 'Show Details',
-  description: 'Where the show was held, who completed the form, and the dates worked.',
   defaultIncluded: true,
   fields: [
     { id: 'show-location', label: 'Show Location', type: 'short-text', placeholder: 'Venue, city, state' },
@@ -535,7 +534,7 @@ const showDetailsSection: BusinessFormSection = {
 }
 
 // Two flavors per printed row, mirroring the two-column paper form, so the
-// full list fits the front of one sheet.
+// full list fits alongside everything else on a single page.
 const showInventoryRows = (() => {
   const entries = [...showSalesFlavors, 'Total Cases']
   const half = Math.ceil(entries.length / 2)
@@ -552,7 +551,6 @@ const showInventoryRows = (() => {
 const showInventorySection: BusinessFormSection = {
   id: 'show-inventory',
   label: 'Inventory by Flavor',
-  description: 'Count cases before the show, log restocks, then count what comes home.',
   defaultIncluded: true,
   fields: [
     {
@@ -574,24 +572,20 @@ const showInventorySection: BusinessFormSection = {
       rows: showInventoryRows,
       defaultRows: showInventoryRows.length,
     },
-    { id: 'total-jars-at-show', label: 'Total Jars at Show', type: 'number' },
-    { id: 'total-jars-sold', label: 'Total Jars Sold', type: 'number' },
-    { id: 'avg-price-per-jar', label: 'Average Price per Jar', type: 'short-text', placeholder: '$0.00' },
-    { id: 'avg-price-per-case', label: 'Average Price per Case', type: 'short-text', placeholder: '$0.00' },
   ],
 }
 
 const showDailySalesSection: BusinessFormSection = {
   id: 'show-daily-sales',
   label: 'Daily Sales',
-  description: 'Split each day between cash and card, then total.',
   defaultIncluded: true,
+  columnGroup: 'show-recap',
   fields: [
     {
       id: 'daily-sales-table',
       label: 'Sales by Day',
       type: 'table',
-      columns: ['Day', 'Cash', 'Credit Card', 'Total'],
+      columns: ['Day', 'Cash', 'Card', 'Total'],
       rows: ['Mon', 'Tues', 'Wed', 'Thur', 'Fri', 'Sat', 'Sun', 'Total Sales'].map((day) => [day]),
       defaultRows: 8,
     },
@@ -601,34 +595,51 @@ const showDailySalesSection: BusinessFormSection = {
 const showExpensesSection: BusinessFormSection = {
   id: 'show-expenses',
   label: 'Expenses',
-  description: 'Everything spent to work the show.',
   defaultIncluded: true,
+  columnGroup: 'show-recap',
   fields: [
     {
       id: 'show-expense-table',
       label: 'Show Expenses',
       type: 'table',
-      columns: ['Expense', 'Amount', 'Notes'],
+      columns: ['Expense', 'Amount'],
       rows: ['Display', 'Chips', 'Food', 'Gas', 'Motel', 'Misc', 'Total Expenses'].map((item) => [item]),
-      defaultRows: 7,
+      defaultRows: 8,
     },
   ],
 }
 
 const showSalesAuditSection: BusinessFormSection = {
   id: 'show-sales-audit',
-  label: 'Sales Audit',
-  description: 'Reconcile collected sales against expenses before turning the form in.',
+  label: 'Sales Audit & Totals',
   defaultIncluded: true,
+  columnGroup: 'show-recap',
   fields: [
     {
       id: 'sales-audit-table',
       label: 'Audit',
       type: 'table',
       columns: ['Line', 'Amount'],
-      rows: [['Cash'], ['Charges'], ['Expenses'], ['Net Total']],
-      defaultRows: 4,
+      rows: [
+        ['Cash'],
+        ['Charges'],
+        ['Expenses'],
+        ['Net Total'],
+        ['Total Jars at Show'],
+        ['Total Jars Sold'],
+        ['Avg Price / Jar'],
+        ['Avg Price / Case'],
+      ],
+      defaultRows: 8,
     },
+  ],
+}
+
+const showWrapUpSection: BusinessFormSection = {
+  id: 'show-wrap-up',
+  label: 'Evaluation & Notes',
+  defaultIncluded: true,
+  fields: [
     { id: 'show-evaluation-by', label: 'Show Evaluation By', type: 'short-text' },
     {
       id: 'show-notes',
@@ -721,6 +732,7 @@ export const businessFormTemplates: BusinessFormTemplate[] = [
       showDailySalesSection,
       showExpensesSection,
       showSalesAuditSection,
+      showWrapUpSection,
     ],
     publicSlug: 'show-sales-form',
     density: 'compact',

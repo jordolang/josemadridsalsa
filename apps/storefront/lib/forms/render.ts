@@ -232,9 +232,20 @@ const compactStyles = `
   }
 
   .density-compact section {
-    padding: 8px 10px;
-    margin-bottom: 8px;
+    padding: 5px 7px;
+    margin-bottom: 4px;
     border-radius: 8px;
+  }
+
+  .density-compact .section-row {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .density-compact .section-row > section {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .density-compact section.section-atomic {
@@ -291,12 +302,12 @@ const compactStyles = `
 
   .density-compact table.form-table th,
   .density-compact table.form-table td {
-    padding: 2px 5px;
+    padding: 1px 4px;
     font-size: 10px;
   }
 
   .density-compact table.form-table td {
-    height: 17px;
+    height: 15px;
   }
 
   .density-compact .signature-line {
@@ -309,9 +320,9 @@ const compactStyles = `
   }
 
   .density-compact footer {
-    margin-top: 12px;
-    padding-top: 8px;
-    font-size: 10px;
+    margin-top: 6px;
+    padding-top: 4px;
+    font-size: 8px;
   }
 `
 
@@ -407,6 +418,23 @@ function renderSection(section: BusinessFormSection): string {
   `
 }
 
+// Consecutive sections sharing a columnGroup print side by side, which is how
+// a dense operational form claws back the vertical space to fit one page.
+function groupSections(sections: BusinessFormSection[]): BusinessFormSection[][] {
+  const groups: BusinessFormSection[][] = []
+
+  sections.forEach((section) => {
+    const previous = groups[groups.length - 1]
+    if (section.columnGroup && previous?.[0]?.columnGroup === section.columnGroup) {
+      previous.push(section)
+    } else {
+      groups.push([section])
+    }
+  })
+
+  return groups
+}
+
 export function renderFormHtml(template: BusinessFormTemplate, options: RenderOptions = {}): string {
   const { title, includeSections, includeBranding = true, notes } = options
 
@@ -452,7 +480,13 @@ export function renderFormHtml(template: BusinessFormTemplate, options: RenderOp
               </div>
             </div>
           </header>
-          ${selectedSections.map(renderSection).join('')}
+          ${groupSections(selectedSections)
+            .map((group) =>
+              group.length > 1
+                ? `<div class="section-row">${group.map(renderSection).join('')}</div>`
+                : renderSection(group[0]),
+            )
+            .join('')}
           ${
             notes
               ? `<section><h2>Notes</h2><div class="long-input"></div><p class="field-helper">${notes}</p></section>`

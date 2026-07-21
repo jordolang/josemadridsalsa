@@ -18,6 +18,7 @@ export const sectionSchema = z.object({
   description: z.string().optional(),
   defaultIncluded: z.boolean().optional(),
   fields: z.array(fieldSchema).min(1, 'Add at least one field to each section'),
+  columnGroup: z.string().min(1).optional(),
 })
 
 export const templatePayloadSchema = z.object({

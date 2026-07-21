@@ -22,6 +22,8 @@ export type BusinessFormSection = {
   description?: string
   defaultIncluded?: boolean
   fields: BusinessFormField[]
+  /** Consecutive sections sharing a columnGroup print side by side. */
+  columnGroup?: string
 }
 
 export type BusinessFormTemplate = {
