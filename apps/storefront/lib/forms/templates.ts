@@ -487,6 +487,189 @@ const developerContactSection: BusinessFormSection = {
   ],
 }
 
+const showSalesFlavors = [
+  'Apple',
+  'Cranberry',
+  'Pumpkin',
+  'Raspberry',
+  'Peach',
+  'Strawberry',
+  'Mango',
+  'Mango-Hab',
+  'Pineapple',
+  'Pine-Hab',
+  'Cherry Mild',
+  'Cherry Choc',
+  'Bean & Corn',
+  'Cilantro Mild',
+  'Cilantro Hot',
+  'RGO',
+  'Chipotle Hot',
+  'BBQ',
+  'Verde Mild',
+  'Verde Hot',
+  'Verde XXH',
+  'Mild',
+  'Clovis Med',
+  'Clovis Ghost',
+  'Hot',
+  'X Hot',
+  'Chipotle Con Queso',
+  'Jerk',
+  'Cranberry Chipotle',
+  'Cherry Hot',
+  'Blueberry',
+  'Total Cases',
+]
+
+const showDetailsSection: BusinessFormSection = {
+  id: 'show-details',
+  label: 'Show Details',
+  description: 'Where the show was held, who completed the form, and the dates worked.',
+  defaultIncluded: true,
+  fields: [
+    { id: 'show-location', label: 'Show Location', type: 'short-text', placeholder: 'Venue, city, state' },
+    { id: 'completed-by', label: 'Completed By', type: 'short-text' },
+    { id: 'show-start-date', label: 'Start Date', type: 'date' },
+    { id: 'show-end-date', label: 'End Date', type: 'date' },
+  ],
+}
+
+const showInventorySection: BusinessFormSection = {
+  id: 'show-inventory',
+  label: 'Inventory by Flavor',
+  description: 'Count cases before the show, log restocks, then count what comes home.',
+  defaultIncluded: true,
+  fields: [
+    {
+      id: 'show-inventory-table',
+      label: 'Case Counts',
+      type: 'table',
+      columns: ['Flavor', 'Beginning Inv.', 'Added Inv.', 'Ending Inv.', 'Cases Sold'],
+      rows: showSalesFlavors.map((flavor) => [flavor]),
+      defaultRows: showSalesFlavors.length,
+    },
+    { id: 'total-jars-at-show', label: 'Total Jars at Show', type: 'number' },
+    { id: 'total-jars-sold', label: 'Total Jars Sold', type: 'number' },
+    { id: 'avg-price-per-jar', label: 'Average Price per Jar', type: 'short-text', placeholder: '$0.00' },
+    { id: 'avg-price-per-case', label: 'Average Price per Case', type: 'short-text', placeholder: '$0.00' },
+  ],
+}
+
+const showDailySalesSection: BusinessFormSection = {
+  id: 'show-daily-sales',
+  label: 'Daily Sales',
+  description: 'Split each day between cash and card, then total.',
+  defaultIncluded: true,
+  fields: [
+    {
+      id: 'daily-sales-table',
+      label: 'Sales by Day',
+      type: 'table',
+      columns: ['Day', 'Cash', 'Credit Card', 'Total'],
+      rows: ['Mon', 'Tues', 'Wed', 'Thur', 'Fri', 'Sat', 'Sun', 'Total Sales'].map((day) => [day]),
+      defaultRows: 8,
+    },
+  ],
+}
+
+const showExpensesSection: BusinessFormSection = {
+  id: 'show-expenses',
+  label: 'Expenses',
+  description: 'Everything spent to work the show.',
+  defaultIncluded: true,
+  fields: [
+    {
+      id: 'show-expense-table',
+      label: 'Show Expenses',
+      type: 'table',
+      columns: ['Expense', 'Amount', 'Notes'],
+      rows: ['Display', 'Chips', 'Food', 'Gas', 'Motel', 'Misc', 'Total Expenses'].map((item) => [item]),
+      defaultRows: 7,
+    },
+  ],
+}
+
+const showSalesAuditSection: BusinessFormSection = {
+  id: 'show-sales-audit',
+  label: 'Sales Audit',
+  description: 'Reconcile collected sales against expenses before turning the form in.',
+  defaultIncluded: true,
+  fields: [
+    {
+      id: 'sales-audit-table',
+      label: 'Audit',
+      type: 'table',
+      columns: ['Line', 'Amount'],
+      rows: [['Cash'], ['Charges'], ['Expenses'], ['Net Total']],
+      defaultRows: 4,
+    },
+    { id: 'show-evaluation-by', label: 'Show Evaluation By', type: 'short-text' },
+    {
+      id: 'show-notes',
+      label: 'Notes',
+      type: 'long-text',
+      placeholder: 'Traffic, weather, best sellers, booth position, whether to book the show again.',
+    },
+  ],
+}
+
+const employeeInfoSection: BusinessFormSection = {
+  id: 'employee-info',
+  label: 'Employee Information',
+  defaultIncluded: true,
+  fields: [
+    { id: 'employee-name', label: 'Employee Name', type: 'short-text' },
+    { id: 'employee-position', label: 'Position / Department', type: 'short-text' },
+    { id: 'pay-period-start', label: 'Pay Period Start', type: 'date' },
+    { id: 'pay-period-end', label: 'Pay Period End', type: 'date' },
+  ],
+}
+
+const employeeHoursLogSection: BusinessFormSection = {
+  id: 'employee-hours-log',
+  label: 'Daily Hours',
+  description:
+    'Sign in and out twice per day so a lunch or break is captured, then describe the work done that day.',
+  defaultIncluded: true,
+  fields: [
+    {
+      id: 'employee-hours-table',
+      label: 'Hours Log',
+      type: 'table',
+      columns: [
+        'Date',
+        'Sign In',
+        'Sign Out',
+        'Sign In',
+        'Sign Out',
+        'Total Hours',
+        'Description of Duties',
+      ],
+      defaultRows: 14,
+      rowHeight: 46,
+    },
+  ],
+}
+
+const employeeHoursSummarySection: BusinessFormSection = {
+  id: 'employee-hours-summary',
+  label: 'Period Summary & Approval',
+  defaultIncluded: true,
+  fields: [
+    { id: 'regular-hours', label: 'Total Regular Hours', type: 'number' },
+    { id: 'overtime-hours', label: 'Total Overtime Hours', type: 'number' },
+    {
+      id: 'employee-certification',
+      label: 'I certify the hours recorded above are accurate.',
+      type: 'checkbox',
+    },
+    { id: 'employee-signature', label: 'Employee Signature', type: 'signature' },
+    { id: 'supervisor-signature', label: 'Supervisor Signature', type: 'signature' },
+    { id: 'approval-date', label: 'Date Approved', type: 'date' },
+  ],
+}
+
 function buildTemplate(
   template: Omit<BusinessFormTemplate, 'sections'> & { sections: BusinessFormSection[] },
 ): BusinessFormTemplate {
@@ -494,6 +677,44 @@ function buildTemplate(
 }
 
 export const businessFormTemplates: BusinessFormTemplate[] = [
+  buildTemplate({
+    id: 'show-sales-form',
+    name: 'Show Sales Form',
+    categoryId: 'operations',
+    description:
+      'Per-show recap of case inventory by flavor, daily cash and card sales, expenses, and the closing sales audit.',
+    tags: ['shows', 'events', 'inventory', 'sales'],
+    estimatedCompletion: '10 minutes',
+    recommendedUses: [
+      'Send with the booth crew to every festival, fair, and food show.',
+      'Reconcile cash, card, and expenses before leaving the show.',
+      'Compare shows year over year when deciding which ones to rebook.',
+    ],
+    sections: [
+      showDetailsSection,
+      showInventorySection,
+      showDailySalesSection,
+      showExpensesSection,
+      showSalesAuditSection,
+    ],
+    publicSlug: 'show-sales-form',
+  }),
+  buildTemplate({
+    id: 'employee-hours-tracker',
+    name: 'Employee Hours Tracker',
+    categoryId: 'hr',
+    description:
+      'Daily sign in and sign out log with a second in/out pair for breaks, plus a description of duties for each day.',
+    tags: ['payroll', 'hr', 'timesheet'],
+    estimatedCompletion: '5 minutes',
+    recommendedUses: [
+      'Track hours for production, kitchen, and event staff each pay period.',
+      'Capture break in and out times so unpaid time is documented.',
+      'Attach to payroll runs as the signed record of hours and duties.',
+    ],
+    sections: [employeeInfoSection, employeeHoursLogSection, employeeHoursSummarySection],
+    publicSlug: 'employee-hours-tracker',
+  }),
   buildTemplate({
     id: 'wholesale-order-form',
     name: 'Wholesale Order Form',

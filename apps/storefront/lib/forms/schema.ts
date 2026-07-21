@@ -8,6 +8,8 @@ export const fieldSchema = z.object({
   helperText: z.string().optional(),
   columns: z.array(z.string().min(1)).optional(),
   defaultRows: z.number().int().min(0).optional(),
+  rows: z.array(z.array(z.string())).optional(),
+  rowHeight: z.number().int().min(0).optional(),
 })
 
 export const sectionSchema = z.object({

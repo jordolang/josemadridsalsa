@@ -12,6 +12,8 @@ export type BusinessFormField = {
   helperText?: string
   columns?: string[]
   defaultRows?: number
+  rows?: string[][]
+  rowHeight?: number
 }
 
 export type BusinessFormSection = {

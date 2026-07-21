@@ -1,4 +1,5 @@
 import type { BusinessFormTemplate, BusinessFormSection, BusinessFormField } from '@/types/forms'
+import { formLogoDataUri } from './logo'
 
 type RenderOptions = {
   title?: string
@@ -64,8 +65,8 @@ const baseStyles = `
   }
 
   .brand-logo {
-    width: 60px;
-    height: 60px;
+    width: 1in;
+    height: 1in;
     object-fit: contain;
   }
 
@@ -239,31 +240,34 @@ function renderField(field: BusinessFormField): string {
           <div class="signature-label">Sign above</div>
         </div>
       `
-    case 'table':
+    case 'table': {
+      const columns = field.columns ?? []
+      const presetRows = field.rows ?? []
+      const blankRows = Math.max((field.defaultRows ?? 6) - presetRows.length, 0)
+      const cellStyle = field.rowHeight ? ` style="height: ${field.rowHeight}px"` : ''
+      const row = (cells: string[]) =>
+        `<tr>${columns.map((_, index) => `<td${cellStyle}>${cells[index] ?? ''}</td>`).join('')}</tr>`
+
       return `
         <div class="form-field">
           <span class="field-label">${field.label}</span>
           <table class="form-table">
             <thead>
               <tr>
-                ${(field.columns ?? []).map((col) => `<th>${col}</th>`).join('')}
+                ${columns.map((col) => `<th>${col}</th>`).join('')}
               </tr>
             </thead>
             <tbody>
-              ${Array.from({ length: field.defaultRows ?? 6 })
-                .map(
-                  () => `
-                    <tr>
-                      ${(field.columns ?? []).map(() => '<td></td>').join('')}
-                    </tr>
-                  `,
-                )
+              ${presetRows.map(row).join('')}
+              ${Array.from({ length: blankRows })
+                .map(() => row([]))
                 .join('')}
             </tbody>
           </table>
           ${helper}
         </div>
       `
+    }
     default:
       return ''
   }
@@ -295,9 +299,6 @@ export function renderFormHtml(template: BusinessFormTemplate, options: RenderOp
 
   const today = new Date().toLocaleDateString()
 
-  // Use relative path for inline preview, works because it's rendered in the same domain
-  // For exports, the absolute URL will be resolved when the HTML is opened
-  const logoUrl = '/images/Hero-image.png'
 
   return `
     <!DOCTYPE html>
@@ -315,7 +316,7 @@ export function renderFormHtml(template: BusinessFormTemplate, options: RenderOp
               <div style="display: flex; align-items: center; gap: 16px;">
                 ${
                   includeBranding
-                    ? `<img src="${logoUrl}" alt="Jose Madrid Salsa Logo" class="brand-logo" onerror="this.style.display='none'" />`
+                    ? `<img src="${formLogoDataUri}" alt="Jose Madrid Salsa Logo" class="brand-logo" />`
                     : ''
                 }
                 <div>
