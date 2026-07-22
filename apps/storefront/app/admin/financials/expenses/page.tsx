@@ -14,6 +14,7 @@ import {
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { formatPrice } from '@/lib/utils'
 import { expenseQueue, supportedUploadFormats } from '@/lib/financials/config'
+import QuickBooksExpensesCard from '@/components/admin/financials/quickbooks-expenses-card'
 import { FinancialUploadPanel } from '@/components/admin/financials/financial-upload-panel'
 import { createMetadata } from '@/lib/metadata'
 
@@ -48,6 +49,9 @@ export default async function ExpensesPage() {
       </header>
 
       <FinancialUploadPanel acceptedExtensions={supportedUploadFormats} />
+
+      {/* Renders nothing when QuickBooks isn't connected. */}
+      <QuickBooksExpensesCard />
 
       <Card className="space-y-4 p-6">
         <div className="flex items-center justify-between">
