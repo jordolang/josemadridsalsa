@@ -56,6 +56,8 @@ interface PreviewRow {
 }
 
 interface PreviewResult {
+  /** 'show' = the strict 20-column CSV, which has no mapping step. */
+  format: 'show' | 'legacy'
   headers: string[]
   mapping: Record<string, string | undefined>
   missingRequired: string[]
@@ -74,6 +76,7 @@ export default function EventImporter() {
   const [mapping, setMapping] = useState<Record<string, string | undefined>>({})
   const [defaultStatus, setDefaultStatus] = useState('INTERESTED')
   const [preview, setPreview] = useState<PreviewResult | null>(null)
+  const [rejection, setRejection] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   async function handleFile(file: File) {
@@ -81,6 +84,7 @@ export default function EventImporter() {
     setCsv(text)
     setFileName(file.name)
     setPreview(null)
+    setRejection(null)
     setMapping({})
   }
 
@@ -91,6 +95,7 @@ export default function EventImporter() {
     }
 
     setBusy(true)
+    setRejection(null)
     try {
       const res = await fetch('/api/admin/events/import', {
         method: 'POST',
@@ -108,7 +113,11 @@ export default function EventImporter() {
 
       const payload = await res.json().catch(() => null)
       if (!res.ok) {
-        toast.error(payload?.error || 'Import failed')
+        // A rejected Show CSV names the offending line and expected header, so
+        // it needs somewhere to live longer than a toast.
+        setPreview(null)
+        setRejection(payload?.error || 'Import failed')
+        toast.error('The file was rejected — nothing was imported')
         return
       }
 
@@ -145,6 +154,11 @@ export default function EventImporter() {
             In FestivalNet, choose <em>Export My List</em>. Their export always contains your
             whole list, so re-importing is safe — matching shows update in place instead of
             duplicating.
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            A file whose header matches the 20-column Show import format is validated in full
+            before anything is written: it either imports completely or is rejected with the
+            offending line. Any other export goes through the column-mapping step instead.
           </p>
         </div>
 
@@ -211,8 +225,26 @@ export default function EventImporter() {
         </div>
       </Card>
 
+      {rejection && (
+        <Card className="border-destructive/50 bg-destructive/5 p-6">
+          <div className="flex gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+            <div className="space-y-1">
+              <p className="font-medium text-destructive">File rejected — nothing was imported</p>
+              <pre className="whitespace-pre-wrap break-words font-mono text-xs text-muted-foreground">
+                {rejection}
+              </pre>
+              <p className="text-sm text-muted-foreground">
+                Fix the export and try again — no partial rows were written.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {preview && (
         <>
+          {preview.format === 'legacy' && (
           <Card className="p-6 space-y-4">
             <div>
               <h2 className="text-lg font-semibold">2. Check the column mapping</h2>
@@ -258,12 +290,15 @@ export default function EventImporter() {
               Re-run preview
             </Button>
           </Card>
+          )}
 
           {preview.rows.length > 0 && (
             <Card className="p-6 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold">3. Review and import</h2>
+                  <h2 className="text-lg font-semibold">
+                    {preview.format === 'show' ? '2' : '3'}. Review and import
+                  </h2>
                   <div className="mt-1 flex flex-wrap gap-2 text-sm">
                     <Badge className="bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-300">
                       {preview.summary.create} new
