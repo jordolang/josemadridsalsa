@@ -21,6 +21,68 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { IntegrationHealth } from '@/components/admin/settings/integration-health'
+import {
+  getQuickBooksAppCredentials,
+  saveQuickBooksAppCredentials,
+  getDefaultEnvironment,
+  getQuickBooksRedirectUri,
+  type QuickBooksEnvironment,
+} from '@/lib/quickbooks/config'
+import { getConnectionStatus, disconnect } from '@/lib/quickbooks/connection'
+
+async function saveQuickBooksCredentialsAction(formData: FormData) {
+  'use server'
+
+  const user = await getCurrentUser()
+  if (!user || !(await hasPermission(user, 'api_keys:manage'))) {
+    throw new Error('Unauthorized')
+  }
+
+  const environment: QuickBooksEnvironment =
+    formData.get('environment') === 'production' ? 'production' : 'sandbox'
+  const clientId = String(formData.get('clientId') || '').trim()
+  const clientSecret = String(formData.get('clientSecret') || '').trim()
+
+  if (!clientId || !clientSecret) {
+    throw new Error('Client ID and Client Secret are required')
+  }
+
+  await saveQuickBooksAppCredentials({
+    environment,
+    clientId,
+    clientSecret,
+    updatedById: user.id,
+  })
+
+  await logAudit({
+    userId: user.id,
+    action: 'integration.update',
+    entityType: 'QuickBooksAppCredential',
+    entityId: environment,
+    changes: { rotated: true },
+  })
+
+  revalidatePath('/admin/settings/integrations')
+}
+
+async function disconnectQuickBooksAction() {
+  'use server'
+
+  const user = await getCurrentUser()
+  if (!user || !(await hasPermission(user, 'api_keys:manage'))) {
+    throw new Error('Unauthorized')
+  }
+
+  await disconnect()
+
+  await logAudit({
+    userId: user.id,
+    action: 'integration.disconnect',
+    entityType: 'QuickBooksConnection',
+  })
+
+  revalidatePath('/admin/settings/integrations')
+}
 
 async function saveServiceKey(formData: FormData) {
   'use server'
@@ -129,7 +191,11 @@ async function toggleServiceKey(id: string, nextState: 'enable' | 'disable') {
   revalidatePath('/admin/settings/integrations')
 }
 
-export default async function IntegrationsPage() {
+export default async function IntegrationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ quickbooks?: string; message?: string }>
+}) {
   const user = await getCurrentUser()
 
   if (!user || !(await hasPermission(user, 'settings:read'))) {
@@ -141,6 +207,14 @@ export default async function IntegrationsPage() {
   const serviceKeys = await prisma.serviceKey.findMany({
     orderBy: [{ serviceName: 'asc' }, { keyName: 'asc' }],
   })
+
+  const { quickbooks: qbResult, message: qbMessage } = await searchParams
+  const qbEnvironment = getDefaultEnvironment()
+  const [qbStatus, qbCreds] = await Promise.all([
+    getConnectionStatus(),
+    getQuickBooksAppCredentials(qbEnvironment),
+  ])
+  const qbRedirectUri = getQuickBooksRedirectUri()
 
   return (
     <div className="space-y-6">
@@ -157,6 +231,156 @@ export default async function IntegrationsPage() {
       </div>
 
       <IntegrationHealth />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>QuickBooks Online</CardTitle>
+          <CardDescription>
+            Sync orders, customers, and payments into QuickBooks. Connect a company below;
+            sales flow into your books automatically.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {qbResult === 'connected' && (
+            <Alert>
+              <AlertDescription>QuickBooks connected successfully.</AlertDescription>
+            </Alert>
+          )}
+          {qbResult === 'error' && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                QuickBooks connection failed{qbMessage ? `: ${qbMessage}` : '.'}
+              </AlertDescription>
+            </Alert>
+          )}
+          {qbResult === 'disconnected' && (
+            <Alert>
+              <AlertDescription>
+                Disconnected from QuickBooks. Order sync is stopped until you reconnect.
+              </AlertDescription>
+            </Alert>
+          )}
+          {qbResult === 'unverified' && (
+            <Alert>
+              <AlertDescription>
+                QuickBooks reported a disconnect we could not match to this company. If the
+                connection below still shows as active, disconnect it here as well.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium">Status:</span>
+            {qbStatus.connected ? (
+              <>
+                <Badge>Connected</Badge>
+                <span className="text-sm text-muted-foreground">
+                  {qbStatus.companyName ?? `Realm ${qbStatus.realmId}`} • {qbStatus.environment}
+                </span>
+              </>
+            ) : (
+              <Badge variant="outline">Not connected</Badge>
+            )}
+          </div>
+
+          {qbStatus.connected && qbStatus.connectionError && (
+            <Alert variant="destructive">
+              <AlertDescription>{qbStatus.connectionError}</AlertDescription>
+            </Alert>
+          )}
+
+          {qbStatus.connected && (
+            <p className="text-xs text-muted-foreground">
+              Last synced:{' '}
+              {qbStatus.lastSyncedAt ? qbStatus.lastSyncedAt.toLocaleString() : 'Never'}
+            </p>
+          )}
+
+          {canManage ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {qbCreds ? (
+                  <Button asChild>
+                    <a href={`/api/integrations/quickbooks/connect?environment=${qbEnvironment}`}>
+                      {qbStatus.connected ? 'Reconnect' : 'Connect QuickBooks'}
+                    </a>
+                  </Button>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Add your Client ID and Secret below to enable connecting.
+                  </p>
+                )}
+                {qbStatus.connected && (
+                  <Button asChild variant="outline">
+                    <a href="/admin/settings/integrations/quickbooks">Sync settings</a>
+                  </Button>
+                )}
+                {qbStatus.connected && (
+                  <form action={disconnectQuickBooksAction}>
+                    <Button type="submit" variant="outline">
+                      Disconnect
+                    </Button>
+                  </form>
+                )}
+              </div>
+
+              <form action={saveQuickBooksCredentialsAction} className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="qbClientId">Client ID</Label>
+                  <Input
+                    id="qbClientId"
+                    name="clientId"
+                    placeholder="Intuit app Client ID"
+                    defaultValue={qbCreds?.clientId ?? ''}
+                    className="font-mono text-sm"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="qbEnvironment">Environment</Label>
+                  <select
+                    id="qbEnvironment"
+                    name="environment"
+                    defaultValue={qbEnvironment}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="sandbox">Sandbox</option>
+                    <option value="production">Production</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="qbClientSecret">Client Secret</Label>
+                  <Input
+                    id="qbClientSecret"
+                    name="clientSecret"
+                    type="password"
+                    placeholder="Paste the Intuit app Client Secret..."
+                    className="font-mono text-sm"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Encrypted immediately with AES-256-GCM. Register your app at
+                    developer.intuit.com and set the Redirect URI to{' '}
+                    <code className="break-all">{qbRedirectUri}</code>.
+                  </p>
+                </div>
+                <div className="md:col-span-2 flex justify-end">
+                  <Button type="submit" variant="secondary">
+                    Save QuickBooks credentials
+                  </Button>
+                </div>
+              </form>
+            </div>
+          ) : (
+            <Alert>
+              <AlertDescription>
+                You have read-only access. Contact an administrator with API key permissions to
+                connect QuickBooks.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

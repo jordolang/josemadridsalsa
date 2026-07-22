@@ -1333,6 +1333,143 @@ model SocialPlatformCredential {
   @@map("social_platform_credential")
 }
 
+// App-level QuickBooks Online OAuth client (Client ID + Secret), one row per
+// environment. Mirrors SocialPlatformCredential: the secret is encrypted at
+// rest and admin-entered values take precedence over env vars.
+model QuickBooksAppCredential {
+  id             String   @id @default(cuid())
+  environment    String   @unique // "sandbox" | "production"
+  clientId       String
+  clientSecret   String
+  clientSecretIv String
+  updatedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("quickbooks_app_credentials")
+}
+
+// A live QuickBooks Online connection (one company / realm). Access + refresh
+// tokens are encrypted at rest with AES-256-GCM, exactly like SocialAccount.
+// QBO access tokens live ~1h; refresh tokens ~100 days (rolling), so we persist
+// both expiries and refresh proactively.
+model QuickBooksConnection {
+  id                    String    @id @default(cuid())
+  realmId               String    @unique // QBO company id
+  environment           String    @default("sandbox") // "sandbox" | "production"
+  companyName           String?
+  accessToken           String
+  accessTokenIv         String
+  refreshToken          String
+  refreshTokenIv        String
+  accessTokenExpiresAt  DateTime
+  refreshTokenExpiresAt DateTime
+  scopes                String[]
+  isActive              Boolean   @default(true)
+  lastRefreshedAt       DateTime?
+  lastSyncedAt          DateTime?
+  connectionError       String?
+  connectedById         String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([isActive])
+  @@map("quickbooks_connections")
+}
+
+/// What kind of record a sync row or id-mapping refers to.
+enum QuickBooksEntityType {
+  CUSTOMER
+  ITEM
+  SALES_RECEIPT
+  REFUND_RECEIPT
+}
+
+enum QuickBooksSyncStatus {
+  PENDING
+  PROCESSING
+  SYNCED
+  FAILED
+  /// Needs a human decision before it can post (e.g. an unmapped account).
+  /// Deliberately distinct from FAILED: retrying will never fix it.
+  BLOCKED
+  /// Intentionally excluded — predates syncStartDate, or manually skipped.
+  SKIPPED
+}
+
+/// Durable queue and audit trail for pushing website records into QBO. Checkout
+/// never writes to QuickBooks inline; it lands here and a cron drains it.
+model QuickBooksSyncRecord {
+  id            String               @id @default(cuid())
+  entityType    QuickBooksEntityType
+  /// Our id for the record being pushed (order id, refund id, …).
+  entityId      String
+  status        QuickBooksSyncStatus @default(PENDING)
+  attempts      Int                  @default(0)
+  lastError     String?
+  /// Id of the object QBO created, once it exists.
+  quickbooksId  String?
+  /// The payload we sent, kept for debugging a bad post after the fact.
+  payload       Json?
+  /// Backoff gate — the processor ignores rows until this passes.
+  nextAttemptAt DateTime?
+  processedAt   DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  /// One lineage per record, which is what makes the sweeper idempotent.
+  @@unique([entityType, entityId])
+  @@index([status, nextAttemptAt])
+  @@map("quickbooks_sync_records")
+}
+
+/// Stable local -> QBO id mapping so a re-sync never creates a second Customer
+/// or Item. Scoped by realm: sandbox ids are meaningless in production, so
+/// switching companies starts with a clean map rather than silently reusing
+/// ids that point at nothing.
+model QuickBooksEntityMap {
+  id           String               @id @default(cuid())
+  realmId      String
+  entityType   QuickBooksEntityType
+  localId      String
+  quickbooksId String
+  /// QBO's optimistic-concurrency token, required to update an object later.
+  syncToken    String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@unique([realmId, entityType, localId])
+  @@index([realmId, entityType, quickbooksId])
+  @@map("quickbooks_entity_maps")
+}
+
+/// Chart-of-accounts mapping and sync controls, one row per connected company.
+model QuickBooksSettings {
+  id                       String    @id @default(cuid())
+  realmId                  String    @unique
+  /// Income account assigned to Items we auto-create. Without it we cannot
+  /// create an Item, so sync stays off until it's set.
+  incomeAccountId          String?
+  /// Where SalesReceipt proceeds land (typically Undeposited Funds).
+  depositAccountId         String?
+  /// QBO Item used for the shipping line.
+  shippingItemId           String?
+  /// Account a checkout discount is booked against.
+  discountAccountId        String?
+  /// Liability account gift certificates were sold into. Redemptions draw it
+  /// down; until it's mapped, orders paying with one are held rather than
+  /// posted at the wrong amount.
+  giftCertificateAccountId String?
+  /// Orders before this date are left out of the books entirely.
+  syncStartDate            DateTime?
+  /// Master switch. Off until the accounts above are mapped.
+  autoSyncEnabled          Boolean   @default(false)
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  @@map("quickbooks_settings")
+}
+
 model FormTemplate {
   id                  String                @id @default(cuid())
   slug                String                @unique
