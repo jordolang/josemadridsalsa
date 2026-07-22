@@ -5,6 +5,16 @@ import { hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
+const BOOKING_STATUSES = [
+  'INTERESTED',
+  'APPLIED',
+  'WAITLISTED',
+  'ACCEPTED',
+  'CONFIRMED',
+  'DECLINED',
+  'CANCELLED',
+] as const
+
 const EventSchema = z.object({
   title: z.string().min(1),
   description: z.string().nullish(),
@@ -16,10 +26,25 @@ const EventSchema = z.object({
   isWhereIsJose: z.boolean().default(false),
   customDescription: z.string().nullish(),
   displayPriority: z.number().int().optional(),
+  applicationDeadline: z.string().nullish(),
+  bookingStatus: z.enum(BOOKING_STATUSES).optional(),
+  boothFee: z.number().nonnegative().nullish(),
   tags: z.array(z.string()).optional(),
 })
 
 export async function GET(request: NextRequest) {
+  // This response carries booking-pipeline data (which shows we have applied
+  // to but not been accepted for, and what we are paying for a booth), so it
+  // is admin-only. The public "Where is Jose?" pages read the DB directly.
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const permitted = await hasPermission(session.user as any, 'events:read')
+  if (!permitted) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const { searchParams } = new URL(request.url)
   const whereIsJose = searchParams.get('whereIsJose') === 'true'
   const featured = searchParams.get('featured') === 'true'
@@ -77,6 +102,11 @@ export async function POST(request: NextRequest) {
         isWhereIsJose: validated.isWhereIsJose,
         customDescription: validated.customDescription,
         displayPriority: validated.displayPriority ?? 0,
+        applicationDeadline: validated.applicationDeadline
+          ? new Date(validated.applicationDeadline)
+          : null,
+        bookingStatus: validated.bookingStatus ?? 'CONFIRMED',
+        boothFee: validated.boothFee ?? null,
         manuallyModified: true,
       },
     })

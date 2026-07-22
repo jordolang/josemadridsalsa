@@ -4,6 +4,16 @@ import { requirePermission } from '@/lib/rbac'
 import { ok, fail } from '@/lib/api'
 import { logAudit } from '@/lib/audit'
 
+const BOOKING_STATUSES = [
+  'INTERESTED',
+  'APPLIED',
+  'WAITLISTED',
+  'ACCEPTED',
+  'CONFIRMED',
+  'DECLINED',
+  'CANCELLED',
+] as const
+
 interface StaffInput {
   name: string
   role?: string | null
@@ -92,6 +102,9 @@ export async function PATCH(
       isWhereIsJose,
       customDescription,
       displayPriority,
+      applicationDeadline,
+      bookingStatus,
+      boothFee,
       staff,
       contacts,
     } = body
@@ -129,6 +142,22 @@ export async function PATCH(
             displayPriority !== undefined
               ? Number(displayPriority) || 0
               : existing.displayPriority,
+          applicationDeadline:
+            applicationDeadline !== undefined
+              ? applicationDeadline
+                ? new Date(applicationDeadline)
+                : null
+              : existing.applicationDeadline,
+          bookingStatus:
+            bookingStatus !== undefined && BOOKING_STATUSES.includes(bookingStatus)
+              ? bookingStatus
+              : existing.bookingStatus,
+          boothFee:
+            boothFee !== undefined
+              ? boothFee === null || boothFee === ''
+                ? null
+                : Number(boothFee)
+              : existing.boothFee,
           // A manual edit means calendar sync should no longer overwrite this event.
           manuallyModified: true,
         },

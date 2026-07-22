@@ -46,6 +46,9 @@ export default async function EditEventPage({
     endDate: event.endDate?.toISOString() ?? null,
     isWhereIsJose: event.isWhereIsJose,
     displayPriority: event.displayPriority,
+    applicationDeadline: event.applicationDeadline?.toISOString() ?? null,
+    bookingStatus: event.bookingStatus,
+    boothFee: event.boothFee?.toString() ?? null,
     staff: event.staff.map((s) => ({
       name: s.name,
       role: s.role ?? '',
