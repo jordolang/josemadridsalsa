@@ -75,6 +75,7 @@ async function saveSettingsAction(formData: FormData) {
     discountAccountId: value('discountAccountId'),
     giftCertificateAccountId: value('giftCertificateAccountId'),
     shippingItemId: value('shippingItemId'),
+    refundItemId: value('refundItemId'),
     // Anchored at noon so a timezone shift can't move the cutoff a day.
     syncStartDate: startDateRaw ? new Date(`${startDateRaw}T12:00:00`) : null,
     autoSyncEnabled: formData.get('autoSyncEnabled') === 'on',
@@ -247,6 +248,27 @@ export default async function QuickBooksSettingsPage() {
               </select>
               <p className="text-xs text-muted-foreground">
                 The QuickBooks item used for the shipping line.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="refundItemId">Refund item</Label>
+              <select
+                id="refundItemId"
+                name="refundItemId"
+                defaultValue={settings?.refundItemId ?? ''}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Not mapped</option>
+                {items.map((i) => (
+                  <option key={i.Id} value={i.Id}>
+                    {i.Name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Where partial refunds land. Full refunds reverse the original lines instead,
+                so this is only needed for partial ones.
               </p>
             </div>
 

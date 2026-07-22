@@ -78,6 +78,7 @@ export interface SyncSettings {
   shippingItemId?: string | null
   discountAccountId?: string | null
   giftCertificateAccountId?: string | null
+  refundItemId?: string | null
 }
 
 export type MappingResult =
@@ -244,6 +245,127 @@ export function buildSalesReceipt(input: {
       PrivateNote: `Website order ${order.orderNumber} (${order.id})`,
       Line: lines,
       ...(order.tax > 0 && { TxnTaxDetail: { TotalTax: round2(order.tax) } }),
+      ...(settings.depositAccountId && {
+        DepositToAccountRef: { value: settings.depositAccountId },
+      }),
+    },
+  }
+}
+
+export interface RefundReceiptPayload {
+  CustomerRef: QboRef
+  TxnDate: string
+  DocNumber?: string
+  PrivateNote?: string
+  Line: SalesItemLine[]
+  DepositToAccountRef?: QboRef
+}
+
+export type RefundMappingResult =
+  | { ok: true; payload: RefundReceiptPayload }
+  | { ok: false; reason: string }
+
+export interface RefundForSync {
+  id: string
+  /** Refund amounts are stored as Int cents; convert before calling. */
+  amount: number
+  reason: string | null
+  createdAt: Date
+  order: OrderForSync
+}
+
+/**
+ * Build a RefundReceipt for money returned to a customer.
+ *
+ * Our refunds record an amount against a payment but carry no line detail, so
+ * there are two honest shapes:
+ *   - a refund matching the order total mirrors the original lines, giving the
+ *     books a true reversal;
+ *   - anything less lands on one designated refund item, because inventing a
+ *     split across products would be fabricating detail we never captured.
+ */
+export function buildRefundReceipt(input: {
+  refund: RefundForSync
+  customerId: string
+  itemIds: Record<string, string>
+  settings: SyncSettings
+}): RefundMappingResult {
+  const { refund, customerId, itemIds, settings } = input
+  const amount = round2(refund.amount)
+
+  if (amount <= 0) {
+    return { ok: false, reason: 'Refund amount is zero or negative' }
+  }
+  if (amount > round2(refund.order.total) + TOTAL_TOLERANCE) {
+    return {
+      ok: false,
+      reason: `Refund ${amount.toFixed(2)} exceeds the order total ${round2(refund.order.total).toFixed(2)}`,
+    }
+  }
+
+  const isFullRefund = Math.abs(amount - round2(refund.order.total)) <= TOTAL_TOLERANCE
+  const lines: SalesItemLine[] = []
+
+  if (isFullRefund) {
+    for (const item of refund.order.items) {
+      const itemId = itemIds[item.productId]
+      if (!itemId) {
+        return { ok: false, reason: `No QuickBooks item mapped for product ${item.productSku}` }
+      }
+      lines.push({
+        DetailType: 'SalesItemLineDetail',
+        Amount: round2(item.totalPrice),
+        Description: item.productName,
+        SalesItemLineDetail: {
+          ItemRef: { value: itemId },
+          Qty: item.quantity,
+          UnitPrice: round2(item.unitPrice),
+        },
+      })
+    }
+
+    // Shipping is refunded alongside the goods on a whole-order reversal.
+    if (refund.order.shippingCost > 0) {
+      if (!settings.shippingItemId) {
+        return { ok: false, reason: 'Order has shipping but no shipping item is mapped' }
+      }
+      lines.push({
+        DetailType: 'SalesItemLineDetail',
+        Amount: round2(refund.order.shippingCost),
+        Description: 'Shipping',
+        SalesItemLineDetail: {
+          ItemRef: { value: settings.shippingItemId },
+          Qty: 1,
+          UnitPrice: round2(refund.order.shippingCost),
+        },
+      })
+    }
+  } else {
+    if (!settings.refundItemId) {
+      return { ok: false, reason: 'Partial refund needs a refund item mapped in settings' }
+    }
+    lines.push({
+      DetailType: 'SalesItemLineDetail',
+      Amount: amount,
+      Description: refund.reason ?? 'Partial refund',
+      SalesItemLineDetail: {
+        ItemRef: { value: settings.refundItemId },
+        Qty: 1,
+        UnitPrice: amount,
+      },
+    })
+  }
+
+  return {
+    ok: true,
+    payload: {
+      CustomerRef: { value: customerId },
+      TxnDate: toTxnDate(refund.createdAt),
+      DocNumber: `R-${refund.order.orderNumber}`.slice(0, MAX_DOC_NUMBER),
+      PrivateNote: `Refund for order ${refund.order.orderNumber}${
+        refund.reason ? ` — ${refund.reason}` : ''
+      } (${refund.id})`,
+      Line: lines,
       ...(settings.depositAccountId && {
         DepositToAccountRef: { value: settings.depositAccountId },
       }),
