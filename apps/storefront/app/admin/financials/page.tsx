@@ -16,6 +16,7 @@ import { formatPrice } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { FinancialUploadPanel } from '@/components/admin/financials/financial-upload-panel'
+import QuickBooksProfitAndLossCard from '@/components/admin/financials/quickbooks-pl-card'
 import { PAID_PAYMENT_STATUSES } from '@/lib/payments/status'
 import {
   financialIntegrations,
@@ -364,6 +365,12 @@ export default async function FinancialsPage({ searchParams }: { searchParams: P
           icon={Receipt}
         />
       </div>
+
+      {/* Renders nothing when QuickBooks isn't connected. */}
+      <QuickBooksProfitAndLossCard
+        start={new Date(Date.now() - RANGE_DAYS[activeRange] * 24 * 60 * 60 * 1000)}
+        end={new Date()}
+      />
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
         <FinancialUploadPanel acceptedExtensions={supportedUploadFormats} />
