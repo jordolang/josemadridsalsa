@@ -162,7 +162,13 @@ export interface QuickBooksExpense {
   vendor: string | null
   account: string | null
   total: number
+  /** How it was paid (Purchase), or the payment status (Bill). */
   paymentType: string | null
+  /** Purchases are already paid; bills are money owed. */
+  kind: 'purchase' | 'bill'
+  /** Bills only: outstanding balance and due date. */
+  balance?: number
+  dueDate?: string | null
 }
 
 interface RawPurchase {
@@ -174,9 +180,25 @@ interface RawPurchase {
   AccountRef?: { name?: string }
 }
 
+interface RawBill {
+  Id: string
+  TxnDate?: string
+  DueDate?: string
+  TotalAmt?: number | string
+  Balance?: number | string
+  VendorRef?: { name?: string }
+  APAccountRef?: { name?: string }
+}
+
+/** Newest first, by transaction date then id so ties are stable. */
+function byDateDesc(a: QuickBooksExpense, b: QuickBooksExpense): number {
+  if (a.date === b.date) return b.id.localeCompare(a.id)
+  return a.date < b.date ? 1 : -1
+}
+
 /**
- * Recent expenses (QBO Purchase records). Expenses are QBO's to own — including
- * anything captured through its native receipt capture — so this only reads.
+ * Recent expenses (QBO Purchase records) — cash already out the door,
+ * including anything captured through QuickBooks' native receipt capture.
  */
 export async function listRecentExpenses(limit = 25): Promise<QuickBooksExpense[]> {
   const data = await quickBooksFetch<{ QueryResponse?: { Purchase?: RawPurchase[] } }>('query', {
@@ -192,5 +214,75 @@ export async function listRecentExpenses(limit = 25): Promise<QuickBooksExpense[
     account: purchase.AccountRef?.name ?? null,
     total: parseReportAmount(purchase.TotalAmt),
     paymentType: purchase.PaymentType ?? null,
+    kind: 'purchase' as const,
+  }))
+}
+
+/**
+ * Outstanding and recent bills (accounts payable) — money owed but not yet
+ * paid, which a purchase list alone would miss entirely.
+ */
+export async function listRecentBills(limit = 25): Promise<QuickBooksExpense[]> {
+  const data = await quickBooksFetch<{ QueryResponse?: { Bill?: RawBill[] } }>('query', {
+    query: { query: `select * from Bill orderby TxnDate desc maxresults ${Math.min(limit, 100)}` },
+  })
+
+  return (data?.QueryResponse?.Bill ?? []).map((bill) => {
+    const balance = parseReportAmount(bill.Balance)
+    return {
+      id: bill.Id,
+      date: bill.TxnDate ?? '',
+      vendor: bill.VendorRef?.name ?? null,
+      account: bill.APAccountRef?.name ?? null,
+      total: parseReportAmount(bill.TotalAmt),
+      paymentType: balance > 0 ? 'Unpaid' : 'Paid',
+      kind: 'bill' as const,
+      balance,
+      dueDate: bill.DueDate ?? null,
+    }
+  })
+}
+
+/**
+ * Purchases and bills together, newest first — the full picture of money spent
+ * and owed. Each source is fetched independently so one failing (a permissions
+ * quirk, an empty entity) still leaves the other usable.
+ */
+export async function listAllExpenses(limit = 25): Promise<QuickBooksExpense[]> {
+  const [purchases, bills] = await Promise.all([
+    listRecentExpenses(limit).catch(() => [] as QuickBooksExpense[]),
+    listRecentBills(limit).catch(() => [] as QuickBooksExpense[]),
+  ])
+  return [...purchases, ...bills].sort(byDateDesc).slice(0, limit)
+}
+
+export interface QuickBooksVendor {
+  id: string
+  name: string
+  email: string | null
+  /** Outstanding balance owed to this vendor. */
+  balance: number
+}
+
+interface RawVendor {
+  Id: string
+  DisplayName?: string
+  Balance?: number | string
+  PrimaryEmailAddr?: { Address?: string }
+}
+
+/** Active vendors with their outstanding balances. */
+export async function listVendors(limit = 100): Promise<QuickBooksVendor[]> {
+  const data = await quickBooksFetch<{ QueryResponse?: { Vendor?: RawVendor[] } }>('query', {
+    query: {
+      query: `select * from Vendor where Active = true maxresults ${Math.min(limit, 500)}`,
+    },
+  })
+
+  return (data?.QueryResponse?.Vendor ?? []).map((vendor) => ({
+    id: vendor.Id,
+    name: vendor.DisplayName ?? 'Unnamed vendor',
+    email: vendor.PrimaryEmailAddr?.Address ?? null,
+    balance: parseReportAmount(vendor.Balance),
   }))
 }

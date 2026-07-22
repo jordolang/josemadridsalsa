@@ -1,4 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+const { quickBooksFetch } = vi.hoisted(() => ({ quickBooksFetch: vi.fn() }))
+
+vi.mock('@/lib/quickbooks/client', () => ({ quickBooksFetch }))
+
 import {
   parseProfitAndLoss,
   parseReportAmount,
@@ -185,5 +190,107 @@ describe('parseProfitAndLoss', () => {
     expect(parseProfitAndLoss({}).sections).toEqual([])
     expect(parseProfitAndLoss(null).totals).toEqual({})
     expect(parseProfitAndLoss({ Rows: { Row: [{ type: 'Data' }] } }).sections).toEqual([])
+  })
+})
+
+describe('expenses and vendors', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('maps purchases and bills, marking bills with a balance unpaid', async () => {
+    quickBooksFetch
+      .mockResolvedValueOnce({
+        QueryResponse: {
+          Purchase: [
+            {
+              Id: '10',
+              TxnDate: '2026-07-10',
+              TotalAmt: '240.00',
+              PaymentType: 'CreditCard',
+              EntityRef: { name: 'Restaurant Depot' },
+              AccountRef: { name: 'Supplies' },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        QueryResponse: {
+          Bill: [
+            {
+              Id: '20',
+              TxnDate: '2026-07-18',
+              DueDate: '2026-08-17',
+              TotalAmt: '1250.00',
+              Balance: '1250.00',
+              VendorRef: { name: 'Glass Supplier' },
+            },
+            {
+              Id: '21',
+              TxnDate: '2026-07-05',
+              TotalAmt: '400.00',
+              Balance: '0',
+              VendorRef: { name: 'Label Printer' },
+            },
+          ],
+        },
+      })
+
+    const { listAllExpenses } = await import('@/lib/quickbooks/reports')
+    const rows = await listAllExpenses(25)
+
+    // Newest first, purchases and bills interleaved by date.
+    expect(rows.map((r) => r.id)).toEqual(['20', '10', '21'])
+
+    const unpaidBill = rows.find((r) => r.id === '20')!
+    expect(unpaidBill.kind).toBe('bill')
+    expect(unpaidBill.paymentType).toBe('Unpaid')
+    expect(unpaidBill.balance).toBe(1250)
+    expect(unpaidBill.dueDate).toBe('2026-08-17')
+
+    const settledBill = rows.find((r) => r.id === '21')!
+    expect(settledBill.paymentType).toBe('Paid')
+
+    const purchase = rows.find((r) => r.id === '10')!
+    expect(purchase.kind).toBe('purchase')
+    expect(purchase.vendor).toBe('Restaurant Depot')
+    expect(purchase.total).toBe(240)
+  })
+
+  it('still returns purchases when the bill query fails', async () => {
+    quickBooksFetch
+      .mockResolvedValueOnce({
+        QueryResponse: { Purchase: [{ Id: '10', TxnDate: '2026-07-10', TotalAmt: '240.00' }] },
+      })
+      .mockRejectedValueOnce(new Error('Bill entity unavailable'))
+
+    const { listAllExpenses } = await import('@/lib/quickbooks/reports')
+    const rows = await listAllExpenses(25)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0].id).toBe('10')
+  })
+
+  it('sums vendor balances and tolerates missing fields', async () => {
+    quickBooksFetch.mockResolvedValueOnce({
+      QueryResponse: {
+        Vendor: [
+          { Id: '1', DisplayName: 'Glass Supplier', Balance: '1250.00' },
+          { Id: '2', Balance: '' },
+        ],
+      },
+    })
+
+    const { listVendors } = await import('@/lib/quickbooks/reports')
+    const vendors = await listVendors()
+
+    expect(vendors[0]).toEqual({
+      id: '1',
+      name: 'Glass Supplier',
+      email: null,
+      balance: 1250,
+    })
+    expect(vendors[1].name).toBe('Unnamed vendor')
+    expect(vendors[1].balance).toBe(0)
   })
 })
