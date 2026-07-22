@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildCustomerPayload,
+  buildRefundReceipt,
   buildItemPayload,
   buildSalesReceipt,
   centsToDollars,
@@ -296,5 +297,96 @@ describe('buildSalesReceipt', () => {
     })
 
     expect(result.ok).toBe(true)
+  })
+})
+
+describe('buildRefundReceipt', () => {
+  const refundBase = (amount: number, orderOverrides = {}) => ({
+    id: 'ref_1',
+    amount,
+    reason: 'Damaged in transit',
+    createdAt: new Date(2026, 6, 25),
+    order: baseOrder(orderOverrides),
+  })
+
+  it('mirrors the original lines for a full refund', () => {
+    const result = buildRefundReceipt({
+      refund: refundBase(24),
+      customerId: '55',
+      itemIds,
+      settings,
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.payload.Line).toHaveLength(1)
+    expect(result.payload.Line[0].Amount).toBe(24)
+    expect(result.payload.DocNumber).toBe('R-JMS-1001')
+  })
+
+  it('refunds shipping too on a whole-order reversal', () => {
+    const result = buildRefundReceipt({
+      refund: refundBase(32.5, { shippingCost: 8.5, total: 32.5 }),
+      customerId: '55',
+      itemIds,
+      settings,
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.payload.Line).toHaveLength(2)
+    expect(result.payload.Line[1].Description).toBe('Shipping')
+  })
+
+  it('books a partial refund against the designated refund item', () => {
+    const result = buildRefundReceipt({
+      refund: refundBase(10),
+      customerId: '55',
+      itemIds,
+      settings: { ...settings, refundItemId: '33' },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.payload.Line).toHaveLength(1)
+    expect(result.payload.Line[0].Amount).toBe(10)
+    expect(result.payload.Line[0].SalesItemLineDetail.ItemRef).toEqual({ value: '33' })
+  })
+
+  it('refuses a partial refund when no refund item is mapped', () => {
+    const result = buildRefundReceipt({
+      refund: refundBase(10),
+      customerId: '55',
+      itemIds,
+      settings: { ...settings, refundItemId: null },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.reason).toContain('refund item')
+  })
+
+  it('refuses a refund larger than the order total', () => {
+    const result = buildRefundReceipt({
+      refund: refundBase(99),
+      customerId: '55',
+      itemIds,
+      settings: { ...settings, refundItemId: '33' },
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.reason).toContain('exceeds the order total')
+  })
+
+  it('refuses a zero refund', () => {
+    const result = buildRefundReceipt({
+      refund: refundBase(0),
+      customerId: '55',
+      itemIds,
+      settings,
+    })
+
+    expect(result.ok).toBe(false)
   })
 })

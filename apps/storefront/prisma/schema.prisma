@@ -1460,6 +1460,10 @@ model QuickBooksSettings {
   /// down; until it's mapped, orders paying with one are held rather than
   /// posted at the wrong amount.
   giftCertificateAccountId String?
+  /// Item a partial refund is booked against. Our refunds carry an amount but
+  /// no line detail, so anything less than a whole-order refund needs one
+  /// designated item to land on.
+  refundItemId             String?
   /// Orders before this date are left out of the books entirely.
   syncStartDate            DateTime?
   /// Master switch. Off until the accounts above are mapped.

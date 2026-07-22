@@ -5,7 +5,9 @@ import { getValidAccessToken, markSynced } from './connection'
 import {
   buildCustomerPayload,
   buildItemPayload,
+  buildRefundReceipt,
   buildSalesReceipt,
+  centsToDollars,
   type OrderForSync,
 } from './mappers'
 
@@ -315,6 +317,94 @@ export async function syncOrder(orderId: string): Promise<SyncOutcome> {
   }
 }
 
+/** Load a refund plus the order it belongs to, money flattened to numbers. */
+export async function loadRefundForSync(refundId: string) {
+  const refund = await prisma.refund.findUnique({
+    where: { id: refundId },
+    include: { payment: { select: { orderId: true } } },
+  })
+  if (!refund) return null
+
+  const order = await loadOrderForSync(refund.payment.orderId)
+  if (!order) return null
+
+  return {
+    id: refund.id,
+    // Refund.amount is Int cents while orders are Decimal dollars.
+    amount: centsToDollars(refund.amount),
+    reason: refund.reason,
+    createdAt: refund.processedAt ?? refund.createdAt,
+    order,
+  }
+}
+
+/**
+ * Post a refund as a QBO RefundReceipt. Mirrors syncOrder: same duplicate
+ * guard, same refuse-rather-than-guess contract.
+ */
+export async function syncRefund(refundId: string): Promise<SyncOutcome> {
+  const { realmId } = await getValidAccessToken()
+
+  const settings = await getSettings(realmId)
+  if (!settings?.incomeAccountId) {
+    return { status: 'BLOCKED', reason: 'No income account mapped in QuickBooks settings' }
+  }
+
+  const refund = await loadRefundForSync(refundId)
+  if (!refund) return { status: 'BLOCKED', reason: 'Refund or its order no longer exists' }
+
+  if (settings.syncStartDate && refund.order.createdAt < settings.syncStartDate) {
+    return { status: 'BLOCKED', reason: 'Order predates the configured sync start date' }
+  }
+
+  const docNumber = `R-${refund.order.orderNumber}`.slice(0, 21)
+  const existing = await queryFirst<{ Id: string }>(
+    'RefundReceipt',
+    `DocNumber = '${escapeQueryLiteral(docNumber)}'`
+  )
+  if (existing?.Id) {
+    return { status: 'SYNCED', quickbooksId: existing.Id }
+  }
+
+  const customerId = await ensureCustomer(realmId, {
+    ...refund.order,
+    userId: (refund.order as { userId?: string | null }).userId ?? null,
+  })
+
+  const itemIds: Record<string, string> = {}
+  for (const line of refund.order.items) {
+    itemIds[line.productId] = await ensureItem(
+      realmId,
+      { id: line.productId, name: line.productName, sku: line.productSku },
+      settings.incomeAccountId
+    )
+  }
+
+  const mapped = buildRefundReceipt({ refund, customerId, itemIds, settings })
+  if (!mapped.ok) {
+    return { status: 'BLOCKED', reason: mapped.reason }
+  }
+
+  const created = await quickBooksFetch<{ RefundReceipt: { Id: string } }>('refundreceipt', {
+    method: 'POST',
+    body: mapped.payload,
+  })
+
+  await saveMapping({
+    realmId,
+    entityType: 'REFUND_RECEIPT',
+    localId: refund.id,
+    quickbooksId: created.RefundReceipt.Id,
+  })
+  await markSynced(realmId)
+
+  return {
+    status: 'SYNCED',
+    quickbooksId: created.RefundReceipt.Id,
+    payload: mapped.payload,
+  }
+}
+
 /**
  * Find paid orders that have never been queued and enqueue them.
  *
@@ -355,17 +445,54 @@ export async function enqueuePaidOrders(limit = 100): Promise<number> {
   return result.count
 }
 
+/**
+ * Enqueue refunds that have been processed but never pushed.
+ *
+ * Same sweeper reasoning as orders: refunds are created by the Stripe webhook
+ * and by admin-initiated flows, and neither should wait on QuickBooks.
+ */
+export async function enqueueRefunds(limit = 100): Promise<number> {
+  const { realmId } = await getValidAccessToken()
+  const settings = await getSettings(realmId)
+  if (!settings?.autoSyncEnabled) return 0
+
+  const candidates = await prisma.refund.findMany({
+    where: { status: 'SUCCEEDED' },
+    select: { id: true },
+    orderBy: { createdAt: 'asc' },
+    take: limit,
+  })
+  if (candidates.length === 0) return 0
+
+  const ids = candidates.map((r) => r.id)
+  const known = await prisma.quickBooksSyncRecord.findMany({
+    where: { entityType: 'REFUND_RECEIPT', entityId: { in: ids } },
+    select: { entityId: true },
+  })
+  const seen = new Set(known.map((r) => r.entityId))
+  const fresh = ids.filter((id) => !seen.has(id))
+  if (fresh.length === 0) return 0
+
+  const result = await prisma.quickBooksSyncRecord.createMany({
+    data: fresh.map((entityId) => ({ entityType: 'REFUND_RECEIPT' as const, entityId })),
+    skipDuplicates: true,
+  })
+  return result.count
+}
+
 /** Process due rows from the ledger. Returns a per-status tally. */
 export async function drainQueue(limit = 25) {
   const now = new Date()
   const due = await prisma.quickBooksSyncRecord.findMany({
     where: {
-      entityType: 'SALES_RECEIPT',
+      entityType: { in: ['SALES_RECEIPT', 'REFUND_RECEIPT'] },
       status: { in: ['PENDING', 'FAILED'] },
       attempts: { lt: MAX_ATTEMPTS },
       OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
     },
-    orderBy: { createdAt: 'asc' },
+    // Oldest first, and receipts ahead of refunds within the same instant so a
+    // refund never posts before the sale it reverses.
+    orderBy: [{ createdAt: 'asc' }, { entityType: 'asc' }],
     take: limit,
   })
 
@@ -381,7 +508,10 @@ export async function drainQueue(limit = 25) {
         where: { id: record.id },
         data: { status: 'PROCESSING', attempts },
       })
-      outcome = await syncOrder(record.entityId)
+      outcome =
+        record.entityType === 'REFUND_RECEIPT'
+          ? await syncRefund(record.entityId)
+          : await syncOrder(record.entityId)
     } catch (error) {
       // Intuit's trace id goes into the stored error: it is the first thing
       // their support asks for, and it only exists on the failed response.

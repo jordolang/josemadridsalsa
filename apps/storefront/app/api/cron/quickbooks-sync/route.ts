@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getConnection } from '@/lib/quickbooks/connection'
-import { drainQueue, enqueuePaidOrders } from '@/lib/quickbooks/sync'
+import { drainQueue, enqueuePaidOrders, enqueueRefunds } from '@/lib/quickbooks/sync'
 
 /**
  * GET /api/cron/quickbooks-sync
@@ -32,8 +32,9 @@ export async function GET(request: Request) {
 
   try {
     const enqueued = await enqueuePaidOrders()
+    const refundsEnqueued = await enqueueRefunds()
     const tally = await drainQueue()
-    return NextResponse.json({ enqueued, ...tally })
+    return NextResponse.json({ enqueued, refundsEnqueued, ...tally })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'QuickBooks sync failed'
     console.error('[cron/quickbooks-sync]', error)
