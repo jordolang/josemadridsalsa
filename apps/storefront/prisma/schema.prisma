@@ -1066,6 +1066,19 @@ model FeaturedEvent {
   lastGoogleSync    DateTime?
   displayPriority   Int        @default(0)
   connectedByUserId String?
+  /// Date our application/registration for the show is due. Distinct from
+  /// startDate: deadlines routinely fall months before the event itself.
+  applicationDeadline DateTime?
+  /// Where we are in the booking pipeline for this show.
+  bookingStatus     EventBookingStatus @default(CONFIRMED)
+  /// Booth/vendor fee in USD.
+  boothFee          Decimal?   @db.Decimal(10, 2)
+  /// Where this event record came from (manual entry, Google Calendar, a
+  /// FestivalNet CSV import).
+  source            EventSource @default(MANUAL)
+  /// Identifier from `source`, used to make re-imports idempotent. FestivalNet
+  /// re-exports the entire list every time, so imports must match on this.
+  externalId        String?
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
   eventTags         EventTag[]
@@ -1073,9 +1086,30 @@ model FeaturedEvent {
   contacts          EventContact[]
   manifest          EventManifest?
 
+  @@unique([source, externalId])
   @@index([isWhereIsJose])
   @@index([featuredFrom, featuredTo])
+  @@index([applicationDeadline])
+  @@index([bookingStatus, startDate])
   @@map("featured_events")
+}
+
+/// Pipeline state for a show we are trying to book. Existing rows default to
+/// CONFIRMED because everything already in the table is a show we are working.
+enum EventBookingStatus {
+  INTERESTED
+  APPLIED
+  WAITLISTED
+  ACCEPTED
+  CONFIRMED
+  DECLINED
+  CANCELLED
+}
+
+enum EventSource {
+  MANUAL
+  GOOGLE_CALENDAR
+  FESTIVALNET
 }
 
 /// People from our team assigned to attend/work an event.

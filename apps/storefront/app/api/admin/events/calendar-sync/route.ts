@@ -66,7 +66,14 @@ export async function POST(_req: NextRequest) {
           updated++
         } else {
           await prisma.featuredEvent.create({
-            data: { ...data, googleEventId: ev.id },
+            // source/externalId mirror googleEventId so calendar rows are
+            // identifiable the same way imported ones are.
+            data: {
+              ...data,
+              googleEventId: ev.id,
+              source: 'GOOGLE_CALENDAR',
+              externalId: ev.id,
+            },
           })
           created++
         }

@@ -8,8 +8,25 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Loader2, Save, Plus, Trash2, Users, Phone } from 'lucide-react'
 import { toast } from 'sonner'
+
+const BOOKING_STATUSES = [
+  { value: 'INTERESTED', label: 'Interested' },
+  { value: 'APPLIED', label: 'Applied' },
+  { value: 'WAITLISTED', label: 'Waitlisted' },
+  { value: 'ACCEPTED', label: 'Accepted' },
+  { value: 'CONFIRMED', label: 'Confirmed' },
+  { value: 'DECLINED', label: 'Declined' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+] as const
 
 interface StaffRow {
   name: string
@@ -38,6 +55,9 @@ export interface EventFormData {
   endDate?: string | null
   isWhereIsJose: boolean
   displayPriority: number
+  applicationDeadline?: string | null
+  bookingStatus?: string | null
+  boothFee?: number | string | null
   staff?: StaffRow[]
   contacts?: ContactRow[]
 }
@@ -49,6 +69,15 @@ function toLocalInput(value?: string | null): string {
   if (Number.isNaN(d.getTime())) return ''
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+/** ISO string -> value for <input type="date"> in local time. */
+function toDateInput(value?: string | null): string {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 const emptyStaff = (): StaffRow => ({
@@ -80,6 +109,13 @@ export default function EventForm({ event }: { event?: EventFormData }) {
   const [endDate, setEndDate] = useState(toLocalInput(event?.endDate))
   const [isWhereIsJose, setIsWhereIsJose] = useState(event?.isWhereIsJose ?? false)
   const [displayPriority, setDisplayPriority] = useState(event?.displayPriority ?? 0)
+  const [applicationDeadline, setApplicationDeadline] = useState(
+    toDateInput(event?.applicationDeadline)
+  )
+  const [bookingStatus, setBookingStatus] = useState(event?.bookingStatus ?? 'CONFIRMED')
+  const [boothFee, setBoothFee] = useState(
+    event?.boothFee === null || event?.boothFee === undefined ? '' : String(event.boothFee)
+  )
   const [staff, setStaff] = useState<StaffRow[]>(event?.staff ?? [])
   const [contacts, setContacts] = useState<ContactRow[]>(event?.contacts ?? [])
   const [saving, setSaving] = useState(false)
@@ -118,6 +154,13 @@ export default function EventForm({ event }: { event?: EventFormData }) {
         featuredTo: endDate ? new Date(endDate).toISOString() : null,
         isWhereIsJose,
         displayPriority: Number(displayPriority) || 0,
+        // Deadlines are date-only; anchor to noon local so a timezone shift
+        // can't roll them onto the previous day.
+        applicationDeadline: applicationDeadline
+          ? new Date(`${applicationDeadline}T12:00:00`).toISOString()
+          : null,
+        bookingStatus,
+        boothFee: boothFee.trim() === '' ? null : Number(boothFee),
       }
 
       if (isEdit && event?.id) {
@@ -233,6 +276,58 @@ export default function EventForm({ event }: { event?: EventFormData }) {
               type="number"
               value={displayPriority}
               onChange={(e) => setDisplayPriority(Number(e.target.value))}
+            />
+          </div>
+        </div>
+      </Card>
+
+      {/* Booking pipeline */}
+      <Card className="p-6 space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">Booking</h2>
+          <p className="text-sm text-muted-foreground">
+            Where this show stands and what it costs us to be there.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="bookingStatus">Status</Label>
+            <Select value={bookingStatus} onValueChange={setBookingStatus}>
+              <SelectTrigger id="bookingStatus">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BOOKING_STATUSES.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="applicationDeadline">Application deadline</Label>
+            <Input
+              id="applicationDeadline"
+              type="date"
+              value={applicationDeadline}
+              onChange={(e) => setApplicationDeadline(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">When our application is due.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="boothFee">Booth fee</Label>
+            <Input
+              id="boothFee"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              value={boothFee}
+              onChange={(e) => setBoothFee(e.target.value)}
             />
           </div>
         </div>

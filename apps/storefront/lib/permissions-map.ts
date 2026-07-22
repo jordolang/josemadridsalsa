@@ -78,11 +78,6 @@ export const adminNavigation: NavItem[] = [
         permission: 'content:read',
       },
       {
-        label: 'Events',
-        href: '/admin/events',
-        permission: 'content:read',
-      },
-      {
         label: 'SEO',
         href: '/admin/seo',
         permission: 'content:write',
@@ -91,6 +86,29 @@ export const adminNavigation: NavItem[] = [
         label: 'The Heat Index (Blog)',
         href: '/admin/blog',
         permission: 'content:read',
+      },
+    ],
+  },
+  {
+    label: 'Events',
+    href: '/admin/events',
+    icon: 'CalendarDays',
+    permission: 'events:read',
+    children: [
+      {
+        label: 'Calendar',
+        href: '/admin/events/calendar',
+        permission: 'events:read',
+      },
+      {
+        label: 'All Events',
+        href: '/admin/events',
+        permission: 'events:read',
+      },
+      {
+        label: 'Import',
+        href: '/admin/events/import',
+        permission: 'events:write',
       },
     ],
   },
