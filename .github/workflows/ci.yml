@@ -61,8 +61,12 @@ jobs:
             apps/admin/coverage/
           retention-days: 30
 
+      # Reporting only — this Jest-oriented action is brittle against the Vitest suite
+      # (it crashes on a missing coverage-summary.json). Like the test/e2e steps above it
+      # must never gate; without this it aborts the job before build runs, keeping CI red.
       - name: Post coverage report to PR
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: ArtiomTr/jest-coverage-report-action@v2
         with:
           coverage-file: ./apps/storefront/coverage/coverage-summary.json
