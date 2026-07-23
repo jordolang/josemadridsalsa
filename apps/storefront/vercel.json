@@ -30,7 +30,7 @@
     },
     {
       "path": "/api/cron/quickbooks-sync",
-      "schedule": "15 * * * *"
+      "schedule": "15 6 * * *"
     }
   ]
 }
