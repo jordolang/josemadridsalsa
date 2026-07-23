@@ -41,7 +41,7 @@ npm install
 
 # Configure environment
 cp .env.example .env.local
-# Fill in required values — see docs/ENVIRONMENT_VARIABLES.md
+# Fill in required values — see apps/docs/content/docs/configuration/environment-variables.mdx
 
 # Apply database migrations
 npm run db:migrate
@@ -156,7 +156,7 @@ Docs: update ENVIRONMENT_VARIABLES.md
 - [ ] Lint is clean: `npm run lint`
 - [ ] Types are valid: `npm run type-check`
 - [ ] If schema changed: `npm run db:generate` has been run and committed
-- [ ] New env vars are documented in `docs/ENVIRONMENT_VARIABLES.md`
+- [ ] New env vars are documented in `apps/docs/content/docs/configuration/environment-variables.mdx`
 
 ### PR Description Template
 
@@ -229,7 +229,7 @@ npx vitest run --coverage
 
 1. **Never commit secrets** — No API keys, passwords, tokens, or private keys in source code or documentation.
 2. **Never commit `.env` files** — `.env`, `.env.local`, `.env.production` are gitignored. Keep them that way.
-3. **Use environment variables** for all sensitive configuration — document them in `docs/ENVIRONMENT_VARIABLES.md` by name only (no values).
+3. **Use environment variables** for all sensitive configuration — document them in `apps/docs/content/docs/configuration/environment-variables.mdx` by name only (no values).
 4. **Rotate keys immediately** if a secret is accidentally exposed.
 5. **Validate all input** with Zod before using it.
 6. **Use parameterized queries** (Prisma handles this) — never build raw SQL strings.
@@ -239,12 +239,11 @@ npx vitest run --coverage
 
 ## Documentation Standards
 
-- All documentation lives in the **`docs/`** directory.
-- File names use **`UPPER_SNAKE_CASE.md`** convention (e.g., `ENVIRONMENT_SETUP.md`).
-- The `docs/index.md` serves as the documentation hub — update it when adding new docs.
+- Project documentation lives in the in-repo **Fumadocs site** at `apps/docs/content/docs`, organized into `getting-started/`, `guides/`, `features/`, `configuration/`, `integrations/`, `deployment/`, and `api/`. Run it locally with `npm run dev:docs`.
+- Docs-site pages are **`.mdx`** files with `title` and `description` frontmatter, named in **`kebab-case`** (e.g., `environment-variables.mdx`).
 - Write clear, concise prose. Use tables and code blocks where they aid clarity.
-- Do **not** create documentation files outside of `docs/` (except `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, and `AGENTS.md` in the root).
-- Do **not** include placeholder values or actual secrets in any documentation file.
+- Do **not** create documentation files outside `apps/docs/content/docs` (except `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `AGENTS.md`, and `CLAUDE.md` in the root).
+- Do **not** include actual secret values in any documentation file.
 
 ---
 
