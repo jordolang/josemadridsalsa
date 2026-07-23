@@ -50,10 +50,10 @@ describe('OrderConfirmationEmail', () => {
 
       expect(html).toContain('Original Salsa')
       expect(html).toContain('SAL-ORG-16OZ')
-      expect(html).toContain('$19.98')
+      expect(html).toContain('$<!-- -->19.98')
       expect(html).toContain('Spicy Salsa')
       expect(html).toContain('SAL-SPI-16OZ')
-      expect(html).toContain('$9.99')
+      expect(html).toContain('$<!-- -->9.99')
     })
 
     it('should include preview text with order number', async () => {
@@ -67,7 +67,7 @@ describe('OrderConfirmationEmail', () => {
     it('should use default name when not provided', async () => {
       const html = await render(<OrderConfirmationEmail {...baseProps} />)
 
-      expect(html).toContain('Hi there,')
+      expect(html).toContain('Hi <!-- -->there<!-- -->,')
     })
 
     it('should use custom name when provided', async () => {
@@ -78,7 +78,7 @@ describe('OrderConfirmationEmail', () => {
         />
       )
 
-      expect(html).toContain('Hi John Smith,')
+      expect(html).toContain('Hi <!-- -->John Smith<!-- -->,')
     })
 
     it('should include tracking link when provided', async () => {
@@ -285,7 +285,7 @@ describe('OrderConfirmationEmail', () => {
       )
 
       expect(html).toContain('Free Sample')
-      expect(html).toContain('$0.00')
+      expect(html).toContain('$<!-- -->0.00')
     })
   })
 

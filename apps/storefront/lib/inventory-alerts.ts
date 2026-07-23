@@ -218,6 +218,13 @@ export async function sendLowStockAlert(productId: string): Promise<{ success: b
           notifiedTo: notifiedEmails,
         },
       });
+    } else {
+      // Every admin email send failed — the alert was recorded but nobody was
+      // notified. Report failure so callers don't treat this as delivered.
+      return {
+        success: false,
+        error: 'Failed to send low stock alert to any admin',
+      };
     }
 
     return {

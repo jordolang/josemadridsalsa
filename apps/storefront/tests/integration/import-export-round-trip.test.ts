@@ -47,13 +47,18 @@ describe.skipIf(!runIntegration)('Import/Export Round-Trip', () => {
   ]
 
   beforeAll(async () => {
-    // Find an active category for test products
-    const category = await prisma.category.findFirst({
+    // Find or create an active category. A fresh CI database has no seed data,
+    // so create one if none exists rather than failing the whole suite.
+    let category = await prisma.category.findFirst({
       where: { isActive: true }
     })
 
     if (!category) {
-      throw new Error('No active category found for test')
+      category = await prisma.category.upsert({
+        where: { slug: 'test-import-export-category' },
+        update: {},
+        create: { name: 'Test Import Export Category', slug: 'test-import-export-category' },
+      })
     }
 
     // Create test products

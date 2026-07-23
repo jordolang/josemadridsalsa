@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST, GET } from '@/app/api/orders/route'
-import { GET as GET_BY_ID } from '@/app/api/orders/[id]/route'
+import { GET as GET_BY_ID } from '@/app/api/orders/[orderId]/route'
 
 // Mock dependencies
 vi.mock('next-auth', () => ({
@@ -699,7 +699,7 @@ describe('Orders API', () => {
       )
 
       const response = await GET_BY_ID(request, {
-        params: Promise.resolve({ id: 'claaa1234567890abc' }),
+        params: Promise.resolve({ orderId: 'claaa1234567890abc' }),
       })
       const data = await response.json()
 
@@ -722,7 +722,7 @@ describe('Orders API', () => {
       )
 
       const response = await GET_BY_ID(request, {
-        params: Promise.resolve({ id: 'claaa1234567890abc' }),
+        params: Promise.resolve({ orderId: 'claaa1234567890abc' }),
       })
       const data = await response.json()
 
@@ -748,13 +748,13 @@ describe('Orders API', () => {
       )
 
       const response = await GET_BY_ID(request, {
-        params: Promise.resolve({ id: 'claaa1234567890abc' }),
+        params: Promise.resolve({ orderId: 'claaa1234567890abc' }),
       })
       const data = await response.json()
 
       // Must be 403, not 401 — authenticated but not the owner
       expect(response.status).toBe(403)
-      expect(data.error).toBe('Forbidden')
+      expect(data.error).toBe('Access denied')
     })
 
     it('should return order details for authenticated user', async () => {
@@ -772,7 +772,7 @@ describe('Orders API', () => {
       )
 
       const response = await GET_BY_ID(request, {
-        params: Promise.resolve({ id: 'claaa1234567890abc' }),
+        params: Promise.resolve({ orderId: 'claaa1234567890abc' }),
       })
       const data = await response.json()
 
@@ -789,6 +789,18 @@ describe('Orders API', () => {
           items: {
             include: {
               product: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+          shippingAddress: {
+            select: {
+              country: true,
             },
           },
         },
@@ -810,7 +822,7 @@ describe('Orders API', () => {
       )
 
       const response = await GET_BY_ID(request, {
-        params: Promise.resolve({ id: 'claaa1234567890abc' }),
+        params: Promise.resolve({ orderId: 'claaa1234567890abc' }),
       })
       const data = await response.json()
 
@@ -840,7 +852,7 @@ describe('Orders API', () => {
       )
 
       const response = await GET_BY_ID(request, {
-        params: Promise.resolve({ id: 'claaa1234567890abc' }),
+        params: Promise.resolve({ orderId: 'claaa1234567890abc' }),
       })
       const data = await response.json()
 

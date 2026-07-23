@@ -22,6 +22,8 @@ export const permissionDefinitions: PermissionDefinition[] = [
   { name: 'products:bulk', description: 'Bulk product operations', category: 'PRODUCTS' },
   { name: 'products:export', description: 'Export products', category: 'PRODUCTS' },
   { name: 'products:import', description: 'Import products from files', category: 'PRODUCTS' },
+  { name: 'inventory:read', description: 'View inventory levels and low-stock alerts', category: 'PRODUCTS' },
+  { name: 'inventory:write', description: 'Adjust inventory and manage stock alerts', category: 'PRODUCTS' },
 
   // Users
   { name: 'users:read', description: 'View users', category: 'USERS' },

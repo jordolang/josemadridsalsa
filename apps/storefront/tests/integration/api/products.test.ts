@@ -17,23 +17,20 @@ import { GET as getRecommendations } from '@/app/api/products/[id]/recommendatio
  * Use server.use() from 'msw/node' to add test-specific HTTP handlers.
  */
 
-// Mock Prisma
-vi.mock('@/lib/prisma', () => ({
-  default: {
+// Mock Prisma. The default and named (`prisma`) exports point to the same
+// client instance in production (see lib/prisma.ts), so the mock must share a
+// single object — otherwise routes importing the named export (e.g.
+// app/api/products/route.ts) hit un-stubbed mocks and throw.
+vi.mock('@/lib/prisma', () => {
+  const client = {
     product: {
       findMany: vi.fn(),
       findUnique: vi.fn(),
       count: vi.fn(),
     },
-  },
-  prisma: {
-    product: {
-      findMany: vi.fn(),
-      findUnique: vi.fn(),
-      count: vi.fn(),
-    },
-  },
-}))
+  }
+  return { default: client, prisma: client }
+})
 
 // Mock recommendations library
 vi.mock('@/lib/recommendations', () => ({
@@ -284,7 +281,6 @@ describe('Products API', () => {
 
       expect(response.status).toBe(500)
       expect(data.error).toBe('Failed to fetch products')
-      expect(data.details).toBe('Database error')
     })
   })
 

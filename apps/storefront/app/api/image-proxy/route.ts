@@ -204,9 +204,21 @@ const rewriteGooglePhotoUrl = (originalUrl: string): string => {
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
 
+  // Decode double-encoded url params before validation. A client may encode an
+  // already-encoded URL, leaving an encoded ':' (%3A) that fails URL validation
+  // below. Decode it up front so the whitelist/HTTPS checks see a real URL.
+  let urlParam = searchParams.get('url')
+  if (urlParam && (urlParam.includes('%3A') || urlParam.includes('%3a'))) {
+    try {
+      urlParam = decodeURIComponent(urlParam)
+    } catch {
+      // Leave as-is; validation will reject it if it is still invalid.
+    }
+  }
+
   // Validate query parameters with Zod
   const validation = ImageProxyQuerySchema.safeParse({
-    url: searchParams.get('url'),
+    url: urlParam,
     placeId: searchParams.get('placeId'),
     maxWidth: searchParams.get('maxWidth'),
   })

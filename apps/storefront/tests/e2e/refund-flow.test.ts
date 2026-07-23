@@ -49,6 +49,12 @@ vi.mock('@/lib/prisma', () => ({
   },
 }))
 
+vi.mock('@/lib/rbac', () => ({
+  requirePermission: vi.fn(() =>
+    Promise.resolve({ id: 'admin-user', email: 'admin@test.com', role: 'ADMIN' })
+  ),
+}))
+
 const mockRefundsCreate = vi.fn()
 
 vi.mock('@/lib/stripe', () => ({
@@ -178,6 +184,10 @@ describe('E2E: Refund Flow', () => {
       paymentId: paymentId,
       // No amount specified = full refund
     }
+
+    // The refund route wraps its work in prisma.$transaction; pass the mocked
+    // prisma as the transaction client so tx.* delegates to the mocked methods.
+    vi.mocked(prisma.$transaction).mockImplementation(async (cb: any) => cb(prisma))
 
     const refundRequestObj = createRequest(refundRequest)
     const refundResponse = await refundPOST(refundRequestObj)
@@ -505,6 +515,10 @@ describe('E2E: Refund Flow', () => {
       reason: 'requested_by_customer',
     }
 
+    // The refund route wraps its work in prisma.$transaction; pass the mocked
+    // prisma as the transaction client so tx.* delegates to the mocked methods.
+    vi.mocked(prisma.$transaction).mockImplementation(async (cb: any) => cb(prisma))
+
     const refundRequestObj = createRequest(refundRequest)
     const refundResponse = await refundPOST(refundRequestObj)
     const refundData = await refundResponse.json()
@@ -719,6 +733,10 @@ describe('E2E: Refund Flow', () => {
       amount: 2500, // Try to refund $25.00, but only $20.00 available
     }
 
+    // The refund route wraps its work in prisma.$transaction; pass the mocked
+    // prisma as the transaction client so tx.* delegates to the mocked methods.
+    vi.mocked(prisma.$transaction).mockImplementation(async (cb: any) => cb(prisma))
+
     const refundRequestObj = createRequest(refundRequest)
     const refundResponse = await refundPOST(refundRequestObj)
     const refundData = await refundResponse.json()
@@ -763,6 +781,10 @@ describe('E2E: Refund Flow', () => {
     const refundRequest: RefundRequest = {
       paymentId: paymentId,
     }
+
+    // The refund route wraps its work in prisma.$transaction; pass the mocked
+    // prisma as the transaction client so tx.* delegates to the mocked methods.
+    vi.mocked(prisma.$transaction).mockImplementation(async (cb: any) => cb(prisma))
 
     const refundRequestObj = createRequest(refundRequest)
     const refundResponse = await refundPOST(refundRequestObj)

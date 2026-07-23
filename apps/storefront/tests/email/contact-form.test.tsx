@@ -49,7 +49,7 @@ describe('ContactFormEmail', () => {
     it('should include reply button', async () => {
       const html = await render(<ContactFormEmail {...baseProps} />)
 
-      expect(html).toContain('Reply to John Smith')
+      expect(html).toContain('Reply to <!-- -->John Smith')
       expect(html).toContain('mailto:john.smith@example.com')
     })
   })
@@ -238,7 +238,7 @@ Symbols: © ® ™`
       const html = await render(<ContactFormEmail {...baseProps} />)
 
       expect(html).toContain('John Smith')
-      expect(html).toContain('Reply to John Smith')
+      expect(html).toContain('Reply to <!-- -->John Smith')
     })
 
     it('should handle names with special characters', async () => {
@@ -284,7 +284,7 @@ Symbols: © ® ™`
       )
 
       expect(html).toContain('Madonna')
-      expect(html).toContain('Reply to Madonna')
+      expect(html).toContain('Reply to <!-- -->Madonna')
     })
   })
 

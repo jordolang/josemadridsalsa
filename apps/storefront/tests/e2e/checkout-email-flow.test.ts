@@ -39,6 +39,17 @@ vi.mock('@/lib/email/automation', () => ({
   sendOrderConfirmationEmail: vi.fn(() => Promise.resolve({ success: true })),
 }))
 
+vi.mock('@/lib/inventory-manager', () => ({
+  deductReservedInventoryInTx: vi.fn(() =>
+    Promise.resolve({ newInventory: 10, product: { lowStockThreshold: 5 } })
+  ),
+  checkAndUpdateAlerts: vi.fn(() => Promise.resolve()),
+}))
+
+vi.mock('@/lib/orders/redeem-codes', () => ({
+  redeemOrderCodesInTx: vi.fn(() => Promise.resolve()),
+}))
+
 const mockHeadersGet = vi.fn()
 
 vi.mock('next/headers', () => ({
@@ -142,6 +153,12 @@ describe('E2E: Checkout Flow → Order Confirmation Email', () => {
         product: {
           update: vi.fn(),
         },
+        payment: {
+          upsert: vi.fn(),
+        },
+        inventoryTransaction: {
+          findFirst: vi.fn().mockResolvedValue(null),
+        },
       })
     })
 
@@ -229,7 +246,7 @@ describe('E2E: Checkout Flow → Order Confirmation Email', () => {
 
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
-    const mockTransaction = vi.fn(async (callback) => callback({ order: { update: vi.fn() }, product: { update: vi.fn() } }))
+    const mockTransaction = vi.fn(async (callback) => callback({ order: { update: vi.fn() }, product: { update: vi.fn() }, payment: { upsert: vi.fn() }, inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null) } }))
     vi.mocked(prisma.$transaction).mockImplementation(mockTransaction as any)
 
     const paymentSucceededEvent: Stripe.Event = {
@@ -285,7 +302,7 @@ describe('E2E: Checkout Flow → Order Confirmation Email', () => {
 
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
-    const mockTransaction = vi.fn(async (callback) => callback({ order: { update: vi.fn() }, product: { update: vi.fn() } }))
+    const mockTransaction = vi.fn(async (callback) => callback({ order: { update: vi.fn() }, product: { update: vi.fn() }, payment: { upsert: vi.fn() }, inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null) } }))
     vi.mocked(prisma.$transaction).mockImplementation(mockTransaction as any)
 
     // Mock email send to reject/fail

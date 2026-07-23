@@ -9,6 +9,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest-setup.ts'],
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+    // Run test files sequentially. The DB integration tests (inventory, checkout
+    // reservation, order completion) share one Postgres and some assertions query
+    // inventory globally, so overlapping files would contaminate each other. This
+    // also removes the parallel-execution flakiness previously seen in the suite.
+    fileParallelism: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'json-summary'],

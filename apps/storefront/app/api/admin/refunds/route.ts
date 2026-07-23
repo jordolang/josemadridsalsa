@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
-import { getProvider } from '@/lib/payments/registry'
+import { getProvider } from '@/lib/payments'
 import type { PaymentProvider } from '@/lib/payments/types'
 
 const RefundRequestSchema = z.object({

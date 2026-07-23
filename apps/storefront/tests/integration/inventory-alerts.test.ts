@@ -48,13 +48,18 @@ describe.skipIf(!runIntegration)('Inventory Alerts System', () => {
       return
     }
 
-    // Find or create an active category
+    // Find or create an active category. A fresh CI database has no seed data,
+    // so create one if none exists rather than failing the whole suite.
     testCategory = await prisma.category.findFirst({
       where: { isActive: true }
     })
 
     if (!testCategory) {
-      throw new Error('No active category found for test')
+      testCategory = await prisma.category.upsert({
+        where: { slug: 'test-inventory-alerts-category' },
+        update: {},
+        create: { name: 'Test Inventory Alerts Category', slug: 'test-inventory-alerts-category' },
+      })
     }
 
     // Create an admin user for notifications

@@ -207,7 +207,7 @@ describe('Fundraiser Signups API', () => {
 
       expect(sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
-          to: expect.stringContaining('fundraising'),
+          to: 'mike@josemadridsalsa.com',
           subject: expect.stringContaining('Test Organization'),
         })
       )

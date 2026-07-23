@@ -755,7 +755,7 @@ describe('Checkout API Integration Tests', () => {
       })
 
       // Mock payment creation failure
-      mockCreatePayment.mockResolvedValue({
+      mockCreatePayment.mockResolvedValueOnce({
         success: false,
         error: 'Stripe API error',
       })

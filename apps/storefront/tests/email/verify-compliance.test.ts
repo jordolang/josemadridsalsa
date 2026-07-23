@@ -14,18 +14,19 @@ import { ShippingNotificationEmail } from '@/emails/shipping-notification'
 import { DeliveryConfirmationEmail } from '@/emails/delivery-confirmation'
 import { ContactFormEmail } from '@/emails/contact-form'
 import { render } from '@react-email/render'
+import { Resend } from 'resend'
 
 // Mock Resend
-vi.mock('resend', () => ({
-  Resend: vi.fn(() => ({
-    emails: {
-      send: vi.fn().mockResolvedValue({
-        id: 'test-email-id',
-        error: null
-      })
-    }
-  }))
-}))
+// The email client instantiates a single Resend client at import time, so all
+// instances must share the same send mock for assertions to observe the call.
+vi.mock('resend', () => {
+  const send = vi.fn().mockResolvedValue({ data: { id: 'test-id' }, error: null })
+  return {
+    Resend: class MockResend {
+      emails = { send }
+    },
+  }
+})
 
 // Mock logger to avoid DB hits
 vi.mock('@/lib/email/logger', () => ({
@@ -33,22 +34,16 @@ vi.mock('@/lib/email/logger', () => ({
   logEmailSend: vi.fn().mockResolvedValue({ id: 'log-id' }),
 }))
 
+// Shared send mock used by the client's singleton Resend instance
+const mockSend = vi.mocked(new Resend('test').emails.send)
+
 describe('Email Compliance - List-Unsubscribe Headers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockSend.mockResolvedValue({ data: { id: 'test-id' }, error: null } as any)
   })
 
   it('should include List-Unsubscribe header when sending order confirmation', async () => {
-    const { Resend } = await import('resend')
-    const mockSend = vi.fn().mockResolvedValue({
-      data: { id: 'test-id' },
-      error: null,
-    })
-
-    vi.mocked(Resend).mockImplementation(() => ({
-      emails: { send: mockSend },
-    }) as any)
-
     const template = OrderConfirmationEmail({
       orderNumber: '12345',
       orderDate: '2024-01-15',
@@ -75,16 +70,6 @@ describe('Email Compliance - List-Unsubscribe Headers', () => {
   })
 
   it('should include List-Unsubscribe header when sending shipping notification', async () => {
-    const { Resend } = await import('resend')
-    const mockSend = vi.fn().mockResolvedValue({
-      data: { id: 'test-id' },
-      error: null,
-    })
-
-    vi.mocked(Resend).mockImplementation(() => ({
-      emails: { send: mockSend },
-    }) as any)
-
     const template = ShippingNotificationEmail({
       orderNumber: '12345',
       trackingNumber: 'TRACK123',
@@ -105,7 +90,7 @@ describe('Email Compliance - List-Unsubscribe Headers', () => {
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         headers: expect.objectContaining({
-          'List-Unsubscribe': expect.stringContaining('/unsubscribe?email=test@example.com'),
+          'List-Unsubscribe': expect.stringContaining('/unsubscribe?email=test%40example.com'),
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
         }),
       })
@@ -113,16 +98,6 @@ describe('Email Compliance - List-Unsubscribe Headers', () => {
   })
 
   it('should include List-Unsubscribe header when sending delivery confirmation', async () => {
-    const { Resend } = await import('resend')
-    const mockSend = vi.fn().mockResolvedValue({
-      data: { id: 'test-id' },
-      error: null,
-    })
-
-    vi.mocked(Resend).mockImplementation(() => ({
-      emails: { send: mockSend },
-    }) as any)
-
     const template = DeliveryConfirmationEmail({
       orderNumber: '12345',
       deliveryDate: '2024-01-20',
@@ -148,16 +123,6 @@ describe('Email Compliance - List-Unsubscribe Headers', () => {
   })
 
   it('should include List-Unsubscribe header when sending contact form email', async () => {
-    const { Resend } = await import('resend')
-    const mockSend = vi.fn().mockResolvedValue({
-      data: { id: 'test-id' },
-      error: null,
-    })
-
-    vi.mocked(Resend).mockImplementation(() => ({
-      emails: { send: mockSend },
-    }) as any)
-
     const template = ContactFormEmail({
       name: 'John Doe',
       email: 'john@example.com',
@@ -264,16 +229,6 @@ describe('Email Compliance - Unsubscribe Links in Footer', () => {
 
 describe('Email Compliance - Full Integration', () => {
   it('should have both header and footer unsubscribe when sending email', async () => {
-    const { Resend } = await import('resend')
-    const mockSend = vi.fn().mockResolvedValue({
-      data: { id: 'test-id' },
-      error: null,
-    })
-
-    vi.mocked(Resend).mockImplementation(() => ({
-      emails: { send: mockSend },
-    }) as any)
-
     const template = OrderConfirmationEmail({
       orderNumber: '12345',
       orderDate: '2024-01-15',
