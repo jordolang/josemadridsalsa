@@ -71,7 +71,6 @@ gcloud/
 # Backstage
 backstage/
 josemadridsalsa/
-!apps/ios/ios-native/JoseMadridSalsa/
 
 # Data files
 data/
@@ -147,9 +146,6 @@ logs/security/
 skills/
 skills-lock.json
 
-# iOS / SwiftPM build artifacts
-apps/ios/**/.build/
-
 # Turborepo task cache
 .turbo/
 
@@ -177,3 +173,4 @@ tiktok-shop-products*.xlsx
 # Codex CLI working directory
 .codex/
 .clauge-worktrees/
+.env*
