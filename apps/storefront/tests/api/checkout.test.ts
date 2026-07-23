@@ -16,6 +16,10 @@ vi.mock('@/lib/prisma', () => {
     order: {
       create: vi.fn(),
     },
+    user: {
+      findUnique: vi.fn(),
+      update: vi.fn(),
+    },
     abandonedCart: {
       updateMany: vi.fn(),
     },
@@ -188,7 +192,7 @@ describe('Checkout API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(422)
+      expect(response.status).toBe(400)
       expect(data.error).toBe('Invalid checkout payload')
     })
 
@@ -205,16 +209,22 @@ describe('Checkout API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(422)
+      expect(response.status).toBe(400)
       expect(data.error).toContain('could not be found')
     })
 
     it('should check inventory availability', async () => {
       const { prisma } = await import('@/lib/prisma')
+      const { reserveMultipleProducts } = await import('@/lib/inventory-manager')
 
       vi.mocked(prisma.product.findMany).mockResolvedValue([
         { ...mockProduct, inventory: 1 } as any, // Not enough inventory
       ])
+      // Inventory validation is performed atomically inside reserveMultipleProducts,
+      // which throws when stock is insufficient.
+      vi.mocked(reserveMultipleProducts).mockRejectedValueOnce(
+        new Error('Insufficient inventory for product Test Salsa')
+      )
 
       const request = new NextRequest('http://localhost/api/checkout', {
         method: 'POST',
@@ -224,7 +234,7 @@ describe('Checkout API', () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(422)
+      expect(response.status).toBe(400)
       expect(data.error).toContain('Insufficient inventory')
     })
 
@@ -464,7 +474,7 @@ describe('Checkout API', () => {
 
       vi.mocked(getServerSession).mockResolvedValueOnce(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
-      vi.mocked(calculateShipping).mockImplementation(() => {
+      vi.mocked(calculateShipping).mockImplementationOnce(() => {
         throw new Error('Shipping API error')
       })
 

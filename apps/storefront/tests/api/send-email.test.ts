@@ -17,10 +17,6 @@ vi.mock('@/lib/prisma', () => ({
   },
 }))
 
-vi.mock('@/lib/email/rate-limit', () => ({
-  checkRateLimit: vi.fn(() => ({ allowed: true })),
-}))
-
 // Mock email templates
 vi.mock('@/emails/contact-form', () => ({
   ContactFormEmail: vi.fn(() => null),
@@ -76,7 +72,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('Validation error')
+      expect(data.error).toContain('Missing required field: name')
     })
 
     it('should validate required field: email', async () => {
@@ -89,7 +85,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('Validation error')
+      expect(data.error).toContain('Missing required field: email')
     })
 
     it('should validate required field: message', async () => {
@@ -102,7 +98,7 @@ describe('Send Email API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('Validation error')
+      expect(data.error).toContain('Missing required field: message')
     })
 
     it('should validate email format', async () => {

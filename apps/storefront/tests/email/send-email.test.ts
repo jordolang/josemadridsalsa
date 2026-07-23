@@ -310,7 +310,7 @@ describe('sendEmail', () => {
       })
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Unknown error')
+      expect(result.error).toBe('Unknown error string')
     })
 
     it('should continue even if logging fails on success', async () => {

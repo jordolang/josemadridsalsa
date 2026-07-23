@@ -16,6 +16,27 @@ jobs:
     name: CI Pipeline
     runs-on: ubuntu-latest
 
+    # Provision a throwaway Postgres so the integration tests (inventory, checkout
+    # reservation, order completion) run for real instead of being skipped.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jms_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jms_test
+      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/jms_test
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,20 +50,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Generate the Prisma client and sync the schema to the throwaway Postgres
+      # so integration tests have their tables before the suite runs.
+      - name: Set up test database
+        run: npm run db:push --workspace=@jose-madrid/storefront
+
       - name: Run linter
         run: npm run lint
 
       - name: Run type check
         run: npm run type-check
 
-      # The vitest suite has a backlog of pre-existing failures (stale mocks, missing test
-      # env vars) and is flaky under parallel execution: tests/api/send-email.test.ts fails
-      # 4 times in one run and 34 in the next with no code change between them. Reporting
-      # them is useful; gating on them would keep CI permanently red, which is how it ended
-      # up disabled_manually in the first place. The steps that gate — npm ci, lint,
-      # type-check and build — all pass today and are what caught the lockfile desync and
-      # the apps/docs type errors.
-      # TODO: fix the suite, then drop continue-on-error so tests gate again.
+      # The vitest suite is now green (the previous backlog of stale mocks / missing test
+      # env vars was fixed, and files run sequentially — fileParallelism: false — which
+      # removed the parallel-execution flakiness). This step gates on test pass/fail.
+      - name: Run tests
+        run: npm run test
+
+      # Coverage is reported (and the thresholds enforced) here but kept non-gating: the
+      # global function/branch coverage still sits just under the 60% target, and blocking
+      # every PR on that is what got the suite disabled before. Raise coverage, then drop
+      # continue-on-error to gate on it too.
       - name: Run tests with coverage (reported, not gating)
         run: npm run test:coverage
         continue-on-error: true

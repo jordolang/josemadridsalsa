@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest'
 import { handlePaymentIntentSucceeded } from '@/lib/stripe/webhooks'
 import prisma from '@/lib/prisma'
 import type Stripe from 'stripe'
-import { InventoryTransactionType, StockStatus } from '@prisma/client'
+import { InventoryTransactionType, StockStatus, HeatLevel } from '@prisma/client'
 import type { Product, Order, OrderItem } from '@prisma/client'
 
 type TestOrder = Order & { items: (OrderItem & { product: Product })[] }
@@ -19,13 +19,18 @@ type TestOrder = Order & { items: (OrderItem & { product: Product })[] }
 // Mock email sending to prevent actual emails during tests
 vi.mock('@/lib/email/automation', () => ({
   sendOrderConfirmationEmail: vi.fn(() => Promise.resolve()),
+  sendAdminNewOrderNotification: vi.fn(() => Promise.resolve()),
 }))
 
 vi.mock('@/lib/inventory-alerts', () => ({
   sendLowStockAlert: vi.fn(() => Promise.resolve()),
 }))
 
-describe('Inventory Decrement on Order Completion', () => {
+// Integration test: needs a live database. Runs in CI (which provisions Postgres)
+// and locally when DATABASE_URL is set; skips otherwise.
+const runIntegration = !!(process.env.DATABASE_URL || process.env.RUN_INTEGRATION_TESTS)
+
+describe.skipIf(!runIntegration)('Inventory Decrement on Order Completion', () => {
   let testProduct: Product
   let testOrder: TestOrder
 
@@ -56,8 +61,15 @@ describe('Inventory Decrement on Order Completion', () => {
         stockReserved: 3, // 3 units reserved for this test order
         lowStockThreshold: 10,
         stockStatus: StockStatus.IN_STOCK,
-        active: true,
-        featured: false,
+        heatLevel: HeatLevel.MILD,
+        isActive: true,
+        isFeatured: false,
+        category: {
+          connectOrCreate: {
+            where: { slug: 'test-inventory-category' },
+            create: { name: 'Test Inventory Category', slug: 'test-inventory-category' },
+          },
+        },
       },
     })
 
@@ -66,18 +78,11 @@ describe('Inventory Decrement on Order Completion', () => {
       data: {
         id: `test-order-${Date.now()}`,
         orderNumber: `TEST-${Date.now()}`,
-        email: 'test@example.com',
-        firstName: 'Test',
-        lastName: 'User',
-        phone: '555-0100',
-        shippingAddress: '123 Test St',
-        shippingCity: 'Test City',
-        shippingState: 'CA',
-        shippingZip: '90210',
-        shippingCountry: 'US',
+        guestEmail: 'test@example.com',
+        guestPhone: '555-0100',
         subtotal: 6000, // 3 items x $20
         tax: 540, // 9% tax
-        shipping: 500, // $5 shipping
+        shippingCost: 500, // $5 shipping
         total: 7040,
         status: 'PENDING',
         paymentStatus: 'PENDING',
@@ -85,11 +90,11 @@ describe('Inventory Decrement on Order Completion', () => {
           create: [
             {
               productId: testProduct.id,
-              name: testProduct.name,
-              sku: testProduct.sku,
+              productName: testProduct.name,
+              productSku: testProduct.sku,
               quantity: 3,
-              price: testProduct.price,
-              subtotal: 6000,
+              unitPrice: testProduct.price,
+              totalPrice: 6000,
             },
           ],
         },
@@ -98,6 +103,24 @@ describe('Inventory Decrement on Order Completion', () => {
         items: true,
         giftCertificates: true,
       },
+    })
+  })
+
+  // Remove this file's test data so it can't contaminate other integration
+  // tests that query inventory globally (e.g. low-stock alert sweeps).
+  afterAll(async () => {
+    if (!runIntegration) return
+    await prisma.inventoryTransaction.deleteMany({
+      where: { orderId: { startsWith: 'test-order-' } },
+    })
+    await prisma.orderItem.deleteMany({
+      where: { orderId: { startsWith: 'test-order-' } },
+    })
+    await prisma.order.deleteMany({
+      where: { id: { startsWith: 'test-order-' } },
+    })
+    await prisma.product.deleteMany({
+      where: { sku: { startsWith: 'TEST-INV-' } },
     })
   })
 
@@ -274,8 +297,15 @@ describe('Inventory Decrement on Order Completion', () => {
         stockReserved: 2,
         lowStockThreshold: 5,
         stockStatus: StockStatus.IN_STOCK,
-        active: true,
-        featured: false,
+        heatLevel: HeatLevel.MILD,
+        isActive: true,
+        isFeatured: false,
+        category: {
+          connectOrCreate: {
+            where: { slug: 'test-inventory-category' },
+            create: { name: 'Test Inventory Category', slug: 'test-inventory-category' },
+          },
+        },
       },
     })
 
@@ -284,18 +314,11 @@ describe('Inventory Decrement on Order Completion', () => {
       data: {
         id: `test-order-multi-${Date.now()}`,
         orderNumber: `TEST-MULTI-${Date.now()}`,
-        email: 'test@example.com',
-        firstName: 'Test',
-        lastName: 'User',
-        phone: '555-0100',
-        shippingAddress: '123 Test St',
-        shippingCity: 'Test City',
-        shippingState: 'CA',
-        shippingZip: '90210',
-        shippingCountry: 'US',
+        guestEmail: 'test@example.com',
+        guestPhone: '555-0100',
         subtotal: 9000,
         tax: 810,
-        shipping: 500,
+        shippingCost: 500,
         total: 10310,
         status: 'PENDING',
         paymentStatus: 'PENDING',
@@ -303,19 +326,19 @@ describe('Inventory Decrement on Order Completion', () => {
           create: [
             {
               productId: testProduct.id,
-              name: testProduct.name,
-              sku: testProduct.sku,
+              productName: testProduct.name,
+              productSku: testProduct.sku,
               quantity: 3,
-              price: testProduct.price,
-              subtotal: 6000,
+              unitPrice: testProduct.price,
+              totalPrice: 6000,
             },
             {
               productId: testProduct2.id,
-              name: testProduct2.name,
-              sku: testProduct2.sku,
+              productName: testProduct2.name,
+              productSku: testProduct2.sku,
               quantity: 2,
-              price: testProduct2.price,
-              subtotal: 3000,
+              unitPrice: testProduct2.price,
+              totalPrice: 3000,
             },
           ],
         },

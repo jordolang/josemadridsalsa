@@ -84,9 +84,12 @@ describe('Encryption Utility', () => {
       const plaintext = 'test-password'
       const encrypted = encrypt(plaintext)
       
-      // Tamper with the encrypted data
+      // Tamper with the encrypted data by flipping a byte of the ciphertext.
+      // (A regex replace is unreliable — the target char may be absent.)
       const parts = encrypted.split(':')
-      parts[2] = parts[2].replace(/A/g, 'B') // Modify encrypted part
+      const cipherBytes = Buffer.from(parts[2], 'base64')
+      cipherBytes[0] ^= 0xff
+      parts[2] = cipherBytes.toString('base64')
       const tampered = parts.join(':')
       
       expect(() => decrypt(tampered)).toThrow()
@@ -108,7 +111,8 @@ describe('Encryption Utility', () => {
     })
 
     it('should return false for strings without proper format', () => {
-      expect(isEncrypted('not:encrypted:format')).toBe(false)
+      // Non-base64 characters (spaces) in the parts — a real ciphertext never has these.
+      expect(isEncrypted('plain text:with spaces:here')).toBe(false)
       expect(isEncrypted('onlyonepart')).toBe(false)
       expect(isEncrypted('two:parts')).toBe(false)
     })

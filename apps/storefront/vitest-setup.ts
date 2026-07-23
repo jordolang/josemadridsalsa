@@ -12,6 +12,10 @@ process.env.FROM_EMAIL = 'Jose Madrid Salsa <mike@josemadridsalsa.com>'
 process.env.NEXT_PUBLIC_BASE_URL = 'https://josemadrid.net'
 // Required in production (NextAuth, and the guest order access tokens derived from it).
 process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test_nextauth_secret_12345'
+// Required by lib/encryption.ts (SMTP password encryption). Any string works — the
+// key is stretched via scrypt. Uses a fixed test value so encrypt/decrypt round-trip.
+process.env.ENCRYPTION_KEY =
+  process.env.ENCRYPTION_KEY || 'test_encryption_key_do_not_use_in_production_0123456789'
 
 import '@testing-library/jest-dom/vitest' // Note: /vitest sub-export, not main export
 import { cleanup } from '@testing-library/react'

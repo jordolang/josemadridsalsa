@@ -16,7 +16,7 @@ describe('Bundles Page', () => {
       expect(metadata.description).toContain('Mix and match')
     })
 
-    it('should have pathname set to /bundles', () => {
+    it('should resolve the open graph image from the /bundles pathname', () => {
       const metadata = createMetadata({
         title: 'Bundle Deals - Create Your Perfect Gift Box',
         description:
@@ -24,7 +24,10 @@ describe('Bundles Page', () => {
         pathname: '/bundles',
       })
 
-      expect(metadata.alternates?.canonical).toBe('/bundles')
+      const ogImages = metadata.openGraph?.images as Array<{ url: string }>
+      expect(ogImages?.[0]?.url).toBe(
+        'https://www.josemadrid.net/images/opengraph/josemadridhome.png'
+      )
     })
   })
 

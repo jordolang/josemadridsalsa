@@ -69,7 +69,7 @@ describe('DeliveryConfirmationEmail', () => {
     it('should use default name when not provided', async () => {
       const html = await render(<DeliveryConfirmationEmail {...baseProps} />)
 
-      expect(html).toContain('Hi there,')
+      expect(html).toContain('Hi <!-- -->there<!-- -->,')
     })
 
     it('should use custom name when provided', async () => {
@@ -80,7 +80,7 @@ describe('DeliveryConfirmationEmail', () => {
         />
       )
 
-      expect(html).toContain('Hi Sarah Johnson,')
+      expect(html).toContain('Hi <!-- -->Sarah Johnson<!-- -->,')
     })
 
     it('should include feedback button when feedbackUrl is provided', async () => {
@@ -247,8 +247,8 @@ describe('DeliveryConfirmationEmail', () => {
     it('should handle many items', async () => {
       const manyItems: OrderItem[] = Array.from({ length: 20 }, (_, i) => ({
         quantity: i + 1,
-        name: `Product ${i + 1}`,
-        sku: `SKU-${i + 1}`,
+        productName: `Product ${i + 1}`,
+        productSku: `SKU-${i + 1}`,
         totalPrice: `$${(i + 1) * 9.99}`,
       }))
 

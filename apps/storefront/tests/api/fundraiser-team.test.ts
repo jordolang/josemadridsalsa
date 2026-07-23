@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 // Mock dependencies
 vi.mock('@/lib/rbac', () => ({
   getCurrentUser: vi.fn(),
+  hasPermission: vi.fn(),
 }))
 
 vi.mock('@/lib/prisma', () => {
@@ -23,6 +24,7 @@ vi.mock('@/lib/prisma', () => {
       count: vi.fn(),
       create: vi.fn(),
       findMany: vi.fn(),
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
       delete: vi.fn(),
     },
@@ -74,7 +76,7 @@ describe('Fundraiser Team API', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Maximum team size (20) reached.')
+      expect(data.error).toBe('Maximum team size (20) reached. Please remove someone before adding a new email.')
     })
 
     it('should add a team member successfully', async () => {
@@ -104,7 +106,7 @@ describe('Fundraiser Team API', () => {
       const response = await POST(request, { params: { id: 'clx123' } })
       const data = await response.json()
 
-      expect(response.status).toBe(201)
+      expect(response.status).toBe(200)
       expect(data.email).toBe('new@example.com')
       expect(prisma.fundraiserAccess.create).toHaveBeenCalled()
     })

@@ -13,6 +13,11 @@ const { GET } = await import('@/app/api/image-proxy/route')
 
 describe('Image Proxy API', () => {
   beforeEach(() => {
+    // MSW's server.listen() (in vitest-setup beforeAll) replaces globalThis.fetch
+    // with its interceptor, which runs after this module's top-level assignment.
+    // Re-install the vi.fn() mock here (beforeEach runs after beforeAll) so the
+    // route's global fetch calls are captured by the mock.
+    global.fetch = vi.fn()
     vi.clearAllMocks()
   })
 
@@ -79,8 +84,10 @@ describe('Image Proxy API', () => {
           })
         )
 
+        // Unique placeId — the route's in-memory placePhotoCache is module-level
+        // and persists across tests, so each placeId test uses a distinct id.
         const request = new NextRequest(
-          'http://localhost/api/image-proxy?placeId=ChIJtest123'
+          'http://localhost/api/image-proxy?placeId=ChIJaccept'
         )
 
         const response = await GET(request)
@@ -103,11 +110,15 @@ describe('Image Proxy API', () => {
       it('should handle invalid maxWidth by using default', async () => {
         const validUrl = 'https://maps.googleapis.com/maps/api/place/photo?key=test'
 
-        vi.mocked(fetch).mockResolvedValue(
-          new Response(Buffer.from('fake-image-data'), {
-            status: 200,
-            headers: { 'content-type': 'image/jpeg' },
-          })
+        // Return a fresh Response per call — a Response body can only be read
+        // once, and this test issues two requests against the same mock.
+        vi.mocked(fetch).mockImplementation(() =>
+          Promise.resolve(
+            new Response(Buffer.from('fake-image-data'), {
+              status: 200,
+              headers: { 'content-type': 'image/jpeg' },
+            })
+          )
         )
 
         // Test maxWidth too small - should use default 1200
@@ -149,7 +160,7 @@ describe('Image Proxy API', () => {
         )
 
         const request = new NextRequest(
-          'http://localhost/api/image-proxy?placeId=ChIJtest123'
+          'http://localhost/api/image-proxy?placeId=ChIJmaxwidth'
         )
 
         await GET(request)
@@ -237,6 +248,11 @@ describe('Image Proxy API', () => {
         delete process.env.GOOGLE_PLACES_API_KEY
         delete process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
+        // The route reads the API key from env once at module load, so re-import
+        // it with the env vars removed to exercise the not-configured branch.
+        vi.resetModules()
+        const { GET: GETNoKey } = await import('@/app/api/image-proxy/route')
+
         const validUrl =
           'https://maps.googleapis.com/maps/api/place/photo?key=old&maxwidth=400'
 
@@ -244,7 +260,7 @@ describe('Image Proxy API', () => {
           `http://localhost/api/image-proxy?url=${encodeURIComponent(validUrl)}`
         )
 
-        const response = await GET(request)
+        const response = await GETNoKey(request)
         const data = await response.json()
 
         expect(response.status).toBe(500)
@@ -252,6 +268,7 @@ describe('Image Proxy API', () => {
 
         // Restore for other tests
         process.env.GOOGLE_PLACES_API_KEY = 'test-api-key'
+        process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = 'test-api-key'
       })
 
       it('should inject server-side API key into URL', async () => {
@@ -338,7 +355,7 @@ describe('Image Proxy API', () => {
         )
 
         const request = new NextRequest(
-          'http://localhost/api/image-proxy?placeId=ChIJtest123'
+          'http://localhost/api/image-proxy?placeId=ChIJnophotos'
         )
 
         const response = await GET(request)
@@ -449,7 +466,7 @@ describe('Image Proxy API', () => {
         const response = await GET(request)
 
         expect(response.headers.get('cache-control')).toBe(
-          'public, max-age=3600, s-maxage=3600'
+          'public, max-age=86400, s-maxage=86400, stale-while-revalidate=3600'
         )
       })
     })

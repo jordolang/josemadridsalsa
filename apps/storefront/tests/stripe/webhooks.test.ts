@@ -22,6 +22,7 @@ vi.mock('@/lib/prisma', () => ({
 
 vi.mock('@/lib/email/automation', () => ({
   sendOrderConfirmationEmail: vi.fn(() => Promise.resolve()),
+  sendAdminNewOrderNotification: vi.fn(() => Promise.resolve()),
 }))
 
 vi.mock('@/lib/inventory-manager', () => ({
