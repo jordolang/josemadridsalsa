@@ -164,7 +164,7 @@ josemadridsalsa/
 The application is deployed on **Vercel**:
 
 - **Production:** [josemadrid.net](https://www.josemadrid.net)
-- **Database:** Vercel Postgres (Neon-backed)
+- **Database:** Supabase Postgres
 - **CI/CD:** Automatic deployment from `main` branch
 
 ## Contributing

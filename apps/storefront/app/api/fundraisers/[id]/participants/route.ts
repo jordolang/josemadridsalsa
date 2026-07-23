@@ -4,52 +4,13 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAudit } from '@/lib/audit'
 import { sendParticipantWelcomeEmail } from '@/lib/email/automation'
+import { generateUniqueReferralCode } from '@/lib/fundraisers/referral-code'
 
 const ParticipantSchema = z.object({
   name: z.string().min(2, 'Participant name is required'),
   email: z.string().email('Valid email is required'),
   phone: z.string().optional(),
 })
-
-/**
- * Generates a unique fundraiser participant referral code
- * Format: FR-XXXX-XXXX (8 alphanumeric characters)
- */
-function generateReferralCode(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  const randomPart1 = Array.from({ length: 4 }, () =>
-    chars.charAt(Math.floor(Math.random() * chars.length))
-  ).join('')
-  const randomPart2 = Array.from({ length: 4 }, () =>
-    chars.charAt(Math.floor(Math.random() * chars.length))
-  ).join('')
-  return `FR-${randomPart1}-${randomPart2}`
-}
-
-/**
- * Generates a unique referral code that doesn't exist in the database
- */
-async function generateUniqueReferralCode(): Promise<string> {
-  let attempts = 0
-  const maxAttempts = 10
-
-  while (attempts < maxAttempts) {
-    const code = generateReferralCode()
-    const existing = await prisma.fundraiserParticipant.findUnique({
-      where: { referralCode: code },
-    })
-
-    if (!existing) {
-      return code
-    }
-
-    attempts++
-  }
-
-  // Fallback: add timestamp to ensure uniqueness
-  const timestamp = Date.now().toString(36).toUpperCase().slice(-4)
-  return `FR-${timestamp}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
-}
 
 /**
  * GET /api/fundraisers/[id]/participants
