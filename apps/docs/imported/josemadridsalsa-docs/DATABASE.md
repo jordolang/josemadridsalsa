@@ -50,7 +50,7 @@ DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=..."
 
 ### Local Development
 
-1. Install PostgreSQL locally or use a managed service (Neon, Supabase, Railway).
+1. Install PostgreSQL locally or use a managed service (Supabase, Railway, or similar).
 2. Create a database:
    ```bash
    createdb josemadrid_dev
@@ -134,7 +134,7 @@ npm run db:reset
 If the production database is missing tables:
 
 1. Navigate to your **Vercel project → Settings → Environment Variables**.
-2. Confirm `DATABASE_URL` points to your Neon/Vercel Postgres endpoint.
+2. Confirm `DATABASE_URL` points to your Supabase Postgres endpoint.
 3. Deploy a migration run or use `npx prisma db push` against production.
 
 ### NextAuth Session Errors
@@ -152,9 +152,9 @@ If the production database is missing tables:
 
 ## Production Database
 
-The production database runs on **Vercel Postgres** (Neon-backed). Key details:
+The production database runs on **Supabase Postgres**. Key details:
 
-- **Host:** Managed by Vercel — configure via the Vercel dashboard
+- **Host:** Managed by Supabase — configure via the Supabase dashboard
 - **Connection Pooling:** Prisma Accelerate (`prisma+postgres://...`)
 - **Tables Required:** 41 tables defined in `prisma/schema.prisma`
 - **Migration Strategy:** Apply via `prisma migrate deploy` during CI/CD

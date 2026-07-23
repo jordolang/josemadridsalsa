@@ -48,8 +48,39 @@ model User {
   blogPosts               BlogPost[]                    @relation("BlogAuthor")
   blogComments            BlogComment[]                 @relation("BlogCommenter")
   blogReactions           BlogReaction[]                @relation("BlogReactor")
+  customer                Customer?
 
   @@map("users")
+}
+
+/// A unified customer/contact record. Distinct from `User` (login accounts):
+/// this table also holds email-only contacts imported from mailing lists and
+/// people who only ever checked out as guests. Registered users are linked via
+/// `userId`. Populated by CSV import and by the /api/admin/customers/sync job.
+model Customer {
+  id                    String         @id @default(cuid())
+  email                 String         @unique
+  firstName             String?
+  lastName              String?
+  phone                 String?
+  source                CustomerSource @default(MANUAL)
+  sourceName            String?
+  emailStatus           String?
+  emailPermissionStatus String?
+  notes                 String?
+  userId                String?        @unique
+  user                  User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  totalOrders           Int            @default(0)
+  totalSpent            Decimal        @default(0) @db.Decimal(10, 2)
+  lastOrderAt           DateTime?
+  importSource          String?
+  importBatchId         String?
+  importedAt            DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  @@index([source])
+  @@map("customers")
 }
 
 model Address {
@@ -2959,6 +2990,13 @@ enum UserRole {
   STAFF
   WHOLESALE
   FUNDRAISER
+}
+
+enum CustomerSource {
+  IMPORT
+  GUEST_ORDER
+  REGISTERED
+  MANUAL
 }
 
 enum PermissionCategory {

@@ -197,8 +197,8 @@ grep -i "DROP\|ALTER.*TYPE" prisma/migrations/*/migration.sql
 ### Step 2: Create Database Backup
 
 ```bash
-# Using Neon (if using Neon Serverless)
-# Navigate to Neon console > Backups > Create snapshot
+# Using Supabase
+# Navigate to Supabase dashboard > Database > Backups > Create backup
 
 # Or using pg_dump
 PGPASSWORD=$DATABASE_PASSWORD pg_dump \
@@ -345,7 +345,7 @@ npx prisma migrate deploy
 
 ```bash
 # 1. Download latest backup
-# (from Neon console or S3/storage location)
+# (from Supabase dashboard or storage location)
 
 # 2. Restore database
 pg_restore -h $DATABASE_HOST -U $DATABASE_USER -d $DATABASE_NAME backup_file.dump
@@ -520,7 +520,7 @@ psql $DATABASE_URL -c "SELECT 1"
 # Add to DATABASE_URL: ?connection_limit=10&pool_timeout=20
 
 # 4. Verify database provider not experiencing downtime
-# Check Neon/provider status page
+# Check Supabase status page
 
 # 5. Review database connection logs in provider dashboard
 ```

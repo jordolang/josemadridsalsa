@@ -14,8 +14,8 @@ import { NewsletterPopup } from '@/components/store/newsletter-popup'
 import { EventTicker } from '@/components/store/event-ticker'
 import { getCalendarEvents } from '@/lib/server/google-data'
 
-// Force all public routes dynamic during the Neon DB quota window (resets 2026-06-01).
-// Prevents build failures from prerendering pages that call Prisma at render time.
+// Force all public routes dynamic: prevents build failures from prerendering
+// pages that call Prisma (the database) at render time.
 export const dynamic = 'force-dynamic'
 
 export default async function PublicLayout({

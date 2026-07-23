@@ -12,10 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, DollarSign, TrendingUp, Users, Swords } from 'lucide-react'
+import { Plus, DollarSign, TrendingUp, Users, Swords, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { FundraiserStatus } from '@prisma/client'
 import { createMetadata } from '@/lib/metadata'
+import { ExportButton } from '@/components/admin/shared/ExportButton'
 
 export const metadata: Metadata = createMetadata({
   title: 'Fundraisers - Jose Madrid Salsa Admin',
@@ -93,6 +94,8 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
   }
 
   const canWrite = await hasPermission(user, 'orders:write')
+  const canExport = await hasPermission(user, 'content:read')
+  const canImport = await hasPermission(user, 'content:write')
   const { fundraisers, total, page, totalPages, stats } = await getFundraisers(params)
 
   return (
@@ -102,13 +105,24 @@ export default async function FundraisersPage({ searchParams }: { searchParams: 
           <h1 className="text-3xl font-bold">Fundraisers</h1>
           <p className="text-muted-foreground">Manage fundraising campaigns</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>
             <Link href="/admin/fundraisers/battle-arena">
               <Swords className="mr-2 h-4 w-4" />
               Battle Arena Seasons
             </Link>
           </Button>
+          {canExport && (
+            <ExportButton endpoint="/api/admin/fundraisers/export" />
+          )}
+          {canImport && (
+            <Button variant="outline" asChild>
+              <Link href="/admin/fundraisers/import">
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </Link>
+            </Button>
+          )}
           {canWrite && (
             <Button asChild>
               <Link href="/admin/fundraisers/new">

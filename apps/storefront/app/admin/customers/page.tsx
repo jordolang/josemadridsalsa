@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
-import { Plus, ShieldAlert, Upload, User, Users } from 'lucide-react'
+import { Upload, Users } from 'lucide-react'
 import Link from 'next/link'
-import type { UserRole } from '@prisma/client'
 
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
@@ -14,7 +13,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card'
 import {
   Pagination,
@@ -33,25 +31,37 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { UsersFilter } from '@/components/admin/users/UsersFilter'
+import { CustomersFilter } from '@/components/admin/customers/CustomersFilter'
+import { SyncCustomersButton } from '@/components/admin/customers/SyncCustomersButton'
+import { ExportButton } from '@/components/admin/shared/ExportButton'
 import { createMetadata } from '@/lib/metadata'
-import { formatUserRole, getRoleBadgeVariant } from '@/lib/user-role'
 
 export const metadata: Metadata = createMetadata({
-  title: 'Users - Jose Madrid Salsa Admin',
-  description: 'Manage user accounts and permissions.',
-  pathname: '/admin/users',
+  title: 'Customers - Jose Madrid Salsa Admin',
+  description: 'Browse, import, and export your customer and contact list.',
+  pathname: '/admin/customers',
 })
 
 type SearchParams = {
   search?: string
-  role?: string
+  source?: string
   page?: string
 }
 
-async function getUsers(searchParams: SearchParams) {
+const SOURCE_LABELS: Record<string, string> = {
+  IMPORT: 'Imported',
+  GUEST_ORDER: 'Guest order',
+  REGISTERED: 'Registered',
+  MANUAL: 'Manual',
+}
+
+function fullName(c: { firstName: string | null; lastName: string | null }) {
+  return [c.firstName, c.lastName].filter(Boolean).join(' ').trim()
+}
+
+async function getCustomers(searchParams: SearchParams) {
   const page = Number(searchParams.page) || 1
-  const limit = 20
+  const limit = 25
   const skip = (page - 1) * limit
 
   const where: any = {}
@@ -59,53 +69,36 @@ async function getUsers(searchParams: SearchParams) {
   if (searchParams.search) {
     where.OR = [
       { email: { contains: searchParams.search, mode: 'insensitive' } },
-      { name: { contains: searchParams.search, mode: 'insensitive' } },
+      { firstName: { contains: searchParams.search, mode: 'insensitive' } },
+      { lastName: { contains: searchParams.search, mode: 'insensitive' } },
     ]
   }
 
-  if (searchParams.role && searchParams.role !== 'all') {
-    where.role = searchParams.role
+  if (searchParams.source && searchParams.source !== 'all') {
+    where.source = searchParams.source
   }
 
-  const [users, total, roleStats] = await Promise.all([
-    prisma.user.findMany({
+  const [customers, total, sourceStats] = await Promise.all([
+    prisma.customer.findMany({
       where,
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        isEmailVerified: true,
-        createdAt: true,
-        lastLoginAt: true,
-        _count: {
-          select: {
-            orders: true,
-            reviews: true,
-          },
-        },
-      },
     }),
-    prisma.user.count({ where }),
-    prisma.user.groupBy({
-      by: ['role'],
-      _count: true,
-    }),
+    prisma.customer.count({ where }),
+    prisma.customer.groupBy({ by: ['source'], _count: true }),
   ])
 
   return {
-    users,
+    customers,
     total,
     page,
     totalPages: Math.ceil(total / limit),
-    roleStats,
+    sourceStats,
   }
 }
 
-export default async function UsersPage({
+export default async function CustomersPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>
@@ -118,49 +111,47 @@ export default async function UsersPage({
   }
 
   const canWrite = await hasPermission(user, 'users:write')
-  const { users, total, page, totalPages, roleStats } = await getUsers(params)
+  const canExport = await hasPermission(user, 'users:export')
+  const { customers, total, page, totalPages, sourceStats } =
+    await getCustomers(params)
 
   const buildPageHref = (targetPage: number) => {
     const qs = new URLSearchParams()
     if (params.search) qs.set('search', params.search)
-    if (params.role) qs.set('role', params.role)
+    if (params.source) qs.set('source', params.source)
     qs.set('page', String(targetPage))
-    return `/admin/users?${qs.toString()}`
+    return `/admin/customers?${qs.toString()}`
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Users</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
           <p className="text-sm text-muted-foreground">
-            Manage user accounts and roles
+            Everyone who has bought from or subscribed to Jose Madrid Salsa
           </p>
         </div>
-        {canWrite && (
-          <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href="/admin/users/import">
+        <div className="flex flex-wrap items-center gap-2">
+          {canExport && <ExportButton endpoint="/api/admin/customers/export" />}
+          {canWrite && <SyncCustomersButton />}
+          {canWrite && (
+            <Button asChild>
+              <Link href="/admin/customers/import">
                 <Upload className="mr-2 size-4" />
                 Import
               </Link>
             </Button>
-            <Button asChild>
-              <Link href="/admin/users/new">
-                <Plus className="mr-2 size-4" />
-                Add User
-              </Link>
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardDescription className="text-xs font-medium uppercase tracking-wide">
-              Total Users
+              Total
             </CardDescription>
             <Users className="size-4 text-muted-foreground" />
           </CardHeader>
@@ -168,59 +159,51 @@ export default async function UsersPage({
             <p className="text-2xl font-bold tabular-nums">{total}</p>
           </CardContent>
         </Card>
-        {roleStats.map((stat) => {
-          const isPrivileged =
-            stat.role === 'ADMIN' || stat.role === 'DEVELOPER'
-          const Icon = isPrivileged ? ShieldAlert : User
-          return (
-            <Card key={stat.role}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardDescription className="text-xs font-medium uppercase tracking-wide">
-                  {formatUserRole(stat.role)}
-                </CardDescription>
-                <Icon className="size-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold tabular-nums">
-                  {stat._count}
-                </p>
-              </CardContent>
-            </Card>
-          )
-        })}
+        {sourceStats.map((stat) => (
+          <Card key={stat.source}>
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs font-medium uppercase tracking-wide">
+                {SOURCE_LABELS[stat.source] ?? stat.source}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold tabular-nums">{stat._count}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
           <Suspense fallback={<Skeleton className="h-10 w-full" />}>
-            <UsersFilter
+            <CustomersFilter
               initialSearch={params.search}
-              initialRole={params.role}
+              initialSource={params.source}
             />
           </Suspense>
         </CardContent>
       </Card>
 
-      {/* Users Table */}
-      {users.length === 0 ? (
+      {/* Customers Table */}
+      {customers.length === 0 ? (
         <Card>
           <CardContent className="py-12">
             <div className="text-center text-muted-foreground">
-              <User className="mx-auto mb-4 size-12 opacity-40" />
+              <Users className="mx-auto mb-4 size-12 opacity-40" />
               <p className="text-lg font-medium text-foreground">
-                No users found
+                No customers found
               </p>
               <p className="mt-1 text-sm">
-                {params.search
-                  ? 'Try a different search term'
-                  : 'Create your first user to get started'}
+                {params.search || params.source
+                  ? 'Try a different search or filter'
+                  : 'Import a contact list or run Sync to pull in existing buyers'}
               </p>
-              {canWrite && (
+              {canWrite && !params.search && !params.source && (
                 <Button className="mt-4" asChild>
-                  <Link href="/admin/users/new">
-                    <Plus className="mr-2 size-4" />
-                    Add User
+                  <Link href="/admin/customers/import">
+                    <Upload className="mr-2 size-4" />
+                    Import customers
                   </Link>
                 </Button>
               )}
@@ -233,49 +216,41 @@ export default async function UsersPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead className="text-right">Orders</TableHead>
-                  <TableHead>Last Login</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right">Total Spent</TableHead>
+                  <TableHead>Last Order</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((u) => (
-                  <TableRow key={u.id}>
+                {customers.map((c) => (
+                  <TableRow key={c.id}>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{u.name || 'No name'}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {u.email}
-                        </p>
+                        <p className="font-medium">{fullName(c) || 'No name'}</p>
+                        <p className="text-sm text-muted-foreground">{c.email}</p>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={getRoleBadgeVariant(u.role)}>
-                        {formatUserRole(u.role)}
-                      </Badge>
+                    <TableCell className="text-muted-foreground">
+                      {c.phone || '—'}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={u.isEmailVerified ? 'default' : 'outline'}
-                      >
-                        {u.isEmailVerified ? 'Verified' : 'Unverified'}
+                      <Badge variant="outline">
+                        {SOURCE_LABELS[c.source] ?? c.source}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {u._count.orders}
+                      {c.totalOrders}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      ${Number(c.totalSpent).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {u.lastLoginAt
-                        ? new Date(u.lastLoginAt).toLocaleDateString()
-                        : 'Never'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="ghost" asChild>
-                        <Link href={`/admin/users/${u.id}/edit`}>Edit</Link>
-                      </Button>
+                      {c.lastOrderAt
+                        ? new Date(c.lastOrderAt).toLocaleDateString()
+                        : '—'}
                     </TableCell>
                   </TableRow>
                 ))}

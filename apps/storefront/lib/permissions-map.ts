@@ -62,6 +62,24 @@ export const adminNavigation: NavItem[] = [
     permission: 'users:read',
   },
   {
+    label: 'Customers',
+    href: '/admin/customers',
+    icon: 'Contact',
+    permission: 'users:read',
+    children: [
+      {
+        label: 'All Customers',
+        href: '/admin/customers',
+        permission: 'users:read',
+      },
+      {
+        label: 'Import',
+        href: '/admin/customers/import',
+        permission: 'users:write',
+      },
+    ],
+  },
+  {
     label: 'Content',
     href: '/admin/content',
     icon: 'FileText',
@@ -127,6 +145,16 @@ export const adminNavigation: NavItem[] = [
         label: 'Fundraiser Accounts',
         href: '/admin/fundraisers/accounts',
         permission: 'orders:write',
+      },
+      {
+        label: 'Import Fundraisers',
+        href: '/admin/fundraisers/import',
+        permission: 'content:write',
+      },
+      {
+        label: 'Import Participants',
+        href: '/admin/fundraisers/participants/import',
+        permission: 'content:write',
       },
     ],
   },

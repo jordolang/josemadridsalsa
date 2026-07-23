@@ -42,7 +42,7 @@ Before launching to production, ensure:
 
 #### Database Setup
 
-- [ ] Production database provisioned (Neon or other PostgreSQL provider)
+- [ ] Production database provisioned (Supabase)
 - [ ] Database connection string obtained and tested
 - [ ] Database migrations applied
   ```bash
