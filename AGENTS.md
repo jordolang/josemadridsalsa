@@ -27,7 +27,7 @@ Every AI agent operating in this repository must:
 2. **Preserve functionality** — Never alter logic, remove working features, or change behavior unless explicitly asked.
 3. **Follow the conventions below** — These rules are not suggestions; they are the standard for this codebase.
 4. **Validate changes** — Run lint, type-check, and tests after every meaningful change.
-5. **Keep documentation current** — When adding features or changing behavior, update the relevant documentation in the [salsadocs](https://github.com/jordolang/salsadocs) repository.
+5. **Keep documentation current** — When adding features or changing behavior, update the relevant documentation in the in-repo docs site (`apps/docs/content/docs`).
 6. **Respect the non-negotiables** — See [Security & Non-Negotiables](#security--non-negotiables).
 
 ---
@@ -37,9 +37,13 @@ Every AI agent operating in this repository must:
 ```
 josemadridsalsa/
 ├── apps/
-│   ├── storefront/       # Main Next.js commerce app and legacy route implementations
-│   └── backend/          # API-only deployment boundary
-├── packages/             # Shared workspace packages extracted from applications
+│   ├── storefront/       # Main Next.js commerce app (storefront, accounts, admin, API routes)
+│   ├── fundraising/      # Fundraising campaign platform
+│   ├── admin/            # Role-based administration dashboard
+│   └── docs/             # Fumadocs documentation site (canonical docs home)
+├── packages/
+│   ├── shared-types/     # Shared TypeScript contracts across apps
+│   └── shared-utils/     # Shared utility functions across apps
 ├── package.json          # npm workspace commands
 └── turbo.json            # Turborepo task graph
 ```
@@ -47,9 +51,9 @@ josemadridsalsa/
 **Key rules:**
 - Route-specific layouts stay close to their application pages.
 - Existing storefront modules live under `apps/storefront/components/store/`.
-- New backend route logic belongs in `apps/backend/`.
+- API route handlers live in `apps/storefront/app/api/`.
 - Shared cross-application contracts belong in `packages/`.
-- See `TURBOREPO_ARCHITECTURE.md` in the [salsadocs](https://github.com/jordolang/salsadocs) repository before moving legacy routes.
+- See the deployment and architecture pages in the docs site (`apps/docs/content/docs/deployment`) before moving legacy routes.
 
 ---
 
@@ -165,10 +169,10 @@ Every PR must include:
 
 ## Documentation Standards
 
-- **All documentation lives in the [salsadocs](https://github.com/jordolang/salsadocs) repository** — no exceptions (except the root-level standard files below).
-- **Root-level documentation files allowed:** `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `AGENTS.md`.
-- **No documentation files elsewhere** — do not create `.md` files in `app/`, `lib/`, `scripts/`, etc.
-- **File naming:** `UPPER_SNAKE_CASE.md` (e.g., `ENVIRONMENT_SETUP.md`).
+- **Project documentation lives in the in-repo Fumadocs site** at `apps/docs/content/docs`, organized into `getting-started/`, `guides/`, `features/`, `configuration/`, `integrations/`, `deployment/`, and `api/`. This site is the canonical documentation home. (An external `salsadocs` mirror is published from the admin panel; treat `apps/docs` as the source of truth.)
+- **Docs-site pages** are `.mdx` with `title` and `description` frontmatter, named in `kebab-case` (e.g., `environment-variables.mdx`).
+- **Root-level documentation files allowed:** `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `AGENTS.md`, and `CLAUDE.md` — these use `UPPER_SNAKE_CASE.md` naming.
+- **No stray docs elsewhere** — do not create `.md` files in `app/`, `lib/`, `scripts/`, or the repo root beyond the allowed files above. One-off verification reports and session summaries do not belong in the repository.
 - **Versioning:** Maintain `CHANGELOG.md` with entries under `[Unreleased]` during development; tag on release.
 - **No real values** in documentation — use placeholder names for env vars, never actual keys or passwords.
 
@@ -179,7 +183,7 @@ Every PR must include:
 - Secrets live in `.env.local` — **never commit this file**.
 - Required variables before first run: `DATABASE_URL`, `NEXTAUTH_SECRET`, `MASTER_KEY`.
 - After every schema change: run `npm run db:generate` and commit the generated client changes.
-- Document any new environment variable in `ENVIRONMENT_VARIABLES.md` in the [salsadocs](https://github.com/jordolang/salsadocs) repository by name and purpose — **never include actual values**.
+- Document any new environment variable in `apps/docs/content/docs/configuration/environment-variables.mdx` by name and purpose — **never include actual values**.
 - Production secrets are managed through **Vercel environment variables**.
 
 ---
@@ -193,7 +197,7 @@ Every PR must include:
 1. **Commit API keys, secrets, tokens, or passwords** — Not in code, not in docs, not in comments.
 2. **Commit `.env` files** of any kind (`.env`, `.env.local`, `.env.production`, etc.).
 3. **Include actual secret values** in any documentation, README, or markdown file.
-4. **Create documentation files in this repository** (except the allowed root-level files listed above) — documentation belongs in the [salsadocs](https://github.com/jordolang/salsadocs) repository.
+4. **Create stray documentation files** outside `apps/docs/content/docs` (except the allowed root-level files listed above) — project documentation belongs in the in-repo Fumadocs site.
 5. **Lower test coverage thresholds** — If tests are failing, fix the code, not the thresholds.
 6. **Bypass the linter** — Fix lint errors; do not add `eslint-disable` comments without strong justification.
 7. **Use `any` in TypeScript** without an explicit, justified comment.
@@ -204,7 +208,7 @@ Every PR must include:
 1. **Validate all user input** with Zod schemas before processing.
 2. **Use parameterized queries** through Prisma — never build raw SQL strings.
 3. **Run the quality checks** (`vitest run`, `lint`, `type-check`) before any commit.
-4. **Keep documentation in [salsadocs](https://github.com/jordolang/salsadocs) current** — Only documented, purposeful files.
+4. **Keep the docs site (`apps/docs`) current** — Only documented, purposeful files.
 5. **Update `CHANGELOG.md`** when adding a feature, fixing a bug, or making a breaking change.
 6. **Report discovered security vulnerabilities** privately per `SECURITY.md`.
 
@@ -216,9 +220,9 @@ Agents performing repository maintenance or cleanup must follow these rules:
 
 1. **Root directory** — Only configuration files, standard documentation (`README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `AGENTS.md`), and Next.js/tooling config files belong here. No log files, no temp scripts, no one-off verification reports.
 
-2. **Docs directory** — Only structured, purposeful documentation. No session summaries, no phase completion reports, no temp notes, no content files (recipes, product descriptions, etc.).
+2. **Docs site (`apps/docs/content/docs`)** — Only structured, purposeful documentation. No session summaries, no phase completion reports, no temp notes, no content files (recipes, product descriptions, etc.).
 
-3. **Naming** — Documentation files follow `UPPER_SNAKE_CASE.md`. No spaces in filenames. No mixed-case inconsistencies.
+3. **Naming** — Root standard docs use `UPPER_SNAKE_CASE.md`; docs-site pages use `kebab-case.mdx`. No spaces in filenames.
 
 4. **Consolidation** — When multiple files cover the same topic, merge them into a single authoritative document and delete the redundant files.
 

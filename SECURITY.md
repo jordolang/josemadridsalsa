@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-We take security seriously at Jlang.dev. Currently supported versions:
+We take security seriously on the Jose Madrid Salsa platform. Currently supported versions:
 
 | Version | Supported          |
 | ------- | ------------------ |
@@ -44,7 +44,7 @@ The following API keys are actively monitored:
 If you discover a security vulnerability, please follow these steps:
 
 1. **Do NOT** open a public issue
-2. Email security concerns to: [your-email@jlang.dev]
+2. Email security concerns to: mike@josemadridsalsa.com
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce

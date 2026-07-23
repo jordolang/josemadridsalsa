@@ -13,7 +13,7 @@
 
   <p>
     <a href="https://www.josemadrid.net">Live Site</a> |
-    <a href="https://github.com/jordolang/salsadocs">Documentation</a> |
+    <a href="apps/docs">Documentation</a> |
     <a href="CHANGELOG.md">Changelog</a> |
     <a href="SECURITY.md">Security</a>
   </p>
@@ -80,10 +80,10 @@ These screenshots are generated from the live production homepage so the README 
 ```text
 josemadridsalsa/
 |-- apps/
-|   |-- storefront/       # Main Next.js commerce application
-|   |-- backend/          # API-only Next.js deployment boundary
+|   |-- storefront/       # Main Next.js commerce and admin app (includes API routes)
 |   |-- fundraising/      # Fundraising campaign platform
-|   `-- admin/            # Role-based administration dashboard
+|   |-- admin/            # Role-based administration dashboard
+|   `-- docs/             # Fumadocs documentation site (canonical docs home)
 |-- packages/
 |   |-- shared-types/     # Shared TypeScript types across all apps
 |   `-- shared-utils/     # Shared utility functions
@@ -97,7 +97,7 @@ josemadridsalsa/
 
 - Node.js 20 or 22
 - PostgreSQL 14+
-- Required environment variables documented in [`docs/ENVIRONMENT_VARIABLES.md`](docs/ENVIRONMENT_VARIABLES.md)
+- Required environment variables documented in [`apps/docs/content/docs/configuration/environment-variables.mdx`](apps/docs/content/docs/configuration/environment-variables.mdx)
 
 ### Setup
 
@@ -113,13 +113,13 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-The monorepo includes four deployment boundaries:
-- **Storefront** - [http://localhost:3000](http://localhost:3000)
-- **Fundraising** - [http://localhost:3001](http://localhost:3001)
-- **Backend API** - [http://localhost:3002](http://localhost:3002)
-- **Admin** - [http://localhost:3003](http://localhost:3003)
+The monorepo runs several workspaces, each started with its own `dev:*` script:
+- **Storefront** - `npm run dev` - [http://localhost:3000](http://localhost:3000)
+- **Fundraising** - `npm run dev:fundraising` - [http://localhost:3001](http://localhost:3001)
+- **Admin** - `npm run dev:admin` - [http://localhost:3003](http://localhost:3003)
+- **Docs** - `npm run dev:docs` - [http://localhost:3002](http://localhost:3002)
 
-See the [salsadocs](https://github.com/jordolang/salsadocs) repository for the Turborepo architecture guide.
+API routes are served from the storefront app (`apps/storefront/app/api`). See the in-repo docs site (`apps/docs/content/docs/deployment`) for the architecture and deployment guides.
 
 ## Quality Checks
 
@@ -135,8 +135,9 @@ Pushing to `main` triggers the production deployment pipeline on Vercel. Product
 
 ## Documentation
 
-Project documentation lives in the [salsadocs](https://github.com/jordolang/salsadocs) repository.
+Project documentation lives in the in-repo [Fumadocs site](apps/docs) at `apps/docs/content/docs`. Run it locally with `npm run dev:docs`. It is organized into getting-started, guides, features, configuration, integrations, deployment, and API reference sections.
 
+- [Documentation site](apps/docs)
 - [Security Policy](SECURITY.md)
 - [Changelog](CHANGELOG.md)
 
