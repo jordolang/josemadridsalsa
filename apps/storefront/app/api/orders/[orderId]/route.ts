@@ -60,6 +60,11 @@ export async function GET(
             name: true,
           },
         },
+        shippingAddress: {
+          select: {
+            country: true,
+          },
+        },
       },
     })
 
@@ -97,6 +102,11 @@ export async function GET(
       trackingNumber: order.trackingNumber,
       customerNotes: order.customerNotes,
       stripePaymentId: order.stripePaymentId,
+      guestEmail: order.guestEmail,
+      estimatedDelivery: order.estimatedDelivery,
+      shippingAddress: order.shippingAddress
+        ? { country: order.shippingAddress.country }
+        : null,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
       user: order.user,
@@ -116,6 +126,7 @@ export async function GET(
               slug: item.product.slug,
               featuredImage: item.product.featuredImage,
               heatLevel: item.product.heatLevel,
+              barcode: item.product.barcode,
             }
           : null,
       })),

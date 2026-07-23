@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react'
+import { GoogleCustomerReviewsOptIn } from '@/components/analytics/google-customer-reviews-optin'
 
 interface OrderItem {
   id: string
@@ -30,6 +31,7 @@ interface OrderItem {
     slug: string
     featuredImage: string | null
     heatLevel: string
+    barcode: string | null
   } | null
 }
 
@@ -47,6 +49,11 @@ interface Order {
   trackingNumber: string | null
   customerNotes: string | null
   stripePaymentId: string | null
+  guestEmail: string | null
+  estimatedDelivery: string | null
+  shippingAddress: {
+    country: string
+  } | null
   createdAt: string
   updatedAt: string
   items: OrderItem[]
@@ -54,7 +61,7 @@ interface Order {
     id: string
     email: string
     name: string | null
-  }
+  } | null
 }
 
 function OrderConfirmationContent() {
@@ -169,8 +176,33 @@ function OrderConfirmationContent() {
     day: 'numeric',
   })
 
+  // Data for the Google Customer Reviews opt-in survey. The delivery date is required by
+  // Google; when the order has no estimate yet (typical right after checkout) we fall back
+  // to a one-week window so the survey is scheduled at a sensible time.
+  const reviewsEmail = order.user?.email ?? order.guestEmail ?? ''
+  const reviewsDeliveryCountry = order.shippingAddress?.country ?? 'US'
+  const reviewsDeliveryDate = (
+    order.estimatedDelivery
+      ? new Date(order.estimatedDelivery)
+      : new Date(new Date(order.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000)
+  )
+    .toISOString()
+    .slice(0, 10)
+  const reviewsGtins = order.items
+    .map((item) => item.product?.barcode)
+    .filter((barcode): barcode is string => Boolean(barcode))
+
   return (
     <div className="container mx-auto px-4 py-8">
+      {reviewsEmail && (
+        <GoogleCustomerReviewsOptIn
+          orderId={order.orderNumber}
+          email={reviewsEmail}
+          deliveryCountry={reviewsDeliveryCountry}
+          estimatedDeliveryDate={reviewsDeliveryDate}
+          gtins={reviewsGtins}
+        />
+      )}
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Success Header */}
         <Card>

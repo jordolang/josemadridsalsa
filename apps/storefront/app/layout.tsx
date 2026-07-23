@@ -143,6 +143,19 @@ fbq('init', '2546527762445636');
 fbq('track', 'PageView');`,
           }}
         />
+        {/* Google Customer Reviews merchant badge widget */}
+        <Script
+          id="merchantWidgetScript"
+          src="https://www.gstatic.com/shopping/merchant/merchantwidget.js"
+          strategy="afterInteractive"
+        />
+        <Script
+          id="merchant-widget-init"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `(function(){function start(){if(window.merchantwidget){window.merchantwidget.start({merchant_id:731675578});}}var s=document.getElementById('merchantWidgetScript');if(window.merchantwidget){start();}else if(s){s.addEventListener('load',start);}})();`,
+          }}
+        />
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
         <noscript>
