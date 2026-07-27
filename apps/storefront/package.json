@@ -198,7 +198,7 @@
     "lint-staged": "^15.2.0",
     "min-indent": "^1.0.1",
     "msw": "^2.12.10",
-    "postcss": "8.5.14",
+    "postcss": "8.5.18",
     "prisma": "6.19.3",
     "react-email": "^5.2.9",
     "readdirp": "^5.0.0",
