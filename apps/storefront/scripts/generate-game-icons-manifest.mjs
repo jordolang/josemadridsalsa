@@ -1,4 +1,4 @@
-import { readdir, writeFile } from 'node:fs/promises'
+import { readdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -71,10 +71,38 @@ async function loadRemoteIcons() {
     .map((entry) => createIcon(entry.path))
 }
 
+async function loadCommittedManifest() {
+  try {
+    const parsed = JSON.parse(await readFile(manifestPath, 'utf8'))
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+// The committed manifest is the source of truth: the icons themselves are not
+// vendored, they are proxied from the upstream repo by app/game-icons/[...path].
+// Builds must not depend on the unauthenticated GitHub API, which rate-limits
+// Vercel's shared build IPs (403) and used to fail the deploy outright.
+const refresh = process.argv.includes('--refresh')
 let icons = await scan(iconRoot)
+
+if (icons.length === 0 && !refresh) {
+  icons = await loadCommittedManifest()
+  if (icons.length > 0) {
+    console.log(`Using the committed game icon manifest (${icons.length} sprites).`)
+  }
+}
+
 if (icons.length === 0) {
-  console.log('No local game icons found; loading the canonical remote catalog.')
-  icons = await loadRemoteIcons()
+  console.log('Loading the canonical remote catalog.')
+  try {
+    icons = await loadRemoteIcons()
+  } catch (error) {
+    icons = await loadCommittedManifest()
+    if (icons.length === 0) throw error
+    console.warn(`Remote catalog unavailable (${error.message}); keeping the committed manifest.`)
+  }
 }
 
 icons.sort((a, b) => a.path.localeCompare(b.path))

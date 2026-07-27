@@ -33,6 +33,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed hard-coded database and Google API fallback credentials from maintenance scripts.
 
 ### Fixed
+- **Intermittent production deploy failures** — The game icon manifest is no longer regenerated from the unauthenticated GitHub API during every Vercel build. That call was rate-limited on Vercel's shared build IPs and failed the whole deploy with a 403 at random, while only ever reproducing the manifest already committed to the repository. Builds now use the committed manifest and never depend on the network; `node scripts/generate-game-icons-manifest.mjs --refresh` re-pulls the upstream catalog on demand.
 - **Storefront console noise** — Google Maps assets now have the required CSP sources, and desktop navigation moves focus before hiding an open menu to prevent Chromium accessibility warnings.
 - **Vercel Toolbar console errors** — The storefront CSP now permits the official Vercel Toolbar resources used for deployment feedback and inspection.
 - **Heat Index post pages on Vercel** — Heat Index routes now include Prisma client files in the serverless trace to prevent post detail pages from failing with a missing Prisma module at runtime.
