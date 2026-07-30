@@ -6,7 +6,6 @@ import Link from 'next/link'
 
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -23,36 +22,34 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { CustomersFilter } from '@/components/admin/customers/CustomersFilter'
+import { CustomersTable } from '@/components/admin/customers/CustomersTable'
 import { SyncCustomersButton } from '@/components/admin/customers/SyncCustomersButton'
 import { ExportButton } from '@/components/admin/shared/ExportButton'
 import { createMetadata } from '@/lib/metadata'
+import {
+  buildCustomerOrderBy,
+  buildCustomerWhere,
+  resolvePage,
+  resolvePageSize,
+  resolveSortColumn,
+  resolveSortDirection,
+} from '@/lib/customers/customer-list'
 
 export const metadata: Metadata = createMetadata({
   title: 'Customers - Jose Madrid Salsa Admin',
-  description: 'Browse, import, and export your customer and contact list.',
+  description: 'Browse, sort, edit, import, and export your customer list.',
   pathname: '/admin/customers',
 })
 
 type SearchParams = {
   search?: string
   source?: string
+  accountType?: string
+  sortBy?: string
+  sortDir?: string
+  pageSize?: string
   page?: string
-}
-
-const SOURCE_LABELS: Record<string, string> = {
-  IMPORT: 'Imported',
-  GUEST_ORDER: 'Guest order',
-  REGISTERED: 'Registered',
-  MANUAL: 'Manual',
 }
 
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
@@ -61,46 +58,58 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   WHOLESALE: 'Wholesale',
 }
 
-function fullName(c: { firstName: string | null; lastName: string | null }) {
-  return [c.firstName, c.lastName].filter(Boolean).join(' ').trim()
-}
-
 async function getCustomers(searchParams: SearchParams) {
-  const page = Number(searchParams.page) || 1
-  const limit = 25
-  const skip = (page - 1) * limit
+  const page = resolvePage(searchParams.page)
+  const limit = resolvePageSize(searchParams.pageSize)
+  const sortBy = resolveSortColumn(searchParams.sortBy)
+  const sortDir = resolveSortDirection(searchParams.sortDir)
 
-  const where: any = {}
+  const where = buildCustomerWhere({
+    search: searchParams.search,
+    source: searchParams.source,
+    accountType: searchParams.accountType,
+  })
 
-  if (searchParams.search) {
-    where.OR = [
-      { email: { contains: searchParams.search, mode: 'insensitive' } },
-      { firstName: { contains: searchParams.search, mode: 'insensitive' } },
-      { lastName: { contains: searchParams.search, mode: 'insensitive' } },
-    ]
-  }
-
-  if (searchParams.source && searchParams.source !== 'all') {
-    where.source = searchParams.source
-  }
-
-  const [customers, total, sourceStats] = await Promise.all([
+  const [customers, total, accountStats] = await Promise.all([
     prisma.customer.findMany({
       where,
-      skip,
+      skip: (page - 1) * limit,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: buildCustomerOrderBy(sortBy, sortDir),
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        accountType: true,
+        source: true,
+        sourceName: true,
+        emailStatus: true,
+        emailPermissionStatus: true,
+        // `notes` is deliberately absent: the archive audit trail averages ~350
+        // characters, which is ~170KB of payload on a 500-row page for a field
+        // only needed once a row is opened. The edit dialog fetches it.
+        totalOrders: true,
+        totalSpent: true,
+        lastOrderAt: true,
+      },
     }),
     prisma.customer.count({ where }),
-    prisma.customer.groupBy({ by: ['source'], _count: true }),
+    // Scoped to the same `where` as the table: unfiltered cards above a
+    // filtered list read as a bug ("Total 22,689" over "Showing 500 of 763").
+    prisma.customer.groupBy({ by: ['accountType'], where, _count: true }),
   ])
 
   return {
     customers,
     total,
     page,
-    totalPages: Math.ceil(total / limit),
-    sourceStats,
+    limit,
+    sortBy,
+    sortDir,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+    accountStats,
   }
 }
 
@@ -118,16 +127,38 @@ export default async function CustomersPage({
 
   const canWrite = await hasPermission(user, 'users:write')
   const canExport = await hasPermission(user, 'users:export')
-  const { customers, total, page, totalPages, sourceStats } =
-    await getCustomers(params)
+  const canCreateLists = await hasPermission(user, 'content:write')
+  const {
+    customers,
+    total,
+    page,
+    limit,
+    sortBy,
+    sortDir,
+    totalPages,
+    accountStats,
+  } = await getCustomers(params)
 
+  // Every view parameter has to survive paging, or turning the page silently
+  // resets the sort and filters back to defaults.
   const buildPageHref = (targetPage: number) => {
     const qs = new URLSearchParams()
-    if (params.search) qs.set('search', params.search)
-    if (params.source) qs.set('source', params.source)
+    for (const key of [
+      'search',
+      'source',
+      'accountType',
+      'sortBy',
+      'sortDir',
+      'pageSize',
+    ] as const) {
+      const value = params[key]
+      if (value) qs.set(key, value)
+    }
     qs.set('page', String(targetPage))
     return `/admin/customers?${qs.toString()}`
   }
+
+  const hasFilters = Boolean(params.search || params.source || params.accountType)
 
   return (
     <div className="space-y-6">
@@ -139,6 +170,8 @@ export default async function CustomersPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* ExportButton forwards the page's querystring, so the download
+              carries the current search, filters and sort. */}
           {canExport && <ExportButton endpoint="/api/admin/customers/export" />}
           {canWrite && <SyncCustomersButton />}
           {canWrite && (
@@ -153,27 +186,31 @@ export default async function CustomersPage({
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardDescription className="text-xs font-medium uppercase tracking-wide">
-              Total
+              {hasFilters ? 'Matching' : 'Total'}
             </CardDescription>
             <Users className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold tabular-nums">{total}</p>
+            <p className="text-2xl font-bold tabular-nums">
+              {total.toLocaleString()}
+            </p>
           </CardContent>
         </Card>
-        {sourceStats.map((stat) => (
-          <Card key={stat.source}>
+        {accountStats.map((stat) => (
+          <Card key={stat.accountType}>
             <CardHeader className="pb-2">
               <CardDescription className="text-xs font-medium uppercase tracking-wide">
-                {SOURCE_LABELS[stat.source] ?? stat.source}
+                {ACCOUNT_TYPE_LABELS[stat.accountType] ?? stat.accountType}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold tabular-nums">{stat._count}</p>
+              <p className="text-2xl font-bold tabular-nums">
+                {stat._count.toLocaleString()}
+              </p>
             </CardContent>
           </Card>
         ))}
@@ -186,6 +223,8 @@ export default async function CustomersPage({
             <CustomersFilter
               initialSearch={params.search}
               initialSource={params.source}
+              initialAccountType={params.accountType}
+              initialPageSize={limit}
             />
           </Suspense>
         </CardContent>
@@ -201,11 +240,11 @@ export default async function CustomersPage({
                 No customers found
               </p>
               <p className="mt-1 text-sm">
-                {params.search || params.source
+                {hasFilters
                   ? 'Try a different search or filter'
                   : 'Import a contact list or run Sync to pull in existing buyers'}
               </p>
-              {canWrite && !params.search && !params.source && (
+              {canWrite && !hasFilters && (
                 <Button className="mt-4" asChild>
                   <Link href="/admin/customers/import">
                     <Upload className="mr-2 size-4" />
@@ -218,59 +257,20 @@ export default async function CustomersPage({
         </Card>
       ) : (
         <>
-          <div className="rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Account</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead className="text-right">Orders</TableHead>
-                  <TableHead className="text-right">Total Spent</TableHead>
-                  <TableHead>Last Order</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {customers.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{fullName(c) || 'No name'}</p>
-                        <p className="text-sm text-muted-foreground">{c.email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {c.phone || '—'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={c.accountType === 'STANDARD' ? 'outline' : 'secondary'}
-                      >
-                        {ACCOUNT_TYPE_LABELS[c.accountType] ?? c.accountType}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {SOURCE_LABELS[c.source] ?? c.source}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {c.totalOrders}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      ${Number(c.totalSpent).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {c.lastOrderAt
-                        ? new Date(c.lastOrderAt).toLocaleDateString()
-                        : '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+            <CustomersTable
+              customers={customers.map((c) => ({
+                ...c,
+                totalSpent: c.totalSpent.toString(),
+                lastOrderAt: c.lastOrderAt ? c.lastOrderAt.toISOString() : null,
+              }))}
+              sortBy={sortBy}
+              sortDir={sortDir}
+              totalMatching={total}
+              canWrite={canWrite}
+              canCreateLists={canCreateLists}
+            />
+          </Suspense>
 
           {/* Pagination */}
           {totalPages > 1 && (

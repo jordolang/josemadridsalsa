@@ -24,6 +24,17 @@ export function toCsv(headers: string[], rows: Cell[][]): string {
   ].join('\r\n')
 }
 
+/**
+ * Serializes one row, with no trailing newline.
+ *
+ * Exported for streamed exports: a Vercel Function caps a buffered response at
+ * 4.5 MB, so a large export has to be written out in chunks rather than built
+ * as one string by `toCsv`.
+ */
+export function toCsvRow(cells: Cell[]): string {
+  return cells.map(escapeCell).join(',')
+}
+
 /** Header-keyed parse over PapaParse, trimming header whitespace. */
 export function parseCsv(text: string): {
   headers: string[]

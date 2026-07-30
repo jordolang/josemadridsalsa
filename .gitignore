@@ -174,3 +174,10 @@ tiktok-shop-products*.xlsx
 .codex/
 .clauge-worktrees/
 .env*
+
+# Python bytecode from the archive extraction script
+__pycache__/
+*.pyc
+
+# Contact-export CSVs — customer PII, never commit
+apps/storefront/emails/lists/

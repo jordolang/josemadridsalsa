@@ -43,6 +43,87 @@ creates any missing customer rows for registered users and guest checkouts.
 Rollups reconstructed from imported spreadsheets are only ever raised, never
 lowered, so a sync against live order data always takes precedence.
 
+## Browsing the list
+
+`/admin/customers` is built for a list in the tens of thousands rather than a
+handful of records.
+
+**Sorting** — every column heading is a button. The first click sorts ascending,
+clicking the active column flips the direction, and the choice lives in the
+`sortBy` / `sortDir` query parameters so a sorted view can be linked or
+bookmarked. Sortable columns: customer, phone, account type, organization,
+source, email status, orders, spent, and last order.
+
+Two rules make long-list sorting behave. Blank values always sort last in both
+directions — over 5,000 contacts have no name, and they shouldn't fill the first
+page whenever you sort by one. And every sort ends with a hidden tie-break on
+email, so paging through 22,000 rows doesn't reshuffle ties between pages.
+
+Sorting is whitelisted in `lib/customers/customer-list.ts`; an unrecognized
+`sortBy` falls back to the default rather than reaching the database.
+
+**Filtering** — free-text search covers name, email, phone, and organization.
+Account type and source have their own dropdowns. Filters reset paging but
+preserve the active sort.
+
+**Page size** — 100, 250, 500 (default), or 1,000 rows per page. Any other value
+in the query string falls back to the default, so the whole table can't be
+requested at once.
+
+**Export** — the CSV download shares the list's `where` and `orderBy`, so it
+contains exactly the rows you're looking at, in the order shown, across every
+page — not just the visible one.
+
+The export response is **streamed** in batches rather than assembled as one
+string. A Vercel Function caps a buffered response body at 4.5 MB, and a full
+export of the current book is around 11 MB, which would fail with
+`FUNCTION_PAYLOAD_TOO_LARGE`. Streamed responses have no such cap. Batches are
+paged by offset because the export honours the user's chosen sort — there is no
+single cursor column — which is why every `orderBy` ends with a unique
+tie-break on email.
+
+## Editing a customer
+
+Clicking a row opens an editor for `firstName`, `lastName`, `phone`,
+`accountType`, `sourceName`, `emailStatus`, `emailPermissionStatus`, and
+`notes`. Saving issues a `PATCH /api/admin/customers/[id]`, which requires
+`users:write` and writes an audit log entry.
+
+Three things are shown but not editable, by design:
+
+- **`email`** is the unique key that order sync, import batches, and every
+  mailing-list row join on. Changing it in place would detach the customer from
+  its own history.
+- **`totalOrders` / `totalSpent` / `lastOrderAt`** are recomputed by the order
+  sync from real `Order` rows, so a hand edit would silently disappear.
+
+`notes` is pre-filled rather than blank — for imported customers it holds the
+archive audit trail, and an empty field would wipe it on the first save.
+
+## Building a mailing list
+
+The **Create mailing list** button turns the current view into a `MailingList`
+plus its `MailingListSubscriber` rows, via
+`POST /api/admin/customers/mailing-list`. It requires both `users:read` and
+`content:write`, since it reads the customer book and writes to email marketing.
+
+Scope is either every customer matching the current filters — the whole result
+set, not just the page on screen — or only the rows ticked with checkboxes, when
+any are ticked.
+
+<Callout type="warn">
+Unsubscribes travel with the data. A customer whose `emailStatus` isn't
+recognizably mailable is still added to the list, but as `UNSUBSCRIBED` with an
+`unsubscribedAt` date, so campaigns skip them. The mapping
+(`subscriberStatusFor`) fails closed: anything unrecognized becomes
+`UNSUBSCRIBED` rather than defaulting to subscribed.
+</Callout>
+
+Each subscriber is tagged with its account type and organization, so the list
+can be segmented after it lands in email marketing. Rows are inserted in
+batches, and `@@unique([listId, email])` with `skipDuplicates` makes the whole
+operation safe to repeat.
+
 ## CSV import and export
 
 `/admin/customers` supports round-tripping the list as CSV.

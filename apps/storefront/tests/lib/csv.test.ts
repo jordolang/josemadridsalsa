@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectMapping, mappedCell, parseCsv, toCsv } from '@/lib/csv'
+import { detectMapping, mappedCell, parseCsv, toCsv, toCsvRow } from '@/lib/csv'
 
 describe('toCsv', () => {
   it('quotes every cell and joins with CRLF', () => {
@@ -28,6 +28,30 @@ describe('toCsv', () => {
     const csv = toCsv(['field'], [[value]])
     const { rows } = parseCsv(csv)
     expect(rows[0].field).toBe(value)
+  })
+})
+
+describe('toCsvRow', () => {
+  it('quotes every cell and doubles embedded quotes', () => {
+    expect(toCsvRow(['Smith, Jane', 'say "hi"'])).toBe(
+      '"Smith, Jane","say ""hi"""'
+    )
+  })
+
+  it('renders null and undefined as empty cells', () => {
+    expect(toCsvRow([null, undefined, ''])).toBe('"","",""')
+  })
+
+  it('emits no trailing newline, so the caller joins rows itself', () => {
+    expect(toCsvRow(['a'])).toBe('"a"')
+  })
+
+  it('escapes identically to toCsv, so a streamed export matches a buffered one', () => {
+    const headers = ['A', 'B']
+    const row = ['x,y', 'p"q']
+    expect(toCsv(headers, [row])).toBe(
+      `${toCsvRow(headers)}\r\n${toCsvRow(row)}`
+    )
   })
 })
 

@@ -215,6 +215,29 @@ def clean_phone(s: str | None) -> str | None:
     return f"{digits[0:3]}-{digits[3:6]}-{digits[6:]}"
 
 
+# A handful of exports were written with the quoting applied twice, so a single
+# name cell arrives as `"Dollinger,Lindsay"""`. Strip the stray quote runs and
+# the separator they leave behind rather than storing the punctuation as part of
+# somebody's name.
+# Note the absence of `.` — a trailing period is legitimate in initials and
+# abbreviations ("O.J.", "Jr."), so stripping it corrupts real names.
+NAME_JUNK_EDGE_RE = re.compile(r'^[\s"\',;]+|[\s"\',;]+$')
+NAME_PUNCT_ONLY_RE = re.compile(r"^[^A-Za-z0-9]+$")
+
+
+def clean_name(v: str | None) -> str | None:
+    """Name-specific cleanup on top of `clean()`. Quotes are dropped outright
+    rather than balanced — a real name never needs them, and the ones that show
+    up here are all quoting artifacts."""
+    if not v:
+        return None
+    s = NAME_JUNK_EDGE_RE.sub("", v).replace('"', "").strip()
+    s = re.sub(r"\s+", " ", s)
+    if not s or NAME_PUNCT_ONLY_RE.match(s):
+        return None
+    return s
+
+
 NAME_NOISE_RE = re.compile(
     r"\b(llc|inc|corp|ltd|company|market|store|school|band|club|team|booster|"
     r"church|dept|department|association|society|chapter|cheer|dance|athletics|"
@@ -226,13 +249,13 @@ NAME_NOISE_RE = re.compile(
 def split_name(full: str | None) -> tuple[str | None, str | None]:
     """Best-effort first/last split. Organization-looking names go to firstName
     only so we never invent a surname from a business name."""
-    full = clean(full)
+    full = clean_name(clean(full))
     if not full:
         return None, None
     if "," in full and full.count(",") == 1:
         last, first = [p.strip() for p in full.split(",", 1)]
         if first and last and not NAME_NOISE_RE.search(full):
-            return first or None, last or None
+            return clean_name(first), clean_name(last)
     if NAME_NOISE_RE.search(full):
         return full, None
     parts = full.split()
@@ -474,8 +497,8 @@ def extract_tabular(rows, rel, sheet, signal) -> list[dict]:
                 NO_EMAIL_ROWS[rel] += 1
             continue
 
-        first = vals.get("firstName")
-        last = vals.get("lastName")
+        first = clean_name(vals.get("firstName"))
+        last = clean_name(vals.get("lastName"))
         if not first and not last:
             first, last = split_name(vals.get("fullName"))
         row_signal = signal
