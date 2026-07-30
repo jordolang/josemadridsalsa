@@ -1,0 +1,84 @@
+---
+title: Pirate Ship Fulfillment
+description: Export orders to Pirate Ship, buy labels at your rates, and import tracking back
+---
+
+# Pirate Ship Fulfillment
+
+Pirate Ship has no public API, so postage can't be purchased programmatically. The
+platform instead automates everything around that manual buy step: it prepares a
+mapped, address-verified import file, and it imports Pirate Ship's tracking export
+back to close the loop. The result is the most hands-off workflow that still uses
+your negotiated Pirate Ship rates.
+
+## The workflow
+
+1. **Open an order** (or the **Ship Orders** queue at `/admin/shipping`).
+2. The system **cross-references the shipping address** against the carrier network
+   and **auto-computes the parcel** — total weight from the ordered products plus
+   packaging, and a box size chosen from the item count. You can edit weight and
+   dimensions before exporting.
+3. Click **Export to Pirate Ship** (single order) or **Export selected / all**
+   (queue) to download a Pirate Ship import CSV.
+4. **Drag the CSV into [pirateship.com](https://www.pirateship.com).** Pirate Ship
+   maps the columns the first time and remembers the mapping. Buy and print the
+   labels at your rates.
+5. In Pirate Ship, **export the shipments** (the tracking spreadsheet), then use
+   **Import tracking CSV** in the Ship Orders queue. Every matching order is marked
+   **Shipped** with its tracking number, and the shipped email is sent.
+
+<Callout type="info" title="Why not fully automatic?">
+Truly hands-off purchase would require driving Pirate Ship's website with stored
+credentials, which is fragile and against their terms. The CSV loop keeps your
+Pirate Ship rates and stays supported. If instant, one-click label purchase matters
+more than the exact Pirate Ship rate, the EasyPost-backed label purchase in
+`app/api/orders/[id]/ship` buys USPS labels directly.
+</Callout>
+
+## Import file columns
+
+The export writes one row per shipment with these headers (Pirate Ship accepts any
+headers and maps them on first import):
+
+`Order`, `Name`, `Company`, `Email`, `Phone`, `Address 1`, `Address 2`, `City`,
+`State`, `Zip`, `Country`, `Weight (lb)`, `Weight (oz)`, `Length (in)`,
+`Width (in)`, `Height (in)`, `Items`.
+
+The **Order** column carries the order number — keep it in Pirate Ship's export so
+the tracking import can match shipments back to orders.
+
+## Parcel calculation
+
+- **Weight** = sum of each product's weight × quantity + packaging tare, rounded up
+  to the nearest ounce. A product with no weight falls back to a default per-unit
+  weight.
+- **Dimensions** = the largest per-product box when products carry their own
+  length/width/height; otherwise a standard box picked from the total unit count.
+
+Set accurate weights and dimensions in the product editor for the most accurate
+Pirate Ship rates and to reduce manual edits at export time.
+
+## Address verification
+
+Before a single-order export, the shipping address is verified against the carrier
+network. The dialog shows one of: **verified**, **address adjusted** (deliverable
+with corrections), **not verified**, or **skipped** (when `SHIPPING_API_KEY` isn't
+configured). Verification never blocks export — Pirate Ship also validates
+addresses on import.
+
+## Key Files
+
+<Files>
+  <Folder name="lib/shipping" defaultOpen>
+    <File name="pirate-ship.ts" />
+    <File name="pirate-ship-order.ts" />
+  </Folder>
+  <Folder name="app/api/admin">
+    <File name="orders/[id]/pirate-ship/route.ts" />
+    <File name="shipping/pirate-ship/export/route.ts" />
+    <File name="shipping/pirate-ship/import-tracking/route.ts" />
+  </Folder>
+  <Folder name="app/admin/shipping">
+    <File name="page.tsx" />
+  </Folder>
+</Files>

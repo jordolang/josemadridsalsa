@@ -792,3 +792,99 @@ export async function validateShippingConfiguration(): Promise<{
     }
   }
 }
+
+/**
+ * Result of cross-referencing a shipping address against the carrier network.
+ *
+ * - `verified`  — address is deliverable; `normalized` holds the corrected form.
+ * - `warning`   — deliverable but the carrier adjusted or flagged fields.
+ * - `failed`    — carrier could not verify the address as deliverable.
+ * - `skipped`   — verification unavailable (no API key / provider error); the
+ *                 caller should proceed with the address as entered.
+ */
+export interface AddressVerificationResult {
+  status: 'verified' | 'warning' | 'failed' | 'skipped'
+  normalized?: ShippingAddress
+  messages: string[]
+}
+
+/**
+ * Cross-reference a shipping address against the carrier network via EasyPost's
+ * address verification, returning the normalized/corrected address when it is
+ * deliverable. Never throws — on any provider error it degrades to `skipped`
+ * so order fulfillment is never blocked by a verification outage.
+ *
+ * @param address Address to verify
+ * @returns Verification status, carrier messages, and (when available) the
+ *   normalized address
+ */
+export async function verifyShippingAddress(
+  address: ShippingAddress
+): Promise<AddressVerificationResult> {
+  const config = getShippingConfig()
+  if (!config.apiKey || config.provider.toLowerCase() !== 'easypost') {
+    return { status: 'skipped', messages: ['Address verification not configured'] }
+  }
+
+  try {
+    const client = getEasyPostClient()
+
+    // EasyPost verifies deliverability when an address is created with `verify`.
+    // The SDK's types don't declare the `verify` option or the `verifications`
+    // result, so this call is loosely typed.
+    // @ts-expect-error - EasyPost SDK types don't include the verify option
+    const created = await client.Address.create({
+      name: address.name,
+      company: address.company,
+      street1: address.street1,
+      street2: address.street2,
+      city: address.city,
+      state: address.state,
+      zip: address.zip,
+      country: address.country || 'US',
+      phone: address.phone,
+      email: address.email,
+      verify: ['delivery'],
+    })
+
+    const delivery = created?.verifications?.delivery
+    const messages: string[] = (delivery?.errors ?? []).map(
+      (e: { message?: string; field?: string }) =>
+        e.message || (e.field ? `Invalid ${e.field}` : 'Address error')
+    )
+
+    const normalized: ShippingAddress = {
+      name: created.name ?? address.name,
+      company: created.company ?? address.company,
+      street1: created.street1 ?? address.street1,
+      street2: created.street2 ?? address.street2,
+      city: created.city ?? address.city,
+      state: created.state ?? address.state,
+      zip: created.zip ?? address.zip,
+      country: created.country ?? address.country ?? 'US',
+      phone: created.phone ?? address.phone,
+      email: created.email ?? address.email,
+    }
+
+    if (delivery?.success) {
+      return {
+        status: messages.length > 0 ? 'warning' : 'verified',
+        normalized,
+        messages,
+      }
+    }
+
+    return {
+      status: 'failed',
+      messages: messages.length > 0 ? messages : ['Address could not be verified as deliverable'],
+    }
+  } catch (error) {
+    console.error('[Shipping API] Error verifying address:', error)
+    return {
+      status: 'skipped',
+      messages: [
+        error instanceof Error ? error.message : 'Address verification unavailable',
+      ],
+    }
+  }
+}
