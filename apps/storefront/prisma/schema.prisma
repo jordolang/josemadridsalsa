@@ -58,28 +58,30 @@ model User {
 /// people who only ever checked out as guests. Registered users are linked via
 /// `userId`. Populated by CSV import and by the /api/admin/customers/sync job.
 model Customer {
-  id                    String         @id @default(cuid())
-  email                 String         @unique
+  id                    String              @id @default(cuid())
+  email                 String              @unique
   firstName             String?
   lastName              String?
   phone                 String?
-  source                CustomerSource @default(MANUAL)
+  source                CustomerSource      @default(MANUAL)
+  accountType           CustomerAccountType @default(STANDARD)
   sourceName            String?
   emailStatus           String?
   emailPermissionStatus String?
   notes                 String?
-  userId                String?        @unique
-  user                  User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
-  totalOrders           Int            @default(0)
-  totalSpent            Decimal        @default(0) @db.Decimal(10, 2)
+  userId                String?             @unique
+  user                  User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  totalOrders           Int                 @default(0)
+  totalSpent            Decimal             @default(0) @db.Decimal(10, 2)
   lastOrderAt           DateTime?
   importSource          String?
   importBatchId         String?
   importedAt            DateTime?
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
 
   @@index([source])
+  @@index([accountType])
   @@map("customers")
 }
 
@@ -1081,35 +1083,35 @@ model TrainingDocument {
 }
 
 model FeaturedEvent {
-  id                  String             @id @default(cuid())
-  googleEventId       String?            @unique
-  title               String
-  description         String?
-  location            String?
-  startDate           DateTime
-  endDate             DateTime?
-  featuredFrom        DateTime
-  featuredTo          DateTime?
-  isWhereIsJose       Boolean            @default(false)
-  customDescription   String?
-  manuallyModified    Boolean            @default(false)
-  modifiedFields      Json?
-  lastGoogleSync      DateTime?
-  displayPriority     Int                @default(0)
-  connectedByUserId   String?
+  id                      String             @id @default(cuid())
+  googleEventId           String?            @unique
+  title                   String
+  description             String?
+  location                String?
+  startDate               DateTime
+  endDate                 DateTime?
+  featuredFrom            DateTime
+  featuredTo              DateTime?
+  isWhereIsJose           Boolean            @default(false)
+  customDescription       String?
+  manuallyModified        Boolean            @default(false)
+  modifiedFields          Json?
+  lastGoogleSync          DateTime?
+  displayPriority         Int                @default(0)
+  connectedByUserId       String?
   /// Date our application/registration for the show is due. Distinct from
   /// startDate: deadlines routinely fall months before the event itself.
-  applicationDeadline DateTime?
+  applicationDeadline     DateTime?
   /// Where we are in the booking pipeline for this show.
-  bookingStatus       EventBookingStatus @default(CONFIRMED)
+  bookingStatus           EventBookingStatus @default(CONFIRMED)
   /// Booth/vendor fee in USD.
-  boothFee            Decimal?           @db.Decimal(10, 2)
+  boothFee                Decimal?           @db.Decimal(10, 2)
   /// Fields below come from the strict 20-column Show import CSV. All are
   /// nullable: an empty cell there means "not published", never zero.
   venue                   String?
   address                 String?
   city                    String?
-  state                   String?        @db.VarChar(2)
+  state                   String?            @db.VarChar(2)
   /// Driving time from the shop, as exported, e.g. "7h 04m".
   driveTime               String?
   /// Operating hours as free text, e.g. "Sat 10am-6pm; Sun 11am-5pm".
@@ -1118,34 +1120,34 @@ model FeaturedEvent {
   /// than a date, so `applicationDeadline` above stays null while this survives.
   applicationDeadlineText String?
   /// A trailing `*` in the export means estimated, not published by the promoter.
-  boothFeeEstimated       Boolean        @default(false)
+  boothFeeEstimated       Boolean            @default(false)
   /// Parenthetical after the fee, e.g. "$750.00* (Contact)" -> "Contact".
   boothFeeNote            String?
   attendance              Int?
-  attendanceEstimated     Boolean        @default(false)
+  attendanceEstimated     Boolean            @default(false)
   exhibitors              Int?
-  exhibitorsEstimated     Boolean        @default(false)
+  exhibitorsEstimated     Boolean            @default(false)
   /// Estimated trip costs in USD.
-  costOfFuel              Decimal?       @db.Decimal(10, 2)
-  lodging                 Decimal?       @db.Decimal(10, 2)
-  meals                   Decimal?       @db.Decimal(10, 2)
+  costOfFuel              Decimal?           @db.Decimal(10, 2)
+  lodging                 Decimal?           @db.Decimal(10, 2)
+  meals                   Decimal?           @db.Decimal(10, 2)
   /// How to apply, as written by the promoter.
   applicationInfo         String?
   /// Where this event record came from (manual entry, Google Calendar, a
   /// FestivalNet CSV import).
-  source              EventSource        @default(MANUAL)
+  source                  EventSource        @default(MANUAL)
   /// Identifier from `source`, used to make re-imports idempotent. FestivalNet
   /// re-exports the entire list every time, so imports must match on this. For
   /// the Show import CSV this holds the FestivalNet posting URL — the natural
   /// key. Never match on event name: names repeat across years and across
   /// monthly variants of one series.
-  externalId          String?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  eventTags           EventTag[]
-  staff               EventStaff[]
-  contacts            EventContact[]
-  manifest            EventManifest?
+  externalId              String?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  eventTags               EventTag[]
+  staff                   EventStaff[]
+  contacts                EventContact[]
+  manifest                EventManifest?
 
   @@unique([source, externalId])
   @@index([isWhereIsJose])
@@ -2997,6 +2999,14 @@ enum CustomerSource {
   GUEST_ORDER
   REGISTERED
   MANUAL
+}
+
+/// What kind of account a customer is: retail salsa buyer, fundraiser
+/// participant/organizer, or a wholesale/retail-chain account.
+enum CustomerAccountType {
+  STANDARD
+  FUNDRAISING
+  WHOLESALE
 }
 
 enum PermissionCategory {

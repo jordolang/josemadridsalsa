@@ -1,0 +1,133 @@
+---
+title: Customers
+description: The unified customer and contact list, account-type designations, CSV import/export, and the document-archive importer
+---
+
+# Customers
+
+`Customer` is the unified contact list behind `/admin/customers`. It is keyed on
+a lowercased email address and holds everyone the business has a record of —
+registered accounts, guest checkouts, imported mailing-list contacts, fundraiser
+organizers, and wholesale accounts — whether or not they ever placed an order.
+
+A `Customer` is deliberately not a `User`. Most rows are contacts with no login;
+`userId` links the ones that do have an account.
+
+## Account type
+
+Every customer carries an `accountType` (`CustomerAccountType`), shown as the
+**Account** column on the customer list and included in the CSV export:
+
+| Value | Meaning |
+|---|---|
+| `STANDARD` | Retail buyer — ordered salsa for themselves through the main storefront |
+| `FUNDRAISING` | Tied to a fundraiser: an organizer, a participant's contact, or a buyer through the fundraiser storefront |
+| `WHOLESALE` | A business account — retail store, distributor, school, daycare, church, or other institutional buyer |
+
+`accountType` answers "what kind of relationship is this?" and is distinct from
+`source` (`CustomerSource`), which records *how the record arrived* — `IMPORT`,
+`GUEST_ORDER`, `REGISTERED`, or `MANUAL`.
+
+When a customer has evidence of more than one relationship, the strongest
+commercial one wins: **wholesale > fundraising > standard**. Every designation
+the evidence supported is written into `notes` alongside the source files, so the
+choice can be audited or re-derived without re-running the import.
+
+## Order rollups
+
+`totalOrders`, `totalSpent`, and `lastOrderAt` are denormalized rollups.
+`POST /api/admin/customers/sync` recomputes them from real `Order` rows — both
+account orders (via `userId`) and guest orders (via `guestEmail`) — and also
+creates any missing customer rows for registered users and guest checkouts.
+
+Rollups reconstructed from imported spreadsheets are only ever raised, never
+lowered, so a sync against live order data always takes precedence.
+
+## CSV import and export
+
+`/admin/customers` supports round-tripping the list as CSV.
+
+- `POST /api/admin/customers/import` parses an upload and returns a
+  create/update preview. It is a **dry run unless `commit: true`**. Column
+  detection is alias-based (built around the Constant Contact export header) and
+  can be overridden with an explicit `mapping`. Email is the only required
+  column and is the upsert key.
+- `GET /api/admin/customers/export` writes the list back out with column names
+  the importer recognizes, honoring the current search and source filters.
+
+Re-importing enriches rather than erases: a blank cell leaves the stored value
+untouched.
+
+Both routes require the `users:write` / `users:export` permissions.
+
+## Document-archive importer
+
+A two-stage operational importer builds the customer list from the local
+`Documents/` business archive (a gitignored, multi-GB folder of scans and
+exports that is never committed). It exists because the archive holds a decade
+of contact data across BigCommerce exports, Constant Contact lists, QuickBooks
+dumps, PayPal statements, retail-store lists, and hand-built fundraiser order
+forms.
+
+### Stage 1 — extract
+
+```bash
+python3 scripts/extract-archive-customers.py \
+  --root ../../Documents --out ../../data/customer-extract
+```
+
+Walks every `.csv`, `.xlsx`, `.xls`, `.docx`, and `.pdf` and writes one JSONL
+record per (email, source file) pair with full provenance. Three modes are tried
+per file:
+
+- **tabular** — a header row maps columns to fields. Every email-shaped cell in
+  a row is accepted, not just the mapped column, because several hand-edited
+  sheets have shifted columns.
+- **labelled** — the `Organization:` / `Submitted by:` / `E-Mail:` layout used by
+  the fundraiser order forms, matched per cell. An `Organization:` match is
+  required, which keeps bank statements and vendor agreements out.
+- **freeform** — any email-shaped string in the text. Restricted to the
+  archive categories that actually hold customers.
+
+Each file also gets a designation signal from its path and name. Files that mix
+retail individuals with business accounts (QuickBooks dumps, campaign-response
+reports) are marked `mixed` and decided per row by whether a company name is
+present.
+
+### Stage 2 — merge and load
+
+```bash
+tsx scripts/import-archive-customers.ts --in ../../data/customer-extract
+tsx scripts/import-archive-customers.ts --in ../../data/customer-extract --commit
+```
+
+`lib/customers/archive-merge.ts` collapses the records into one customer per
+email. Every rule is **order-independent** — feeding the same records in a
+different sequence must produce the same customer:
+
+- **Designation** by the wholesale > fundraising > standard precedence above.
+- **Email status** takes the most restrictive value across all sources, so an
+  unsubscribe is never overwritten by an older export marking the address
+  Active.
+- **Field values** take whatever the most sources agree on, breaking ties toward
+  the fuller value.
+- **Dates** resolve their `DD/MM` vs `MM/DD` convention *per file* — the archive's
+  BigCommerce exports disagree with each other.
+- **Order rollups** dedupe by the order itself, so the same export filed under
+  two names counts once.
+
+The script prints its target database before writing and is a dry run unless
+`--commit` is passed. It writes `customers.merged.csv` and `merge-report.json`
+for review, tags every row with an `importBatchId`, and preserves hand-written
+notes by appending rather than replacing.
+
+<Callout type="warn">
+Stage 1's output contains customer PII. Keep it on a gitignored path — `data/`
+and `Documents/` both are — and never commit it.
+</Callout>
+
+## Related
+
+- [Email Marketing](/docs/features/email-marketing) — campaigns, lists, and suppression
+- [Lead Generation](/docs/features/lead-generation) — B2B prospecting, which feeds wholesale contacts
+- [Orders](/docs/features/orders) — the order data behind the rollups

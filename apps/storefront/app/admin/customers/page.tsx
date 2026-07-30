@@ -55,6 +55,12 @@ const SOURCE_LABELS: Record<string, string> = {
   MANUAL: 'Manual',
 }
 
+const ACCOUNT_TYPE_LABELS: Record<string, string> = {
+  STANDARD: 'Standard',
+  FUNDRAISING: 'Fundraising',
+  WHOLESALE: 'Wholesale',
+}
+
 function fullName(c: { firstName: string | null; lastName: string | null }) {
   return [c.firstName, c.lastName].filter(Boolean).join(' ').trim()
 }
@@ -218,6 +224,7 @@ export default async function CustomersPage({
                 <TableRow>
                   <TableHead>Customer</TableHead>
                   <TableHead>Phone</TableHead>
+                  <TableHead>Account</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead className="text-right">Orders</TableHead>
                   <TableHead className="text-right">Total Spent</TableHead>
@@ -235,6 +242,13 @@ export default async function CustomersPage({
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {c.phone || '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={c.accountType === 'STANDARD' ? 'outline' : 'secondary'}
+                      >
+                        {ACCOUNT_TYPE_LABELS[c.accountType] ?? c.accountType}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
