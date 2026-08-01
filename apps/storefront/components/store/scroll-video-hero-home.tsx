@@ -157,10 +157,10 @@ export function ScrollVideoHeroHome() {
         </div>
       </div>
 
-      {/* Scrolling content — one full screen per panel. The footage finishes on
-          the last panel (market copy over the market frame), then the hero ends
-          cleanly straight into the next section. The copy is a narrow left
-          column so it clears the centred jar. */}
+      {/* Scrolling content — one full screen per panel, then a text-free outro
+          so the closing beats (pan out the window, the outdoor booth) play
+          full-screen after the last line of copy before the store section slides
+          up over them. The copy is a narrow left column so it clears the jar. */}
       <div className="relative z-10">
         {PANELS.map((panel, idx) => (
           <div
@@ -208,6 +208,9 @@ export function ScrollVideoHeroHome() {
             </div>
           </div>
         ))}
+        {/* Outro — one screen of scroll with no copy so the video runs out to its
+            final frame (the outdoor booth) full-screen before the store covers it. */}
+        <div aria-hidden style={{ height: 'calc(100svh - var(--hero-nav-offset))' }} />
       </div>
     </section>
   )
