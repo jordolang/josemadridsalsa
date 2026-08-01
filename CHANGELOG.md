@@ -24,6 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Facebook + TikTok social commerce hardening** — Admin social integrations now use a verified OAuth session flow, support choosing the exact connected destination account for each export, and can create Meta catalogs from the admin panel when Business Manager access is available.
 
 ### Changed
+- **Homepage hero redesign** — The storefront home page (`/`) now leads with a scroll-scrubbed cinematic hero: the video advances frame-by-frame as the page scrolls (logo → jar → farmers-market beats), with the copy in a left-hand column over a left-edge legibility gradient that fades before the centred subject. The Featured Products section is lifted above the pinned video (opaque `z-10` wrapper) so the footage can no longer bleed behind the store text, and the Fundraising section now sits directly beneath the products display. This replaces the previous GrowthBook-flagged `HeroWithFeatureFlag`, retiring the logged-in hero personalization on the homepage.
 - **Preview deployment policy** now disables Vercel Git deployments for non-`main` branches to stop recurring failed preview checks while keeping production deploys enabled.
 - **Claude Code Review workflow** is now manual-only until `CLAUDE_CODE_OAUTH_TOKEN` is rotated; the previous automatic PR run failed with `401 Invalid bearer token`.
 - **Shop listings** now target a selected connected Facebook Page or TikTok account instead of blindly exporting to the first active account.
