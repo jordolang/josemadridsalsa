@@ -537,6 +537,9 @@ function CheckoutForm() {
 
       if (response.ok) {
         const data = await response.json()
+        // Clear any error left over from an earlier failed attempt so a
+        // successful recalculation self-heals the on-screen message.
+        setShippingError(null)
         const options = data.availableOptions || []
         setAvailableShippingOptions(options)
 
