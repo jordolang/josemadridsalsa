@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { POST } from '@/app/api/orders/[id]/ship/route'
+import { POST } from '@/app/api/orders/[orderId]/ship/route'
 import { NextRequest } from 'next/server'
 
 // Mock dependencies. The route imports prisma as a named export, so expose
@@ -102,7 +102,7 @@ const validBody = {
   },
 }
 
-describe('POST /api/orders/[id]/ship - Integration Tests', () => {
+describe('POST /api/orders/[orderId]/ship - Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     process.env.SHIPPING_API_KEY = 'test_api_key'
@@ -143,7 +143,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
     mockPrisma.shippingLabel.create.mockResolvedValue({ id: 'label-1' })
 
     const response = await POST(buildRequest(validBody), {
-      params: Promise.resolve({ id: 'order-1' }),
+      params: Promise.resolve({ orderId: 'order-1' }),
     })
     const data = await response.json()
 
@@ -219,7 +219,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
     })
 
     const response = await POST(buildRequest(validBody), {
-      params: Promise.resolve({ id: 'order-1' }),
+      params: Promise.resolve({ orderId: 'order-1' }),
     })
 
     expect(response.status).toBe(409)
@@ -248,7 +248,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
           country: 'US',
         },
       }),
-      { params: Promise.resolve({ id: 'order-1' }) }
+      { params: Promise.resolve({ orderId: 'order-1' }) }
     )
 
     expect(response.status).toBe(403)
@@ -263,7 +263,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
     // Invalid request - missing required parcel field
     const response = await POST(
       buildRequest({ rateId: 'rate_test1' }),
-      { params: Promise.resolve({ id: 'order-1' }) }
+      { params: Promise.resolve({ orderId: 'order-1' }) }
     )
 
     expect(response.status).toBe(400)
@@ -289,7 +289,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
           country: 'US',
         },
       }),
-      { params: Promise.resolve({ id: 'invalid-order' }) }
+      { params: Promise.resolve({ orderId: 'invalid-order' }) }
     )
 
     expect(response.status).toBe(404)
@@ -330,7 +330,7 @@ describe('POST /api/orders/[id]/ship - Integration Tests', () => {
           country: 'US',
         },
       }),
-      { params: Promise.resolve({ id: 'order-1' }) }
+      { params: Promise.resolve({ orderId: 'order-1' }) }
     )
 
     expect(response.status).toBe(500)

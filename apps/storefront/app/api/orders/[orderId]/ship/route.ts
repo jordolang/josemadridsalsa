@@ -35,7 +35,7 @@ const ShipmentRequestSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -48,7 +48,7 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { id } = await params
+    const { orderId: id } = await params
     const body = await request.json()
     const { rateId, parcel, fromAddress } = ShipmentRequestSchema.parse(body)
 
