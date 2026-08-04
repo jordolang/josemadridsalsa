@@ -1,0 +1,123 @@
+---
+title: Timeclock
+description: The append-only staff timeclock in the account area — punch pairs, lunch breaks, IP logging, derived hours, and pay-period selection
+---
+
+# Timeclock
+
+Staff clock in and out at `/account/timeclock`. The page lives in the customer
+account area, not the admin panel — it sits next to the **Admin Panel** link in
+the account sidebar, so clocking in never requires entering the admin console.
+
+Access is limited to `STAFF`, `ADMIN`, and `DEVELOPER` accounts (`isStaff` in
+`lib/rbac.ts`). Everyone else sees a short notice instead of the clock. Each
+user only ever sees and punches their own record.
+
+## The data model
+
+Each clock-in/clock-out cycle is one `TimeClockEntry` row:
+
+| Column | Meaning |
+| --- | --- |
+| `clockInAt` / `clockOutAt` | Punch instants, both set by the server |
+| `clockInIp` / `clockOutIp` | IP address recorded at each punch |
+| `notes` | Notes / job duties, written once at clock-out |
+
+`clockOutAt` is null while a shift is open. There is deliberately **no stored
+hours column** — hours are always derived from the two timestamps, so a total
+can never disagree with the record it came from.
+
+### Lunch breaks
+
+A break is not modelled specially. The user clocks out, clocks back in, and gets
+a second row on the same day. Day and period totals sum the pairs, so an
+8:00–12:00 and a 13:00–17:00 punch add up to 8.00 hours on one day.
+
+### Why entries cannot be altered
+
+Three things together make the record tamper-evident:
+
+1. **Server-authoritative timestamps.** The punch time comes from `new Date()`
+   inside the route handler. The browser never sends a time, so changing a
+   laptop's clock changes nothing but the cosmetic display.
+2. **No mutation surface.** The API exposes a read, a clock-in, and a clock-out.
+   There is no PATCH and no DELETE, and the clock-out only ever closes the
+   caller's own single open row.
+3. **Notes are write-once.** They arrive as part of the clock-out mutation and
+   can never be edited afterwards.
+
+Two consequences worth knowing:
+
+**A forgotten clock-out cannot be corrected.** The row stays open, renders as
+*In progress*, and is excluded from every total. Adding an admin correction path
+would mean deliberately opening a hole in the guarantees above — it is not
+built.
+
+**Deleting the user deletes the history.** The `userId` relation uses
+`onDelete: Cascade`, matching every other user-owned record in this schema, so
+removing an account through `/api/admin/users/[id]` takes its punches with it.
+That path is therefore held to the owner accounts listed in
+`DATA_ERASURE_EMAILS` (`lib/developer/constants.ts`) — holding `users:write` is
+no longer enough to delete a user. Everyone else gets a 403.
+
+The guarantees above cover the person clocking in; this guard covers the admin
+console. If payroll records must survive even an owner deleting the account,
+change the relation to `onDelete: Restrict` — note that this makes deleting any
+user who has ever clocked in fail outright.
+
+### One open punch per user
+
+A partial unique index enforces it at the database level, because an
+application-level check alone races on a double-click or a second tab:
+
+```sql
+CREATE UNIQUE INDEX "time_clock_entries_open_unique"
+  ON "time_clock_entries"("userId") WHERE "clockOutAt" IS NULL;
+```
+
+Prisma's schema language cannot express a filtered index, so it exists only in
+the migration. The route still checks first, to return a readable error rather
+than a constraint violation.
+
+The index is invisible to `schema.prisma`, so it was worth checking whether
+Prisma would treat it as drift: `prisma migrate diff` after applying the
+migration does **not** report it. Should a future reset ever drop it, re-add it
+by hand — it is intentional, not leftover.
+
+## Hours and time zones
+
+Punches are stored as UTC instants, but a work day is a local business day in
+Zanesville, Ohio. `lib/timeclock.ts` buckets every instant through `Intl`
+against a fixed `America/New_York` constant, so a daylight-saving transition
+never shifts a shift onto the wrong day or drifts totals twice a year. A punch
+is filed under the day it *started*, which keeps an overnight shift on one row.
+
+Totals are shown both as decimal hours for payroll (`8.25`) and as readable
+duration (`8h 15m`).
+
+## Pay periods
+
+The user types a start and end date directly as `MM/DD/YYYY` — digits are masked
+into slashes as they type, and <kbd>Enter</kbd> applies the range. There is no
+calendar picker. Impossible dates such as `02/30/2026` are rejected rather than
+rolled over into the next month.
+
+The addressable window is two months either side of today. The server clamps
+whatever it receives to that window, so a hand-crafted query cannot page through
+unbounded history, and the UI re-displays the range the server actually used.
+
+## Files
+
+| Path | Role |
+| --- | --- |
+| `lib/timeclock.ts` | Pure date, bucketing, and formatting logic |
+| `lib/timeclock-server.ts` | Range resolution and the page/API view model |
+| `app/api/account/timeclock/route.ts` | `GET` history, `POST` clock in |
+| `app/api/account/timeclock/clock-out/route.ts` | `POST` clock out with notes |
+| `app/(public)/account/timeclock/page.tsx` | Server component, role gate |
+| `components/account/timeclock/LiveClock.tsx` | Ticking clock, isolated |
+| `components/account/timeclock/TimeClockPanel.tsx` | Controls, period, history table |
+
+The live clock repaints about 25 times a second and is kept in its own component
+so nothing else on the page re-renders with it. It is offset onto the server's
+time so the displayed clock matches what a punch will record.

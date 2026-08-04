@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
-import { ok, fail } from '@/lib/api'
+import { ok, fail, forbidden } from '@/lib/api'
 import { logAudit } from '@/lib/audit'
+import { canEraseData } from '@/lib/developer/constants'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 
@@ -91,6 +92,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const currentUser = await requirePermission('users:write')
+
+    // Deleting a User cascades to everything they own, including their
+    // append-only timeclock history, so erasure is held to the owner accounts.
+    if (!canEraseData(currentUser.email)) {
+      return forbidden('Only an owner account can delete records')
+    }
+
     const { id } = await params
 
     const existing = await prisma.user.findUnique({ where: { id } })

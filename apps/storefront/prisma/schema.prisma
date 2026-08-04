@@ -49,8 +49,34 @@ model User {
   blogComments            BlogComment[]                 @relation("BlogCommenter")
   blogReactions           BlogReaction[]                @relation("BlogReactor")
   customer                Customer?
+  timeClockEntries        TimeClockEntry[]
 
   @@map("users")
+}
+
+/// An append-only staff timeclock punch pair. One row per clock-in/clock-out,
+/// so a lunch break simply creates a second row on the same day. Hours are
+/// always derived from the timestamps — never stored — and rows are never
+/// updated after clock-out, which is what keeps the record tamper-evident.
+/// A partial unique index (see the migration) allows at most one open row
+/// (clockOutAt IS NULL) per user.
+///
+/// Caveat: `onDelete: Cascade` matches the rest of this schema, which means
+/// deleting a User through /api/admin/users/[id] destroys their punch history
+/// too. Switch to Restrict if payroll records must outlive the account.
+model TimeClockEntry {
+  id         String    @id @default(cuid())
+  userId     String
+  clockInAt  DateTime  @default(now())
+  clockOutAt DateTime?
+  clockInIp  String?
+  clockOutIp String?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, clockInAt])
+  @@map("time_clock_entries")
 }
 
 /// A unified customer/contact record. Distinct from `User` (login accounts):
