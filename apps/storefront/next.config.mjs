@@ -51,7 +51,10 @@ const nextConfig = {
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",
-      "upgrade-insecure-requests",
+      // Production only: on http://localhost this upgrades every subresource to
+      // https, which Safari applies to localhost and Chrome does not — leaving
+      // dev pages unstyled with no assets in Safari.
+      ...(isProd ? ['upgrade-insecure-requests'] : []),
     ].join('; ')
 
     const headers = [
