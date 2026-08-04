@@ -3628,3 +3628,207 @@ enum BlogPostLayout {
   VIDEO
   MINIMAL
 }
+
+// ---------------------------------------------------------------------------
+// Document-archive imports
+//
+// Structured data recovered from the local (gitignored) `Documents/` business
+// archive. Each row carries full provenance (source file + md5 + sheet/row) so
+// an import is auditable and re-runnable, and so rows can be traced back to the
+// spreadsheet they came from. See scripts/extract-mileage.py + import-mileage.ts.
+// ---------------------------------------------------------------------------
+
+/// A single business trip recovered from the yearly "Mileage Master" and
+/// related spreadsheets in `01 Financial/Mileage`. The source files use four
+/// different column layouts (some with odometer readings, some with computed
+/// miles, some with a Sales column) and overlap heavily across re-exports, so
+/// rows are normalized to this shape and de-duplicated on `contentHash`.
+model MileageEntry {
+  id            String           @id @default(cuid())
+  /// Trip (start) date. Rows without a resolvable date are dropped at import.
+  tripDate      DateTime
+  /// End date for multi-day shows; null for a same-day trip.
+  endDate       DateTime?
+  /// Where the trip went — the "Vendor"/"Show"/"Location"/"Reason" cell.
+  destination   String
+  city          String?
+  state         String?          @db.VarChar(4)
+  /// Round-trip miles as recorded. Null when the source left it blank.
+  miles         Int?
+  /// One-way miles, when the sheet tracked it separately.
+  oneWayMiles   Int?
+  /// Odometer readings, present only in the driver-kept "Matt Mileage" sheets.
+  odometerStart Int?
+  odometerEnd   Int?
+  /// Canonicalized driver name (Deb/Debbie -> "Debbie"; "?" -> null).
+  driver        String?
+  /// Booth/market sales recorded alongside the trip, when present.
+  sales         Decimal?         @db.Decimal(10, 2)
+  /// Derived trip type from the destination text; null when undetermined.
+  category      MileageCategory?
+  /// Calendar year of the trip, denormalized for cheap filtering/reporting.
+  year          Int
+
+  // Provenance — every field needed to trace this row to its spreadsheet.
+  sourceFile    String
+  sourceMd5     String
+  sourceSheet   String?
+  sourceRow     Int?
+  /// The original row, keyed by its source header, for audit.
+  rawRow        Json?
+  /// Stable hash of the normalized trip; unique so re-imports and the three
+  /// overlapping 2022 "Master" files collapse to one row.
+  contentHash   String           @unique
+  importSource  String           @default("document-archive")
+  importBatchId String?
+  importedAt    DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+
+  @@index([year])
+  @@index([driver])
+  @@index([sourceMd5])
+  @@map("mileage_entries")
+}
+
+enum MileageCategory {
+  SHOW
+  FARMERS_MARKET
+  FUNDRAISER
+  VENDOR
+  ERRAND
+  MISC
+}
+
+/// One row per file in the local (gitignored) `Documents/` business archive —
+/// the searchable index over the ~3,100 PDFs/DOCX/scans and everything else that
+/// cannot become typed domain rows. Metadata comes from the archive's own
+/// `search_index.csv`; `extractedText` is full text we pull from the text-bearing
+/// formats (scans have none until OCR). `sensitivity` gates HR/tax/bank records
+/// so they are never exposed on public or customer-facing surfaces.
+model ArchiveDocument {
+  id             String                  @id @default(cuid())
+  /// Path relative to the archive root, e.g. "03 Fundraisers/2024/...".
+  path           String                  @unique
+  /// Top-level archive folder, e.g. "01 Financial".
+  category       String
+  filename       String
+  ext            String?
+  sizeBytes      Int?
+  md5            String?
+  /// Where the file originally lived before the archive was organized.
+  originalSource String?
+  /// Year parsed from the path when the archive filed it by year; else null.
+  year           Int?
+  /// Short preview shipped in the archive's search_index.csv (often empty).
+  textPreview    String?
+  /// Full extracted text. Null for image-only scans until OCR is run.
+  extractedText  String?
+  textChars      Int                     @default(0)
+  extraction     ArchiveExtractionStatus @default(PENDING)
+  /// True when the file is a scan/image with no recoverable text layer.
+  needsOcr       Boolean                 @default(false)
+  sensitivity    ArchiveSensitivity      @default(INTERNAL)
+  importSource   String                  @default("document-archive")
+  importBatchId  String?
+  importedAt     DateTime                @default(now())
+  createdAt      DateTime                @default(now())
+
+  @@index([category])
+  @@index([year])
+  @@index([sensitivity])
+  @@index([extraction])
+  @@map("archive_documents")
+}
+
+enum ArchiveExtractionStatus {
+  PENDING
+  EXTRACTED
+  EMPTY
+  SCANNED_NO_TEXT
+  UNSUPPORTED
+  ERROR
+}
+
+enum ArchiveSensitivity {
+  PUBLIC
+  INTERNAL
+  SENSITIVE
+}
+
+/// One fundraiser campaign instance recovered from an order-form file in
+/// `03 Fundraisers`. The archive holds two form shapes: an order-export sheet
+/// (one row per customer order, with a "Total Jars" column) and the hand-filled
+/// Jose Madrid order-form template (Organization/Submitted-by labels plus
+/// per-flavor quantities). Both collapse to this per-file summary. Jar counts are
+/// recoverable and trustworthy; dollar revenue usually is not, so it stays null
+/// rather than being guessed from a price assumption.
+model ArchivedFundraiser {
+  id               String                     @id @default(cuid())
+  organizationName String
+  year             Int?
+  orderDate        DateTime?
+  submittedBy      String?
+  contactEmail     String?
+  contactPhone     String?
+  formType         ArchivedFundraiserFormType @default(UNKNOWN)
+  /// Total jars ordered: summed "Total Jars" (order-export) or summed per-flavor
+  /// quantities (order-form template). Null when not recoverable.
+  totalJars        Int?
+  /// Number of underlying customer orders, for the order-export shape.
+  orderCount       Int?
+  /// Per-flavor quantity map for the order-form template shape.
+  flavorsJson      Json?
+
+  sourceFile       String                     @unique
+  sourceMd5        String?
+  notes            String?
+  importSource     String                     @default("document-archive")
+  importBatchId    String?
+  importedAt       DateTime                   @default(now())
+  createdAt        DateTime                   @default(now())
+
+  @@index([year])
+  @@index([organizationName])
+  @@map("archived_fundraisers")
+}
+
+enum ArchivedFundraiserFormType {
+  ORDER_EXPORT
+  ORDER_FORM
+  UNKNOWN
+}
+
+/// A single show or farmers-market day's sales, recovered from the yearly sales
+/// sheets in `04 Shows & Events` (e.g. "2025 Show Sales", "2025 Farmers Market").
+/// One row per event day. Dollar sales here are the crew's own tallies, not QBO
+/// — treat as historical record, not authoritative accounting.
+model ArchivedShowSale {
+  id            String           @id @default(cuid())
+  showName      String
+  showDate      DateTime?
+  /// The raw date cell when it was a range like "1/3-5/2025" rather than a date.
+  dateText      String?
+  year          Int?
+  eventType     ArchivedShowType @default(SHOW)
+  sales         Decimal?         @db.Decimal(10, 2)
+  amountPaid    Decimal?         @db.Decimal(10, 2)
+  expenses      Decimal?         @db.Decimal(10, 2)
+  salesPerson   String?
+  sourceFile    String
+  sourceMd5     String?
+  sourceRow     Int?
+  contentHash   String           @unique
+  importSource  String           @default("document-archive")
+  importBatchId String?
+  importedAt    DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+
+  @@index([year])
+  @@index([eventType])
+  @@map("archived_show_sales")
+}
+
+enum ArchivedShowType {
+  SHOW
+  FARMERS_MARKET
+}
