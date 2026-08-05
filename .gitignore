@@ -181,3 +181,7 @@ __pycache__/
 
 # Contact-export CSVs — customer PII, never commit
 apps/storefront/emails/lists/
+
+# Unused homepage hero source video — the scroll-scrubbed hero loads
+# hero-video-scrub.mp4 (tracked); this 7.4 MB original is not referenced.
+apps/storefront/public/images/home/hero-video.mp4
