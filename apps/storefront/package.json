@@ -66,7 +66,6 @@
   "author": "Jose Madrid Salsa",
   "license": "MIT",
   "dependencies": {
-    "@jose-madrid/shared-types": "*",
     "@amplitude/analytics-browser": "^2.33.1",
     "@amplitude/plugin-session-replay-browser": "^1.25.5",
     "@anthropic-ai/sdk": "^0.71.2",
@@ -76,6 +75,7 @@
     "@googleapis/calendar": "^14.2.0",
     "@growthbook/growthbook-react": "^1.6.5",
     "@hookform/resolvers": "^5.2.2",
+    "@jose-madrid/shared-types": "*",
     "@openai/codex-sdk": "^0.57.0",
     "@paypal/checkout-server-sdk": "^1.0.3",
     "@paypal/react-paypal-js": "^9.1.0",
@@ -128,6 +128,7 @@
     "framer-motion": "^12.23.25",
     "google-auth-library": "^10.6.1",
     "gray-matter": "^4.0.3",
+    "handlebars": "^4.7.9",
     "jszip": "^3.10.1",
     "lucide-react": "^0.555.0",
     "mammoth": "^1.11.0",
