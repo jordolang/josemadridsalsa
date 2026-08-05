@@ -180,7 +180,6 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
 
       // Verify shipping cost is in realistic range
       // Standard shipping should typically be $5-15 for domestic
-      // Express could be up to $30-40
       expect(data.shippingCost).toBeGreaterThanOrEqual(0)
       expect(data.shippingCost).toBeLessThan(50)
 
@@ -490,7 +489,7 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
         const data = await response.json()
 
         // Remote state shipping should be higher but still reasonable
-        // Standard should be $8-25, Express up to $50
+        // Standard shipping to a remote state should be $8-25
         expect(data.shippingCost).toBeGreaterThan(0)
         expect(data.shippingCost).toBeLessThan(60)
 
@@ -811,14 +810,14 @@ To complete the full E2E test, perform these manual steps:
    - State: CA
    - ZIP: 94111
 
-7. □ Verify shipping options appear with:
-   - Multiple carrier/service options
+7. □ Verify the single standard shipping option appears with:
+   - Exactly one carrier/service option
    - Realistic pricing ($6-30 range)
-   - Estimated delivery times
+   - Estimated delivery time
 
-8. □ Select expedited shipping option
+8. □ Verify no express or expedited option is offered
 
-9. □ Verify order summary updates with new shipping cost
+9. □ Verify order summary shows that option's shipping cost
 
 10. □ Test Alaska address:
     - Change state to AK

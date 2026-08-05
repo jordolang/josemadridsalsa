@@ -233,8 +233,8 @@ describeIfE2E('E2E: Shipping API Error Handling', () => {
       expect(data.shippingCost).toBeGreaterThanOrEqual(0)
       expect(data.shippingCost).toBeLessThan(100) // Reasonable domestic shipping
 
-      // Verify multiple options available
-      expect(data.availableOptions.length).toBeGreaterThanOrEqual(2)
+      // Standard shipping is the only option offered
+      expect(data.availableOptions.length).toBe(1)
 
       // Verify options have required fields
       data.availableOptions.forEach((option: ShippingOption) => {

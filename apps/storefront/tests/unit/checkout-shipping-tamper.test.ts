@@ -35,10 +35,7 @@ vi.mock('@/lib/shipping-calculator', () => ({
     shippingCost: 7.99,
     shippingMethod: 'Standard Shipping',
     estimatedDelivery: '3-5 business days',
-    availableOptions: [
-      { method: 'Standard Shipping', cost: 7.99 },
-      { method: 'Express Shipping', cost: 19.99 },
-    ],
+    availableOptions: [{ method: 'Standard Shipping', cost: 7.99 }],
   }),
 }))
 

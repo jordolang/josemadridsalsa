@@ -56,11 +56,6 @@ describe('Checkout Shipping Calculation API Integration Tests', () => {
         cost: 8.99,
         estimatedDays: '3-5 business days',
       },
-      {
-        method: 'USPS Priority Mail',
-        cost: 14.99,
-        estimatedDays: '1-3 business days',
-      },
     ],
   }
 
@@ -86,9 +81,8 @@ describe('Checkout Shipping Calculation API Integration Tests', () => {
       expect(data.shippingCost).toBe(8.99)
       expect(data.shippingMethod).toBe('USPS Ground Advantage')
       expect(data.estimatedDelivery).toBe('3-5 business days')
-      expect(data.availableOptions).toHaveLength(2)
+      expect(data.availableOptions).toHaveLength(1)
       expect(data.availableOptions[0].method).toBe('USPS Ground Advantage')
-      expect(data.availableOptions[1].method).toBe('USPS Priority Mail')
       expect(data.fallback).toBe(false) // fallback defaults to false when using real rates
 
       // Verify prisma was called to fetch product details

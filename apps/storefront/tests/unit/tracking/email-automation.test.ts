@@ -118,7 +118,7 @@ describe('Email Automation - Shipping Notifications', () => {
         trackingUrl: 'https://www.ups.com/track/TRACK123456',
         shippedAt: new Date('2026-06-19T14:00:00Z'),
         estimatedDelivery: null,
-        shippingMethod: 'Express Shipping',
+        shippingMethod: 'Standard Shipping',
         items: [],
       }
 

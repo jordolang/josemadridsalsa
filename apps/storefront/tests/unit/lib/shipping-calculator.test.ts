@@ -64,7 +64,7 @@ describe('Shipping Calculator', () => {
         estimatedDelivery: '3-5 business days',
       })
       expect(result.availableOptions).toBeDefined()
-      expect(result.availableOptions).toHaveLength(2)
+      expect(result.availableOptions).toHaveLength(1)
     })
 
     it('should calculate international shipping for non-US orders', async () => {
@@ -179,7 +179,7 @@ describe('Shipping Calculator', () => {
       expect(result.shippingCost).toBe(10.48)
     })
 
-    it('should return available shipping options', async () => {
+    it('should return standard shipping as the only available option', async () => {
       const result = await calculateShipping({
         items: [{ quantity: 1, weight: 2 }],
         shippingAddress: {
@@ -190,51 +190,32 @@ describe('Shipping Calculator', () => {
         subtotal: 30.0,
       })
 
-      expect(result.availableOptions).toHaveLength(2)
+      expect(result.availableOptions).toHaveLength(1)
       expect(result.availableOptions?.[0]).toMatchObject({
         method: 'Standard Shipping',
         cost: 6.99,
         estimatedDays: '3-5 business days',
       })
-      expect(result.availableOptions?.[1]).toMatchObject({
-        method: 'Express Shipping',
-        cost: 14.99,
-        estimatedDays: '1-2 business days',
-      })
     })
 
-    it('should offer free express shipping when express cost exceeds subtotal', async () => {
-      const result = await calculateShipping({
-        items: [{ quantity: 1, weight: 2 }],
-        shippingAddress: {
-          state: 'CA',
-          postalCode: '94111',
-          country: 'US',
-        },
-        subtotal: 10.0,
-      })
+    it('should never offer an express shipping option', async () => {
+      for (const subtotal of [10.0, 30.0, 49.99]) {
+        const result = await calculateShipping({
+          items: [{ quantity: 1, weight: 2 }],
+          shippingAddress: {
+            state: 'AK',
+            postalCode: '99501',
+            country: 'US',
+          },
+          subtotal,
+        })
 
-      expect(result.availableOptions?.[1]).toMatchObject({
-        method: 'Express Shipping',
-        // Express base (14.99) exceeds the subtotal (10.0), so it is made free.
-        cost: 0,
-        estimatedDays: '1-2 business days',
-      })
-    })
-
-    it('should apply state multiplier to express shipping', async () => {
-      const result = await calculateShipping({
-        items: [{ quantity: 1, weight: 2 }],
-        shippingAddress: {
-          state: 'AK',
-          postalCode: '99501',
-          country: 'US',
-        },
-        subtotal: 30.0,
-      })
-
-      // Express $14.99 * 1.5 = $22.485, rounded to $22.48
-      expect(result.availableOptions?.[1].cost).toBe(22.48)
+        expect(result.availableOptions).toHaveLength(1)
+        expect(result.shippingMethod).not.toMatch(/express/i)
+        expect(
+          result.availableOptions?.some((option) => /express/i.test(option.method))
+        ).toBe(false)
+      }
     })
 
     it('should handle multiple items with different weights', async () => {

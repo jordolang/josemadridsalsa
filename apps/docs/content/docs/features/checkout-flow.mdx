@@ -166,7 +166,7 @@ const schema = z.object({
   state: z.string().min(2, 'Invalid state'),
   postalCode: z.string().regex(/^\d{5}(-\d{4})?$/, 'Invalid postal code'),
   country: z.string().default('US'),
-  shippingMethod: z.enum(['standard', 'express', 'overnight'])
+  shippingMethod: z.literal('standard')
 })
 ```
 
@@ -180,7 +180,7 @@ interface CheckoutRequest {
   cartItems: CartItem[]
   shippingAddress: Address
   billingAddress?: Address
-  shippingMethod: 'standard' | 'express' | 'overnight'
+  shippingMethod: 'standard'
   couponCode?: string
   email: string
 }

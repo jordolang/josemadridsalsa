@@ -75,12 +75,6 @@ const SHIPPING_RATES = {
     estimatedDays: '3-5 business days',
   },
 
-  // Express shipping
-  EXPRESS: {
-    cost: 14.99,
-    estimatedDays: '1-2 business days',
-  },
-
   // International shipping (flat rate for simplicity)
   INTERNATIONAL: {
     cost: 24.99,
@@ -348,49 +342,16 @@ function calculateEstimateRates(
 
   const finalCost = baseCost * stateMultiplier
 
-  // Build available options based on address type
-  const availableOptions = []
-
-  if (isPoBox) {
-    // PO Box - only USPS options
-    const expressCost = SHIPPING_RATES.EXPRESS.cost * stateMultiplier
-
-    availableOptions.push(
-      {
-        method: 'USPS Ground Advantage',
-        cost: parseFloat(finalCost.toFixed(2)),
-        estimatedDays: SHIPPING_RATES.FLAT_RATE.estimatedDays,
-      },
-      {
-        method: 'USPS Priority Mail',
-        cost: parseFloat((finalCost * 1.5).toFixed(2)),
-        estimatedDays: '1-3 business days',
-      },
-      {
-        method: 'USPS Priority Mail Express',
-        // Make express free if it exceeds the subtotal
-        cost: expressCost > subtotal ? 0 : expressCost,
-        estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
-      }
-    )
-  } else {
-    // Regular address - all carriers available
-    const expressCost = parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2))
-
-    availableOptions.push(
-      {
-        method: 'Standard Shipping',
-        cost: parseFloat(finalCost.toFixed(2)),
-        estimatedDays: SHIPPING_RATES.FLAT_RATE.estimatedDays,
-      },
-      {
-        method: 'Express Shipping',
-        // Make express free if it exceeds the subtotal
-        cost: expressCost > subtotal ? 0 : expressCost,
-        estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
-      }
-    )
-  }
+  // Build the single available option based on address type.
+  // Standard shipping is the only method offered.
+  const availableOptions = [
+    {
+      // Only USPS can deliver to a PO Box
+      method: isPoBox ? 'USPS Ground Advantage' : 'Standard Shipping',
+      cost: parseFloat(finalCost.toFixed(2)),
+      estimatedDays: SHIPPING_RATES.FLAT_RATE.estimatedDays,
+    },
+  ]
 
   return {
     shippingCost: availableOptions[0].cost,
@@ -407,7 +368,7 @@ function calculateEstimateRates(
  * Strategy:
  * 1. Check free shipping threshold first
  * 2. Call real carrier API for accurate rates
- * 3. Return multiple shipping options (standard, expedited, express)
+ * 3. Return the single standard shipping option
  * 4. Fall back to estimate-based rates if API fails (never block checkout)
  *
  * Follows error handling pattern from lib/tax-calculator.ts
@@ -482,18 +443,20 @@ export async function calculateShipping(
       // Sort rates by cost (cheapest first)
       const sortedRates = [...filteredRates].sort((a, b) => a.rate - b.rate)
 
-      // Map API rates to our format
-      const availableOptions = sortedRates.map((rate) => ({
-        method: `${rate.carrier} ${rate.service}`,
-        cost: rate.rate,
-        estimatedDays: rate.deliveryDays
-          ? `${rate.deliveryDays} business days`
-          : '3-5 business days',
-        estimatedDeliveryDate: rate.deliveryDate || undefined,
-      }))
-
-      // Use cheapest rate as default
+      // Only standard shipping is offered, so expose a single option: the
+      // cheapest carrier rate. Expedited/express services are never surfaced.
       const cheapestRate = sortedRates[0]
+
+      const availableOptions = [
+        {
+          method: `${cheapestRate.carrier} ${cheapestRate.service}`,
+          cost: cheapestRate.rate,
+          estimatedDays: cheapestRate.deliveryDays
+            ? `${cheapestRate.deliveryDays} business days`
+            : '3-5 business days',
+          estimatedDeliveryDate: cheapestRate.deliveryDate || undefined,
+        },
+      ]
 
       return {
         shippingCost: cheapestRate.rate,
