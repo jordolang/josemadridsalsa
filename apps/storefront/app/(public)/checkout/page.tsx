@@ -340,6 +340,12 @@ function CheckoutForm() {
   const taxAbortRef = useRef<AbortController | null>(null)
   const shippingAbortRef = useRef<AbortController | null>(null)
   const hasRecoveredRef = useRef(false)
+  // Always-current formState for the debounced tax/shipping calculators. Their
+  // setTimeout callbacks capture the render in which the keystroke fired, so
+  // reading `formState` directly there is one keystroke stale — a freshly
+  // completed ZIP would still be seen as incomplete. Read this ref instead.
+  const latestFormRef = useRef(formState)
+  latestFormRef.current = formState
 
   const subtotal = useMemo(
     () => items.reduce((total, item) => total + item.price * item.quantity, 0),
@@ -446,10 +452,11 @@ function CheckoutForm() {
 
   // Calculate tax when address is complete
   const calculateTaxEstimate = async () => {
+    const form = latestFormRef.current
     // Only calculate once the address can actually pass server validation
     // (state >= 2 chars, postalCode >= 5). Firing mid-typing produces requests
     // the API rejects; mirror the same readiness gate used for shipping.
-    if (!isShippingAddressReadyForRates(formState) || items.length === 0) {
+    if (!isShippingAddressReadyForRates(form) || items.length === 0) {
       return
     }
 
@@ -471,11 +478,11 @@ function CheckoutForm() {
             price: item.price,
           })),
           shippingAddress: {
-            address1: formState.address1,
-            address2: formState.address2 || undefined,
-            city: formState.city,
-            state: formState.state,
-            postalCode: formState.postalCode,
+            address1: form.address1,
+            address2: form.address2 || undefined,
+            city: form.city,
+            state: form.state,
+            postalCode: form.postalCode,
             country: 'US',
           },
         }),
@@ -499,11 +506,12 @@ function CheckoutForm() {
 
   // Calculate shipping when address is complete
   const calculateShippingEstimate = async () => {
+    const form = latestFormRef.current
     // Only calculate once the address can actually pass server validation.
     // The calculate-shipping route requires state >= 2 chars and postalCode
     // >= 5 chars, so firing while the customer is still typing returns a 400
     // "Invalid shipping calculation request". Mirror those minimums here.
-    if (!isShippingAddressReadyForRates(formState) || items.length === 0) {
+    if (!isShippingAddressReadyForRates(form) || items.length === 0) {
       return
     }
 
@@ -525,11 +533,11 @@ function CheckoutForm() {
             quantity: item.quantity,
           })),
           shippingAddress: {
-            address1: formState.address1,
-            address2: formState.address2 || undefined,
-            city: formState.city,
-            state: formState.state,
-            postalCode: formState.postalCode,
+            address1: form.address1,
+            address2: form.address2 || undefined,
+            city: form.city,
+            state: form.state,
+            postalCode: form.postalCode,
             country: 'US',
           },
         }),
