@@ -46,20 +46,40 @@ describe('buildOrderWhere', () => {
     expect(where.salesChannel).toBe('FUNDRAISER')
   })
 
-  it('builds a bounded date range', () => {
-    const where = buildOrderWhere(
+  it('treats a picked end date as the whole day, not midnight', () => {
+    // Regression: "To: Feb 1" resolved to Feb 1 00:00 UTC and excluded everything ordered
+    // that day. Date pickers are inclusive of the day selected.
+    const range = buildOrderWhere(
       parseOrderFilters({ startDate: '2026-01-01', endDate: '2026-02-01' })
-    )
-    expect(where.createdAt).toEqual({
-      gte: new Date('2026-01-01'),
-      lte: new Date('2026-02-01'),
-    })
+    ).createdAt as { gte: Date; lte: Date }
+
+    const middayOnEndDate = new Date('2026-02-01T17:00:00Z')
+    expect(range.lte.getTime()).toBeGreaterThan(middayOnEndDate.getTime())
+    expect(range.gte.getTime()).toBeLessThan(range.lte.getTime())
+  })
+
+  it('anchors both bounds to the business day in Eastern time', () => {
+    const range = buildOrderWhere(
+      parseOrderFilters({ startDate: '2026-01-15', endDate: '2026-01-15' })
+    ).createdAt as { gte: Date; lte: Date }
+
+    // Jan 15 is EST (UTC-5): local midnight is 05:00Z, end of day is 04:59:59.999Z next day.
+    expect(range.gte.toISOString()).toBe('2026-01-15T05:00:00.000Z')
+    expect(range.lte.toISOString()).toBe('2026-01-16T04:59:59.999Z')
+  })
+
+  it('handles daylight saving on the summer side of the year', () => {
+    const range = buildOrderWhere(parseOrderFilters({ startDate: '2026-07-15' }))
+      .createdAt as { gte: Date }
+
+    // July is EDT (UTC-4), so local midnight is 04:00Z rather than 05:00Z.
+    expect(range.gte.toISOString()).toBe('2026-07-15T04:00:00.000Z')
   })
 
   it('builds a one-sided date range', () => {
-    expect(buildOrderWhere(parseOrderFilters({ startDate: '2026-01-01' })).createdAt).toEqual({
-      gte: new Date('2026-01-01'),
-    })
+    const where = buildOrderWhere(parseOrderFilters({ startDate: '2026-01-01' }))
+    expect((where.createdAt as { gte: Date }).gte).toBeInstanceOf(Date)
+    expect((where.createdAt as { lte?: Date }).lte).toBeUndefined()
   })
 
   it('builds a value range', () => {
@@ -123,6 +143,30 @@ describe('saved views', () => {
       parseOrderFilters({ view: 'payment-failed', paymentStatus: 'PAID' })
     )
     expect(where.paymentStatus).toBe('FAILED')
+  })
+
+  it('discards a leftover filter that the view constrains itself', () => {
+    // Regression: clicking Payment Failed then Needs Shipping left paymentStatus=FAILED in
+    // the URL. ANDed against the view's own paymentStatus IN (PAID, SUCCEEDED) that is
+    // unsatisfiable, so Needs Shipping rendered empty — the exact false negative the
+    // PAID_PAYMENT_STATUSES handling exists to prevent.
+    const where = buildOrderWhere(
+      parseOrderFilters({ view: 'needs-shipping', paymentStatus: 'FAILED' })
+    )
+
+    expect(where.paymentStatus).toBeUndefined()
+    expect((where.AND as Record<string, any>[])[0].paymentStatus.in).toEqual(
+      expect.arrayContaining(['PAID', 'SUCCEEDED'])
+    )
+  })
+
+  it('discards a leftover fulfillment selection that Local Pickup constrains', () => {
+    const where = buildOrderWhere(
+      parseOrderFilters({ view: 'local-pickup', fulfillmentStatus: 'FULFILLED' })
+    )
+
+    expect(where.fulfillmentStatus).toBeUndefined()
+    expect((where.AND as Record<string, any>[])[0].fulfillmentStatus.notIn).toContain('FULFILLED')
   })
 
   it('a view still respects orthogonal filters like search', () => {

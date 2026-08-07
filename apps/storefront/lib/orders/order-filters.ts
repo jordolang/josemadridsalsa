@@ -78,14 +78,59 @@ const optionalNumber = z
     return Number.isFinite(n) ? n : undefined
   })
 
-const optionalDate = z
-  .string()
-  .optional()
-  .transform((v) => {
-    if (!v) return undefined
-    const d = new Date(v)
-    return Number.isNaN(d.getTime()) ? undefined : d
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
+
+/** Milliseconds a zone is offset from UTC at a given instant. */
+function zoneOffsetMs(at: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
   })
+    .formatToParts(at)
+    .reduce<Record<string, number>>((acc, part) => {
+      if (part.type !== 'literal') acc[part.type] = Number(part.value)
+      return acc
+    }, {})
+
+  // formatToParts has second precision, so the milliseconds are carried over from the
+  // original instant — otherwise the offset absorbs them and end-of-day lands a second late.
+  const asUtc =
+    Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour % 24, parts.minute, parts.second) +
+    at.getUTCMilliseconds()
+
+  return asUtc - at.getTime()
+}
+
+/**
+ * Resolve a `YYYY-MM-DD` picker value to an instant at the given local wall-clock time in
+ * the business time zone. A date picker means the whole day: without this, "To: Feb 1"
+ * resolves to Feb 1 00:00 UTC and silently excludes everything ordered that day.
+ */
+function resolveBusinessDay(value: string, endOfDay: boolean): Date | undefined {
+  if (!DATE_ONLY.test(value)) {
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed
+  }
+
+  const [year, month, day] = value.split('-').map(Number)
+  const naive = endOfDay
+    ? Date.UTC(year, month - 1, day, 23, 59, 59, 999)
+    : Date.UTC(year, month - 1, day, 0, 0, 0, 0)
+
+  return new Date(naive - zoneOffsetMs(new Date(naive), BUSINESS_TIME_ZONE))
+}
+
+const optionalDate = (endOfDay: boolean) =>
+  z
+    .string()
+    .optional()
+    .transform((v) => (v ? resolveBusinessDay(v, endOfDay) : undefined))
 
 /**
  * Search params accepted by the orders list and export. Everything is optional and invalid
@@ -99,8 +144,8 @@ export const OrderFilterSchema = z.object({
   salesChannel: optionalEnum(SALES_CHANNELS),
   paymentStatus: optionalEnum(PAYMENT_STATUSES),
   shippingMethod: z.string().trim().optional(),
-  startDate: optionalDate,
-  endDate: optionalDate,
+  startDate: optionalDate(false),
+  endDate: optionalDate(true),
   minTotal: optionalNumber,
   maxTotal: optionalNumber,
   view: z.string().trim().optional(),
@@ -122,6 +167,14 @@ export interface SavedOrderView {
   filters: Partial<OrderFilters>
   /** Extra clauses a view needs that the flat filter shape cannot express. */
   where?: Prisma.OrderWhereInput
+  /**
+   * Filter keys this view's `where` already constrains. They are dropped from the user's
+   * selections before building, because a leftover param and the view's own clause would
+   * otherwise AND into a contradiction and return nothing — e.g. clicking Payment Failed
+   * and then Needs Shipping leaves `paymentStatus=FAILED` in the URL, which cannot be true
+   * at the same time as the view's `paymentStatus IN (PAID, SUCCEEDED)`.
+   */
+  owns?: (keyof OrderFilters)[]
 }
 
 /**
@@ -137,6 +190,7 @@ export const SAVED_ORDER_VIEWS: SavedOrderView[] = [
     label: 'Needs Shipping',
     description: 'Paid orders that are not fully fulfilled yet',
     filters: {},
+    owns: ['paymentStatus', 'fulfillmentStatus', 'status'],
     where: {
       paymentStatus: { in: PAID_PAYMENT_STATUSES },
       fulfillmentStatus: { notIn: SETTLED_FULFILLMENT_STATUSES },
@@ -166,6 +220,7 @@ export const SAVED_ORDER_VIEWS: SavedOrderView[] = [
     label: 'Local Pickup',
     description: 'In-store pickup orders still awaiting handoff',
     filters: { shippingMethod: LOCAL_PICKUP_SHIPPING_METHOD },
+    owns: ['fulfillmentStatus', 'shippingMethod'],
     where: { fulfillmentStatus: { notIn: SETTLED_FULFILLMENT_STATUSES } },
   },
 ]
@@ -183,7 +238,16 @@ export function getSavedView(key?: string): SavedOrderView | undefined {
  */
 export function buildOrderWhere(filters: OrderFilters): Prisma.OrderWhereInput {
   const view = getSavedView(filters.view)
-  const f: OrderFilters = view ? { ...filters, ...view.filters } : filters
+  let f: OrderFilters = filters
+
+  if (view) {
+    f = { ...filters }
+    // Drop the keys the view constrains itself, then let its own filters win.
+    for (const key of view.owns ?? []) {
+      delete (f as Record<string, unknown>)[key]
+    }
+    f = { ...f, ...view.filters }
+  }
 
   const where: Prisma.OrderWhereInput = {}
   const and: Prisma.OrderWhereInput[] = []

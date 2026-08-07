@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/select'
 import { FULFILLMENT_STATUS_LABELS } from '@/lib/orders/fulfillment'
 import { SALES_CHANNEL_LABELS } from '@/lib/orders/sales-channel'
-import { SAVED_ORDER_VIEWS } from '@/lib/orders/order-filters'
+import { hasActiveOrderFilters, parseOrderFilters, SAVED_ORDER_VIEWS } from '@/lib/orders/order-filters'
 
 const ORDER_STATUS_OPTIONS = [
   'PENDING',
@@ -85,7 +85,9 @@ export function OrderFilters() {
   }, [pathname, router, searchParams])
 
   const activeView = current('view')
-  const hasAny = FILTER_KEYS.some((k) => searchParams.get(k))
+  const hasAny = hasActiveOrderFilters(
+    parseOrderFilters(Object.fromEntries(searchParams.entries()))
+  )
 
   return (
     <Card>
