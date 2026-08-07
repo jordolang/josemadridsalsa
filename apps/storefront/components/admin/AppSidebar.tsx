@@ -28,6 +28,7 @@ import {
   ShoppingCart,
   Terminal,
   TrendingUp,
+  Undo2,
   Users,
 } from 'lucide-react'
 
@@ -75,6 +76,7 @@ const iconMap: Record<string, LucideIcon> = {
   Settings,
   Gift,
   TrendingUp,
+  Undo2,
   Lock,
   Mail,
   Terminal,

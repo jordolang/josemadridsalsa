@@ -580,6 +580,7 @@ model Order {
   payments                 Payment[]
   shippingLabels           ShippingLabel[]
   fulfillments             Fulfillment[]
+  returnRequests           ReturnRequest[]
 
   @@index([userId])
   @@index([participantId])
@@ -627,6 +628,56 @@ model FulfillmentItem {
   @@map("fulfillment_items")
 }
 
+/// A customer's request to send goods back. Only quantities that actually shipped can be
+/// returned, so this hangs off the fulfillment accounting rather than the raw order lines.
+model ReturnRequest {
+  id            String            @id @default(cuid())
+  rmaNumber     String            @unique
+  orderId       String
+  status        ReturnStatus      @default(REQUESTED)
+  reason        ReturnReason
+  resolution    ReturnResolution  @default(REFUND)
+  customerNote  String?
+  adminNote     String?
+  /// Withheld from the refund. Stored per-request because it is a judgement call.
+  restockingFee Decimal?          @db.Decimal(10, 2)
+  /// Set once money is actually sent back, linking to the refund the existing admin refund
+  /// path created — returns never call the payment provider themselves.
+  refundId      String?           @unique
+  requestedById String?
+  approvedById  String?
+  approvedAt    DateTime?
+  receivedAt    DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  order         Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  refund        Refund?           @relation(fields: [refundId], references: [id])
+  items         ReturnRequestItem[]
+
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("return_requests")
+}
+
+model ReturnRequestItem {
+  id              String               @id @default(cuid())
+  returnRequestId String
+  orderItemId     String
+  quantity        Int
+  /// Recorded at inspection; decides whether the units go back on the shelf.
+  condition       ReturnItemCondition?
+  /// Whether stock has been put back for this line, so a re-run cannot double-restock.
+  restocked       Boolean              @default(false)
+  returnRequest   ReturnRequest        @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
+  orderItem       OrderItem            @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@unique([returnRequestId, orderItemId])
+  @@index([orderItemId])
+  @@map("return_request_items")
+}
+
 /// Append-only log of business facts (`order.created`, `payment.completed`, …).
 /// Consumers subscribe to these rather than being hand-wired at each call site;
 /// it also backs per-entity activity timelines. Write via `lib/domain-events/emit.ts`.
@@ -662,6 +713,7 @@ model OrderItem {
   order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product      Product  @relation(fields: [productId], references: [id])
   fulfillmentItems FulfillmentItem[]
+  returnItems  ReturnRequestItem[]
 
   @@index([orderId])
   @@index([productId])
@@ -714,6 +766,7 @@ model Refund {
   updatedAt      DateTime     @updatedAt
   processedAt    DateTime?
   payment        Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  returnRequest  ReturnRequest?
 
   @@index([paymentId])
   @@index([provider])
@@ -3236,6 +3289,40 @@ enum FulfillmentStatus {
   FULFILLED
   DELIVERED
   RETURNED
+}
+
+/// Lifecycle of a return request. Terminal states are REJECTED, COMPLETED and CANCELLED.
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  RECEIVED
+  COMPLETED
+  CANCELLED
+}
+
+enum ReturnReason {
+  DAMAGED
+  WRONG_ITEM
+  NOT_AS_DESCRIBED
+  ARRIVED_LATE
+  CHANGED_MIND
+  QUALITY_ISSUE
+  OTHER
+}
+
+enum ReturnResolution {
+  REFUND
+  EXCHANGE
+  STORE_CREDIT
+}
+
+/// Condition a returned unit arrived in, recorded at inspection. Only RESELLABLE units go
+/// back into sellable stock; DAMAGED is tracked so the loss is visible.
+enum ReturnItemCondition {
+  RESELLABLE
+  DAMAGED
+  DISCARDED
 }
 
 /// Where an order came from. Replaces inferring origin from the combination of

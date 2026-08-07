@@ -27,6 +27,12 @@ export const adminNavigation: NavItem[] = [
     permission: 'orders:read',
   },
   {
+    label: 'Returns',
+    href: '/admin/returns',
+    icon: 'Undo2',
+    permission: 'orders:read',
+  },
+  {
     label: 'Gift Certificates',
     href: '/admin/gift-certificates',
     icon: 'Gift',
