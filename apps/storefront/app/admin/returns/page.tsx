@@ -84,7 +84,14 @@ export default async function ReturnsPage({
                 <TableBody>
                   {returns.map((returnRequest) => (
                     <TableRow key={returnRequest.id}>
-                      <TableCell className="font-medium">{returnRequest.rmaNumber}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link
+                          href={`/admin/returns/${returnRequest.id}`}
+                          className="text-primary hover:underline"
+                        >
+                          {returnRequest.rmaNumber}
+                        </Link>
+                      </TableCell>
                       <TableCell>
                         <Link
                           href={`/admin/orders/${returnRequest.order.id}`}
