@@ -14,6 +14,14 @@ model User {
   email                   String                        @unique
   name                    String?
   password                String?
+  /// TOTP shared secret, encrypted at rest with the credential vault key (lib/crypto.ts).
+  /// Never returned to the client once enrolment completes.
+  twoFactorSecret         String?
+  twoFactorSecretIv       String?
+  /// Non-null once the user has proved they can generate a valid code. A secret without
+  /// this is a half-finished enrolment and must not gate sign-in.
+  twoFactorEnabledAt      DateTime?
+  twoFactorRecoveryCodes  TwoFactorRecoveryCode[]
   role                    UserRole                      @default(CUSTOMER)
   isEmailVerified         Boolean                       @default(false)
   phone                   String?
@@ -2201,6 +2209,21 @@ model EngagementRequest {
   @@index([type, status])
   @@index([createdAt])
   @@map("engagement_requests")
+}
+
+/// Single-use fallback codes for when the authenticator device is lost. Only the hash is
+/// stored, so a database leak does not hand over working second factors.
+model TwoFactorRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, codeHash])
+  @@index([userId])
+  @@map("two_factor_recovery_codes")
 }
 
 model PasswordResetToken {

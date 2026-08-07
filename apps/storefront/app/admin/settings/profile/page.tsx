@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { TwoFactorSettings } from '@/components/admin/TwoFactorSettings'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -234,6 +235,8 @@ export default function AdminProfilePage() {
           Manage your account information and security settings.
         </p>
       </div>
+
+      <TwoFactorSettings />
 
       {/* Account overview card */}
       <Card>
