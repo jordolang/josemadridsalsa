@@ -135,8 +135,8 @@ precedence is written down as a business decision rather than left to fall out o
 order: explicit → fundraiser → POS → marketplace → import → website. The same precedence
 appears in the migration backfill and in the helper; **change both together**.
 
-Still to do: expose it as an admin filter and a reporting dimension (part of the Orders
-filter work in Phase 2).
+**Now exposed** as an admin filter and a CSV export column (Phase 2). Still to do: use it as
+a reporting dimension in the analytics views.
 
 ## Area-by-area, in your navigation order
 
@@ -377,7 +377,7 @@ preferences beyond order events.
 | Workflow automation | **Partial** | Two half-engines already exist: `OrderNotificationRule`/`OrderNotificationEvent` (order-scoped trigger→action) and `EmailAutomation`/`AutomationStep`/`AutomationTrigger`/`AutomationEnrollment` (full trigger→condition→action). The job is to generalise and unify them onto #2, not build from scratch. | **5–7 d** |
 | Global search | **Missing** | `components/ui/command.tsx` (cmdk) is installed but unused for search. Cross-entity search over orders/customers/SKUs/tracking/coupons needs a unified index. | **3–5 d** |
 | Bulk operations | **Partial** | Orders are genuinely done — select-all, bulk status change, export selected (`OrdersTableClient.tsx:130-180`) — plus endpoints for events, leads, mailing lists. Absent for products, inventory, customers, shipments. | **3–4 d** |
-| Activity timelines | **Missing** | `Order.modificationHistory` is untyped JSON. Falls out of #2 nearly free. | **1–2 d** after #2 |
+| Activity timelines | **Done for orders** | `buildOrderTimeline()` merges recorded `DomainEvent` rows with the timestamps on the order/payments/refunds, so orders predating the event log still show a history; derived entries are labelled `reconstructed`. Other entities still to do. | shipped |
 | Notification centre | **Partial** | `Notification` model + `NotificationType`, but all 5 values are order/system (`ORDER_NEW`, `ORDER_STATUS_CHANGE`, `ORDER_HIGH_VALUE`, `ORDER_MODIFIED`, `SYSTEM`). No inventory, payment-failure, integration-failure, or dispute types. No in-admin centre UI. | **3–4 d** |
 | Idempotency | **Partial** | Genuinely handled on the money paths — `WebhookEvent` dedup plus explicit keys in `webhooks/stripe`, `checkout/complete`, `checkout/square/process-payment`, `checkout/paypal/capture-order`, `pos/create-terminal-checkout`, `lib/orders/redeem-codes.ts`, `lib/email/template-sender.ts`. Not applied to inventory adjustments or shipment creation. | **1–2 d** |
 | Security baseline | **Mostly present** | RBAC, encrypted credentials (`lib/crypto.ts`), signed webhook verification, rate limiting (`lib/rate-limit`, `rate-limiter.ts`), Zod validation, audit log, API scopes. Gap is 2FA + session management. | see above |
@@ -398,9 +398,10 @@ complete.** Most later items get cheaper from here.
 **Before this reaches production:** the migration has been applied to dev Neon only. It must
 run against Supabase, and the `directUrl`/env-precedence trap noted below applies.
 
-**Phase 2 — Operational core: 23–33 days.**
-Returns/RMA 5–7 · notification centre 3–4 · global search 3–5 · bulk operations 3–4 ·
-operational dashboard split 3–4 · order filters + saved views 3–4 · timelines 1–2 · 2FA 2–3.
+**Phase 2 — Operational core: 23–33 days. In progress.**
+Order filters + saved views 3–4 ✅ · timelines 1–2 ✅ · returns/RMA 5–7 ⬜ · notification
+centre 3–4 ⬜ · global search 3–5 ⬜ · bulk operations 3–4 ⬜ · operational dashboard split
+3–4 ⬜ · 2FA 2–3 ⬜. Remaining: **19–27 days**.
 
 **Phase 3 — Commercial depth: 35–48 days.**
 Workflow automation 5–7 · purchase orders + receiving 4–6 · profit/margin 3–4 · cohort +
