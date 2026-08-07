@@ -6,6 +6,8 @@ import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
 import {
   buildFulfillmentUpdate,
+  fulfillEntireOrder,
+  isDerivedTransition,
   recordFulfillmentEvent,
   transitionForOrderStatus,
 } from '@/lib/orders/fulfillment'
@@ -74,6 +76,15 @@ export async function POST(
       where: { id },
       data: updateData,
     })
+
+    // A derived transition ("shipped") means every item shipped; the order enum then comes
+    // from the items rather than being asserted alongside them.
+    if (transition && isDerivedTransition(transition)) {
+      await fulfillEntireOrder(prisma, id, {
+        via: 'admin:update-status',
+        createdById: (session.user as { id: string }).id,
+      })
+    }
 
     if (transition) {
       await recordFulfillmentEvent({

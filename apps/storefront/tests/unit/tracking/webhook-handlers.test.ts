@@ -13,6 +13,15 @@ vi.mock('@/lib/prisma', () => ({
     order: {
       update: vi.fn(),
     },
+    // An in_transit event now also writes the item fulfillment quantities and records the
+    // shipment, so the mock has to cover those too.
+    orderItem: {
+      findMany: vi.fn().mockResolvedValue([]),
+      update: vi.fn(),
+    },
+    fulfillment: {
+      create: vi.fn(),
+    },
   },
 }))
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { buildFulfillmentUpdate, recordFulfillmentEvent } from '@/lib/orders/fulfillment'
+import { buildFulfillmentUpdate, fulfillEntireOrder, recordFulfillmentEvent } from '@/lib/orders/fulfillment'
 import {
   mapShopifyFinancialStatusToPrisma,
   mapShopifyFulfillmentStatusToPrisma,
@@ -146,6 +146,8 @@ async function handleFulfillmentPayload(payload: ShopifyFulfillmentPayload) {
   await prisma.order.update({ where: { id: order.id }, data: updateData })
 
   if (payload.status !== 'cancelled') {
+    await fulfillEntireOrder(prisma, order.id, { via: 'webhook:shopify' })
+
     await recordFulfillmentEvent({
       orderId: order.id,
       transition: payload.status === 'delivered' ? 'delivered' : 'shipped',

@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
 import { createOrderNotification } from '@/lib/notifications/order-notifications'
 import {
+  fulfillEntireOrder,
   fulfillmentStatusFor,
   isTerminalOrderStatus,
   recordFulfillmentEvent,
@@ -121,10 +122,27 @@ export async function PATCH(request: NextRequest) {
     })
 
     if (transition && affected.length > 0) {
-      await prisma.order.updateMany({
-        where: { id: { in: affected.map((o) => o.id) } },
-        data: { fulfillmentStatus: fulfillmentStatusFor(transition) },
-      })
+      const overlay = fulfillmentStatusFor(transition)
+
+      if (overlay) {
+        // DELIVERED and RETURNED are order-level overlays; they say what happened after
+        // shipping and cannot be inferred from item quantities.
+        await prisma.order.updateMany({
+          where: { id: { in: affected.map((o) => o.id) } },
+          data: { fulfillmentStatus: overlay },
+        })
+      } else {
+        // "Mark shipped" means every item shipped. Writing the item quantities and deriving
+        // keeps the order enum and its items from disagreeing about how much went out.
+        // Sequential rather than parallel: the batch is capped at 100 orders and this avoids
+        // opening a connection per order against the pooler.
+        for (const order of affected) {
+          await fulfillEntireOrder(prisma, order.id, {
+            via: 'admin:bulk-status',
+            createdById: userId,
+          })
+        }
+      }
     }
 
     if (transition) {

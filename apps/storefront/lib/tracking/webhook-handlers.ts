@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma'
 import { sendOrderShippedEmail, sendOrderDeliveredEmail } from '@/lib/email/automation'
 import {
   buildFulfillmentUpdate,
+  fulfillEntireOrder,
+  isDerivedTransition,
   recordFulfillmentEvent,
   type FulfillmentTransition,
 } from '@/lib/orders/fulfillment'
@@ -116,6 +118,11 @@ export async function handleTrackerUpdated(
   })
 
   if (transition) {
+    // in_transit means the carrier has the goods, so every item on the order has shipped.
+    if (isDerivedTransition(transition)) {
+      await fulfillEntireOrder(prisma, shippingLabel.orderId, { via: 'webhook:easypost' })
+    }
+
     await recordFulfillmentEvent({
       orderId: shippingLabel.orderId,
       transition,

@@ -35,6 +35,7 @@ import type { PaymentStatus } from '@prisma/client'
 import { isPaid } from '@/lib/payments/status'
 import { buildOrderTimeline } from '@/lib/orders/order-timeline'
 import { OrderTimeline } from '@/components/admin/OrderTimeline'
+import { FulfillItemsDialog } from '@/components/admin/FulfillItemsDialog'
 
 async function getOrder(id: string) {
   const order = await prisma.order.findUnique({
@@ -290,8 +291,22 @@ export default async function OrderDetailPage({
 
           {/* Order Items */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle>Order Items</CardTitle>
+              {canWrite &&
+                order.status !== 'CANCELLED' &&
+                order.status !== 'REFUNDED' && (
+                  <FulfillItemsDialog
+                    orderId={order.id}
+                    items={order.items.map((item) => ({
+                      id: item.id,
+                      productName: item.productName,
+                      productSku: item.productSku,
+                      quantity: item.quantity,
+                      quantityFulfilled: item.quantityFulfilled,
+                    }))}
+                  />
+                )}
             </CardHeader>
             <CardContent className="space-y-4">
               {order.items.map((item) => (
@@ -315,6 +330,11 @@ export default async function OrderDetailPage({
                     <p className="text-sm text-muted-foreground">
                       Quantity: {item.quantity} × $
                       {Number(item.unitPrice).toFixed(2)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.quantityFulfilled >= item.quantity
+                        ? 'Fulfilled'
+                        : `${item.quantityFulfilled} of ${item.quantity} fulfilled`}
                     </p>
                   </div>
                   <div className="text-right">

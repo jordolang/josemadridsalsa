@@ -5,7 +5,7 @@ import { hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
-import { buildFulfillmentUpdate, recordFulfillmentEvent } from '@/lib/orders/fulfillment'
+import { buildFulfillmentUpdate, fulfillEntireOrder, recordFulfillmentEvent } from '@/lib/orders/fulfillment'
 import { getShippingClient } from '@/lib/shipping-api'
 import { ALLOWED_CARRIERS } from '@/lib/shipping-carriers'
 import { z } from 'zod'
@@ -200,6 +200,8 @@ export async function POST(
     })
 
     if (advancesFulfillment) {
+      await fulfillEntireOrder(prisma, id, { via: 'admin:shipping-label', createdById: userId })
+
       await recordFulfillmentEvent({
         orderId: id,
         transition: 'shipped',

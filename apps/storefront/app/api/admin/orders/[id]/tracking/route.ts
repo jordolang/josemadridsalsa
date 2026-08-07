@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
-import { buildFulfillmentUpdate, recordFulfillmentEvent } from '@/lib/orders/fulfillment'
+import { buildFulfillmentUpdate, fulfillEntireOrder, recordFulfillmentEvent } from '@/lib/orders/fulfillment'
 import { z } from 'zod'
 
 const TrackingSchema = z.object({
@@ -66,6 +66,11 @@ export async function POST(
     })
 
     if (shouldAdvance) {
+      await fulfillEntireOrder(prisma, id, {
+        via: 'admin:tracking',
+        createdById: (session.user as any).id,
+      })
+
       await recordFulfillmentEvent({
         orderId: id,
         transition: 'shipped',
