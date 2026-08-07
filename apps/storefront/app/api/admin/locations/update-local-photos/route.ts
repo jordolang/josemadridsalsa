@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requirePermission } from '@/lib/rbac'
+import { logAudit } from '@/lib/audit'
 
 export const runtime = 'nodejs'
 
@@ -70,6 +72,15 @@ const photoMappings = [
 ]
 
 export async function POST() {
+  // Previously unauthenticated — see the note in ../fetch-photos/route.ts. This one writes
+  // photo URLs onto matched locations, so anyone could have rewritten them.
+  let actor: Awaited<ReturnType<typeof requirePermission>>
+  try {
+    actor = await requirePermission('content:write')
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   let updated = 0
   let skipped = 0
   const results: string[] = []
@@ -114,6 +125,13 @@ export async function POST() {
       results.push(`✗ NOT FOUND: ${mapping.businessName}`)
     }
   }
+
+  await logAudit({
+    userId: actor.id,
+    action: 'update',
+    entityType: 'retail_location',
+    changes: { updated, skipped, total: photoMappings.length },
+  })
 
   return NextResponse.json({
     success: true,

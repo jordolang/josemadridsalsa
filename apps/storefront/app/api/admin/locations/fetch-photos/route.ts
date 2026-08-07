@@ -1,10 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requirePermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import { findPlaceByNameAddress, getBestPhotoUrlForPlace, getCompanyLogoFromWebsite } from '@/lib/google-places'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
+  // This route was previously unauthenticated: an anonymous POST could enumerate every
+  // active location, spend billable Google Places quota, and write photo URLs back to the
+  // database. It sits under /api/admin but nothing enforced that — the proxy only handles
+  // fundraising redirects.
+  let actor: Awaited<ReturnType<typeof requirePermission>>
+  try {
+    actor = await requirePermission('content:write')
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   const { force } = await req.json().catch(() => ({ force: false }))
 
@@ -95,6 +108,16 @@ export async function POST(req: NextRequest) {
       })
     }
   }
+
+  await logAuditWithRequest(
+    {
+      userId: actor.id,
+      action: 'update',
+      entityType: 'retail_location',
+      changes: { processed, updated, missing: missing.length, force: !!force },
+    },
+    req
+  )
 
   return NextResponse.json({
     processed,
