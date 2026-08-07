@@ -2,27 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { parseQuery } from '@/lib/api'
+import { buildOrderWhere, parseOrderFilters } from '@/lib/orders/order-filters'
 
 export async function GET(request: NextRequest) {
   await requirePermission('orders:export')
 
-  const query = parseQuery(request)
-  const where: any = {}
-
-  // Apply same filters as list
-  if (query.status && query.status !== 'all') {
-    where.status = query.status
-  }
-
-  if (query.startDate || query.endDate) {
-    where.createdAt = {}
-    if (query.startDate) {
-      where.createdAt.gte = new Date(query.startDate)
-    }
-    if (query.endDate) {
-      where.createdAt.lte = new Date(query.endDate)
-    }
-  }
+  // Shares the orders list's filter module, so exporting a filtered view returns exactly the
+  // rows on screen. Previously this understood only `status` and a date range, which meant
+  // any newer filter silently exported everything.
+  const query = parseQuery(request) as Record<string, string | undefined>
+  const where = buildOrderWhere(parseOrderFilters(query))
 
   const orders = await prisma.order.findMany({
     where,
@@ -52,6 +41,8 @@ export async function GET(request: NextRequest) {
     'Customer Name',
     'Customer Email',
     'Status',
+    'Fulfillment Status',
+    'Sales Channel',
     'Payment Status',
     'Subtotal',
     'Shipping',
@@ -72,6 +63,8 @@ export async function GET(request: NextRequest) {
       order.user?.name || order.guestEmail || 'Guest',
       order.user?.email || order.guestEmail || '',
       order.status,
+      order.fulfillmentStatus,
+      order.salesChannel,
       order.paymentStatus,
       order.subtotal.toString(),
       order.shippingCost.toString(),
