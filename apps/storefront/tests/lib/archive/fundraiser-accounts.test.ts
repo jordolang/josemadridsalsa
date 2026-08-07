@@ -76,6 +76,25 @@ describe('canonicalizeOrganizationName', () => {
   it('never strips a name down to nothing', () => {
     expect(canonicalizeOrganizationName('2024')).toBe('2024')
   })
+
+  it('drops order-form boilerplate taken from a filename', () => {
+    expect(
+      canonicalizeOrganizationName('Southern Local - 2025 JMS Fundraiser Order Form 25 Flavor')
+    ).toBe('Southern Local')
+  })
+
+  it('strips a duplicate-download suffix', () => {
+    expect(canonicalizeOrganizationName('Maysville Key Club (2)')).toBe(
+      'Maysville Key Club'
+    )
+  })
+
+  it('leaves a name that is nothing but boilerplate for the artifact check', () => {
+    // Stripping to empty would lose the evidence that this is not an org, so
+    // the raw value survives canonicalization and is rejected downstream.
+    const name = 'JMS Fundraiser Order Form 25 Flavor 2026 (1)'
+    expect(isLikelyOrganizationName(name)).toBe(false)
+  })
 })
 
 describe('isLikelyOrganizationName', () => {

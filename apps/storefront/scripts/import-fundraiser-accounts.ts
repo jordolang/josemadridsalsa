@@ -149,12 +149,15 @@ async function main(): Promise<void> {
 
   const existing = await prisma.customer.findMany({
     where: { email: { in: importable.map((a) => a.email as string) } },
-    select: { email: true },
+    select: { email: true, sourceName: true },
   })
-  const existingEmails = new Set(existing.map((c) => c.email.toLowerCase()))
+  const existingByEmail = new Map(
+    existing.map((c) => [c.email.toLowerCase(), c])
+  )
 
   let created = 0
-  let updated = 0
+  let filled = 0
+  let leftAlone = 0
 
   for (const account of importable) {
     const email = account.email as string
@@ -163,6 +166,17 @@ async function main(): Promise<void> {
     } archived campaign(s)${
       account.years.length ? ` (${account.years.join(', ')})` : ''
     }.`
+
+    const stored = existingByEmail.get(email)
+
+    // A stored organization is the curated value — a hand edit, or a richer
+    // name from an earlier import ("American Heritage Girls Troop OH0148" vs
+    // the archive's "AHG OH0148"). Only fill it when it is blank.
+    const hasStoredOrg = Boolean(stored?.sourceName?.trim())
+    if (stored && hasStoredOrg) {
+      leftAlone++
+      continue
+    }
 
     await prisma.customer.upsert({
       where: { email },
@@ -182,7 +196,7 @@ async function main(): Promise<void> {
         // Fill blanks only; never clobber a stored value.
         firstName: account.firstName ?? undefined,
         lastName: account.lastName ?? undefined,
-        // Designation and organization are authoritative from the archive.
+        // Designation is authoritative from the archive.
         accountType: 'FUNDRAISING',
         sourceName: account.organizationName,
         importSource: 'document-archive-fundraisers',
@@ -191,14 +205,16 @@ async function main(): Promise<void> {
       },
     })
 
-    if (existingEmails.has(email)) updated++
+    if (stored) filled++
     else created++
   }
 
-  console.log(`\nupserted ${importable.length} fundraiser accounts`)
-  console.log(`  created: ${created}   updated existing: ${updated}`)
+  console.log(`\n${importable.length} addressed fundraiser organizations`)
+  console.log(`  created new customers        : ${created}`)
+  console.log(`  filled a blank organization  : ${filled}`)
+  console.log(`  left an existing name intact : ${leftAlone}`)
   console.log(
-    `  skipped (no contact address): ${unaddressed.length} organizations`
+    `  skipped (no contact address) : ${unaddressed.length} organizations`
   )
 }
 

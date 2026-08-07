@@ -74,8 +74,23 @@ export function repairMojibake(value: string): string {
   }
 }
 
+/**
+ * Order-form boilerplate that leaks in when a name was taken from the filename
+ * rather than an `Organization:` cell ("Southern Local - 2025 JMS Fundraiser
+ * Order Form 25 Flavor"). Everything from the boilerplate onward is dropped.
+ */
+const FORM_BOILERPLATE = [
+  /\bJMS\s+Fundraiser\s+Order\s+Form\b.*$/i,
+  /\bFundraiser\s+Order\s+Form\b.*$/i,
+  /\b\d+\s*Flavor\b.*$/i,
+]
+
 /** Trailing year / season / campaign-period noise on an organization name. */
 const TRAILING_NOISE = [
+  // "(1)", "(2)" — duplicate-download suffixes
+  /\s*\(\d+\)$/,
+  // Separators left dangling once a suffix is removed
+  /\s*[-–—,:]\s*$/,
   // "2024", "'21", "Fall '21", "Spring 2023", "Winter 2023", "Fall 2024"
   /\s+(?:spring|summer|fall|autumn|winter)\s*'?\d{2,4}$/i,
   /\s+'\d{2}$/,
@@ -93,6 +108,8 @@ const ARTIFACT_PATTERNS = [
   /^\d{4}\s+online\s+fr\b/i,
   /^(?:tracking|order\s*form)\b/i,
   /^untitled/i,
+  // Filename-derived names that are entirely order-form boilerplate.
+  /^(?:jms\s+)?fundraiser\s+order\s+form\b/i,
 ]
 
 /**
@@ -102,6 +119,14 @@ const ARTIFACT_PATTERNS = [
  */
 export function canonicalizeOrganizationName(raw: string): string {
   let name = repairMojibake(raw).replace(/\s+/g, ' ').trim()
+
+  // Drop order-form boilerplate first — it hides the trailing year behind it.
+  for (const pattern of FORM_BOILERPLATE) {
+    const next = name.replace(pattern, '').trim()
+    // Only accept the strip if a plausible name survives; otherwise the whole
+    // value was boilerplate and should fail isLikelyOrganizationName instead.
+    if (next !== name && next.length >= 3) name = next
+  }
 
   // Strip repeatedly: "BGSU Equestrian Team Fall '21" sheds season then year.
   let changed = true
@@ -128,7 +153,15 @@ export function isLikelyOrganizationName(raw: string): boolean {
   const name = canonicalizeOrganizationName(raw)
   if (name.length < 3) return false
   if (!/[a-z]/i.test(name)) return false
-  return !ARTIFACT_PATTERNS.some((pattern) => pattern.test(name))
+
+  // Test the raw value as well as the canonical one. Stripping boilerplate can
+  // leave a misleading fragment — "JMS Fundraiser Order Form 25 Flavor" sheds
+  // down to "JMS", which looks like an acronym but is the company's own name
+  // off the form template.
+  const original = repairMojibake(raw).replace(/\s+/g, ' ').trim()
+  return !ARTIFACT_PATTERNS.some(
+    (pattern) => pattern.test(name) || pattern.test(original)
+  )
 }
 
 /** Split "Jane Doe" into first/last; returns nulls when unusable. */
