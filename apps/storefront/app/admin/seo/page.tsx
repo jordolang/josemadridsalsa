@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { CheckCircle, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -90,6 +91,13 @@ export default function SEOPage() {
           <h1 className="text-3xl font-bold">SEO Manager</h1>
           <p className="text-muted-foreground">
             Global settings, meta templates, structured data, sitemap, analysis, and Search Console
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Title, description and social image for an individual page are set on that page under{' '}
+            <Link href="/admin/content/pages" className="underline underline-offset-4">
+              Content → Pages
+            </Link>
+            . The templates here apply wherever a page leaves them blank.
           </p>
         </div>
         {CONFIG_TABS.includes(activeTab) && (

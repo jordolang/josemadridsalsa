@@ -17,7 +17,7 @@ type DbProduct = Awaited<ReturnType<typeof getProducts>>[number];
  * shape that the client `ProductCard` expects. Decimal prices are already
  * coerced to numbers inside `getProducts`, so the cast here is structural.
  */
-function toCardProduct(row: DbProduct): Product {
+export function toCardProduct(row: DbProduct): Product {
   return {
     id: row.id,
     name: row.name,

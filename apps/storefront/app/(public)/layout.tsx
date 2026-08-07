@@ -13,6 +13,8 @@ import { ComparisonURLHandler } from '@/components/store/comparison-url-handler'
 import { NewsletterPopup } from '@/components/store/newsletter-popup'
 import { EventTicker } from '@/components/store/event-ticker'
 import { getCalendarEvents } from '@/lib/server/google-data'
+import { getHeaderGroups } from '@/lib/cms/navigation'
+import { getFooterOverrides } from '@/lib/cms/footer'
 
 // Force all public routes dynamic: prevents build failures from prerendering
 // pages that call Prisma (the database) at render time.
@@ -27,7 +29,11 @@ export default async function PublicLayout({
   // ScheduleMap, and any other component that needs it on this page tree.
   // Next.js deduplicates identical fetch() calls within the same render, so
   // even if child pages also call getCalendarEvents(), only one HTTP request fires.
-  const calendarEvents = await getCalendarEvents(20)
+  const [calendarEvents, headerGroups, footerOverrides] = await Promise.all([
+    getCalendarEvents(20),
+    getHeaderGroups(),
+    getFooterOverrides(),
+  ])
   const enableVercelAnalytics = process.env.NEXT_PUBLIC_VERCEL_ANALYTICS_ENABLED === 'true'
 
   return (
@@ -39,12 +45,12 @@ export default async function PublicLayout({
       </Suspense>
       <div className="flex min-h-screen flex-col">
         <AnnouncementBar />
-        <Navigation />
+        <Navigation groups={headerGroups} />
         <EventTicker initialEvents={calendarEvents} />
         <div className="flex-1">
           {children}
         </div>
-        <Footer />
+        <Footer overrides={footerOverrides} />
       </div>
       <CartSidebar />
       <CompareFloatingButton />

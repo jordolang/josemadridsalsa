@@ -114,9 +114,8 @@ const imageTextSchema = z.object({
 const productGridSchema = z.object({
   heading: z.string().default(''),
   subheading: z.string().default(''),
-  source: z.enum(['featured', 'category', 'manual']).default('featured'),
+  source: z.enum(['featured', 'category']).default('featured'),
   categorySlug: z.string().default(''),
-  productIds: z.array(z.string()).default([]),
   limit: z.number().int().min(1).max(24).default(8),
 })
 
@@ -266,7 +265,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
   {
     type: 'productGrid',
     label: 'Product grid',
-    description: 'A grid of products, either featured, from a category, or hand-picked.',
+    description: 'A grid of products, either featured or drawn from a category.',
     schema: productGridSchema,
     defaults: productGridSchema.parse({}),
     fields: [
@@ -279,7 +278,6 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
         options: [
           { value: 'featured', label: 'Featured products' },
           { value: 'category', label: 'From a category' },
-          { value: 'manual', label: 'Hand-picked' },
         ],
       },
       {

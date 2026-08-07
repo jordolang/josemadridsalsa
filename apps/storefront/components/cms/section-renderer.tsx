@@ -7,7 +7,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import { FeaturedProductsSection } from '@/components/store/featured-products-section'
+import {
+  FeaturedProductsSection,
+  toCardProduct,
+} from '@/components/store/featured-products-section'
+import { ProductCard } from '@/components/store/product-card'
+import { getProducts } from '@/lib/db/products'
 import { FeaturedHeatIndexSection } from '@/components/store/featured-heat-index-section'
 import { FooterNewsletterSignup } from '@/components/store/footer-newsletter-signup'
 import { getFaqs } from '@/lib/cms/queries'
@@ -56,7 +61,7 @@ function RichBody({ html, className }: { html: string; className?: string }) {
   return (
     <div
       className={`prose prose-neutral max-w-none dark:prose-invert ${className ?? ''}`}
-      // eslint-disable-next-line react/no-danger -- sanitised by sanitizeCmsHtml
+      // Sanitised against an allowlist by sanitizeCmsHtml
       dangerouslySetInnerHTML={{ __html: sanitizeCmsHtml(html) }}
     />
   )
@@ -113,16 +118,37 @@ async function FaqBlock({ data }: { data: Record<string, unknown> }) {
 async function ProductGridBlock({ data }: { data: Record<string, unknown> }) {
   const heading = str(data, 'heading')
   const subheading = str(data, 'subheading')
+  const limit = num(data, 'limit', 8)
+  const category = str(data, 'categorySlug')
+  const useCategory = str(data, 'source') === 'category' && category !== ''
 
-  // `featured` reuses the storefront's existing section so a landing page and
-  // the homepage show products identically.
+  const products = useCategory
+    ? (await getProducts({ category, inStock: true, take: limit })).map(toCardProduct)
+    : []
+
   return (
     <Section>
       <Container>
         {heading && <h2 className="mb-2 text-3xl font-bold">{heading}</h2>}
         {subheading && <p className="mb-6 text-muted-foreground">{subheading}</p>}
       </Container>
-      <FeaturedProductsSection limit={num(data, 'limit', 8)} />
+      {useCategory ? (
+        <Container>
+          {products.length === 0 ? (
+            <p className="text-muted-foreground">No products found in this category.</p>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
+        </Container>
+      ) : (
+        // Reuses the storefront's own featured section so a landing page and
+        // the homepage present featured products identically.
+        <FeaturedProductsSection limit={limit} />
+      )}
     </Section>
   )
 }

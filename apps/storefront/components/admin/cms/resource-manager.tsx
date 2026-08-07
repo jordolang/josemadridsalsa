@@ -140,16 +140,19 @@ export function ResourceManager({
     setForm(defaults)
   }
 
-  function openEdit(row: ResourceRecord) {
-    setEditing(row)
-    const next: ResourceRecord = { ...defaults }
-    for (const field of fields) {
-      const value = row[field.name]
-      next[field.name] =
-        field.type === 'datetime' ? toLocalInput(value) : (value ?? defaults[field.name])
-    }
-    setForm(next)
-  }
+  const openEdit = useCallback(
+    (row: ResourceRecord) => {
+      setEditing(row)
+      const next: ResourceRecord = { ...defaults }
+      for (const field of fields) {
+        const value = row[field.name]
+        next[field.name] =
+          field.type === 'datetime' ? toLocalInput(value) : (value ?? defaults[field.name])
+      }
+      setForm(next)
+    },
+    [defaults, fields]
+  )
 
   const [showDialog, setShowDialog] = useState(false)
 
@@ -260,7 +263,7 @@ export function ResourceManager({
         </TableCell>
       </TableRow>
     ))
-  }, [loading, rows, columns, emptyMessage])
+  }, [loading, rows, columns, emptyMessage, openEdit])
 
   return (
     <div className="space-y-6">

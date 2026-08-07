@@ -66,14 +66,60 @@ const legalLinks = [
   { text: 'Accessibility', href: '/accessibility' },
 ]
 
-const contactInfo = [
-  { icon: Mail, text: supportEmail, href: `mailto:${supportEmail}` },
-  { icon: Phone, text: supportPhone, href: `tel:${supportPhone.replace(/[^+\d]/g, '')}` },
-  { icon: MapPin, text: headquartersLocation, isAddress: true },
-]
+export interface FooterColumnData {
+  title: string
+  links: Array<{ text: string; href: string }>
+}
 
-export function Footer() {
+export interface FooterOverrides {
+  /** Replaces the company blurb under the logo. */
+  description?: string
+  /** Replaces the four link columns wholesale. */
+  columns?: FooterColumnData[]
+  /** Replaces the copyright line. */
+  copyrightText?: string
+  socialLinks?: Array<{ label: string; href: string }>
+  contactEmail?: string
+  contactPhone?: string
+  address?: string
+}
+
+/**
+ * @param overrides CMS content from /admin/content/footer. Anything left
+ *   unset keeps the built-in value, so an unconfigured footer is unchanged.
+ */
+export function Footer({ overrides }: { overrides?: FooterOverrides } = {}) {
   const currentYear = new Date().getFullYear()
+
+  const description = overrides?.description || company.description
+  const columns: FooterColumnData[] =
+    overrides?.columns && overrides.columns.length > 0
+      ? overrides.columns
+      : [
+          { title: 'About Us', links: aboutLinks },
+          { title: 'Shop', links: serviceLinks },
+          { title: 'Helpful Links', links: helpfulLinks },
+          { title: 'Policies', links: legalLinks },
+        ]
+
+  const social = overrides?.socialLinks?.length
+    ? overrides.socialLinks.map((link) => ({
+        // CMS social entries carry no icon, so reuse the built-in icon whose
+        // label matches and fall back to a generic map pin.
+        icon: socialLinks.find((s) => s.label.toLowerCase() === link.label.toLowerCase())?.icon ?? MapPin,
+        label: link.label,
+        href: link.href,
+      }))
+    : socialLinks
+
+  const resolvedEmail = overrides?.contactEmail || supportEmail
+  const resolvedPhone = overrides?.contactPhone || supportPhone
+  const resolvedAddress = overrides?.address || headquartersLocation
+  const contacts = [
+    { icon: Mail, text: resolvedEmail, href: `mailto:${resolvedEmail}` },
+    { icon: Phone, text: resolvedPhone, href: `tel:${resolvedPhone.replace(/[^+\d]/g, '')}` },
+    { icon: MapPin, text: resolvedAddress, isAddress: true },
+  ]
 
   return (
     <footer className="bg-secondary dark:bg-secondary/20 mt-16 w-full place-self-end rounded-t-xl">
@@ -95,11 +141,11 @@ export function Footer() {
             </div>
 
             <p className="text-foreground/50 mt-6 max-w-md text-center leading-relaxed sm:max-w-xs sm:text-left">
-              {company.description}
+              {description}
             </p>
 
             <ul className="mt-8 flex justify-center gap-6 sm:justify-start md:gap-8">
-              {socialLinks.map(({ icon: Icon, label, href }) => (
+              {social.map(({ icon: Icon, label, href }) => (
                 <li key={label}>
                   <Link
                     href={href}
@@ -114,15 +160,14 @@ export function Footer() {
           </div>
 
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4 lg:col-span-2">
-            <FooterColumn title="About Us" links={aboutLinks} />
-            <FooterColumn title="Shop" links={serviceLinks} />
-            <FooterColumn title="Helpful Links" links={helpfulLinks} />
-            <FooterColumn title="Policies" links={legalLinks} />
+            {columns.map((column) => (
+              <FooterColumn key={column.title} title={column.title} links={column.links} />
+            ))}
           </div>
         </div>
 
         <div className="mt-12 grid grid-cols-1 gap-8 border-t pt-12 md:grid-cols-3">
-          <ContactColumn items={contactInfo} />
+          <ContactColumn items={contacts} />
           <FooterNewsletterSignup source="footer:newsletter" />
           <div className="text-center sm:text-left">
             <p className="text-lg font-medium">Share your experience</p>
@@ -138,7 +183,8 @@ export function Footer() {
         <div className="mt-12 border-t pt-6">
           <div className="text-center sm:flex sm:justify-between sm:text-left">
             <p className="text-secondary-foreground/70 mt-4 text-sm transition sm:order-first sm:mt-0">
-              &copy; {currentYear} {company.name}. All rights reserved.
+              {overrides?.copyrightText ||
+                `\u00a9 ${currentYear} ${company.name}. All rights reserved.`}
             </p>
             <p className="text-sm">
               Crafted in Ohio • Fresh batches every week
