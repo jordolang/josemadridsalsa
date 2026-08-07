@@ -75,6 +75,26 @@ const videoHeroSchema = z.object({
   ctaHref: z.string().default(''),
 })
 
+/**
+ * The homepage hero is a scroll-scrubbed video with three copy panels that
+ * cross-fade as the visitor scrolls, so its fields mirror those panels rather
+ * than the single headline a generic hero has.
+ */
+const homeHeroSchema = z.object({
+  panel1Eyebrow: z.string().default(''),
+  panel1Title: z.string().default(''),
+  panel1Accent: z.string().default(''),
+  panel1Body: z.string().default(''),
+  panel2Eyebrow: z.string().default(''),
+  panel2Title: z.string().default(''),
+  panel2Accent: z.string().default(''),
+  panel2Body: z.string().default(''),
+  panel3Eyebrow: z.string().default(''),
+  panel3Title: z.string().default(''),
+  panel3Accent: z.string().default(''),
+  panel3Body: z.string().default(''),
+})
+
 const richTextSchema = z.object({
   heading: z.string().default(''),
   body: z.string().default(''),
@@ -178,6 +198,33 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
       { name: 'posterUrl', label: 'Poster image', type: 'image' },
       { name: 'ctaText', label: 'Button text', type: 'text' },
       { name: 'ctaHref', label: 'Button link', type: 'link' },
+    ],
+  },
+  {
+    type: 'homeHero',
+    label: 'Homepage hero',
+    description: 'The three copy panels that cross-fade over the scrolling hero video.',
+    schema: homeHeroSchema,
+    defaults: homeHeroSchema.parse({}),
+    systemOnly: true,
+    fields: [
+      { name: 'panel1Eyebrow', label: 'Panel 1 — small label', type: 'text' },
+      { name: 'panel1Title', label: 'Panel 1 — headline', type: 'text' },
+      {
+        name: 'panel1Accent',
+        label: 'Panel 1 — highlighted word',
+        type: 'text',
+        help: 'Shown in gold at the end of the headline.',
+      },
+      { name: 'panel1Body', label: 'Panel 1 — body', type: 'textarea' },
+      { name: 'panel2Eyebrow', label: 'Panel 2 — small label', type: 'text' },
+      { name: 'panel2Title', label: 'Panel 2 — headline', type: 'text' },
+      { name: 'panel2Accent', label: 'Panel 2 — highlighted word', type: 'text' },
+      { name: 'panel2Body', label: 'Panel 2 — body', type: 'textarea' },
+      { name: 'panel3Eyebrow', label: 'Panel 3 — small label', type: 'text' },
+      { name: 'panel3Title', label: 'Panel 3 — headline', type: 'text' },
+      { name: 'panel3Accent', label: 'Panel 3 — highlighted word', type: 'text' },
+      { name: 'panel3Body', label: 'Panel 3 — body', type: 'textarea' },
     ],
   },
   {
@@ -332,6 +379,27 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
 ]
 
 const BLOCKS_BY_TYPE = new Map(BLOCK_DEFINITIONS.map((block) => [block.type, block]))
+
+/** Block metadata without the Zod schemas, safe to send to a client component. */
+export interface SerializableBlock {
+  type: string
+  label: string
+  description: string
+  fields: BlockField[]
+  defaults: Record<string, unknown>
+  systemOnly: boolean
+}
+
+export function serializableBlocks(): SerializableBlock[] {
+  return BLOCK_DEFINITIONS.map((block) => ({
+    type: block.type,
+    label: block.label,
+    description: block.description,
+    fields: block.fields,
+    defaults: block.defaults,
+    systemOnly: Boolean(block.systemOnly),
+  }))
+}
 
 export function getBlockDefinition(type: string): BlockDefinition | undefined {
   return BLOCKS_BY_TYPE.get(type)

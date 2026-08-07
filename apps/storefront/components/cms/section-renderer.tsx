@@ -11,6 +11,7 @@ import { FeaturedProductsSection } from '@/components/store/featured-products-se
 import { FeaturedHeatIndexSection } from '@/components/store/featured-heat-index-section'
 import { FooterNewsletterSignup } from '@/components/store/footer-newsletter-signup'
 import { getFaqs } from '@/lib/cms/queries'
+import { sanitizeCmsHtml } from '@/lib/cms/sanitize'
 import type { ResolvedSection } from '@/lib/cms/queries'
 
 /**
@@ -46,16 +47,17 @@ function Container({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Body copy is authored in the admin by staff, and is rendered as HTML so
- * editors can use basic formatting. Only users holding `content:write` can
- * write this field, so it is trusted the same way blog post bodies are.
+ * Body copy is authored in the admin so editors can use basic formatting.
+ * It is sanitised against an allowlist before rendering — see
+ * `lib/cms/sanitize.ts`.
  */
 function RichBody({ html, className }: { html: string; className?: string }) {
   if (!html) return null
   return (
     <div
       className={`prose prose-neutral max-w-none dark:prose-invert ${className ?? ''}`}
-      dangerouslySetInnerHTML={{ __html: html }}
+      // eslint-disable-next-line react/no-danger -- sanitised by sanitizeCmsHtml
+      dangerouslySetInnerHTML={{ __html: sanitizeCmsHtml(html) }}
     />
   )
 }

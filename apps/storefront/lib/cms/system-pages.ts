@@ -74,7 +74,7 @@ export const SYSTEM_PAGES: SystemPageDefinition[] = [
     sections: [
       {
         key: 'hero',
-        block: 'videoHero',
+        block: 'homeHero',
         label: 'Hero',
         description: 'Scroll-scrubbed video hero at the top of the page.',
         required: true,

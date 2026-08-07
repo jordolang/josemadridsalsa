@@ -10,9 +10,10 @@ import { isMissingTableError } from '@/lib/prisma-errors'
  *
  * Redirects are public routing information — the same data a visitor observes
  * by following the old URL — so this endpoint is unauthenticated.
+ *
+ * Deliberately not `force-dynamic`: that would defeat the s-maxage header
+ * below and send every middleware refresh through to Postgres.
  */
-export const dynamic = 'force-dynamic'
-
 export async function GET() {
   try {
     const redirects = await prisma.redirect.findMany({

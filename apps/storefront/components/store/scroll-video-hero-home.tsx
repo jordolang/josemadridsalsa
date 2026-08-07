@@ -16,7 +16,15 @@ const DEFAULT_NAV_HEIGHT = 72
 // keeps it readable even where the gradient has faded out.
 const COPY_SHADOW = '0 1px 3px rgba(0,0,0,0.9), 0 2px 12px rgba(0,0,0,0.75)'
 
-const PANELS = [
+export interface HeroPanel {
+  eyebrow: string
+  title: string
+  accent: string
+  body: string
+  cta?: boolean
+}
+
+const PANELS: HeroPanel[] = [
   {
     eyebrow: 'Award-winning since 1987',
     title: 'Premium Gourmet',
@@ -40,7 +48,13 @@ const PANELS = [
   },
 ]
 
-export function ScrollVideoHeroHome() {
+/**
+ * @param panels Optional CMS overrides. Any panel field left blank in the
+ *   admin falls back to the copy defined above, so an unedited homepage looks
+ *   exactly as it always has.
+ */
+export function ScrollVideoHeroHome({ panels }: { panels?: HeroPanel[] } = {}) {
+  const activePanels = panels ?? PANELS
   const sectionRef = useRef<HTMLElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const cueRef = useRef<HTMLDivElement>(null)
@@ -162,7 +176,7 @@ export function ScrollVideoHeroHome() {
           full-screen after the last line of copy before the store section slides
           up over them. The copy is a narrow left column so it clears the jar. */}
       <div className="relative z-10">
-        {PANELS.map((panel, idx) => (
+        {activePanels.map((panel, idx) => (
           <div
             key={panel.title}
             className="flex items-center px-5 sm:px-8 md:px-14"
