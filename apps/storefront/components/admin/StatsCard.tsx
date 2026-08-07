@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { LucideIcon } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
@@ -32,6 +33,8 @@ interface StatsCardProps {
   color?: StatsCardColor
   subtitle?: string
   progress?: number
+  /** Makes the whole card a link into the list it summarises. */
+  href?: string
 }
 
 const iconAccentMap: Record<StatsCardColor, string> = {
@@ -50,6 +53,7 @@ export function StatsCard({
   icon: Icon,
   loading,
   color = 'blue',
+  href,
   subtitle,
   progress,
 }: StatsCardProps) {
@@ -67,8 +71,13 @@ export function StatsCard({
     )
   }
 
-  return (
-    <Card className="relative overflow-hidden">
+  const card = (
+    <Card
+      className={cn(
+        'relative h-full overflow-hidden',
+        href && 'transition-colors hover:border-primary/50'
+      )}
+    >
       <CardHeader className="flex flex-row items-start justify-between gap-4 pb-2">
         <div className="min-w-0 flex-1">
           <CardDescription className="text-xs font-medium uppercase tracking-wide">
@@ -118,5 +127,15 @@ export function StatsCard({
         )}
       </CardContent>
     </Card>
+  )
+
+  // A statistic the reader cannot act on is wallpaper; when a destination exists the whole
+  // card becomes the affordance rather than hiding a link inside it.
+  return href ? (
+    <Link href={href} className="block h-full">
+      {card}
+    </Link>
+  ) : (
+    card
   )
 }

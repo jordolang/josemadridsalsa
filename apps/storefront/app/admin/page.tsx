@@ -9,6 +9,18 @@ import {
   Eye,
 } from 'lucide-react'
 import { StatsCard } from '@/components/admin/StatsCard'
+import { OperationalQueues } from '@/components/admin/dashboard/OperationalQueues'
+import {
+  activeInventoryAlertsWhere,
+  needsShippingWhere,
+  openReturnsWhere,
+  paymentFailedWhere,
+  pendingFundraiserSignupsWhere,
+  pendingWholesaleWhere,
+  stuckPendingWhere,
+  STUCK_PENDING_MINUTES,
+  type QueueCounts,
+} from '@/lib/admin/operational-queues'
 import { SalesOverview } from '@/components/admin/SalesOverview'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
@@ -186,6 +198,45 @@ function formatTimeAgo(date: Date): string {
   return `${diffDays}d ago`
 }
 
+/**
+ * Counts for the operational queues. Each uses the same `where` clause as the page it links
+ * to, so the number on a card and the rows behind it cannot drift apart.
+ *
+ * A queue that cannot be counted (a missing table on a partially migrated environment, say)
+ * reports zero rather than taking the whole dashboard down with it.
+ */
+async function getOperationalQueueCounts(): Promise<QueueCounts> {
+  const stuckSince = new Date(Date.now() - STUCK_PENDING_MINUTES * 60 * 1000)
+
+  const [
+    needsShipping,
+    paymentFailed,
+    stuckPending,
+    openReturns,
+    inventoryAlerts,
+    fundraiserSignups,
+    wholesaleApplications,
+  ] = await Promise.all([
+    prisma.order.count({ where: needsShippingWhere }).catch(() => 0),
+    prisma.order.count({ where: paymentFailedWhere }).catch(() => 0),
+    prisma.order.count({ where: stuckPendingWhere(stuckSince) }).catch(() => 0),
+    prisma.returnRequest.count({ where: openReturnsWhere }).catch(() => 0),
+    prisma.inventoryAlert.count({ where: activeInventoryAlertsWhere }).catch(() => 0),
+    prisma.fundraiserSignupRequest.count({ where: pendingFundraiserSignupsWhere }).catch(() => 0),
+    prisma.wholesaleAccount.count({ where: pendingWholesaleWhere }).catch(() => 0),
+  ])
+
+  return {
+    needsShipping,
+    paymentFailed,
+    stuckPending,
+    openReturns,
+    inventoryAlerts,
+    fundraiserSignups,
+    wholesaleApplications,
+  }
+}
+
 export default async function AdminDashboard() {
   try {
     const user = await getCurrentUser()
@@ -212,6 +263,8 @@ export default async function AdminDashboard() {
       color: statusColorMap[s.status]?.color ?? 'bg-muted/500',
       bgColor: statusColorMap[s.status]?.bgColor ?? 'bg-muted/50 text-foreground',
     }))
+
+    const queueCounts = await getOperationalQueueCounts()
 
     // Map low stock inventory items
     const inventoryAlerts = stats.lowStockProducts.map((p) => ({
@@ -241,11 +294,27 @@ export default async function AdminDashboard() {
           </div>
         </div>
 
+        {/* What needs doing right now — every tile links into the list it counts.
+            Performance figures stay below, and in /admin/analytics. */}
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold">Needs attention</h2>
+            <Link
+              href="/admin/analytics"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Performance &rarr;
+            </Link>
+          </div>
+          <OperationalQueues counts={queueCounts} />
+        </section>
+
         {/* Stats Grid - Row 1 */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {canViewFinancials && (
             <StatsCard
               title="Total Revenue"
+              href="/admin/analytics/orders"
               value={`$${Number(stats.revenue).toLocaleString()}`}
               icon={DollarSign}
               color="green"
@@ -254,6 +323,7 @@ export default async function AdminDashboard() {
           {canViewOrders && (
             <StatsCard
               title="Total Orders"
+              href="/admin/orders"
               value={stats.totalOrders.toLocaleString()}
               icon={ShoppingCart}
               color="blue"
@@ -261,6 +331,7 @@ export default async function AdminDashboard() {
           )}
           <StatsCard
             title="Total Customers"
+              href="/admin/customers"
             value={stats.totalUsers.toLocaleString()}
             icon={Users}
             color="purple"
@@ -268,6 +339,7 @@ export default async function AdminDashboard() {
           />
           <StatsCard
             title="Products"
+              href="/admin/products"
             value={stats.totalProducts.toLocaleString()}
             icon={Package}
             color="orange"
@@ -278,6 +350,7 @@ export default async function AdminDashboard() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             title="Store Locations"
+              href="/admin/locations"
             value={stats.totalLocations.toLocaleString()}
             icon={MapPin}
             color="red"
@@ -285,6 +358,7 @@ export default async function AdminDashboard() {
           />
           <StatsCard
             title="Avg Rating"
+              href="/admin/reviews"
             value={stats.avgRating > 0 ? stats.avgRating.toFixed(1) : 'N/A'}
             icon={Star}
             color="teal"
@@ -293,6 +367,7 @@ export default async function AdminDashboard() {
           {canViewFinancials && (
             <StatsCard
               title="Avg Order Value"
+              href="/admin/analytics/orders"
               value={
                 stats.totalOrders > 0
                   ? `$${(Number(stats.revenue) / stats.totalOrders).toFixed(2)}`
