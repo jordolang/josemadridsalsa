@@ -2381,17 +2381,30 @@ model Notification {
   id         String           @id @default(cuid())
   userId     String
   type       NotificationType
+  severity   NotificationSeverity @default(INFO)
   title      String
   message    String
   entityType String?
   entityId   String?
+  /// Where clicking the notification should take the operator.
+  link       String?
+  /// Stable identifier for the underlying fact. Re-observing the same condition updates the
+  /// existing row instead of creating another, so a recurring check cannot flood the list.
+  dedupeKey  String?
   isRead     Boolean          @default(false)
   readAt     DateTime?
   createdAt  DateTime         @default(now())
 
+  @@unique([userId, dedupeKey])
   @@index([userId, isRead])
   @@index([createdAt])
   @@map("notifications")
+}
+
+enum NotificationSeverity {
+  INFO
+  WARNING
+  CRITICAL
 }
 
 model TrainingDocumentCategory {
@@ -3545,6 +3558,11 @@ enum NotificationType {
   ORDER_HIGH_VALUE
   ORDER_MODIFIED
   SYSTEM
+  PAYMENT_FAILED
+  INVENTORY_LOW
+  INVENTORY_OUT_OF_STOCK
+  RETURN_REQUESTED
+  INTEGRATION_FAILED
 }
 
 enum ChatDomain {

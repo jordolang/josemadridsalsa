@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   Activity,
   BarChart3,
+  Bell,
   Building2,
   Archive,
   CalendarDays,
@@ -58,6 +59,7 @@ import type { NavItem } from '@/lib/permissions-map'
 
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard,
+  Bell,
   Archive,
   ShoppingCart,
   Package,

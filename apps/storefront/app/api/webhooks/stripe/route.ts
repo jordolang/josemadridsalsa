@@ -7,6 +7,7 @@ import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { deductReservedInventoryInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
+import { dedupeKeys, notifyOperators, severityFor } from '@/lib/notifications/dispatch'
 import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
 
 export const runtime = 'nodejs'
@@ -253,6 +254,20 @@ export async function POST(request: Request) {
               },
             })
           })
+
+          // Notified outside the transaction: a failed notification must not roll back the
+          // record of the failed payment.
+          await notifyOperators({
+            type: 'PAYMENT_FAILED',
+            severity: severityFor('PAYMENT_FAILED'),
+            title: 'Payment failed',
+            message: `Payment on order ${orderId} did not go through`,
+            entityType: 'order',
+            entityId: orderId,
+            link: '/admin/orders?view=payment-failed',
+            dedupeKey: dedupeKeys.paymentFailed(orderId),
+          })
+
           console.log('Order payment failed via webhook:', orderId)
         }
         break

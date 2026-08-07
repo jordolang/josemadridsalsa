@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
+import { dedupeKeys, notifyOperators, severityFor } from '@/lib/notifications/dispatch'
 import {
   generateRmaNumber,
   validateReturnRequest,
@@ -147,6 +148,17 @@ export async function POST(request: NextRequest) {
         reason: body.reason,
         status: 'REQUESTED',
       },
+    })
+
+    await notifyOperators({
+      type: 'RETURN_REQUESTED',
+      severity: severityFor('RETURN_REQUESTED'),
+      title: 'Return requested',
+      message: `${returnRequest.rmaNumber} on order ${order.orderNumber}`,
+      entityType: 'return_request',
+      entityId: returnRequest.id,
+      link: `/admin/returns/${returnRequest.id}`,
+      dedupeKey: dedupeKeys.returnRequested(returnRequest.id),
     })
 
     await logAuditWithRequest(
