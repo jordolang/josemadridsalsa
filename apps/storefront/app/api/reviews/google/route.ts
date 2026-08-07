@@ -1,22 +1,38 @@
 import { NextResponse } from 'next/server'
 import { ok, serverError } from '@/lib/api'
 
-const API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 const PLACES_API_BASE = 'https://places.googleapis.com/v1'
+
+/** How long Google's response is reused. Reviews change rarely and the call is billable. */
+const REVIEWS_TTL_SECONDS = 7200
 
 // Google Place ID for Jose Madrid Salsa
 // This can be found from your Google My Business profile URL
 // You can also use the place name/address to search if Place ID is not available
 // Accept both the server-only and public variants of the place ID env var
-const PLACE_ID = process.env.GOOGLE_PLACE_ID || process.env.NEXT_PUBLIC_GOOGLE_PLACE_ID || ''
-const PLACE_NAME = process.env.GOOGLE_PLACE_NAME || 'Jose Madrid Salsa'
-
-// Cache reviews for 2 hours (reviews don't change frequently)
-export const revalidate = 7200 // 2 hours in seconds
-
 export const runtime = 'nodejs' // Required for environment variable access
 
+/**
+ * Rendered per request rather than prerendered.
+ *
+ * This route previously declared `revalidate = 7200`, which made Next execute it during
+ * `next build` and bake the result into the static output. The build environment has no
+ * Google Places credentials, so what got baked was a 500 — and production then served that
+ * 500 for up to two hours after every deploy, even though the key is present in the runtime
+ * environment. Caching now lives on the upstream fetch instead, which keeps the billable
+ * call down to one per TTL without pinning a build-time failure into the output.
+ */
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
+  // Read at request time, not module scope, so the values come from the runtime
+  // environment rather than whatever existed when the bundle was built.
+  const API_KEY =
+    process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  const PLACE_ID =
+    process.env.GOOGLE_PLACE_ID || process.env.NEXT_PUBLIC_GOOGLE_PLACE_ID || ''
+  const PLACE_NAME = process.env.GOOGLE_PLACE_NAME || 'Jose Madrid Salsa'
+
   if (!API_KEY) {
     return serverError('Google Places API key not configured. Please set GOOGLE_PLACES_API_KEY or NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.')
   }
@@ -38,6 +54,7 @@ export async function GET() {
           body: JSON.stringify({
             textQuery: PLACE_NAME,
           }),
+          next: { revalidate: REVIEWS_TTL_SECONDS },
         }
       )
 
@@ -71,6 +88,7 @@ export async function GET() {
           'X-Goog-Api-Key': API_KEY,
           'X-Goog-FieldMask': 'reviews,rating,userRatingCount',
         },
+        next: { revalidate: REVIEWS_TTL_SECONDS },
       }
     )
 

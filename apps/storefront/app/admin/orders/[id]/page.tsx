@@ -236,6 +236,7 @@ export default async function OrderDetailPage({
       productSku: item.productSku,
       productImage: item.productImage,
       quantity: item.quantity,
+      quantityFulfilled: item.quantityFulfilled,
       unitPrice: Number(item.unitPrice),
       totalPrice: Number(item.totalPrice),
     })),
@@ -249,6 +250,7 @@ export default async function OrderDetailPage({
       order={mobileOrder}
       actionContext={actionContext}
       canWrite={canWrite}
+      timeline={timeline}
     />
     <div className="hidden md:block space-y-6">
       {/* Header */}

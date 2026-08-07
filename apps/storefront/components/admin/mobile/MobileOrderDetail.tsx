@@ -7,6 +7,9 @@ import {
   getOrderStatusVariant,
 } from '@/lib/order-status'
 import type { OrderStatus } from '@/lib/admin/order-primary-cta'
+import { FulfillItemsDialog } from '@/components/admin/FulfillItemsDialog'
+import { OrderTimeline } from '@/components/admin/OrderTimeline'
+import type { TimelineEntry } from '@/lib/orders/order-timeline'
 import { OrderActionBar } from './OrderActionBar'
 import type { OrderActionContext } from './OrderActionsDrawer'
 import { cn } from '@/lib/utils'
@@ -45,6 +48,7 @@ interface MobileOrderDetailOrder {
     productSku: string
     productImage: string | null
     quantity: number
+    quantityFulfilled: number
     unitPrice: number
     totalPrice: number
   }[]
@@ -55,6 +59,7 @@ interface MobileOrderDetailProps {
   order: MobileOrderDetailOrder
   actionContext: OrderActionContext
   canWrite: boolean
+  timeline: TimelineEntry[]
   className?: string
 }
 
@@ -62,6 +67,7 @@ export function MobileOrderDetail({
   order,
   actionContext,
   canWrite,
+  timeline,
   className,
 }: MobileOrderDetailProps) {
   return (
@@ -97,7 +103,21 @@ export function MobileOrderDetail({
         </section>
 
         <section className="rounded-lg border bg-card">
-          <h2 className="border-b px-4 py-3 text-sm font-semibold">Items</h2>
+          <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
+            <h2 className="text-sm font-semibold">Items</h2>
+            {canWrite && order.status !== 'CANCELLED' && order.status !== 'REFUNDED' && (
+              <FulfillItemsDialog
+                orderId={order.id}
+                items={order.items.map((item) => ({
+                  id: item.id,
+                  productName: item.productName,
+                  productSku: item.productSku,
+                  quantity: item.quantity,
+                  quantityFulfilled: item.quantityFulfilled,
+                }))}
+              />
+            )}
+          </div>
           <ul className="divide-y">
             {order.items.map((item) => (
               <li key={item.id} className="flex gap-3 p-3">
@@ -121,6 +141,11 @@ export function MobileOrderDetail({
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {item.quantity} × ${item.unitPrice.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.quantityFulfilled >= item.quantity
+                      ? 'Fulfilled'
+                      : `${item.quantityFulfilled} of ${item.quantity} fulfilled`}
                   </p>
                 </div>
                 <p className="shrink-0 text-sm font-medium tabular-nums">
@@ -222,6 +247,10 @@ export function MobileOrderDetail({
             </p>
           </section>
         )}
+
+        {/* Same history as the desktop view — the phone is often where an order gets
+            queried, so it should not be the surface missing the answer. */}
+        <OrderTimeline entries={timeline} />
       </div>
       {canWrite && <OrderActionBar order={actionContext} />}
     </div>

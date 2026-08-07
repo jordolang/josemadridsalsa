@@ -28,7 +28,9 @@ export function fail(message: string, status = 400, details?: unknown) {
 export function serverError(message = 'Internal server error', error?: unknown) {
   const errorMessage = error !== undefined ? getErrorMessage(error) : undefined
   const details = errorMessage && errorMessage !== message ? errorMessage : undefined
-  console.error('Server error:', errorMessage ?? error)
+  // Log the message too: most callers pass only a message, and logging `error` alone
+  // printed a bare "Server error: undefined" that said nothing about what failed.
+  console.error('Server error:', message, errorMessage ? `- ${errorMessage}` : '')
   return NextResponse.json(
     {
       error: message,

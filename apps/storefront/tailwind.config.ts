@@ -133,6 +133,7 @@ const config: Config = {
   			'slide-in-right': 'slideInRight 0.5s ease-out',
   			'slide-in-left': 'slideInLeft 0.5s ease-out',
   			'wiggle': 'wiggle 1s ease-in-out',
+  			'bell-ring': 'bellRing 0.9s ease-in-out',
   			'pulse-slow': 'pulseSlow 3s ease-in-out infinite',
   			'spin-slow': 'spinSlow 3s linear infinite',
   			'swing': 'swing 1s ease-in-out',
@@ -142,6 +143,16 @@ const config: Config = {
   			'progress-shimmer': 'progressShimmer 2s linear infinite'
   		},
   		keyframes: {
+  			// A short swing for the notification bell when a new item arrives. Pivots from the
+  			// top so it reads as the bell swinging rather than the whole icon sliding.
+  			bellRing: {
+  				'0%, 100%': { transform: 'rotate(0deg)' },
+  				'15%': { transform: 'rotate(14deg)' },
+  				'30%': { transform: 'rotate(-12deg)' },
+  				'45%': { transform: 'rotate(9deg)' },
+  				'60%': { transform: 'rotate(-6deg)' },
+  				'75%': { transform: 'rotate(3deg)' }
+  			},
   			fadeIn: {
   				'0%': {
   					opacity: '0'
