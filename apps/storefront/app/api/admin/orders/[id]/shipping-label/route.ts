@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
+import { buildFulfillmentUpdate, recordFulfillmentEvent } from '@/lib/orders/fulfillment'
 import { getShippingClient } from '@/lib/shipping-api'
 import { ALLOWED_CARRIERS } from '@/lib/shipping-carriers'
 import { z } from 'zod'
@@ -174,20 +176,38 @@ export async function POST(
       shippingLabelUrl: mockLabelUrl,
     }
 
-    if (
+    const advancesFulfillment =
       order.status !== 'SHIPPED' &&
       order.status !== 'DELIVERED' &&
       order.status !== 'CANCELLED' &&
       order.status !== 'REFUNDED'
-    ) {
-      orderUpdate.status = 'SHIPPED'
-      orderUpdate.shippedAt = new Date()
+
+    if (advancesFulfillment) {
+      Object.assign(orderUpdate, buildFulfillmentUpdate({ transition: 'shipped', current: order }))
     }
 
     await prisma.order.update({
       where: { id },
       data: orderUpdate,
     })
+
+    await emitDomainEvent({
+      type: 'shipment.created',
+      entityType: 'order',
+      entityId: id,
+      actorUserId: userId,
+      payload: { carrier, service, trackingNumber: mockTrackingNumber, labelId: shippingLabel.id },
+    })
+
+    if (advancesFulfillment) {
+      await recordFulfillmentEvent({
+        orderId: id,
+        transition: 'shipped',
+        current: order,
+        actorUserId: userId,
+        eventPayload: { orderNumber: order.orderNumber, via: 'admin:shipping-label' },
+      })
+    }
 
     await logAudit({
       userId,

@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
           status: 'PENDING',
           paymentProvider: 'SQUARE',
           paymentChannel: 'POS',
+          salesChannel: 'POS',
           shippingMethod: 'IN_STORE_PICKUP',
           items: {
             create: orderItems,

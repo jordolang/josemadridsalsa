@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
+import { buildFulfillmentUpdate, recordFulfillmentEvent } from '@/lib/orders/fulfillment'
 import { z } from 'zod'
 
 const TrackingSchema = z.object({
@@ -45,22 +46,34 @@ export async function POST(
       shippingLabelUrl: trackingUrl || null,
     }
 
-    // Auto-advance to SHIPPED when adding tracking if order is not yet shipped/delivered
-    if (
+    // Auto-advance to SHIPPED when adding tracking if order is not yet shipped/delivered.
+    // buildFulfillmentUpdate sets status, fulfillmentStatus and shippedAt together so
+    // this route cannot advance one without the others.
+    const shouldAdvance =
       updateStatus &&
       order.status !== 'SHIPPED' &&
       order.status !== 'DELIVERED' &&
       order.status !== 'CANCELLED' &&
       order.status !== 'REFUNDED'
-    ) {
-      updateData.status = 'SHIPPED'
-      updateData.shippedAt = new Date()
+
+    if (shouldAdvance) {
+      Object.assign(updateData, buildFulfillmentUpdate({ transition: 'shipped', current: order }))
     }
 
     const updated = await prisma.order.update({
       where: { id },
       data: updateData,
     })
+
+    if (shouldAdvance) {
+      await recordFulfillmentEvent({
+        orderId: id,
+        transition: 'shipped',
+        current: order,
+        actorUserId: (session.user as any).id,
+        eventPayload: { orderNumber: order.orderNumber, trackingNumber, carrier, via: 'admin:tracking' },
+      })
+    }
 
     await logAudit({
       userId: (session.user as any).id,

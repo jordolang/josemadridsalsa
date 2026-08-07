@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
+import { deriveSalesChannel } from '@/lib/orders/sales-channel'
 import { getProvider } from '@/lib/payments'
 import { Prisma } from '@prisma/client'
 import { queueShopifySync } from '@/lib/shopify/sync'
@@ -354,6 +355,7 @@ export async function POST(request: NextRequest) {
         total: toDecimal(total),
         paymentStatus: 'PENDING',
         status: 'PENDING',
+        salesChannel: deriveSalesChannel({ participantId, fundraiserId }),
         participantId,
         fundraiserId,
         items: {

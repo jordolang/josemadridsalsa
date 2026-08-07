@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
+import { deriveSalesChannel } from '@/lib/orders/sales-channel'
 import { getProvider } from '@/lib/payments'
 import { Prisma } from '@prisma/client'
 import { calculateTax } from '@/lib/tax-calculator'
@@ -234,6 +235,11 @@ export async function POST(request: NextRequest) {
           status: 'PENDING',
           paymentProvider: 'PAYPAL',
           paymentChannel: 'ONLINE',
+          salesChannel: deriveSalesChannel({
+            participantId,
+            fundraiserId,
+            paymentChannel: 'ONLINE',
+          }),
           participantId,
           fundraiserId,
           items: {

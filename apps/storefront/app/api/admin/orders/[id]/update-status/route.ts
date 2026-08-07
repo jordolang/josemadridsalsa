@@ -4,6 +4,11 @@ import { authOptions } from '@/lib/auth'
 import { hasPermission, type UserRole } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
+import {
+  buildFulfillmentUpdate,
+  recordFulfillmentEvent,
+  transitionForOrderStatus,
+} from '@/lib/orders/fulfillment'
 import { z } from 'zod'
 import {
   sendOrderCancellationEmail,
@@ -52,15 +57,33 @@ export async function POST(
 
     const previousStatus = order.status
 
-    const updateData: Record<string, unknown> = { status }
-    if (status === 'SHIPPED' && !order.shippedAt) updateData.shippedAt = new Date()
-    if (status === 'DELIVERED' && !order.deliveredAt) updateData.deliveredAt = new Date()
+    // Fulfillment state is derived from the chosen status rather than set independently,
+    // so `status` and `fulfillmentStatus` cannot drift apart. The admin picked the
+    // commercial status here, so it wins — hence syncOrderStatus: false.
+    const transition = transitionForOrderStatus(status, order)
+    const fulfillmentUpdate = transition
+      ? buildFulfillmentUpdate({ transition, current: order, syncOrderStatus: false })
+      : {}
+
+    // buildFulfillmentUpdate already stamps shippedAt/deliveredAt and guards against
+    // restamping, so no timestamp handling belongs here.
+    const updateData: Record<string, unknown> = { status, ...fulfillmentUpdate }
     if (adminNote) updateData.adminNotes = adminNote
 
     const updated = await prisma.order.update({
       where: { id },
       data: updateData,
     })
+
+    if (transition) {
+      await recordFulfillmentEvent({
+        orderId: id,
+        transition,
+        current: order,
+        actorUserId: (session.user as { id: string }).id,
+        eventPayload: { orderNumber: order.orderNumber, via: 'admin:update-status' },
+      })
+    }
 
     await logAudit({
       userId: (session.user as { id: string }).id,

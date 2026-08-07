@@ -507,6 +507,13 @@ model Order {
   shippingAddressId        String?
   billingAddressId         String?
   status                   OrderStatus            @default(PENDING)
+  /// Fulfillment is tracked separately from `status` and `paymentStatus` so an order can be
+  /// (for example) PAID + PARTIALLY_FULFILLED without either field lying. Always write this
+  /// through `lib/orders/fulfillment.ts` so it cannot drift from `status`.
+  fulfillmentStatus        FulfillmentStatus      @default(UNFULFILLED)
+  /// Where the order originated. Derived from paymentChannel/fundraiserId/shopifyOrderId/
+  /// importSource at creation time — see `lib/orders/sales-channel.ts` for the precedence.
+  salesChannel             SalesChannel           @default(WEBSITE)
   subtotal                 Decimal                @db.Decimal(10, 2)
   shippingCost             Decimal                @default(0) @db.Decimal(10, 2)
   tax                      Decimal                @default(0) @db.Decimal(10, 2)
@@ -572,11 +579,70 @@ model Order {
   abandonedCart            AbandonedCart?         @relation(fields: [abandonedCartId], references: [id])
   payments                 Payment[]
   shippingLabels           ShippingLabel[]
+  fulfillments             Fulfillment[]
 
   @@index([userId])
   @@index([participantId])
   @@index([abandonedCartId])
+  @@index([fulfillmentStatus])
+  @@index([salesChannel])
   @@map("orders")
+}
+
+/// A single shipment (or pickup handoff) covering some subset of an order's items.
+/// An order with one Fulfillment covering everything is the common case; multiple
+/// rows model split shipments.
+model Fulfillment {
+  id             String            @id @default(cuid())
+  orderId        String
+  status         FulfillmentStatus @default(FULFILLED)
+  trackingNumber String?
+  carrierName    String?
+  trackingUrl    String?
+  shippingLabelId String?
+  notes          String?
+  createdById    String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  order          Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  items          FulfillmentItem[]
+
+  @@index([orderId])
+  @@index([status])
+  @@map("fulfillments")
+}
+
+model FulfillmentItem {
+  id            String      @id @default(cuid())
+  fulfillmentId String
+  orderItemId   String
+  quantity      Int
+  fulfillment   Fulfillment @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
+  orderItem     OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@unique([fulfillmentId, orderItemId])
+  @@index([orderItemId])
+  @@map("fulfillment_items")
+}
+
+/// Append-only log of business facts (`order.created`, `payment.completed`, …).
+/// Consumers subscribe to these rather than being hand-wired at each call site;
+/// it also backs per-entity activity timelines. Write via `lib/domain-events/emit.ts`.
+model DomainEvent {
+  id          String   @id @default(cuid())
+  type        String
+  entityType  String
+  entityId    String
+  payload     Json?
+  actorUserId String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@index([type, createdAt])
+  @@index([createdAt])
+  @@map("domain_events")
 }
 
 model OrderItem {
@@ -584,6 +650,9 @@ model OrderItem {
   orderId      String
   productId    String
   quantity     Int
+  /// How many of `quantity` have shipped. Never exceeds `quantity`; the sum of this
+  /// column across an order is what derives `Order.fulfillmentStatus`.
+  quantityFulfilled Int  @default(0)
   unitPrice    Decimal  @db.Decimal(10, 2)
   totalPrice   Decimal  @db.Decimal(10, 2)
   productName  String
@@ -592,6 +661,7 @@ model OrderItem {
   createdAt    DateTime @default(now())
   order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product      Product  @relation(fields: [productId], references: [id])
+  fulfillmentItems FulfillmentItem[]
 
   @@index([orderId])
   @@index([productId])
@@ -631,7 +701,11 @@ model Payment {
 
 model Refund {
   id             String       @id @default(cuid())
+  /// The processor's refund ID. Despite the name this is provider-agnostic — PayPal and
+  /// Square refunds store their own IDs here. Pair it with `provider` to identify the
+  /// processor; the column is not renamed because doing so would drop existing IDs.
   stripeRefundId String       @unique
+  provider       PaymentProvider @default(STRIPE)
   amount         Int
   reason         String?
   status         RefundStatus @default(PENDING)
@@ -642,6 +716,7 @@ model Refund {
   payment        Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@index([paymentId])
+  @@index([provider])
   @@map("refunds")
 }
 
@@ -3151,6 +3226,29 @@ enum PaymentProvider {
 enum PaymentChannel {
   ONLINE
   POS
+}
+
+/// Fulfillment lifecycle, kept independent of `OrderStatus` (which covers the order's
+/// commercial lifecycle) and `PaymentStatus` (which covers money).
+enum FulfillmentStatus {
+  UNFULFILLED
+  PARTIALLY_FULFILLED
+  FULFILLED
+  DELIVERED
+  RETURNED
+}
+
+/// Where an order came from. Replaces inferring origin from the combination of
+/// paymentChannel, fundraiserId, shopifyOrderId and importSource.
+enum SalesChannel {
+  WEBSITE
+  POS
+  FUNDRAISER
+  WHOLESALE
+  MANUAL
+  MARKETPLACE
+  PHONE
+  IMPORT
 }
 
 enum ReviewStatus {

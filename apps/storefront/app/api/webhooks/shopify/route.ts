@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { buildFulfillmentUpdate, recordFulfillmentEvent } from '@/lib/orders/fulfillment'
 import {
   mapShopifyFinancialStatusToPrisma,
   mapShopifyFulfillmentStatusToPrisma,
@@ -126,19 +127,32 @@ async function handleFulfillmentPayload(payload: ShopifyFulfillmentPayload) {
 
   if (payload.status === 'cancelled') {
     updateData.status = 'CANCELLED'
+    updateData.fulfillmentStatus = 'UNFULFILLED'
   } else {
-    updateData.status = 'SHIPPED'
-  }
-
-  if (!order.shippedAt) {
-    updateData.shippedAt = parseShopifyDate(payload.created_at) ?? new Date()
-  }
-
-  if (payload.status === 'delivered' && !order.deliveredAt) {
-    updateData.deliveredAt = parseShopifyDate(payload.created_at) ?? new Date()
+    // Shopify reports fulfillment, so translate it through the shared helper rather than
+    // setting status on its own and leaving fulfillmentStatus behind. Shopify's own event
+    // time is more accurate than "now", so it is passed in as the stamp the helper uses.
+    const transition = payload.status === 'delivered' ? 'delivered' : 'shipped'
+    Object.assign(
+      updateData,
+      buildFulfillmentUpdate({
+        transition,
+        current: order,
+        now: parseShopifyDate(payload.created_at) ?? new Date(),
+      })
+    )
   }
 
   await prisma.order.update({ where: { id: order.id }, data: updateData })
+
+  if (payload.status !== 'cancelled') {
+    await recordFulfillmentEvent({
+      orderId: order.id,
+      transition: payload.status === 'delivered' ? 'delivered' : 'shipped',
+      current: order,
+      eventPayload: { orderNumber: order.orderNumber, via: 'webhook:shopify' },
+    })
+  }
 }
 
 export async function POST(request: NextRequest) {

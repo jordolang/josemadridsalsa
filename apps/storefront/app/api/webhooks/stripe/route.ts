@@ -6,6 +6,7 @@ import prisma from '@/lib/prisma'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { deductReservedInventoryInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
 
 export const runtime = 'nodejs'
@@ -114,6 +115,21 @@ export async function POST(request: Request) {
               stripePaymentId: paymentIntent.id,
             },
           })
+
+          await emitDomainEvent(
+            {
+              type: 'payment.completed',
+              entityType: 'order',
+              entityId: order.id,
+              payload: {
+                provider: 'STRIPE',
+                amount: paymentIntent.amount,
+                currency: paymentIntent.currency,
+                paymentIntentId: paymentIntent.id,
+              },
+            },
+            tx
+          )
 
           // Update or create Payment record
           await tx.payment.upsert({
@@ -255,6 +271,16 @@ export async function POST(request: Request) {
                 status: 'CANCELLED',
               },
             })
+
+            await emitDomainEvent(
+              {
+                type: 'payment.failed',
+                entityType: 'order',
+                entityId: orderId,
+                payload: { provider: 'STRIPE', paymentIntentId: paymentIntent.id },
+              },
+              tx
+            )
 
             // Update Payment record
             await tx.payment.upsert({

@@ -5,6 +5,12 @@ import { hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
 import { createOrderNotification } from '@/lib/notifications/order-notifications'
+import {
+  fulfillmentStatusFor,
+  isTerminalOrderStatus,
+  recordFulfillmentEvent,
+  type FulfillmentTransition,
+} from '@/lib/orders/fulfillment'
 import { z } from 'zod'
 
 const BulkStatusSchema = z.object({
@@ -42,7 +48,14 @@ export async function PATCH(request: NextRequest) {
     // Fetch all orders to validate they exist and capture previous statuses
     const orders = await prisma.order.findMany({
       where: { id: { in: orderIds } },
-      select: { id: true, orderNumber: true, status: true, userId: true },
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        userId: true,
+        shippedAt: true,
+        deliveredAt: true,
+      },
     })
 
     const foundIds = new Set(orders.map((o) => o.id))
@@ -85,11 +98,48 @@ export async function PATCH(request: NextRequest) {
       updateData.deliveredAt = new Date()
     }
 
+    // Keep fulfillment in step with the commercial status. `updateMany` cannot take
+    // per-row values, so instead of forcing one fulfillment status onto the whole batch
+    // the orders are partitioned and the fulfillment fields are written only to the rows
+    // that should receive them.
+    const transition: FulfillmentTransition | null =
+      status === 'SHIPPED' ? 'shipped' : status === 'DELIVERED' ? 'delivered' : status === 'REFUNDED' ? 'returned' : null
+
+    // Which orders in the batch this transition actually applies to. A cancelled or
+    // refunded order caught up in a bulk "mark shipped" must not be marked FULFILLED, and
+    // goods that never left cannot come back.
+    const affected = !transition
+      ? []
+      : transition === 'returned'
+        ? ordersToUpdate.filter((o) => o.shippedAt || o.deliveredAt)
+        : ordersToUpdate.filter((o) => !isTerminalOrderStatus(o.status))
+
     // Perform the bulk update
     await prisma.order.updateMany({
       where: { id: { in: idsToUpdate } },
       data: updateData,
     })
+
+    if (transition && affected.length > 0) {
+      await prisma.order.updateMany({
+        where: { id: { in: affected.map((o) => o.id) } },
+        data: { fulfillmentStatus: fulfillmentStatusFor(transition) },
+      })
+    }
+
+    if (transition) {
+      await Promise.all(
+        affected.map((o) =>
+          recordFulfillmentEvent({
+            orderId: o.id,
+            transition,
+            current: o,
+            actorUserId: userId,
+            eventPayload: { orderNumber: o.orderNumber, via: 'admin:bulk-status' },
+          })
+        )
+      )
+    }
 
     // Batch-fetch full order data for notifications (single query instead of N)
     const ordersNeedingNotification = ordersToUpdate.filter((o) => o.userId)
