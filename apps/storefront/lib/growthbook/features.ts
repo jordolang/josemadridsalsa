@@ -6,7 +6,6 @@
  * the flag key and inferred value.
  */
 export interface AppFeatures {
-  'homepage-announcement-banner': boolean
   'personalized-homepage-hero': boolean
   'personalized-email-recommendations': boolean
 }

@@ -5,7 +5,7 @@ import { Navigation } from '@/components/store/navigation'
 import Footer from '@/components/ui/footer-column'
 import { AiChatWidget } from '@/components/chat/ai-chat-widget'
 import { AmplitudeAnalytics } from '@/components/analytics/amplitude-analytics'
-import { GrowthBookAnnouncementBanner } from '@/components/growthbook/announcement-banner'
+import { AnnouncementBar } from '@/components/store/announcement-bar'
 import { Analytics } from '@vercel/analytics/react'
 import { WishlistSyncProvider } from '@/components/providers/wishlist-sync-provider'
 import { CompareFloatingButton, ProductComparison } from '@/components/store/product-comparison'
@@ -38,7 +38,7 @@ export default async function PublicLayout({
         <ComparisonURLHandler />
       </Suspense>
       <div className="flex min-h-screen flex-col">
-        <GrowthBookAnnouncementBanner />
+        <AnnouncementBar />
         <Navigation />
         <EventTicker initialEvents={calendarEvents} />
         <div className="flex-1">
