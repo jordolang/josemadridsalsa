@@ -212,6 +212,9 @@ describe('E2E: Refund Flow', () => {
     expect(prisma.refund.create).toHaveBeenCalledWith({
       data: {
         stripeRefundId: 're_test_123',
+        // Refunds record which processor they came from, so they can be attributed and
+        // reported on — stripeRefundId is provider-agnostic despite its name.
+        provider: 'STRIPE',
         amount: 4999,
         reason: undefined,
         status: 'SUCCEEDED',

@@ -202,7 +202,8 @@ export async function POST(request: Request) {
         await prisma.$transaction(async (tx) => {
           await tx.refund.create({
             data: {
-              stripeRefundId: refund.id, // Reusing field for provider refund ID
+              stripeRefundId: refund.id, // Provider-agnostic despite the name; see Refund.provider
+              provider: 'SQUARE',
               paymentId: payment.id,
               amount: refundAmount,
               status: 'SUCCEEDED',

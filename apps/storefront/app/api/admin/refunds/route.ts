@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import { getProvider } from '@/lib/payments'
 import type { PaymentProvider } from '@/lib/payments/types'
 
@@ -13,7 +14,7 @@ const RefundRequestSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    await requirePermission('orders:write')
+    const actor = await requirePermission('orders:write')
 
     const json = await request.json()
     const parsed = RefundRequestSchema.safeParse(json)
@@ -92,9 +93,26 @@ export async function POST(request: Request) {
       }
 
       // Create refund record in database
+      // stripeRefundId is provider-agnostic despite the name (see Refund.provider), and it
+      // is UNIQUE — the previous `provider === 'STRIPE' ? id : ''` wrote an empty string for
+      // every PayPal and Square refund, so the second non-Stripe refund ever taken would hit
+      // the unique constraint and roll the whole refund back. Store the real provider ID.
+      if (!refundResult.providerRefundId) {
+        // Fail rather than synthesise an ID. A fabricated identifier in a financial table
+        // can never be reconciled against the processor, which is worse than a refund that
+        // visibly failed to record — the money moved, so this needs a human to look at it.
+        throw Object.assign(
+          new Error(
+            `${provider} reported a ${refundResult.status} refund with no refund ID; refund not recorded`
+          ),
+          { code: 'PROVIDER_ERROR' }
+        )
+      }
+
       const refund = await tx.refund.create({
         data: {
-          stripeRefundId: provider === 'STRIPE' ? (refundResult.providerRefundId ?? '') : '',
+          stripeRefundId: refundResult.providerRefundId,
+          provider,
           amount: refundAmount,
           reason: reason || undefined,
           status: refundResult.status,
@@ -117,6 +135,24 @@ export async function POST(request: Request) {
 
       return refund
     })
+
+    // Logged after the transaction commits, so a rolled-back refund leaves no audit entry
+    // claiming money moved. Amounts are in cents, matching the Refund record.
+    await logAuditWithRequest(
+      {
+        userId: actor.id,
+        action: 'refund',
+        entityType: 'payment',
+        entityId: paymentId,
+        changes: {
+          refundId: result.id,
+          amount: result.amount,
+          status: result.status,
+          reason: reason ?? null,
+        },
+      },
+      request
+    )
 
     return NextResponse.json({
       refundId: result.id,
