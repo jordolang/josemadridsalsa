@@ -31,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ProductsTableClient } from '@/components/admin/ProductsTableClient'
 import { ProductImportButton } from '@/components/admin/ProductImportButton'
 import { formatHeatLevel, getHeatLevelClass } from '@/lib/heat-level'
 import { cn } from '@/lib/utils'
@@ -250,123 +251,26 @@ export default async function ProductsPage({
       </Card>
 
       {/* Products Table */}
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Product</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Heat Level</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-              <TableHead className="text-right">Inventory</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="py-12 text-center text-muted-foreground"
-                >
-                  No products found
-                </TableCell>
-              </TableRow>
-            ) : (
-              products.map((product) => {
-                const lowStock = product.inventory <= product.lowStockThreshold
-                return (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {product.featuredImage && (
-                          <div className="relative size-10 shrink-0">
-                            <Image
-                              src={product.featuredImage}
-                              alt={product.name}
-                              fill
-                              className="rounded object-cover"
-                              sizes="40px"
-                            />
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <Link
-                              href={`/admin/products/${product.id}`}
-                              className="font-medium text-primary hover:underline"
-                            >
-                              {product.name}
-                            </Link>
-                            <LowStockAlert
-                              inventory={product.inventory}
-                              threshold={product.lowStockThreshold}
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            SKU: {product.sku}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {product.category.name}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={getHeatLevelClass(product.heatLevel)}
-                      >
-                        {formatHeatLevel(product.heatLevel)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      ${Number(product.price).toFixed(2)}
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        'text-right tabular-nums',
-                        lowStock && 'font-medium text-destructive'
-                      )}
-                    >
-                      {product.inventory}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={product.isActive ? 'default' : 'outline'}>
-                        {product.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link
-                            href={`/products/${product.slug}`}
-                            target="_blank"
-                            aria-label={`View ${product.name} on storefront`}
-                          >
-                            <Eye className="size-4" />
-                          </Link>
-                        </Button>
-                        {canWrite && (
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link
-                              href={`/admin/products/${product.id}/edit`}
-                              aria-label={`Edit ${product.name}`}
-                            >
-                              <Edit className="size-4" />
-                            </Link>
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <ProductsTableClient
+        canWrite={canWrite}
+        categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+        products={products.map((product) => ({
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          sku: product.sku,
+          featuredImage: product.featuredImage,
+          categoryName: product.category.name,
+          heatLevel: product.heatLevel,
+          heatLevelLabel: formatHeatLevel(product.heatLevel),
+          heatLevelClass: getHeatLevelClass(product.heatLevel),
+          price: product.price.toString(),
+          inventory: product.inventory,
+          lowStockThreshold: product.lowStockThreshold,
+          isActive: product.isActive,
+        }))}
+      />
+
 
       {/* Pagination */}
       {totalPages > 1 && (
