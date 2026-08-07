@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type { Prisma } from '@prisma/client'
 import { prisma as db } from '@/lib/prisma'
 import { requireAdminSession } from '@/lib/admin-auth'
+import { logAuditWithRequest } from '@/lib/audit'
 
 const CreateSeasonSchema = z.object({
   period: z.string().regex(/^\d{4}-\d{2}$/, 'period must be YYYY-MM'),
@@ -46,6 +47,17 @@ export async function POST(req: NextRequest) {
         createdBy: admin.id,
       },
     })
+    await logAuditWithRequest(
+      {
+        userId: admin.id,
+        action: 'create',
+        entityType: 'fundraiser_season',
+        entityId: season.id,
+        changes: { period, status, startsAt: startDate, endsAt: endDate },
+      },
+      req,
+    )
+
     return NextResponse.json({ success: true, season }, { status: 201 })
   } catch (err) {
     const isUnique =
@@ -68,7 +80,7 @@ export async function POST(req: NextRequest) {
  * GET /api/admin/arena/seasons — list seasons, newest first.
  */
 export async function GET() {
-  await requireAdminSession()
+  const admin = await requireAdminSession()
   const seasons = await db.fundraiserSeason.findMany({
     orderBy: [{ startsAt: 'desc' }],
     include: {

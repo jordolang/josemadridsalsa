@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { hasPermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
@@ -121,6 +122,17 @@ export async function POST(request: NextRequest) {
         })
       }
     }
+
+    await logAuditWithRequest(
+      {
+        userId: (session.user as any).id,
+        action: 'create',
+        entityType: 'featured_event',
+        entityId: event.id,
+        changes: { title: event.title, tags: validated.tags ?? [] },
+      },
+      request
+    )
 
     return NextResponse.json(event, { status: 201 })
   } catch (error) {

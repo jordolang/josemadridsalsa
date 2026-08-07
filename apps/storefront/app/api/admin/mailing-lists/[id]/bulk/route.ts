@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import { SubscriberStatus, SuppressionReason } from '@prisma/client'
 
 export async function POST(
@@ -25,6 +26,20 @@ export async function POST(
     if (!action || !subscriberIds || subscriberIds.length === 0) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    // Logged once up front rather than per branch: every case below mutates subscriber
+    // records and returns from inside the switch, so a single entry naming the action and
+    // the affected count is both simpler and harder to leave out of a new branch.
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: `bulk_${action}`,
+        entityType: 'mailing_list',
+        entityId: id,
+        changes: { subscriberCount: subscriberIds.length, targetListId, status },
+      },
+      request
+    )
 
     switch (action) {
       case 'delete':

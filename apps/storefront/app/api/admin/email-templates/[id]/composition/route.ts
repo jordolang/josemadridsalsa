@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
+import { logAudit, logAuditWithRequest } from '@/lib/audit'
 import { z } from 'zod'
 
 const compositionSchema = z.object({
@@ -41,6 +42,17 @@ export async function GET(
         { status: 404 }
       )
     }
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'update',
+        entityType: 'email_template_composition',
+        entityId: composition.id,
+        changes: { templateId: id },
+      },
+      request
+    )
 
     return NextResponse.json({ composition })
   } catch (error) {
@@ -99,6 +111,17 @@ export async function POST(
         },
       },
     })
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'create',
+        entityType: 'email_template_composition',
+        entityId: composition.id,
+        changes: { templateId: id },
+      },
+      request
+    )
 
     return NextResponse.json({ composition }, { status: 201 })
   } catch (error) {
@@ -189,6 +212,16 @@ export async function DELETE(
     await prisma.emailTemplateComposition.delete({
       where: { templateId: id },
     })
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'delete',
+        entityType: 'email_template_composition',
+        entityId: id,
+      },
+      request
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {

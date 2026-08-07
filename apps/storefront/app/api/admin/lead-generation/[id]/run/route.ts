@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import { prisma } from '@/lib/prisma'
 import { getJson } from 'serpapi'
 import { eventBus } from '@/lib/scraper/event-bus'
@@ -30,8 +31,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let actor: Awaited<ReturnType<typeof requirePermission>>
   try {
-    await requirePermission('messaging:read')
+    actor = await requirePermission('messaging:read')
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
@@ -41,6 +43,20 @@ export async function POST(
   if (!campaign) {
     return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
   }
+
+  // Logged before the stream opens, so the action is named for what is actually known at
+  // this point: the run was requested. A streaming response has no single completion point
+  // to hook, so an entry saying "ran" could outlive a run that died on its first scrape.
+  await logAuditWithRequest(
+    {
+      userId: actor.id,
+      action: 'run_requested',
+      entityType: 'lead_campaign',
+      entityId: campaign.id,
+      changes: { name: campaign.name },
+    },
+    request
+  )
 
   const encoder = new TextEncoder()
 

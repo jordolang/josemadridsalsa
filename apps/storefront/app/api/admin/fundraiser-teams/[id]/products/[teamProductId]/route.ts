@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma as db } from '@/lib/prisma'
 import { requireAdminSession } from '@/lib/admin-auth'
+import { logAuditWithRequest } from '@/lib/audit'
 
 /**
  * Admin API: update or remove a single FundraiserTeamProduct row.
@@ -22,8 +23,9 @@ export async function PATCH(
     params,
   }: { params: Promise<{ id: string; teamProductId: string }> },
 ) {
+  let admin: Awaited<ReturnType<typeof requireAdminSession>>
   try {
-    await requireAdminSession()
+    admin = await requireAdminSession()
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -75,6 +77,18 @@ export async function PATCH(
       },
     },
   })
+
+  await logAuditWithRequest(
+    {
+      userId: admin.id,
+      action: 'update',
+      entityType: 'fundraiser_team_product',
+      entityId: teamProductId,
+      changes: parsed.data,
+    },
+    req,
+  )
+
   return NextResponse.json({ teamProduct: row })
 }
 
@@ -84,8 +98,9 @@ export async function DELETE(
     params,
   }: { params: Promise<{ id: string; teamProductId: string }> },
 ) {
+  let admin: Awaited<ReturnType<typeof requireAdminSession>>
   try {
-    await requireAdminSession()
+    admin = await requireAdminSession()
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -100,5 +115,17 @@ export async function DELETE(
   }
 
   await db.fundraiserTeamProduct.delete({ where: { id: teamProductId } })
+
+  await logAuditWithRequest(
+    {
+      userId: admin.id,
+      action: 'delete',
+      entityType: 'fundraiser_team_product',
+      entityId: teamProductId,
+      changes: { teamId },
+    },
+    _req,
+  )
+
   return NextResponse.json({ success: true })
 }

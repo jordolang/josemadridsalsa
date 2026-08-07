@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
+import { logAuditWithRequest } from '@/lib/audit'
 
 function currentPeriod(): string {
   const now = new Date()
@@ -103,6 +104,14 @@ export async function POST(
     },
   })
 
+  await logAuditWithRequest({
+    userId: user.id,
+    action: 'create',
+    entityType: 'fundraiser_team',
+    entityId: team.id,
+    changes: { fundraiserId: id, slug: team.slug, via: 'battle-arena' },
+  })
+
   return NextResponse.json({ team, created: true })
 }
 
@@ -126,5 +135,14 @@ export async function DELETE(
   if (!existing) return NextResponse.json({ success: true, removed: false })
 
   await prisma.fundraiserTeam.delete({ where: { slug: fundraiser.slug } })
+
+  await logAuditWithRequest({
+    userId: user.id,
+    action: 'delete',
+    entityType: 'fundraiser_team',
+    entityId: existing.id,
+    changes: { fundraiserId: id, slug: fundraiser.slug, via: 'battle-arena' },
+  })
+
   return NextResponse.json({ success: true, removed: true })
 }

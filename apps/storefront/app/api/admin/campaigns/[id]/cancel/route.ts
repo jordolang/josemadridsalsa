@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 
 export async function POST(
   request: NextRequest,
@@ -23,6 +24,17 @@ export async function POST(
         data: { status: 'FAILED', errorMessage: 'Campaign cancelled', failedAt: new Date() },
       }),
     ])
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'update',
+        entityType: 'email_campaign',
+        entityId: id,
+        changes: { status: { to: 'CANCELLED' } },
+      },
+      request
+    )
 
     return NextResponse.json({ success: true })
   } catch {

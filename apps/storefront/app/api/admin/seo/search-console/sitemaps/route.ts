@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { hasPermission } from '@/lib/rbac'
+import { logAudit, logAuditWithRequest } from '@/lib/audit'
 import { getGscServiceAccount, getSeoConfiguration } from '@/lib/seo/configuration'
 import { listSitemaps, submitSitemap } from '@/lib/seo/search-console'
 
@@ -64,6 +65,15 @@ export async function POST() {
 
   try {
     await submitSitemap(ctx.serviceAccount, ctx.config.gscProperty!, sitemapUrl)
+
+    // Submitting to Search Console is an outward-facing action against the live property,
+    // so it gets recorded even though nothing local changed.
+    await logAudit({
+      action: 'submit_sitemap',
+      entityType: 'seo_configuration',
+      changes: { sitemapUrl, property: ctx.config.gscProperty },
+    })
+
     return NextResponse.json({ success: true, sitemapUrl })
   } catch (error) {
     return NextResponse.json(

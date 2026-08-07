@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma as db } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/admin-auth";
+import { logAuditWithRequest } from "@/lib/audit";
 import { z } from "zod";
 
 export async function POST(req: NextRequest) {
@@ -18,6 +19,21 @@ export async function POST(req: NextRequest) {
     where: { id: signupId },
     data: { status: "REJECTED", reviewedBy: admin.id, reviewedAt: new Date(), reviewNotes: reviewNotes ?? null },
   });
+
+  await logAuditWithRequest(
+    {
+      userId: admin.id,
+      action: "reject",
+      entityType: "fundraiser_signup_request",
+      entityId: signupId,
+      changes: {
+        status: { from: signup.status, to: "REJECTED" },
+        schoolName: signup.schoolName,
+        reviewNotes: reviewNotes ?? null,
+      },
+    },
+    req
+  );
 
   return NextResponse.json({ success: true });
 }

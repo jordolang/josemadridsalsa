@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
   try {
@@ -61,6 +62,17 @@ export async function POST(request: NextRequest) {
       },
       include: { steps: { orderBy: { order: 'asc' } } },
     })
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'create',
+        entityType: 'email_automation',
+        entityId: automation.id,
+        changes: { name: automation.name, trigger: automation.trigger },
+      },
+      request
+    )
 
     return NextResponse.json({ success: true, automation }, { status: 201 })
   } catch {

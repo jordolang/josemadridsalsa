@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import { triggerCampaignContinuation } from '@/lib/email/queue'
 
 export async function POST(
@@ -32,6 +33,24 @@ export async function POST(
       where: { id },
       data: { status: 'SENDING', startedAt: campaign.startedAt ?? new Date() },
     })
+
+    // Who started a send to the customer list, and when, is the audit question that
+    // matters most for email — the action is irreversible once mail is out.
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'send',
+        entityType: 'email_campaign',
+        entityId: id,
+        changes: {
+          name: campaign.name,
+          subject: campaign.subject,
+          status: { from: campaign.status, to: 'SENDING' },
+          totalRecipients: campaign.totalRecipients,
+        },
+      },
+      request
+    )
 
     // Start the self-continuing send chain (survives serverless freezes).
     await triggerCampaignContinuation(id)

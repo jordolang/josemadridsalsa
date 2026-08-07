@@ -1,0 +1,446 @@
+---
+title: Admin Platform Gap Analysis
+description: What the admin console already covers against a full commerce-operations spec, what is missing, and what each gap costs to close
+---
+
+Assessed against `apps/storefront` on branch `feature/admin-operating-system`. Every
+Present/Partial claim below cites a model in `prisma/schema.prisma`, a route under
+`app/admin` / `app/api/admin`, or a file path.
+
+Estimates are **engineer-days for one developer working with Claude, reusing the patterns
+already in this repo**. They assume no new infrastructure. Ranges, not point estimates.
+
+## Headline
+
+The admin is far further along than a gap list makes it look. Of the ~17 areas in the spec,
+**9 are substantially built**, 6 are partial, and 2 are genuinely absent (returns/RMA and
+content management). The console has 70+ route folders and 99 admin API route files with
+write handlers.
+
+What is missing is not breadth — it is **three structural things** that every remaining
+feature depends on:
+
+1. **Fulfillment has no state of its own.** Order and payment states are separated; fulfillment is not.
+2. **There is no domain event bus.** Every reaction to a business action is hand-wired at the call site.
+3. **Sales channel is encoded across four uncoordinated fields.**
+
+Fix those three first (~11–17 days) and the rest of the backlog gets meaningfully cheaper,
+because most of it is a consumer of one of them.
+
+## Structural findings (fix before feature work)
+
+<Callout type="info" title="Phase 1 status">
+All of Phase 1 is **implemented** on branch `feature/admin-operating-system` — findings 1–3,
+the `Refund.provider` defect, and the audit-log backfill. The migration
+(`20260807120000_add_fulfillment_channel_domain_events`) is applied to dev Neon and is **not
+yet applied to production Supabase**. Each section below keeps the original finding and
+records what shipped.
+</Callout>
+
+### 1. Fulfillment state is conflated into `OrderStatus`
+
+`Order` correctly separates payment (`paymentStatus: PaymentStatus`) from lifecycle
+(`status: OrderStatus`), but `OrderStatus` mixes lifecycle and fulfillment:
+
+```
+PENDING · CONFIRMED · PROCESSING · SHIPPED · DELIVERED · CANCELLED · REFUNDED
+```
+
+`OrderItem` has `quantity` but **no `quantityFulfilled`**. Partial fulfillment, split
+shipments, and per-item returns are therefore *structurally impossible*, not merely
+un-built UI. `ShippingLabel` exists and relates to `Order`, but nothing ties a label to the
+specific items in that box.
+
+Also: `PaymentStatus` carries both `PAID` and `SUCCEEDED`. This is already reconciled at the
+code layer — `lib/payments/status.ts` makes `PAID` the canonical writer and exposes
+`PAID_PAYMENT_STATUSES` / `isPaid()` for reads, precisely because the checkout route and the
+Stripe webhook once wrote different values and could not recognise each other's work. Rows
+written before that fix are still stored as `SUCCEEDED`, so reads must keep going through the
+helper. Collapsing the enum itself is a separate data migration across every payment row and
+~39 call sites; it is **deliberately not in Phase 1** — estimate it at **2–3 days** on its own.
+
+**Shipped.** `FulfillmentStatus` enum (`UNFULFILLED · PARTIALLY_FULFILLED · FULFILLED ·
+DELIVERED · RETURNED`), `Order.fulfillmentStatus`, `OrderItem.quantityFulfilled`, and
+`Fulfillment` + `FulfillmentItem` models so a shipment can cover a subset of an order.
+
+The important part is `lib/orders/fulfillment.ts`. Six places in the codebase advance an order
+to shipped or delivered — `admin/orders/[id]/update-status`, `admin/orders/bulk-status`,
+`admin/orders/[id]/tracking`, `admin/orders/[id]/shipping-label`, `webhooks/shopify`, and
+`lib/tracking/webhook-handlers.ts` (EasyPost). Rather than editing six routes to each set two
+fields, `buildFulfillmentUpdate()` returns status, fulfillment status and timestamps as one
+object and all six call it. Nothing outside that module assigns `fulfillmentStatus` directly,
+so the two fields cannot drift.
+
+Rules the helper encodes, each with a test: a partially shipped order is `PROCESSING`, never
+`SHIPPED`; a late tracking webhook records delivery without resurrecting a cancelled or
+refunded order; `shippedAt` is stamped on first delivery when the carrier never sent an
+in-transit event; and refunding an order that never shipped does not mark it `RETURNED`.
+
+Migration backfill derives history from `status`/`shippedAt`/`deliveredAt` rather than
+defaulting everything to `UNFULFILLED` — otherwise the first report run off the new column
+would claim the business has never shipped anything.
+
+**What is schema-only so far.** `Fulfillment`, `FulfillmentItem`, `OrderItem.quantityFulfilled`
+and `deriveFulfillmentStatus()` exist and are tested, but **nothing in the app writes them
+yet** — every current path goes through `buildFulfillmentUpdate()`, which sets the order-level
+enum directly. So `PARTIALLY_FULFILLED` is not yet reachable in production and
+`quantityFulfilled` holds its backfilled value. That is the intended Phase 1 boundary: the data
+model is what unblocks the Phase 2 partial-fulfillment and returns UI, which is where the
+writing path gets built. Do not read `Fulfillment` as live.
+
+### 2. No domain event system
+
+`lib/scraper/event-bus.ts` exists but is a scraper-progress SSE bus — unrelated. There is no
+`order.created` / `payment.completed` / `inventory.low` emitter. Reactions are wired inline
+in webhook handlers and route bodies.
+
+The consequence shows up everywhere else in this document: workflow automation, the
+notification centre, activity timelines, and analytics all want to subscribe to the same
+facts, and today each would have to re-instrument the same call sites.
+
+**Shipped.** `DomainEvent` (append-only, indexed by `(entityType, entityId, createdAt)` so it
+doubles as the timeline source), a typed catalogue in `lib/domain-events/types.ts`, and
+`emitDomainEvent()` in `lib/domain-events/emit.ts`.
+
+Two design points worth knowing:
+
+- **It never throws.** Emitting is observability, not the operation — a failed event write
+  must not roll back a captured payment. This mirrors how `logAudit` swallows its own errors.
+  The prisma client is resolved *inside* the try block rather than as a default parameter,
+  because default parameters evaluate before the try and would throw straight past the catch.
+- **It accepts a transaction client.** Callers inside `prisma.$transaction` pass `tx`, so the
+  event participates in the transaction and a rolled-back payment leaves no phantom event.
+
+Wired so far: the fulfillment transitions from all six writers above, `shipment.created` on
+label purchase, and `payment.completed` / `payment.failed` in the **Stripe** webhook only.
+Still to instrument: the Square, PayPal and `checkout/complete` payment paths (all three set
+`status: 'CONFIRMED'` without emitting), `order.created` across the five checkout paths,
+`inventory.low`, and `customer.created`.
+
+### 3. Sales channel is four fields pretending to be one
+
+The spec asks for `Website / POS / Festival / Wholesale / Manual / Marketplace / Phone`.
+Today an order's origin is inferable from `paymentChannel` (`ONLINE | POS` only),
+`importSource`, `fundraiserId`, `participantId`, and `shopifyOrderId` — none of which are
+mutually exclusive or enumerated.
+
+This is a consolidation job, not a greenfield one: the data mostly exists.
+
+**Shipped.** `SalesChannel` enum (`WEBSITE · POS · FUNDRAISER · WHOLESALE · MANUAL ·
+MARKETPLACE · PHONE · IMPORT`) + `Order.salesChannel`, set at creation in all five order
+paths via `deriveSalesChannel()` in `lib/orders/sales-channel.ts`.
+
+The signals genuinely overlap — a fundraiser sale can be rung up on the POS terminal — so the
+precedence is written down as a business decision rather than left to fall out of statement
+order: explicit → fundraiser → POS → marketplace → import → website. The same precedence
+appears in the migration backfill and in the helper; **change both together**.
+
+Still to do: expose it as an admin filter and a reporting dimension (part of the Orders
+filter work in Phase 2).
+
+## Area-by-area, in your navigation order
+
+### Overview
+
+| Item | State | Evidence |
+|---|---|---|
+| Sales/revenue/AOV tiles | **Present** | `app/admin/page.tsx` (452 lines), `components/admin/SalesOverview.tsx`, `RevenueChart.tsx`, `StatsCard.tsx` |
+| Low-stock alerts | **Present** | `components/admin/LowStockAlert.tsx`, `InventoryAlert` model |
+| Top products | **Present** | `components/admin/PopularProducts.tsx` |
+| Failed payments / unfulfilled queue | **Missing** | no `fulfillmentStatus` to query (see #1) |
+| Secondary growth dashboard | **Present** | `/admin/growth` — 12-month revenue, new-vs-total customers, top products |
+| Operational vs analytical split | **Missing** | one page does both |
+
+The dashboard is informational rather than action-oriented: the eight `StatsCard` instances in
+`app/admin/page.tsx:247-310` take no `href`, and the only navigation on the page is generic
+("View Analytics", "View All", "Manage Users" at lines 236, 355, 412). Clicking "12 low stock"
+does not land you in a filtered product list. Splitting it into an operational "what needs
+doing" page plus the existing analytical view is **3–4 days**, and depends on #1 for the
+unfulfilled queue.
+
+Note: `app/admin/growth/page.tsx` builds its metrics with `prisma.$queryRaw` template literals
+(lines 14-27). They are parameter-free and therefore not an injection risk, but CLAUDE.md's
+"never build raw SQL" rule means these should be migrated to Prisma aggregates when the
+analytics work below happens.
+
+### Orders
+
+**Present:** list, detail, row-selection with bulk status change and "export selected"
+(`components/admin/OrdersTableClient.tsx:130-180`), `api/admin/orders/bulk-status`,
+export, import, refund (`orders/[id]/refund`), invoice + packing slip (`InvoicePDF.tsx`,
+`PackingSlipButton.tsx`, `printedInvoiceAt` / `printedPackingSlipAt`), label purchase
+(`BuyShippingLabelDialog.tsx`), tracking (`trackingHistory`, `trackingUrl`, EasyPost
+webhook), customer + admin notes, `modificationHistory` JSON.
+
+**Missing:** partial fulfillment, split shipments, returns/exchanges, manual order creation,
+a real timeline (`modificationHistory` is an untyped JSON blob, not an event log), saved
+views.
+
+Filtering is confirmed narrow: `app/admin/orders/page.tsx:42-59` supports exactly two filters —
+a text search across `orderNumber` / `guestEmail` / user name+email, and a single
+`OrderStatus` dropdown (lines 182-189). The spec's `date + payment status + fulfillment status +
+customer + product + shipping method + channel + value + tags + location` needs #1 and #3
+first.
+
+**Work:** filters + saved views **3–4 days**; manual orders **2–3 days**; timeline **1–2 days**
+once #2 lands.
+
+### Products
+
+**Present:** full CRUD, variants (`ProductVariant`), SKU/barcode, `price` /
+`compareAtPrice` / `costPrice` (COGS is there), `taxCode`, categories, tags
+(`Tag`/`ProductTag`), images, weight + `lengthInches`/`widthInches`/`heightInches`, SEO
+(`metaTitle`, `metaDescription`, `ogImage`, `searchKeywords`), `isActive`/`isFeatured`,
+`unitsPerCase`, nutrition + ingredients, import/export.
+
+**Missing:** collections (distinct from categories), bundles, subscriptions, scheduled
+launches, related products, supplier info, **custom attributes**.
+
+Adjacent: `/admin/merchandise` exists but is driven entirely by static config in
+`lib/merchandise/config` (`adminMerchProducts`, `merchCollections`, `adminVendorCredentials`) —
+it is a read-only display of a hard-coded catalog, not a managed one. Promoting merch to real
+`Product` rows is **1–2 days** if you want it editable.
+
+On custom attributes: `heatLevel` is a hard-coded `HeatLevel` enum column, exactly the
+pattern the spec warns about. A `ProductAttribute`/`AttributeValue` pair would generalise it —
+but note this is only worth doing if you actually intend the multi-client framework (see the
+closing section). For one salsa company, the enum is correct and cheaper.
+
+**Work:** collections **2 days**; bundles **3–4 days**; scheduled launches **1 day**;
+subscriptions **6–10 days** (recurring billing is its own project).
+
+### Inventory
+
+**Present:** stock by SKU, `stockReserved` vs `inventory` (available/on-hand exists),
+`lowStockThreshold`, `stockStatus`, full history via `InventoryTransaction` with a genuinely
+good type enum (`SALE · RESTOCK · ADJUSTMENT · RETURN · DAMAGED · SAMPLE · TRANSFER ·
+INITIAL · RESERVATION · RELEASE · IMPORT`), `InventoryAlert` with acknowledge/resolve
+workflow, `RestockNotification`, import/export, transactional decrement in
+`lib/inventory-manager.ts`.
+
+This is the strongest area in the console.
+
+**Missing:** purchase orders, receiving, backorders, multi-location/warehouse (the
+`TRANSFER` transaction type exists but there is no location dimension to transfer between).
+
+**Work:** purchase orders + receiving **4–6 days**; multi-location **4–5 days** (touches every
+stock read); backorders **2–3 days**.
+
+### Customers
+
+**Present:** `Customer` model with `CustomerSource` and `CustomerAccountType`,
+`/admin/customers` + import/export/sync/mailing-list, addresses, order history,
+`LoyaltyAccount` + `PointTransaction` + `LoyaltyReward` + `RewardRedemption`,
+`AbandonedCart`, `WholesaleAccount` + `WholesaleStatus` with a real approval queue at
+`/admin/wholesale` (321 lines, paginated, status-filtered), tags, `ContactSubmission`,
+`/admin/messages` + `/admin/messages/live` over `ChatConversation`/`ChatThread`.
+
+**Missing:** computed LTV/average-spend surfaced in the UI, segments (`EmailSegment` exists
+but is email-scoped), disputes/chargebacks.
+
+**Work:** LTV + spend rollups **2 days**; general-purpose segments **3–4 days**.
+
+### Marketing
+
+The most complete area. `EmailCampaign`, `EmailRecipient`, `EmailLog`, `EmailTemplate` +
+versions + compositions, `EmailAutomation` / `AutomationStep` / `AutomationTrigger` /
+`AutomationEnrollment` / `AutomationLog`, `MailingList` + subscribers, `EmailSegment`,
+`EmailBounce` / `EmailSuppression` / `UnsubscribePreference`, `BrandKit`, `EmailSchedule`,
+plus `/admin/email-marketing`, `/admin/email-campaigns`, `/admin/communications`,
+`/admin/social`, `/admin/feeds`, `/admin/lead-generation`, `ShopListing` for Meta/TikTok/Amazon
+catalogs.
+
+**Missing:** SMS, referral/affiliate tracking, UTM attribution stored on orders.
+
+**Work:** UTM capture → order **1–2 days**; affiliate/referral **4–5 days**; SMS **3–4 days**.
+
+### Content
+
+**Present:** `/admin/blog` (posts, series, categories, comments), `/admin/media` +
+`Media`/`MediaTag`, `/admin/seo` with `SeoConfiguration` + `StructuredData` + search-console
+integration, `Recipe`, `DeveloperPageContent`, `/admin/forms` (a template builder over static
+`lib/forms/templates` definitions, for downloadable business forms — not web page content).
+
+**Missing:** homepage/banner management, announcements, landing pages, FAQs, navigation
+editing, **redirects** (no `Redirect` model — relevant given the BigCommerce cutover),
+reusable page sections.
+
+`/admin/content` is a 5-line redirect to `/admin/media` (`app/admin/content/page.tsx`) — the
+nav slot exists but there is no content management behind it. This is the thinnest area
+relative to the spec.
+
+**Work:** redirects **1–2 days**; banners/announcements **2–3 days**; navigation + sections
+**4–6 days**.
+
+### Analytics
+
+**Present:** `/admin/analytics` with orders, inventory, fundraisers, social sub-views;
+`/admin/growth` (12-month revenue, order counts, new-vs-cumulative customers, top products);
+`Analytics`/`AnalyticsSetting`, `lib/analytics/*` including `abandoned-cart-metrics.ts`,
+Google Analytics reporting, Amplitude.
+
+**Missing:** gross profit / margin (COGS is captured on `Product.costPrice` but never rolled
+up), cohort retention, repeat-customer rate, inventory turnover, days-of-stock, sell-through,
+contribution margin, geographic sales, channel attribution (blocked on #3), custom date-range
+export.
+
+**Work:** profit/margin reporting **3–4 days**; cohort + retention **3–4 days**; inventory
+turnover/days-of-stock **2 days**.
+
+### Finance
+
+**Present:** `/admin/financials` with expenses, payroll, taxes; `/admin/invoices` (status filter
+across DRAFT/SENT/PAID/OVERDUE/CANCELLED plus text search, `app/admin/invoices/page.tsx:26-32`);
+QuickBooks Online integration
+(`QuickBooksConnection`, `QuickBooksSyncRecord`, `QuickBooksEntityMap`, `QuickBooksSettings`,
+`lib/quickbooks/*`) syncing paid orders and refunds and pulling live P&L; `Invoice`;
+`GiftCertificate` + usage; `MileageEntry`; `TimeClockEntry`.
+
+**Correctness issue (fixed in Phase 1).** `Refund.stripeRefundId` is a required unique field,
+and the PayPal and Square webhooks both stuff their provider refund ID into it. Worse,
+`app/api/admin/refunds/route.ts` wrote `provider === 'STRIPE' ? id : ''` — so every
+admin-initiated PayPal or Square refund stored an **empty string** in a UNIQUE column, meaning
+the second such refund ever taken would hit the constraint and roll back the whole refund
+transaction. `Refund.provider` has now been added and backfilled from `Payment.provider`, and
+the admin route stores the real provider ID. The column is deliberately *not* renamed to
+`providerRefundId`: Prisma emits DROP + ADD for a rename, which would destroy every stored
+refund ID.
+
+**Missing:** processor fees (not captured anywhere — needed for true net revenue), chargebacks
+/ disputes.
+
+**Work:** processor fee capture **2–3 days**; disputes **2–3 days**.
+
+### Operations (shipping, reviews, returns, staff, audit)
+
+**Shipping — Present:** EasyPost via `lib/shipping-*`, `ShippingProvider` /
+`ShippingCarrier` / `ShippingLabel`, `ShippingSettings` (free-shipping threshold, origin
+address, enabled carriers), real-time rates, tracking webhooks, `OrderNotificationRule` +
+`OrderNotificationSetting` for automated customer notifications.
+**Missing:** zones, package presets, insurance, local pickup/delivery. **3–4 days.**
+
+**Reviews — Present:** `Review` (with `isVerified`, `ReviewStatus`, `moderatedAt`/`moderatedBy`),
+`SiteReview`, `/admin/reviews`, `BlogComment` moderation.
+**Missing:** photo reviews, Q&A, review-request automation. **2–3 days** (automation is nearly
+free once #2 exists).
+
+**Returns / RMA — Missing entirely.** No model, no route. The `RETURN` inventory transaction
+type and `OrderStatus.REFUNDED` are the only traces. Needs #1 first (returns are per-item).
+**5–7 days.**
+
+**Staff & permissions — Present and good:** `UserRole` (`CUSTOMER · ADMIN · DEVELOPER · STAFF ·
+WHOLESALE · FUNDRAISER`), `Permission` + `RolePermission` with 18 `PermissionCategory` values,
+`lib/rbac.ts`, `lib/admin-auth.ts`, `/admin/users` with import/export, `ServiceCredential` +
+`CredentialAccessGrant` encrypted vault, `PartnerApiKey` with scopes.
+**Missing:** **2FA** (zero hits for `twoFactor`/`TOTP`/`authenticator` anywhere), session
+management UI, password policy. **2FA: 2–3 days.**
+
+**Audit log — was under-applied, now backfilled.** `AuditLog` model with the right indexes,
+`lib/audit.ts`, `/admin/audit-logs`. At the start of Phase 1, **48 of the 99 admin API route
+files containing a POST/PATCH/PUT/DELETE handler referenced it at all**.
+
+That is now **93 of 99**. The six that do not are deliberate: `campaigns/[id]/test-send`,
+`email-templates/[id]/test`, `email-templates/[id]/composition/render`,
+`fundraiser-teams/preview-story`, `locations/geocode`, and `lead-generation/[id]/parse` are
+POST endpoints that render a preview, geocode a lookup, or send a test message to the admin
+who asked for it. They change no persistent state, so an audit entry would be noise.
+
+Two defects surfaced while doing this, both fixed:
+
+- **`lib/audit.ts` could throw and 500 the operation it was recording.** `getRequestMetadata`
+  ran outside any try/catch inside `logAuditWithRequest`, so a request object without usable
+  headers turned a *completed* refund into a 500 for the caller. Audit logging records
+  something that already happened; it must never be able to fail the caller. Both functions
+  are now total, with regression tests in `tests/lib/audit.test.ts`.
+- **Two admin endpoints had no authentication at all.**
+  `POST /api/admin/locations/fetch-photos` and `POST /api/admin/locations/update-local-photos`
+  had no session or permission check. `proxy.ts` does not guard `/api/admin` — it only handles
+  fundraising redirects — so both were anonymously callable. `fetch-photos` would enumerate
+  every active retail location, spend **billable Google Places quota**, and write photo URLs
+  back to the database. Both now require `content:write`.
+
+### Settings
+
+**Present:** `/admin/settings` is an overview hub (role counts, permission count, service keys,
+recent audit activity — `app/admin/settings/page.tsx:24-45`) linking to profile, payments
+(`PaymentProviderConfig`), shipping, email (`EmailConfiguration`), integrations
+(`ThirdPartyIntegration`), and discount codes. Plus GrowthBook feature flags and `.env` secrets.
+**Missing (confirmed by reading the hub):** store identity/currency, tax configuration UI
+(Stripe Tax is code-configured in `lib/tax-calculator.ts`), legal pages, notification
+preferences beyond order events.
+**Work: 2–3 days.**
+
+## Cross-cutting requests
+
+| Request | State | Note | Est. |
+|---|---|---|---|
+| Workflow automation | **Partial** | Two half-engines already exist: `OrderNotificationRule`/`OrderNotificationEvent` (order-scoped trigger→action) and `EmailAutomation`/`AutomationStep`/`AutomationTrigger`/`AutomationEnrollment` (full trigger→condition→action). The job is to generalise and unify them onto #2, not build from scratch. | **5–7 d** |
+| Global search | **Missing** | `components/ui/command.tsx` (cmdk) is installed but unused for search. Cross-entity search over orders/customers/SKUs/tracking/coupons needs a unified index. | **3–5 d** |
+| Bulk operations | **Partial** | Orders are genuinely done — select-all, bulk status change, export selected (`OrdersTableClient.tsx:130-180`) — plus endpoints for events, leads, mailing lists. Absent for products, inventory, customers, shipments. | **3–4 d** |
+| Activity timelines | **Missing** | `Order.modificationHistory` is untyped JSON. Falls out of #2 nearly free. | **1–2 d** after #2 |
+| Notification centre | **Partial** | `Notification` model + `NotificationType`, but all 5 values are order/system (`ORDER_NEW`, `ORDER_STATUS_CHANGE`, `ORDER_HIGH_VALUE`, `ORDER_MODIFIED`, `SYSTEM`). No inventory, payment-failure, integration-failure, or dispute types. No in-admin centre UI. | **3–4 d** |
+| Idempotency | **Partial** | Genuinely handled on the money paths — `WebhookEvent` dedup plus explicit keys in `webhooks/stripe`, `checkout/complete`, `checkout/square/process-payment`, `checkout/paypal/capture-order`, `pos/create-terminal-checkout`, `lib/orders/redeem-codes.ts`, `lib/email/template-sender.ts`. Not applied to inventory adjustments or shipment creation. | **1–2 d** |
+| Security baseline | **Mostly present** | RBAC, encrypted credentials (`lib/crypto.ts`), signed webhook verification, rate limiting (`lib/rate-limit`, `rate-limiter.ts`), Zod validation, audit log, API scopes. Gap is 2FA + session management. | see above |
+| AI admin assistant | **Partial** | `lib/ai-rag`, `app/api/ai-chat`, `ChatDomain` already spans orders/products/payments. Natural-language querying over commerce data is a genuinely reachable extension. | **5–8 d** |
+
+## Sequencing and totals
+
+Each phase total is the arithmetic sum of its line items above — no overlap discount is
+applied, because the dependencies run sequentially rather than in parallel for a solo dev.
+
+**Phase 1 — Structural: 14–21 days. Mostly done.**
+Fulfillment model 5–8 ✅ · domain events 4–6 ✅ (schema, emitter and the fulfillment/payment
+call sites; `order.created`, `inventory.low` and `customer.created` still to instrument) ·
+sales channel 2–3 ✅ (admin filter deferred to Phase 2) · `Refund.provider` fix 0.5 ✅ ·
+audit-log backfill 2–3 ✅ (48/99 route files → 93/99, six deliberate skips). **Phase 1 is
+complete.** Most later items get cheaper from here.
+
+**Before this reaches production:** the migration has been applied to dev Neon only. It must
+run against Supabase, and the `directUrl`/env-precedence trap noted below applies.
+
+**Phase 2 — Operational core: 23–33 days.**
+Returns/RMA 5–7 · notification centre 3–4 · global search 3–5 · bulk operations 3–4 ·
+operational dashboard split 3–4 · order filters + saved views 3–4 · timelines 1–2 · 2FA 2–3.
+
+**Phase 3 — Commercial depth: 35–48 days.**
+Workflow automation 5–7 · purchase orders + receiving 4–6 · profit/margin 3–4 · cohort +
+retention 3–4 · inventory turnover 2 · processor fees 2–3 · customer LTV rollups 2 ·
+collections 2 · bundles 3–4 · redirects 1–2 · banners/announcements 2–3 · shipping zones +
+presets + pickup 3–4 · settings completion 2–3 · UTM capture 1–2.
+
+**Phase 4 — Optional: 37–54 days.**
+Subscriptions 6–10 · AI admin assistant 5–8 · multi-location inventory 4–5 · affiliate/referral
+4–5 · custom product attributes 4–6 · navigation + page sections 4–6 · SMS 3–4 · general
+segments 3–4 · disputes/chargebacks 2–3 · review gaps (photo, Q&A, request automation) 2–3.
+
+| | Engineer-days | Weeks at 5 productive days |
+|---|---|---|
+| Phase 1 | 14–21 | 3–4 |
+| Phase 2 | 23–33 | 5–7 |
+| Phase 3 | 35–48 | 7–10 |
+| **Phases 1–3** | **72–102** | **15–20** |
+| Phase 4 | 37–54 | 7–11 |
+| **All four** | **109–156** | **22–31** |
+
+Engineer-days are not calendar days. At a realistic part-time pace alongside running the
+business, treat Phases 1–3 as **5 to 8 calendar months**, and Phase 1 alone — the part that
+unblocks everything else — as **3 to 5 weeks**.
+
+### Constraints that affect the plan
+
+- **Migrations are the long pole**, not the React. Items requiring schema changes that must
+  land on both dev (Neon) and prod (Supabase): fulfillment, sales channel, `Refund.provider`,
+  domain events, returns, purchase orders, multi-location, collections/bundles. Note the
+  Prisma CLI env-precedence trap when targeting production.
+- **Vercel Hobby rejects sub-daily crons at deploy pre-build.** Any automation phrased as
+  "alert if unfulfilled for 48 hours" needs either a daily cron, an external scheduler, or a
+  plan upgrade. That is a billing decision, not an engineering one.
+
+## On the multi-client framework idea
+
+Recommend against it now. Abstracting products, orders, inventory, and permissions into
+reusable modules with per-client branding and attribute schemas would multiply nearly every
+estimate above, and there is exactly one client. The reusable asset you get from doing Phase 1
+well — a clean event bus, a proper fulfillment model, an audited mutation layer — is most of
+what a second deployment would want anyway, and it can be extracted later against a real
+second set of requirements rather than an imagined one.

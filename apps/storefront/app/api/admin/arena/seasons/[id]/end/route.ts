@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma as db } from '@/lib/prisma'
 import { requireAdminSession } from '@/lib/admin-auth'
+import { logAuditWithRequest } from '@/lib/audit'
 
 const EndSeasonSchema = z.object({
   // Optional prize/scholarship amounts recorded on the Championship row.
@@ -27,7 +28,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  await requireAdminSession()
+  const admin = await requireAdminSession()
   const { id: seasonId } = await params
   const parsed = EndSeasonSchema.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) {
@@ -111,6 +112,23 @@ export async function POST(
 
     return { updatedSeason, championship }
   })
+
+  // Ending a season freezes standings and awards the championship, so it needs an
+  // attributable record of who closed it and what it paid out.
+  await logAuditWithRequest(
+    {
+      userId: admin.id,
+      action: 'update',
+      entityType: 'fundraiser_season',
+      entityId: season.id,
+      changes: {
+        period: season.period,
+        status: { to: 'ENDED' },
+        championshipId: result.championship?.id ?? null,
+      },
+    },
+    req,
+  )
 
   return NextResponse.json({
     success: true,

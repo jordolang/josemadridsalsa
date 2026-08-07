@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requirePermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import { prisma } from '@/lib/prisma'
 import { ok, fail } from '@/lib/api'
 import { z } from 'zod'
@@ -11,7 +12,7 @@ const bulkDeleteSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    await requirePermission('messaging:assign')
+    const user = await requirePermission('messaging:assign')
 
     const body: unknown = await req.json()
     const { campaignId, ids } = bulkDeleteSchema.parse(body)
@@ -19,6 +20,17 @@ export async function POST(req: NextRequest) {
     const { count } = await prisma.lead.deleteMany({
       where: { id: { in: ids }, campaignId },
     })
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'delete',
+        entityType: 'lead',
+        entityId: campaignId,
+        changes: { campaignId, requested: ids.length, deleted: count },
+      },
+      req
+    )
 
     return ok({ success: true, deleted: count })
   } catch (error: unknown) {

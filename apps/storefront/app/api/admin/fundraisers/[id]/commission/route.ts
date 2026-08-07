@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import prisma from '@/lib/prisma'
 
 const CommissionSchema = z.object({
@@ -38,6 +39,24 @@ export async function PUT(
       where: { id },
       data: { commissionRate: parsed.data.commissionRate },
     })
+
+    // Commission rate determines what the organization is paid, so rate changes need an
+    // attributable before/after record.
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'update',
+        entityType: 'fundraiser',
+        entityId: id,
+        changes: {
+          commissionRate: {
+            from: Number(existing.commissionRate),
+            to: parsed.data.commissionRate,
+          },
+        },
+      },
+      req
+    )
 
     return NextResponse.json(updated)
   } catch (error: unknown) {

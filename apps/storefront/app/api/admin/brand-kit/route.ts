@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { createChangeSnapshot, logAuditWithRequest } from '@/lib/audit'
 
 export async function GET() {
   try {
@@ -29,6 +30,17 @@ export async function PUT(request: NextRequest) {
     const brandKit = existing
       ? await prisma.brandKit.update({ where: { id: existing.id }, data: body })
       : await prisma.brandKit.create({ data: body })
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: existing ? 'update' : 'create',
+        entityType: 'brand_kit',
+        entityId: brandKit.id,
+        changes: createChangeSnapshot(existing, body),
+      },
+      request
+    )
 
     return NextResponse.json({ success: true, brandKit })
   } catch {

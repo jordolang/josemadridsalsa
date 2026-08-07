@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 
 export async function PUT(
   request: NextRequest,
@@ -28,6 +29,17 @@ export async function PUT(
       },
     })
 
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'update',
+        entityType: 'email_template',
+        entityId: id,
+        changes: { name, subject, isActive },
+      },
+      request
+    )
+
     return NextResponse.json({ success: true, template })
   } catch (error) {
     console.error('Error updating template:', error)
@@ -53,6 +65,13 @@ export async function DELETE(
     await prisma.emailTemplate.delete({
       where: { id },
     })
+
+    // Logged after the delete commits, so a failed delete leaves no entry claiming the
+    // template is gone.
+    await logAuditWithRequest(
+      { userId: user.id, action: 'delete', entityType: 'email_template', entityId: id },
+      request
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {

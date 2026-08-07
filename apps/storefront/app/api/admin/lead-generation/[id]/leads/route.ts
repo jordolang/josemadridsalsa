@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
+import { logAudit, logAuditWithRequest } from '@/lib/audit'
 import { ok, fail, parsePagination } from '@/lib/api'
 import { z } from 'zod'
 
@@ -89,7 +90,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requirePermission('messaging:read')
+    const actor = await requirePermission('messaging:read')
 
     const { id: campaignId } = await params
     const campaign = await prisma.leadCampaign.findUnique({
@@ -117,6 +118,17 @@ export async function POST(
         status: 'SCRAPED',
       },
     })
+
+    await logAuditWithRequest(
+      {
+        userId: actor.id,
+        action: 'create',
+        entityType: 'lead',
+        entityId: lead.id,
+        changes: { campaignId: lead.campaignId, status: lead.status },
+      },
+      req
+    )
 
     return ok({ lead })
   } catch (error: unknown) {

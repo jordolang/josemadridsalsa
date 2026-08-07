@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { hasPermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import { getSeoConfiguration, updateSeoConfiguration } from '@/lib/seo/configuration'
 
 const configSchema = z.object({
@@ -68,6 +69,18 @@ export async function POST(request: NextRequest) {
     }
 
     await updateSeoConfiguration(parsed.data)
+
+    // SEO configuration holds service-account credentials; the audit entry records the
+    // keys that changed, never their values.
+    await logAuditWithRequest(
+      {
+        userId: (session.user as any).id,
+        action: 'update',
+        entityType: 'seo_configuration',
+        changes: { fields: Object.keys(parsed.data) },
+      },
+      request
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {

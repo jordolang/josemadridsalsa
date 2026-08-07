@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma as db } from '@/lib/prisma'
 import { requireAdminSession } from '@/lib/admin-auth'
+import { logAuditWithRequest } from '@/lib/audit'
 
 const TeamOpSchema = z.object({
   teamId: z.string().min(1),
@@ -16,7 +17,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  await requireAdminSession()
+  const admin = await requireAdminSession()
   const { id: seasonId } = await params
   const parsed = TeamOpSchema.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) {
@@ -59,6 +60,17 @@ export async function POST(
       activePeriod: true,
     },
   })
+  await logAuditWithRequest(
+    {
+      userId: admin.id,
+      action: 'update',
+      entityType: 'fundraiser_team',
+      entityId: team.id,
+      changes: { seasonId: { to: season.id }, period: season.period, teamName: team.name },
+    },
+    req,
+  )
+
   return NextResponse.json({ success: true, team: updated })
 }
 

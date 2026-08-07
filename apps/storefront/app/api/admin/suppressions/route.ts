@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import { SuppressionReason } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
@@ -63,6 +64,17 @@ export async function POST(request: NextRequest) {
       update: { reason, notes },
     })
 
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'create',
+        entityType: 'email_suppression',
+        entityId: suppression.id,
+        changes: { email: suppression.email, reason, notes },
+      },
+      request
+    )
+
     return NextResponse.json({ success: true, suppression })
   } catch (error) {
     console.error('Add suppression error:', error)
@@ -82,6 +94,20 @@ export async function DELETE(request: NextRequest) {
     if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
 
     await prisma.emailSuppression.delete({ where: { email } })
+
+    // Removing a suppression makes a previously blocked address mailable again, so it is
+    // recorded against the admin who lifted it.
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'delete',
+        entityType: 'email_suppression',
+        entityId: email,
+        changes: { email },
+      },
+      request
+    )
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Delete suppression error:', error)
