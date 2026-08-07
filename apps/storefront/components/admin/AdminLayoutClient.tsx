@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Bell } from 'lucide-react'
 
+import { GlobalSearch } from '@/components/admin/GlobalSearch'
 import { AppSidebar } from '@/components/admin/AppSidebar'
 import {
   Breadcrumb,
@@ -137,6 +138,9 @@ function AdminLayoutInner({
             </BreadcrumbList>
           </Breadcrumb>
           <div className="ml-auto flex items-center gap-1">
+            <div className="mr-1 hidden md:block">
+              <GlobalSearch />
+            </div>
             <Tooltip>
               <TooltipTrigger asChild>
                 <ThemeToggle className="size-8 rounded-md px-0" />
