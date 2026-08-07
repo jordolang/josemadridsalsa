@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { isAuthorizedCronRequest } from '@/lib/cron/auth'
 import { sendEmail, substituteVariables } from '@/lib/email/sender'
 import { abandonedCartTemplate } from '@/lib/email/templates/abandoned-cart'
 import { checkUnsubscribed } from '@/lib/email/logger'
@@ -96,7 +97,11 @@ async function sendAbandonedCartEmail(
   return result.success
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!isAuthorizedCronRequest(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const now = new Date()
 

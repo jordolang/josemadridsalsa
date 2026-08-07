@@ -116,7 +116,9 @@ export const NOTIFICATION_SEVERITY_BY_TYPE: Record<NotificationType, Notificatio
   INVENTORY_LOW: 'WARNING',
   INVENTORY_OUT_OF_STOCK: 'CRITICAL',
   RETURN_REQUESTED: 'WARNING',
+  RETURN_AGING: 'WARNING',
   INTEGRATION_FAILED: 'CRITICAL',
+  ORDER_UNFULFILLED_STALE: 'WARNING',
 }
 
 export function severityFor(type: NotificationType): NotificationSeverity {

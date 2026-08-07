@@ -564,6 +564,7 @@ model Order {
   shippedAt                DateTime?
   deliveredAt              DateTime?
   confirmationEmailSentAt  DateTime?
+  reviewRequestSentAt      DateTime?
   fundraiserId             String?
   importSource             String?
   importBatchId            String?
@@ -3585,7 +3586,9 @@ enum NotificationType {
   INVENTORY_LOW
   INVENTORY_OUT_OF_STOCK
   RETURN_REQUESTED
+  RETURN_AGING
   INTEGRATION_FAILED
+  ORDER_UNFULFILLED_STALE
 }
 
 enum ChatDomain {

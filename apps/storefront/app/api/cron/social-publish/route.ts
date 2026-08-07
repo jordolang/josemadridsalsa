@@ -2,11 +2,15 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { publishPost } from '@/lib/social/publisher'
 
-// Publishes scheduled social posts whose time has arrived. Triggered every 15
-// minutes by the GitHub Actions workflow .github/workflows/social-publish.yml
-// (Vercel's free plan caps cron jobs, so we drive it from Actions instead).
-// Without this, "Schedule" only ever saved a row and never actually posted —
+// Publishes scheduled social posts whose time has arrived. Triggered every 5 minutes by
+// Vercel Cron. Without this, "Schedule" only ever saved a row and never actually posted —
 // the gap that made scheduling look done but do nothing.
+//
+// This ran from a GitHub Actions workflow while the project was on the Vercel Hobby plan,
+// which capped crons at daily. Pro lifts that, and the workflow was removed rather than left
+// alongside: `publishPost` guards against re-publishing an already-PUBLISHED pair, but the
+// check and the claim are not atomic, so two schedulers racing the same queue could both
+// pass the guard and post twice. One scheduler is the guarantee.
 
 export const dynamic = 'force-dynamic'
 

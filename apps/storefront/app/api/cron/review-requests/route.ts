@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { isAuthorizedCronRequest } from '@/lib/cron/auth'
 import { sendReviewRequestEmail } from '@/lib/email/transactional'
 
 // Send review requests to customers whose orders were delivered 3–7 days ago
@@ -7,7 +8,13 @@ import { sendReviewRequestEmail } from '@/lib/email/transactional'
 const MIN_DAYS_AFTER_DELIVERY = 3
 const MAX_DAYS_AFTER_DELIVERY = 7
 
-export async function GET() {
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: Request) {
+  if (!isAuthorizedCronRequest(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const now = new Date()
     const minDelivery = new Date(now.getTime() - MAX_DAYS_AFTER_DELIVERY * 24 * 60 * 60 * 1000)
@@ -17,9 +24,10 @@ export async function GET() {
       where: {
         status: 'DELIVERED',
         deliveredAt: { gte: minDelivery, lte: maxDelivery },
-        // Use confirmationEmailSentAt as a proxy for "review request sent"
-        // In a future migration this could be a dedicated reviewRequestSentAt field
-        confirmationEmailSentAt: null,
+        // The real "already asked" marker. This used to key off `confirmationEmailSentAt`,
+        // which every successful checkout stamps — so the filter only ever matched orders
+        // that never got a confirmation email, and the cron sent almost nothing.
+        reviewRequestSentAt: null,
         OR: [
           { userId: { not: null } },
           { guestEmail: { not: null } },
@@ -50,10 +58,12 @@ export async function GET() {
           productName,
         })
 
-        // Mark review request sent so we don't re-send
+        // Mark the request sent so we don't ask twice. Writing this to its own column
+        // leaves `confirmationEmailSentAt` meaning what its name says — the previous
+        // version overwrote it here and lost the confirmation timestamp.
         await prisma.order.update({
           where: { id: order.id },
-          data: { confirmationEmailSentAt: now },
+          data: { reviewRequestSentAt: now },
         })
 
         sent++

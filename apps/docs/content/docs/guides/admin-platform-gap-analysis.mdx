@@ -443,9 +443,17 @@ unblocks everything else — as **3 to 5 weeks**.
   land on both dev (Neon) and prod (Supabase): fulfillment, sales channel, `Refund.provider`,
   domain events, returns, purchase orders, multi-location, collections/bundles. Note the
   Prisma CLI env-precedence trap when targeting production.
-- **Vercel Hobby rejects sub-daily crons at deploy pre-build.** Any automation phrased as
-  "alert if unfulfilled for 48 hours" needs either a daily cron, an external scheduler, or a
-  plan upgrade. That is a billing decision, not an engineering one.
+- **Cron frequency is no longer a constraint.** The project moved to Vercel Pro on
+  2026-08-07: 100 cron jobs per project, minimum interval once per minute, per-minute
+  precision. Under Hobby this was daily-only with ±59 minutes of slop, which is why several
+  crons were built expecting a cadence they never got, and why scheduled social publishing
+  was driven from GitHub Actions. Both have been corrected. Workflow automation can now be
+  scheduled honestly rather than designed around a daily tick.
+
+  The new limit is **idempotency, not the plan**. A time-window query that was harmless once
+  a day becomes a spam cannon hourly; raising any cron's frequency requires it to carry a
+  persisted "already did this" marker first. The review-request cron is the worked example —
+  see `Order.reviewRequestSentAt`.
 
 ## On the multi-client framework idea
 
