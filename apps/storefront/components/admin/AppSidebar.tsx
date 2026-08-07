@@ -7,6 +7,7 @@ import {
   Activity,
   BarChart3,
   Building2,
+  Archive,
   CalendarDays,
   ChefHat,
   ChevronRight,
@@ -56,6 +57,7 @@ import type { NavItem } from '@/lib/permissions-map'
 
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard,
+  Archive,
   ShoppingCart,
   Package,
   Users,

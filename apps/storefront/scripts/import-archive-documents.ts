@@ -12,6 +12,11 @@
  *   tsx scripts/import-archive-documents.ts --archive ../../Documents --text <dir>
  *   tsx scripts/import-archive-documents.ts --archive ../../Documents --text <dir> --commit
  *
+ * `--redact-sensitive-text` stores SENSITIVE documents as metadata only, with
+ * `extractedText` null — full row parity without the raw identifiers those
+ * files carry. Use it when the target is a database that also serves public
+ * traffic.
+ *
  * Idempotent: upserts on the unique `path`, so re-running refreshes text and
  * classification without creating duplicates.
  */
@@ -52,15 +57,23 @@ interface Args {
   archiveDir: string
   textDir: string
   commit: boolean
+  /** Store SENSITIVE documents as metadata only, without their text. */
+  redactSensitiveText: boolean
 }
 
 function parseArgs(argv: string[]): Args {
-  const out: Args = { archiveDir: '../../Documents', textDir: '', commit: false }
+  const out: Args = {
+    archiveDir: '../../Documents',
+    textDir: '',
+    commit: false,
+    redactSensitiveText: false,
+  }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--archive') out.archiveDir = argv[++i]
     else if (a === '--text') out.textDir = argv[++i]
     else if (a === '--commit') out.commit = true
+    else if (a === '--redact-sensitive-text') out.redactSensitiveText = true
   }
   if (!out.textDir) throw new Error('--text <dir> is required (extract-archive-text.py output)')
   return out
@@ -142,8 +155,24 @@ async function main(): Promise<void> {
       textChars: t?.textChars ?? 0,
       extraction: t?.extraction ?? 'PENDING',
       needsOcr: t?.needsOcr ?? false,
-      sensitivity: classifySensitivity(relPath, category),
+      sensitivity: classifySensitivity(relPath, category, t?.extractedText ?? null),
     })
+  }
+
+  // Drop the text of gated documents before anything is written. The raw
+  // identifiers in the archive (SSNs on tax returns, account numbers on bank
+  // records) live only in `extractedText`, so removing it here keeps them out
+  // of the target database entirely rather than relying on a read-time guard.
+  if (args.redactSensitiveText) {
+    let redacted = 0
+    for (const doc of docs) {
+      if (doc.sensitivity === 'SENSITIVE' && doc.extractedText) {
+        doc.extractedText = null
+        doc.textChars = 0
+        redacted++
+      }
+    }
+    console.log(`\n--redact-sensitive-text: dropped the text of ${redacted} SENSITIVE documents`)
   }
 
   // Summary

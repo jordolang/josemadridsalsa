@@ -51,9 +51,24 @@ const SENSITIVE_KEYWORDS = [
  * Decide a file's sensitivity from its archive path and category. Defaults to
  * INTERNAL — nothing is treated as public unless a caller later promotes it.
  */
+/**
+ * Identifiers that make a document sensitive regardless of where it is filed.
+ * Path and category alone miss these: a Social Security number turned up in
+ * `12 Correspondence/Dear Sirs.docx`, a category no rule treats as sensitive.
+ */
+const SENSITIVE_CONTENT_PATTERNS: RegExp[] = [
+  // SSN, written out. Deliberately not a bare 9-digit run — order numbers,
+  // UPCs and phone numbers would swamp it with false positives.
+  /\b\d{3}-\d{2}-\d{4}\b/,
+  /\b(?:social security (?:number|no|#)|SSN)\b\s*[:#]?\s*\d/i,
+]
+
 export function classifySensitivity(
   relPath: string,
-  category: string
+  category: string,
+  /** Extracted text, when available. Content can make a document sensitive
+   *  even when its path and category do not. */
+  extractedText?: string | null
 ): ArchiveSensitivity {
   const lower = relPath.toLowerCase()
 
@@ -67,6 +82,12 @@ export function classifySensitivity(
 
   for (const kw of SENSITIVE_KEYWORDS) {
     if (lower.includes(kw)) return 'SENSITIVE'
+  }
+
+  if (extractedText) {
+    for (const pattern of SENSITIVE_CONTENT_PATTERNS) {
+      if (pattern.test(extractedText)) return 'SENSITIVE'
+    }
   }
 
   return 'INTERNAL'

@@ -80,6 +80,34 @@ export const adminNavigation: NavItem[] = [
     ],
   },
   {
+    label: 'Document Archive',
+    href: '/admin/archive',
+    icon: 'Archive',
+    permission: 'analytics:read',
+    children: [
+      {
+        label: 'Documents',
+        href: '/admin/archive/documents',
+        permission: 'analytics:read',
+      },
+      {
+        label: 'Fundraiser Campaigns',
+        href: '/admin/archive/fundraisers',
+        permission: 'analytics:read',
+      },
+      {
+        label: 'Show & Market Sales',
+        href: '/admin/archive/shows',
+        permission: 'analytics:read',
+      },
+      {
+        label: 'Mileage',
+        href: '/admin/archive/mileage',
+        permission: 'analytics:read',
+      },
+    ],
+  },
+  {
     label: 'Content',
     href: '/admin/content',
     icon: 'FileText',
