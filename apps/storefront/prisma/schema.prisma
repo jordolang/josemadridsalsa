@@ -602,21 +602,21 @@ model Order {
 /// An order with one Fulfillment covering everything is the common case; multiple
 /// rows model split shipments.
 model Fulfillment {
-  id             String            @id @default(cuid())
-  orderId        String
-  status         FulfillmentStatus @default(FULFILLED)
-  trackingNumber String?
-  carrierName    String?
-  trackingUrl    String?
+  id              String            @id @default(cuid())
+  orderId         String
+  status          FulfillmentStatus @default(FULFILLED)
+  trackingNumber  String?
+  carrierName     String?
+  trackingUrl     String?
   shippingLabelId String?
-  notes          String?
-  createdById    String?
-  shippedAt      DateTime?
-  deliveredAt    DateTime?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  order          Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  items          FulfillmentItem[]
+  notes           String?
+  createdById     String?
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  order           Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  items           FulfillmentItem[]
 
   @@index([orderId])
   @@index([status])
@@ -639,28 +639,28 @@ model FulfillmentItem {
 /// A customer's request to send goods back. Only quantities that actually shipped can be
 /// returned, so this hangs off the fulfillment accounting rather than the raw order lines.
 model ReturnRequest {
-  id            String            @id @default(cuid())
-  rmaNumber     String            @unique
+  id            String              @id @default(cuid())
+  rmaNumber     String              @unique
   orderId       String
-  status        ReturnStatus      @default(REQUESTED)
+  status        ReturnStatus        @default(REQUESTED)
   reason        ReturnReason
-  resolution    ReturnResolution  @default(REFUND)
+  resolution    ReturnResolution    @default(REFUND)
   customerNote  String?
   adminNote     String?
   /// Withheld from the refund. Stored per-request because it is a judgement call.
-  restockingFee Decimal?          @db.Decimal(10, 2)
+  restockingFee Decimal?            @db.Decimal(10, 2)
   /// Set once money is actually sent back, linking to the refund the existing admin refund
   /// path created — returns never call the payment provider themselves.
-  refundId      String?           @unique
+  refundId      String?             @unique
   requestedById String?
   approvedById  String?
   approvedAt    DateTime?
   receivedAt    DateTime?
   completedAt   DateTime?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  order         Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  refund        Refund?           @relation(fields: [refundId], references: [id])
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  order         Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  refund        Refund?             @relation(fields: [refundId], references: [id])
   items         ReturnRequestItem[]
 
   @@index([orderId])
@@ -705,23 +705,23 @@ model DomainEvent {
 }
 
 model OrderItem {
-  id           String   @id @default(cuid())
-  orderId      String
-  productId    String
-  quantity     Int
+  id                String              @id @default(cuid())
+  orderId           String
+  productId         String
+  quantity          Int
   /// How many of `quantity` have shipped. Never exceeds `quantity`; the sum of this
   /// column across an order is what derives `Order.fulfillmentStatus`.
-  quantityFulfilled Int  @default(0)
-  unitPrice    Decimal  @db.Decimal(10, 2)
-  totalPrice   Decimal  @db.Decimal(10, 2)
-  productName  String
-  productSku   String
-  productImage String?
-  createdAt    DateTime @default(now())
-  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product      Product  @relation(fields: [productId], references: [id])
-  fulfillmentItems FulfillmentItem[]
-  returnItems  ReturnRequestItem[]
+  quantityFulfilled Int                 @default(0)
+  unitPrice         Decimal             @db.Decimal(10, 2)
+  totalPrice        Decimal             @db.Decimal(10, 2)
+  productName       String
+  productSku        String
+  productImage      String?
+  createdAt         DateTime            @default(now())
+  order             Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product           Product             @relation(fields: [productId], references: [id])
+  fulfillmentItems  FulfillmentItem[]
+  returnItems       ReturnRequestItem[]
 
   @@index([orderId])
   @@index([productId])
@@ -760,20 +760,20 @@ model Payment {
 }
 
 model Refund {
-  id             String       @id @default(cuid())
+  id             String          @id @default(cuid())
   /// The processor's refund ID. Despite the name this is provider-agnostic — PayPal and
   /// Square refunds store their own IDs here. Pair it with `provider` to identify the
   /// processor; the column is not renamed because doing so would drop existing IDs.
-  stripeRefundId String       @unique
+  stripeRefundId String          @unique
   provider       PaymentProvider @default(STRIPE)
   amount         Int
   reason         String?
-  status         RefundStatus @default(PENDING)
+  status         RefundStatus    @default(PENDING)
   paymentId      String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   processedAt    DateTime?
-  payment        Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payment        Payment         @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   returnRequest  ReturnRequest?
 
   @@index([paymentId])
@@ -2401,7 +2401,7 @@ model OrderNotificationSetting {
 }
 
 model Notification {
-  id         String           @id @default(cuid())
+  id         String               @id @default(cuid())
   userId     String
   type       NotificationType
   severity   NotificationSeverity @default(INFO)
@@ -2414,9 +2414,9 @@ model Notification {
   /// Stable identifier for the underlying fact. Re-observing the same condition updates the
   /// existing row instead of creating another, so a recurring check cannot flood the list.
   dedupeKey  String?
-  isRead     Boolean          @default(false)
+  isRead     Boolean              @default(false)
   readAt     DateTime?
-  createdAt  DateTime         @default(now())
+  createdAt  DateTime             @default(now())
 
   @@unique([userId, dedupeKey])
   @@index([userId, isRead])
@@ -3904,11 +3904,11 @@ model MileageEntry {
   rawRow        Json?
   /// Stable hash of the normalized trip; unique so re-imports and the three
   /// overlapping 2022 "Master" files collapse to one row.
-  contentHash   String           @unique
-  importSource  String           @default("document-archive")
+  contentHash   String   @unique
+  importSource  String   @default("document-archive")
   importBatchId String?
-  importedAt    DateTime         @default(now())
-  createdAt     DateTime         @default(now())
+  importedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
 
   @@index([year])
   @@index([driver])
@@ -4005,13 +4005,13 @@ model ArchivedFundraiser {
   /// Per-flavor quantity map for the order-form template shape.
   flavorsJson      Json?
 
-  sourceFile       String                     @unique
-  sourceMd5        String?
-  notes            String?
-  importSource     String                     @default("document-archive")
-  importBatchId    String?
-  importedAt       DateTime                   @default(now())
-  createdAt        DateTime                   @default(now())
+  sourceFile    String   @unique
+  sourceMd5     String?
+  notes         String?
+  importSource  String   @default("document-archive")
+  importBatchId String?
+  importedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
 
   @@index([year])
   @@index([organizationName])
@@ -4057,4 +4057,244 @@ model ArchivedShowSale {
 enum ArchivedShowType {
   SHOW
   FARMERS_MARKET
+}
+
+// ============================================================================
+// Content Management System
+// ============================================================================
+
+enum ContentStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+/// SYSTEM pages map onto an existing hard-coded route and supply field
+/// overrides plus section ordering/visibility. LANDING pages are composed
+/// entirely in the admin from the block registry.
+enum PageKind {
+  SYSTEM
+  LANDING
+}
+
+model Page {
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  title        String
+  kind         PageKind      @default(LANDING)
+  status       ContentStatus @default(DRAFT)
+  publishedAt  DateTime?
+  scheduledFor DateTime?
+
+  // Per-page SEO; falls back to the global SeoConfiguration templates when null
+  seoTitle       String?
+  seoDescription String?
+  ogImage        String?
+  canonicalUrl   String?
+  noIndex        Boolean @default(false)
+
+  sections    PageSection[]
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([kind])
+  @@map("cms_pages")
+}
+
+model PageSection {
+  id                String           @id @default(cuid())
+  pageId            String
+  page              Page             @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  /// Key into the block registry in lib/cms/blocks.ts
+  type              String
+  sortOrder         Int              @default(0)
+  isVisible         Boolean          @default(true)
+  data              Json             @default("{}")
+  reusableSectionId String?
+  reusableSection   ReusableSection? @relation(fields: [reusableSectionId], references: [id], onDelete: SetNull)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([pageId, sortOrder])
+  @@index([reusableSectionId])
+  @@map("cms_page_sections")
+}
+
+model ReusableSection {
+  id        String        @id @default(cuid())
+  key       String        @unique
+  name      String
+  type      String
+  data      Json          @default("{}")
+  status    ContentStatus @default(PUBLISHED)
+  usages    PageSection[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@map("cms_reusable_sections")
+}
+
+enum BannerPlacement {
+  SITE_WIDE_TOP
+  HOMEPAGE_HERO
+  CATEGORY
+  CHECKOUT
+  FUNDRAISING
+}
+
+model Banner {
+  id          String          @id @default(cuid())
+  name        String
+  placement   BannerPlacement @default(SITE_WIDE_TOP)
+  headline    String?
+  body        String?
+  imageUrl    String?
+  imageAlt    String?
+  ctaText     String?
+  ctaHref     String?
+  status      ContentStatus   @default(DRAFT)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  priority    Int             @default(0)
+  /// Empty means every path; otherwise a list of path prefixes to match
+  targetPaths String[]        @default([])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([placement, status, priority])
+  @@map("cms_banners")
+}
+
+enum AnnouncementVariant {
+  INFO
+  PROMO
+  WARNING
+  SUCCESS
+}
+
+model Announcement {
+  id          String              @id @default(cuid())
+  message     String
+  ctaText     String?
+  ctaHref     String?
+  variant     AnnouncementVariant @default(INFO)
+  status      ContentStatus       @default(DRAFT)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  priority    Int                 @default(0)
+  /// Empty means every path; otherwise a list of path prefixes to match
+  targetPaths String[]            @default([])
+  dismissible Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([status, priority])
+  @@map("cms_announcements")
+}
+
+model FaqCategory {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  description String?
+  sortOrder   Int       @default(0)
+  items       FaqItem[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("cms_faq_categories")
+}
+
+model FaqItem {
+  id         String        @id @default(cuid())
+  question   String
+  answer     String
+  categoryId String?
+  category   FaqCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  sortOrder  Int           @default(0)
+  status     ContentStatus @default(PUBLISHED)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([categoryId, sortOrder])
+  @@index([status])
+  @@map("cms_faq_items")
+}
+
+enum NavigationLocation {
+  HEADER
+  FOOTER
+  MOBILE
+  UTILITY
+}
+
+model NavigationMenu {
+  id        String             @id @default(cuid())
+  location  NavigationLocation @unique
+  name      String
+  items     NavigationItem[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@map("cms_navigation_menus")
+}
+
+model NavigationItem {
+  id           String           @id @default(cuid())
+  menuId       String
+  menu         NavigationMenu   @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  parentId     String?
+  parent       NavigationItem?  @relation("NavigationItemChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children     NavigationItem[] @relation("NavigationItemChildren")
+  label        String
+  href         String
+  description  String?
+  iconName     String?
+  sortOrder    Int              @default(0)
+  isVisible    Boolean          @default(true)
+  openInNewTab Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([menuId, parentId, sortOrder])
+  @@map("cms_navigation_items")
+}
+
+/// Non-link footer content; the footer's link columns live in the
+/// NavigationMenu whose location is FOOTER.
+model FooterSettings {
+  id                String   @id @default(cuid())
+  tagline           String?
+  aboutText         String?
+  copyrightText     String?
+  newsletterHeading String?
+  newsletterBody    String?
+  /// { facebook, instagram, tiktok, x, youtube, ... }
+  socialLinks       Json?
+  contactEmail      String?
+  contactPhone      String?
+  addressLines      String[] @default([])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("cms_footer_settings")
+}
+
+model Redirect {
+  id          String    @id @default(cuid())
+  source      String    @unique
+  destination String
+  permanent   Boolean   @default(true)
+  isActive    Boolean   @default(true)
+  hitCount    Int       @default(0)
+  lastHitAt   DateTime?
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isActive])
+  @@map("cms_redirects")
 }
