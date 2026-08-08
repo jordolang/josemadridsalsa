@@ -264,6 +264,11 @@ export const adminNavigation: NavItem[] = [
         href: '/admin/analytics/orders',
         permission: 'analytics:read',
       },
+      {
+        label: 'Margin',
+        href: '/admin/analytics/margin',
+        permission: 'analytics:read',
+      },
     ],
   },
   {
