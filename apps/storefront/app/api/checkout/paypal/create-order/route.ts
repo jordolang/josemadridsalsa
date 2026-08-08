@@ -99,6 +99,10 @@ export async function POST(request: NextRequest) {
         productId: product.id,
         quantity: item.quantity,
         unitPrice: toDecimal(unitPrice),
+        // Snapshot the cost at the moment of sale. Margin computed from the product's
+        // *current* cost would silently recalculate every past order whenever a supplier
+        // changes price. Null stays null — an unknown cost must not become zero.
+        unitCost: product.costPrice ?? undefined,
         totalPrice: toDecimal(lineTotal),
         productName: product.name,
         productSku: product.sku,

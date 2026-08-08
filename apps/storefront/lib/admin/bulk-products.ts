@@ -25,6 +25,12 @@ export const BulkProductActionSchema = z.discriminatedUnion('action', [
     // everything free.
     percent: z.number().gte(-90).lte(500),
   }),
+  // Cost is what margin reporting is computed from, so it needs a way in that is not
+  // editing 28 products one at a time.
+  z.object({ action: z.literal('set-cost'), cost: z.number().min(0).max(100_000) }),
+  // Uses what a supplier most recently actually charged, from the purchase orders that
+  // already record it — a real number rather than a remembered one.
+  z.object({ action: z.literal('apply-latest-purchase-cost') }),
 ])
 
 export const BulkProductRequestSchema = z.object({
@@ -49,8 +55,11 @@ export function uniformUpdateFor(
       return { isFeatured: false }
     case 'assign-category':
       return { categoryId: action.categoryId }
+    case 'set-cost':
+      return { costPrice: action.cost }
     case 'adjust-price':
-      // Per-row, derived from each product's own price.
+    case 'apply-latest-purchase-cost':
+      // Per-row: derived from each product's own price, or its own purchase history.
       return null
   }
 }
@@ -103,5 +112,38 @@ export function describeBulkAction(action: BulkProductAction, count: number): st
       return `Moved ${plural} to a new category`
     case 'adjust-price':
       return `${action.percent >= 0 ? 'Raised' : 'Lowered'} prices on ${plural} by ${Math.abs(action.percent)}%`
+    case 'set-cost':
+      return `Set cost to $${action.cost.toFixed(2)} on ${plural}`
+    case 'apply-latest-purchase-cost':
+      return `Applied the latest purchase cost to ${plural}`
   }
+}
+
+export interface LatestPurchaseCost {
+  productId: string
+  unitCost: number
+}
+
+/**
+ * Work out which products get a new cost from their most recent purchase order line.
+ *
+ * A product that has never been purchased is **skipped**, not zeroed — the whole point of
+ * costs is that a missing one stays missing. Callers report the skipped count rather than
+ * quietly succeeding on a subset, so "applied to 3 of 20" is visible.
+ */
+export function planCostFromPurchases(
+  productIds: string[],
+  latest: LatestPurchaseCost[]
+): { updates: Array<{ id: string; cost: number }>; skipped: string[] } {
+  const costByProduct = new Map(latest.map((row) => [row.productId, row.unitCost]))
+  const updates: Array<{ id: string; cost: number }> = []
+  const skipped: string[] = []
+
+  for (const id of productIds) {
+    const cost = costByProduct.get(id)
+    if (cost === undefined) skipped.push(id)
+    else updates.push({ id, cost })
+  }
+
+  return { updates, skipped }
 }

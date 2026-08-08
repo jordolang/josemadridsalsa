@@ -717,6 +717,11 @@ model OrderItem {
   /// column across an order is what derives `Order.fulfillmentStatus`.
   quantityFulfilled Int                 @default(0)
   unitPrice         Decimal             @db.Decimal(10, 2)
+  /// What this unit cost us at the moment of sale, snapshotted from `Product.costPrice`.
+  /// Margin has to be computed from this rather than the product's current cost, or last
+  /// year's margin gets recalculated with this year's prices every time a cost changes.
+  /// Null means the cost was unknown when the order was placed — never treat it as zero.
+  unitCost          Decimal?            @db.Decimal(10, 2)
   totalPrice        Decimal             @db.Decimal(10, 2)
   productName       String
   productSku        String
@@ -737,6 +742,15 @@ model Payment {
   stripePaymentIntentId    String?          @unique
   stripeCheckoutSessionId  String?          @unique
   amount                   Int
+  /// What the processor charged us to take this payment, in cents.
+  ///
+  /// Null means not yet known, which is the normal state immediately after a payment:
+  /// Square only computes its fee after settlement, and Stripe's requires expanding the
+  /// balance transaction. A reconciliation sweep fills it in. Null must never be read as
+  /// zero — that would report a fee-free payment and overstate profit.
+  processorFee             Int?
+  /// When the fee above was last looked up, so the sweep knows what it has already tried.
+  processorFeeCheckedAt    DateTime?
   currency                 String           @default("usd")
   status                   PaymentStatus    @default(PENDING)
   paymentMethod            String?

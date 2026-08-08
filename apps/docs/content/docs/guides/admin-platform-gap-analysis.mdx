@@ -301,12 +301,24 @@ relative to the spec.
 `Analytics`/`AnalyticsSetting`, `lib/analytics/*` including `abandoned-cart-metrics.ts`,
 Google Analytics reporting, Amplitude.
 
-**Missing:** gross profit / margin (COGS is captured on `Product.costPrice` but never rolled
-up), cohort retention, repeat-customer rate, inventory turnover, days-of-stock, sell-through,
-contribution margin, geographic sales, channel attribution (blocked on #3), custom date-range
-export.
+**Margin — inputs shipped, dashboard outstanding (Phase 3).** `OrderItem.unitCost` snapshots
+cost at sale time, and `lib/analytics/margin.ts` computes gross profit with coverage reported
+rather than averaged away. Scoped deliberately as *operational* margin — per product, order
+and channel — not accounting; QuickBooks Online stays the source of truth for the books.
 
-**Work:** profit/margin reporting **3–4 days**; cohort + retention **3–4 days**; inventory
+**The blocker was data, not code:** all 28 products had a null `costPrice`, so a dashboard
+built first would have reported "no data" indefinitely. Bulk **Set cost** and **Apply latest
+purchase cost** now exist to get real numbers in. Coverage will be zero until someone uses
+them, and the reporting says so in words rather than showing a confident wrong number.
+
+**Not yet handled:** fundraiser orders carry a commission, so price − cost is not margin on
+that channel. The dashboard must either net the commission or exclude the channel and say
+which — it cannot quietly mix them.
+
+**Missing:** the margin dashboard itself, cohort retention, repeat-customer rate, inventory
+turnover, days-of-stock, sell-through, geographic sales, custom date-range export.
+
+**Work:** margin dashboard **1–2 days**; cohort + retention **3–4 days**; inventory
 turnover/days-of-stock **2 days**.
 
 ### Finance
@@ -328,10 +340,16 @@ the admin route stores the real provider ID. The column is deliberately *not* re
 `providerRefundId`: Prisma emits DROP + ADD for a rename, which would destroy every stored
 refund ID.
 
-**Missing:** processor fees (not captured anywhere — needed for true net revenue), chargebacks
-/ disputes.
+**Processor fees — shipped (Phase 3).** `Payment.processorFee` plus a
+`/api/cron/processor-fees` reconciliation sweep. Not captured at webhook time because Square
+does not know its own fee until after settlement; since a sweep is unavoidable there, all
+providers use it. Stripe and PayPal lookups are implemented; **Square's is not yet**, and
+reports itself as uncovered rather than being silently skipped. Null always means "not known"
+— never zero.
 
-**Work:** processor fee capture **2–3 days**; disputes **2–3 days**.
+**Missing:** chargebacks / disputes; the Square fee lookup.
+
+**Work:** disputes **2–3 days**; Square fee lookup **0.5 days**.
 
 ### Operations (shipping, reviews, returns, staff, audit)
 

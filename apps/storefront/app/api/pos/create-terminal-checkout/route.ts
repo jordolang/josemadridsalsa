@@ -83,11 +83,24 @@ export async function POST(request: NextRequest) {
     const taxDollars = taxAmount / 100
     const totalDollars = total / 100
 
+    // Costs come from the database, not the till payload — the client has no business
+    // asserting what stock cost us, and a POS sale should be as margin-visible as a web one.
+    const costByProduct = new Map(
+      (
+        await prisma.product.findMany({
+          where: { id: { in: items.map((item) => item.productId) } },
+          select: { id: true, costPrice: true },
+        })
+      ).map((product) => [product.id, product.costPrice])
+    )
+
     // Build order items for DB
     const orderItems = items.map((item) => ({
       productId: item.productId,
       quantity: item.quantity,
       unitPrice: toDecimal(item.price),
+      // Snapshotted at the moment of sale; null stays null rather than becoming zero.
+      unitCost: costByProduct.get(item.productId) ?? undefined,
       totalPrice: toDecimal(item.price * item.quantity),
       productName: item.name,
       productSku: item.sku ?? '',

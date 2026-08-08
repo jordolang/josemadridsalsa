@@ -4,6 +4,7 @@ import {
   BulkProductRequestSchema,
   describeBulkAction,
   MAX_BULK_PRODUCTS,
+  planCostFromPurchases,
   planPriceAdjustment,
   uniformUpdateFor,
 } from '@/lib/admin/bulk-products'
@@ -120,6 +121,82 @@ describe('planPriceAdjustment', () => {
 
   it('handles an empty selection', () => {
     expect(planPriceAdjustment([], 10)).toEqual([])
+  })
+})
+
+describe('cost actions', () => {
+  it('maps set-cost to a uniform field update', () => {
+    expect(uniformUpdateFor({ action: 'set-cost', cost: 4.25 })).toEqual({ costPrice: 4.25 })
+  })
+
+  it('returns null for apply-latest-purchase-cost, which is per-row', () => {
+    expect(uniformUpdateFor({ action: 'apply-latest-purchase-cost' })).toBeNull()
+  })
+
+  it('accepts a zero cost, which is a real answer', () => {
+    expect(
+      BulkProductRequestSchema.safeParse({
+        productIds: [cuid(1)],
+        operation: { action: 'set-cost', cost: 0 },
+      }).success
+    ).toBe(true)
+  })
+
+  it('refuses a negative cost', () => {
+    expect(
+      BulkProductRequestSchema.safeParse({
+        productIds: [cuid(1)],
+        operation: { action: 'set-cost', cost: -1 },
+      }).success
+    ).toBe(false)
+  })
+
+  it('describes both cost actions', () => {
+    expect(describeBulkAction({ action: 'set-cost', cost: 4.25 }, 3)).toBe(
+      'Set cost to $4.25 on 3 products'
+    )
+    expect(describeBulkAction({ action: 'apply-latest-purchase-cost' }, 1)).toBe(
+      'Applied the latest purchase cost to 1 product'
+    )
+  })
+})
+
+describe('planCostFromPurchases', () => {
+  it('applies the cost from each product’s purchase history', () => {
+    const plan = planCostFromPurchases(
+      ['a', 'b'],
+      [
+        { productId: 'a', unitCost: 4.25 },
+        { productId: 'b', unitCost: 3.1 },
+      ]
+    )
+    expect(plan.updates).toEqual([
+      { id: 'a', cost: 4.25 },
+      { id: 'b', cost: 3.1 },
+    ])
+    expect(plan.skipped).toEqual([])
+  })
+
+  it('skips a product that has never been purchased rather than zeroing it', () => {
+    // A missing cost has to stay missing. Writing zero would make it look like free stock
+    // and report a 100% margin on everything that product sells.
+    const plan = planCostFromPurchases(['a', 'b'], [{ productId: 'a', unitCost: 4.25 }])
+    expect(plan.updates).toEqual([{ id: 'a', cost: 4.25 }])
+    expect(plan.skipped).toEqual(['b'])
+  })
+
+  it('skips everything when there is no purchase history at all', () => {
+    const plan = planCostFromPurchases(['a', 'b'], [])
+    expect(plan.updates).toEqual([])
+    expect(plan.skipped).toEqual(['a', 'b'])
+  })
+
+  it('ignores purchase costs for products outside the selection', () => {
+    const plan = planCostFromPurchases(['a'], [
+      { productId: 'a', unitCost: 4.25 },
+      { productId: 'z', unitCost: 9.99 },
+    ])
+    expect(plan.updates).toEqual([{ id: 'a', cost: 4.25 }])
   })
 })
 

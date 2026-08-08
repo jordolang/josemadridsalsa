@@ -7,6 +7,7 @@ import { logAuditWithRequest } from '@/lib/audit'
 import {
   BulkProductRequestSchema,
   describeBulkAction,
+  planCostFromPurchases,
   planPriceAdjustment,
   uniformUpdateFor,
 } from '@/lib/admin/bulk-products'
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     let updated = 0
+    let skipped = 0
     let priceChanges: { id: string; from: number; to: number }[] = []
 
     const uniform = uniformUpdateFor(operation)
@@ -61,9 +63,38 @@ export async function POST(request: NextRequest) {
         )
       )
       updated = priceChanges.length
+    } else if (operation.action === 'apply-latest-purchase-cost') {
+      // Most recent purchase order line per product. Ordered newest-first and de-duplicated
+      // in code rather than with a correlated subquery, because the selection is capped at
+      // 200 products and clarity is worth more here than a clever query.
+      const lines = await prisma.purchaseOrderItem.findMany({
+        where: { productId: { in: existing.map((p) => p.id) } },
+        select: { productId: true, unitCost: true, purchaseOrder: { select: { createdAt: true } } },
+        orderBy: { purchaseOrder: { createdAt: 'desc' } },
+      })
+
+      const seen = new Set<string>()
+      const latest: Array<{ productId: string; unitCost: number }> = []
+      for (const line of lines) {
+        if (seen.has(line.productId)) continue
+        seen.add(line.productId)
+        latest.push({ productId: line.productId, unitCost: Number(line.unitCost) })
+      }
+
+      const plan = planCostFromPurchases(existing.map((p) => p.id), latest)
+
+      await prisma.$transaction(
+        plan.updates.map((change) =>
+          prisma.product.update({ where: { id: change.id }, data: { costPrice: change.cost } })
+        )
+      )
+      updated = plan.updates.length
+      skipped = plan.skipped.length
     }
 
-    const summary = describeBulkAction(operation, updated)
+    const summary = skipped
+      ? `${describeBulkAction(operation, updated)} — ${skipped} skipped with no purchase history`
+      : describeBulkAction(operation, updated)
 
     await logAuditWithRequest(
       {
@@ -77,12 +108,14 @@ export async function POST(request: NextRequest) {
           // Before/after is recorded for price changes specifically, since that is the one
           // action that cannot be reconstructed from the action name alone.
           ...(priceChanges.length ? { priceChanges } : {}),
+          // No silent caps: a run that only covered part of the selection says so.
+          ...(skipped ? { skippedNoPurchaseHistory: skipped } : {}),
         },
       },
       request
     )
 
-    return NextResponse.json({ success: true, updated, summary })
+    return NextResponse.json({ success: true, updated, skipped, summary })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
