@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { MediaUploader, MediaPreview } from './media-uploader'
+import { SocialCrosspostPanel } from './social-crosspost-panel'
 
 type Status = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED'
 type PostLayout = 'STANDARD' | 'LONGFORM' | 'GALLERY' | 'VIDEO' | 'MINIMAL'
@@ -121,6 +122,7 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
   const contentRef = useRef<HTMLTextAreaElement>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [crosspostAccountIds, setCrosspostAccountIds] = useState<string[]>([])
 
   const [form, setForm] = useState({
     title: initial.title ?? '',
@@ -243,6 +245,7 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
         seriesId: form.seriesId || null,
         seriesOrder: form.seriesOrder === '' ? null : Number(form.seriesOrder),
         categoryId: form.categoryId || null,
+        crosspostAccountIds,
       }
 
       const url =
@@ -622,6 +625,14 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
             )}
           </div>
         </div>
+
+        <SocialCrosspostPanel
+          selected={crosspostAccountIds}
+          onChange={setCrosspostAccountIds}
+          mode={mode}
+          postSlug={initial.slug}
+          postStatus={form.status}
+        />
 
         <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
           <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">

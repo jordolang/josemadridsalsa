@@ -1,0 +1,71 @@
+---
+title: Blog Social Cross-Posting
+description: Cross-post a Heat Index blog article's full content to connected Facebook, X/Twitter and Google Business channels from the post editor.
+---
+
+The Heat Index post editor can publish a blog article's **full content** to your
+connected social channels — not just the Open Graph link card the on-page share
+buttons produce. Check the channels you want in the editor's **Cross-post to
+social** panel and the article is posted to them.
+
+## How it works
+
+The feature reuses the platform's existing social publishing engine
+(`lib/social/publisher.ts`), the same one behind `/admin/social`. When you
+cross-post an article, a single `SocialMediaPost` is created and linked to the
+blog post (via `SocialMediaPost.blogPostId`, which is unique). Repeated saves or
+"Cross-post now" clicks reuse that one record, so the per-account idempotency
+guard prevents the same article being posted twice to the same channel.
+
+### What gets posted
+
+A social feed post can't render the article's HTML (headings, bold, images
+interleaved with prose), so the body is converted from Markdown into the closest
+faithful plain text:
+
+- Paragraphs and line breaks are preserved.
+- Bullet and numbered lists are kept (`-` / `*` become `•`).
+- Headings and bold/italic/code markers are stripped to their text.
+- Links become `text (url)`.
+- The `[[youtube:…]]`, `[[vimeo:…]]` and `[[video:…]]` embeds become plain URLs.
+- Inline images are dropped from the text — the **cover image** is carried by the
+  link preview card instead.
+
+The post is the article title, optional subtitle, then the converted body, with a
+link back to `…/heat-index/<slug>` attached.
+
+### Eligible channels
+
+Only channels that accept a text-plus-link post are offered:
+
+| Platform | What's posted |
+|---|---|
+| **Facebook** (Page) | Full article text + link preview card (cover image) |
+| **X / Twitter** | A trimmed hook (title + excerpt) + link, kept within 280 characters |
+| **Google Business** | Article text summary + a "Learn more" link |
+
+Instagram and TikTok are intentionally excluded — their publishing APIs require
+an uploaded image or video, which a text article doesn't provide.
+
+Channels come from the accounts connected under
+[Social](/docs/features/admin-dashboard) at `/admin/social`. Connect the Facebook
+Page you want to post to there first (for example the `josemadridsalsainc` Page);
+it then appears as a checkbox in the editor.
+
+## Using it
+
+1. Open or create a post in **Admin → Blog → Posts**.
+2. In the **Cross-post to social** panel, check the channels to post to. The
+   connected Facebook Page(s) are pre-selected by default.
+3. **On publish** — checked channels are posted to automatically when the post
+   transitions to *Published*, alongside the subscriber notification email.
+4. **On demand** — use **Cross-post now** to post immediately (for example to an
+   already-published article, or to retry a channel that failed). The panel shows
+   each channel's status and a link to the live post.
+
+## Permissions
+
+Cross-posting is gated on the `content:write` permission — the same permission
+the blog editor already requires — so a content admin can cross-post without the
+broader `social_media:*` permissions. Account connection and app credentials are
+still managed under `/admin/social`.

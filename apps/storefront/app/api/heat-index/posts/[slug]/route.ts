@@ -3,6 +3,7 @@ import { ok, fail, notFound, serverError } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
 import { blogPostUpdateSchema } from '@/lib/blog/schemas'
 import { publishBlogPost } from '@/lib/blog/publish'
+import { crosspostAccountIdsSchema, crosspostBlogPost } from '@/lib/social/blog-crosspost'
 import prisma from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -61,6 +62,8 @@ export async function PATCH(
 
     const wasPublished = existing.status === 'PUBLISHED'
     const willBePublished = parsed.data.status === 'PUBLISHED'
+    const crosspostParsed = crosspostAccountIdsSchema.safeParse(body.crosspostAccountIds)
+    const crosspostAccountIds = crosspostParsed.success ? crosspostParsed.data : []
 
     const data: Record<string, unknown> = { ...parsed.data }
     if (willBePublished && !existing.publishedAt) {
@@ -76,6 +79,11 @@ export async function PATCH(
       await publishBlogPost(updated.id).catch((err) => {
         console.error('Failed to send publish notifications:', err)
       })
+      if (crosspostAccountIds.length > 0) {
+        await crosspostBlogPost(updated.id, crosspostAccountIds).catch((err) => {
+          console.error('Failed to cross-post to social media:', err)
+        })
+      }
     }
 
     return ok(updated)
