@@ -1,0 +1,42 @@
+# CI / verification image. Installs the workspace and runs the commit gate.
+# No runtime server — this image exists to reproduce a clean-checkout build.
+#
+#   docker build -t josemadridsalsa:ci --build-arg NODE_VERSION=20 -f Dockerfile.ci .
+#   docker run --rm josemadridsalsa:ci                       # lint + type-check + build
+#   docker run --rm --env-file .env.local josemadridsalsa:ci npm run test
+#
+# `npm run test` is deliberately not in the default command: the suite includes
+# tests under apps/storefront/tests/integration that hit a live database and
+# need DATABASE_URL / DATABASE_URL_UNPOOLED to be reachable.
+
+ARG NODE_VERSION=20
+
+FROM node:${NODE_VERSION}-bookworm-slim AS base
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates openssl \
+  && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+# Kept identical to the base stage in Dockerfile so both share the deps layer cache.
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    HUSKY=0
+
+FROM base AS deps
+COPY package.json package-lock.json ./
+COPY apps/admin/package.json ./apps/admin/
+COPY apps/docs/package.json ./apps/docs/
+COPY apps/fundraising/package.json ./apps/fundraising/
+COPY apps/storefront/package.json ./apps/storefront/
+COPY packages/shared-types/package.json ./packages/shared-types/
+COPY packages/shared-utils/package.json ./packages/shared-utils/
+COPY apps/storefront/prisma ./apps/storefront/prisma
+RUN npm ci --legacy-peer-deps
+
+FROM base AS ci
+ENV CI=1
+# The TypeScript pass over this codebase exceeds Node's memory-derived default
+# heap. See the same argument in Dockerfile.
+ARG NODE_MAX_OLD_SPACE=4096
+ENV NODE_OPTIONS=--max-old-space-size=${NODE_MAX_OLD_SPACE}
+COPY --from=deps /app ./
+COPY . .
+CMD ["sh", "-c", "npm run lint && npm run type-check && npm run build"]
