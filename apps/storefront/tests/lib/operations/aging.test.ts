@@ -4,9 +4,12 @@ import {
   agingDedupeKeys,
   agingReturnsSpec,
   hoursBefore,
+  minutesBefore,
   STALE_RETURN_HOURS,
   STALE_UNFULFILLED_HOURS,
   staleUnfulfilledSpec,
+  STUCK_WEBHOOK_MINUTES,
+  stuckWebhooksSpec,
   summariseReferences,
 } from '@/lib/operations/aging'
 
@@ -126,8 +129,81 @@ describe('agingReturnsSpec', () => {
   })
 })
 
-describe('the two sweeps stay independent', () => {
-  it('uses distinct dedupe keys so one cannot overwrite the other', () => {
-    expect(agingDedupeKeys.ordersUnfulfilled).not.toBe(agingDedupeKeys.returnsAging)
+describe('minutesBefore', () => {
+  it('subtracts whole minutes', () => {
+    const now = new Date('2026-08-08T12:00:00.000Z')
+    expect(minutesBefore(now, 30).toISOString()).toBe('2026-08-08T11:30:00.000Z')
+  })
+
+  it('does not mutate the date it is given', () => {
+    const now = new Date('2026-08-08T12:00:00.000Z')
+    minutesBefore(now, 30)
+    expect(now.toISOString()).toBe('2026-08-08T12:00:00.000Z')
+  })
+})
+
+describe('stuckWebhooksSpec', () => {
+  it('says nothing when everything processed', () => {
+    expect(stuckWebhooksSpec([])).toBeNull()
+  })
+
+  it('treats a stuck webhook as critical, not a warning', () => {
+    // The provider took the money and called us; our handler died partway. That is the
+    // worst of the sweep's conditions, not a nag.
+    const spec = stuckWebhooksSpec([{ provider: 'STRIPE', type: 'payment_intent.succeeded' }])
+    expect(spec?.type).toBe('INTEGRATION_FAILED')
+    expect(spec?.severity).toBe('CRITICAL')
+  })
+
+  it('counts per provider so a broken integration is distinguishable from one bad event', () => {
+    const spec = stuckWebhooksSpec([
+      { provider: 'STRIPE', type: 'a' },
+      { provider: 'STRIPE', type: 'b' },
+      { provider: 'PAYPAL', type: 'c' },
+    ])
+    expect(spec?.title).toBe('3 webhooks stuck unprocessed')
+    expect(spec?.message).toContain('STRIPE 2, PAYPAL 1')
+  })
+
+  it('labels a null provider rather than dropping it', () => {
+    // EasyPost writes webhook rows with no provider — that column is for payment providers.
+    const spec = stuckWebhooksSpec([{ provider: null, type: 'tracker.updated' }])
+    expect(spec?.message).toContain('unknown 1')
+  })
+
+  it('orders the breakdown by count, then name for a stable tie', () => {
+    const spec = stuckWebhooksSpec([
+      { provider: 'SQUARE', type: 'a' },
+      { provider: 'PAYPAL', type: 'b' },
+      { provider: 'STRIPE', type: 'c' },
+      { provider: 'STRIPE', type: 'd' },
+    ])
+    expect(spec?.message).toContain('STRIPE 2, PAYPAL 1, SQUARE 1')
+  })
+
+  it('uses the singular for one', () => {
+    const spec = stuckWebhooksSpec([{ provider: 'STRIPE', type: 'a' }])
+    expect(spec?.title).toBe('1 webhook stuck unprocessed')
+    expect(spec?.message).toContain('It was')
+  })
+
+  it('defaults to the documented threshold', () => {
+    expect(STUCK_WEBHOOK_MINUTES).toBe(30)
+    expect(stuckWebhooksSpec([{ provider: 'STRIPE', type: 'a' }])?.message).toContain('30 minutes')
+  })
+
+  it('reuses the integration-failure dedupe identity', () => {
+    expect(agingDedupeKeys.webhooksStuck).toBe('integration-failed:webhooks')
+  })
+})
+
+describe('the three sweeps stay independent', () => {
+  it('uses distinct dedupe keys so one cannot overwrite another', () => {
+    const keys = [
+      agingDedupeKeys.ordersUnfulfilled,
+      agingDedupeKeys.returnsAging,
+      agingDedupeKeys.webhooksStuck,
+    ]
+    expect(new Set(keys).size).toBe(keys.length)
   })
 })
