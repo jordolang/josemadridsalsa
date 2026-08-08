@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { deriveSalesChannel } from '@/lib/orders/sales-channel'
+import { emitOrderCreated } from '@/lib/orders/events'
 import { getProvider } from '@/lib/payments'
 import { Prisma } from '@prisma/client'
 import { queueShopifySync } from '@/lib/shopify/sync'
@@ -365,6 +366,15 @@ export async function POST(request: NextRequest) {
       include: {
         items: true,
       },
+    })
+
+    await emitOrderCreated({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      total: order.total,
+      salesChannel: order.salesChannel,
+      itemCount: order.items.length,
+      actorUserId: user?.id ?? null,
     })
 
     // Log order creation audit event

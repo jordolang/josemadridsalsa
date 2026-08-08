@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { getProvider } from '@/lib/payments'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { PAID_PAYMENT_STATUS } from '@/lib/payments/status'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -129,6 +130,21 @@ export async function POST(request: Request) {
               paymentProvider: 'SQUARE',
             },
           })
+
+          await emitDomainEvent(
+            {
+              type: 'payment.completed',
+              entityType: 'order',
+              entityId: order.id,
+              payload: {
+                provider: 'SQUARE',
+                amount: amountInCents,
+                currency: (payment.amount_money?.currency || 'usd').toLowerCase(),
+                squarePaymentId,
+              },
+            },
+            tx
+          )
 
           await tx.payment.upsert({
             where: { squarePaymentId },

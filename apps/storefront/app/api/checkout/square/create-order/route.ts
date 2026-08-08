@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { deriveSalesChannel } from '@/lib/orders/sales-channel'
+import { emitOrderCreated } from '@/lib/orders/events'
 import { Prisma } from '@prisma/client'
 import { calculateTax } from '@/lib/tax-calculator'
 import { calculateShipping } from '@/lib/shipping-calculator'
@@ -247,6 +248,15 @@ export async function POST(request: NextRequest) {
         include: {
           items: true,
         },
+      })
+
+      await emitOrderCreated({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        total: order.total,
+        salesChannel: order.salesChannel,
+        itemCount: order.items.length,
+        actorUserId: user?.id ?? null,
       })
 
       // Log audit event
