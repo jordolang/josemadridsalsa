@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -42,6 +43,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { MediaPicker } from './media-picker'
+import { statusBadge } from './status'
 
 export type ResourceFieldType =
   | 'text'
@@ -64,10 +66,72 @@ export interface ResourceField {
 
 export type ResourceRecord = Record<string, unknown>
 
+/**
+ * How a cell is displayed.
+ *
+ * Deliberately a string rather than a render function: the screens that use
+ * this manager are server components, and a function prop cannot cross the
+ * server/client boundary — React refuses to serialize it and the whole page
+ * fails to render. Keeping the column definition plain data means TypeScript
+ * rejects a render callback at compile time instead of production finding it.
+ */
+export type ResourceColumnFormat =
+  /** Wrap the value in an outline badge. */
+  | 'badge'
+  /** Draft / Scheduled / Published / Archived badge. */
+  | 'status'
+  /** Badge showing `trueLabel` or `falseLabel`. */
+  | 'boolean'
+  /** Read a nested value, e.g. `category.name`. */
+  | 'nested'
+
 export interface ResourceColumn {
   name: string
   label: string
-  render?: (row: ResourceRecord) => React.ReactNode
+  format?: ResourceColumnFormat
+  /** Dotted path for the `nested` format, e.g. `_count.items`. */
+  path?: string
+  /** Shown when the value is null/undefined. */
+  fallback?: string
+  /** Labels for the `boolean` format. */
+  trueLabel?: string
+  falseLabel?: string
+}
+
+/** Read a dotted path such as `category.name` off a record. */
+function readPath(row: ResourceRecord, path: string): unknown {
+  return path
+    .split('.')
+    .reduce<unknown>(
+      (value, key) =>
+        value && typeof value === 'object'
+          ? (value as Record<string, unknown>)[key]
+          : undefined,
+      row
+    )
+}
+
+function renderCell(row: ResourceRecord, column: ResourceColumn): React.ReactNode {
+  const raw = column.format === 'nested' && column.path
+    ? readPath(row, column.path)
+    : row[column.name]
+
+  switch (column.format) {
+    case 'status':
+      return statusBadge(row)
+    case 'badge':
+      return <Badge variant="outline">{String(raw ?? column.fallback ?? '—')}</Badge>
+    case 'boolean':
+      return (
+        <Badge variant={raw ? 'default' : 'outline'}>
+          {raw ? (column.trueLabel ?? 'Yes') : (column.falseLabel ?? 'No')}
+        </Badge>
+      )
+    default:
+      return raw === null || raw === undefined || raw === ''
+        ? (column.fallback ?? '—')
+        : String(raw)
+  }
 }
 
 interface ResourceManagerProps {
@@ -240,9 +304,7 @@ export function ResourceManager({
     return rows.map((row) => (
       <TableRow key={String(row.id)}>
         {columns.map((column) => (
-          <TableCell key={column.name}>
-            {column.render ? column.render(row) : String(row[column.name] ?? '—')}
-          </TableCell>
+          <TableCell key={column.name}>{renderCell(row, column)}</TableCell>
         ))}
         <TableCell className="text-right">
           <Button
