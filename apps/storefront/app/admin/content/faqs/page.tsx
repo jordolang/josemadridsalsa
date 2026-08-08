@@ -5,7 +5,7 @@ import { createMetadata } from '@/lib/metadata'
 import { requirePermission } from '@/lib/rbac'
 import { getFaqCategories } from '@/lib/cms/queries'
 import { ResourceManager } from '@/components/admin/cms/resource-manager'
-import { STATUS_OPTIONS, statusBadge } from '@/components/admin/cms/status'
+import { STATUS_OPTIONS } from '@/components/admin/cms/status'
 import { Button } from '@/components/ui/button'
 
 export const metadata: Metadata = createMetadata({
@@ -48,12 +48,11 @@ export default async function FaqsPage() {
           {
             name: 'category',
             label: 'Category',
-            render: (row) => {
-              const category = row.category as { name?: string } | null
-              return category?.name ?? 'Uncategorised'
-            },
+            format: 'nested',
+            path: 'category.name',
+            fallback: 'Uncategorised',
           },
-          { name: 'status', label: 'Status', render: statusBadge },
+          { name: 'status', label: 'Status', format: 'status' },
           { name: 'sortOrder', label: 'Order' },
         ]}
         defaults={{

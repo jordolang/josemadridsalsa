@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { createMetadata } from '@/lib/metadata'
 import { ResourceManager } from '@/components/admin/cms/resource-manager'
-import { Badge } from '@/components/ui/badge'
 
 export const metadata: Metadata = createMetadata({
   title: 'Redirects - Jose Madrid Salsa Admin',
@@ -24,18 +23,16 @@ export default function RedirectsPage() {
         {
           name: 'permanent',
           label: 'Type',
-          render: (row) => (
-            <Badge variant="outline">{row.permanent ? '301 permanent' : '302 temporary'}</Badge>
-          ),
+          format: 'boolean',
+          trueLabel: '301 permanent',
+          falseLabel: '302 temporary',
         },
         {
           name: 'isActive',
           label: 'Active',
-          render: (row) => (
-            <Badge variant={row.isActive ? 'default' : 'outline'}>
-              {row.isActive ? 'Active' : 'Paused'}
-            </Badge>
-          ),
+          format: 'boolean',
+          trueLabel: 'Active',
+          falseLabel: 'Paused',
         },
         { name: 'hitCount', label: 'Hits' },
       ]}

@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
 import { createMetadata } from '@/lib/metadata'
 import { ResourceManager } from '@/components/admin/cms/resource-manager'
-import { Badge } from '@/components/ui/badge'
-import { STATUS_OPTIONS, statusBadge } from '@/components/admin/cms/status'
+import { STATUS_OPTIONS } from '@/components/admin/cms/status'
 
 export const metadata: Metadata = createMetadata({
   title: 'Announcements - Jose Madrid Salsa Admin',
@@ -21,12 +20,8 @@ export default function AnnouncementsPage() {
       emptyMessage="No announcements yet. Create one to show a message above the navigation."
       columns={[
         { name: 'message', label: 'Message' },
-        {
-          name: 'variant',
-          label: 'Style',
-          render: (row) => <Badge variant="outline">{String(row.variant)}</Badge>,
-        },
-        { name: 'status', label: 'Status', render: statusBadge },
+        { name: 'variant', label: 'Style', format: 'badge' },
+        { name: 'status', label: 'Status', format: 'status' },
         { name: 'priority', label: 'Priority' },
       ]}
       defaults={{

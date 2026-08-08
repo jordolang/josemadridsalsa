@@ -3,7 +3,7 @@ import { createMetadata } from '@/lib/metadata'
 import { requirePermission } from '@/lib/rbac'
 import { composableBlocks } from '@/lib/cms/blocks'
 import { ResourceManager } from '@/components/admin/cms/resource-manager'
-import { STATUS_OPTIONS, statusBadge } from '@/components/admin/cms/status'
+import { STATUS_OPTIONS } from '@/components/admin/cms/status'
 
 export const metadata: Metadata = createMetadata({
   title: 'Reusable Sections - Jose Madrid Salsa Admin',
@@ -33,7 +33,7 @@ export default async function ReusableSectionsPage() {
         { name: 'name', label: 'Name' },
         { name: 'key', label: 'Key' },
         { name: 'type', label: 'Block' },
-        { name: 'status', label: 'Status', render: statusBadge },
+        { name: 'status', label: 'Status', format: 'status' },
       ]}
       defaults={{ key: '', name: '', type: typeOptions[0]?.value ?? 'richText', data: {}, status: 'PUBLISHED' }}
       fields={[

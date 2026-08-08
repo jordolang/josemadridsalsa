@@ -23,10 +23,9 @@ export default function FaqCategoriesPage() {
         {
           name: 'items',
           label: 'Questions',
-          render: (row) => {
-            const counts = row._count as { items?: number } | undefined
-            return counts?.items ?? 0
-          },
+          format: 'nested',
+          path: '_count.items',
+          fallback: '0',
         },
         { name: 'sortOrder', label: 'Order' },
       ]}
