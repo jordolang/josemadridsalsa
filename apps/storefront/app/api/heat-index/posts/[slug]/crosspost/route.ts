@@ -66,14 +66,18 @@ export async function POST(
     // Selected accounts that were dropped (inactive, deleted, or on an
     // ineligible platform) never produced a result — surface them rather than
     // reporting the request as fully successful.
-    const postedIds = new Set(results.map((r) => r.accountId))
-    const skipped = requestedIds.filter((id) => !postedIds.has(id))
+    const resultIds = new Set(results.map((r) => r.accountId))
+    const skipped = requestedIds.filter((id) => !resultIds.has(id))
     const failures = results.filter((r) => !r.success)
     const allSucceeded = failures.length === 0 && skipped.length === 0
 
     const parts: string[] = []
-    if (failures.length > 0) parts.push(`${failures.length} failed`)
-    if (skipped.length > 0) parts.push(`${skipped.length} channel(s) unavailable`)
+    if (failures.length > 0) {
+      parts.push(`${failures.length} ${failures.length === 1 ? 'failure' : 'failures'}`)
+    }
+    if (skipped.length > 0) {
+      parts.push(`${skipped.length} ${skipped.length === 1 ? 'channel' : 'channels'} unavailable`)
+    }
 
     return ok({
       results,

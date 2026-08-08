@@ -50,7 +50,12 @@ export function truncateText(text: string, max: number): string {
   if (max <= 0) return ''
   if (text.length <= max) return text
   if (max === 1) return '…'
-  const slice = text.slice(0, max - 1)
+  let end = max - 1
+  // Don't cut in the middle of a UTF-16 surrogate pair (e.g. an emoji), which
+  // would emit a malformed character.
+  const lastKept = text.charCodeAt(end - 1)
+  if (lastKept >= 0xd800 && lastKept <= 0xdbff) end -= 1
+  const slice = text.slice(0, end)
   const lastSpace = slice.lastIndexOf(' ')
   const cut = lastSpace > max * 0.6 ? slice.slice(0, lastSpace) : slice
   return cut.replace(/\s+$/, '') + '…'
@@ -109,7 +114,7 @@ export function markdownToPlainText(markdown: string): string {
   // tokens so the emphasis/list passes below can't mangle underscores, asterisks
   // or leading dashes inside them. Restored at the end.
   const protectedUrls: string[] = []
-  text = text.replace(/(?:https?:\/\/|www\.)[^\s)]+/gi, (m) => {
+  text = text.replace(/(?:https?:\/\/|www\.)[^\s)]*(?:\([^\s)]*\)[^\s)]*)*/gi, (m) => {
     protectedUrls.push(m)
     return `\u0000${protectedUrls.length - 1}\u0001`
   })

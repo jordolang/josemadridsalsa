@@ -98,6 +98,18 @@ describe('markdownToPlainText', () => {
       'post (https://x.com/a_b_*c*)',
     )
   })
+
+  it('protects a bare URL that contains balanced parentheses', () => {
+    expect(
+      markdownToPlainText('See https://en.wikipedia.org/wiki/Salsa_(sauce) for more'),
+    ).toBe('See https://en.wikipedia.org/wiki/Salsa_(sauce) for more')
+  })
+
+  it('handles a markdown link whose URL contains parentheses', () => {
+    expect(
+      markdownToPlainText('[wiki](https://en.wikipedia.org/wiki/Salsa_(sauce))'),
+    ).toBe('wiki (https://en.wikipedia.org/wiki/Salsa_(sauce))')
+  })
 })
 
 describe('boundedHashtags', () => {
