@@ -14,6 +14,8 @@ export interface InventoryAdjustment {
   reason?: string;
   notes?: string;
   orderId?: string;
+  /** Set when the stock arrived by receiving a purchase order. */
+  purchaseOrderId?: string;
   userId?: string;
 }
 
@@ -66,7 +68,7 @@ async function withSerializableRetry<T>(fn: () => Promise<T>, maxRetries = 3): P
  * Adjust inventory for a product and create transaction record
  */
 export async function adjustInventory(adjustment: InventoryAdjustment) {
-  const { productId, quantity, type, reason, notes, orderId, userId } = adjustment;
+  const { productId, quantity, type, reason, notes, orderId, purchaseOrderId, userId } = adjustment;
 
   // Get current product
   const product = await prisma.product.findUnique({
@@ -122,6 +124,7 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
         reason,
         notes,
         orderId,
+        purchaseOrderId,
         userId,
       },
     }),

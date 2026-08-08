@@ -1,0 +1,35 @@
+# Local development image. The source tree is bind-mounted at run time, so this
+# image only carries the toolchain and the installed node_modules.
+#
+# Use it through docker-compose.dev.yml, which wires the bind mount, the port,
+# and a Postgres service:
+#
+#   docker compose -f docker-compose.dev.yml up
+#
+# Run another workspace's dev server by overriding the command, e.g.
+#   docker compose -f docker-compose.dev.yml run --rm --service-ports storefront npm run dev:admin
+
+ARG NODE_VERSION=20
+
+FROM node:${NODE_VERSION}-bookworm-slim
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates openssl git \
+  && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    HUSKY=0 \
+    HOSTNAME=0.0.0.0
+
+COPY package.json package-lock.json ./
+COPY apps/admin/package.json ./apps/admin/
+COPY apps/docs/package.json ./apps/docs/
+COPY apps/fundraising/package.json ./apps/fundraising/
+COPY apps/storefront/package.json ./apps/storefront/
+COPY packages/shared-types/package.json ./packages/shared-types/
+COPY packages/shared-utils/package.json ./packages/shared-utils/
+COPY apps/storefront/prisma ./apps/storefront/prisma
+RUN npm ci --legacy-peer-deps
+
+# storefront / fundraising / docs / admin
+EXPOSE 3000 3001 3002 3003
+CMD ["npm", "run", "dev"]

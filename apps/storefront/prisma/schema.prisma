@@ -48,6 +48,8 @@ model User {
   orders                  Order[]
   partnerApiKeys          PartnerApiKey[]
   passwordResetTokens     PasswordResetToken[]
+  purchaseOrders          PurchaseOrder[]
+  purchaseOrderReceipts   PurchaseOrderReceipt[]
   reviews                 Review[]
   shippingSettings        ShippingSettings[]
   unsubscribePreferences  UnsubscribePreference[]
@@ -206,6 +208,7 @@ model Product {
   orderItems             OrderItem[]
   productIngredients     ProductIngredient[]
   productTags            ProductTag[]
+  purchaseOrderItems     PurchaseOrderItem[]
   variants               ProductVariant[]
   category               Category                @relation(fields: [categoryId], references: [id])
   restockNotifications   RestockNotification[]
@@ -2576,23 +2579,128 @@ model OrderNotificationRule {
 }
 
 model InventoryTransaction {
-  id            String                   @id @default(cuid())
-  productId     String
-  type          InventoryTransactionType
-  quantity      Int
-  previousStock Int
-  newStock      Int
-  reason        String?
-  notes         String?
-  orderId       String?
-  userId        String?
-  createdAt     DateTime                 @default(now())
-  product       Product                  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id              String                   @id @default(cuid())
+  productId       String
+  type            InventoryTransactionType
+  quantity        Int
+  previousStock   Int
+  newStock        Int
+  reason          String?
+  notes           String?
+  orderId         String?
+  // Set when the movement came from receiving a purchase order. Without it, "where did this
+  // stock come from" is only answerable from a free-text reason, which is not an answer.
+  purchaseOrderId String?
+  userId          String?
+  createdAt       DateTime                 @default(now())
+  product         Product                  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@index([type])
   @@index([createdAt])
+  @@index([purchaseOrderId])
   @@map("inventory_transactions")
+}
+
+/// A business the shop buys stock from.
+model Supplier {
+  id             String          @id @default(cuid())
+  name           String
+  contactName    String?
+  email          String?
+  phone          String?
+  address1       String?
+  address2       String?
+  city           String?
+  state          String?
+  postalCode     String?
+  country        String?         @default("US")
+  notes          String?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  purchaseOrders PurchaseOrder[]
+
+  @@index([isActive])
+  @@map("suppliers")
+}
+
+/// Stock ordered from a supplier, and the record of what actually turned up.
+model PurchaseOrder {
+  id           String                 @id @default(cuid())
+  poNumber     String                 @unique
+  supplierId   String
+  status       PurchaseOrderStatus    @default(DRAFT)
+  expectedAt   DateTime?
+  submittedAt  DateTime?
+  receivedAt   DateTime?
+  cancelledAt  DateTime?
+  shippingCost Decimal                @default(0) @db.Decimal(10, 2)
+  notes        String?
+  createdById  String?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  supplier     Supplier               @relation(fields: [supplierId], references: [id])
+  createdBy    User?                  @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  items        PurchaseOrderItem[]
+  receipts     PurchaseOrderReceipt[]
+
+  @@index([status])
+  @@index([supplierId])
+  @@index([expectedAt])
+  @@map("purchase_orders")
+}
+
+/// One product line on a purchase order.
+///
+/// `quantityReceived` is a cached rollup of this line's receipt items and must only ever be
+/// changed by the receiving path, which writes both in one transaction. Setting it directly
+/// breaks the invariant that it equals the sum of `receiptItems.quantity`.
+model PurchaseOrderItem {
+  id               String                     @id @default(cuid())
+  purchaseOrderId  String
+  productId        String
+  quantityOrdered  Int
+  quantityReceived Int                        @default(0)
+  unitCost         Decimal                    @db.Decimal(10, 2)
+  purchaseOrder    PurchaseOrder              @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product          Product                    @relation(fields: [productId], references: [id])
+  receiptItems     PurchaseOrderReceiptItem[]
+
+  @@unique([purchaseOrderId, productId])
+  @@index([productId])
+  @@map("purchase_order_items")
+}
+
+/// One delivery against a purchase order. A PO may be filled by several.
+model PurchaseOrderReceipt {
+  id              String                     @id @default(cuid())
+  purchaseOrderId String
+  /// Packing slip or supplier invoice number, so a receipt can be matched to paperwork.
+  reference       String?
+  notes           String?
+  receivedById    String?
+  receivedAt      DateTime                   @default(now())
+  createdAt       DateTime                   @default(now())
+  purchaseOrder   PurchaseOrder              @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  receivedBy      User?                      @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+  items           PurchaseOrderReceiptItem[]
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_receipts")
+}
+
+model PurchaseOrderReceiptItem {
+  id                  String               @id @default(cuid())
+  receiptId           String
+  purchaseOrderItemId String
+  quantity            Int
+  receipt             PurchaseOrderReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  purchaseOrderItem   PurchaseOrderItem    @relation(fields: [purchaseOrderItemId], references: [id], onDelete: Cascade)
+
+  @@index([receiptId])
+  @@index([purchaseOrderItemId])
+  @@map("purchase_order_receipt_items")
 }
 
 model InventoryAlert {
@@ -3637,6 +3745,18 @@ enum OrderNotificationEvent {
   ORDER_REFUNDED
   PAYMENT_FAILED
   HIGH_VALUE_ORDER
+}
+
+/// DRAFT, SUBMITTED and CANCELLED are lifecycle states a person sets. PARTIALLY_RECEIVED and
+/// RECEIVED are derived from received quantities and must never be set by hand — the same
+/// split as order fulfillment, where progress comes from item counts and everything else is
+/// an overlay.
+enum PurchaseOrderStatus {
+  DRAFT
+  SUBMITTED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
 }
 
 enum InventoryTransactionType {

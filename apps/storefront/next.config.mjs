@@ -11,6 +11,9 @@ const monorepoRoot = existsSync(path.join(workspaceRoot, 'turbo.json'))
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: monorepoRoot,
+  // Self-contained server build for the Docker image (Dockerfile). Gated so the
+  // Vercel build path stays exactly as it was.
+  ...(process.env.DOCKER_BUILD === '1' ? { output: 'standalone' } : {}),
   // Force cache invalidation for Vercel builds
   generateBuildId: async () => {
     return `build-${Date.now()}`

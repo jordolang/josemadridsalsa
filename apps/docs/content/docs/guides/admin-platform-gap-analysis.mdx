@@ -226,11 +226,20 @@ workflow, `RestockNotification`, import/export, transactional decrement in
 
 This is the strongest area in the console.
 
-**Missing:** purchase orders, receiving, backorders, multi-location/warehouse (the
-`TRANSFER` transaction type exists but there is no location dimension to transfer between).
+**Purchase orders and receiving — shipped (Phase 3).** `Supplier`, `PurchaseOrder`,
+`PurchaseOrderItem`, `PurchaseOrderReceipt`, `PurchaseOrderReceiptItem`, plus API routes for
+suppliers, purchase orders, submit/cancel and receiving. Stock arrives through
+`adjustInventory` with a `RESTOCK` transaction carrying a `purchaseOrderId`, so receiving
+records inventory history and re-evaluates low stock the same way every other movement does.
+`quantityReceived` follows the fulfillment invariant — a cached rollup with exactly one
+writer — and `PARTIALLY_RECEIVED`/`RECEIVED` are derived from quantities rather than stamped.
+**The admin UI is not built yet**; the API is complete and tested.
 
-**Work:** purchase orders + receiving **4–6 days**; multi-location **4–5 days** (touches every
-stock read); backorders **2–3 days**.
+**Missing:** backorders, multi-location/warehouse (the `TRANSFER` transaction type exists but
+there is no location dimension to transfer between).
+
+**Work:** multi-location **4–5 days** (touches every stock read); backorders **2–3 days**;
+purchase-order admin screens **2–3 days**.
 
 ### Customers
 
