@@ -106,17 +106,26 @@ describe('creditFundraiserCommission', () => {
     expect(fundraiserUpdate).not.toHaveBeenCalled()
   })
 
-  it('claims the order before touching a rollup', async () => {
+  it('claims the order and records the amount in one write', async () => {
     const { tx } = fakeTx({ order: fundraiserOrder })
 
     await creditFundraiserCommission(tx, 'order-1')
 
-    // The guard is what makes the claim atomic rather than a read-then-write.
-    expect(tx.order.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: 'order-1', commissionCreditedAt: null },
-      })
-    )
+    // The guard is what makes the claim atomic rather than a read-then-write, and the amount
+    // rides along so it can never be credited without being recorded.
+    const call = tx.order.updateMany.mock.calls[0][0]
+    expect(call.where).toEqual({ id: 'order-1', commissionCreditedAt: null })
+    expect(Number(call.data.fundraiserCommission)).toBe(30)
+    expect(call.data.commissionCreditedAt).toBeInstanceOf(Date)
+  })
+
+  it('records nothing on the order when it loses the claim', async () => {
+    const { tx } = fakeTx({ order: fundraiserOrder, claimCount: 0 })
+
+    await creditFundraiserCommission(tx, 'order-1')
+
+    // The losing write matched no rows, so the winner's amount stands.
+    expect(tx.order.updateMany).toHaveBeenCalledOnce()
   })
 
   it('does not credit when the fundraiser row has gone', async () => {

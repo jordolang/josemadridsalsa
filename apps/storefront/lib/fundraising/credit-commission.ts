@@ -61,17 +61,6 @@ export async function creditFundraiserCommission(
     return { credited: false, amount: 0, reason: 'fundraiser-missing' }
   }
 
-  // Claim the order. Only the caller whose update matches a still-null column proceeds,
-  // which is what makes this safe to call from a webhook and a completion route at once.
-  const claim = await tx.order.updateMany({
-    where: { id: orderId, commissionCreditedAt: null },
-    data: { commissionCreditedAt: new Date() },
-  })
-
-  if (claim.count === 0) {
-    return { credited: false, amount: 0, reason: 'already-credited' }
-  }
-
   const amount = calculateFundraiserCommission(
     {
       subtotal: Number(order.subtotal),
@@ -79,6 +68,23 @@ export async function creditFundraiserCommission(
     },
     Number(fundraiser.commissionRate)
   )
+
+  // Claim the order and record what the group was paid, in one write. Only the caller whose
+  // update matches a still-null column proceeds, which is what makes this safe to call from a
+  // webhook and a completion route at once. The amount is stored rather than derived later
+  // because the rate is editable, and a recomputed figure would eventually disagree with what
+  // was actually handed over.
+  const claim = await tx.order.updateMany({
+    where: { id: orderId, commissionCreditedAt: null },
+    data: {
+      commissionCreditedAt: new Date(),
+      fundraiserCommission: new Prisma.Decimal(amount.toFixed(2)),
+    },
+  })
+
+  if (claim.count === 0) {
+    return { credited: false, amount: 0, reason: 'already-credited' }
+  }
 
   // Revenue is the full order value; commission is the group's share of the merchandise.
   // They are deliberately different figures — see lib/fundraising/commission.ts.

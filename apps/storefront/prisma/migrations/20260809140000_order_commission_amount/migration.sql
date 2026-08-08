@@ -1,0 +1,11 @@
+-- Records what a fundraising group was actually paid for an order.
+--
+-- The rollups say what a group has earned in total, but nothing said what any single order
+-- contributed. Margin reporting needs that per order: on the fundraiser channel, sale price
+-- minus cost is not the margin, because half of the merchandise goes to the group. Deriving
+-- it later from `Fundraiser.commissionRate` would be wrong the moment anyone edits the rate,
+-- which is an audited admin action — the same reason `OrderItem.unitCost` is snapshotted
+-- rather than joined to the product's current cost.
+--
+-- Null means not a fundraiser order, or not credited yet. It never means zero.
+ALTER TABLE "orders" ADD COLUMN "fundraiserCommission" DECIMAL(10,2);

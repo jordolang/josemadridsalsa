@@ -571,6 +571,10 @@ model Order {
   /// Set once, by whichever path marks the order paid first. The claim on this column is what
   /// stops the same sale being credited twice when a webhook and a completion route race.
   commissionCreditedAt     DateTime?
+  /// What the group was actually paid for this order, recorded at the moment it was credited.
+  /// Null means not a fundraiser order, or not yet credited — never zero. The rate is editable
+  /// afterwards, so recomputing this later would disagree with what was really handed over.
+  fundraiserCommission     Decimal?               @db.Decimal(10, 2)
   fundraiserId             String?
   importSource             String?
   importBatchId            String?
