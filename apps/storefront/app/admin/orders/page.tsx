@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Download } from 'lucide-react'
+import { Download, Plus } from 'lucide-react'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
@@ -134,14 +134,24 @@ export default async function OrdersPage({
             Manage and track all customer orders
           </p>
         </div>
-        {canExport && (
-          <Button variant="outline" asChild>
-            <a href={exportHref}>
-              <Download className="mr-2 size-4" />
-              Export
-            </a>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canExport && (
+            <Button variant="outline" asChild>
+              <a href={exportHref}>
+                <Download className="mr-2 size-4" />
+                Export
+              </a>
+            </Button>
+          )}
+          {canWrite && (
+            <Button asChild>
+              <Link href="/admin/orders/new">
+                <Plus className="mr-2 size-4" />
+                New order
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
