@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Inbox, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import Link from 'next/link'
 
 type FinancialUploadPanelProps = {
   acceptedExtensions: string[]
@@ -99,7 +100,7 @@ export function FinancialUploadPanel({ acceptedExtensions }: FinancialUploadPane
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
         <span>Need recurring imports? Set up automated feeds through your QuickBooks or Xero integration.</span>
         <Button variant="outline" size="sm" asChild>
-          <a href="/admin/settings/integrations?service=quickbooks">Configure automations</a>
+          <Link href="/admin/settings/integrations?service=quickbooks">Configure automations</Link>
         </Button>
       </div>
     </div>

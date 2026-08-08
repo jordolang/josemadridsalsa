@@ -15,6 +15,7 @@ import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { formatPrice } from '@/lib/utils'
 import { payrollRuns, payrollEmployees } from '@/lib/financials/config'
 import { createMetadata } from '@/lib/metadata'
+import Link from 'next/link'
 
 export const metadata: Metadata = createMetadata({
   title: 'Payroll - Jose Madrid Salsa Admin',
@@ -42,7 +43,7 @@ export default async function PayrollPage() {
           </p>
         </div>
         <Button variant="default" asChild>
-          <a href="/admin/settings/integrations?service=adp">Connect ADP Workforce Now</a>
+          <Link href="/admin/settings/integrations?service=adp">Connect ADP Workforce Now</Link>
         </Button>
       </header>
 

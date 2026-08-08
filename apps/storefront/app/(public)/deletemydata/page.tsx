@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { createMetadata } from '@/lib/metadata';
+import Link from 'next/link'
 
 const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? 'mike@josemadridsalsa.com';
 
@@ -54,7 +55,7 @@ export default function DeleteMyDataPage() {
               accounting, fraud-prevention, and warranty obligations. Payment card details are handled by our payment
               providers and are not stored on our systems. Any retained records are kept only as long as required and
               are protected in accordance with our{' '}
-              <a href="/privacy">Privacy Policy</a>.
+              <Link href="/privacy">Privacy Policy</Link>.
             </p>
 
             <h2>Processing Time</h2>

@@ -29,6 +29,7 @@ import {
   type QuickBooksEnvironment,
 } from '@/lib/quickbooks/config'
 import { getConnectionStatus, disconnect } from '@/lib/quickbooks/connection'
+import Link from 'next/link'
 
 async function saveQuickBooksCredentialsAction(formData: FormData) {
   'use server'
@@ -312,7 +313,7 @@ export default async function IntegrationsPage({
                 )}
                 {qbStatus.connected && (
                   <Button asChild variant="outline">
-                    <a href="/admin/settings/integrations/quickbooks">Sync settings</a>
+                    <Link href="/admin/settings/integrations/quickbooks">Sync settings</Link>
                   </Button>
                 )}
                 {qbStatus.connected && (
