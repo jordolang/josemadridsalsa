@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { Bell } from 'lucide-react'
 
 import { GlobalSearch } from '@/components/admin/GlobalSearch'
+import { NotificationBell } from '@/components/admin/NotificationBell'
 import { AppSidebar } from '@/components/admin/AppSidebar'
 import {
   Breadcrumb,
@@ -141,6 +142,7 @@ function AdminLayoutInner({
             <div className="mr-1 hidden md:block">
               <GlobalSearch />
             </div>
+            <NotificationBell />
             <Tooltip>
               <TooltipTrigger asChild>
                 <ThemeToggle className="size-8 rounded-md px-0" />
