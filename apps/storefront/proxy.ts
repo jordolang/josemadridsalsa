@@ -29,6 +29,12 @@ interface CmsRedirect {
 }
 
 const CACHE_TTL_MS = 60_000
+/**
+ * This fetch sits in front of every page render, so it is capped hard: a slow
+ * or unreachable database must cost one page a couple of seconds at most, not
+ * stall the site. On timeout the previous table keeps being served.
+ */
+const FETCH_TIMEOUT_MS = 2_000
 
 let cachedRedirects: CmsRedirect[] = []
 let cachedAt = 0
@@ -41,13 +47,16 @@ async function loadRedirects(request: NextRequest): Promise<CmsRedirect[]> {
 
   inFlight = (async () => {
     try {
-      const response = await fetch(new URL('/api/cms/redirects', request.url))
+      const response = await fetch(new URL('/api/cms/redirects', request.url), {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      })
       if (response.ok) {
         const data = (await response.json()) as { redirects?: CmsRedirect[] }
         cachedRedirects = data.redirects ?? []
       }
     } catch {
-      // Keep serving whatever is cached; retry after the TTL.
+      // Timed out or unreachable. Keep serving whatever is cached and retry
+      // after the TTL rather than hammering a database that is struggling.
     } finally {
       cachedAt = Date.now()
       inFlight = null

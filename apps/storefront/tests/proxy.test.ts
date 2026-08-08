@@ -127,6 +127,23 @@ describe('CMS redirects', () => {
     expect(response.headers.get('x-middleware-next')).toBe('1')
   })
 
+  it('falls through when the redirect table times out', async () => {
+    vi.resetModules()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        const error = new Error('The operation was aborted due to timeout')
+        error.name = 'TimeoutError'
+        throw error
+      })
+    )
+    const slowProxy = (await import('@/proxy')).default as Proxy
+
+    const response = await slowProxy(new NextRequest('https://store.example.com/products'))
+
+    expect(response.headers.get('x-middleware-next')).toBe('1')
+  })
+
   it('falls through when the redirect table cannot be loaded', async () => {
     vi.resetModules()
     vi.stubGlobal(
