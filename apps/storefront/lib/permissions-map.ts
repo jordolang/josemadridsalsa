@@ -126,6 +126,46 @@ export const adminNavigation: NavItem[] = [
     permission: 'content:read',
     children: [
       {
+        label: 'Pages',
+        href: '/admin/content/pages',
+        permission: 'content:read',
+      },
+      {
+        label: 'Banners',
+        href: '/admin/content/banners',
+        permission: 'content:write',
+      },
+      {
+        label: 'Announcements',
+        href: '/admin/content/announcements',
+        permission: 'content:write',
+      },
+      {
+        label: 'FAQs',
+        href: '/admin/content/faqs',
+        permission: 'content:write',
+      },
+      {
+        label: 'Navigation',
+        href: '/admin/content/navigation',
+        permission: 'content:write',
+      },
+      {
+        label: 'Footer',
+        href: '/admin/content/footer',
+        permission: 'content:write',
+      },
+      {
+        label: 'Reusable Sections',
+        href: '/admin/content/sections',
+        permission: 'content:write',
+      },
+      {
+        label: 'Redirects',
+        href: '/admin/content/redirects',
+        permission: 'content:write',
+      },
+      {
         label: 'Media Library',
         href: '/admin/media',
         permission: 'content:read',

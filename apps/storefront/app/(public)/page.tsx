@@ -12,6 +12,8 @@ import { LocationMapClient } from '@/components/store/location-map-client'
 import { getReviewsData, getCalendarEvents } from '@/lib/server/google-data'
 import { ActiveCampaignsGrid } from '@/components/fundraiser/active-campaigns-grid'
 import { ScrollVideoHeroHome } from '@/components/store/scroll-video-hero-home'
+import { getPageContent } from '@/lib/cms/queries'
+import { homeHeroPanels } from '@/lib/cms/home'
 import { FeaturedProductsSection } from '@/components/store/featured-products-section'
 import { FeaturedHeatIndexSection } from '@/components/store/featured-heat-index-section'
 
@@ -95,9 +97,12 @@ const FUNDRAISING_STATS = [
 // on the schedule map is the only path that ever triggers a client fetch.
 export default async function Home() {
   // Fetch all data in parallel — reviews and calendar
-  const [reviewsData, calendarEvents] = await Promise.all([
+  const [reviewsData, calendarEvents, content] = await Promise.all([
     getReviewsData(),
     getCalendarEvents(),
+    // CMS overrides for this page. Every lookup below supplies the original
+    // copy as its fallback, so an unedited homepage is byte-for-byte unchanged.
+    getPageContent('home'),
   ])
 
   return (
@@ -108,7 +113,7 @@ export default async function Home() {
 
         {/* Hero — video scrubs frame-by-frame as the page scrolls; copy sits in
             a left column over a left-edge legibility gradient */}
-        <ScrollVideoHeroHome />
+        <ScrollVideoHeroHome panels={homeHeroPanels(content)} />
 
         {/* Opaque white separator that also LIFTS the products area above the
             hero. The hero is a positioned, isolated stacking context, so a plain
@@ -118,12 +123,15 @@ export default async function Home() {
         <div className="relative z-10 bg-background">
           <div aria-hidden className="h-8 sm:h-12" />
           {/* Featured Products — pulled from Prisma (isFeatured=true, inStock=true) */}
-          <ErrorBoundary>
-            <FeaturedProductsSection />
-          </ErrorBoundary>
+          {content.isVisible('featuredProducts') && (
+            <ErrorBoundary>
+              <FeaturedProductsSection limit={content.number('featuredProducts', 'limit', 4)} />
+            </ErrorBoundary>
+          )}
         </div>
 
         {/* Fundraising — moved up to sit right below the products display */}
+        {content.isVisible('fundraisingPromo') && (
         <section className="relative overflow-hidden bg-gradient-to-br from-verde-50 to-salsa-50 py-12 sm:py-16 md:py-20 dark:from-verde-950/20 dark:to-salsa-950/20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <ScrollReveal>
@@ -133,11 +141,18 @@ export default async function Home() {
                     Earn 50% Profit
                   </span>
                   <h2 className="mb-4 font-serif text-3xl sm:text-4xl font-bold leading-tight tracking-[-0.02em] text-foreground md:text-5xl">
-                    Fundraise With <span className="text-gradient">Jose!</span>
+                    {content.text('fundraisingPromo', 'heading') || (
+                      <>
+                        Fundraise With <span className="text-gradient">Jose!</span>
+                      </>
+                    )}
                   </h2>
                   <p className="mb-6 max-w-md text-base sm:text-lg leading-relaxed text-muted-foreground">
-                    Looking for a fundraiser people actually want to buy? Our premium handcrafted salsas
-                    sell themselves — trusted by 500+ schools, teams, and nonprofits.
+                    {content.text(
+                      'fundraisingPromo',
+                      'body',
+                      'Looking for a fundraiser people actually want to buy? Our premium handcrafted salsas sell themselves — trusted by 500+ schools, teams, and nonprofits.'
+                    )}
                   </p>
 
                   {/* Punchy 3-up stat blocks with Volkhov numerals */}
@@ -193,8 +208,10 @@ export default async function Home() {
             </ScrollReveal>
           </div>
         </section>
+        )}
 
         {/* Heat-Level Categories */}
+        {content.isVisible('heatLevels') && (
         <section className="bg-muted/30 py-12 sm:py-16 md:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <ScrollReveal>
@@ -203,10 +220,18 @@ export default async function Home() {
                   Heat Levels
                 </span>
                 <h2 className="mb-4 font-serif text-3xl sm:text-4xl font-bold tracking-[-0.02em] text-foreground md:text-5xl">
-                  Built for Every <span className="text-gradient">Palate</span>
+                  {content.text('heatLevels', 'heading') || (
+                    <>
+                      Built for Every <span className="text-gradient">Palate</span>
+                    </>
+                  )}
                 </h2>
                 <p className="mx-auto max-w-2xl text-base sm:text-lg text-muted-foreground">
-                  From those who like it mild to the heat seekers — we have the perfect salsa for everyone.
+                  {content.text(
+                    'heatLevels',
+                    'body',
+                    'From those who like it mild to the heat seekers — we have the perfect salsa for everyone.'
+                  )}
                 </p>
               </div>
             </ScrollReveal>
@@ -242,13 +267,17 @@ export default async function Home() {
             </div>
           </div>
         </section>
+        )}
 
         {/* Featured Blog — newest Heat Index stories */}
-        <ErrorBoundary>
-          <FeaturedHeatIndexSection />
-        </ErrorBoundary>
+        {content.isVisible('heatIndex') && (
+          <ErrorBoundary>
+            <FeaturedHeatIndexSection />
+          </ErrorBoundary>
+        )}
 
         {/* What Sets Us Apart */}
+        {content.isVisible('whatSetsUsApart') && (
         <section className="py-12 sm:py-16 md:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 items-center gap-12 sm:gap-16 lg:grid-cols-2">
@@ -316,8 +345,10 @@ export default async function Home() {
             </div>
           </div>
         </section>
+        )}
 
         {/* Where Is Jose — Live Schedule Map */}
+        {content.isVisible('whereIsJose') && (
         <section className="py-12 sm:py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <ScrollReveal>
@@ -345,22 +376,33 @@ export default async function Home() {
             </ScrollReveal>
           </div>
         </section>
+        )}
 
         {/* Active Fundraising Campaigns — team mascots */}
-        <ErrorBoundary>
-          <ActiveCampaignsGrid
-            limit={6}
-            heading="Teams Fundraising Right Now"
-            subheading="Meet the schools, clubs, and teams raising money with Jose Madrid Salsa. Back a team and every jar counts toward their goal."
-            className="bg-background"
-          />
-        </ErrorBoundary>
+        {content.isVisible('activeCampaigns') && (
+          <ErrorBoundary>
+            <ActiveCampaignsGrid
+              limit={6}
+              heading={content.text(
+                'activeCampaigns',
+                'heading',
+                'Teams Fundraising Right Now'
+              )}
+              subheading={content.text(
+                'activeCampaigns',
+                'body',
+                'Meet the schools, clubs, and teams raising money with Jose Madrid Salsa. Back a team and every jar counts toward their goal.'
+              )}
+              className="bg-background"
+            />
+          </ErrorBoundary>
+        )}
 
         {/* Gift Box Selector Section */}
-        <GiftBoxSelector />
+        {content.isVisible('giftBoxes') && <GiftBoxSelector />}
 
         {/* Location Map Section */}
-        <LocationMapClient />
+        {content.isVisible('locationMap') && <LocationMapClient />}
 
         {/* Reviews Section — data pre-fetched server-side, zero client API calls */}
         <AnimatedTestimonials reviewsData={reviewsData} />
