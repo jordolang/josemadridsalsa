@@ -11,7 +11,7 @@ interface CampaignSummaryEmailProps {
   organizationName: string
   totalOrders: number
   totalRevenue: string
-  totalRaised: string
+  commissionEarned: string
   participantCount: number
   topParticipants?: Array<{ name: string; sales: number }>
   campaignUrl: string
@@ -25,14 +25,15 @@ export function CampaignSummaryEmail({
   organizationName,
   totalOrders,
   totalRevenue,
-  totalRaised,
+  commissionEarned,
   participantCount,
   topParticipants = [],
   campaignUrl,
   supportEmail = 'mike@josemadridsalsa.com',
   unsubscribeUrl,
 }: CampaignSummaryEmailProps) {
-  const previewText = `${campaignName} Campaign Summary - ${totalRaised} raised!`
+  // "Raised" means sales everywhere else on the site, so the preview quotes sales.
+  const previewText = `${campaignName} Campaign Summary - ${totalRevenue} raised!`
 
   return React.createElement(
     EmailLayout,
@@ -132,7 +133,7 @@ export function CampaignSummaryEmail({
             lineHeight: '1.6',
           },
         },
-        `Total Raised: ${totalRaised}`
+        `Commission Earned: ${commissionEarned}`
       ),
       React.createElement(
         Text,

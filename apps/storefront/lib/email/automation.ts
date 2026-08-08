@@ -547,9 +547,10 @@ export async function sendCampaignSummaryEmail(fundraiserId: string) {
     (sum: number, order: { total: import('@prisma/client').Prisma.Decimal }) => sum + Number(order.total),
     0
   )
-  // Use commissionRate as profit margin proxy
+  // The group's share. Reported as commission, not as "raised" — a goal on this site is
+  // measured in sales, so calling the commission "raised" named it the other figure.
   const commissionRate = Number(fundraiser.commissionRate ?? 0)
-  const totalRaised = totalRevenue * (commissionRate / 100)
+  const commissionEarned = totalRevenue * (commissionRate / 100)
 
   const participantSales = new Map<string, { name: string; sales: number }>()
   fundraiser.participants.forEach((participant: { id: string; name: string }) => {
@@ -578,7 +579,7 @@ export async function sendCampaignSummaryEmail(fundraiserId: string) {
     organizationName: fundraiser.organizationName,
     totalOrders,
     totalRevenue: `$${totalRevenue.toFixed(2)}`,
-    totalRaised: `$${totalRaised.toFixed(2)}`,
+    commissionEarned: `$${commissionEarned.toFixed(2)}`,
     participantCount: fundraiser.participants.length,
     topParticipants,
     campaignUrl,
