@@ -8,6 +8,7 @@ import { getCurrentUser } from '@/lib/rbac'
 import { deductReservedInventoryInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { createOrderAccessToken } from '@/lib/orders/access-token'
+import { calculateFundraiserCommission } from '@/lib/fundraising/commission'
 
 const ProcessPaymentSchema = z.object({
   sourceId: z.string().min(1, 'Payment source token is required'),
@@ -44,6 +45,9 @@ export async function POST(request: NextRequest) {
         userId: true,
         guestEmail: true,
         total: true,
+        // Commission is taken from merchandise, so the subtotal is loaded alongside the total.
+        subtotal: true,
+        discountAmount: true,
         paymentStatus: true,
         status: true,
         participantId: true,
@@ -183,13 +187,22 @@ export async function POST(request: NextRequest) {
         // Update participant totals if attributed
         if (order.participantId && order.fundraiserId) {
           const orderTotal = Number(order.total)
+          // Commission is taken from merchandise, not from the order total — see
+          // lib/fundraising/commission.ts. Revenue stays the full order value.
+          const commissionOrder = {
+            subtotal: Number(order.subtotal),
+            discountAmount: Number(order.discountAmount),
+          }
           const fundraiser = await tx.fundraiser.findUnique({
             where: { id: order.fundraiserId! },
             select: { commissionRate: true },
           })
 
           if (fundraiser) {
-            const commissionAmount = orderTotal * (Number(fundraiser.commissionRate) / 100)
+            const commissionAmount = calculateFundraiserCommission(
+              commissionOrder,
+              Number(fundraiser.commissionRate)
+            )
             await tx.fundraiserParticipant.update({
               where: { id: order.participantId! },
               data: {

@@ -11,6 +11,8 @@ import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
 import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manager'
 import { getReferralFromCode } from '@/lib/fundraising/referral-tracker'
+import { fundraiserUnitPrice } from '@/lib/fundraising/pricing'
+import { getFundraiserPriceOverrides } from '@/lib/fundraising/pricing.server'
 
 const PayPalCheckoutSchema = z.object({
   items: z
@@ -84,6 +86,11 @@ export async function POST(request: NextRequest) {
 
     const productMap = new Map(products.map((product) => [product.id, product]))
 
+    // A fundraiser sells at its own price, and the supporter was quoted that price on the
+    // fundraiser page. Resolved from the referral code here rather than accepted from the
+    // client, for the same reason shipping is recomputed server-side.
+    const fundraiserPrices = await getFundraiserPriceOverrides(referralCode, productIds)
+
     let subtotal = 0
     const orderItems = []
 
@@ -91,7 +98,7 @@ export async function POST(request: NextRequest) {
       const product = productMap.get(item.productId)
       if (!product) continue
 
-      const unitPrice = Number(product.price)
+      const unitPrice = fundraiserUnitPrice(product.price, fundraiserPrices.get(product.id))
       const lineTotal = unitPrice * item.quantity
       subtotal += lineTotal
 

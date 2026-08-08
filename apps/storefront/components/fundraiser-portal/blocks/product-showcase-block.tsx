@@ -1,4 +1,5 @@
 import type { ProductShowcaseBlock as ProductShowcaseBlockType } from '@/lib/fundraiser-page-config'
+import { fundraiserUnitPrice } from '@/lib/fundraising/pricing'
 
 type FallbackProduct = {
   id: string
@@ -106,7 +107,7 @@ export function ProductShowcaseBlock({ block, fundraiser, fallbackProducts, isFa
 
   // Normal fundraiser products
   const filteredProducts = fundraiser.products.filter((fp) => {
-    const price = fp.price ? Number(fp.price) : Number(fp.product.price)
+    const price = fundraiserUnitPrice(fp.product.price, fp.price)
     return pricePoints.some((pp) => Math.abs(price - pp) < 0.01)
   })
 
@@ -138,7 +139,7 @@ export function ProductShowcaseBlock({ block, fundraiser, fallbackProducts, isFa
         ) : (
           <div className={`grid grid-cols-1 gap-6 ${gridCols}`}>
             {displayProducts.map((fp) => {
-              const price = fp.price ? Number(fp.price) : Number(fp.product.price)
+              const price = fundraiserUnitPrice(fp.product.price, fp.price)
               const image = fp.product.images?.[0]
               return (
                 <a

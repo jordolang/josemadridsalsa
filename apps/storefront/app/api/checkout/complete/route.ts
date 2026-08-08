@@ -7,6 +7,7 @@ import { Prisma, PaymentStatus, OrderStatus } from '@prisma/client'
 import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
 import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
+import { calculateFundraiserCommission } from '@/lib/fundraising/commission'
 
 const CompleteSchema = z.object({
   orderId: z.string().cuid(),
@@ -23,6 +24,7 @@ type OrderWithItems = {
   paymentStatus: PaymentStatus
   status: OrderStatus
   total: Prisma.Decimal
+  subtotal: Prisma.Decimal
   discountCode: string | null
   discountAmount: Prisma.Decimal
   giftCertificateCode: string | null
@@ -71,6 +73,8 @@ export async function POST(request: Request) {
           paymentStatus: true,
           status: true,
           total: true,
+          // Commission is taken from merchandise, so the subtotal is loaded alongside the total.
+          subtotal: true,
           discountCode: true,
           discountAmount: true,
           giftCertificateCode: true,
@@ -233,6 +237,12 @@ export async function POST(request: Request) {
         // Update participant totals if order is attributed to a participant
         if (order!.participantId) {
           const orderTotal = Number(order!.total)
+          // Commission is taken from merchandise, not from the order total — see
+          // lib/fundraising/commission.ts. Revenue stays the full order value.
+          const commissionOrder = {
+            subtotal: Number(order!.subtotal),
+            discountAmount: Number(order!.discountAmount),
+          }
 
           // Get the fundraiser to calculate commission
           const fundraiser = await tx.fundraiser.findUnique({
@@ -241,7 +251,10 @@ export async function POST(request: Request) {
           })
 
           if (fundraiser) {
-            const commissionAmount = orderTotal * (Number(fundraiser.commissionRate) / 100)
+            const commissionAmount = calculateFundraiserCommission(
+              commissionOrder,
+              Number(fundraiser.commissionRate)
+            )
 
             // Increment participant totals
             await tx.fundraiserParticipant.update({
