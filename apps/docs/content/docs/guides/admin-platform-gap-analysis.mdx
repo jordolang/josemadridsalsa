@@ -233,13 +233,20 @@ suppliers, purchase orders, submit/cancel and receiving. Stock arrives through
 records inventory history and re-evaluates low stock the same way every other movement does.
 `quantityReceived` follows the fulfillment invariant — a cached rollup with exactly one
 writer — and `PARTIALLY_RECEIVED`/`RECEIVED` are derived from quantities rather than stamped.
-**The admin UI is not built yet**; the API is complete and tested.
+Admin screens at `/admin/purchase-orders` cover the list with status filters, drafting an
+order, the detail view with delivery history, and receiving; suppliers live at
+`/admin/purchase-orders/suppliers`. Both are linked under Products in the sidebar.
 
 **Missing:** backorders, multi-location/warehouse (the `TRANSFER` transaction type exists but
-there is no location dimension to transfer between).
+there is no location dimension to transfer between). Editing a draft PO's lines after
+creation is also not built — a wrong draft is cancelled and re-drafted.
+
+**Note:** `/admin/inventory` exists as a page but has no sidebar entry in
+`lib/permissions-map.ts`, so it is only reachable by typing the URL or from the dashboard
+widget. Pre-existing, not introduced here.
 
 **Work:** multi-location **4–5 days** (touches every stock read); backorders **2–3 days**;
-purchase-order admin screens **2–3 days**.
+draft PO line editing **1 day**.
 
 ### Customers
 

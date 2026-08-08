@@ -38,6 +38,19 @@ export function canReceive(status: PurchaseOrderStatus): boolean {
   return status === 'SUBMITTED' || status === 'PARTIALLY_RECEIVED'
 }
 
+/** Nothing further will happen to these on their own. */
+export function isClosedPurchaseOrder(status: PurchaseOrderStatus): boolean {
+  return status === 'RECEIVED' || status === 'CANCELLED'
+}
+
+export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, string> = {
+  DRAFT: 'Draft',
+  SUBMITTED: 'Submitted',
+  PARTIALLY_RECEIVED: 'Partially received',
+  RECEIVED: 'Received',
+  CANCELLED: 'Cancelled',
+}
+
 export type ReceiptProgress = 'NONE' | 'PARTIAL' | 'COMPLETE'
 
 /**
