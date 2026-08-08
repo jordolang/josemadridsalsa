@@ -9,6 +9,7 @@ import {
   describeBulkAction,
   planCostFromPurchases,
   planPriceAdjustment,
+  planPriceSet,
   uniformUpdateFor,
 } from '@/lib/admin/bulk-products'
 
@@ -49,11 +50,12 @@ export async function POST(request: NextRequest) {
         data: uniform,
       })
       updated = result.count
-    } else if (operation.action === 'adjust-price') {
-      priceChanges = planPriceAdjustment(
-        existing.map((p) => ({ id: p.id, price: Number(p.price) })),
-        operation.percent
-      )
+    } else if (operation.action === 'adjust-price' || operation.action === 'set-price') {
+      const priced = existing.map((p) => ({ id: p.id, price: Number(p.price) }))
+      priceChanges =
+        operation.action === 'adjust-price'
+          ? planPriceAdjustment(priced, operation.percent)
+          : planPriceSet(priced, operation.price)
 
       // One transaction: a partially applied price change across a catalogue is worse than
       // none at all, because there is no way to tell which rows moved.

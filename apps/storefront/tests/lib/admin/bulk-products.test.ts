@@ -6,6 +6,7 @@ import {
   MAX_BULK_PRODUCTS,
   planCostFromPurchases,
   planPriceAdjustment,
+  planPriceSet,
   uniformUpdateFor,
 } from '@/lib/admin/bulk-products'
 
@@ -48,6 +49,19 @@ describe('BulkProductRequestSchema', () => {
     // A typo of 1000 would wreck the catalogue; -100 would make everything free.
     expect(attempt(1000)).toBe(false)
     expect(attempt(-100)).toBe(false)
+  })
+
+  it('refuses a free or negative flat price', () => {
+    const attempt = (price: number) =>
+      BulkProductRequestSchema.safeParse({
+        productIds: [cuid(1)],
+        operation: { action: 'set-price', price },
+      }).success
+
+    expect(attempt(9)).toBe(true)
+    // Unlike cost, which can legitimately be zero, nothing in the catalogue is free.
+    expect(attempt(0)).toBe(false)
+    expect(attempt(-1)).toBe(false)
   })
 
   it('requires a category id when assigning one', () => {
@@ -125,8 +139,29 @@ describe('planPriceAdjustment', () => {
 })
 
 describe('cost actions', () => {
+  it('records what each price was, so a flat set can be undone from the audit log', () => {
+    const changes = planPriceSet(
+      [
+        { id: 'a', price: 7 },
+        { id: 'b', price: 11.49 },
+      ],
+      9
+    )
+
+    expect(changes).toEqual([
+      { id: 'a', from: 7, to: 9 },
+      { id: 'b', from: 11.49, to: 9 },
+    ])
+  })
+
   it('maps set-cost to a uniform field update', () => {
     expect(uniformUpdateFor({ action: 'set-cost', cost: 4.25 })).toEqual({ costPrice: 4.25 })
+  })
+
+  it('keeps set-price per-row even though every row lands on the same figure', () => {
+    // Uniform would lose the before-value, and a price change nobody can read back is not
+    // one anybody can undo.
+    expect(uniformUpdateFor({ action: 'set-price', price: 9 })).toBeNull()
   })
 
   it('returns null for apply-latest-purchase-cost, which is per-row', () => {
@@ -149,6 +184,12 @@ describe('cost actions', () => {
         operation: { action: 'set-cost', cost: -1 },
       }).success
     ).toBe(false)
+  })
+
+  it('describes a flat price', () => {
+    expect(describeBulkAction({ action: 'set-price', price: 9 }, 28)).toBe(
+      'Set price to $9.00 on 28 products'
+    )
   })
 
   it('describes both cost actions', () => {

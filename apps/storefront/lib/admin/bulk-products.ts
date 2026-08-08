@@ -25,6 +25,10 @@ export const BulkProductActionSchema = z.discriminatedUnion('action', [
     // everything free.
     percent: z.number().gte(-90).lte(500),
   }),
+  // A percentage cannot land on a round number from an arbitrary starting price, and a
+  // catalogue priced uniformly is the common case here — so setting the figure directly is
+  // its own action rather than arithmetic the operator has to do first.
+  z.object({ action: z.literal('set-price'), price: z.number().min(0.01).max(100_000) }),
   // Cost is what margin reporting is computed from, so it needs a way in that is not
   // editing 28 products one at a time.
   z.object({ action: z.literal('set-cost'), cost: z.number().min(0).max(100_000) }),
@@ -58,8 +62,11 @@ export function uniformUpdateFor(
     case 'set-cost':
       return { costPrice: action.cost }
     case 'adjust-price':
+    case 'set-price':
     case 'apply-latest-purchase-cost':
-      // Per-row: derived from each product's own price, or its own purchase history.
+      // Per-row: derived from each product's own price, or its own purchase history. A flat
+      // `set-price` could be one `updateMany`, but then the audit entry would record what
+      // every price became without recording what any of them was.
       return null
   }
 }
@@ -95,6 +102,16 @@ export function planPriceAdjustment(
   })
 }
 
+/**
+ * Work out each product's change for a flat price.
+ *
+ * Every row lands on the same figure, so the only thing worth computing is what each one was
+ * — which is what makes the change reversible from the audit log.
+ */
+export function planPriceSet(products: PricedProduct[], price: number): PriceChange[] {
+  return products.map((product) => ({ id: product.id, from: product.price, to: price }))
+}
+
 /** Human summary for the audit entry and the toast. */
 export function describeBulkAction(action: BulkProductAction, count: number): string {
   const plural = `${count} product${count === 1 ? '' : 's'}`
@@ -112,6 +129,8 @@ export function describeBulkAction(action: BulkProductAction, count: number): st
       return `Moved ${plural} to a new category`
     case 'adjust-price':
       return `${action.percent >= 0 ? 'Raised' : 'Lowered'} prices on ${plural} by ${Math.abs(action.percent)}%`
+    case 'set-price':
+      return `Set price to $${action.price.toFixed(2)} on ${plural}`
     case 'set-cost':
       return `Set cost to $${action.cost.toFixed(2)} on ${plural}`
     case 'apply-latest-purchase-cost':

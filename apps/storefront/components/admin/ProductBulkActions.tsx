@@ -16,6 +16,16 @@ import {
 import type { BulkProductAction } from '@/lib/admin/bulk-products'
 
 /**
+ * Both money fields take the same shape, but not the same floor: the API rejects a price of
+ * zero because nothing in the catalogue is free, while a cost of zero is legitimate — donated
+ * stock costs nothing.
+ */
+function isAmount(value: string, min: number): boolean {
+  const amount = Number(value)
+  return value.trim() !== '' && !Number.isNaN(amount) && amount >= min
+}
+
+/**
  * Actions bar for a product selection. Rendered only when something is selected, so it
  * never occupies space while browsing.
  */
@@ -31,6 +41,8 @@ export function ProductBulkActions({
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
   const [percent, setPercent] = useState('')
+  const [price, setPrice] = useState('')
+  const [cost, setCost] = useState('')
 
   if (selectedIds.length === 0) return null
 
@@ -110,6 +122,53 @@ export function ProductBulkActions({
           Adjust price
         </Button>
       </div>
+
+      <div className="flex items-center gap-1">
+        <Input
+          type="number"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          placeholder="$"
+          className="h-8 w-20"
+          aria-label="Price"
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isSaving || !isAmount(price, 0.01)}
+          onClick={() => run({ action: 'set-price', price: Number(price) })}
+        >
+          Set price
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <Input
+          type="number"
+          value={cost}
+          onChange={(e) => setCost(e.target.value)}
+          placeholder="$"
+          className="h-8 w-20"
+          aria-label="Cost"
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isSaving || !isAmount(cost, 0)}
+          onClick={() => run({ action: 'set-cost', cost: Number(cost) })}
+        >
+          Set cost
+        </Button>
+      </div>
+
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={isSaving}
+        onClick={() => run({ action: 'apply-latest-purchase-cost' })}
+      >
+        Cost from purchases
+      </Button>
 
       <Button size="sm" variant="ghost" disabled={isSaving} onClick={onDone} className="ml-auto">
         Clear
