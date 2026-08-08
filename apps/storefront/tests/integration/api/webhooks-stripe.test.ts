@@ -208,7 +208,18 @@ describe('Stripe Webhook Integration Tests', () => {
           updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         payment: { update: vi.fn(), upsert: vi.fn() },
-        refund: { upsert: vi.fn() },
+        refund: {
+          // The reversal re-reads the refund inside the transaction and claims it. These
+          // refunds sit on ordinary orders, so it short-circuits before touching a rollup.
+          upsert: vi.fn().mockResolvedValue({ id: 'refund-test' }),
+          findUnique: vi.fn().mockResolvedValue({
+            amount: 0,
+            commissionReversed: null,
+            payment: { order: null },
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
+        },
         product: { update: mockProductUpdate },
         inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
         auditLog: {
@@ -334,7 +345,18 @@ describe('Stripe Webhook Integration Tests', () => {
           updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         payment: { update: vi.fn(), upsert: vi.fn() },
-        refund: { upsert: vi.fn() },
+        refund: {
+          // The reversal re-reads the refund inside the transaction and claims it. These
+          // refunds sit on ordinary orders, so it short-circuits before touching a rollup.
+          upsert: vi.fn().mockResolvedValue({ id: 'refund-test' }),
+          findUnique: vi.fn().mockResolvedValue({
+            amount: 0,
+            commissionReversed: null,
+            payment: { order: null },
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
+        },
         product: { update: mockProductUpdate },
         inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
         auditLog: {
@@ -712,7 +734,18 @@ describe('Stripe Webhook Integration Tests', () => {
           updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         payment: { update: vi.fn(), upsert: vi.fn() },
-        refund: { upsert: vi.fn() },
+        refund: {
+          // The reversal re-reads the refund inside the transaction and claims it. These
+          // refunds sit on ordinary orders, so it short-circuits before touching a rollup.
+          upsert: vi.fn().mockResolvedValue({ id: 'refund-test' }),
+          findUnique: vi.fn().mockResolvedValue({
+            amount: 0,
+            commissionReversed: null,
+            payment: { order: null },
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
+        },
         product: { update: mockProductUpdate },
         inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
         auditLog: {
@@ -817,7 +850,18 @@ describe('Stripe Webhook Integration Tests', () => {
           updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         payment: { update: vi.fn(), upsert: vi.fn() },
-        refund: { upsert: vi.fn() },
+        refund: {
+          // The reversal re-reads the refund inside the transaction and claims it. These
+          // refunds sit on ordinary orders, so it short-circuits before touching a rollup.
+          upsert: vi.fn().mockResolvedValue({ id: 'refund-test' }),
+          findUnique: vi.fn().mockResolvedValue({
+            amount: 0,
+            commissionReversed: null,
+            payment: { order: null },
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
+        },
         product: { update: mockProductUpdate },
         inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
       }
@@ -914,7 +958,18 @@ describe('Stripe Webhook Integration Tests', () => {
           updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         payment: { update: vi.fn(), upsert: vi.fn() },
-        refund: { upsert: vi.fn() },
+        refund: {
+          // The reversal re-reads the refund inside the transaction and claims it. These
+          // refunds sit on ordinary orders, so it short-circuits before touching a rollup.
+          upsert: vi.fn().mockResolvedValue({ id: 'refund-test' }),
+          findUnique: vi.fn().mockResolvedValue({
+            amount: 0,
+            commissionReversed: null,
+            payment: { order: null },
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
+        },
         product: { update: mockProductUpdate },
         inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
       }
@@ -1042,7 +1097,18 @@ describe('Stripe Webhook Integration Tests', () => {
           updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         payment: { update: vi.fn(), upsert: vi.fn() },
-        refund: { upsert: vi.fn() },
+        refund: {
+          // The reversal re-reads the refund inside the transaction and claims it. These
+          // refunds sit on ordinary orders, so it short-circuits before touching a rollup.
+          upsert: vi.fn().mockResolvedValue({ id: 'refund-test' }),
+          findUnique: vi.fn().mockResolvedValue({
+            amount: 0,
+            commissionReversed: null,
+            payment: { order: null },
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
+        },
         product: { update: mockProductUpdate },
         inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
       }
@@ -1111,7 +1177,18 @@ describe('Stripe Webhook Integration Tests', () => {
           updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         payment: { update: vi.fn(), upsert: vi.fn() },
-        refund: { upsert: vi.fn() },
+        refund: {
+          // The reversal re-reads the refund inside the transaction and claims it. These
+          // refunds sit on ordinary orders, so it short-circuits before touching a rollup.
+          upsert: vi.fn().mockResolvedValue({ id: 'refund-test' }),
+          findUnique: vi.fn().mockResolvedValue({
+            amount: 0,
+            commissionReversed: null,
+            payment: { order: null },
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
+        },
         product: { update: mockProductUpdate },
         inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
       }
@@ -1319,7 +1396,18 @@ describe('Stripe Webhook Integration Tests', () => {
           updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         payment: { update: vi.fn(), upsert: vi.fn() },
-        refund: { upsert: vi.fn() },
+        refund: {
+          // The reversal re-reads the refund inside the transaction and claims it. These
+          // refunds sit on ordinary orders, so it short-circuits before touching a rollup.
+          upsert: vi.fn().mockResolvedValue({ id: 'refund-test' }),
+          findUnique: vi.fn().mockResolvedValue({
+            amount: 0,
+            commissionReversed: null,
+            payment: { order: null },
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
+        },
         product: { update: mockProductUpdate },
         inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
         auditLog: {
@@ -1395,7 +1483,18 @@ describe('Stripe Webhook Integration Tests', () => {
           updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         payment: { update: vi.fn(), upsert: vi.fn() },
-        refund: { upsert: vi.fn() },
+        refund: {
+          // The reversal re-reads the refund inside the transaction and claims it. These
+          // refunds sit on ordinary orders, so it short-circuits before touching a rollup.
+          upsert: vi.fn().mockResolvedValue({ id: 'refund-test' }),
+          findUnique: vi.fn().mockResolvedValue({
+            amount: 0,
+            commissionReversed: null,
+            payment: { order: null },
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
+        },
         product: { update: mockProductUpdate },
         inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
       }

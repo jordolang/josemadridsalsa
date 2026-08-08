@@ -10,6 +10,7 @@ import { emitDomainEvent } from '@/lib/domain-events/emit'
 import { dedupeKeys, notifyOperators, severityFor } from '@/lib/notifications/dispatch'
 import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
+import { reverseFundraiserCommission } from '@/lib/fundraising/reverse-commission'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -405,7 +406,7 @@ export async function POST(request: Request) {
           })
 
           // Create refund record
-          await tx.refund.upsert({
+          const refundRow = await tx.refund.upsert({
             where: { stripeRefundId: stripeRefund.id },
             create: {
               stripeRefundId: stripeRefund.id,
@@ -418,6 +419,10 @@ export async function POST(request: Request) {
               status: 'SUCCEEDED',
             },
           })
+
+          // Take the fundraising group's share back out. Idempotent on the refund, so a
+          // redelivered webhook cannot claw it back twice.
+          await reverseFundraiserCommission(tx, refundRow.id)
 
           // Restore inventory on full refunds only
           // Note: Partial refunds do not restore inventory as they may not correspond to specific items being returned.

@@ -798,6 +798,10 @@ model Refund {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   processedAt    DateTime?
+  /// Fundraiser commission taken back because of this refund. Non-null is also the claim that
+  /// stops the same refund reversing twice. Null means not a fundraiser refund, or not yet
+  /// processed — never zero.
+  commissionReversed Decimal?    @db.Decimal(10, 2)
   payment        Payment         @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   returnRequest  ReturnRequest?
 

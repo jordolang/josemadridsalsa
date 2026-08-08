@@ -6,6 +6,7 @@ import { getPayPalAccessToken } from '@/lib/payments/providers/paypal'
 import { PAID_PAYMENT_STATUS } from '@/lib/payments/status'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
+import { reverseFundraiserCommission } from '@/lib/fundraising/reverse-commission'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -279,7 +280,7 @@ export async function POST(request: Request) {
         const isFullRefund = refundAmount >= payment.amount
 
         await prisma.$transaction(async (tx) => {
-          await tx.refund.create({
+          const refundRow = await tx.refund.create({
             data: {
               stripeRefundId: refundId, // Provider-agnostic despite the name; see Refund.provider
               provider: 'PAYPAL',
@@ -288,6 +289,9 @@ export async function POST(request: Request) {
               status: 'SUCCEEDED',
             },
           })
+
+          // Take the fundraising group's share back out. Idempotent on the refund.
+          await reverseFundraiserCommission(tx, refundRow.id)
 
           await tx.payment.update({
             where: { id: payment.id },

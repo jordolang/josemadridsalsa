@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
 import { getProvider } from '@/lib/payments'
 import type { PaymentProvider } from '@/lib/payments/types'
+import { reverseFundraiserCommission } from '@/lib/fundraising/reverse-commission'
 
 const RefundRequestSchema = z.object({
   paymentId: z.string().min(1, 'Payment ID is required'),
@@ -123,6 +124,10 @@ export async function POST(request: Request) {
 
       // Update payment status when refund succeeds
       if (refundResult.status === 'SUCCEEDED') {
+        // Take the fundraising group's share back out. Only on a succeeded refund — a pending
+        // one has not returned any money yet, and the webhook will reverse it when it lands.
+        await reverseFundraiserCommission(tx, refund.id)
+
         const newTotalRefunded = totalRefunded + refundAmount
         const newPaymentStatus =
           newTotalRefunded >= payment.amount ? 'REFUNDED' : 'PARTIALLY_REFUNDED'
