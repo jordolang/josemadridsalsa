@@ -36,6 +36,8 @@ interface SocialCrosspostPanelProps {
   mode: 'create' | 'edit'
   postSlug?: string
   postStatus: string
+  dirty?: boolean
+  refreshKey?: number
 }
 
 export function SocialCrosspostPanel({
@@ -44,9 +46,12 @@ export function SocialCrosspostPanel({
   mode,
   postSlug,
   postStatus,
+  dirty = false,
+  refreshKey = 0,
 }: SocialCrosspostPanelProps) {
   const [accounts, setAccounts] = useState<SocialAccount[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [posting, setPosting] = useState(false)
   const [status, setStatus] = useState<PublishStatus[]>([])
   const defaultsApplied = useRef(false)
@@ -61,6 +66,7 @@ export function SocialCrosspostPanel({
         if (cancelled) return
         const list: SocialAccount[] = data.accounts ?? []
         setAccounts(list)
+        setLoadError(false)
         // Pre-select the connected Facebook page(s) once, as the default channel.
         if (!defaultsApplied.current && selected.length === 0) {
           defaultsApplied.current = true
@@ -68,7 +74,7 @@ export function SocialCrosspostPanel({
           if (fb.length > 0) onChange(fb)
         }
       } catch {
-        if (!cancelled) setAccounts([])
+        if (!cancelled) setLoadError(true)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -92,7 +98,7 @@ export function SocialCrosspostPanel({
     return () => {
       cancelled = true
     }
-  }, [mode, postSlug])
+  }, [mode, postSlug, refreshKey])
 
   function toggle(id: string) {
     onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id])
@@ -109,7 +115,11 @@ export function SocialCrosspostPanel({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Cross-post failed')
-      toast.success(data.message ?? 'Cross-posted')
+      if (data.allSucceeded === false) {
+        toast.warning(data.message ?? 'Cross-posted with issues')
+      } else {
+        toast.success(data.message ?? 'Cross-posted')
+      }
       // Refresh status.
       const s = await fetch(`/api/heat-index/posts/${postSlug}/crosspost`)
       if (s.ok) {
@@ -141,6 +151,10 @@ export function SocialCrosspostPanel({
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading channels…
         </div>
+      ) : loadError ? (
+        <p className="text-sm text-destructive">
+          Couldn&apos;t load connected channels. Reload the page to try again.
+        </p>
       ) : accounts.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No connected channels.{' '}
@@ -221,7 +235,7 @@ export function SocialCrosspostPanel({
             size="sm"
             className="w-full"
             onClick={crosspostNow}
-            disabled={posting || selected.length === 0}
+            disabled={posting || selected.length === 0 || dirty}
           >
             {posting ? (
               <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
@@ -230,11 +244,18 @@ export function SocialCrosspostPanel({
             )}
             Cross-post now
           </Button>
-          {postStatus !== 'PUBLISHED' && (
+          {dirty ? (
             <p className="text-xs text-muted-foreground mt-1.5">
-              Tip: posting works before publishing, but the article link won&apos;t be live until the
-              post is published.
+              Save your changes first — cross-posting uses the saved article, so unsaved edits
+              wouldn&apos;t be included.
             </p>
+          ) : (
+            postStatus !== 'PUBLISHED' && (
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Tip: posting works before publishing, but the article link won&apos;t be live until the
+                post is published.
+              </p>
+            )
           )}
         </div>
       )}

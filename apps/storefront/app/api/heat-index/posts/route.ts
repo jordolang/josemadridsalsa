@@ -64,7 +64,10 @@ export async function POST(req: NextRequest) {
 
     const data = parsed.data
     const crosspostParsed = crosspostAccountIdsSchema.safeParse(body.crosspostAccountIds)
-    const crosspostAccountIds = crosspostParsed.success ? crosspostParsed.data : []
+    if (!crosspostParsed.success) {
+      return fail(`Validation error: ${crosspostParsed.error.issues[0].message}`)
+    }
+    const crosspostAccountIds = crosspostParsed.data
     const existing = await prisma.blogPost.findUnique({ where: { slug: data.slug } })
     if (existing) return fail('A post with this slug already exists', 409)
 

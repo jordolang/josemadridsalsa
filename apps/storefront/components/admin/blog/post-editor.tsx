@@ -123,6 +123,8 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [crosspostAccountIds, setCrosspostAccountIds] = useState<string[]>([])
+  const [dirty, setDirty] = useState(false)
+  const [crosspostRefreshKey, setCrosspostRefreshKey] = useState(0)
 
   const [form, setForm] = useState({
     title: initial.title ?? '',
@@ -149,6 +151,7 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }))
+    setDirty(true)
   }
 
   useEffect(() => {
@@ -261,6 +264,10 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Save failed')
       toast.success(mode === 'create' ? 'Post created' : 'Post saved')
+      setDirty(false)
+      // Auto cross-posting runs server-side on the draft→published transition;
+      // bump the key so the panel re-reads per-channel status after the save.
+      setCrosspostRefreshKey((k) => k + 1)
       if (mode === 'create') {
         router.push(`/admin/blog/posts/${data.slug}`)
       } else {
@@ -632,6 +639,8 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
           mode={mode}
           postSlug={initial.slug}
           postStatus={form.status}
+          dirty={dirty}
+          refreshKey={crosspostRefreshKey}
         />
 
         <div className="rounded-2xl border border-border bg-card p-5 space-y-3">

@@ -5,6 +5,7 @@ const { prismaMock, publishToAccountMock } = vi.hoisted(() => ({
     blogPost: { findUnique: vi.fn() },
     socialAccount: { findMany: vi.fn() },
     socialMediaPost: { upsert: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
+    socialPostPublish: { findMany: vi.fn() },
   },
   publishToAccountMock: vi.fn(),
 }))
@@ -17,6 +18,7 @@ import {
   blogPostToSocialText,
   buildTwitterText,
   blogPostUrl,
+  truncateText,
   crosspostBlogPost,
   getBlogCrosspostStatus,
   CROSSPOST_PLATFORMS,
@@ -76,6 +78,29 @@ describe('markdownToPlainText', () => {
   it('keeps fenced code content without the fences', () => {
     const md = '```js\nconst heat = 10\n```'
     expect(markdownToPlainText(md)).toBe('const heat = 10')
+  })
+
+  it('leaves underscores inside words and URLs intact', () => {
+    expect(markdownToPlainText('See https://x.com/a_b_c and _emph_ here')).toBe(
+      'See https://x.com/a_b_c and emph here',
+    )
+  })
+})
+
+describe('truncateText', () => {
+  it('returns the text unchanged when within budget', () => {
+    expect(truncateText('short', 100)).toBe('short')
+  })
+
+  it('truncates at a word boundary with an ellipsis', () => {
+    const out = truncateText('the quick brown fox jumps', 16)
+    expect(out.length).toBeLessThanOrEqual(16)
+    expect(out.endsWith('…')).toBe(true)
+    expect(out).not.toContain('jumps')
+  })
+
+  it('returns empty string for a non-positive budget', () => {
+    expect(truncateText('anything', 0)).toBe('')
   })
 })
 
@@ -147,8 +172,10 @@ describe('crosspostBlogPost', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     prismaMock.blogPost.findUnique.mockResolvedValue(samplePost)
+    prismaMock.socialMediaPost.findUnique.mockResolvedValue(null)
     prismaMock.socialMediaPost.upsert.mockResolvedValue({ id: 's1', publishedAt: null })
     prismaMock.socialMediaPost.update.mockResolvedValue({})
+    prismaMock.socialPostPublish.findMany.mockResolvedValue([])
   })
 
   it('throws when the blog post does not exist', async () => {
@@ -181,6 +208,7 @@ describe('crosspostBlogPost', () => {
       success: true,
       externalUrl: 'https://facebook.com/1',
     })
+    prismaMock.socialPostPublish.findMany.mockResolvedValueOnce([{ status: 'PUBLISHED' }])
 
     const { results } = await crosspostBlogPost('p1', ['a1', 'a1'])
 
@@ -206,11 +234,34 @@ describe('crosspostBlogPost', () => {
     })
   })
 
+  it('marks the post published when at least one of several accounts succeeds', async () => {
+    prismaMock.socialAccount.findMany.mockResolvedValueOnce([
+      { id: 'a1', platform: 'FACEBOOK', accountName: 'fb' },
+      { id: 'a2', platform: 'TWITTER', accountName: 'x' },
+    ])
+    publishToAccountMock
+      .mockResolvedValueOnce({ success: true, externalUrl: 'https://facebook.com/1' })
+      .mockResolvedValueOnce({ success: false, error: 'rate limited' })
+    prismaMock.socialPostPublish.findMany.mockResolvedValueOnce([
+      { status: 'PUBLISHED' },
+      { status: 'FAILED' },
+    ])
+
+    const { results } = await crosspostBlogPost('p1', ['a1', 'a2'])
+
+    expect(results.map((r) => r.success)).toEqual([true, false])
+    expect(prismaMock.socialMediaPost.update).toHaveBeenCalledWith({
+      where: { id: 's1' },
+      data: { status: 'PUBLISHED', publishedAt: expect.any(Date) },
+    })
+  })
+
   it('marks the post failed when every account fails', async () => {
     prismaMock.socialAccount.findMany.mockResolvedValueOnce([
       { id: 'a1', platform: 'FACEBOOK', accountName: 'fb' },
     ])
     publishToAccountMock.mockResolvedValueOnce({ success: false, error: 'token expired' })
+    prismaMock.socialPostPublish.findMany.mockResolvedValueOnce([{ status: 'FAILED' }])
 
     const { results } = await crosspostBlogPost('p1', ['a1'])
 
@@ -218,6 +269,38 @@ describe('crosspostBlogPost', () => {
     expect(prismaMock.socialMediaPost.update).toHaveBeenCalledWith({
       where: { id: 's1' },
       data: { status: 'FAILED', publishedAt: null },
+    })
+  })
+
+  it('reuses an existing post: unions platforms and preserves the original publishedAt', async () => {
+    const firstPublishedAt = new Date('2026-08-01T00:00:00Z')
+    // Article was previously cross-posted to Twitter.
+    prismaMock.socialMediaPost.findUnique.mockResolvedValueOnce({
+      platforms: ['TWITTER'],
+      publishedAt: firstPublishedAt,
+    })
+    prismaMock.socialAccount.findMany.mockResolvedValueOnce([
+      { id: 'a1', platform: 'FACEBOOK', accountName: 'josemadridsalsainc' },
+    ])
+    // A newly added Facebook channel fails on retry.
+    publishToAccountMock.mockResolvedValueOnce({ success: false, error: 'token expired' })
+    // But Twitter is already PUBLISHED on the record.
+    prismaMock.socialPostPublish.findMany.mockResolvedValueOnce([
+      { status: 'PUBLISHED' },
+      { status: 'FAILED' },
+    ])
+
+    await crosspostBlogPost('p1', ['a1'])
+
+    // The update branch refreshes platforms as the union, and never sets status.
+    const upsertArg = prismaMock.socialMediaPost.upsert.mock.calls[0][0]
+    expect(upsertArg.update.platforms).toEqual(['TWITTER', 'FACEBOOK'])
+    expect(upsertArg.update).not.toHaveProperty('status')
+
+    // The already-published article stays PUBLISHED with its first timestamp.
+    expect(prismaMock.socialMediaPost.update).toHaveBeenCalledWith({
+      where: { id: 's1' },
+      data: { status: 'PUBLISHED', publishedAt: firstPublishedAt },
     })
   })
 })

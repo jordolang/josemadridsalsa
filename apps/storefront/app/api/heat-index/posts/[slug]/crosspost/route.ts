@@ -47,7 +47,7 @@ export async function POST(
     await requirePermission('content:write')
     const { slug } = await params
 
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
     const parsed = crosspostSchema.safeParse(body)
     if (!parsed.success) {
       return fail(`Validation error: ${parsed.error.issues[0].message}`)
@@ -56,20 +56,32 @@ export async function POST(
     const post = await prisma.blogPost.findUnique({ where: { slug }, select: { id: true } })
     if (!post) return notFound('Post not found')
 
-    const { results } = await crosspostBlogPost(post.id, parsed.data.accountIds)
+    const requestedIds = Array.from(new Set(parsed.data.accountIds))
+    const { results } = await crosspostBlogPost(post.id, requestedIds)
 
     if (results.length === 0) {
       return fail('No eligible connected channels were selected', 400)
     }
 
+    // Selected accounts that were dropped (inactive, deleted, or on an
+    // ineligible platform) never produced a result — surface them rather than
+    // reporting the request as fully successful.
+    const postedIds = new Set(results.map((r) => r.accountId))
+    const skipped = requestedIds.filter((id) => !postedIds.has(id))
     const failures = results.filter((r) => !r.success)
+    const allSucceeded = failures.length === 0 && skipped.length === 0
+
+    const parts: string[] = []
+    if (failures.length > 0) parts.push(`${failures.length} failed`)
+    if (skipped.length > 0) parts.push(`${skipped.length} channel(s) unavailable`)
+
     return ok({
       results,
-      allSucceeded: failures.length === 0,
-      message:
-        failures.length === 0
-          ? 'Cross-posted to all selected channels'
-          : `Cross-posted with ${failures.length} failure(s)`,
+      skipped,
+      allSucceeded,
+      message: allSucceeded
+        ? 'Cross-posted to all selected channels'
+        : `Cross-posted with ${parts.join(', ')}`,
     })
   } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('Unauthorized'))

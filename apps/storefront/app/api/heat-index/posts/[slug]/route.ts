@@ -63,7 +63,10 @@ export async function PATCH(
     const wasPublished = existing.status === 'PUBLISHED'
     const willBePublished = parsed.data.status === 'PUBLISHED'
     const crosspostParsed = crosspostAccountIdsSchema.safeParse(body.crosspostAccountIds)
-    const crosspostAccountIds = crosspostParsed.success ? crosspostParsed.data : []
+    if (!crosspostParsed.success) {
+      return fail(`Validation error: ${crosspostParsed.error.issues[0].message}`)
+    }
+    const crosspostAccountIds = crosspostParsed.data
 
     const data: Record<string, unknown> = { ...parsed.data }
     if (willBePublished && !existing.publishedAt) {

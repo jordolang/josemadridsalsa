@@ -10,7 +10,9 @@ import { publishToAccount } from './publisher'
  */
 export const crosspostAccountIdsSchema = z.array(z.string().min(1)).default([])
 
-const SITE_URL = process.env.NEXTAUTH_URL ?? 'https://www.josemadrid.net'
+// Normalize like getSocialBaseUrl: a trailing slash or pasted whitespace in
+// NEXTAUTH_URL would otherwise yield "https://host//heat-index/slug".
+const SITE_URL = (process.env.NEXTAUTH_URL ?? 'https://www.josemadrid.net').trim().replace(/\/+$/, '')
 
 /**
  * Platforms a blog article can be cross-posted to. A cross-post is text + a link
@@ -23,6 +25,43 @@ export const CROSSPOST_PLATFORMS: SocialMediaPlatform[] = [
   'TWITTER',
   'GOOGLE_MY_BUSINESS',
 ]
+
+/**
+ * Per-platform maximum body length. A message longer than the network accepts is
+ * rejected outright, so the article text is truncated to fit before publishing.
+ * Facebook allows ~63k; a Google Business local post summary caps at 1,500.
+ * Twitter is handled separately by buildTwitterText.
+ */
+const PLATFORM_MAX_CHARS: Record<SocialMediaPlatform, number> = {
+  FACEBOOK: 63206,
+  TWITTER: 280,
+  INSTAGRAM: 2200,
+  TIKTOK: 2200,
+  GOOGLE_MY_BUSINESS: 1500,
+}
+
+/**
+ * Truncate to a hard character budget at a word boundary, adding an ellipsis.
+ */
+export function truncateText(text: string, max: number): string {
+  if (max <= 0) return ''
+  if (text.length <= max) return text
+  if (max === 1) return '…'
+  const slice = text.slice(0, max - 1)
+  const lastSpace = slice.lastIndexOf(' ')
+  const cut = lastSpace > max * 0.6 ? slice.slice(0, lastSpace) : slice
+  return cut.replace(/\s+$/, '') + '…'
+}
+
+/**
+ * The hashtag block publishToAccount appends to every post's body. Its length
+ * has to be reserved from each platform's budget so the final message (body +
+ * hashtags) still fits.
+ */
+function hashtagSuffix(tags: string[]): string {
+  if (tags.length === 0) return ''
+  return '\n\n' + tags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ')
+}
 
 export function blogPostUrl(slug: string): string {
   return `${SITE_URL}/heat-index/${slug}`
@@ -79,9 +118,13 @@ export function markdownToPlainText(markdown: string): string {
     .join('\n')
 
   // Inline emphasis / code markers: strip the markers, keep the text.
-  text = text.replace(/(\*\*|__)(.+?)\1/g, '$2') // bold
-  text = text.replace(/(\*|_)(.+?)\1/g, '$2') // italic
-  text = text.replace(/~~(.+?)~~/g, '$2') // strikethrough
+  // Underscore emphasis only counts at word boundaries so intra-word underscores
+  // in URLs and identifiers (e.g. https://x/a_b_c) are left untouched.
+  text = text.replace(/\*\*(.+?)\*\*/g, '$1') // bold (asterisk)
+  text = text.replace(/(^|\W)__(.+?)__(?=\W|$)/g, '$1$2') // bold (underscore)
+  text = text.replace(/\*(?!\s)([^*]+?)(?<!\s)\*/g, '$1') // italic (asterisk)
+  text = text.replace(/(^|\W)_(.+?)_(?=\W|$)/g, '$1$2') // italic (underscore)
+  text = text.replace(/~~(.+?)~~/g, '$1') // strikethrough
   text = text.replace(/`([^`]+)`/g, '$1') // inline code
 
   // Trim trailing whitespace per line and collapse runs of blank lines.
@@ -167,9 +210,28 @@ export async function crosspostBlogPost(
   if (eligible.length === 0) return { results: [] }
 
   const url = blogPostUrl(post.slug)
-  const content = blogPostToSocialText(post)
-  const twitterContent = buildTwitterText(post, url)
-  const platforms = Array.from(new Set(eligible.map((a) => a.platform)))
+  const fullText = blogPostToSocialText(post)
+  const reserve = hashtagSuffix(post.tags).length
+
+  // Reuse the article's existing SocialMediaPost so its platform history isn't
+  // lost when this call targets only a subset of channels.
+  const existingSocial = await prisma.socialMediaPost.findUnique({
+    where: { blogPostId: post.id },
+    select: { platforms: true, publishedAt: true },
+  })
+  const platforms = Array.from(
+    new Set<SocialMediaPlatform>([
+      ...(existingSocial?.platforms ?? []),
+      ...eligible.map((a) => a.platform),
+    ]),
+  )
+
+  // Truncate each platform's body to its limit, reserving room for the hashtag
+  // suffix publishToAccount appends. Facebook uses facebookContent; Google
+  // Business falls back to content; Twitter has its own bounded builder.
+  const facebookContent = truncateText(fullText, PLATFORM_MAX_CHARS.FACEBOOK - reserve)
+  const content = truncateText(fullText, PLATFORM_MAX_CHARS.GOOGLE_MY_BUSINESS - reserve)
+  const twitterContent = buildTwitterText(post, url, PLATFORM_MAX_CHARS.TWITTER - reserve)
 
   const social = await prisma.socialMediaPost.upsert({
     where: { blogPostId: post.id },
@@ -177,7 +239,7 @@ export async function crosspostBlogPost(
       blogPostId: post.id,
       platforms,
       content,
-      facebookContent: content,
+      facebookContent,
       twitterContent,
       linkUrl: url,
       hashtags: post.tags,
@@ -186,7 +248,7 @@ export async function crosspostBlogPost(
     update: {
       platforms,
       content,
-      facebookContent: content,
+      facebookContent,
       twitterContent,
       linkUrl: url,
       hashtags: post.tags,
@@ -206,12 +268,20 @@ export async function crosspostBlogPost(
     })
   }
 
-  const anySucceeded = results.some((r) => r.success)
+  // Derive the post's status from every persisted publish row, not just this
+  // run's results — a failed retry of one new channel must not flip an article
+  // that already published elsewhere back to FAILED — and keep the first
+  // published timestamp.
+  const publishes = await prisma.socialPostPublish.findMany({
+    where: { postId: social.id },
+    select: { status: true },
+  })
+  const anyPublished = publishes.some((p) => p.status === 'PUBLISHED')
   await prisma.socialMediaPost.update({
     where: { id: social.id },
     data: {
-      status: anySucceeded ? 'PUBLISHED' : 'FAILED',
-      publishedAt: anySucceeded ? new Date() : null,
+      status: anyPublished ? 'PUBLISHED' : 'FAILED',
+      publishedAt: existingSocial?.publishedAt ?? (anyPublished ? new Date() : null),
     },
   })
 
