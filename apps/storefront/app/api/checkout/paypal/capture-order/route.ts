@@ -6,7 +6,7 @@ import { Prisma, PaymentStatus, OrderStatus } from '@prisma/client'
 import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { createOrderAccessToken } from '@/lib/orders/access-token'
-import { calculateFundraiserCommission } from '@/lib/fundraising/commission'
+import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
 
 const CaptureSchema = z.object({
   paypalOrderId: z.string().min(1, 'PayPal order ID is required'),
@@ -183,37 +183,9 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        // Update participant totals if attributed
-        if (order!.participantId && order!.fundraiserId) {
-          const orderTotal = Number(order!.total)
-          // Commission is taken from merchandise, not from the order total — see
-          // lib/fundraising/commission.ts. Revenue stays the full order value.
-          const commissionOrder = {
-            subtotal: Number(order!.subtotal),
-            discountAmount: Number(order!.discountAmount),
-          }
-
-          const fundraiser = await tx.fundraiser.findUnique({
-            where: { id: order!.fundraiserId! },
-            select: { commissionRate: true },
-          })
-
-          if (fundraiser) {
-            const commissionAmount = calculateFundraiserCommission(
-              commissionOrder,
-              Number(fundraiser.commissionRate)
-            )
-
-            await tx.fundraiserParticipant.update({
-              where: { id: order!.participantId! },
-              data: {
-                totalOrders: { increment: 1 },
-                totalRevenue: { increment: new Prisma.Decimal(orderTotal.toFixed(2)) },
-                totalCommission: { increment: new Prisma.Decimal(commissionAmount.toFixed(2)) },
-              },
-            })
-          }
-        }
+        // Credit the fundraiser. Idempotent and safe to race with the payment webhook,
+        // which completes the same order in parallel and now credits it too.
+        await creditFundraiserCommission(tx, order!.id)
 
         // Deduct reserved inventory
         for (const item of order!.items) {

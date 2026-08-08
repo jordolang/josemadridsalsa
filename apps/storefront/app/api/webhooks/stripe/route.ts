@@ -9,6 +9,7 @@ import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
 import { dedupeKeys, notifyOperators, severityFor } from '@/lib/notifications/dispatch'
 import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
+import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -148,6 +149,12 @@ export async function POST(request: Request) {
               paymentMethod: paymentIntent.payment_method_types?.[0],
             },
           })
+
+          // Credit the fundraiser. This handler had no participant handling at all, so a
+          // webhook arriving before /api/checkout/complete left the group unpaid for that
+          // sale — the completion route returns early once the order is already paid.
+          // Idempotent on the order, so whichever path wins credits it exactly once.
+          await creditFundraiserCommission(tx, order.id)
 
           // Deduct reserved inventory for product orders (not gift certificates).
           // Uses deductReservedInventoryInTx to atomically decrement both

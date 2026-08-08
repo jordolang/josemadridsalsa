@@ -5,6 +5,7 @@ import { getProvider } from '@/lib/payments'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { PAID_PAYMENT_STATUS } from '@/lib/payments/status'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
+import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -165,6 +166,11 @@ export async function POST(request: Request) {
               paidAt: new Date(),
             },
           })
+
+          // Credit the fundraiser. This handler had no participant handling at all, so a
+          // webhook arriving before the completion route left the group unpaid for that
+          // sale. Idempotent on the order, so whichever path wins credits it once.
+          await creditFundraiserCommission(tx, order.id)
         })
 
         // Send confirmation email (non-blocking)

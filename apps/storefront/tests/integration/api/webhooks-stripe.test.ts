@@ -196,7 +196,17 @@ describe('Stripe Webhook Integration Tests', () => {
 
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
-        order: { update: mockOrderUpdate },
+        order: {
+          update: mockOrderUpdate,
+          // The commission credit re-reads the order inside the transaction and claims
+          // it with a conditional update. These orders carry no participant.
+          findUnique: vi.fn().mockResolvedValue({
+            participantId: null,
+            fundraiserId: null,
+            commissionCreditedAt: null,
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
         payment: { update: vi.fn(), upsert: vi.fn() },
         refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
@@ -312,7 +322,17 @@ describe('Stripe Webhook Integration Tests', () => {
 
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
-        order: { update: mockOrderUpdate },
+        order: {
+          update: mockOrderUpdate,
+          // The commission credit re-reads the order inside the transaction and claims
+          // it with a conditional update. These orders carry no participant.
+          findUnique: vi.fn().mockResolvedValue({
+            participantId: null,
+            fundraiserId: null,
+            commissionCreditedAt: null,
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
         payment: { update: vi.fn(), upsert: vi.fn() },
         refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
@@ -680,7 +700,17 @@ describe('Stripe Webhook Integration Tests', () => {
 
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
-        order: { update: mockOrderUpdate },
+        order: {
+          update: mockOrderUpdate,
+          // The commission credit re-reads the order inside the transaction and claims
+          // it with a conditional update. These orders carry no participant.
+          findUnique: vi.fn().mockResolvedValue({
+            participantId: null,
+            fundraiserId: null,
+            commissionCreditedAt: null,
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
         payment: { update: vi.fn(), upsert: vi.fn() },
         refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
@@ -775,7 +805,17 @@ describe('Stripe Webhook Integration Tests', () => {
 
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
-        order: { update: mockOrderUpdate },
+        order: {
+          update: mockOrderUpdate,
+          // The commission credit re-reads the order inside the transaction and claims
+          // it with a conditional update. These orders carry no participant.
+          findUnique: vi.fn().mockResolvedValue({
+            participantId: null,
+            fundraiserId: null,
+            commissionCreditedAt: null,
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
         payment: { update: vi.fn(), upsert: vi.fn() },
         refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
@@ -862,7 +902,17 @@ describe('Stripe Webhook Integration Tests', () => {
 
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
-        order: { update: mockOrderUpdate },
+        order: {
+          update: mockOrderUpdate,
+          // The commission credit re-reads the order inside the transaction and claims
+          // it with a conditional update. These orders carry no participant.
+          findUnique: vi.fn().mockResolvedValue({
+            participantId: null,
+            fundraiserId: null,
+            commissionCreditedAt: null,
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
         payment: { update: vi.fn(), upsert: vi.fn() },
         refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
@@ -980,7 +1030,17 @@ describe('Stripe Webhook Integration Tests', () => {
 
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
-        order: { update: mockOrderUpdate },
+        order: {
+          update: mockOrderUpdate,
+          // The commission credit re-reads the order inside the transaction and claims
+          // it with a conditional update. These orders carry no participant.
+          findUnique: vi.fn().mockResolvedValue({
+            participantId: null,
+            fundraiserId: null,
+            commissionCreditedAt: null,
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
         payment: { update: vi.fn(), upsert: vi.fn() },
         refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
@@ -1039,7 +1099,17 @@ describe('Stripe Webhook Integration Tests', () => {
 
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
-        order: { update: mockOrderUpdate },
+        order: {
+          update: mockOrderUpdate,
+          // The commission credit re-reads the order inside the transaction and claims
+          // it with a conditional update. These orders carry no participant.
+          findUnique: vi.fn().mockResolvedValue({
+            participantId: null,
+            fundraiserId: null,
+            commissionCreditedAt: null,
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
         payment: { update: vi.fn(), upsert: vi.fn() },
         refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
@@ -1237,7 +1307,17 @@ describe('Stripe Webhook Integration Tests', () => {
 
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
-        order: { update: mockOrderUpdate },
+        order: {
+          update: mockOrderUpdate,
+          // The commission credit re-reads the order inside the transaction and claims
+          // it with a conditional update. These orders carry no participant.
+          findUnique: vi.fn().mockResolvedValue({
+            participantId: null,
+            fundraiserId: null,
+            commissionCreditedAt: null,
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
         payment: { update: vi.fn(), upsert: vi.fn() },
         refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
@@ -1303,7 +1383,17 @@ describe('Stripe Webhook Integration Tests', () => {
 
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
-        order: { update: mockOrderUpdate },
+        order: {
+          update: mockOrderUpdate,
+          // The commission credit re-reads the order inside the transaction and claims
+          // it with a conditional update. These orders carry no participant.
+          findUnique: vi.fn().mockResolvedValue({
+            participantId: null,
+            fundraiserId: null,
+            commissionCreditedAt: null,
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
         payment: { update: vi.fn(), upsert: vi.fn() },
         refund: { upsert: vi.fn() },
         product: { update: mockProductUpdate },
@@ -1449,7 +1539,17 @@ describe('Stripe Webhook Integration Tests', () => {
     // Mock the transaction to capture order.update and payment.upsert calls
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
-        order: { update: mockOrderUpdate },
+        order: {
+          update: mockOrderUpdate,
+          // The commission credit re-reads the order inside the transaction and claims
+          // it with a conditional update. These orders carry no participant.
+          findUnique: vi.fn().mockResolvedValue({
+            participantId: null,
+            fundraiserId: null,
+            commissionCreditedAt: null,
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
         payment: { upsert: mockPaymentUpsert },
       }
       return callback(txContext)
@@ -1510,7 +1610,17 @@ describe('Stripe Webhook Integration Tests', () => {
     // Mock the transaction to capture order.update and payment.upsert calls
     vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
       const txContext = {
-        order: { update: mockOrderUpdate },
+        order: {
+          update: mockOrderUpdate,
+          // The commission credit re-reads the order inside the transaction and claims
+          // it with a conditional update. These orders carry no participant.
+          findUnique: vi.fn().mockResolvedValue({
+            participantId: null,
+            fundraiserId: null,
+            commissionCreditedAt: null,
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
         payment: { upsert: mockPaymentUpsert },
       }
       return callback(txContext)

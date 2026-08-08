@@ -568,6 +568,9 @@ model Order {
   deliveredAt              DateTime?
   confirmationEmailSentAt  DateTime?
   reviewRequestSentAt      DateTime?
+  /// Set once, by whichever path marks the order paid first. The claim on this column is what
+  /// stops the same sale being credited twice when a webhook and a completion route race.
+  commissionCreditedAt     DateTime?
   fundraiserId             String?
   importSource             String?
   importBatchId            String?
