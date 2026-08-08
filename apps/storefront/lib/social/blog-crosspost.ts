@@ -11,8 +11,11 @@ import { publishToAccount } from './publisher'
 export const crosspostAccountIdsSchema = z.array(z.string().min(1)).default([])
 
 // Normalize like getSocialBaseUrl: a trailing slash or pasted whitespace in
-// NEXTAUTH_URL would otherwise yield "https://host//heat-index/slug".
-const SITE_URL = (process.env.NEXTAUTH_URL ?? 'https://www.josemadrid.net').trim().replace(/\/+$/, '')
+// NEXTAUTH_URL would otherwise yield "https://host//heat-index/slug". The
+// fallback is applied AFTER normalization so a blank/whitespace value still
+// resolves to an absolute site URL rather than an empty (relative) one.
+const SITE_URL =
+  process.env.NEXTAUTH_URL?.trim().replace(/\/+$/, '') || 'https://www.josemadrid.net'
 
 /**
  * Platforms a blog article can be cross-posted to. A cross-post is text + a link
@@ -63,6 +66,22 @@ function hashtagSuffix(tags: string[]): string {
   return '\n\n' + tags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ')
 }
 
+/**
+ * Keep only as many tags as fit within a bounded suffix. publishToAccount
+ * appends the same hashtag block to every platform, and on Twitter the link
+ * plus an unbounded hashtag block could blow the 280-char limit no matter how
+ * far the body is trimmed. Capping the suffix keeps every platform's budget
+ * solvable while preserving the most important (leading) tags.
+ */
+export function boundedHashtags(tags: string[], maxSuffixChars = 100): string[] {
+  const out: string[] = []
+  for (const tag of tags) {
+    if (hashtagSuffix([...out, tag]).length > maxSuffixChars) break
+    out.push(tag)
+  }
+  return out
+}
+
 export function blogPostUrl(slug: string): string {
   return `${SITE_URL}/heat-index/${slug}`
 }
@@ -85,6 +104,15 @@ export function markdownToPlainText(markdown: string): string {
   text = text.replace(/\[\[youtube:([^\]]+)\]\]/g, (_m, id: string) => `https://youtu.be/${id.trim()}`)
   text = text.replace(/\[\[vimeo:([^\]]+)\]\]/g, (_m, id: string) => `https://vimeo.com/${id.trim()}`)
   text = text.replace(/\[\[video:([^\]]+)\]\]/g, (_m, url: string) => url.trim())
+
+  // Protect URLs (including the ones the embeds just produced) with placeholder
+  // tokens so the emphasis/list passes below can't mangle underscores, asterisks
+  // or leading dashes inside them. Restored at the end.
+  const protectedUrls: string[] = []
+  text = text.replace(/(?:https?:\/\/|www\.)[^\s)]+/gi, (m) => {
+    protectedUrls.push(m)
+    return `\u0000${protectedUrls.length - 1}\u0001`
+  })
 
   // Inline images ![alt](url) → dropped (the link card shows the cover image).
   text = text.replace(/!\[[^\]]*\]\([^)]*\)/g, '')
@@ -126,6 +154,9 @@ export function markdownToPlainText(markdown: string): string {
   text = text.replace(/(^|\W)_(.+?)_(?=\W|$)/g, '$1$2') // italic (underscore)
   text = text.replace(/~~(.+?)~~/g, '$1') // strikethrough
   text = text.replace(/`([^`]+)`/g, '$1') // inline code
+
+  // Restore protected URLs.
+  text = text.replace(/\u0000(\d+)\u0001/g, (_m, i: string) => protectedUrls[Number(i)] ?? '')
 
   // Trim trailing whitespace per line and collapse runs of blank lines.
   return text
@@ -211,7 +242,10 @@ export async function crosspostBlogPost(
 
   const url = blogPostUrl(post.slug)
   const fullText = blogPostToSocialText(post)
-  const reserve = hashtagSuffix(post.tags).length
+  // Cap the hashtag block so the URL + hashtags can't exhaust a platform's
+  // budget (Twitter especially). The same bounded set is stored and reserved.
+  const tags = boundedHashtags(post.tags)
+  const reserve = hashtagSuffix(tags).length
 
   // Reuse the article's existing SocialMediaPost so its platform history isn't
   // lost when this call targets only a subset of channels.
@@ -242,7 +276,7 @@ export async function crosspostBlogPost(
       facebookContent,
       twitterContent,
       linkUrl: url,
-      hashtags: post.tags,
+      hashtags: tags,
       status: 'DRAFT',
     },
     update: {
@@ -251,7 +285,7 @@ export async function crosspostBlogPost(
       facebookContent,
       twitterContent,
       linkUrl: url,
-      hashtags: post.tags,
+      hashtags: tags,
     },
   })
 

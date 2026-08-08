@@ -19,6 +19,7 @@ import {
   buildTwitterText,
   blogPostUrl,
   truncateText,
+  boundedHashtags,
   crosspostBlogPost,
   getBlogCrosspostStatus,
   CROSSPOST_PLATFORMS,
@@ -84,6 +85,32 @@ describe('markdownToPlainText', () => {
     expect(markdownToPlainText('See https://x.com/a_b_c and _emph_ here')).toBe(
       'See https://x.com/a_b_c and emph here',
     )
+  })
+
+  it('protects underscores/asterisks at URL segment boundaries', () => {
+    expect(markdownToPlainText('Read https://x.com/_foo_/**bar** now')).toBe(
+      'Read https://x.com/_foo_/**bar** now',
+    )
+  })
+
+  it('keeps a markdown link URL that contains emphasis-like characters', () => {
+    expect(markdownToPlainText('[post](https://x.com/a_b_*c*)')).toBe(
+      'post (https://x.com/a_b_*c*)',
+    )
+  })
+})
+
+describe('boundedHashtags', () => {
+  it('returns all tags when the suffix fits', () => {
+    expect(boundedHashtags(['salsa', 'zanesville'])).toEqual(['salsa', 'zanesville'])
+  })
+
+  it('drops trailing tags once the suffix budget is exceeded', () => {
+    const many = Array.from({ length: 40 }, (_v, i) => `tag${i}`)
+    const kept = boundedHashtags(many, 40)
+    expect(kept.length).toBeLessThan(many.length)
+    // The kept prefix is a prefix of the input.
+    expect(kept).toEqual(many.slice(0, kept.length))
   })
 })
 

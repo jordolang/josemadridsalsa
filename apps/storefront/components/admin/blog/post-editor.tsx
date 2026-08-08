@@ -268,7 +268,10 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
       // Auto cross-posting runs server-side on the draft→published transition;
       // bump the key so the panel re-reads per-channel status after the save.
       setCrosspostRefreshKey((k) => k + 1)
-      if (mode === 'create') {
+      if (mode === 'create' || (data.slug && data.slug !== initial.slug)) {
+        // On create, or when the slug changed, navigate to the saved slug so the
+        // editor (and the cross-post panel) target the current URL rather than a
+        // stale one.
         router.push(`/admin/blog/posts/${data.slug}`)
       } else {
         router.refresh()
