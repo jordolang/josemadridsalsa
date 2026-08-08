@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { generateGiftCertificateCode } from '@/lib/utils'
 import { queueShopifySync } from '@/lib/shopify/sync'
+import { emitOrderCreated } from '@/lib/orders/events'
 
 const GiftCertificatePurchaseSchema = z.object({
   purchaserName: z.string().min(1, 'Your name is required'),
@@ -57,6 +58,15 @@ export async function POST(request: Request) {
         status: 'PENDING',
         customerNotes: `Gift Certificate Purchase - Recipient: ${recipientName}${message ? ` - Message: ${message}` : ''}`,
       },
+    })
+
+    await emitOrderCreated({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      total: order.total,
+      salesChannel: order.salesChannel,
+      // A gift certificate has no order items — the certificate itself is the goods.
+      itemCount: 0,
     })
 
     queueShopifySync(order.id)

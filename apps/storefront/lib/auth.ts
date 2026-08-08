@@ -232,6 +232,19 @@ export const authOptions: NextAuthOptions = {
                 select: { id: true, role: true, name: true },
               })
               console.log(`[JWT Callback] Created new user via ${account.provider} OAuth:`, normalizedEmail)
+
+              const { emitDomainEvent } = await import('@/lib/domain-events/emit')
+              await emitDomainEvent({
+                type: 'customer.created',
+                entityType: 'customer',
+                entityId: dbUser.id,
+                actorUserId: dbUser.id,
+                payload: {
+                  email: normalizedEmail,
+                  name: dbUser.name,
+                  via: `oauth:${account.provider}`,
+                },
+              })
             }
             token.id = dbUser.id
             token.role = dbUser.role

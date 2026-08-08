@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { getPayPalAccessToken } from '@/lib/payments/providers/paypal'
 import { PAID_PAYMENT_STATUS } from '@/lib/payments/status'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -188,6 +189,22 @@ export async function POST(request: Request) {
               paymentProvider: 'PAYPAL',
             },
           })
+
+          await emitDomainEvent(
+            {
+              type: 'payment.completed',
+              entityType: 'order',
+              entityId: order.id,
+              payload: {
+                provider: 'PAYPAL',
+                amount: Math.round(parseFloat(event.resource.amount?.value || '0') * 100),
+                currency: event.resource.amount?.currency_code?.toLowerCase() || 'usd',
+                paypalOrderId: orderId,
+                paypalCaptureId: captureId,
+              },
+            },
+            tx
+          )
 
           // Create or update payment record
           await tx.payment.upsert({

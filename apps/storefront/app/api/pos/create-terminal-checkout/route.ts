@@ -6,6 +6,7 @@ import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requirePermission } from '@/lib/rbac'
 import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manager'
+import { emitOrderCreated } from '@/lib/orders/events'
 
 const TerminalCheckoutSchema = z.object({
   items: z
@@ -128,6 +129,14 @@ export async function POST(request: NextRequest) {
             create: orderItems,
           },
         },
+      })
+
+      await emitOrderCreated({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        total: order.total,
+        salesChannel: order.salesChannel,
+        itemCount: orderItems.length,
       })
 
       // Create Square Terminal Checkout

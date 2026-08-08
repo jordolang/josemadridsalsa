@@ -92,7 +92,15 @@ function createdOrderData() {
 describe('POST /api/checkout — discount and gift certificate pricing', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockOrderCreate.mockResolvedValue({ id: 'clorderaaaaaaaaaaaaaaaaaa', orderNumber: 'JMS-1' })
+    // Mirrors what the route's own `include: { items: true }` returns. The stub previously
+    // carried only id and orderNumber, which no real call to this query can produce.
+    mockOrderCreate.mockResolvedValue({
+      id: 'clorderaaaaaaaaaaaaaaaaaa',
+      orderNumber: 'JMS-1',
+      total: 20,
+      salesChannel: 'WEBSITE',
+      items: [{ id: 'clitemaaaaaaaaaaaaaaaaaaa' }],
+    })
     mockCreatePayment.mockResolvedValue({ success: true, clientSecret: 'cs_test' })
     process.env.NEXTAUTH_SECRET = 'test-secret'
   })
