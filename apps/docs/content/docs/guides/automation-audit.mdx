@@ -450,8 +450,9 @@ What the rest of the phase pinned, in rough order of what would hurt most if it 
   modules, plus `lint` and `type-check`. It is *not* full-suite green: `npm run test` has 8–9
   pre-existing failures in `tests/integration/*` caused by remote-Neon latency and shared state,
   unrelated to this work.
-- **This table is the work queue.** Rows move ORPHANED → WIRED → VERIFIED and this page is updated in
-  the same commit, so progress is visible and the work is resumable across sessions.
+- **This table was the work queue.** Rows moved ORPHANED → WIRED → VERIFIED and this page was updated in
+  the same commit, so progress stayed visible and the work resumed cleanly across sessions. The queue is
+  now empty.
 - **Dead code is reported, not deleted** (CLAUDE.md Part 1 §3). `OrderNotificationRule`,
   `EmailWebhook`, and the duplicate abandoned-cart sender are listed above as findings; removing them
   is a separate, explicitly-approved change.
