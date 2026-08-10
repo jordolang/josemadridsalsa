@@ -15,6 +15,16 @@ the root `package.json` is canonical.
 
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
+### Fixed
+- **Four cron routes failed open when `CRON_SECRET` was unset** — `social-publish`, `quickbooks-sync`, `email-campaigns` and `email-automation` each carried a private copy of the authorisation check that returned `true` whenever the secret was missing. The shared guard in `lib/cron/auth.ts` refuses in production instead, precisely because that is the configuration where failing open matters: these routes publish to social accounts, write to accounting and send customer email, and a cron endpoint is an ordinary public URL — nothing about living under `app/api/cron` makes one unreachable. All four now use the shared guard.
+
+  A structural test now asserts that every route under `app/api/cron` uses it, returns 401, and carries no private fail-open copy. Asserted over the source of each route rather than by invoking handlers, because the property being protected is "nobody forgot", and a per-route behavioural test only ever covers the routes somebody remembered to write a test for. Two real faults motivated it: a stub route that shipped with no check at all, and these four.
+
+### Added
+- **Review-request and abandoned-cart selection logic is now testable** — both crons held their date arithmetic inside the route file, where nothing could reach it. The review-request window has been wrong here before, in a way that was invisible: the "already asked" guard keyed off `confirmationEmailSentAt`, which every successful checkout stamps, so the filter only ever matched orders that never got a confirmation and the cron sent almost nothing.
+
+  Selection and copy move to `lib/orders/review-requests.ts` and `lib/checkout/abandoned-cart.ts`, following the `lib/operations/aging.ts` pattern. The tests pin the parts that fail silently: that the delivery window's bounds are not inverted (an order delivered *longer* ago has the *earlier* timestamp, so the maximum age produces `gte` — reversed, the range is empty and nothing sends); that each abandoned-cart stage measures from the right column, since measuring all three from `updatedAt` would fire the whole sequence in one sweep once a cart was two days old; and that a cart whose stored JSON cannot be priced says "your items" rather than `$0.00` or `$NaN`.
+
 ### Added
 - **Order notification rules do something** — `OrderNotificationRule` has sat in the schema with **zero code references anywhere**: a table describing which order events should go to which addresses and Slack channels, that nothing read. An admin could describe routing that never occurred. It is now evaluated against the domain events as they happen.
 

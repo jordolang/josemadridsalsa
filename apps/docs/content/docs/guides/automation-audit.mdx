@@ -77,7 +77,7 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 8 | Refund processed email — refund-initiated | **VERIFIED** ✅ | Phase 3 — `handlers/refund-notification.ts` + new producer, 9 tests |
 | 9 | Order cancellation email | WIRED | `lib/email/transactional:19`, 1 call site |
 | 10 | Order ready-for-pickup email | **VERIFIED** ✅ | Phase 2 — `handlers/pickup-ready.ts` on `order.fulfilled`, 7 tests |
-| 11 | Review request (3–7d post-delivery) | WIRED | `cron/review-requests`; keys off `reviewRequestSentAt` (previously-fixed bug) |
+| 11 | Review request (3–7d post-delivery) | **VERIFIED** ✅ | Phase 5 — `lib/orders/review-requests.ts`, 13 tests |
 
 ### B. Operator notifications
 
@@ -118,7 +118,7 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 
 | # | Automation | State | Evidence |
 |---|---|---|---|
-| 30 | Abandoned cart, 3 stages | WIRED | `cron/abandoned-cart`, stage 0→3 at 1h/24h/48h |
+| 30 | Abandoned cart, 3 stages | **VERIFIED** ✅ | Phase 5 — `lib/checkout/abandoned-cart.ts`, 20 tests |
 | 31 | Duplicate abandoned-cart sender | **ORPHANED — reported** | `lib/email/automation.ts:384` shadowed by the cron's own local copy. Removal needs sign-off (CLAUDE.md §3) |
 | 32 | Stock decrement on payment | WIRED | `lib/inventory-manager.ts` |
 | 33 | `InventoryAlert` creation | WIRED | 15 `prisma.inventoryAlert` references |
