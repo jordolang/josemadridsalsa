@@ -18,11 +18,11 @@ One decision is still open: [the money gate](#design-decision-that-needs-a-signa
 
 ## Headline
 
-The starting assumption for this audit was that the automation layer was designed but never built.
-**That is not what the code shows.** Roughly **87%** of the automation surface has code behind it and
-**~72% is wired to a real trigger and works today** — order confirmations fire on three of four payment
-paths, shipped/delivered emails fire off the EasyPost tracking webhook, and the operations sweep
-genuinely finds stale orders, aging returns and stuck webhooks.
+*As found on 2026-08-09.* The starting assumption for this audit was that the automation layer was
+designed but never built. **That is not what the code showed.** Roughly **87%** of the automation
+surface had code behind it and **~72% was wired to a real trigger and worked** — order confirmations
+fired on three of four payment paths, shipped/delivered emails fired off the EasyPost tracking
+webhook, and the operations sweep genuinely found stale orders, aging returns and stuck webhooks.
 
 The real problem is narrower and more interesting than "nothing exists":
 
@@ -71,7 +71,8 @@ platform is built toward cutover. So `domain_events` in production is empty, and
 a real order arrives — which is correct, not broken: no payment, no fact, no event.
 
 That means every automation here is **deployed and armed, not observed working in production**. The
-confidence behind the percentages below comes from 1618 passing tests, from exercising the drain and
+confidence behind the percentages below came, at the time of that check, from 1618 passing tests
+across the repo — the automation suite alone has since gone from 137 to 530 — from exercising the drain and
 the lifecycle sweep against the dev database, and from black-box probes of the deployed routes. It
 does not come from watching a live order flow through, because there has not been one. Stating that
 plainly matters more than a cleaner-sounding claim: the first real order after cutover is the true
