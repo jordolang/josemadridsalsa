@@ -16,6 +16,10 @@ the root `package.json` is canonical.
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
 ### Added
+- **Local pickup orders tell the customer they are ready** — a pickup order got no notification at all. The shipped email is sent from the EasyPost tracking webhook, and a pickup order never has a label, so no tracker exists and nothing ever fired. `sendOrderReadyForPickupEmail` was written for exactly this and had no callers.
+
+  It subscribes to `order.fulfilled`, so the notice follows the fact rather than whichever admin route happened to mark the order fulfilled. Shipped orders are filtered out in the same handler rather than through a second code path — they already get their email from the tracking webhook, and sending both would tell one customer both to expect a parcel and to come and collect it. A guest with no name on file is greeted rather than addressed as `undefined`.
+
 - **New order notifications for the shop** — a new order notified nobody, by any mechanism, on any payment path. Three separate attempts existed and all three were unreachable: `notifyAdminsOfNewOrder` had no callers and would have returned early regardless, because it reads `OrderNotificationSetting` — a table with no rows, no seed and no UI to create one; and the admin email sender was called only from `lib/stripe/webhooks.ts`, which nothing imports. A paid order now raises an in-app notification, flags anything above $100 separately, and sends the admin email.
 
   It subscribes to `payment.completed` rather than being wired into each payment route, so one handler covers Stripe, PayPal and Square — and any path added later. Hand-wiring a fourth copy into each route is the pattern that produced three dead mechanisms in the first place. The high-value flag carries its own dedupe key rather than being a louder version of the first notification, so acknowledging the routine "new order" does not also clear the flag saying this one was unusually large. Both keys derive from the order id, which is what makes the handler safe under the event poller's at-least-once delivery.

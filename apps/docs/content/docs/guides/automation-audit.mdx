@@ -76,7 +76,7 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 7 | Refund processed email — admin-initiated | WIRED | `admin/orders/[id]/update-status:132` |
 | 8 | Refund processed email — webhook-initiated | **MISSING** | `payment.refunded` event emitted, no email sent |
 | 9 | Order cancellation email | WIRED | `lib/email/transactional:19`, 1 call site |
-| 10 | Order ready-for-pickup email | **ORPHANED** | `lib/email/transactional:105` — 0 callers |
+| 10 | Order ready-for-pickup email | **VERIFIED** ✅ | Phase 2 — `handlers/pickup-ready.ts` on `order.fulfilled`, 7 tests |
 | 11 | Review request (3–7d post-delivery) | WIRED | `cron/review-requests`; keys off `reviewRequestSentAt` (previously-fixed bug) |
 
 ### B. Operator notifications
@@ -148,12 +148,15 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 
 Across **54** scored automation candidates (53 at audit time, plus the consumer layer built in Phase 1):
 
-| Measure | At audit | After Phase 1 | After Phase 2 |
+| Measure | At audit | After Phase 1 | Phase 2 so far |
 |---|---|---|---|
 | **Built** — code exists (VERIFIED + WIRED + ORPHANED) | 46 / 87% | 48 / 89% | **48 / 89%** |
-| **Functions correctly today** (VERIFIED + WIRED) | 38 / 72% | 41 / 76% | **43 / 80%** |
-| **Proven by an automated test** (VERIFIED only) | 8 / 15% | 10 / 19% | **12 / 22%** |
-| **Needs work** (ORPHANED + SCHEMA-ONLY + MISSING + stub) | 15 / 28% | 13 / 24% | **11 / 20%** |
+| **Functions correctly today** (VERIFIED + WIRED) | 38 / 72% | 41 / 76% | **44 / 81%** |
+| **Proven by an automated test** (VERIFIED only) | 8 / 15% | 10 / 19% | **13 / 24%** |
+| **Needs work** (ORPHANED + SCHEMA-ONLY + MISSING + stub) | 15 / 28% | 13 / 24% | **10 / 19%** |
+
+Item 21a (the admin new-order email) is a correction note rather than a separately scored candidate,
+so the denominator stays 54.
 
 #### Correction to the original audit
 
@@ -260,8 +263,13 @@ threshold is a documented constant matching the column's default, and notificati
 needs no per-user row. `notifyAdminsOfNewOrder`, `createOrderNotification` and
 `OrderNotificationSetting` are consequently legacy; they are reported here, not deleted.
 
-**Remaining (5):** ready-for-pickup email, participant milestone, campaign summary, campaign launch,
-and the duplicate abandoned-cart sender.
+**Done — ready-for-pickup (item 10).** A local-pickup order got nothing: the shipped email comes from
+the EasyPost tracking webhook and a pickup order never has a label. `handlers/pickup-ready.ts`
+subscribes to `order.fulfilled` and filters out shipped orders in the same handler, so no customer is
+told both to expect a parcel and to come and collect it.
+
+**Remaining (4):** participant milestone, campaign summary, campaign launch, and the duplicate
+abandoned-cart sender.
 
 ### Phase 3 — Close the parity gaps (3 items)
 
