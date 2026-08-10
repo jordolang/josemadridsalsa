@@ -8,6 +8,7 @@
 import { clearDomainEventHandlers } from '../subscribe'
 
 import { registerAutomationEnrollmentHandlers } from './automation-enrollment'
+import { registerOrderNotificationHandlers } from './order-notifications'
 
 let registered = false
 
@@ -24,6 +25,7 @@ export function registerDomainEventConsumers(): void {
   registered = true
 
   registerAutomationEnrollmentHandlers()
+  registerOrderNotificationHandlers()
 }
 
 /** Reset registration state. For tests, which need to re-register against a clean registry. */

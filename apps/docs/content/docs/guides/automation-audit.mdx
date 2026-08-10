@@ -91,8 +91,9 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 17 | Stale unfulfilled orders sweep | WIRED | `cron/operations-sweep` |
 | 18 | Aging returns sweep | WIRED | `cron/operations-sweep` |
 | 19 | Stuck webhooks sweep | WIRED | `cron/operations-sweep` |
-| 20 | New-order in-app notification | **ORPHANED** | `notifyAdminsOfNewOrder` — 0 callers, *and* no-ops without an `OrderNotificationSetting` row |
-| 21 | High-value order alert | **ORPHANED** | nested inside #20 |
+| 20 | New-order in-app notification | **VERIFIED** ✅ | Phase 2 — `handlers/order-notifications.ts` on `payment.completed`, 15 tests |
+| 21 | High-value order alert | **VERIFIED** ✅ | Phase 2 — separate dedupe key, $100 threshold |
+| 21a | Admin new-order **email** | **VERIFIED** ✅ | Phase 2 — was orphaned, not Stripe-only; see correction below |
 | 22 | Per-rule email/Slack routing | **SCHEMA-ONLY** | `OrderNotificationRule` model — 0 code references anywhere |
 
 ### C. Email marketing automation engine
@@ -147,12 +148,20 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 
 Across **54** scored automation candidates (53 at audit time, plus the consumer layer built in Phase 1):
 
-| Measure | At audit | After Phase 1 |
-|---|---|---|
-| **Built** — code exists (VERIFIED + WIRED + ORPHANED) | 46 / 87% | **48 / 89%** |
-| **Functions correctly today** (VERIFIED + WIRED) | 38 / 72% | **41 / 76%** |
-| **Proven by an automated test** (VERIFIED only) | 8 / 15% | **10 / 19%** |
-| **Needs work** (ORPHANED + SCHEMA-ONLY + MISSING + stub) | 15 / 28% | **13 / 24%** |
+| Measure | At audit | After Phase 1 | After Phase 2 |
+|---|---|---|---|
+| **Built** — code exists (VERIFIED + WIRED + ORPHANED) | 46 / 87% | 48 / 89% | **48 / 89%** |
+| **Functions correctly today** (VERIFIED + WIRED) | 38 / 72% | 41 / 76% | **43 / 80%** |
+| **Proven by an automated test** (VERIFIED only) | 8 / 15% | 10 / 19% | **12 / 22%** |
+| **Needs work** (ORPHANED + SCHEMA-ONLY + MISSING + stub) | 15 / 28% | 13 / 24% | **11 / 20%** |
+
+#### Correction to the original audit
+
+The audit recorded the admin new-order email as wired on the Stripe path. **It was not wired at
+all.** Its only caller is `lib/stripe/webhooks.ts`, and nothing imports that module — it is dead
+code. So a new order notified nobody, by any mechanism, on any payment path: `notifyAdminsOfNewOrder`
+had no callers and would have returned early anyway (it reads `OrderNotificationSetting`, a table with
+no rows, no seed and no UI), and the email sender was unreachable. Phase 2 fixes all three at once.
 
 The gap between *87% built* and *72% working* is the 8 orphaned automations — finished code with no
 caller. The gap between *72% working* and *15% verified* is the real risk: most of what works is
@@ -237,17 +246,30 @@ a handler that reads as working while never firing:
   customer — it is an operator concern, handled by `notifyOperators` (items 13–14). Routing it through
   the marketing engine would need an operator-recipient concept that does not exist yet.
 
-### Phase 2 — Close the orphans (8 items)
+### Phase 2 — Close the orphans *(in progress: 3 of 8 done)*
 
-Wire the finished-but-uncalled code: `notifyAdminsOfNewOrder` (+ seed `OrderNotificationSetting`
-defaults so it stops silently no-opping), ready-for-pickup, participant milestone, campaign summary,
-campaign launch. Delete the duplicate abandoned-cart sender. Each is small; each gets a test.
+**Done — new-order notifications (items 20, 21, 21a).** `handlers/order-notifications.ts` subscribes to
+`payment.completed` and raises the in-app notification, the high-value flag above $100, and the admin
+email. One handler covers Stripe, PayPal and Square — and any payment path added later — instead of a
+fourth hand-wired copy in each route, which is the pattern that produced the problem.
+
+`OrderNotificationSetting` was **not** seeded as originally planned. That table has no rows, no seed
+and no UI to create one, so reading it would reintroduce the silent no-op this was meant to fix. The
+threshold is a documented constant matching the column's default, and notifications go through
+`notifyOperators` — the same dispatcher the operations sweep and inventory alerts already use, which
+needs no per-user row. `notifyAdminsOfNewOrder`, `createOrderNotification` and
+`OrderNotificationSetting` are consequently legacy; they are reported here, not deleted.
+
+**Remaining (5):** ready-for-pickup email, participant milestone, campaign summary, campaign launch,
+and the duplicate abandoned-cart sender.
 
 ### Phase 3 — Close the parity gaps (3 items)
 
-Order confirmation on the POS/manual path; refund email on the webhook path; admin new-order
-notification on PayPal/Square/POS (currently Stripe-only). These are the "same automation, forgotten
-on the fourth path" bugs that Phase 1 makes structurally impossible going forward.
+Order confirmation on the POS/manual path, and refund email on the webhook path — which also needs a
+`payment.refunded` producer, without which `ORDER_REFUNDED` stays unmappable. (The admin new-order gap
+originally listed here was closed in Phase 2; see the correction above.) These are the "same
+automation, forgotten on the fourth path" bugs that Phase 1 makes structurally impossible going
+forward, since a consumer fires for the fact rather than for one route.
 
 ### Phase 4 — Build the missing engines (3 items)
 
