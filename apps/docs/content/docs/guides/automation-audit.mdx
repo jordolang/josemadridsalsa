@@ -93,9 +93,9 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 4 | Order confirmation — POS / manual order | **VERIFIED** ✅ | Phase 3 — `handlers/order-confirmation.ts`, 11 tests |
 | 5 | Order shipped email | VERIFIED | `lib/tracking/webhook-handlers:149`; `tests/unit/tracking/webhook-handlers.test.ts` |
 | 6 | Order delivered email | VERIFIED | `lib/tracking/webhook-handlers:155`; `tests/email/delivery-confirmation.test.tsx` |
-| 7 | Refund processed email — admin-initiated | WIRED | `admin/orders/[id]/update-status:132` |
+| 7 | Refund processed email — admin-initiated | **VERIFIED** ✅ | Phase 5 — `tests/lib/email/transactional.test.ts`; amount, method, settlement window |
 | 8 | Refund processed email — refund-initiated | **VERIFIED** ✅ | Phase 3 — `handlers/refund-notification.ts` + new producer, 9 tests |
-| 9 | Order cancellation email | WIRED | `lib/email/transactional:19`, 1 call site |
+| 9 | Order cancellation email | **VERIFIED** ✅ | Phase 5 — same file; no unsubstituted tokens, encoded unsubscribe link |
 | 10 | Order ready-for-pickup email | **VERIFIED** ✅ | Phase 2 — `handlers/pickup-ready.ts` on `order.fulfilled`, 7 tests |
 | 11 | Review request (3–7d post-delivery) | **VERIFIED** ✅ | Phase 5 — `lib/orders/review-requests.ts`, 13 tests |
 
@@ -128,10 +128,10 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 |---|---|---|---|
 | 23 | Automation CRUD + admin builder UI | WIRED | `app/api/admin/automations`, `app/admin/email-marketing/automations` |
 | 24 | **Trigger → enrollment** | **VERIFIED** ✅ | Phase 1 — `lib/domain-events/handlers/automation-enrollment.ts`, 12 tests |
-| 25 | Due-step drain (5-min cron) | WIRED | `cron/email-automation` — now fed by the outbox drain on the same tick |
-| 26 | `AutomationTrigger` values firing | WIRED ✅ | Phases 1+3 — 5 of 17 mapped, incl. `ORDER_REFUNDED` |
-| 27 | Scheduled campaign send | WIRED | `cron/email-campaigns` |
-| 28 | Resend webhook → bounce/suppression | WIRED | `app/api/webhooks/resend` (123 lines) |
+| 25 | Due-step drain (5-min cron) | **VERIFIED** ✅ | Phase 5 — `tests/lib/email/automation-engine.test.ts`, 18 tests; fed by the outbox drain on the same tick |
+| 26 | `AutomationTrigger` values firing | **VERIFIED** ✅ | Phases 1+3+5 — 5 of 17 mapped, incl. `ORDER_REFUNDED`; enrollment covered in `automation-engine.test.ts` |
+| 27 | Scheduled campaign send | **VERIFIED** ✅ | Phase 5 — `tests/lib/cron/email-campaigns.test.ts`; due-window bounds and stalled-run recovery |
+| 28 | Resend webhook → bounce/suppression | **VERIFIED** ✅ | Phase 5 — `tests/api/webhooks-resend.test.ts`; hard suppresses, soft does not |
 | 29 | `EmailWebhook` model | **REMOVED** ✅ | Outbound webhook registry, never built. Dropped with a guarded migration that refuses if prod holds rows. |
 
 ### D. Cart, inventory & purchasing
