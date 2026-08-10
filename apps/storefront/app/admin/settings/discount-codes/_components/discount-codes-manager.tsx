@@ -32,9 +32,9 @@ import {
   updateDiscountCode,
 } from '../actions'
 
-type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT' | 'FREE_SHIPPING'
+type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT'
 
-const DISCOUNT_TYPES: DiscountType[] = ['PERCENTAGE', 'FIXED_AMOUNT', 'FREE_SHIPPING']
+const DISCOUNT_TYPES: DiscountType[] = ['PERCENTAGE', 'FIXED_AMOUNT']
 
 export interface DiscountCodeRow {
   id: string
@@ -59,13 +59,10 @@ interface Props {
 const TYPE_LABELS: Record<DiscountType, string> = {
   PERCENTAGE: 'Percentage',
   FIXED_AMOUNT: 'Fixed amount',
-  FREE_SHIPPING: 'Free shipping',
 }
 
 function formatValue(type: DiscountType, value: string): string {
-  if (type === 'PERCENTAGE') return `${value}%`
-  if (type === 'FIXED_AMOUNT') return `$${value}`
-  return 'Free shipping'
+  return type === 'PERCENTAGE' ? `${value}%` : `$${value}`
 }
 
 function dateInputValue(iso: string | null): string {

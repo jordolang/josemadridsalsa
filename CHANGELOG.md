@@ -16,6 +16,16 @@ the root `package.json` is canonical.
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
 ### Removed
+- **Free shipping, entirely** — the business does not offer it and never has. Two mechanisms did: a `freeShippingThreshold` on `ShippingSettings` that zeroed the shipping line above a subtotal, falling back to **$50 in code** when null, and a `FREE_SHIPPING` discount type that did the same on demand. A loyalty reward spent 300 points on it.
+
+  Both were live and expensive. Once real carrier rates reached checkout, the $50 default meant a **six-jar order shipped free at a cost of ~$11.88** to the business and a **twelve-jar case at ~$35.74** — on exactly the orders worth having. At $9 a jar the threshold triggered at six.
+
+  Removed from every layer rather than switched off: the two zero-cost branches in `lib/shipping-calculator.ts` and its DB-backed threshold reader, the discount branch, the loyalty reward, the checkout path that zeroed shipping for a code, the admin threshold field and its API, the `freeShippingThreshold` column, and the `FREE_SHIPPING` enum value. Customer-facing copy went too — the checkout banner, a wholesale bullet, two fundraising claims, and the promo text baked into the email header block and the seasonal template.
+
+  The tests were inverted rather than deleted: where they asserted a threshold produced $0, they now assert shipping is charged at $50, $75, $500 and $10,000, and two Playwright specs assert the phrase "free shipping" never appears on checkout. `tests/component/CheckoutForm.test.tsx` lost a whole `Free Shipping Threshold` block that only ever asserted arithmetic defined inside the test file — it never touched application code and passed regardless.
+
+  Dropping the enum value needed the type rebuilt, since Postgres cannot remove a value in place. Safe: zero `FREE_SHIPPING` codes existed in either database and the threshold was null in both, so no configured behaviour was removed.
+
 - **The duplicate abandoned-cart sender** — `lib/email/automation.ts` carried a second `sendAbandonedCartEmail` that nothing called. The working one is the cron's own local copy, so the two were never in conflict; the risk was that a future caller would reach for the exported one, which builds different copy and a different recovery URL than the sequence actually sends. Removed with its single-use `CartItemData` interface.
 
 - **The `EmailWebhook` model** — an outbound webhook registry (name, url, events, secret) with **zero code references anywhere**: nothing ever registered a webhook and nothing ever delivered to one. Unrelated to `app/api/webhooks/resend`, which is the *inbound* handler for bounce and delivery events and is untouched.

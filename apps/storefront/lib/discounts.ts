@@ -100,10 +100,6 @@ export async function validateDiscountCode(
       case 'FIXED_AMOUNT':
         discountAmount = Math.min(Number(discountCode.value), cartTotal)
         break
-      case 'FREE_SHIPPING':
-        // This will be handled separately in checkout
-        discountAmount = 0
-        break
     }
 
     return {

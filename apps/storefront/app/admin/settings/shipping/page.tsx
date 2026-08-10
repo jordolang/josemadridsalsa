@@ -90,14 +90,6 @@ async function saveShippingSettings(formData: FormData) {
     throw new Error('Unauthorized')
   }
 
-  const freeShippingThreshold = formData.get('freeShippingThreshold')
-  const parsedThreshold = freeShippingThreshold && String(freeShippingThreshold).trim().length > 0
-    ? parseFloat(String(freeShippingThreshold))
-    : null
-  const threshold = parsedThreshold !== null && Number.isFinite(parsedThreshold) && parsedThreshold > 0
-    ? parsedThreshold
-    : null
-
   const street = String(formData.get('street') || '').trim()
   const city = String(formData.get('city') || '').trim()
   const state = String(formData.get('state') || '').trim()
@@ -115,7 +107,6 @@ async function saveShippingSettings(formData: FormData) {
   const enabledCarriers = formData.getAll('enabledCarriers').map((c: FormDataEntryValue) => String(c))
 
   const settingsData = {
-    freeShippingThreshold: threshold,
     originAddress: originAddress ? originAddress : Prisma.JsonNull,
     defaultCarrier,
     enabledCarriers,
@@ -137,7 +128,6 @@ async function saveShippingSettings(formData: FormData) {
     entityType: 'ShippingSettings',
     entityId: settings.id,
     changes: {
-      freeShippingThreshold: threshold,
       originAddress,
       defaultCarrier,
       enabledCarriers,
@@ -268,7 +258,7 @@ export default async function ShippingSettingsPage() {
         <div>
           <h1 className="text-3xl font-bold">Shipping Settings</h1>
           <p className="text-muted-foreground">
-            Configure shipping rates, free shipping threshold, and origin address for carrier API calculations.
+            Configure shipping rates and the origin address for carrier API calculations.
           </p>
         </div>
         {settings && (
@@ -329,105 +319,12 @@ export default async function ShippingSettingsPage() {
         <CardHeader>
           <CardTitle>Configuration</CardTitle>
           <CardDescription>
-            Set the free shipping threshold and origin address used for real-time carrier rate calculations.
+            Set the warehouse origin address used for real-time carrier rate calculations. Shipping
+            is charged on every order — there is no free-shipping threshold.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form action={saveShippingSettings} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="freeShippingThreshold">Free shipping threshold</Label>
-              <p className="text-xs text-muted-foreground">
-                Orders above this amount qualify for free shipping. Leave blank to disable.
-              </p>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">$</span>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  id="freeShippingThreshold"
-                  name="freeShippingThreshold"
-                  defaultValue={settings?.freeShippingThreshold?.toString() || ''}
-                  placeholder="75.00"
-                  className="max-w-xs"
-                  disabled={!canManage}
-                />
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold">Origin address</h3>
-                <p className="text-sm text-muted-foreground">
-                  The warehouse or fulfillment center address used to calculate shipping costs.
-                </p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="street">Street address</Label>
-                  <Input
-                    type="text"
-                    id="street"
-                    name="street"
-                    defaultValue={originAddress?.street || ''}
-                    placeholder="123 Warehouse Blvd"
-                    disabled={!canManage}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    type="text"
-                    id="city"
-                    name="city"
-                    defaultValue={originAddress?.city || ''}
-                    placeholder="San Francisco"
-                    disabled={!canManage}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="state">State / Province</Label>
-                  <Input
-                    type="text"
-                    id="state"
-                    name="state"
-                    defaultValue={originAddress?.state || ''}
-                    placeholder="CA"
-                    disabled={!canManage}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="zipCode">ZIP / Postal code</Label>
-                  <Input
-                    type="text"
-                    id="zipCode"
-                    name="zipCode"
-                    defaultValue={originAddress?.zipCode || ''}
-                    placeholder="94111"
-                    disabled={!canManage}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
-                  <Input
-                    type="text"
-                    id="country"
-                    name="country"
-                    defaultValue={originAddress?.country || 'US'}
-                    placeholder="US"
-                    disabled={!canManage}
-                  />
-                </div>
-              </div>
-            </div>
-
             <Separator />
 
             <div className="space-y-4">
@@ -506,22 +403,6 @@ export default async function ShippingSettingsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3 text-sm">
-            <div className="flex items-start gap-2">
-              {settings?.freeShippingThreshold ? (
-                <>
-                  <Badge>Active</Badge>
-                  <p className="text-muted-foreground">
-                    Free shipping enabled for orders over ${settings.freeShippingThreshold.toString()}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <Badge variant="outline">Disabled</Badge>
-                  <p className="text-muted-foreground">Free shipping threshold not configured</p>
-                </>
-              )}
-            </div>
-
             <div className="flex items-start gap-2">
               {originAddress?.street && originAddress?.city ? (
                 <>

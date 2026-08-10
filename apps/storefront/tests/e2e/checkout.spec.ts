@@ -238,7 +238,7 @@ test.describe('Checkout flow', () => {
     await expect(shippingSection).toBeVisible()
   })
 
-  test('should show free shipping message for orders over $50', async ({ page }) => {
+  test('should never advertise free shipping', async ({ page }) => {
     // Navigate to checkout
     await page.getByRole('link', { name: /checkout/i }).first().click()
     await expect(page).toHaveURL(/\/checkout/)
@@ -252,15 +252,8 @@ test.describe('Checkout flow', () => {
     // Wait for calculations
     await page.waitForTimeout(1000)
 
-    // Check if free shipping message appears
-    // This depends on the cart total being >= $50
-    const freeShippingMessage = page.getByText(/free shipping on orders over \$50/i)
-    const isVisible = await freeShippingMessage.isVisible().catch(() => false)
-
-    // If visible, verify it shows
-    if (isVisible) {
-      await expect(freeShippingMessage).toBeVisible()
-    }
+    // Shipping is charged on every order, so nothing should ever advertise it as free.
+    await expect(page.getByText(/free shipping/i)).toHaveCount(0)
   })
 
   test('should display prompt to enter address for tax/shipping calculation', async ({ page }) => {

@@ -13,7 +13,7 @@ const formSchema = z
   .object({
     code: z.string().min(1).max(50),
     description: z.string().max(255).optional(),
-    type: z.enum(['PERCENTAGE', 'FIXED_AMOUNT', 'FREE_SHIPPING']),
+    type: z.enum(['PERCENTAGE', 'FIXED_AMOUNT']),
     value: z.coerce.number().min(0),
     maxUses: z.coerce.number().int().positive().optional(),
     maxUsesPerUser: z.coerce.number().int().positive().optional(),

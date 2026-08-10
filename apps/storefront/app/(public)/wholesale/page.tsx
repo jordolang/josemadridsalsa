@@ -127,10 +127,6 @@ export default function WholesalePage() {
                       <CheckCircle className="w-5 h-5 text-salsa-500 flex-shrink-0 mt-0.5" />
                       <span>Competitive wholesale pricing</span>
                     </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-salsa-500 flex-shrink-0 mt-0.5" />
-                      <span>Free shipping on qualifying orders</span>
-                    </li>
                   </ul>
                   <div className="pt-4">
                     <Button className="w-full bg-gradient-to-r from-salsa-600 to-chile-600 hover:from-salsa-700 hover:to-chile-700" asChild>

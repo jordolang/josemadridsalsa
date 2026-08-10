@@ -1,6 +1,6 @@
 ---
 title: Shipping Configuration
-description: Configure shipping rates, carriers, and free shipping thresholds
+description: Configure shipping rates, carriers, and the warehouse origin address
 ---
 
 # Shipping Configuration
@@ -13,19 +13,19 @@ The `calculateShipping` function in `lib/shipping-calculator.ts` follows this st
 
 <Steps>
 <Step>
-### Check Free Shipping
+### Resolve the Warehouse Origin
 
-The system first checks if the order meets the free shipping threshold (configurable in the database, defaults to $50). If met, shipping is free with no API call needed.
+Every quote needs an origin. `getShippingOrigin()` reads the admin setting first, then the
+`SHIPPING_ORIGIN_*` environment variables, and returns nothing rather than a placeholder when the
+address is incomplete — an unresolved origin falls back to flat-rate estimates instead of pricing
+from a made-up address.
 
 ```typescript
-const freeShippingThreshold = await getFreeShippingThreshold()
+const origin = await getShippingOrigin()
 
-if (subtotal >= freeShippingThreshold) {
-  return {
-    shippingCost: 0,
-    shippingMethod: 'Free Shipping',
-    estimatedDelivery: '3-5 business days',
-  }
+if (!origin.ok) {
+  console.error(describeMissingOrigin(origin.missing))
+  return calculateEstimateRates(input, true)
 }
 ```
 </Step>
@@ -69,7 +69,7 @@ If the API fails or returns no rates, the system falls back to estimate-based ra
 ```typescript
 catch (error) {
   console.error('[Shipping Calculator] Error:', error)
-  return calculateEstimateRates(input, freeShippingThreshold, true)
+  return calculateEstimateRates(input, true)
 }
 ```
 </Step>
@@ -81,7 +81,6 @@ Default rates are defined in `lib/shipping-calculator.ts`:
 
 ```typescript
 const SHIPPING_RATES = {
-  FREE_SHIPPING_THRESHOLD: 50,
 
   FLAT_RATE: {
     cost: 6.99,
@@ -104,26 +103,6 @@ const SHIPPING_RATES = {
     HI: 1.5, // Hawaii
     PR: 2.0, // Puerto Rico
   },
-}
-```
-
-## Configuring Free Shipping Threshold
-
-The free shipping threshold is stored in the `ShippingSettings` table and can be updated via the admin panel at `/admin/settings`:
-
-```typescript
-// The system reads from the database first, falls back to default
-async function getFreeShippingThreshold(): Promise<number> {
-  const settings = await prisma.shippingSettings.findUnique({
-    where: { singleton: 'singleton' },
-    select: { freeShippingThreshold: true },
-  })
-
-  if (settings?.freeShippingThreshold) {
-    return parseFloat(settings.freeShippingThreshold.toString())
-  }
-
-  return SHIPPING_RATES.FREE_SHIPPING_THRESHOLD // default: $50
 }
 ```
 
@@ -187,7 +166,7 @@ const estimate = await getShippingEstimate({
   state: 'CA',
   country: 'US',
 })
-// Returns: 6.99 (or 0 if over free shipping threshold)
+// Returns: 6.99 — shipping is charged on every order
 ```
 
 ## Parcel Dimensions

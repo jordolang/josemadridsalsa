@@ -1181,7 +1181,6 @@ model AnalyticsSetting {
 
 model ShippingSettings {
   id                    String   @id @default(cuid())
-  freeShippingThreshold Decimal? @db.Decimal(10, 2)
   originAddress         Json?
   defaultCarrier        String?
   enabledCarriers       String[] @default([])
@@ -3313,10 +3312,11 @@ enum MessageSenderType {
   ADMIN
 }
 
+/// The business does not offer free shipping, so there is deliberately no FREE_SHIPPING type.
+/// Shipping is charged on every order — see `lib/shipping-calculator.ts`.
 enum DiscountType {
   PERCENTAGE
   FIXED_AMOUNT
-  FREE_SHIPPING
 }
 
 enum LoyaltyTier {

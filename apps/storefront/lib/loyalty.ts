@@ -278,13 +278,6 @@ export async function createDefaultRewards() {
       minimumTier: 'SILVER' as any,
     },
     {
-      name: 'Free Shipping',
-      description: 'Free shipping on your next order',
-      pointsCost: 300,
-      rewardType: 'FREE_SHIPPING',
-      minimumTier: 'BRONZE' as any,
-    },
-    {
       name: '$25 Off',
       description: 'Get $25 off your next order',
       pointsCost: 2500,

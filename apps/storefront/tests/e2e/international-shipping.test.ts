@@ -286,53 +286,6 @@ describeIfE2E('E2E: International Shipping', () => {
     })
   })
 
-  describe('Free Shipping Threshold with International', () => {
-    it('should NOT apply free shipping threshold to international orders', async () => {
-      if (!testProductId) {
-        console.log('⚠️  Skipping: No test product available')
-        return
-      }
-
-      // Get product to calculate quantity for high-value order
-      const product = await prisma.product.findUnique({
-        where: { id: testProductId }
-      })
-
-      if (!product) {
-        console.log('⚠️  Skipping: Product not found')
-        return
-      }
-
-      // Create order over $50 (free shipping threshold for domestic)
-      const quantity = Math.ceil(60 / Number(product.price))
-
-      const response = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: [{ productId: testProductId, quantity }],
-          shippingAddress: {
-            address1: '123 Yonge Street',
-            city: 'Toronto',
-            state: 'ON',
-            postalCode: 'M5B 2H1',
-            country: 'CA',
-          },
-        }),
-      })
-
-      const data = await response.json()
-      const subtotal = Number(product.price) * quantity
-
-      console.log(`✓ Testing international order over $${subtotal.toFixed(2)}:`)
-      console.log(`  Shipping cost: $${data.shippingCost.toFixed(2)}`)
-
-      // International orders should still have shipping charges
-      // even if over free shipping threshold
-      expect(data.shippingCost).toBeGreaterThan(0)
-      console.log(`  ✓ International shipping charged despite high subtotal`)
-    })
-  })
 
   describe('Other International Countries', () => {
     it('should handle UK addresses', async () => {

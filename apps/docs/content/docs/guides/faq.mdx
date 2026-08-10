@@ -50,9 +50,11 @@ Order numbers follow `JMS-YYYYMMDD-XXXXXXXX` where the suffix is generated from 
 
 Tax is calculated via the Stripe Tax API based on the shipping address and product tax code. Wholesale accounts with approved resale numbers are automatically tax-exempt. See [Tax Configuration](/docs/guides/taxes).
 
-### When does free shipping apply?
+### Is there free shipping?
 
-Orders over the configurable threshold (default: $50) qualify for free shipping. The threshold is stored in the `ShippingSettings` database table and can be changed in the admin panel.
+No. Shipping is charged on every order, without exception. A subtotal threshold that zeroed the
+shipping line was removed: with real carrier rates, it had the business absorbing about $11.88 to
+ship six jars and $35.74 to ship a case, while charging the customer nothing.
 
 ## Authentication
 

@@ -139,12 +139,13 @@ The shipping calculator falls back to estimate rates when the carrier API fails.
    ```
 3. Look for `[Shipping Calculator]` errors in server logs
 
-### Free Shipping Not Applying
+### Shipping Shows as $0
 
-The free shipping threshold is read from the database first, then falls back to $50. To check the current threshold:
+It should not. **There is no free shipping.** Shipping is charged on every order, without exception. A zero shipping line means the carrier returned no
+rates *and* the estimate fallback produced nothing — check the warehouse origin is set:
 
 ```sql
-SELECT "freeShippingThreshold" FROM "shipping_settings"
+SELECT "originAddress" FROM "shipping_settings"
 WHERE singleton = 'singleton';
 ```
 

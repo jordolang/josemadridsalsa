@@ -133,8 +133,6 @@ export async function POST(request: NextRequest) {
     // only a code; the amount is derived here so it cannot be tampered with.
     let discountAmount = 0
     let appliedDiscountCode: string | null = null
-    let discountGivesFreeShipping = false
-
     if (discountCode) {
       const discountResult = await validateDiscountCode(discountCode, subtotal, user?.id)
 
@@ -148,7 +146,6 @@ export async function POST(request: NextRequest) {
       appliedDiscountCode = discountResult.discountCode!.code
       // A discount can never exceed the value of the goods.
       discountAmount = Math.min(discountResult.discountAmount ?? 0, subtotal)
-      discountGivesFreeShipping = discountResult.discountCode!.type === 'FREE_SHIPPING'
     }
 
     // Tax and shipping are assessed on what the customer actually pays for the goods.
@@ -273,10 +270,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // A FREE_SHIPPING code carries no dollar discount; it zeroes the shipping line.
-    if (discountGivesFreeShipping) {
-      finalShippingCost = 0
-    }
+    // Shipping is charged on every order. There is deliberately no path that zeroes it — no
+    // threshold, no discount type, no reward. See `lib/shipping-calculator.ts`.
 
     const amountDue = discountedSubtotal + taxAmount + finalShippingCost
 

@@ -276,8 +276,8 @@ test.describe('Payment flow', () => {
     await expect(page).toHaveURL(/\/checkout/)
   })
 
-  test('should calculate free shipping for orders over $50', async ({ page }) => {
-    // Close cart sidebar and add more items to reach $50
+  test('should never advertise free shipping in the order summary', async ({ page }) => {
+    // Close cart sidebar and add more items
     const closeButton = page.getByRole('button', { name: /close cart/i })
     const isCloseVisible = await closeButton.isVisible().catch(() => false)
     if (isCloseVisible) {
@@ -316,12 +316,8 @@ test.describe('Payment flow', () => {
     // Check if subtotal is >= $50, then shipping should be FREE
     const orderSummary = page.locator('aside').filter({ has: page.getByRole('heading', { name: /order summary/i }) })
     const subtotalText = await orderSummary.getByText(/subtotal/i).locator('..').textContent()
-
-    // If order is over $50, verify free shipping message
-    if (subtotalText && subtotalText.includes('$') && parseFloat(subtotalText.replace(/[^0-9.]/g, '')) >= 50) {
-      const freeShippingMessage = page.getByText(/free shipping on orders over \$50/i)
-      await expect(freeShippingMessage).toBeVisible()
-    }
+    // Shipping is charged on every order; nothing should advertise it as free.
+    await expect(page.getByText(/free shipping/i)).toHaveCount(0)
   })
 
   test('should show processing state during payment', async ({ page }) => {

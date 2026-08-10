@@ -18,7 +18,6 @@ const OriginAddressSchema = z.object({
 
 const ShippingSettingsSchema = z
   .object({
-    freeShippingThreshold: z.number().positive().nullable().optional(),
     originAddress: OriginAddressSchema.nullable().optional(),
     defaultCarrier: carrierEnum.nullable().optional(),
     enabledCarriers: z.array(carrierEnum).optional(),
@@ -52,7 +51,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       data: {
         id: settings.id,
-        freeShippingThreshold: settings.freeShippingThreshold,
         originAddress: settings.originAddress,
         defaultCarrier: settings.defaultCarrier,
         enabledCarriers: settings.enabledCarriers,
@@ -91,14 +89,12 @@ export async function POST(request: NextRequest) {
     const data = parsed.data
 
 const createData = {
-        freeShippingThreshold: data.freeShippingThreshold ?? null,
         originAddress: data.originAddress ? data.originAddress : Prisma.JsonNull,
         defaultCarrier: data.defaultCarrier ?? null,
         enabledCarriers: data.enabledCarriers ?? [],
         updatedById: user.id,
 }
         const updateData = {
-                freeShippingThreshold: data.freeShippingThreshold ?? null,
                 originAddress: data.originAddress ? data.originAddress : Prisma.JsonNull,
                 defaultCarrier: data.defaultCarrier ?? null,
                 enabledCarriers: { set: data.enabledCarriers ?? [] },
@@ -118,7 +114,6 @@ const createData = {
         entityType: 'ShippingSettings',
         entityId: settings.id,
         changes: {
-          freeShippingThreshold: data.freeShippingThreshold,
           originAddress: data.originAddress,
           defaultCarrier: data.defaultCarrier,
           enabledCarriers: data.enabledCarriers,
@@ -130,7 +125,6 @@ const createData = {
     return NextResponse.json({
       data: {
         id: settings.id,
-        freeShippingThreshold: settings.freeShippingThreshold,
         originAddress: settings.originAddress,
         defaultCarrier: settings.defaultCarrier,
         enabledCarriers: settings.enabledCarriers,

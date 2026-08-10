@@ -302,7 +302,7 @@ describeIfE2E('Performance Test: Shipping Calculation Under Load', () => {
       console.log(`  AK shipping cost: $${akResult.shippingCost}`)
       console.log(`  HI shipping cost: $${hiResult.shippingCost}`)
 
-      // Alaska and Hawaii should be more expensive (unless free shipping applies)
+      // Alaska and Hawaii carry a multiplier, so they should be more expensive
       if (caResult.shippingCost > 0) {
         expect(akResult.shippingCost).toBeGreaterThanOrEqual(caResult.shippingCost)
         expect(hiResult.shippingCost).toBeGreaterThanOrEqual(caResult.shippingCost)

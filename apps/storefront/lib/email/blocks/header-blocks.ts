@@ -208,13 +208,13 @@ export const header_promo: EmailBlock = {
       description: 'Promotional message',
       type: 'string',
       required: true,
-      fallback: 'FREE SHIPPING on orders over $50',
+      fallback: 'Fresh salsa, shipped from Zanesville',
       example: 'SALE: 20% off everything!',
     },
   },
   defaultProps: {
     bannerColor: '#dc2626',
-    promoText: 'FREE SHIPPING on orders over $50',
+    promoText: 'Fresh salsa, shipped from Zanesville',
   },
   styling: {
     backgroundColor: '#dc2626',

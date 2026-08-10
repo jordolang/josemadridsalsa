@@ -1,11 +1,20 @@
 ---
 title: Shipping
-description: Shipping calculation with real carrier API rates, fallback estimates, PO Box detection, free shipping thresholds, and address validation
+description: Shipping calculation with real carrier API rates, fallback estimates, jar packing, PO Box detection, and address validation
 ---
 
 # Shipping
 
-Shipping costs are calculated using real carrier API rates with automatic fallback to estimate-based rates. The system supports free shipping thresholds, PO Box detection, weight-based pricing, and state-specific multipliers.
+Shipping costs are calculated using real carrier API rates with automatic fallback to estimate-based
+rates. The system supports jar-grid packing, PO Box detection, weight-based pricing, and
+state-specific multipliers.
+
+<Callout type="warn" title="There is no free shipping">
+Shipping is charged on every order, without exception. A `freeShippingThreshold` that zeroed the
+shipping line above a subtotal — defaulting to $50 — and a `FREE_SHIPPING` discount type were both
+removed. With real carrier rates they were expensive: a six-jar order crossed the default and cost
+the business about $11.88 to ship, a case about $35.74, with nothing charged to the customer.
+</Callout>
 
 ## Architecture
 
@@ -27,16 +36,12 @@ Shipping costs are calculated using real carrier API rates with automatic fallba
 ## Calculation Strategy
 
 <Steps>
-### Free Shipping Check
+### Origin Resolution
 
-The system first checks if the order subtotal meets the free shipping threshold. The threshold is configurable in the database via `ShippingSettings` and defaults to $50.
-
-```ts
-const freeShippingThreshold = await getFreeShippingThreshold()
-if (subtotal >= freeShippingThreshold) {
-  return { shippingCost: 0, shippingMethod: 'Free Shipping', ... }
-}
-```
+The warehouse origin is resolved through `lib/shipping/origin.ts` — the admin setting first, then
+the `SHIPPING_ORIGIN_*` environment variables. It returns nothing rather than a placeholder when
+incomplete, and an unresolved origin sends the quote to flat-rate estimates rather than pricing
+from a made-up address.
 
 ### International Routing
 
@@ -119,5 +124,6 @@ The `validateShippingAddress()` function checks:
 The `getShippingEstimate()` function provides a quick estimate for the cart page without detailed item info, based only on subtotal, state, and country.
 
 <Callout type="info">
-The free shipping threshold is stored in the `ShippingSettings` singleton table and can be updated from the admin panel without code changes.
+The warehouse origin address and enabled carriers are stored in the `ShippingSettings` singleton
+table and can be updated from the admin panel without code changes.
 </Callout>

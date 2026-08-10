@@ -28,7 +28,8 @@ The shipping system calculates real-time rates from carrier APIs (EasyPost or Sh
 
 1. **Never block checkout** - All errors fall back to estimate rates
 2. **Server-side truth** - Shipping cost is always recalculated server-side; client values are never trusted
-3. **Configurable** - Free shipping threshold and origin address are managed from the admin panel
+3. **No free shipping** - Shipping is charged on every order, without exception
+4. **Configurable** - The warehouse origin address and enabled carriers are managed from the admin panel
 4. **PO Box aware** - Automatically filters to USPS-only options for PO Box addresses
 
 ---
@@ -97,12 +98,6 @@ The `SHIPPING_ORIGIN_*` environment variables serve as defaults. The admin setti
 
 ### Configurable Fields
 
-#### Free Shipping Threshold
-- Numeric dollar amount (e.g., `75.00`)
-- Orders at or above this amount receive free shipping
-- Leave blank to disable free shipping
-- Stored in the `ShippingSettings` table (singleton row)
-- Default fallback: `$50.00` (hardcoded in `SHIPPING_RATES.FREE_SHIPPING_THRESHOLD`)
 
 #### Origin Address
 - Street address, city, state, ZIP code, country
@@ -122,7 +117,6 @@ The `SHIPPING_ORIGIN_*` environment variables serve as defaults. The admin setti
 ### Status Dashboard
 
 The admin page displays current configuration status with badges:
-- **Free shipping:** Active (with threshold) or Disabled
 - **Origin address:** Configured (with address preview) or Required
 - **Carriers:** Active (count + names) or Warning (none enabled)
 
@@ -177,7 +171,7 @@ The main entry point for all shipping calculations. Called by both the checkout 
 
 ### Step-by-Step Flow
 
-1. **Free shipping check** - Fetch threshold from DB (`ShippingSettings` singleton); if subtotal >= threshold, return `$0.00` immediately
+1. **Origin resolution** - Read the warehouse address from `ShippingSettings`, then `SHIPPING_ORIGIN_*`; an incomplete address falls through to estimates rather than quoting from a placeholder
 2. **International check** - Non-US addresses use estimate-based rates (carrier API not yet supported for international)
 3. **Parcel dimensions** - Aggregate item weights and dimensions:
    - Weight: sum of `(item weight * quantity)`, converted to ounces (1 lb = 16 oz); default 1 lb per item
@@ -194,7 +188,6 @@ Used when the carrier API is unavailable or returns no rates.
 
 | Condition | Rate |
 |-----------|------|
-| Subtotal >= free shipping threshold | $0.00 (Free Shipping) |
 | International (non-US) | $24.99 |
 | Standard domestic (flat rate) | $6.99 |
 | Weight > 5 lbs | $4.99 base + $0.50/lb over 5 lbs |
@@ -238,7 +231,7 @@ The system has multiple fallback layers to ensure checkout is never blocked:
 3. **Carrier API errors** - Log error, use estimate-based rates with `fallback: true`
 4. **API key missing** - `getShippingClient()` throws; caught by `getShippingRates()`, returns empty rates; calculator falls back to estimates
 5. **Calculate-shipping endpoint fails entirely** - Returns HTTP 200 with flat-rate estimate ($6.99) rather than HTTP 500
-6. **Free shipping threshold DB fetch fails** - Falls back to hardcoded `$50.00` threshold
+6. **Origin address missing or incomplete** - Falls back to flat-rate estimates and logs which fields are absent
 
 ---
 

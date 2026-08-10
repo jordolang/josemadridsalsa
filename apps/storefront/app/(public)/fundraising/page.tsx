@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = createMetadata({
   title: 'Fundraising - Jose Madrid Salsa',
-  description: 'Partner with Jose Madrid Salsa for your fundraising goals! Earn 50% profit with free shipping, online and pre-sell options available.',
+  description: 'Partner with Jose Madrid Salsa for your fundraising goals! Earn 50% profit, with online and pre-sell options available.',
   pathname: '/fundraising',
 });
 
@@ -69,7 +69,7 @@ export default function FundraisingPage() {
               </div>
               <div className="bg-white/10 backdrop-blur rounded-lg p-4">
                 <Truck className="w-8 h-8 mx-auto mb-2 text-yellow-300" />
-                <p className="font-bold text-lg">Free Shipping</p>
+                <p className="font-bold text-lg">Direct Ship</p>
               </div>
               <div className="bg-white/10 backdrop-blur rounded-lg p-4">
                 <Users className="w-8 h-8 mx-auto mb-2 text-yellow-300" />
@@ -186,10 +186,6 @@ export default function FundraisingPage() {
                     <li className="flex items-start gap-3">
                       <div className="w-2 h-2 bg-verde-500 rounded-full mt-2"></div>
                       <span>Pre-set forms: 25, 16, or 9 flavors</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="w-2 h-2 bg-verde-500 rounded-full mt-2"></div>
-                      <span>Free shipping on 96+ jars</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <div className="w-2 h-2 bg-verde-500 rounded-full mt-2"></div>

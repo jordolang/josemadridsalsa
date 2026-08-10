@@ -477,7 +477,8 @@ describe('Loyalty System', () => {
 
       await createDefaultRewards()
 
-      expect(createSpy).toHaveBeenCalledTimes(4)
+      // Three, not four: the "Free Shipping" reward was removed along with free shipping.
+      expect(createSpy).toHaveBeenCalledTimes(3)
       expect(createSpy).toHaveBeenCalledWith({
         data: {
           name: '$5 Off',
@@ -498,15 +499,12 @@ describe('Loyalty System', () => {
           minimumTier: 'SILVER',
         },
       })
-      expect(createSpy).toHaveBeenCalledWith({
-        data: {
-          name: 'Free Shipping',
-          description: 'Free shipping on your next order',
-          pointsCost: 300,
-          rewardType: 'FREE_SHIPPING',
-          minimumTier: 'BRONZE',
-        },
-      })
+      // No free-shipping reward: the business charges shipping on every order.
+      expect(createSpy).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ rewardType: 'FREE_SHIPPING' }),
+        })
+      )
       expect(createSpy).toHaveBeenCalledWith({
         data: {
           name: '$25 Off',

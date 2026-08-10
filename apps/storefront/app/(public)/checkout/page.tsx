@@ -1383,11 +1383,6 @@ function CheckoutForm() {
                     <span>-{formatPrice(giftCertificateAmount)}</span>
                   </div>
                 )}
-                {shippingCost === 0 && availableShippingOptions.length > 0 && (
-                  <p className="text-xs text-green-600 font-medium">
-                    Free shipping applied!
-                  </p>
-                )}
                 {!isCalculatingShipping && availableShippingOptions.length === 0 && formState.postalCode.length >= 5 && (
                   <p className="text-xs text-gray-500 italic">
                     Enter your full address to calculate shipping

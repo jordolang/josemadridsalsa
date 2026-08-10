@@ -141,7 +141,7 @@ The in-memory rate limiter is per-process. For multi-server deployments, switch 
 
 ### Shipping Cost Caching
 
-The shipping calculator checks free shipping eligibility before making any API calls. For orders over the threshold, zero-cost shipping is returned immediately without a carrier API round-trip.
+The shipping calculator resolves the warehouse origin before making any API call, and falls back to flat-rate estimates when it is unset, so a misconfigured deployment never blocks checkout.
 
 ### Tax Exemption Short-Circuit
 
@@ -271,4 +271,4 @@ import { Analytics } from '@vercel/analytics/react'
 - [ ] Images use `next/image` with appropriate `sizes`
 - [ ] Prisma queries use `select` to limit fetched columns
 - [ ] Serializable transactions use retry logic
-- [ ] Free shipping and tax exemption checks happen before API calls
+- [ ] Tax exemption checks happen before API calls

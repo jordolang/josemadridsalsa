@@ -350,98 +350,6 @@ describeIfE2E('E2E: Shipping Calculator Integration', () => {
     })
   })
 
-  describe('Free Shipping Threshold', () => {
-    it('should offer free shipping for orders over $50', async () => {
-      if (!testProductId) {
-        console.log('⚠️  Skipping: No test product available')
-        return
-      }
-
-      // Calculate quantity needed to exceed $50
-      const quantity = Math.ceil(51 / testProductPrice)
-
-      const response = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: [{ productId: testProductId, quantity }],
-          shippingAddress: {
-            address1: '123 Main Street',
-            city: 'San Francisco',
-            state: 'CA',
-            postalCode: '94111',
-            country: 'US',
-          },
-        }),
-      })
-
-      expect(response.status).toBe(200)
-      const data = await response.json()
-
-      const subtotal = testProductPrice * quantity
-      console.log(`✓ Free shipping test with subtotal: $${subtotal.toFixed(2)}`)
-
-      if (subtotal >= 50) {
-        // Should have at least one free shipping option
-        const hasFreeOption = data.availableOptions?.some((opt: any) => opt.cost === 0)
-
-        if (hasFreeOption) {
-          console.log('  Free shipping option available ✓')
-          expect(hasFreeOption).toBe(true)
-
-          // Find and display the free option
-          const freeOption = data.availableOptions.find((opt: any) => opt.cost === 0)
-          console.log(`  Method: ${freeOption.method}`)
-        } else {
-          console.log('  ⚠️  No free shipping option found')
-        }
-      }
-    })
-
-    it('should not offer free shipping for orders under $50', async () => {
-      if (!testProductId) {
-        console.log('⚠️  Skipping: No test product available')
-        return
-      }
-
-      // Use quantity that keeps subtotal under $50
-      const quantity = Math.max(1, Math.floor(45 / testProductPrice))
-
-      const response = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: [{ productId: testProductId, quantity }],
-          shippingAddress: {
-            address1: '123 Main Street',
-            city: 'San Francisco',
-            state: 'CA',
-            postalCode: '94111',
-            country: 'US',
-          },
-        }),
-      })
-
-      expect(response.status).toBe(200)
-      const data = await response.json()
-
-      const subtotal = testProductPrice * quantity
-      console.log(`✓ Paid shipping test with subtotal: $${subtotal.toFixed(2)}`)
-
-      if (subtotal < 50) {
-        // All options should have a cost
-        const allOptionsPaid = data.availableOptions?.every((opt: any) => opt.cost > 0)
-
-        console.log(`  All options require payment: ${allOptionsPaid}`)
-
-        if (data.availableOptions && data.availableOptions.length > 0) {
-          const cheapest = Math.min(...data.availableOptions.map((opt: any) => opt.cost))
-          console.log(`  Cheapest option: $${cheapest.toFixed(2)}`)
-          expect(cheapest).toBeGreaterThan(0)
-        }
-      }
-    })
-  })
 
   describe('PO Box Handling', () => {
     it('should detect PO Box addresses', async () => {
@@ -609,7 +517,6 @@ Test Coverage:
   ✓ Multiple carrier options
   ✓ Address-based rate calculation
   ✓ State surcharges (AK/HI)
-  ✓ Free shipping threshold ($50+)
   ✓ PO Box address handling
   ✓ Error handling and validation
   ✓ Performance benchmarks

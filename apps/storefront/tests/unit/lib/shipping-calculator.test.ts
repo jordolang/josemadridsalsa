@@ -44,40 +44,22 @@ function expectedEstimateCost(
 
 describe('Shipping Calculator', () => {
   describe('calculateShipping', () => {
-    it('should return free shipping for orders over $50', async () => {
-      const result = await calculateShipping({
-        items: [{ quantity: 1, weightOz: 32 }],
-        shippingAddress: {
-          state: 'CA',
-          postalCode: '94111',
-          country: 'US',
-        },
-        subtotal: 75.0,
-      })
+    // There is no free shipping. These replaced two tests that asserted a $50 threshold zeroed
+    // the shipping line — the behaviour that had the business paying $11.88 to ship a six-jar
+    // order and $35.74 to ship a case, while charging the customer nothing.
+    it.each([50, 75, 500, 10_000])(
+      'charges for shipping on a $%i order — no threshold gives it away',
+      async (subtotal) => {
+        const result = await calculateShipping({
+          items: [{ quantity: 1, weightOz: 32 }],
+          shippingAddress: { state: 'CA', postalCode: '94111', country: 'US' },
+          subtotal,
+        })
 
-      expect(result).toMatchObject({
-        shippingCost: 0,
-        shippingMethod: 'Free Shipping',
-        estimatedDelivery: '3-5 business days',
-      })
-    })
-
-    it('should return free shipping for orders exactly at $50 threshold', async () => {
-      const result = await calculateShipping({
-        items: [{ quantity: 1, weightOz: 32 }],
-        shippingAddress: {
-          state: 'CA',
-          postalCode: '94111',
-          country: 'US',
-        },
-        subtotal: 50.0,
-      })
-
-      expect(result).toMatchObject({
-        shippingCost: 0,
-        shippingMethod: 'Free Shipping',
-      })
-    })
+        expect(result.shippingCost).toBeGreaterThan(0)
+        expect(result.shippingMethod).not.toMatch(/free/i)
+      }
+    )
 
     it('should calculate flat rate shipping for domestic orders', async () => {
       const result = await calculateShipping({
@@ -273,24 +255,9 @@ describe('Shipping Calculator', () => {
   })
 
   describe('getShippingEstimate', () => {
-    it('should return 0 for orders over free shipping threshold', async () => {
-      const estimate = await getShippingEstimate({
-        subtotal: 75.0,
-        state: 'CA',
-        country: 'US',
-      })
-
-      expect(estimate).toBe(0)
-    })
-
-    it('should return 0 for orders exactly at threshold', async () => {
-      const estimate = await getShippingEstimate({
-        subtotal: 50.0,
-        state: 'CA',
-        country: 'US',
-      })
-
-      expect(estimate).toBe(0)
+    it.each([50, 75, 10_000])('never estimates $0 for a $%i order', async (subtotal) => {
+      const estimate = await getShippingEstimate({ subtotal, state: 'CA', country: 'US' })
+      expect(estimate).toBeGreaterThan(0)
     })
 
     it('should return international rate for non-US countries', async () => {
@@ -563,7 +530,6 @@ describe('Shipping Calculator', () => {
           subtotal: 0,
         })
 
-        // Should not qualify for free shipping
         expect(result.shippingCost).toBeGreaterThan(0)
       })
 
@@ -612,7 +578,6 @@ describe('Shipping Calculator', () => {
           subtotal: -10.0,
         })
 
-        // Should not qualify for free shipping
         expect(result.shippingCost).toBeGreaterThan(0)
       })
 
@@ -661,9 +626,9 @@ describe('Shipping Calculator', () => {
           subtotal: 10000.0,
         })
 
-        // Should qualify for free shipping
-        expect(result.shippingCost).toBe(0)
-        expect(result.shippingMethod).toBe('Free Shipping')
+        // Charged regardless of subtotal — there is no free-shipping threshold.
+        expect(result.shippingCost).toBeGreaterThan(0)
+        expect(result.shippingMethod).not.toMatch(/free/i)
       })
 
       it('should handle very large weight (100 lbs)', async () => {
@@ -716,7 +681,7 @@ describe('Shipping Calculator', () => {
     })
 
     describe('Boundary Conditions', () => {
-      it('should handle subtotal exactly $49.99 (just under threshold)', async () => {
+      it('should charge shipping on a small subtotal', async () => {
         const result = await calculateShipping({
           items: [{ quantity: 1, weightOz: 32 }],
           shippingAddress: {
@@ -727,11 +692,10 @@ describe('Shipping Calculator', () => {
           subtotal: 49.99,
         })
 
-        // Should NOT qualify for free shipping
-        expect(result.shippingCost).toBeGreaterThan(0)
+                expect(result.shippingCost).toBeGreaterThan(0)
       })
 
-      it('should handle subtotal exactly $50.01 (just over threshold)', async () => {
+      it('should charge shipping on a subtotal just over the old $50 threshold', async () => {
         const result = await calculateShipping({
           items: [{ quantity: 1, weightOz: 32 }],
           shippingAddress: {
@@ -742,9 +706,9 @@ describe('Shipping Calculator', () => {
           subtotal: 50.01,
         })
 
-        // Should qualify for free shipping
-        expect(result.shippingCost).toBe(0)
-        expect(result.shippingMethod).toBe('Free Shipping')
+        // Charged regardless of subtotal — there is no free-shipping threshold.
+        expect(result.shippingCost).toBeGreaterThan(0)
+        expect(result.shippingMethod).not.toMatch(/free/i)
       })
 
       it('should handle weight exactly at 5 lbs threshold', async () => {
@@ -807,8 +771,8 @@ describe('Shipping Calculator', () => {
           subtotal: 50.000001,
         })
 
-        // Should qualify for free shipping (over $50)
-        expect(result.shippingCost).toBe(0)
+        // Charged regardless of subtotal — there is no free-shipping threshold.
+        expect(result.shippingCost).toBeGreaterThan(0)
       })
 
       it('should handle weight with many decimal places', async () => {
@@ -891,7 +855,7 @@ describe('Shipping Calculator', () => {
         expect(result.shippingCost).toBe(expectedEstimateCost([{ quantity: 1, weightOz: 240 }], 1.5))
       })
 
-      it('should handle PR + multiple heavy items + free shipping', async () => {
+      it('should charge shipping for PR with multiple heavy items', async () => {
         const result = await calculateShipping({
           items: [
             { quantity: 2, weightOz: 160 },
@@ -905,9 +869,9 @@ describe('Shipping Calculator', () => {
           subtotal: 75.0,
         })
 
-        // Should get free shipping despite PR location
-        expect(result.shippingCost).toBe(0)
-        expect(result.shippingMethod).toBe('Free Shipping')
+        // Puerto Rico carries a 2x multiplier and a large subtotal buys no relief from it.
+        expect(result.shippingCost).toBeGreaterThan(0)
+        expect(result.shippingMethod).not.toMatch(/free/i)
       })
 
       it('should handle international + very heavy items', async () => {

@@ -151,7 +151,6 @@ const seasonalHolidayTemplate: EmailTemplateDefinition = {
     name: 'string',
     discountCode: 'string',
     expiryDate: 'string',
-    freeShippingThreshold: 'string',
   },
   html: `
 <!DOCTYPE html>
@@ -169,7 +168,6 @@ const seasonalHolidayTemplate: EmailTemplateDefinition = {
         <p style="margin:0 0 10px;font-size:18px;font-weight:700;">🎁 Holiday Gift Special</p>
         <p style="margin:0 0 20px;font-size:36px;font-weight:700;">25% OFF</p>
         <p style="margin:0 0 10px;font-size:14px;">Use code: <strong style="font-size:18px;letter-spacing:2px;">{{discountCode}}</strong></p>
-        <p style="margin:0 0 20px;font-size:12px;">Plus FREE shipping on orders over {{freeShippingThreshold}}</p>
         <p style="margin:0;font-size:12px;">Valid through {{expiryDate}}</p>
       </div>
       <div style="text-align:center;margin:30px 0;">
@@ -205,7 +203,7 @@ const seasonalHolidayTemplate: EmailTemplateDefinition = {
 
 The holidays are here! Give the gift of authentic, handcrafted salsa.
 
-Holiday Gift Special: 25% OFF + FREE shipping on orders over {{freeShippingThreshold}}
+Holiday Gift Special: 25% OFF
 
 Use code {{discountCode}} - Valid through {{expiryDate}}
 

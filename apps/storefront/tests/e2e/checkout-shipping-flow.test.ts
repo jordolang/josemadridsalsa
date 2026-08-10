@@ -186,7 +186,7 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
       if (data.availableOptions && data.availableOptions.length > 0) {
         // Check each option is within realistic bounds
         data.availableOptions.forEach((option: ShippingOption) => {
-          expect(option.cost).toBeGreaterThanOrEqual(0) // Can be 0 for free shipping
+          expect(option.cost).toBeGreaterThan(0) // shipping is charged on every order
           expect(option.cost).toBeLessThan(50) // Should not exceed $50 for domestic
         })
       }
@@ -195,61 +195,6 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
     })
   })
 
-  describe('Step 5: Free Shipping Threshold', () => {
-    it('should apply free shipping for orders over threshold', async () => {
-      if (!testProductId) {
-        console.log('⚠️  Skipping: No test product available')
-        return
-      }
-
-      // Get product to calculate quantity needed for $50+ order
-      const product = await prisma.product.findUnique({
-        where: { id: testProductId }
-      })
-
-      if (!product) {
-        console.log('⚠️  Skipping: Product not found')
-        return
-      }
-
-      // Calculate quantity to exceed $50 threshold
-      const quantity = Math.ceil(51 / Number(product.price))
-
-      const response = await fetch(`${baseUrl}/api/checkout/calculate-shipping`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: [{ productId: testProductId, quantity }],
-          shippingAddress: {
-            address1: '123 Main Street',
-            city: 'San Francisco',
-            state: 'CA',
-            postalCode: '94111',
-            country: 'US',
-          },
-        }),
-      })
-
-      const data = await response.json()
-
-      // Calculate subtotal
-      const subtotal = Number(product.price) * quantity
-
-      console.log(`✓ Testing free shipping with subtotal: $${subtotal.toFixed(2)}`)
-
-      if (subtotal >= 50) {
-        // Should have at least one free shipping option
-        const hasFreeOption = data.availableOptions?.some((opt: ShippingOption) => opt.cost === 0)
-
-        if (hasFreeOption) {
-          console.log('✓ Free shipping option available for orders over $50')
-          expect(hasFreeOption).toBe(true)
-        } else {
-          console.log('⚠️  No free shipping option found (check free shipping threshold configuration)')
-        }
-      }
-    })
-  })
 
   describe('Step 6-7: Checkout Integration', () => {
     it('should validate checkout API accepts shipping method and cost', async () => {

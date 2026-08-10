@@ -154,9 +154,6 @@ export function buildShippingItems<T extends { productId: string; quantity: numb
  * Can be moved to database for dynamic configuration
  */
 const SHIPPING_RATES = {
-  // Free shipping threshold
-  FREE_SHIPPING_THRESHOLD: 50,
-
   // Flat rate shipping
   FLAT_RATE: {
     cost: 6.99,
@@ -224,38 +221,6 @@ function isPOBox(address: string | undefined): boolean {
  * @param address Shipping address to check
  * @returns 'residential' | 'commercial' | 'unknown'
  */
-/**
- * Get free shipping threshold from database settings
- *
- * Fetches the configurable free shipping threshold from ShippingSettings
- * Falls back to default value if settings don't exist
- *
- * Following error handling pattern from lib/tax-calculator.ts
- */
-async function getFreeShippingThreshold(): Promise<number> {
-  try {
-    const settings = await prisma.shippingSettings.findUnique({
-      where: { singleton: 'singleton' },
-      select: { freeShippingThreshold: true },
-    })
-
-    if (settings?.freeShippingThreshold) {
-      const parsed = parseFloat(settings.freeShippingThreshold.toString())
-      if (Number.isFinite(parsed) && parsed > 0) {
-        return parsed
-      }
-      console.warn('[Shipping Calculator] Invalid freeShippingThreshold in DB, using default')
-    }
-
-    // Return default if no settings found
-    return SHIPPING_RATES.FREE_SHIPPING_THRESHOLD
-  } catch (error) {
-    console.error('[Shipping Calculator] Error fetching free shipping threshold:', error)
-
-    // Return default threshold to not block checkout
-    return SHIPPING_RATES.FREE_SHIPPING_THRESHOLD
-  }
-}
 
 /**
  * Standard shipping box sizes (USPS/UPS/FedEx common sizes)
@@ -417,20 +382,9 @@ function calculateParcelDimensions(
  */
 function calculateEstimateRates(
   input: ShippingCalculationInput,
-  freeShippingThreshold: number,
   markAsFallback = false
 ): ShippingCalculationResult {
   const { items, shippingAddress, subtotal } = input
-
-  // Free shipping for orders over threshold
-  if (subtotal >= freeShippingThreshold) {
-    return {
-      shippingCost: 0,
-      shippingMethod: 'Free Shipping',
-      estimatedDelivery: SHIPPING_RATES.FLAT_RATE.estimatedDays,
-      fallback: markAsFallback,
-    }
-  }
 
   // International shipping
   if (shippingAddress.country !== 'US') {
@@ -492,10 +446,12 @@ function calculateEstimateRates(
  * Calculate shipping cost for an order using real carrier API
  *
  * Strategy:
- * 1. Check free shipping threshold first
- * 2. Call real carrier API for accurate rates
- * 3. Return the single standard shipping option
- * 4. Fall back to estimate-based rates if API fails (never block checkout)
+ * 1. Call the real carrier API for accurate rates
+ * 2. Return the single standard shipping option
+ * 3. Fall back to estimate-based rates if the API fails (never block checkout)
+ *
+ * **There is no free-shipping path.** Shipping is charged on every order, without exception —
+ * a threshold that zeroed the cost was removed because the business does not offer free shipping.
  *
  * Follows error handling pattern from lib/tax-calculator.ts
  */
@@ -504,22 +460,10 @@ export async function calculateShipping(
 ): Promise<ShippingCalculationResult> {
   const { items, shippingAddress, subtotal } = input
 
-  // Get configurable free shipping threshold from database
-  const freeShippingThreshold = await getFreeShippingThreshold()
-
-  // Free shipping for orders over threshold (check first to avoid API call)
-  if (subtotal >= freeShippingThreshold) {
-    return {
-      shippingCost: 0,
-      shippingMethod: 'Free Shipping',
-      estimatedDelivery: SHIPPING_RATES.FLAT_RATE.estimatedDays,
-    }
-  }
-
   // For international shipping, fall back to estimate rates for now
   // TODO: Add international shipping API support
   if (shippingAddress.country !== 'US') {
-    return calculateEstimateRates(input, freeShippingThreshold, false)
+    return calculateEstimateRates(input, false)
   }
 
   // No origin means no honest carrier rate. Estimates are used instead and say so via `fallback`,
@@ -527,7 +471,7 @@ export async function calculateShipping(
   const originResult = await getShippingOrigin()
   if (!originResult.ok) {
     console.error(`[Shipping Calculator] ${describeMissingOrigin(originResult.missing)}`)
-    return calculateEstimateRates(input, freeShippingThreshold, true)
+    return calculateEstimateRates(input, true)
   }
 
   try {
@@ -570,7 +514,7 @@ export async function calculateShipping(
         // If no USPS rates available, fall back to estimates
         if (filteredRates.length === 0) {
           console.warn('[Shipping Calculator] No USPS rates available for PO Box, using estimates')
-          return calculateEstimateRates(input, freeShippingThreshold, true)
+          return calculateEstimateRates(input, true)
         }
       }
 
@@ -603,7 +547,7 @@ export async function calculateShipping(
     } else {
       // No rates returned - fall back to estimates
       console.warn('[Shipping Calculator] No rates returned from API, using estimates')
-      return calculateEstimateRates(input, freeShippingThreshold, true)
+      return calculateEstimateRates(input, true)
     }
   } catch (error) {
     console.error('[Shipping Calculator] Error calculating shipping:', error)
@@ -624,7 +568,7 @@ export async function calculateShipping(
     console.warn('[Shipping Calculator] Falling back to estimate-based rates')
 
     // Return estimate rates rather than failing checkout
-    return calculateEstimateRates(input, freeShippingThreshold, true)
+    return calculateEstimateRates(input, true)
   }
 }
 
@@ -636,14 +580,6 @@ export async function getShippingEstimate(params: {
   state: string
   country?: string
 }): Promise<number> {
-  // Get configurable free shipping threshold from database
-  const freeShippingThreshold = await getFreeShippingThreshold()
-
-  // Quick estimate without detailed item info
-  if (params.subtotal >= freeShippingThreshold) {
-    return 0
-  }
-
   if (params.country && params.country !== 'US') {
     return SHIPPING_RATES.INTERNATIONAL.cost
   }

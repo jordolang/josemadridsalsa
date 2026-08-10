@@ -7,7 +7,7 @@ import { logAudit } from '@/lib/audit'
 const DiscountCodeSchema = z.object({
   code: z.string().min(1).max(50).transform(val => val.toUpperCase()),
   description: z.string().optional(),
-  type: z.enum(['PERCENTAGE', 'FIXED_AMOUNT', 'FREE_SHIPPING']),
+  type: z.enum(['PERCENTAGE', 'FIXED_AMOUNT']),
   value: z.number().positive(),
   maxUses: z.number().int().positive().optional(),
   maxUsesPerUser: z.number().int().positive().optional(),
