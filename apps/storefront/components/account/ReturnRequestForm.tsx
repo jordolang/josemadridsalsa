@@ -54,7 +54,14 @@ export function ReturnRequestForm({
   const [reason, setReason] = useState<string>('')
   const [note, setNote] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-  const [submitted, setSubmitted] = useState<{ rmaNumber: string } | null>(null)
+  const [submitted, setSubmitted] = useState<{
+    rmaNumber: string
+    instructions: {
+      address: { name: string; street1: string; city: string; state: string; zip: string }
+      steps: string[]
+      conditionNote: string
+    } | null
+  } | null>(null)
 
   const selected = useMemo(
     () => Object.entries(quantities).filter(([, qty]) => qty > 0),
@@ -71,14 +78,43 @@ export function ReturnRequestForm({
   )
 
   if (submitted) {
+    const { instructions } = submitted
     return (
       <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-6">
-        <h2 className="text-lg font-semibold">Return request received</h2>
+        <h2 className="text-lg font-semibold">Your return is approved</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Your reference is <span className="font-mono">{submitted.rmaNumber}</span>. We&apos;ll
-          review it and email you with next steps — please hold on to the items until you hear
-          from us.
+          No need to wait for us — send it back whenever you&apos;re ready. Your reference is{' '}
+          <span className="font-mono text-foreground">{submitted.rmaNumber}</span>.
         </p>
+
+        {instructions ? (
+          <>
+            <ol className="mt-4 space-y-2 text-sm">
+              {instructions.steps.map((step, index) => (
+                <li key={step} className="flex gap-3">
+                  <span className="text-muted-foreground tabular-nums">{index + 1}.</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+
+            <address className="mt-4 rounded-lg border border-border bg-background p-4 text-sm not-italic">
+              <p className="font-medium">{instructions.address.name}</p>
+              <p>{instructions.address.street1}</p>
+              <p>
+                {instructions.address.city}, {instructions.address.state}{' '}
+                {instructions.address.zip}
+              </p>
+            </address>
+
+            <p className="mt-3 text-xs text-muted-foreground">{instructions.conditionNote}</p>
+          </>
+        ) : (
+          <p className="mt-4 text-sm">
+            We&apos;ll email you the return address shortly — hold on to the items until then.
+          </p>
+        )}
+
         <Button
           variant="outline"
           className="mt-4"
@@ -121,7 +157,10 @@ export function ReturnRequestForm({
         return
       }
 
-      setSubmitted({ rmaNumber: data.returnRequest.rmaNumber })
+      setSubmitted({
+        rmaNumber: data.returnRequest.rmaNumber,
+        instructions: data.instructions ?? null,
+      })
     } catch {
       toast.error('Could not submit your request')
     } finally {

@@ -691,21 +691,6 @@ model ReturnRequest {
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
-  /// Prepaid label emailed to the customer so they can send the goods back.
-  ///
-  /// Stored here rather than as a `ShippingLabel` row on purpose. `lib/tracking/webhook-handlers.ts`
-  /// looks a label up by `trackingCode` and advances **that label's order** to shipped and then
-  /// delivered — so a return label would mark the customer's order DELIVERED the moment the
-  /// parcel reached the warehouse. Keeping return labels out of that table makes the collision
-  /// impossible rather than guarded. The cost is that return shipments are not tracked.
-  returnLabelShipmentId  String?    @unique
-  returnLabelTrackingCode String?
-  returnLabelUrl         String?
-  returnLabelCarrier     String?
-  returnLabelService     String?
-  /// In cents, matching Payment.processorFee. Null means no label bought, never free.
-  returnLabelCostCents   Int?
-  returnLabelPurchasedAt DateTime?
 
   order         Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   refund        Refund?             @relation(fields: [refundId], references: [id])

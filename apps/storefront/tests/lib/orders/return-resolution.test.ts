@@ -9,6 +9,8 @@ import {
   settledOutcome,
   storeCreditExpiry,
   STORE_CREDIT_VALID_DAYS,
+  computeRefundBreakdown,
+  isOurFault,
 } from '@/lib/orders/return-resolution'
 
 const nothingSettled = { refundId: null, giftCertificateId: null, exchangeOrderId: null }
@@ -119,5 +121,125 @@ describe('code and number generation', () => {
   it('marks an exchange order distinctly from a sale', () => {
     const number = generateExchangeOrderNumber(new Date('2026-08-09T00:00:00.000Z'), () => 0.5)
     expect(number).toBe('JMS-EX-20260809-5500')
+  })
+})
+
+describe('isOurFault', () => {
+  it('counts damage, the wrong item, and a quality problem', () => {
+    expect(isOurFault('DAMAGED')).toBe(true)
+    expect(isOurFault('WRONG_ITEM')).toBe(true)
+    expect(isOurFault('QUALITY_ISSUE')).toBe(true)
+  })
+
+  it('does not count a change of mind or a late arrival', () => {
+    // A late parcel still arrived, so the delivery was performed.
+    expect(isOurFault('CHANGED_MIND')).toBe(false)
+    expect(isOurFault('ARRIVED_LATE')).toBe(false)
+    expect(isOurFault('OTHER')).toBe(false)
+  })
+})
+
+describe('computeRefundBreakdown', () => {
+  const twoJars = [{ orderItemId: 'a', quantity: 2, unitPriceCents: 900 }]
+
+  const order = {
+    orderTaxCents: 261,      // tax on $36 of goods
+    orderGoodsCents: 3600,   // four jars ordered
+    orderShippingCents: 699,
+  }
+
+  it('refunds goods plus the tax on those goods', () => {
+    const result = computeRefundBreakdown({ ...order, lines: twoJars, reason: 'CHANGED_MIND' })
+    expect(result.goodsCents).toBe(1800)
+    // Half the goods came back, so half the tax.
+    expect(result.taxCents).toBe(131)
+    expect(result.totalCents).toBe(1931)
+  })
+
+  it('withholds original shipping when the customer simply changed their mind', () => {
+    const result = computeRefundBreakdown({ ...order, lines: twoJars, reason: 'CHANGED_MIND' })
+    expect(result.shippingCents).toBe(0)
+    expect(result.shippingRefunded).toBe(false)
+  })
+
+  it('refunds original shipping when the jar arrived broken', () => {
+    const result = computeRefundBreakdown({ ...order, lines: twoJars, reason: 'DAMAGED' })
+    expect(result.shippingCents).toBe(699)
+    expect(result.totalCents).toBe(1800 + 131 + 699)
+  })
+
+  it('apportions tax rather than refunding the whole order’s tax for one line', () => {
+    // Refunding all $2.61 for half the goods would hand back tax never collected on them.
+    const result = computeRefundBreakdown({ ...order, lines: twoJars, reason: 'CHANGED_MIND' })
+    expect(result.taxCents).toBeLessThan(order.orderTaxCents)
+  })
+
+  it('never apportions more than the tax actually collected', () => {
+    // A returned quantity exceeding the recorded order goods must not amplify the tax.
+    const result = computeRefundBreakdown({
+      ...order,
+      lines: [{ orderItemId: 'a', quantity: 10, unitPriceCents: 900 }],
+      reason: 'CHANGED_MIND',
+    })
+    expect(result.taxCents).toBe(order.orderTaxCents)
+  })
+
+  it('does not divide by zero on a fully discounted order', () => {
+    const result = computeRefundBreakdown({
+      lines: twoJars,
+      orderTaxCents: 0,
+      orderGoodsCents: 0,
+      orderShippingCents: 0,
+      reason: 'CHANGED_MIND',
+    })
+    expect(Number.isNaN(result.taxCents)).toBe(false)
+    expect(result.taxCents).toBe(0)
+  })
+
+  it('takes a restocking fee off the total', () => {
+    const result = computeRefundBreakdown({
+      ...order,
+      lines: twoJars,
+      reason: 'CHANGED_MIND',
+      restockingFeeCents: 500,
+    })
+    expect(result.totalCents).toBe(1931 - 500)
+  })
+
+  it('refunds nothing rather than billing the customer when the fee exceeds the value', () => {
+    const result = computeRefundBreakdown({
+      ...order,
+      lines: twoJars,
+      reason: 'CHANGED_MIND',
+      restockingFeeCents: 999_99,
+    })
+    expect(result.totalCents).toBe(0)
+  })
+
+  it('lets staff force shipping in or out', () => {
+    const forcedIn = computeRefundBreakdown({
+      ...order,
+      lines: twoJars,
+      reason: 'CHANGED_MIND',
+      refundShippingOverride: true,
+    })
+    expect(forcedIn.shippingCents).toBe(699)
+
+    const forcedOut = computeRefundBreakdown({
+      ...order,
+      lines: twoJars,
+      reason: 'DAMAGED',
+      refundShippingOverride: false,
+    })
+    expect(forcedOut.shippingCents).toBe(0)
+  })
+
+  it('explains the shipping decision, so staff see why before confirming', () => {
+    expect(
+      computeRefundBreakdown({ ...order, lines: twoJars, reason: 'DAMAGED' }).shippingReason
+    ).toContain('down to us')
+    expect(
+      computeRefundBreakdown({ ...order, lines: twoJars, reason: 'CHANGED_MIND' }).shippingReason
+    ).toContain('delivery happened')
   })
 })

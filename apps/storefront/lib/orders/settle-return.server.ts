@@ -1,12 +1,12 @@
-import { Prisma } from '@prisma/client'
+import { Prisma, type ReturnReason } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
 import { adjustInventory } from '@/lib/inventory-manager'
 import { RefundError, refundPaymentInTx } from '@/lib/payments/refund'
 import {
+  computeRefundBreakdown,
   generateExchangeOrderNumber,
   generateStoreCreditCode,
-  returnValueCents,
   storeCreditExpiry,
   type ReturnOutcome,
 } from '@/lib/orders/return-resolution'
@@ -44,15 +44,22 @@ interface SettleReturnInput {
   outcome: ReturnOutcome
   restockingFeeCents: number
   actorUserId: string
+  /** Staff override on whether the original shipping comes back. Defaults to the reason's rule. */
+  refundShippingOverride?: boolean
   returnRequest: {
     id: string
     rmaNumber: string
     orderId: string
+    reason: ReturnReason
     order: {
       orderNumber: string
       userId: string | null
       guestEmail: string | null
       shippingAddressId: string | null
+      subtotal: Prisma.Decimal
+      tax: Prisma.Decimal
+      shippingCost: Prisma.Decimal
+      discountAmount: Prisma.Decimal
       payments: Array<{ id: string }>
       user: { name: string | null; email: string } | null
     }
@@ -77,14 +84,25 @@ const toDecimal = (cents: number) => new Prisma.Decimal((cents / 100).toFixed(2)
 export async function settleReturn(input: SettleReturnInput): Promise<ResolutionSettlement> {
   const { outcome, returnRequest, restockingFeeCents, actorUserId } = input
 
-  const valueCents = returnValueCents(
-    returnRequest.items.map((item) => ({
+  // Goods plus the tax collected on them, plus the original shipping when the return is our
+  // fault — see `computeRefundBreakdown`. The same figure drives all three outcomes.
+  const breakdown = computeRefundBreakdown({
+    lines: returnRequest.items.map((item) => ({
       orderItemId: item.orderItemId,
       quantity: item.quantity,
       unitPriceCents: toCents(item.orderItem.unitPrice),
     })),
-    restockingFeeCents
-  )
+    orderTaxCents: toCents(returnRequest.order.tax),
+    // Net of discounts, because that is the base the tax was charged on.
+    orderGoodsCents:
+      toCents(returnRequest.order.subtotal) - toCents(returnRequest.order.discountAmount),
+    orderShippingCents: toCents(returnRequest.order.shippingCost),
+    reason: returnRequest.reason,
+    restockingFeeCents,
+    refundShippingOverride: input.refundShippingOverride,
+  })
+
+  const valueCents = breakdown.totalCents
 
   switch (outcome) {
     case 'REFUND':

@@ -30,7 +30,11 @@ vi.mock('@/lib/inventory-manager', () => ({
 }))
 
 // $20.00 of goods, $5 shipping, no tax — keeps the arithmetic checkable by hand.
-vi.mock('@/lib/shipping-calculator', () => ({
+vi.mock('@/lib/shipping-calculator', async (importOriginal) => ({
+  // Only the rate call is stubbed. `buildShippingItems` is pure mapping — the thing that turns
+  // catalogue rows into parcel weights and dimensions — so the real one is kept, and a unit
+  // mistake in it fails these tests rather than being mocked away.
+  ...(await importOriginal<typeof import('@/lib/shipping-calculator')>()),
   calculateShipping: vi.fn(async () => ({
     shippingCost: 5,
     shippingMethod: 'Standard Shipping',

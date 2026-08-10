@@ -10,12 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { ReturnActions } from '@/components/admin/ReturnActions'
-import { ReturnLabelPanel } from '@/components/admin/ReturnLabelPanel'
-import {
-  RETURN_STATUS_LABELS,
-  computeReturnRefundCents,
-  isTerminalReturnStatus,
-} from '@/lib/orders/returns'
+import { RETURN_STATUS_LABELS, isTerminalReturnStatus } from '@/lib/orders/returns'
+import { computeRefundBreakdown } from '@/lib/orders/return-resolution'
 import type { ReturnStatus } from '@prisma/client'
 
 const STATUS_VARIANT: Record<ReturnStatus, 'default' | 'secondary' | 'outline' | 'destructive'> = {
@@ -48,6 +44,10 @@ export default async function ReturnDetailPage({
             orderNumber: true,
             guestEmail: true,
             shippedAt: true,
+            subtotal: true,
+            tax: true,
+            shippingCost: true,
+            discountAmount: true,
             user: { select: { name: true, email: true } },
           },
         },
@@ -62,17 +62,24 @@ export default async function ReturnDetailPage({
 
     const canWrite = await hasPermission(user, 'orders:write')
 
-    const quantities = new Map(returnRequest.items.map((i) => [i.orderItemId, i.quantity]))
-    const refundCents = computeReturnRefundCents(
-      quantities,
-      returnRequest.items.map((i) => ({
-        id: i.orderItemId,
-        quantity: i.orderItem.quantity,
-        quantityFulfilled: i.orderItem.quantityFulfilled,
-        unitPrice: Number(i.orderItem.unitPrice),
+    // The same breakdown settlement will use, so the figure on screen is the figure refunded.
+    const toCents = (value: unknown) => Math.round(Number(value) * 100)
+    const breakdown = computeRefundBreakdown({
+      lines: returnRequest.items.map((i) => ({
+        orderItemId: i.orderItemId,
+        quantity: i.quantity,
+        unitPriceCents: toCents(i.orderItem.unitPrice),
       })),
-      returnRequest.restockingFee ? Number(returnRequest.restockingFee) : 0
-    )
+      orderTaxCents: toCents(returnRequest.order.tax),
+      orderGoodsCents:
+        toCents(returnRequest.order.subtotal) - toCents(returnRequest.order.discountAmount),
+      orderShippingCents: toCents(returnRequest.order.shippingCost),
+      reason: returnRequest.reason,
+      restockingFeeCents: returnRequest.restockingFee
+        ? toCents(returnRequest.restockingFee)
+        : 0,
+    })
+    const refundCents = breakdown.totalCents
 
     return (
       <div className="space-y-6">
@@ -129,16 +136,24 @@ export default async function ReturnDetailPage({
                 ))}
 
                 <Separator />
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    Refund due
-                    {returnRequest.restockingFee
-                      ? ` (less $${Number(returnRequest.restockingFee).toFixed(2)} fee)`
-                      : ''}
-                  </span>
-                  <span className="font-medium tabular-nums">
-                    ${(refundCents / 100).toFixed(2)}
-                  </span>
+                {/* Itemised, because "refund due" as one number hides whether the original
+                    shipping is in it — which depends on whose fault the return is. */}
+                <div className="space-y-1 text-sm">
+                  <Row label="Goods returned" cents={breakdown.goodsCents} />
+                  <Row label="Tax on those goods" cents={breakdown.taxCents} />
+                  <Row
+                    label="Original shipping"
+                    cents={breakdown.shippingCents}
+                    note={breakdown.shippingReason}
+                  />
+                  {breakdown.restockingFeeCents > 0 && (
+                    <Row label="Restocking fee" cents={-breakdown.restockingFeeCents} />
+                  )}
+                  <Separator />
+                  <div className="flex justify-between font-medium">
+                    <span>Refund due</span>
+                    <span className="tabular-nums">${(refundCents / 100).toFixed(2)}</span>
+                  </div>
                 </div>
                 {returnRequest.refund && (
                   <p className="text-xs text-muted-foreground">
@@ -178,22 +193,18 @@ export default async function ReturnDetailPage({
 
             <Card>
               <CardHeader>
-                <CardTitle>Return label</CardTitle>
+                <CardTitle>Return shipping</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ReturnLabelPanel
-                  returnId={returnRequest.id}
-                  canWrite={canWrite}
-                  isTerminal={isTerminalReturnStatus(returnRequest.status)}
-                  label={{
-                    url: returnRequest.returnLabelUrl,
-                    trackingCode: returnRequest.returnLabelTrackingCode,
-                    carrier: returnRequest.returnLabelCarrier,
-                    service: returnRequest.returnLabelService,
-                    costCents: returnRequest.returnLabelCostCents,
-                    purchasedAt: returnRequest.returnLabelPurchasedAt,
-                  }}
-                />
+              <CardContent className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  The customer arranges and pays their own return postage. They were given{' '}
+                  <span className="font-mono text-foreground">{returnRequest.rmaNumber}</span> to
+                  write on the box and the warehouse address to send it to.
+                </p>
+                <p>
+                  Nothing to do here until the parcel arrives — then mark it received and confirm
+                  the refund.
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -269,6 +280,20 @@ export default async function ReturnDetailPage({
     console.error('[Return detail] Error rendering:', error)
     throw new Error('Failed to load return')
   }
+}
+
+function Row({ label, cents, note }: { label: string; cents: number; note?: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="text-muted-foreground">
+        {label}
+        {note && <span className="ml-2 text-xs">· {note}</span>}
+      </span>
+      <span className="tabular-nums">
+        {cents < 0 ? '−' : ''}${Math.abs(cents / 100).toFixed(2)}
+      </span>
+    </div>
+  )
 }
 
 function Detail({ label, value }: { label: string; value: string }) {

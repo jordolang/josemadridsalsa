@@ -86,6 +86,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             userId: true,
             guestEmail: true,
             shippingAddressId: true,
+            // The refund is goods + the tax on them, plus original shipping when the return is our
+            // fault, so the whole order's money is needed to apportion it.
+            subtotal: true,
+            tax: true,
+            shippingCost: true,
+            discountAmount: true,
             payments: {
               // Includes PARTIALLY_REFUNDED: a second partial return against the same order
               // still has balance to refund, and filtering on SUCCEEDED alone hid it.
