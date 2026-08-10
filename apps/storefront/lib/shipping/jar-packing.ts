@@ -51,6 +51,9 @@ export const JAR_TARE_OZ = 10.5
  */
 export const SALSA_SPECIFIC_GRAVITY = 1.04
 
+/** Net contents of the standard jar, ounces — used only when a caller knows just the count. */
+export const DEFAULT_JAR_CONTENTS_OZ = 16
+
 /** Corrugated box itself, ounces. Roughly constant across the sizes used here. */
 export const BOX_TARE_OZ = 5
 
@@ -98,7 +101,17 @@ const round = (value: number) => Math.round(value * 100) / 100
  * box gets the weight right but the dimensional pricing wrong. Splitting a quote across boxes needs
  * multi-parcel support at the carrier layer.
  */
-export function packJars(jarCount: number, netContentsOz = 16): JarParcel {
+export function packJars(
+  jarCount: number,
+  /**
+   * Total **net contents** across the jars, in ounces — the sum of each product's `weight`.
+   *
+   * Passed in rather than assumed per jar, because the catalogue is not guaranteed uniform: a 32oz
+   * jar weighs twice a 16oz one and multiplying a count by a fixed size would silently ignore that.
+   * Defaults to a jar apiece for callers that only know the count.
+   */
+  totalNetContentsOz?: number
+): JarParcel {
   const jars = Math.max(0, Math.floor(jarCount))
 
   if (jars === 0) {
@@ -127,7 +140,10 @@ export function packJars(jarCount: number, netContentsOz = 16): JarParcel {
   const depth = lines * JAR_DIAMETER_IN + BOX_WALL_ALLOWANCE_IN
   const height = layers * JAR_HEIGHT_IN + BOX_VERTICAL_PADDING_IN
 
-  const jarWeight = jars * jarGrossWeightOz(netContentsOz)
+  // Contents at their real density, plus the glass and lid for each jar. Falls back to one jar's
+  // worth apiece when the caller knows only how many there are.
+  const netContents = totalNetContentsOz ?? jars * DEFAULT_JAR_CONTENTS_OZ
+  const jarWeight = netContents * SALSA_SPECIFIC_GRAVITY + jars * JAR_TARE_OZ
   const packaging = boxes * BOX_TARE_OZ + jars * PACKING_PER_JAR_OZ
 
   // Longest side is the length, which is how carriers describe a parcel.

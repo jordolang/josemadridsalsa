@@ -300,7 +300,8 @@ function totalJarCount(items: ShippingItem[]): number {
  */
 export function calculateOrderParcel(items: ShippingItem[]): Parcel {
   if (isAllJars(items)) {
-    const packed = packJars(totalJarCount(items))
+    // Real per-item contents, not a count times a guess: a 32oz jar weighs twice a 16oz one.
+    const packed = packJars(totalJarCount(items), totalWeightOunces(items))
     return {
       length: packed.length,
       width: packed.width,
