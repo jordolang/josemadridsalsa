@@ -8,6 +8,7 @@ import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } f
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
 import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 const CompleteSchema = z.object({
   orderId: z.string().cuid(),
@@ -201,6 +202,30 @@ export async function POST(request: Request) {
             abandonedCartId: abandonedCartId || undefined,
           } as Parameters<typeof tx.order.update>[0]['data'],
         })
+
+        // Record the payment fact on the main storefront path.
+        //
+        // This route and the Stripe webhook race to complete the same order, and the loser
+        // returns early on `isPaid`. Only the webhook emitted the event and only the webhook
+        // sent the confirmation email — so whenever this route won that race, which is the
+        // common case because the browser calls it the moment payment confirms, the customer
+        // got no confirmation and no consumer ever ran. Emitting here settles it either way:
+        // the confirmation handler is idempotent through `confirmationEmailSentAt`, so exactly
+        // one email goes out no matter which side commits first.
+        await emitDomainEvent(
+          {
+            type: 'payment.completed',
+            entityType: 'order',
+            entityId: order!.id,
+            payload: {
+              provider: isFullyCoveredByGiftCertificate ? 'GIFT_CERTIFICATE' : 'STRIPE',
+              amount: expectedTotalInCents,
+              currency: 'usd',
+              stripePaymentIntentId: paymentIntentId ?? undefined,
+            },
+          },
+          tx
+        )
 
         // Mark abandoned cart as recovered
         if (abandonedCartId) {

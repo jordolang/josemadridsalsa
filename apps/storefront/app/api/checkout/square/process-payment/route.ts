@@ -9,6 +9,7 @@ import { deductReservedInventoryInTx, checkAndUpdateAlerts } from '@/lib/invento
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { createOrderAccessToken } from '@/lib/orders/access-token'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 const ProcessPaymentSchema = z.object({
   sourceId: z.string().min(1, 'Payment source token is required'),
@@ -164,6 +165,26 @@ export async function POST(request: NextRequest) {
             paidAt: new Date(),
           },
         })
+
+        // Record the payment fact. Without this, nothing downstream knows a Square web sale
+        // happened: this route marks the order PAID, so the webhook that used to emit the event
+        // short-circuits on `paymentStatus === 'PAID'` and returns before emitting. Every
+        // `payment.completed` consumer — automation enrollment, the shop's new-order
+        // notification, participant milestones, order rules — was therefore silent on this path.
+        await emitDomainEvent(
+          {
+            type: 'payment.completed',
+            entityType: 'order',
+            entityId: order.id,
+            payload: {
+              provider: 'SQUARE',
+              amount: amountInCents,
+              currency: 'usd',
+              squarePaymentId,
+            },
+          },
+          tx
+        )
 
         // Mark abandoned carts as recovered
         if (order.userId) {

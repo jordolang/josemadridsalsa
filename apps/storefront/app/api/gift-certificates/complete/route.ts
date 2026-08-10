@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { sendGiftCertificateDeliveryEmail } from '@/lib/email/transactional'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 const CompleteSchema = z.object({
   orderId: z.string().cuid(),
@@ -51,14 +52,37 @@ export async function POST(request: Request) {
       )
     }
 
-    // Update order payment status
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        paymentStatus: 'PAID',
-        status: 'CONFIRMED',
-        stripePaymentId: paymentIntentId,
-      },
+    // Update order payment status, and record the payment fact alongside it.
+    //
+    // The fact matters here for the same reason it does on the PayPal and Square checkout
+    // routes: this route marks the order PAID, so the Stripe webhook that would otherwise emit
+    // the event skips it as already paid. A gift-certificate sale therefore reached no consumer
+    // at all — the shop was never notified that one sold, and the purchaser, who is charged real
+    // money, received nothing (the delivery emails below go to the recipients, not the buyer).
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          paymentStatus: 'PAID',
+          status: 'CONFIRMED',
+          stripePaymentId: paymentIntentId,
+        },
+      })
+
+      await emitDomainEvent(
+        {
+          type: 'payment.completed',
+          entityType: 'order',
+          entityId: order.id,
+          payload: {
+            provider: 'STRIPE',
+            amount: paymentIntent.amount,
+            currency: paymentIntent.currency,
+            stripePaymentIntentId: paymentIntentId,
+          },
+        },
+        tx
+      )
     })
 
     // Send delivery email to each gift certificate recipient

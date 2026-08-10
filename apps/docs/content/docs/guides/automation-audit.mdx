@@ -88,8 +88,8 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | # | Automation | State | Evidence |
 |---|---|---|---|
 | 1 | Order confirmation — Stripe | VERIFIED | `webhooks/stripe:229`; `tests/email/order-confirmation.test.tsx` |
-| 2 | Order confirmation — PayPal | WIRED | `webhooks/paypal:242`, `checkout/paypal/capture-order:226` |
-| 3 | Order confirmation — Square | WIRED | `webhooks/square:179`, `checkout/square/process-payment:227` |
+| 2 | Order confirmation — PayPal | **VERIFIED** ✅ | Phase 5 — `capture-order` now emits `payment.completed`; `payment-fact-parity.test.ts` |
+| 3 | Order confirmation — Square | **VERIFIED** ✅ | Phase 5 — `process-payment` now emits `payment.completed`; same test |
 | 4 | Order confirmation — POS / manual order | **VERIFIED** ✅ | Phase 3 — `handlers/order-confirmation.ts`, 11 tests |
 | 5 | Order shipped email | VERIFIED | `lib/tracking/webhook-handlers:149`; `tests/unit/tracking/webhook-handlers.test.ts` |
 | 6 | Order delivered email | VERIFIED | `lib/tracking/webhook-handlers:155`; `tests/email/delivery-confirmation.test.tsx` |
@@ -196,6 +196,35 @@ duplicate abandoned-cart sender, reported not removed) — neither is a missing 
 
 Item 21a (the admin new-order email) is a correction note rather than a separately scored candidate,
 so the denominator stays 54.
+
+#### A fourth correction: the fact itself was missing on four settlement paths
+
+This is the most consequential correction in the audit, because it invalidates the evidence behind
+several rows that were scored as working.
+
+Every consumer built in Phases 1–4 hangs off `payment.completed`. **Four of the eight routes that
+mark an order paid never emitted it.** `checkout/complete` (the main storefront path),
+`checkout/paypal/capture-order`, `checkout/square/process-payment` and `gift-certificates/complete`
+each set `paymentStatus: PAID` and recorded nothing. The webhooks that *do* emit then return early
+on "already paid" — so whenever the checkout route won the race, which is the ordinary case because
+the browser calls it the moment payment confirms, the fact was lost for that sale.
+
+The consequences were not subtle. On those paths nobody was enrolled in an automation, the shop
+raised no new-order notification, no high-value alert fired, participant milestones did not count
+the sale, and order rules did not evaluate. On `checkout/complete` the customer also received **no
+order confirmation at all**, because that route never sent one and the webhook that would have was
+skipping the order as already paid.
+
+So items 20, 21, 21a, 22, 24 and 47 were scored VERIFIED against an event that, on the busiest
+paths, was never emitted. Their handlers were correct and their tests passed; they were simply never
+called. All four routes now emit inside the transaction that marks the order paid, and
+`tests/lib/domain-events/payment-fact-parity.test.ts` enumerates every settlement route and fails if
+one appears without the emit.
+
+Exactly one event is emitted per sale in either race order: whichever side commits first emits, and
+the other returns early on `isPaid`. Where a duplicate is still conceivable, the consumers absorb
+it — the confirmation is idempotent through `confirmationEmailSentAt`, notifications through their
+dedupe keys, and milestones through the marker written when one fires.
 
 #### Correction to the original audit
 

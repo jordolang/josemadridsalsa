@@ -7,6 +7,7 @@ import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } f
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { createOrderAccessToken } from '@/lib/orders/access-token'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 const CaptureSchema = z.object({
   paypalOrderId: z.string().min(1, 'PayPal order ID is required'),
@@ -145,6 +146,26 @@ export async function POST(request: NextRequest) {
 
         // Create the Payment record
         const amountInCents = Math.round(Number(order!.total) * 100)
+
+        // Record the payment fact. Without this, nothing downstream knows a PayPal web sale
+        // happened: this route marks the order PAID, so the webhook that used to emit the event
+        // short-circuits on `paymentStatus === 'PAID'` and returns before emitting. Every
+        // `payment.completed` consumer — automation enrollment, the shop's new-order
+        // notification, participant milestones, order rules — was therefore silent on this path.
+        await emitDomainEvent(
+          {
+            type: 'payment.completed',
+            entityType: 'order',
+            entityId: order!.id,
+            payload: {
+              provider: 'PAYPAL',
+              amount: amountInCents,
+              currency: 'usd',
+              paypalOrderId,
+            },
+          },
+          tx
+        )
         await tx.payment.create({
           data: {
             paypalOrderId,
