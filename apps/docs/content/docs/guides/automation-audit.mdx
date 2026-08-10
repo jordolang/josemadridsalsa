@@ -8,6 +8,14 @@ description: What is automated today, what is built but never fires, and the pha
 Audit date: **2026-08-09**. Method: static call-site census across `apps/storefront`, cross-referenced
 against `prisma/schema.prisma`, `vercel.json` cron schedules, and a targeted Vitest run.
 
+**Status: all five phases complete (2026-08-10).** 52 of 52 live automations function today and 51
+carry a passing test; the one that does not is manual by design. The sections below are kept in the
+order they were written — the audit as found, then each phase as it shipped — so the corrections
+stay visible next to the claims they correct. The last of those corrections is the largest:
+[the payment fact was missing on four settlement paths](#a-fourth-correction-the-fact-itself-was-missing-on-four-settlement-paths).
+
+One decision is still open: [the money gate](#design-decision-that-needs-a-signature-the-money-gate).
+
 ## Headline
 
 The starting assumption for this audit was that the automation layer was designed but never built.
@@ -106,8 +114,8 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 12 | Payment failed → operators | VERIFIED | `webhooks/stripe:268`; `tests/lib/notifications/dispatch.test.ts` |
 | 13 | Inventory low → operators | VERIFIED | `lib/inventory-manager:710`; `tests/lib/inventory/alert-notifications.test.ts` |
 | 14 | Inventory out-of-stock → operators | VERIFIED | same |
-| 15 | Return requested (customer path) | WIRED | `api/account/returns:131` |
-| 16 | Return requested (admin path) | WIRED | `api/admin/returns:153` |
+| 15 | Return requested (customer path) | **VERIFIED** ✅ | Phase 5 — `tests/api/returns-notifications.test.ts`, 8 tests |
+| 16 | Return requested (admin path) | **VERIFIED** ✅ | Phase 5 — `tests/api/admin-returns-notifications.test.ts`; window override is an explicit choice |
 | 17 | Stale unfulfilled orders sweep | **VERIFIED** | `cron/operations-sweep`; `tests/lib/operations/aging.test.ts` (31 cases) |
 | 18 | Aging returns sweep | **VERIFIED** | same |
 | 19 | Stuck webhooks sweep | **VERIFIED** | same |
@@ -126,7 +134,7 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 
 | # | Automation | State | Evidence |
 |---|---|---|---|
-| 23 | Automation CRUD + admin builder UI | WIRED | `app/api/admin/automations`, `app/admin/email-marketing/automations` |
+| 23 | Automation CRUD + admin builder UI | **VERIFIED** ✅ | Phase 5 — `tests/api/admin-automations.test.ts`; step order derived from position, not trusted from the client |
 | 24 | **Trigger → enrollment** | **VERIFIED** ✅ | Phase 1 — `lib/domain-events/handlers/automation-enrollment.ts`, 12 tests |
 | 25 | Due-step drain (5-min cron) | **VERIFIED** ✅ | Phase 5 — `tests/lib/email/automation-engine.test.ts`, 18 tests; fed by the outbox drain on the same tick |
 | 26 | `AutomationTrigger` values firing | **VERIFIED** ✅ | Phases 1+3+5 — 5 of 17 mapped, incl. `ORDER_REFUNDED`; enrollment covered in `automation-engine.test.ts` |
@@ -150,9 +158,9 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | # | Automation | State | Evidence |
 |---|---|---|---|
 | 36 | Fulfillment status derivation | VERIFIED | `lib/orders/fulfillment.ts`; `tests/lib/orders/fulfillment.test.ts` |
-| 37 | Shipping label purchase | **MANUAL — by design** | `admin/orders/[id]/shipping-label` POST is operator-driven. See *Money gate* below. |
+| 37 | Shipping label purchase | **MANUAL — by design** | `admin/orders/[id]/shipping-label` POST is operator-driven. See *Money gate* below. Route covered by `tests/api/shipping-label-events.test.ts` — it refuses a second purchase and announces nothing on any path that bought nothing. |
 | 38 | Tracking webhook → order status | VERIFIED | `lib/tracking/webhook-handlers.ts` |
-| 39 | Label purchase → `shipment.created` | WIRED | `shipping-label/route:194` |
+| 39 | Label purchase → `shipment.created` | **VERIFIED** ✅ | Phase 5 — `tests/api/shipping-label-events.test.ts`; real tracking code, no event on any path that bought nothing |
 | 40 | QuickBooks paid-order sync | **VERIFIED** | `tests/lib/quickbooks-sync.test.ts` (21 cases); hourly, off the checkout path by design |
 | 41 | QuickBooks refund sync | **VERIFIED** | same |
 | 42 | Processor fee capture | **VERIFIED** | `tests/lib/payments/processor-fees.test.ts` |
@@ -163,22 +171,28 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 47 | Participant milestone | **VERIFIED** ✅ | Phase 2 — `handlers/participant-milestone.ts`, 16 tests |
 | 48 | Campaign summary | **VERIFIED** ✅ | Phase 2 — `cron/fundraiser-lifecycle`, 16 tests |
 | 49 | Campaign launch | **VERIFIED** ✅ | Phase 2 — `cron/fundraiser-lifecycle` |
-| 50 | Scheduled social publish | WIRED | `cron/social-publish`, single-scheduler guarantee documented |
+| 50 | Scheduled social publish | **VERIFIED** ✅ | Phase 5 — `tests/lib/cron/social-publish.test.ts`; single-scheduler guarantee documented |
 | 51 | Welcome email on registration | **VERIFIED** ✅ | Phase 5 — same file; `api/auth/register:68` |
 | 52 | Newsletter welcome | **VERIFIED** ✅ | Phase 5 — same file; `api/newsletter:35` |
 | 53 | Contact-form confirmation | **VERIFIED** ✅ | Phase 5 — same file; `(public)/messages/start:60` |
-| 54 | `customer.created` domain event | WIRED | `api/auth/register:59`, `lib/auth.ts:237` |
+| 55 | `customer.created` domain event | **VERIFIED** ✅ | Phase 5 — `tests/api/register-customer-created.test.ts`; `api/auth/register:59`, `lib/auth.ts:237` |
 
 ## The three percentages
 
-Across **54** scored automation candidates (53 at audit time, plus the consumer layer built in Phase 1):
+Across **52** live automation candidates. The list began at 53; Phases 1 and 5 added two (the
+consumer layer, item 54, and the registration fact, item 55) and three were removed rather than
+built (items 29, 31 and 43), which is where 52 comes from. Item 21a is a correction note rather
+than a separately scored candidate.
 
 | Measure | At audit | Phase 1 | Phase 2 | Phase 3 | Phase 4 | After Phase 5 |
 |---|---|---|---|---|---|---|
-| **Built** — code exists (VERIFIED + WIRED + ORPHANED) | 46 / 87% | 48 / 89% | 48 / 89% | 50 / 93% | 52 / 98% | **52 / 98%** |
-| **Functions correctly today** (VERIFIED + WIRED) | 38 / 72% | 41 / 76% | 47 / 87% | 49 / 91% | 51 / 96% | **51 / 96%** |
-| **Proven by an automated test** (VERIFIED only) | 8 / 15% | 10 / 19% | 16 / 30% | 18 / 33% | 20 / 38% | **30 / 57%** |
-| **Needs work** (ORPHANED + SCHEMA-ONLY + MISSING + stub) | 15 / 28% | 13 / 24% | 7 / 13% | 5 / 9% | 2 / 4% | **2 / 4%** |
+| **Built** — code exists (VERIFIED + WIRED + ORPHANED) | 46 / 87% | 48 / 89% | 48 / 89% | 50 / 93% | 52 / 98% | **52 / 100%** |
+| **Functions correctly today** (VERIFIED + WIRED) | 38 / 72% | 41 / 76% | 47 / 87% | 49 / 91% | 51 / 96% | **52 / 100%** |
+| **Proven by an automated test** (VERIFIED only) | 8 / 15% | 10 / 19% | 16 / 30% | 18 / 33% | 20 / 38% | **51 / 98%** |
+| **Needs work** (ORPHANED + SCHEMA-ONLY + MISSING + stub) | 15 / 28% | 13 / 24% | 7 / 13% | 5 / 9% | 2 / 4% | **0** |
+
+The one row not counted as proven is item 37, shipping label purchase, which is **manual by
+design** — there is no automation to prove. Its route is covered by tests all the same.
 
 #### A third correction: the VERIFIED column was undercounting
 
@@ -190,12 +204,9 @@ only tests it had traced by hand, so 15% understated the real starting position.
 is that this codebase was better tested than the first pass credited — the same direction as the
 headline finding.
 
-The denominator falls to **53** at Phase 4: item 43 was a dead stub and is deleted rather than
-scored. The two remaining are item 29 (`EmailWebhook`, a schema-only model) and item 31 (the
-duplicate abandoned-cart sender, reported not removed) — neither is a missing automation.
-
-Item 21a (the admin new-order email) is a correction note rather than a separately scored candidate,
-so the denominator stays 54.
+The denominator moved twice. Item 43 was a dead stub, deleted at Phase 4 rather than scored, and
+items 29 (`EmailWebhook`) and 31 (the duplicate abandoned-cart sender) were removed with sign-off
+once the audit had recorded them — none of the three was a missing automation.
 
 #### A fourth correction: the fact itself was missing on four settlement paths
 
@@ -317,7 +328,7 @@ a handler that reads as working while never firing:
   customer — it is an operator concern, handled by `notifyOperators` (items 13–14). Routing it through
   the marketing engine would need an operator-recipient concept that does not exist yet.
 
-### Phase 2 — Close the orphans *(in progress: 3 of 8 done)*
+### Phase 2 — Close the orphans ✅ *complete*
 
 **Done — new-order notifications (items 20, 21, 21a).** `handlers/order-notifications.ts` subscribes to
 `payment.completed` and raises the in-app notification, the high-value flag above $100, and the admin
@@ -357,7 +368,7 @@ announce a fundraiser that started in March or summarise every campaign the shop
 automation is unaffected. Per CLAUDE.md §3 it is reported here rather than deleted — removing it is a
 separate, explicitly-approved change.
 
-### Phase 3 — Close the parity gaps (3 items)
+### Phase 3 — Close the parity gaps ✅ *complete*
 
 ✅ **Complete.** All three, including the one that was easy to drop:
 
@@ -399,10 +410,38 @@ the code existed with no callers, making it ORPHANED.
 **`dashboard-analysis` (item 43) — removed.** Five lines returning `{success: true}`, referenced by
 nothing, not scheduled in `vercel.json`, and the only cron route with no authorisation check.
 
-### Phase 5 — Raise the verified floor
+### Phase 5 — Raise the verified floor ✅ *complete*
 
-Bring the 15% VERIFIED number up by testing the 30 WIRED automations, prioritising the money paths
-(payments, refunds, QuickBooks, inventory decrement).
+Every remaining WIRED row now carries a test. The count went 8 → 51 of 52, and the only row without
+one is item 37, which is manual by design.
+
+**It did not stay a testing exercise.** Writing the payment-path tests turned up the fourth
+correction above: four of the eight routes that mark an order paid never emitted
+`payment.completed`, including `checkout/complete` — the busiest path in the application, and one
+the hand-traced census had missed entirely. The structural test found it, which is the argument for
+that style: a behavioural test only ever covers the route somebody remembered to write one for.
+
+What the rest of the phase pinned, in rough order of what would hurt most if it broke:
+
+- **The confirmation stamps `confirmationEmailSentAt` only on success.** Every caller and the domain
+  event handler read that column as "this customer has been told", so stamping a failed send would
+  suppress the confirmation permanently, silently, and only for orders that already hit an email
+  problem.
+- **The automation engine's bookkeeping.** Nothing called `enrollInAutomation` before Phase 1, so
+  the engine had never run against a real enrollment. An enrollment that advances on a failed send
+  skips a step nobody notices was skipped; one that fails to advance re-sends the same email every
+  five minutes forever. Both directions are asserted, along with not rewinding a customer who is
+  already mid-series and surviving a step whose template was deleted.
+- **Hard versus soft bounces.** A permanent bounce suppresses the address; a full mailbox must not,
+  or a real customer is dropped from every future email over a transient failure.
+- **Cron due-windows.** `scheduledAt <= now` for campaigns and social posts, and the stalled-recipient
+  cutoff that separates "a live run is working on it" from "the run died". Inverted or missing, each
+  looks exactly like "nothing to do".
+- **Templates that ship placeholders.** Substitution failures do not throw; they send `{{TOKEN}}` to
+  the customer. The transactional senders now assert that nothing of the sort survives into anything
+  a customer reads.
+- **Announcing what did not happen.** The label route emits `shipment.created` only once postage is
+  really bought, and nothing on any path that refused, failed, or was already labelled.
 
 ## Working process
 
