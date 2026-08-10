@@ -568,6 +568,13 @@ model Order {
   deliveredAt              DateTime?
   confirmationEmailSentAt  DateTime?
   reviewRequestSentAt      DateTime?
+  /// When the customer was told their refund went through. Null means not yet told.
+  ///
+  /// Two things send this email — the admin status change, and the consumer that reacts to a
+  /// refund actually settling at the processor — and they are reached by different admin
+  /// actions on the same order. Without a shared marker a customer can be emailed twice about
+  /// the same money, which reads as two refunds.
+  refundEmailSentAt        DateTime?
   /// Set once, by whichever path marks the order paid first. The claim on this column is what
   /// stops the same sale being credited twice when a webhook and a completion route race.
   commissionCreditedAt     DateTime?

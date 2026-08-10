@@ -129,16 +129,28 @@ export async function POST(
           year: 'numeric',
         })
 
-        sendRefundProcessedEmail({
-          email: recipientEmail,
-          name: recipientName,
-          orderNumber: order.orderNumber,
-          refundAmount,
-          refundMethod,
-          originalOrderDate,
-        }).catch((err: unknown) => {
-          console.error('Refund email failed for order', order.orderNumber, err)
-        })
+        // Shared with the `payment.refunded` consumer, which sends the same email when a refund
+        // settles at the processor. The two are reached by different admin actions on the same
+        // order, so without the marker a customer can be told twice about one refund.
+        if (!order.refundEmailSentAt) {
+          sendRefundProcessedEmail({
+            email: recipientEmail,
+            name: recipientName,
+            orderNumber: order.orderNumber,
+            refundAmount,
+            refundMethod,
+            originalOrderDate,
+          })
+            .then(() =>
+              prisma.order.update({
+                where: { id: order.id },
+                data: { refundEmailSentAt: new Date() },
+              })
+            )
+            .catch((err: unknown) => {
+              console.error('Refund email failed for order', order.orderNumber, err)
+            })
+        }
       }
     }
 

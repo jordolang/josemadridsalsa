@@ -70,11 +70,11 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 1 | Order confirmation — Stripe | VERIFIED | `webhooks/stripe:229`; `tests/email/order-confirmation.test.tsx` |
 | 2 | Order confirmation — PayPal | WIRED | `webhooks/paypal:242`, `checkout/paypal/capture-order:226` |
 | 3 | Order confirmation — Square | WIRED | `webhooks/square:179`, `checkout/square/process-payment:227` |
-| 4 | Order confirmation — POS / manual order | **MISSING** | No `sendOrderConfirmationEmail` under `app/api/pos` or `app/api/admin` |
+| 4 | Order confirmation — POS / manual order | **VERIFIED** ✅ | Phase 3 — `handlers/order-confirmation.ts`, 11 tests |
 | 5 | Order shipped email | VERIFIED | `lib/tracking/webhook-handlers:149`; `tests/unit/tracking/webhook-handlers.test.ts` |
 | 6 | Order delivered email | VERIFIED | `lib/tracking/webhook-handlers:155`; `tests/email/delivery-confirmation.test.tsx` |
 | 7 | Refund processed email — admin-initiated | WIRED | `admin/orders/[id]/update-status:132` |
-| 8 | Refund processed email — webhook-initiated | **MISSING** | `payment.refunded` event emitted, no email sent |
+| 8 | Refund processed email — refund-initiated | **VERIFIED** ✅ | Phase 3 — `handlers/refund-notification.ts` + new producer, 9 tests |
 | 9 | Order cancellation email | WIRED | `lib/email/transactional:19`, 1 call site |
 | 10 | Order ready-for-pickup email | **VERIFIED** ✅ | Phase 2 — `handlers/pickup-ready.ts` on `order.fulfilled`, 7 tests |
 | 11 | Review request (3–7d post-delivery) | WIRED | `cron/review-requests`; keys off `reviewRequestSentAt` (previously-fixed bug) |
@@ -109,7 +109,7 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 23 | Automation CRUD + admin builder UI | WIRED | `app/api/admin/automations`, `app/admin/email-marketing/automations` |
 | 24 | **Trigger → enrollment** | **VERIFIED** ✅ | Phase 1 — `lib/domain-events/handlers/automation-enrollment.ts`, 12 tests |
 | 25 | Due-step drain (5-min cron) | WIRED | `cron/email-automation` — now fed by the outbox drain on the same tick |
-| 26 | `AutomationTrigger` values firing | WIRED ✅ | Phase 1 — 4 of 17 mapped; see *Triggers not yet mapped* |
+| 26 | `AutomationTrigger` values firing | WIRED ✅ | Phases 1+3 — 5 of 17 mapped, incl. `ORDER_REFUNDED` |
 | 27 | Scheduled campaign send | WIRED | `cron/email-campaigns` |
 | 28 | Resend webhook → bounce/suppression | WIRED | `app/api/webhooks/resend` (123 lines) |
 | 29 | `EmailWebhook` model | **SCHEMA-ONLY** | 0 `prisma.emailWebhook` references |

@@ -2,6 +2,7 @@ import type { PaymentStatus, Prisma } from '@prisma/client'
 
 import { getProvider } from '@/lib/payments'
 import type { PaymentProvider } from '@/lib/payments/types'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 import { reverseFundraiserCommission } from '@/lib/fundraising/reverse-commission'
 
 /**
@@ -167,6 +168,27 @@ export async function refundPaymentInTx(
       where: { id: payment.id },
       data: { status: newPaymentStatus },
     })
+
+    // Until this existed, `payment.refunded` had no producer at all: the customer was never
+    // told their money was on its way back, and `ORDER_REFUNDED` — one of the automation
+    // triggers — could never fire. Emitted only on SUCCEEDED, because a pending refund has
+    // not returned anything yet, and with the transaction client so the fact is durable only
+    // if the refund is.
+    await emitDomainEvent(
+      {
+        type: 'payment.refunded',
+        entityType: 'order',
+        entityId: payment.orderId,
+        payload: {
+          refundId: refund.id,
+          provider,
+          amountCents: refundAmount,
+          partial: newPaymentStatus === 'PARTIALLY_REFUNDED',
+          reason: params.reason ?? null,
+        },
+      },
+      tx
+    )
   }
 
   return refund

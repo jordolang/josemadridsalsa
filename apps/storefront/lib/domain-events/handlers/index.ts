@@ -8,9 +8,11 @@
 import { clearDomainEventHandlers } from '../subscribe'
 
 import { registerAutomationEnrollmentHandlers } from './automation-enrollment'
+import { registerOrderConfirmationHandlers } from './order-confirmation'
 import { registerOrderNotificationHandlers } from './order-notifications'
 import { registerParticipantMilestoneHandlers } from './participant-milestone'
 import { registerPickupReadyHandlers } from './pickup-ready'
+import { registerRefundNotificationHandlers } from './refund-notification'
 
 let registered = false
 
@@ -27,9 +29,11 @@ export function registerDomainEventConsumers(): void {
   registered = true
 
   registerAutomationEnrollmentHandlers()
+  registerOrderConfirmationHandlers()
   registerOrderNotificationHandlers()
   registerPickupReadyHandlers()
   registerParticipantMilestoneHandlers()
+  registerRefundNotificationHandlers()
 }
 
 /** Reset registration state. For tests, which need to re-register against a clean registry. */

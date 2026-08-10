@@ -142,19 +142,34 @@ describe('automation enrollment handler', () => {
     })
   })
 
-  it('does not map ORDER_REFUNDED, because nothing emits a refund fact yet', () => {
-    expect(Object.values(AUTOMATION_TRIGGER_BY_EVENT)).not.toContain('ORDER_REFUNDED')
+  it('maps ORDER_REFUNDED now that lib/payments/refund.ts emits the fact', async () => {
+    // Left unmapped until the producer existed: a trigger wired to a fact nobody emits reads
+    // as a working automation and is not one.
+    orderFindUnique.mockResolvedValue({ guestEmail: 'g@example.com', user: null })
+
+    await handleAutomationEnrollment(event({ type: 'payment.refunded' }))
+
+    expect(enrollInAutomation.mock.calls[0][0]).toBe('ORDER_REFUNDED')
   })
 
-  it('subscribes to exactly the mapped event types', () => {
-    registerDomainEventConsumers()
-
-    expect(subscribedEventTypes().sort()).toEqual([
+  it('maps exactly the facts that start an automation', () => {
+    // Asserted against this handler's own map rather than the global registry, which other
+    // consumers also register into — an unrelated new handler should not fail this test.
+    expect(Object.keys(AUTOMATION_TRIGGER_BY_EVENT).sort()).toEqual([
       'customer.created',
       'order.delivered',
       'order.fulfilled',
       'payment.completed',
+      'payment.refunded',
     ])
+  })
+
+  it('registers its handlers into the shared bus', () => {
+    registerDomainEventConsumers()
+
+    for (const type of Object.keys(AUTOMATION_TRIGGER_BY_EVENT)) {
+      expect(subscribedEventTypes()).toContain(type)
+    }
   })
 
   it('registers once, so a warm serverless instance cannot send duplicate emails', async () => {

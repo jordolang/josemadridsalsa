@@ -26,15 +26,16 @@ import type { DomainEventType } from '../types'
  * `order.fulfilled` is the shipped fact: `lib/orders/fulfillment.ts` maps the `shipped`
  * transition onto it. There is no `order.shipped` producer, despite the type existing.
  *
- * `ORDER_REFUNDED` is intentionally absent. Nothing emits `payment.refunded` or
- * `refund.completed` today, so mapping it would register a handler that can never fire and
- * read, falsely, as though refund automations worked.
+ * `ORDER_REFUNDED` maps to `payment.refunded`, which `lib/payments/refund.ts` emits once a
+ * refund settles at the processor. It was left unmapped until that producer existed, because a
+ * trigger wired to a fact nobody emits reads as a working automation and is not one.
  */
 const TRIGGER_BY_EVENT: Partial<Record<DomainEventType, AutomationTriggerType>> = {
   'payment.completed': 'ORDER_PLACED',
   'order.fulfilled': 'ORDER_SHIPPED',
   'order.delivered': 'ORDER_DELIVERED',
   'customer.created': 'USER_REGISTERED',
+  'payment.refunded': 'ORDER_REFUNDED',
 }
 
 function payloadOf(event: DomainEventRecord): Record<string, unknown> {

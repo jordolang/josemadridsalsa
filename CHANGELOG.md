@@ -16,6 +16,20 @@ the root `package.json` is canonical.
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
 ### Added
+- **Refunds tell the customer, and `payment.refunded` finally has a producer** — a refund issued through the admin refund form or by settling a return moved the money and told the customer nothing. The only thing that sent that email was an admin manually flipping an order's status to REFUNDED, which is a different action and can happen without any money moving at all.
+
+  `lib/payments/refund.ts` now emits `payment.refunded` when a refund settles at the processor — inside the same transaction, so the fact is durable only if the refund is, and only on SUCCEEDED, because a pending refund has not returned anything yet. That producer did not exist before, which is why `ORDER_REFUNDED` — one of the automation triggers — could never fire. It is now mapped; a trigger wired to a fact nobody emits reads as a working automation and is not one.
+
+  The email reports **what was actually refunded**, taken from the event, rather than the order total: a partial refund on a three-jar order should not tell the customer the whole order came back. Both senders now share `Order.refundEmailSentAt`, so whichever runs first sends and the other stays quiet — without it a customer gets two "your refund was processed" emails for one refund, which reads as two refunds. Orders already refunded are backfilled, so switching this on does not email everyone the shop has ever refunded.
+
+- **POS and manual orders finally confirm themselves to the customer** — three checkout routes and three webhooks each called `sendOrderConfirmationEmail` by hand; the POS and the manual-order form did not. A counter sale or a phone order confirmed nothing to anybody. This is the "same automation, forgotten on the fourth path" bug in its purest form.
+
+  Rather than a fifth hand-wired copy, a consumer listens for the facts and confirms any order that has not been confirmed, which makes the omission structurally impossible on paths added later. It cannot double-send, because `sendOrderConfirmationEmail` stamps `confirmationEmailSentAt` and the consumer checks it first — the web paths stamp it during checkout, long before the five-minute drain reaches their event.
+
+  Two events, because the two families of channel become real at different moments: money arriving for anything taken online or at the terminal, and the order being written down for phone, wholesale and manual sales, where an admin is recording a deal already struck and no later payment fact is coming. Website, PayPal, Square and POS all open an order *before* taking payment, so confirming those at creation would email everyone who abandoned checkout.
+
+  The POS terminal now also emits `payment.completed`, which it never did. That was why the counter was the one path the shop learned nothing from — beyond the missing confirmation, a POS sale raised no new-order notification, enrolled nobody in an automation, and counted toward no fundraiser milestone. All four now work from the one fact.
+
 - **Campaign coordinators hear when a fundraiser opens and when it closes** — `sendCampaignLaunchEmail` and `sendCampaignSummaryEmail` were both written, both correct, and neither had a caller. A coordinator set a fundraiser up and heard nothing when it went live, then heard nothing when it finished — including the totals, which is the one thing they need in order to hand money to a school. A daily `fundraiser-lifecycle` cron announces campaigns that have opened, closes campaigns whose end date has passed, and sends the closing summary.
 
   This is a sweep rather than a consumer of domain events, and deliberately so: **a campaign ending has no actor.** It is a date passing — no route runs, no request is made, and nothing would ever emit an event for it. Since the sweep has to exist for that, the launch announcement rides along rather than being wired separately into the admin route.
