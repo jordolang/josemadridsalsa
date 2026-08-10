@@ -701,17 +701,26 @@ model ReturnRequestItem {
 /// Consumers subscribe to these rather than being hand-wired at each call site;
 /// it also backs per-entity activity timelines. Write via `lib/domain-events/emit.ts`.
 model DomainEvent {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   type        String
   entityType  String
   entityId    String
   payload     Json?
   actorUserId String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  /// When consumers finished handling this event. Null means still pending.
+  ///
+  /// This column is what makes `domain_events` a transactional outbox rather than only an
+  /// audit log. Events are emitted inside the caller's transaction (payment webhooks pass
+  /// their `tx` client), so handlers cannot run at emit time — they would fire for work that
+  /// may still roll back, and would hold a transaction open across network I/O. A poller
+  /// only ever sees committed rows, which makes the hand-off correct by construction.
+  consumedAt  DateTime?
 
   @@index([entityType, entityId, createdAt])
   @@index([type, createdAt])
   @@index([createdAt])
+  @@index([consumedAt, createdAt])
   @@map("domain_events")
 }
 
