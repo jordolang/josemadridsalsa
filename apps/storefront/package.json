@@ -22,6 +22,7 @@
     "db:seed:nutrition": "tsx scripts/seed-nutrition-ingredients.ts",
     "db:seed:email-templates": "tsx scripts/seed-email-templates.ts",
     "db:seed:fundraiser": "tsx scripts/seed-fundraiser-demo.ts",
+    "db:seed:cms": "tsx scripts/seed-cms-demo.ts",
     "db:cleanup:fundraiser": "tsx scripts/cleanup-fundraiser-demo.ts",
     "locations:import": "tsx scripts/import-locations-from-markdown.ts",
     "locations:verify": "tsx scripts/verify-locations.ts",
