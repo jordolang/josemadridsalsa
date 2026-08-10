@@ -94,7 +94,7 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 20 | New-order in-app notification | **VERIFIED** ✅ | Phase 2 — `handlers/order-notifications.ts` on `payment.completed`, 15 tests |
 | 21 | High-value order alert | **VERIFIED** ✅ | Phase 2 — separate dedupe key, $100 threshold |
 | 21a | Admin new-order **email** | **VERIFIED** ✅ | Phase 2 — was orphaned, not Stripe-only; see correction below |
-| 22 | Per-rule email/Slack routing | **SCHEMA-ONLY** | `OrderNotificationRule` model — 0 code references anywhere |
+| 22 | Per-rule email/Slack routing | **VERIFIED** ✅ | Phase 4 — `handlers/order-rules.ts`, 20 tests |
 
 ### C-0. Infrastructure
 
@@ -122,7 +122,7 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 31 | Duplicate abandoned-cart sender | **ORPHANED — reported** | `lib/email/automation.ts:384` shadowed by the cron's own local copy. Removal needs sign-off (CLAUDE.md §3) |
 | 32 | Stock decrement on payment | WIRED | `lib/inventory-manager.ts` |
 | 33 | `InventoryAlert` creation | WIRED | 15 `prisma.inventoryAlert` references |
-| 34 | Restock notification to customers | **SCHEMA-ONLY** | `RestockNotification` — 1 reference, no send path |
+| 34 | Restock email to staff | **VERIFIED** ✅ | Phase 4 — `handlers/restock-alert.ts`, 6 tests. *Audit mislabelled this as customer-facing; it is a staff restock recommendation, and was orphaned rather than schema-only.* |
 | 35 | PO receiving → stock + event | WIRED | `lib/purchasing/receive-purchase-order:143` |
 
 ### E. Fulfillment, shipping, financial, social, identity
@@ -136,7 +136,7 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 40 | QuickBooks paid-order sync | WIRED | `cron/quickbooks-sync` (hourly, off the checkout path by design) |
 | 41 | QuickBooks refund sync | WIRED | `enqueueRefunds` |
 | 42 | Processor fee capture | WIRED | `cron/processor-fees` |
-| 43 | `dashboard-analysis` cron | **DEAD STUB** | 5 lines, returns `{success:true}`, not in `vercel.json` |
+| 43 | `dashboard-analysis` cron | **REMOVED** ✅ | Phase 4 — unreferenced, unscheduled, unauthenticated; deleted with sign-off |
 | 44 | Fundraiser donation receipt | WIRED | 6 call sites |
 | 45 | Participant welcome | WIRED | 1 call site |
 | 46 | Fundraiser follow-up | WIRED | 1 call site |
