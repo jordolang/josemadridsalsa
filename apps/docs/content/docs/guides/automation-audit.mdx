@@ -112,14 +112,14 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 26 | `AutomationTrigger` values firing | WIRED ✅ | Phases 1+3 — 5 of 17 mapped, incl. `ORDER_REFUNDED` |
 | 27 | Scheduled campaign send | WIRED | `cron/email-campaigns` |
 | 28 | Resend webhook → bounce/suppression | WIRED | `app/api/webhooks/resend` (123 lines) |
-| 29 | `EmailWebhook` model | **SCHEMA-ONLY** | 0 `prisma.emailWebhook` references |
+| 29 | `EmailWebhook` model | **REMOVED** ✅ | Outbound webhook registry, never built. Dropped with a guarded migration that refuses if prod holds rows. |
 
 ### D. Cart, inventory & purchasing
 
 | # | Automation | State | Evidence |
 |---|---|---|---|
 | 30 | Abandoned cart, 3 stages | **VERIFIED** ✅ | Phase 5 — `lib/checkout/abandoned-cart.ts`, 20 tests |
-| 31 | Duplicate abandoned-cart sender | **ORPHANED — reported** | `lib/email/automation.ts:384` shadowed by the cron's own local copy. Removal needs sign-off (CLAUDE.md §3) |
+| 31 | Duplicate abandoned-cart sender | **REMOVED** ✅ | Removed with sign-off. The working automation is the cron's own copy and is unaffected. |
 | 32 | Stock decrement on payment | **VERIFIED** | `tests/lib/inventory-manager.test.ts` (44 cases) + `tests/integration/inventory-order-completion` |
 | 33 | `InventoryAlert` creation | **VERIFIED** | `tests/lib/inventory-manager.test.ts` — alert creation flow |
 | 34 | Restock email to staff | **VERIFIED** ✅ | Phase 4 — `handlers/restock-alert.ts`, 6 tests. *Audit mislabelled this as customer-facing; it is a staff restock recommendation, and was orphaned rather than schema-only.* |

@@ -2187,19 +2187,6 @@ model EmailSegment {
   @@map("email_segments")
 }
 
-model EmailWebhook {
-  id        String   @id @default(cuid())
-  name      String
-  url       String
-  events    String[]
-  secret    String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("email_webhooks")
-}
-
 model BrandKit {
   id              String   @id @default(cuid())
   logoUrl         String?

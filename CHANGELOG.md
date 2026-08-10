@@ -15,6 +15,13 @@ the root `package.json` is canonical.
 
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
+### Removed
+- **The duplicate abandoned-cart sender** — `lib/email/automation.ts` carried a second `sendAbandonedCartEmail` that nothing called. The working one is the cron's own local copy, so the two were never in conflict; the risk was that a future caller would reach for the exported one, which builds different copy and a different recovery URL than the sequence actually sends. Removed with its single-use `CartItemData` interface.
+
+- **The `EmailWebhook` model** — an outbound webhook registry (name, url, events, secret) with **zero code references anywhere**: nothing ever registered a webhook and nothing ever delivered to one. Unrelated to `app/api/webhooks/resend`, which is the *inbound* handler for bounce and delivery events and is untouched.
+
+  The migration **refuses to run rather than destroy**. The table carries a `secret` column, and the developer database it was checked against is not production, so instead of assuming prod is also empty it raises if any row exists. Because `vercel-build` wraps `prisma migrate deploy` in a warning rather than a failure, the failure mode is "the table survives and the drop shows up in the build log" — the right way round for a change that cannot be undone.
+
 ### Fixed
 - **Four cron routes failed open when `CRON_SECRET` was unset** — `social-publish`, `quickbooks-sync`, `email-campaigns` and `email-automation` each carried a private copy of the authorisation check that returned `true` whenever the secret was missing. The shared guard in `lib/cron/auth.ts` refuses in production instead, precisely because that is the configuration where failing open matters: these routes publish to social accounts, write to accounting and send customer email, and a cron endpoint is an ordinary public URL — nothing about living under `app/api/cron` makes one unreachable. All four now use the shared guard.
 
