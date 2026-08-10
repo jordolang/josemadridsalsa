@@ -977,6 +977,13 @@ model Fundraiser {
   commissionRate       Decimal                 @db.Decimal(5, 2)
   status               FundraiserStatus        @default(DRAFT)
   isActive             Boolean                 @default(false)
+  /// When the coordinator was told the campaign is live. Null means not yet sent.
+  ///
+  /// A sent-marker rather than a status check, because `status` can move back and forth while
+  /// an admin edits a campaign and the coordinator should not be re-announced each time.
+  launchEmailSentAt    DateTime?
+  /// When the coordinator was sent the closing summary. Null means not yet sent.
+  summaryEmailSentAt   DateTime?
   totalOrders          Int                     @default(0)
   totalRevenue         Decimal                 @default(0) @db.Decimal(10, 2)
   totalCommission      Decimal                 @default(0) @db.Decimal(10, 2)

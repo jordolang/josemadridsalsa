@@ -114,7 +114,7 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | # | Automation | State | Evidence |
 |---|---|---|---|
 | 30 | Abandoned cart, 3 stages | WIRED | `cron/abandoned-cart`, stage 0→3 at 1h/24h/48h |
-| 31 | Duplicate abandoned-cart sender | **ORPHANED** | `lib/email/automation.ts:384` shadowed by the cron's own local copy |
+| 31 | Duplicate abandoned-cart sender | **ORPHANED — reported** | `lib/email/automation.ts:384` shadowed by the cron's own local copy. Removal needs sign-off (CLAUDE.md §3) |
 | 32 | Stock decrement on payment | WIRED | `lib/inventory-manager.ts` |
 | 33 | `InventoryAlert` creation | WIRED | 15 `prisma.inventoryAlert` references |
 | 34 | Restock notification to customers | **SCHEMA-ONLY** | `RestockNotification` — 1 reference, no send path |
@@ -136,8 +136,8 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 45 | Participant welcome | WIRED | 1 call site |
 | 46 | Fundraiser follow-up | WIRED | 1 call site |
 | 47 | Participant milestone | **VERIFIED** ✅ | Phase 2 — `handlers/participant-milestone.ts`, 16 tests |
-| 48 | Campaign summary | **ORPHANED** | 0 callers |
-| 49 | Campaign launch | **ORPHANED** | 0 callers |
+| 48 | Campaign summary | **VERIFIED** ✅ | Phase 2 — `cron/fundraiser-lifecycle`, 16 tests |
+| 49 | Campaign launch | **VERIFIED** ✅ | Phase 2 — `cron/fundraiser-lifecycle` |
 | 50 | Scheduled social publish | WIRED | `cron/social-publish`, single-scheduler guarantee documented |
 | 51 | Welcome email on registration | WIRED | `api/auth/register` |
 | 52 | Newsletter welcome | WIRED | 1 call site |
@@ -148,12 +148,12 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 
 Across **54** scored automation candidates (53 at audit time, plus the consumer layer built in Phase 1):
 
-| Measure | At audit | After Phase 1 | Phase 2 so far |
+| Measure | At audit | After Phase 1 | After Phase 2 |
 |---|---|---|---|
 | **Built** — code exists (VERIFIED + WIRED + ORPHANED) | 46 / 87% | 48 / 89% | **48 / 89%** |
-| **Functions correctly today** (VERIFIED + WIRED) | 38 / 72% | 41 / 76% | **44 / 81%** |
-| **Proven by an automated test** (VERIFIED only) | 8 / 15% | 10 / 19% | **13 / 24%** |
-| **Needs work** (ORPHANED + SCHEMA-ONLY + MISSING + stub) | 15 / 28% | 13 / 24% | **10 / 19%** |
+| **Functions correctly today** (VERIFIED + WIRED) | 38 / 72% | 41 / 76% | **47 / 87%** |
+| **Proven by an automated test** (VERIFIED only) | 8 / 15% | 10 / 19% | **16 / 30%** |
+| **Needs work** (ORPHANED + SCHEMA-ONLY + MISSING + stub) | 15 / 28% | 13 / 24% | **7 / 13%** |
 
 Item 21a (the admin new-order email) is a correction note rather than a separately scored candidate,
 so the denominator stays 54.
@@ -273,7 +273,21 @@ had no caller. A new `lastMilestoneNotified` marker makes it replay-safe and col
 into one message; existing participants are backfilled so switching it on does not congratulate a whole
 roster retroactively.
 
-**Remaining (3):** campaign summary, campaign launch, and the duplicate abandoned-cart sender.
+**Done — campaign launch and summary (items 48, 49).** A coordinator set a fundraiser up and heard
+nothing when it went live, and nothing when it finished — including the totals, the one thing they need
+in order to hand money to a school. `cron/fundraiser-lifecycle` (daily) announces campaigns that have
+opened, closes campaigns whose end date has passed, and sends the closing summary.
+
+This one is a **sweep rather than an event consumer, and deliberately so**: a campaign ending is a date
+passing. No route runs, no request is made, and nothing would ever emit an event for it. Since the sweep
+must exist for that, the launch announcement rides along instead of being wired into the admin route.
+Both are gated on sent-markers, and existing campaigns are backfilled so switching it on does not
+announce a fundraiser that started in March or summarise every campaign the shop has ever run.
+
+**Phase 2 complete.** The one remaining orphan, item 31, is a *duplicate* rather than a gap:
+`lib/email/automation.ts:384` is shadowed by the abandoned-cart cron's own local copy, so the working
+automation is unaffected. Per CLAUDE.md §3 it is reported here rather than deleted — removing it is a
+separate, explicitly-approved change.
 
 ### Phase 3 — Close the parity gaps (3 items)
 
