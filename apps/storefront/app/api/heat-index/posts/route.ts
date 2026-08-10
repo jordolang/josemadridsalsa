@@ -4,6 +4,7 @@ import { requirePermission } from '@/lib/rbac'
 import { blogPostSchema } from '@/lib/blog/schemas'
 import { postCardSelect } from '@/lib/blog/queries'
 import { publishBlogPost } from '@/lib/blog/publish'
+import { crosspostAccountIdsSchema, crosspostBlogPost } from '@/lib/social/blog-crosspost'
 import prisma from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -62,6 +63,11 @@ export async function POST(req: NextRequest) {
     }
 
     const data = parsed.data
+    const crosspostParsed = crosspostAccountIdsSchema.safeParse(body.crosspostAccountIds)
+    if (!crosspostParsed.success) {
+      return fail(`Validation error: ${crosspostParsed.error.issues[0].message}`)
+    }
+    const crosspostAccountIds = crosspostParsed.data
     const existing = await prisma.blogPost.findUnique({ where: { slug: data.slug } })
     if (existing) return fail('A post with this slug already exists', 409)
 
@@ -76,6 +82,11 @@ export async function POST(req: NextRequest) {
       await publishBlogPost(post.id).catch((err) => {
         console.error('Failed to send publish notifications:', err)
       })
+      if (crosspostAccountIds.length > 0) {
+        await crosspostBlogPost(post.id, crosspostAccountIds).catch((err) => {
+          console.error('Failed to cross-post to social media:', err)
+        })
+      }
     }
 
     return ok(post, 201)

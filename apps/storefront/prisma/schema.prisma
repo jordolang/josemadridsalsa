@@ -1570,6 +1570,11 @@ model SocialMediaPost {
   media            SocialMediaPostMedia[]
   publishes        SocialPostPublish[]
 
+  // Set when this post is a blog article cross-post. Unique so one article maps
+  // to at most one SocialMediaPost (see BlogPost.crosspost).
+  blogPostId String?   @unique
+  blogPost   BlogPost? @relation("BlogPostCrosspost", fields: [blogPostId], references: [id], onDelete: SetNull)
+
   @@index([status])
   @@index([scheduledAt])
   @@index([createdById])
@@ -3935,6 +3940,11 @@ model BlogPost {
 
   comments  BlogComment[]
   reactions BlogReaction[]
+
+  // The social-media cross-post created for this article, if any. Kept unique so
+  // repeated publishes/cross-posts reuse one SocialMediaPost and its per-account
+  // idempotency guards instead of duplicating the post on every save.
+  crosspost SocialMediaPost? @relation("BlogPostCrosspost")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
