@@ -135,7 +135,7 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 44 | Fundraiser donation receipt | WIRED | 6 call sites |
 | 45 | Participant welcome | WIRED | 1 call site |
 | 46 | Fundraiser follow-up | WIRED | 1 call site |
-| 47 | Participant milestone | **ORPHANED** | 0 callers |
+| 47 | Participant milestone | **VERIFIED** ✅ | Phase 2 — `handlers/participant-milestone.ts`, 16 tests |
 | 48 | Campaign summary | **ORPHANED** | 0 callers |
 | 49 | Campaign launch | **ORPHANED** | 0 callers |
 | 50 | Scheduled social publish | WIRED | `cron/social-publish`, single-scheduler guarantee documented |
@@ -268,8 +268,12 @@ the EasyPost tracking webhook and a pickup order never has a label. `handlers/pi
 subscribes to `order.fulfilled` and filters out shipped orders in the same handler, so no customer is
 told both to expect a parcel and to come and collect it.
 
-**Remaining (4):** participant milestone, campaign summary, campaign launch, and the duplicate
-abandoned-cart sender.
+**Done — participant milestone (item 47).** Passing 5/10/25/50/100 sales sends the congratulation that
+had no caller. A new `lastMilestoneNotified` marker makes it replay-safe and collapses a burst of sales
+into one message; existing participants are backfilled so switching it on does not congratulate a whole
+roster retroactively.
+
+**Remaining (3):** campaign summary, campaign launch, and the duplicate abandoned-cart sender.
 
 ### Phase 3 — Close the parity gaps (3 items)
 

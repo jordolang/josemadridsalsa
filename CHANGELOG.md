@@ -16,6 +16,12 @@ the root `package.json` is canonical.
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
 ### Added
+- **Fundraiser participants hear when they hit a milestone** — `sendParticipantMilestoneEmail` existed, rendered, and had no callers: the one piece of the fundraising loop that tells a seller their effort registered anywhere. Passing 5, 10, 25, 50 or 100 sales now sends it.
+
+  Milestones are counted in orders rather than dollars, because a participant selling $10 jars moves in whole jars and "you have made 25 sales" is a number they can check against their own memory. The thresholds thin out on purpose — the early ones are close together because the first few sales are when someone decides whether this is worth doing, and the later ones spread out so a strong seller is not emailed every other afternoon.
+
+  It hangs off `payment.completed` rather than the commission crediting that moves the counter, because `credit-commission` runs inside a transaction and sending email from there would hold it open across a network call. A new `lastMilestoneNotified` column makes it replay-safe under at-least-once delivery, and comparing the highest milestone reached against that marker also collapses a burst of sales into one message instead of one per threshold crossed — twenty-five jars at a school fair is one congratulation, not three. The marker is written *after* the send, so a crash between the two repeats an email rather than losing it. Existing participants are backfilled to whatever they have already passed, so switching this on does not congratulate a whole roster for thresholds crossed weeks ago.
+
 - **Local pickup orders tell the customer they are ready** — a pickup order got no notification at all. The shipped email is sent from the EasyPost tracking webhook, and a pickup order never has a label, so no tracker exists and nothing ever fired. `sendOrderReadyForPickupEmail` was written for exactly this and had no callers.
 
   It subscribes to `order.fulfilled`, so the notice follows the fact rather than whichever admin route happened to mark the order fulfilled. Shipped orders are filtered out in the same handler rather than through a second code path — they already get their email from the tracking webhook, and sending both would tell one customer both to expect a parcel and to come and collect it. A guest with no name on file is greeted rather than addressed as `undefined`.

@@ -1066,6 +1066,13 @@ model FundraiserParticipant {
   totalOrders     Int                         @default(0)
   totalRevenue    Decimal                     @default(0) @db.Decimal(10, 2)
   totalCommission Decimal                     @default(0) @db.Decimal(10, 2)
+  /// Highest sales milestone this participant has already been congratulated for.
+  ///
+  /// A marker rather than a derived value because domain events are delivered at-least-once:
+  /// without it a replayed `payment.completed` would send a second "you reached 25 sales"
+  /// email. Comparing the highest milestone reached against this column also collapses a
+  /// burst of orders into one message instead of one per threshold crossed.
+  lastMilestoneNotified Int                    @default(0)
   createdAt       DateTime                    @default(now())
   updatedAt       DateTime                    @default(now()) @updatedAt
   fundraiser      Fundraiser                  @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
