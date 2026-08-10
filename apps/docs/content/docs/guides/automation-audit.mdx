@@ -88,9 +88,9 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 14 | Inventory out-of-stock → operators | VERIFIED | same |
 | 15 | Return requested (customer path) | WIRED | `api/account/returns:131` |
 | 16 | Return requested (admin path) | WIRED | `api/admin/returns:153` |
-| 17 | Stale unfulfilled orders sweep | WIRED | `cron/operations-sweep` |
-| 18 | Aging returns sweep | WIRED | `cron/operations-sweep` |
-| 19 | Stuck webhooks sweep | WIRED | `cron/operations-sweep` |
+| 17 | Stale unfulfilled orders sweep | **VERIFIED** | `cron/operations-sweep`; `tests/lib/operations/aging.test.ts` (31 cases) |
+| 18 | Aging returns sweep | **VERIFIED** | same |
+| 19 | Stuck webhooks sweep | **VERIFIED** | same |
 | 20 | New-order in-app notification | **VERIFIED** ✅ | Phase 2 — `handlers/order-notifications.ts` on `payment.completed`, 15 tests |
 | 21 | High-value order alert | **VERIFIED** ✅ | Phase 2 — separate dedupe key, $100 threshold |
 | 21a | Admin new-order **email** | **VERIFIED** ✅ | Phase 2 — was orphaned, not Stripe-only; see correction below |
@@ -120,10 +120,10 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 |---|---|---|---|
 | 30 | Abandoned cart, 3 stages | **VERIFIED** ✅ | Phase 5 — `lib/checkout/abandoned-cart.ts`, 20 tests |
 | 31 | Duplicate abandoned-cart sender | **ORPHANED — reported** | `lib/email/automation.ts:384` shadowed by the cron's own local copy. Removal needs sign-off (CLAUDE.md §3) |
-| 32 | Stock decrement on payment | WIRED | `lib/inventory-manager.ts` |
-| 33 | `InventoryAlert` creation | WIRED | 15 `prisma.inventoryAlert` references |
+| 32 | Stock decrement on payment | **VERIFIED** | `tests/lib/inventory-manager.test.ts` (44 cases) + `tests/integration/inventory-order-completion` |
+| 33 | `InventoryAlert` creation | **VERIFIED** | `tests/lib/inventory-manager.test.ts` — alert creation flow |
 | 34 | Restock email to staff | **VERIFIED** ✅ | Phase 4 — `handlers/restock-alert.ts`, 6 tests. *Audit mislabelled this as customer-facing; it is a staff restock recommendation, and was orphaned rather than schema-only.* |
-| 35 | PO receiving → stock + event | WIRED | `lib/purchasing/receive-purchase-order:143` |
+| 35 | PO receiving → stock + event | **VERIFIED** | `tests/lib/purchasing/receiving.test.ts` (31 cases) |
 
 ### E. Fulfillment, shipping, financial, social, identity
 
@@ -134,8 +134,8 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 38 | Tracking webhook → order status | VERIFIED | `lib/tracking/webhook-handlers.ts` |
 | 39 | Label purchase → `shipment.created` | WIRED | `shipping-label/route:194` |
 | 40 | QuickBooks paid-order sync | WIRED | `cron/quickbooks-sync` (hourly, off the checkout path by design) |
-| 41 | QuickBooks refund sync | WIRED | `enqueueRefunds` |
-| 42 | Processor fee capture | WIRED | `cron/processor-fees` |
+| 41 | QuickBooks refund sync | **VERIFIED** | same |
+| 42 | Processor fee capture | **VERIFIED** | `tests/lib/payments/processor-fees.test.ts` |
 | 43 | `dashboard-analysis` cron | **REMOVED** ✅ | Phase 4 — unreferenced, unscheduled, unauthenticated; deleted with sign-off |
 | 44 | Fundraiser donation receipt | WIRED | 6 call sites |
 | 45 | Participant welcome | WIRED | 1 call site |
@@ -153,12 +153,22 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 
 Across **54** scored automation candidates (53 at audit time, plus the consumer layer built in Phase 1):
 
-| Measure | At audit | Phase 1 | Phase 2 | Phase 3 | After Phase 4 |
-|---|---|---|---|---|---|
-| **Built** — code exists (VERIFIED + WIRED + ORPHANED) | 46 / 87% | 48 / 89% | 48 / 89% | 50 / 93% | **52 / 98%** |
-| **Functions correctly today** (VERIFIED + WIRED) | 38 / 72% | 41 / 76% | 47 / 87% | 49 / 91% | **51 / 96%** |
-| **Proven by an automated test** (VERIFIED only) | 8 / 15% | 10 / 19% | 16 / 30% | 18 / 33% | **20 / 38%** |
-| **Needs work** (ORPHANED + SCHEMA-ONLY + MISSING + stub) | 15 / 28% | 13 / 24% | 7 / 13% | 5 / 9% | **2 / 4%** |
+| Measure | At audit | Phase 1 | Phase 2 | Phase 3 | Phase 4 | After Phase 5 |
+|---|---|---|---|---|---|---|
+| **Built** — code exists (VERIFIED + WIRED + ORPHANED) | 46 / 87% | 48 / 89% | 48 / 89% | 50 / 93% | 52 / 98% | **52 / 98%** |
+| **Functions correctly today** (VERIFIED + WIRED) | 38 / 72% | 41 / 76% | 47 / 87% | 49 / 91% | 51 / 96% | **51 / 96%** |
+| **Proven by an automated test** (VERIFIED only) | 8 / 15% | 10 / 19% | 16 / 30% | 18 / 33% | 20 / 38% | **30 / 57%** |
+| **Needs work** (ORPHANED + SCHEMA-ONLY + MISSING + stub) | 15 / 28% | 13 / 24% | 7 / 13% | 5 / 9% | 2 / 4% | **2 / 4%** |
+
+#### A third correction: the VERIFIED column was undercounting
+
+Phase 5 added tests for two automations (items 11 and 30) but the figure moves by ten, because a
+re-audit found eight more that were **already covered and never credited** — the operations sweep
+(`aging.test.ts`, 31 cases), stock decrement and alert creation (`inventory-manager.test.ts`, 44),
+purchase-order receiving (31), QuickBooks sync (21) and processor fees. The original audit counted
+only tests it had traced by hand, so 15% understated the real starting position. The honest reading
+is that this codebase was better tested than the first pass credited — the same direction as the
+headline finding.
 
 The denominator falls to **53** at Phase 4: item 43 was a dead stub and is deleted rather than
 scored. The two remaining are item 29 (`EmailWebhook`, a schema-only model) and item 31 (the
