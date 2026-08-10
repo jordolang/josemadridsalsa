@@ -68,7 +68,11 @@ vi.mock('@/lib/tax-calculator', () => ({
   ),
 }))
 
-vi.mock('@/lib/shipping-calculator', () => ({
+// Only the rate call is stubbed. `buildShippingItems` is pure mapping — the thing that turns
+// catalogue rows into parcel weights and dimensions — so the real one is kept, and a unit
+// mistake in it fails these tests rather than being mocked away.
+vi.mock('@/lib/shipping-calculator', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/shipping-calculator')>()),
   calculateShipping: vi.fn(() => ({
     shippingCost: 8.99,
     shippingMethod: 'Standard Shipping',

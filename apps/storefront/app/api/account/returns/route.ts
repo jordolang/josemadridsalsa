@@ -11,6 +11,8 @@ import {
   validateReturnRequest,
   type ReturnableOrderItem,
 } from '@/lib/orders/returns'
+import { buildReturnInstructions } from '@/lib/orders/return-instructions'
+import { describeMissingOrigin, getShippingOrigin } from '@/lib/shipping/origin'
 
 const CustomerReturnSchema = z.object({
   orderId: z.string().cuid(),
@@ -32,10 +34,13 @@ const CustomerReturnSchema = z.object({
 /**
  * Customer-initiated return request.
  *
- * Deliberately narrower than the admin route: the customer chooses items and a reason, and
- * nothing else. Resolution, restocking fees and the window override stay with staff, and
- * the request always lands as REQUESTED for a human to approve — a customer cannot approve
- * their own return.
+ * Deliberately narrower than the admin route: the customer chooses items and a reason, and nothing
+ * else. Resolution, restocking fees and the window override stay with staff.
+ *
+ * **Self-serve.** A request inside the published window is approved on creation — a customer does
+ * not need permission to send something back. They arrange and pay their own return postage, so the
+ * response carries the address to send it to. The only remaining steps are ours: confirm the parcel
+ * arrived, then confirm the refund.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -100,6 +105,11 @@ export async function POST(request: NextRequest) {
         orderId: order.id,
         reason: body.reason,
         resolution: 'REFUND',
+        // Approved on creation: a customer inside the published window does not need our permission
+        // to send something back. They arrange and pay their own postage, and the only steps left
+        // are ours — confirm the goods arrived, then confirm what to refund.
+        status: 'APPROVED',
+        approvedAt: new Date(),
         customerNote: body.note ?? null,
         requestedById: userId,
         items: {
@@ -121,7 +131,7 @@ export async function POST(request: NextRequest) {
         rmaNumber: returnRequest.rmaNumber,
         returnRequestId: returnRequest.id,
         reason: body.reason,
-        status: 'REQUESTED',
+        status: 'APPROVED',
         via: 'customer',
       },
     })
@@ -139,7 +149,26 @@ export async function POST(request: NextRequest) {
       dedupeKey: dedupeKeys.returnRequested(returnRequest.id),
     })
 
-    return NextResponse.json({ returnRequest }, { status: 201 })
+    // The address has to come back with the response: an approved return the customer cannot post
+    // is not self-serve. A missing warehouse address is reported rather than hidden, because the
+    // return is already open and somebody has to be able to complete it.
+    const origin = await getShippingOrigin()
+    const instructions = origin.ok
+      ? buildReturnInstructions(returnRequest.rmaNumber, {
+          name: origin.origin.name,
+          street1: origin.origin.street1,
+          city: origin.origin.city,
+          state: origin.origin.state,
+          zip: origin.origin.zip,
+          country: origin.origin.country,
+        })
+      : null
+
+    if (!origin.ok) {
+      console.error(`[Returns] ${describeMissingOrigin(origin.missing)}`)
+    }
+
+    return NextResponse.json({ returnRequest, instructions }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 })

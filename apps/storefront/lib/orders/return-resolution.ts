@@ -1,4 +1,4 @@
-import type { ReturnResolution } from '@prisma/client'
+import type { ReturnReason, ReturnResolution } from '@prisma/client'
 
 /**
  * What completing a return actually does about the money.
@@ -117,6 +117,94 @@ export function returnValueCents(
   const goods = lines.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0)
   // A fee larger than the goods gives nothing back rather than charging the customer.
   return Math.max(0, goods - restockingFeeCents)
+}
+
+/**
+ * Return reasons that are the business's fault.
+ *
+ * These are the only cases where the customer gets the **original shipping** back as well. Everyone
+ * else paid for a delivery that happened, so that service was rendered — but a customer who was sent
+ * a broken or wrong jar should not be out of pocket for the postage that brought it.
+ *
+ * `QUALITY_ISSUE` counts: the product not being good enough is on us. `CHANGED_MIND`,
+ * `ARRIVED_LATE` and `NOT_AS_DESCRIBED` do not — a late parcel still arrived, and "not as
+ * described" is a judgement call staff can override per return.
+ */
+export const OUR_FAULT_RETURN_REASONS: ReturnReason[] = ['DAMAGED', 'WRONG_ITEM', 'QUALITY_ISSUE']
+
+export function isOurFault(reason: ReturnReason): boolean {
+  return OUR_FAULT_RETURN_REASONS.includes(reason)
+}
+
+export interface RefundBreakdownInput {
+  lines: ReturnedLineValue[]
+  /** Tax the order collected, in cents. */
+  orderTaxCents: number
+  /** Goods total of the whole order, in cents — the base tax was charged on. */
+  orderGoodsCents: number
+  /** Shipping and handling the customer paid, in cents. */
+  orderShippingCents: number
+  reason: ReturnReason
+  restockingFeeCents?: number
+  /**
+   * Staff override. Forces original shipping in or out regardless of the reason, for the calls
+   * that do not fit the rule.
+   */
+  refundShippingOverride?: boolean
+}
+
+export interface RefundBreakdown {
+  goodsCents: number
+  /** Tax attributable to the returned goods. */
+  taxCents: number
+  /** Original shipping, included only when the return is our fault. */
+  shippingCents: number
+  restockingFeeCents: number
+  totalCents: number
+  /** Whether shipping was included, and why — shown to staff before they confirm. */
+  shippingRefunded: boolean
+  shippingReason: string
+}
+
+/**
+ * What to send back.
+ *
+ * **Goods + the tax on those goods**, plus original shipping when the fault is ours, less any
+ * restocking fee.
+ *
+ * Tax is apportioned by the returned goods' share of the order's goods rather than recomputed:
+ * re-running Stripe Tax would price today's rates against a sale that happened at yesterday's, and
+ * refunding the whole order's tax for one returned jar would hand back tax that was never
+ * collected on it.
+ */
+export function computeRefundBreakdown(input: RefundBreakdownInput): RefundBreakdown {
+  const goodsCents = input.lines.reduce(
+    (sum, line) => sum + line.unitPriceCents * line.quantity,
+    0
+  )
+
+  // Guard the divisor: an order whose goods total is zero — fully discounted, or a replacement —
+  // has no tax to apportion, and dividing by it would produce NaN in a refund.
+  const share = input.orderGoodsCents > 0 ? goodsCents / input.orderGoodsCents : 0
+  const taxCents = Math.round(input.orderTaxCents * Math.min(1, share))
+
+  const ourFault = input.refundShippingOverride ?? isOurFault(input.reason)
+  const shippingCents = ourFault ? input.orderShippingCents : 0
+
+  const restockingFeeCents = input.restockingFeeCents ?? 0
+
+  return {
+    goodsCents,
+    taxCents,
+    shippingCents,
+    restockingFeeCents,
+    // Never negative: a fee larger than everything else refunds nothing rather than billing them.
+    totalCents: Math.max(0, goodsCents + taxCents + shippingCents - restockingFeeCents),
+    shippingRefunded: ourFault && input.orderShippingCents > 0,
+    shippingReason: ourFault
+      ? 'Refunded — the return is down to us'
+      : 'Not refunded — the delivery happened',
+  }
 }
 
 /**

@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { calculateTax } from '@/lib/tax-calculator'
-import { calculateShipping } from '@/lib/shipping-calculator'
+import { buildShippingItems, calculateShipping } from '@/lib/shipping-calculator'
+import { prisma } from '@/lib/prisma'
 
 /**
  * Tax Calculation API - Real-time tax estimates for checkout
  * José Madrid Salsa E-commerce Platform
- * 
- * @note Product weight is optional. If not provided, defaults to 1 lb per item
- *       which is a reasonable estimate for salsa jars (typically 0.5-2 lbs).
- *       For accurate shipping costs, always include product weights.
+ *
+ * Parcel weight and dimensions come from the catalogue, not the request — see the comment at the
+ * `calculateShipping` call below.
  */
 
 const TaxCalculationSchema = z.object({
@@ -19,7 +19,6 @@ const TaxCalculationSchema = z.object({
         productId: z.string().cuid(),
         quantity: z.number().int().positive(),
         price: z.number().positive(), // Price per unit in dollars
-        weight: z.number().positive().optional(), // Weight in pounds (defaults to 1 lb if not provided)
       })
     )
     .min(1, 'Items array cannot be empty'),
@@ -80,14 +79,23 @@ export async function POST(request: Request) {
     // Calculate totals
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
     
-    // Calculate shipping cost using shipping calculator
-    // Note: Weight defaults to 1 lb per item if not provided
-    // This is a reasonable estimate for salsa jars which typically weigh 0.5-2 lbs
+    // Parcel weight and dimensions are read from the catalogue, never taken from the request.
+    // The endpoint used to accept a client-supplied `weight`: our own checkout never sent one,
+    // and a caller that did could understate the parcel to quote itself cheaper shipping. Same
+    // reasoning as `shippingCost` not being accepted in `/api/checkout`.
+    const shippingProducts = await prisma.product.findMany({
+      where: { id: { in: items.map((item) => item.productId) } },
+      select: {
+        id: true,
+        weight: true,
+        lengthInches: true,
+        widthInches: true,
+        heightInches: true,
+      },
+    })
+
     const shippingResult = await calculateShipping({
-      items: items.map((item) => ({
-        weight: item.weight ?? 1.0, // Default to 1 lb if weight not provided
-        quantity: item.quantity,
-      })),
+      items: buildShippingItems(items, new Map(shippingProducts.map((p) => [p.id, p]))),
       shippingAddress: {
         state: shippingAddress.state,
         postalCode: shippingAddress.postalCode,

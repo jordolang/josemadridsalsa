@@ -106,13 +106,40 @@ doing", `/admin/analytics` answers "how are we performing".
 
 ## Shipping and fulfillment
 
-- ✅ Carrier integrations (EasyPost), ✅ real-time rates, ✅ label creation, ✅ tracking
+- ✅ Carrier integrations (EasyPost), ✅ real-time rates, ✅ tracking
+- ✅ Label creation — a **real** EasyPost purchase. Until this release the route synthesised
+  `${CARRIER}${Date.now()}` as a tracking number, pointed `labelUrl` at a route that did not exist,
+  and bought no postage — so it marked orders shipped and showed customers a tracking number that
+  404s. The buy dialog invented the rates it displayed, too
+- ✅ Packing model — jars pack three to a line, four lines to a case of twelve
+  (`lib/shipping/jar-packing.ts`), which sizes and weighs the parcel for both the customer's quote
+  and the label bought against it
+- ✅ Postage bought elsewhere — Pirate Ship has no API, so tracking, carrier, service and **what we
+  actually paid** can be recorded by hand and land on the order as a shipment
 - ✅ Fulfillment status, ✅ automated customer notifications
 - ❓ Local pickup — `PICKUP` exists as a channel/method value without a pickup workflow
 - ❌ Shipping rules
 - ❌ Zones
 - ❌ Package presets
 - ❌ Shipping insurance
+- ❌ Multi-parcel quoting — an order over one case is quoted as one tall parcel. The weight is right
+  and the dimensional price is not, because the carrier client sends one parcel per shipment
+
+<Callout type="warn" title="Every shipping quote was 16x overweight">
+`Product.weight` is **ounces** — a jar is `16`, and `lib/feeds/products.ts` maps the same column to
+`weightOz` for the Google and Amazon feeds. Both paths in `lib/shipping-calculator.ts` treated it as
+pounds, so one 16oz jar priced as a 16 lb parcel: it tripped the heavy-parcel surcharge and cost
+**$10.49 instead of $6.99**, and a six-jar order quoted as 96 lb. Seven orders in the database show
+exactly that figure.
+
+Two related faults found with it: the warehouse address had three sources of truth under two
+environment-variable prefixes, with rate quoting **defaulting to a placeholder in San Francisco**;
+and `Product.weight` is the jar *size*, not the shipping weight, so gross weight is now computed
+from the glass, lid, contents and packaging rather than read off the catalogue.
+
+The unit is now in the field name (`weightOz`), one helper computes parcel weight for both paths,
+and one resolver supplies the origin to quoting and buying alike.
+</Callout>
 
 ## Discounts and promotions
 
@@ -181,11 +208,20 @@ happened. `lib/analytics/monthly-series.ts` always emits every month.
 - ✅ Store credit — a gift certificate for the return's value, coded `JMS-CR-…`
 - ✅ Eligibility rules — a 30-day window from fulfillment, enforced on the customer path with a
   staff override (`RETURN_WINDOW_DAYS` in `lib/orders/returns.ts`)
-- ✅ Return labels — a real EasyPost purchase from the customer's address back to the warehouse
+- ✅ Self-serve — a customer inside the window opens a return **without staff approval** and is
+  given the RMA and the warehouse address immediately
+- ❌ Return labels — deliberately not built. **The customer arranges and pays their own return
+  postage**, so there is no label to buy and nothing to claw back if the parcel never arrives
 
 All three resolutions settle to the same value, so which one staff pick changes the form the
 customer's compensation takes and never the amount. A return produces exactly one outcome; the
 mutual exclusion is in `lib/orders/return-resolution.ts` with tests.
+
+**The refund is goods + the tax collected on them**, plus the original shipping *only* when the
+return is our fault (`DAMAGED`, `WRONG_ITEM`, `QUALITY_ISSUE`) — everyone else paid for a delivery
+that happened. Tax is apportioned by the returned goods' share of the order rather than recomputed,
+because re-running Stripe Tax would price today's rates against yesterday's sale. Staff can override
+the shipping decision per return, and the breakdown is itemised on screen before they confirm.
 
 ## User and staff administration
 

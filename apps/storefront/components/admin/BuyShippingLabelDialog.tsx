@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, Tag } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, Tag } from 'lucide-react'
 import { toast } from 'sonner'
+
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -15,21 +17,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
 interface ShippingRate {
   id: string
   carrier: string
   service: string
   rate: number
-  deliveryDays?: number
+  deliveryDays?: number | null
+}
+
+interface RateQuote {
+  parcel: { length: number; width: number; height: number; weight: number }
+  packing: string
+  customerPaidShipping: number
+  testMode: boolean
+  rates: ShippingRate[]
+  messages: Array<{ type: string; message: string }>
 }
 
 interface BuyShippingLabelDialogProps {
@@ -38,14 +41,14 @@ interface BuyShippingLabelDialogProps {
   hasShippingAddress: boolean
 }
 
-const CARRIERS = [
-  { value: 'usps', label: 'USPS' },
-  { value: 'ups', label: 'UPS' },
-  { value: 'fedex', label: 'FedEx' },
-] as const
-
-type Step = 'select' | 'confirm' | 'success'
-
+/**
+ * Buys real postage.
+ *
+ * This dialog used to **make up the rates it displayed** — a `mockRates` array built client-side
+ * from a hard-coded service list and an invented price — and the endpoint behind it never called
+ * the carrier either. Now the rates come from the carrier for this order's actual parcel, and the
+ * primary action is one click on the cheapest one, which is the only step that should need a human.
+ */
 export default function BuyShippingLabelDialog({
   orderId,
   orderNumber,
@@ -53,10 +56,8 @@ export default function BuyShippingLabelDialog({
 }: BuyShippingLabelDialogProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [step, setStep] = useState<Step>('select')
-  const [carrier, setCarrier] = useState('')
-  const [rates, setRates] = useState<ShippingRate[]>([])
-  const [selectedRate, setSelectedRate] = useState<ShippingRate | null>(null)
+  const [quote, setQuote] = useState<RateQuote | null>(null)
+  const [chosenRateId, setChosenRateId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isPurchasing, setIsPurchasing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,98 +66,57 @@ export default function BuyShippingLabelDialog({
     cost: number
     carrier: string
     service: string
+    labelUrl?: string
   } | null>(null)
 
-  function resetState() {
-    setStep('select')
-    setCarrier('')
-    setRates([])
-    setSelectedRate(null)
-    setError(null)
-    setResult(null)
-    setIsLoading(false)
-    setIsPurchasing(false)
-  }
-
-  async function handleFetchRates() {
-    if (!carrier) return
-
+  const loadRates = useCallback(async () => {
     setIsLoading(true)
     setError(null)
-    setRates([])
-    setSelectedRate(null)
-
     try {
-      // The shipping label API fetches rates internally.
-      // We can use the GET endpoint to check existing labels,
-      // but for rate preview we'll use a lightweight approach:
-      // fetch rates by attempting a calculate-shipping call or
-      // just let the user pick carrier+service and show cost on confirm.
-      //
-      // Since the label POST endpoint validates rates internally,
-      // we present common service options per carrier and show
-      // the cost preview when they confirm.
-
-      const serviceOptions = getServiceOptions(carrier)
-      const mockRates: ShippingRate[] = serviceOptions.map((svc, i) => ({
-        id: `rate-${carrier}-${i}`,
-        carrier: carrier.toUpperCase(),
-        service: svc.service,
-        rate: svc.estimatedRate,
-        deliveryDays: svc.deliveryDays,
-      }))
-
-      setRates(mockRates)
-
-      if (mockRates.length > 0) {
-        setSelectedRate(mockRates[0])
+      const response = await fetch(`/api/admin/orders/${orderId}/shipping-label/rates`)
+      const data = await response.json()
+      if (!response.ok) {
+        setError(data.error ?? 'Could not fetch rates')
+        return
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch rates')
+      setQuote(data)
+      // Cheapest pre-selected: the endpoint returns them sorted, so the default is one click away.
+      setChosenRateId(data.rates[0]?.id ?? null)
+    } catch {
+      setError('Could not fetch rates')
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [orderId])
 
-  async function handlePurchase() {
-    if (!selectedRate) return
+  useEffect(() => {
+    if (open && !quote && !result) {
+      loadRates()
+    }
+  }, [open, quote, result, loadRates])
 
+  async function purchase() {
+    if (!chosenRateId) return
     setIsPurchasing(true)
     setError(null)
-
     try {
-      const response = await fetch(
-        `/api/admin/orders/${orderId}/shipping-label`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            carrier: carrier,
-            service: selectedRate.service,
-            rateId: selectedRate.id,
-          }),
-        }
-      )
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to purchase shipping label')
-      }
-
-      setResult({
-        trackingNumber: data.label.trackingNumber,
-        cost: data.label.cost,
-        carrier: data.label.carrier,
-        service: data.label.service,
+      const response = await fetch(`/api/admin/orders/${orderId}/shipping-label`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rateId: chosenRateId }),
       })
-      setStep('success')
-      toast.success('Label purchased', {
-        description: `${data.label.carrier} ${data.label.service} — tracking ${data.label.trackingNumber}`,
+      const data = await response.json()
+      if (!response.ok) {
+        setError(data.error ?? 'Failed to buy the label')
+        return
+      }
+      setResult(data.label)
+      toast.success('Label bought', {
+        description: `${data.label.carrier} ${data.label.service} — ${data.label.trackingNumber}`,
       })
       router.refresh()
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to purchase label')
+    } catch {
+      setError('Failed to buy the label')
     } finally {
       setIsPurchasing(false)
     }
@@ -165,13 +125,21 @@ export default function BuyShippingLabelDialog({
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen)
     if (!nextOpen) {
-      resetState()
+      setQuote(null)
+      setChosenRateId(null)
+      setError(null)
+      setResult(null)
     }
   }
 
   if (!hasShippingAddress) {
     return null
   }
+
+  const chosen = quote?.rates.find((rate) => rate.id === chosenRateId) ?? null
+  // A label costing more than the customer paid is not a reason to block, but it is a reason to say
+  // so before the money goes — that is the case where Pirate Ship is worth the manual detour.
+  const underwater = chosen !== null && quote !== null && chosen.rate > quote.customerPaidShipping
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -183,179 +151,126 @@ export default function BuyShippingLabelDialog({
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Buy Shipping Label</DialogTitle>
+          <DialogTitle>Buy shipping label</DialogTitle>
           <DialogDescription>
-            Purchase a shipping label for order {orderNumber}
+            Real carrier rates for order {orderNumber}. Buying charges the carrier account.
           </DialogDescription>
         </DialogHeader>
 
-        {step === 'select' && (
-          <div className="space-y-4 py-2">
-            {/* Carrier selector */}
-            <div className="space-y-2">
-              <Label>Carrier</Label>
-              <Select value={carrier} onValueChange={(v) => { setCarrier(v); setRates([]); setSelectedRate(null); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select carrier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CARRIERS.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-            {/* Fetch rates button */}
-            {carrier && rates.length === 0 && (
-              <Button
-                variant="outline"
-                onClick={handleFetchRates}
-                disabled={isLoading}
-                className="w-full"
-              >
-                {isLoading ? 'Loading services...' : 'View Available Services'}
+        {result ? (
+          <div className="space-y-3 py-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <CheckCircle2 className="size-5 text-emerald-600" />
+              {result.carrier} {result.service} — ${result.cost.toFixed(2)}
+            </div>
+            <p className="font-mono text-xs text-muted-foreground">{result.trackingNumber}</p>
+            {result.labelUrl && (
+              <Button variant="outline" size="sm" asChild>
+                <a href={result.labelUrl} target="_blank" rel="noopener noreferrer">
+                  Print label
+                  <ExternalLink className="ml-1 size-3.5" />
+                </a>
               </Button>
             )}
+          </div>
+        ) : isLoading ? (
+          <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            Pricing this parcel with the carrier…
+          </div>
+        ) : quote ? (
+          <div className="space-y-4 py-2">
+            <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+              <p className="font-medium">{quote.packing}</p>
+              <p className="text-xs text-muted-foreground">
+                {quote.parcel.length}″ × {quote.parcel.width}″ × {quote.parcel.height}″ ·{' '}
+                {(quote.parcel.weight / 16).toFixed(1)} lb · customer paid $
+                {quote.customerPaidShipping.toFixed(2)}
+              </p>
+            </div>
 
-            {/* Service options */}
-            {rates.length > 0 && (
-              <div className="space-y-2">
-                <Label>Service</Label>
-                <div className="space-y-2">
-                  {rates.map((rate) => {
-                    const isSelected = selectedRate?.id === rate.id
-                    return (
-                      <label
-                        key={rate.id}
-                        data-state={isSelected ? 'selected' : undefined}
-                        className="flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors hover:bg-accent/50 data-[state=selected]:border-primary data-[state=selected]:bg-primary/5"
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="radio"
-                            name="shippingRate"
-                            checked={isSelected}
-                            onChange={() => setSelectedRate(rate)}
-                            className="size-4 accent-primary"
-                          />
-                          <div>
-                            <p className="text-sm font-medium">{rate.service}</p>
-                            {rate.deliveryDays && (
-                              <p className="text-xs text-muted-foreground">
-                                {rate.deliveryDays} business days
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <span className="text-sm font-semibold tabular-nums">
-                          ${rate.rate.toFixed(2)}
+            {quote.testMode && (
+              <Alert>
+                <AlertDescription className="text-xs">
+                  Carrier is in test mode — no real postage will be bought.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {quote.rates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No carrier returned a rate for this parcel.
+                {quote.messages.map((m) => ` ${m.message}`)}
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {quote.rates.map((rate, index) => (
+                  <button
+                    key={rate.id}
+                    type="button"
+                    onClick={() => setChosenRateId(rate.id)}
+                    className={`flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left text-sm transition-colors ${
+                      rate.id === chosenRateId
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:bg-muted/50'
+                    }`}
+                  >
+                    <span>
+                      <span className="font-medium">
+                        {rate.carrier} {rate.service}
+                      </span>
+                      {rate.deliveryDays ? (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {rate.deliveryDays} day{rate.deliveryDays === 1 ? '' : 's'}
                         </span>
-                      </label>
-                    )
-                  })}
-                </div>
+                      ) : null}
+                      {index === 0 && (
+                        <Badge variant="secondary" className="ml-2 text-[10px]">
+                          cheapest
+                        </Badge>
+                      )}
+                    </span>
+                    <span className="tabular-nums font-medium">${rate.rate.toFixed(2)}</span>
+                  </button>
+                ))}
               </div>
             )}
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+            {underwater && chosen && (
+              <Alert>
+                <AlertTriangle className="size-4" />
+                <AlertDescription className="text-xs">
+                  This label costs ${(chosen.rate - quote.customerPaidShipping).toFixed(2)} more than
+                  the customer paid for shipping. Consider buying it through Pirate Ship and
+                  recording it manually instead.
+                </AlertDescription>
               </Alert>
             )}
           </div>
-        )}
-
-        {step === 'success' && result && (
-          <div className="space-y-4 py-4">
-            <Alert>
-              <CheckCircle2 className="size-4" />
-              <AlertDescription>
-                Shipping label purchased successfully.
-              </AlertDescription>
-            </Alert>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Carrier</span>
-                <span className="font-medium">{result.carrier}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Service</span>
-                <span className="font-medium">{result.service}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Cost</span>
-                <span className="font-medium tabular-nums">
-                  ${result.cost.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Tracking</span>
-                <span className="font-mono text-xs">
-                  {result.trackingNumber}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
+        ) : null}
 
         <DialogFooter>
-          {step === 'select' && selectedRate && (
-            <div className="flex w-full items-center justify-between">
-              <div className="text-sm">
-                <span className="text-muted-foreground">Cost: </span>
-                <span className="font-semibold tabular-nums">
-                  ${selectedRate.rate.toFixed(2)}
-                </span>
-              </div>
-              <Button
-                onClick={handlePurchase}
-                disabled={isPurchasing}
-              >
-                {isPurchasing ? 'Purchasing...' : 'Confirm Purchase'}
+          {result ? (
+            <Button onClick={() => handleOpenChange(false)}>Done</Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => handleOpenChange(false)}>
+                Cancel
               </Button>
-            </div>
-          )}
-          {step === 'success' && (
-            <Button onClick={() => handleOpenChange(false)}>
-              Done
-            </Button>
+              <Button disabled={!chosenRateId || isPurchasing} onClick={purchase}>
+                {isPurchasing && <Loader2 className="mr-1 size-4 animate-spin" />}
+                {chosen ? `Buy for $${chosen.rate.toFixed(2)}` : 'Buy label'}
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
-}
-
-function getServiceOptions(carrier: string): Array<{
-  service: string
-  estimatedRate: number
-  deliveryDays: number
-}> {
-  switch (carrier) {
-    case 'usps':
-      return [
-        { service: 'Ground Advantage', estimatedRate: 5.99, deliveryDays: 5 },
-        { service: 'Priority Mail', estimatedRate: 8.99, deliveryDays: 3 },
-        { service: 'Priority Mail Express', estimatedRate: 26.99, deliveryDays: 1 },
-      ]
-    case 'ups':
-      return [
-        { service: 'Ground', estimatedRate: 9.99, deliveryDays: 5 },
-        { service: '3 Day Select', estimatedRate: 14.99, deliveryDays: 3 },
-        { service: '2nd Day Air', estimatedRate: 22.99, deliveryDays: 2 },
-        { service: 'Next Day Air', estimatedRate: 34.99, deliveryDays: 1 },
-      ]
-    case 'fedex':
-      return [
-        { service: 'Ground', estimatedRate: 9.49, deliveryDays: 5 },
-        { service: 'Express Saver', estimatedRate: 15.99, deliveryDays: 3 },
-        { service: '2Day', estimatedRate: 21.99, deliveryDays: 2 },
-        { service: 'Priority Overnight', estimatedRate: 36.99, deliveryDays: 1 },
-      ]
-    default:
-      return []
-  }
 }

@@ -105,10 +105,25 @@ DATABASE_URL_UNPOOLED="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/jos
 | `SHIPPING_PROVIDER` | No | Shipping rate provider: `easypost` or `shippo` |
 | `SHIPPING_API_KEY` | For rates | Shipping provider API key |
 | `SHIPPING_TEST_MODE` | No | Set to `"false"` for production |
-| `SHIPPING_ORIGIN_ADDRESS` | For rates | Origin street address |
-| `SHIPPING_ORIGIN_CITY` | For rates | Origin city |
-| `SHIPPING_ORIGIN_STATE` | For rates | Origin state (2-letter code) |
-| `SHIPPING_ORIGIN_ZIP` | For rates | Origin ZIP code |
+| `SHIPPING_ORIGIN_ADDRESS` | For rates and labels | Warehouse street address |
+| `SHIPPING_ORIGIN_CITY` | For rates and labels | Warehouse city |
+| `SHIPPING_ORIGIN_STATE` | For rates and labels | Warehouse state (2-letter code) |
+| `SHIPPING_ORIGIN_ZIP` | For rates and labels | Warehouse ZIP code |
+| `SHIPPING_ORIGIN_COUNTRY` | No | Defaults to `US` |
+| `SHIP_FROM_NAME` | No | Sender name on labels. Defaults to `Jose Madrid Salsa` |
+| `SHIP_FROM_STREET`, `SHIP_FROM_CITY`, `SHIP_FROM_STATE`, `SHIP_FROM_ZIP`, `SHIP_FROM_COUNTRY` | No | Legacy aliases for the `SHIPPING_ORIGIN_*` variables above, still read as a fallback. Prefer `SHIPPING_ORIGIN_*` |
+
+<Callout type="warn" title="Set the warehouse address">
+Rate quoting and label purchase both read the warehouse address through
+`lib/shipping/origin.ts`, which takes **Settings → Shipping** first and these variables second.
+Until one of the two is complete, no real carrier rate can be fetched — checkout falls back to
+flat-rate estimates and logs why.
+
+They used to be configured separately: quoting read `SHIPPING_ORIGIN_*` and **defaulted to a
+placeholder address in San Francisco** when unset, while label purchase read `SHIP_FROM_*`. A
+half-configured deployment therefore quoted customers from one address and shipped from another,
+with nothing in the response to indicate it.
+</Callout>
 
 ## Monitoring
 
