@@ -157,16 +157,16 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 41 | QuickBooks refund sync | **VERIFIED** | same |
 | 42 | Processor fee capture | **VERIFIED** | `tests/lib/payments/processor-fees.test.ts` |
 | 43 | `dashboard-analysis` cron | **REMOVED** ✅ | Phase 4 — unreferenced, unscheduled, unauthenticated; deleted with sign-off |
-| 44 | Fundraiser donation receipt | WIRED | 6 call sites |
-| 45 | Participant welcome | WIRED | 1 call site |
-| 46 | Fundraiser follow-up | WIRED | 1 call site |
+| 44 | Fundraiser donation receipt | **VERIFIED** ✅ | Phase 5 — `tests/lib/email/automation.test.ts`; cents→currency, anonymous donors |
+| 45 | Participant welcome | **VERIFIED** ✅ | Phase 5 — same file; referral code and organiser reply-to |
+| 46 | Fundraiser follow-up | **VERIFIED** ✅ | Phase 5 — same file |
 | 47 | Participant milestone | **VERIFIED** ✅ | Phase 2 — `handlers/participant-milestone.ts`, 16 tests |
 | 48 | Campaign summary | **VERIFIED** ✅ | Phase 2 — `cron/fundraiser-lifecycle`, 16 tests |
 | 49 | Campaign launch | **VERIFIED** ✅ | Phase 2 — `cron/fundraiser-lifecycle` |
 | 50 | Scheduled social publish | WIRED | `cron/social-publish`, single-scheduler guarantee documented |
-| 51 | Welcome email on registration | WIRED | `api/auth/register` |
-| 52 | Newsletter welcome | WIRED | 1 call site |
-| 53 | Contact-form confirmation | WIRED | 1 call site |
+| 51 | Welcome email on registration | **VERIFIED** ✅ | Phase 5 — same file; `api/auth/register:68` |
+| 52 | Newsletter welcome | **VERIFIED** ✅ | Phase 5 — same file; `api/newsletter:35` |
+| 53 | Contact-form confirmation | **VERIFIED** ✅ | Phase 5 — same file; `(public)/messages/start:60` |
 | 54 | `customer.created` domain event | WIRED | `api/auth/register:59`, `lib/auth.ts:237` |
 
 ## The three percentages
