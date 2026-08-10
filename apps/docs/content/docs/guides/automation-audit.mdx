@@ -153,12 +153,16 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 
 Across **54** scored automation candidates (53 at audit time, plus the consumer layer built in Phase 1):
 
-| Measure | At audit | Phase 1 | Phase 2 | After Phase 3 |
-|---|---|---|---|---|
-| **Built** — code exists (VERIFIED + WIRED + ORPHANED) | 46 / 87% | 48 / 89% | 48 / 89% | **50 / 93%** |
-| **Functions correctly today** (VERIFIED + WIRED) | 38 / 72% | 41 / 76% | 47 / 87% | **49 / 91%** |
-| **Proven by an automated test** (VERIFIED only) | 8 / 15% | 10 / 19% | 16 / 30% | **18 / 33%** |
-| **Needs work** (ORPHANED + SCHEMA-ONLY + MISSING + stub) | 15 / 28% | 13 / 24% | 7 / 13% | **5 / 9%** |
+| Measure | At audit | Phase 1 | Phase 2 | Phase 3 | After Phase 4 |
+|---|---|---|---|---|---|
+| **Built** — code exists (VERIFIED + WIRED + ORPHANED) | 46 / 87% | 48 / 89% | 48 / 89% | 50 / 93% | **52 / 98%** |
+| **Functions correctly today** (VERIFIED + WIRED) | 38 / 72% | 41 / 76% | 47 / 87% | 49 / 91% | **51 / 96%** |
+| **Proven by an automated test** (VERIFIED only) | 8 / 15% | 10 / 19% | 16 / 30% | 18 / 33% | **20 / 38%** |
+| **Needs work** (ORPHANED + SCHEMA-ONLY + MISSING + stub) | 15 / 28% | 13 / 24% | 7 / 13% | 5 / 9% | **2 / 4%** |
+
+The denominator falls to **53** at Phase 4: item 43 was a dead stub and is deleted rather than
+scored. The two remaining are item 29 (`EmailWebhook`, a schema-only model) and item 31 (the
+duplicate abandoned-cart sender, reported not removed) — neither is a missing automation.
 
 Item 21a (the admin new-order email) is a correction note rather than a separately scored candidate,
 so the denominator stays 54.
@@ -313,10 +317,28 @@ originally listed here was closed in Phase 2; see the correction above.) These a
 automation, forgotten on the fourth path" bugs that Phase 1 makes structurally impossible going
 forward, since a consumer fires for the fact rather than for one route.
 
-### Phase 4 — Build the missing engines (3 items)
+### Phase 4 — Build the missing engines ✅ *complete*
 
-`OrderNotificationRule` evaluation (per-rule email/Slack routing — schema is ready), restock
-notifications to waiting customers, and either implement or remove the `dashboard-analysis` stub.
+**Order notification rules (item 22).** The model had zero code references anywhere — a table
+describing which events go to which addresses and Slack channels, that nothing read. Now evaluated
+against the domain events. Deliberately separate from `notifyOperators`, which is the built-in
+operational floor every operator sees; these are rules an admin writes, to recipients who may not be
+operators at all. `ORDER_CANCELLED` is deliberately unmapped because nothing emits `order.cancelled`
+— a rule using it would sit in the table looking configured and never fire, the same mistake as
+mapping `ORDER_REFUNDED` before its producer existed.
+
+**Restock emails (item 34).** `createRestockNotification` already computed urgency, days of stock
+remaining and a recommended order quantity — and had no callers, so a low stock level produced only
+an in-app badge saying a product was low, not what to do about it. Now hangs off `inventory.low` and
+`inventory.out_of_stock` with a seven-day per-product cooldown, because stock stays below threshold
+until someone restocks and the event fires on every sale that keeps it there.
+
+*Two corrections to the original audit here.* Item 34 was recorded as a customer-facing "notify me
+when back in stock" and as SCHEMA-ONLY. It is neither: it is a **staff restock recommendation**, and
+the code existed with no callers, making it ORPHANED.
+
+**`dashboard-analysis` (item 43) — removed.** Five lines returning `{success: true}`, referenced by
+nothing, not scheduled in `vercel.json`, and the only cron route with no authorisation check.
 
 ### Phase 5 — Raise the verified floor
 
