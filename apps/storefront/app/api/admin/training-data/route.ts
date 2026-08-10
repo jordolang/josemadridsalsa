@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { TrainingDocumentSourceType, TrainingDocumentStatus } from '@prisma/client'
 import { requirePermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import prisma from '@/lib/prisma'
 import {
   extractTextFromUpload,
@@ -87,8 +88,11 @@ function buildErrorResponse(message: string, status = 400) {
 }
 
 export async function POST(request: Request) {
+  // Hoisted out of the auth try/catch so the acting user is still in scope when the
+  // upload is audited further down.
+  let actor: Awaited<ReturnType<typeof requirePermission>>
   try {
-    await requirePermission('content:write')
+    actor = await requirePermission('content:write')
   } catch (error: any) {
     return buildErrorResponse(error?.message ?? 'Unauthorized', 403)
   }
@@ -164,6 +168,17 @@ export async function POST(request: Request) {
     if (extraction.status === 'ready') {
       invalidateIndexedContentCache()
     }
+
+    await logAuditWithRequest(
+      {
+        userId: actor.id,
+        action: 'create',
+        entityType: 'training_document',
+        entityId: document.id,
+        changes: { title: document.title, status: extraction.status },
+      },
+      request
+    )
 
     return NextResponse.json({
       document,

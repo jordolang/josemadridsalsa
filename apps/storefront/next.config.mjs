@@ -11,6 +11,9 @@ const monorepoRoot = existsSync(path.join(workspaceRoot, 'turbo.json'))
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: monorepoRoot,
+  // Self-contained server build for the Docker image (Dockerfile). Gated so the
+  // Vercel build path stays exactly as it was.
+  ...(process.env.DOCKER_BUILD === '1' ? { output: 'standalone' } : {}),
   // Force cache invalidation for Vercel builds
   generateBuildId: async () => {
     return `build-${Date.now()}`
@@ -51,7 +54,10 @@ const nextConfig = {
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",
-      "upgrade-insecure-requests",
+      // Production only: on http://localhost this upgrades every subresource to
+      // https, which Safari applies to localhost and Chrome does not — leaving
+      // dev pages unstyled with no assets in Safari.
+      ...(isProd ? ['upgrade-insecure-requests'] : []),
     ].join('; ')
 
     const headers = [

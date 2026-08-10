@@ -32,6 +32,15 @@ vi.mock('@/lib/prisma', () => ({
       create: vi.fn(),
       findFirst: vi.fn(),
       upsert: vi.fn(),
+      // Two tests pass this mock in as the transaction client, so the commission reversal
+      // reads through it. These refunds sit on ordinary orders and it short-circuits.
+      findUnique: vi.fn().mockResolvedValue({
+        amount: 0,
+        commissionReversed: null,
+        payment: { order: null },
+      }),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
     },
     product: {
       update: vi.fn(),
@@ -212,6 +221,9 @@ describe('E2E: Refund Flow', () => {
     expect(prisma.refund.create).toHaveBeenCalledWith({
       data: {
         stripeRefundId: 're_test_123',
+        // Refunds record which processor they came from, so they can be attributed and
+        // reported on — stripeRefundId is provider-agnostic despite its name.
+        provider: 'STRIPE',
         amount: 4999,
         reason: undefined,
         status: 'SUCCEEDED',
@@ -288,6 +300,13 @@ describe('E2E: Refund Flow', () => {
             amount: 4999,
             status: 'SUCCEEDED',
           }),
+          findUnique: vi.fn().mockResolvedValue({
+            amount: 0,
+            commissionReversed: null,
+            payment: { order: null },
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
         },
         product: {
           update: vi.fn(),
@@ -383,7 +402,18 @@ describe('E2E: Refund Flow', () => {
     const mockTx = {
       order: { update: vi.fn() },
       payment: { update: vi.fn() },
-      refund: { upsert: vi.fn() },
+      refund: {
+        // The commission reversal re-reads the refund in the transaction; these sit on
+        // ordinary orders, so it short-circuits.
+        upsert: vi.fn().mockResolvedValue({ id: 'refund-test' }),
+        findUnique: vi.fn().mockResolvedValue({
+          amount: 0,
+          commissionReversed: null,
+          payment: { order: null },
+        }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
+      },
       product: { update: vi.fn() },
       auditLog: {
         findFirst: vi.fn().mockResolvedValue(null),
@@ -599,6 +629,13 @@ describe('E2E: Refund Flow', () => {
             amount: partialRefundAmount,
             status: 'SUCCEEDED',
           }),
+          findUnique: vi.fn().mockResolvedValue({
+            amount: 0,
+            commissionReversed: null,
+            payment: { order: null },
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
         },
         product: {
           update: vi.fn(),
@@ -660,7 +697,18 @@ describe('E2E: Refund Flow', () => {
     const mockTx = {
       order: { update: vi.fn() },
       payment: { update: vi.fn() },
-      refund: { upsert: vi.fn() },
+      refund: {
+        // The commission reversal re-reads the refund in the transaction; these sit on
+        // ordinary orders, so it short-circuits.
+        upsert: vi.fn().mockResolvedValue({ id: 'refund-test' }),
+        findUnique: vi.fn().mockResolvedValue({
+          amount: 0,
+          commissionReversed: null,
+          payment: { order: null },
+        }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
+      },
       product: { update: vi.fn() },
       auditLog: {
         findFirst: vi.fn().mockResolvedValue(null),
@@ -848,7 +896,18 @@ describe('E2E: Refund Flow', () => {
       return callback({
         order: { update: vi.fn() },
         payment: { update: vi.fn() },
-        refund: { upsert: vi.fn() },
+        refund: {
+        // The commission reversal re-reads the refund in the transaction; these sit on
+        // ordinary orders, so it short-circuits.
+        upsert: vi.fn().mockResolvedValue({ id: 'refund-test' }),
+        findUnique: vi.fn().mockResolvedValue({
+          amount: 0,
+          commissionReversed: null,
+          payment: { order: null },
+        }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
+      },
         product: { update: vi.fn() },
         auditLog: {
           create: vi.fn().mockResolvedValue({
@@ -926,7 +985,18 @@ describe('E2E: Refund Flow', () => {
     const mockTx = {
       order: { update: vi.fn() },
       payment: { update: vi.fn() },
-      refund: { upsert: vi.fn() },
+      refund: {
+        // The commission reversal re-reads the refund in the transaction; these sit on
+        // ordinary orders, so it short-circuits.
+        upsert: vi.fn().mockResolvedValue({ id: 'refund-test' }),
+        findUnique: vi.fn().mockResolvedValue({
+          amount: 0,
+          commissionReversed: null,
+          payment: { order: null },
+        }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        aggregate: vi.fn().mockResolvedValue({ _sum: { commissionReversed: null } }),
+      },
       product: { update: vi.fn() },
       auditLog: {
         create: vi.fn(),

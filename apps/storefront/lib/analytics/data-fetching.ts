@@ -2,6 +2,7 @@ import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getDateRange } from '@/lib/analytics/date-range'
 import type { AnalyticsRangeKey } from '@/lib/analytics/date-range'
+import { SALES_ONLY } from '@/lib/orders/sales-population'
 
 export type ChartPoint = {
   date: string
@@ -70,6 +71,7 @@ export async function getAnalyticsData(range: AnalyticsRangeKey): Promise<Analyt
   const includedPayments: PaymentStatus[] = [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED]
 
   const orderFilter: Prisma.OrderWhereInput = {
+    ...SALES_ONLY,
     createdAt: createdAtRange,
     status: { notIn: excludedStatuses },
     paymentStatus: { in: includedPayments },

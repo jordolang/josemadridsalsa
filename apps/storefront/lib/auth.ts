@@ -107,6 +107,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        totp: { label: 'Authentication code', type: 'text' },
       },
       authorize: async (credentials) => {
         try {
@@ -140,6 +141,7 @@ export const authOptions: NextAuthOptions = {
               name: true,
               role: true,
               password: true,
+              twoFactorEnabledAt: true,
             }
           })
 
@@ -159,6 +161,24 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
+          // Second factor, checked only after the password is known good so a wrong
+          // password never reveals whether an account has 2FA configured.
+          if (user.twoFactorEnabledAt) {
+            const token = typeof credentials.totp === 'string' ? credentials.totp.trim() : ''
+
+            if (!token) {
+              // Signals to the sign-in form that a code is needed. Thrown rather than
+              // returned null, because null is indistinguishable from bad credentials.
+              throw new Error('TWO_FACTOR_REQUIRED')
+            }
+
+            const { verifyTwoFactorChallenge } = await import('@/lib/auth/two-factor')
+            if (!(await verifyTwoFactorChallenge(user.id, token))) {
+              console.error('[Auth] Invalid two-factor code for:', normalizedEmail)
+              throw new Error('TWO_FACTOR_INVALID')
+            }
+          }
+
           console.log('[Auth] Login successful for:', normalizedEmail)
           return {
             id: user.id,
@@ -167,6 +187,16 @@ export const authOptions: NextAuthOptions = {
             role: user.role,
           } as any
         } catch (error) {
+          // The two-factor signals are control flow, not failures: swallowing them into
+          // null would render as "invalid password" and leave the user with no way to
+          // discover that a code is required.
+          if (
+            error instanceof Error &&
+            (error.message === 'TWO_FACTOR_REQUIRED' || error.message === 'TWO_FACTOR_INVALID')
+          ) {
+            throw error
+          }
+
           console.error('[Auth] Authentication error:', error)
           if (error instanceof Error) {
             console.error('[Auth] Error details:', error.message, error.stack)
@@ -202,6 +232,19 @@ export const authOptions: NextAuthOptions = {
                 select: { id: true, role: true, name: true },
               })
               console.log(`[JWT Callback] Created new user via ${account.provider} OAuth:`, normalizedEmail)
+
+              const { emitDomainEvent } = await import('@/lib/domain-events/emit')
+              await emitDomainEvent({
+                type: 'customer.created',
+                entityType: 'customer',
+                entityId: dbUser.id,
+                actorUserId: dbUser.id,
+                payload: {
+                  email: normalizedEmail,
+                  name: dbUser.name,
+                  via: `oauth:${account.provider}`,
+                },
+              })
             }
             token.id = dbUser.id
             token.role = dbUser.role

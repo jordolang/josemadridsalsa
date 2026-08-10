@@ -9,28 +9,40 @@
   },
   "crons": [
     {
+      "path": "/api/cron/email-automation",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/email-campaigns",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/social-publish",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/abandoned-cart",
-      "schedule": "0 8 * * *"
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/quickbooks-sync",
+      "schedule": "15 * * * *"
+    },
+    {
+      "path": "/api/cron/operations-sweep",
+      "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/cron/processor-fees",
+      "schedule": "30 */2 * * *"
     },
     {
       "path": "/api/cron/review-requests",
       "schedule": "0 10 * * *"
     },
     {
-      "path": "/api/cron/email-automation",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/email-campaigns",
-      "schedule": "0 7 * * *"
-    },
-    {
-      "path": "/api/cron/dashboard-analysis",
-      "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/cron/quickbooks-sync",
-      "schedule": "15 6 * * *"
+      "path": "/api/cron/fundraiser-lifecycle",
+      "schedule": "0 13 * * *"
     }
   ]
 }

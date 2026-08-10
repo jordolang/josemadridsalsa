@@ -47,29 +47,43 @@ export async function logAudit(params: AuditLogParams) {
  * Extract IP and user agent from request
  */
 export function getRequestMetadata(request?: NextRequest | Request) {
-  if (!request) {
+  // Defensive rather than trusting the shape: this runs on the way to writing an audit
+  // entry for an operation that has already happened. A request object without usable
+  // headers must cost us the IP, not the whole operation — see logAuditWithRequest.
+  try {
+    const headers = request?.headers
+    if (!headers?.get) {
+      return { ipAddress: null, userAgent: null }
+    }
+
+    const ipAddress =
+      headers.get('x-forwarded-for')?.split(',')[0] || headers.get('x-real-ip') || null
+
+    const userAgent = headers.get('user-agent') || null
+
+    return { ipAddress, userAgent }
+  } catch {
     return { ipAddress: null, userAgent: null }
   }
-
-  const ipAddress =
-    request.headers.get('x-forwarded-for')?.split(',')[0] ||
-    request.headers.get('x-real-ip') ||
-    null
-
-  const userAgent = request.headers.get('user-agent') || null
-
-  return { ipAddress, userAgent }
 }
 
 /**
- * Helper to log with request metadata
+ * Helper to log with request metadata.
+ *
+ * Like `logAudit`, this never throws. Audit logging records something that already
+ * happened — a refund that has moved money, a rotated credential — so a failure here must
+ * not turn a completed operation into a 500 for the caller.
  */
 export async function logAuditWithRequest(
   params: Omit<AuditLogParams, 'ipAddress' | 'userAgent'>,
   request?: NextRequest | Request
 ) {
-  const metadata = getRequestMetadata(request)
-  return logAudit({ ...params, ...metadata })
+  try {
+    const metadata = getRequestMetadata(request)
+    return await logAudit({ ...params, ...metadata })
+  } catch (e) {
+    console.warn('Audit log failed:', e)
+  }
 }
 
 /**

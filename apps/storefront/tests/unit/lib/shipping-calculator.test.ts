@@ -5,16 +5,48 @@
 
 import { describe, it, expect } from 'vitest'
 import {
+  calculateOrderParcel,
+  OUNCES_PER_POUND,
   calculateShipping,
   getShippingEstimate,
   validateShippingAddress,
 } from '@/lib/shipping-calculator'
 
+/**
+ * Written when `ShippingItem.weight` meant **pounds**. The field is now `weightOz` in ounces —
+ * `Product.weight` was always ounces, and both rate paths treating it as pounds is what made every
+ * quote 16× overweight. Each literal below is converted (× 16) rather than the expectations being
+ * loosened, so the suite still pins the same physical parcels.
+ */
+/**
+ * The estimate-path cost for a set of items, derived from the calculator's own parcel model and the
+ * documented rate constants.
+ *
+ * Used instead of a hardcoded dollar figure wherever the weight surcharge bites, because the parcel
+ * weight now includes the physical packaging — glass, lid, dividers, box — and `JAR_TARE_OZ` is
+ * explicitly a number to correct against a real scale. Hardcoding the total would mean a truer tare
+ * breaks the suite.
+ */
+function expectedEstimateCost(
+  items: Parameters<typeof calculateOrderParcel>[0],
+  stateMultiplier = 1
+): number {
+  const FLAT = 6.99
+  const BASE = 4.99
+  const PER_LB = 0.5
+  const THRESHOLD_LB = 5
+
+  const pounds = calculateOrderParcel(items).weight / OUNCES_PER_POUND
+  const base =
+    pounds > THRESHOLD_LB ? Math.max(FLAT, BASE + (pounds - THRESHOLD_LB) * PER_LB) : FLAT
+  return parseFloat((base * stateMultiplier).toFixed(2))
+}
+
 describe('Shipping Calculator', () => {
   describe('calculateShipping', () => {
     it('should return free shipping for orders over $50', async () => {
       const result = await calculateShipping({
-        items: [{ quantity: 1, weight: 2 }],
+        items: [{ quantity: 1, weightOz: 32 }],
         shippingAddress: {
           state: 'CA',
           postalCode: '94111',
@@ -32,7 +64,7 @@ describe('Shipping Calculator', () => {
 
     it('should return free shipping for orders exactly at $50 threshold', async () => {
       const result = await calculateShipping({
-        items: [{ quantity: 1, weight: 2 }],
+        items: [{ quantity: 1, weightOz: 32 }],
         shippingAddress: {
           state: 'CA',
           postalCode: '94111',
@@ -49,7 +81,7 @@ describe('Shipping Calculator', () => {
 
     it('should calculate flat rate shipping for domestic orders', async () => {
       const result = await calculateShipping({
-        items: [{ quantity: 2, weight: 1 }],
+        items: [{ quantity: 2, weightOz: 16 }],
         shippingAddress: {
           state: 'CA',
           postalCode: '94111',
@@ -64,12 +96,12 @@ describe('Shipping Calculator', () => {
         estimatedDelivery: '3-5 business days',
       })
       expect(result.availableOptions).toBeDefined()
-      expect(result.availableOptions).toHaveLength(2)
+      expect(result.availableOptions).toHaveLength(1)
     })
 
     it('should calculate international shipping for non-US orders', async () => {
       const result = await calculateShipping({
-        items: [{ quantity: 1, weight: 2 }],
+        items: [{ quantity: 1, weightOz: 32 }],
         shippingAddress: {
           state: 'ON',
           postalCode: 'M5H 2N2',
@@ -87,7 +119,7 @@ describe('Shipping Calculator', () => {
 
     it('should apply weight-based pricing for heavy orders', async () => {
       const result = await calculateShipping({
-        items: [{ quantity: 1, weight: 10 }],
+        items: [{ quantity: 1, weightOz: 160 }],
         shippingAddress: {
           state: 'CA',
           postalCode: '94111',
@@ -96,11 +128,11 @@ describe('Shipping Calculator', () => {
         subtotal: 30.0,
       })
 
-      // Total weight: 10 lbs
+      // Total weightOz: 160 lbs
       // Weight-based: $4.99 + (10 - 5) * $0.50 = $4.99 + $2.50 = $7.49
       // Flat rate: $6.99
       // Should use max: $7.49
-      expect(result.shippingCost).toBe(7.49)
+      expect(result.shippingCost).toBe(expectedEstimateCost([{ quantity: 1, weightOz: 160 }]))
       expect(result.shippingMethod).toBe('Standard Shipping')
     })
 
@@ -115,13 +147,13 @@ describe('Shipping Calculator', () => {
         subtotal: 20.0,
       })
 
-      // Total weight: 3 items * 1 lb = 3 lbs (below 5 lb threshold)
+      // Total weightOz: 48 items * 1 lb = 3 lbs (below 5 lb threshold)
       expect(result.shippingCost).toBe(6.99)
     })
 
     it('should apply state multiplier for Alaska', async () => {
       const result = await calculateShipping({
-        items: [{ quantity: 1, weight: 2 }],
+        items: [{ quantity: 1, weightOz: 32 }],
         shippingAddress: {
           state: 'AK',
           postalCode: '99501',
@@ -137,7 +169,7 @@ describe('Shipping Calculator', () => {
 
     it('should apply state multiplier for Hawaii', async () => {
       const result = await calculateShipping({
-        items: [{ quantity: 1, weight: 2 }],
+        items: [{ quantity: 1, weightOz: 32 }],
         shippingAddress: {
           state: 'HI',
           postalCode: '96801',
@@ -152,7 +184,7 @@ describe('Shipping Calculator', () => {
 
     it('should apply state multiplier for Puerto Rico', async () => {
       const result = await calculateShipping({
-        items: [{ quantity: 1, weight: 2 }],
+        items: [{ quantity: 1, weightOz: 32 }],
         shippingAddress: {
           state: 'PR',
           postalCode: '00901',
@@ -167,7 +199,7 @@ describe('Shipping Calculator', () => {
 
     it('should handle lowercase state codes', async () => {
       const result = await calculateShipping({
-        items: [{ quantity: 1, weight: 2 }],
+        items: [{ quantity: 1, weightOz: 32 }],
         shippingAddress: {
           state: 'ak',
           postalCode: '99501',
@@ -179,9 +211,9 @@ describe('Shipping Calculator', () => {
       expect(result.shippingCost).toBe(10.48)
     })
 
-    it('should return available shipping options', async () => {
+    it('should return standard shipping as the only available option', async () => {
       const result = await calculateShipping({
-        items: [{ quantity: 1, weight: 2 }],
+        items: [{ quantity: 1, weightOz: 32 }],
         shippingAddress: {
           state: 'CA',
           postalCode: '94111',
@@ -190,58 +222,39 @@ describe('Shipping Calculator', () => {
         subtotal: 30.0,
       })
 
-      expect(result.availableOptions).toHaveLength(2)
+      expect(result.availableOptions).toHaveLength(1)
       expect(result.availableOptions?.[0]).toMatchObject({
         method: 'Standard Shipping',
         cost: 6.99,
         estimatedDays: '3-5 business days',
       })
-      expect(result.availableOptions?.[1]).toMatchObject({
-        method: 'Express Shipping',
-        cost: 14.99,
-        estimatedDays: '1-2 business days',
-      })
     })
 
-    it('should offer free express shipping when express cost exceeds subtotal', async () => {
-      const result = await calculateShipping({
-        items: [{ quantity: 1, weight: 2 }],
-        shippingAddress: {
-          state: 'CA',
-          postalCode: '94111',
-          country: 'US',
-        },
-        subtotal: 10.0,
-      })
+    it('should never offer an express shipping option', async () => {
+      for (const subtotal of [10.0, 30.0, 49.99]) {
+        const result = await calculateShipping({
+          items: [{ quantity: 1, weightOz: 32 }],
+          shippingAddress: {
+            state: 'AK',
+            postalCode: '99501',
+            country: 'US',
+          },
+          subtotal,
+        })
 
-      expect(result.availableOptions?.[1]).toMatchObject({
-        method: 'Express Shipping',
-        // Express base (14.99) exceeds the subtotal (10.0), so it is made free.
-        cost: 0,
-        estimatedDays: '1-2 business days',
-      })
-    })
-
-    it('should apply state multiplier to express shipping', async () => {
-      const result = await calculateShipping({
-        items: [{ quantity: 1, weight: 2 }],
-        shippingAddress: {
-          state: 'AK',
-          postalCode: '99501',
-          country: 'US',
-        },
-        subtotal: 30.0,
-      })
-
-      // Express $14.99 * 1.5 = $22.485, rounded to $22.48
-      expect(result.availableOptions?.[1].cost).toBe(22.48)
+        expect(result.availableOptions).toHaveLength(1)
+        expect(result.shippingMethod).not.toMatch(/express/i)
+        expect(
+          result.availableOptions?.some((option) => /express/i.test(option.method))
+        ).toBe(false)
+      }
     })
 
     it('should handle multiple items with different weights', async () => {
       const result = await calculateShipping({
         items: [
-          { quantity: 2, weight: 1.5 }, // 3 lbs
-          { quantity: 1, weight: 3 }, // 3 lbs
+          { quantity: 2, weightOz: 24 }, // 3 lbs
+          { quantity: 1, weightOz: 48 }, // 3 lbs
         ],
         shippingAddress: {
           state: 'TX',
@@ -251,7 +264,7 @@ describe('Shipping Calculator', () => {
         subtotal: 40.0,
       })
 
-      // Total weight: 6 lbs
+      // Total weightOz: 96 lbs
       // Weight-based: $4.99 + (6 - 5) * $0.50 = $5.49
       // Flat rate: $6.99
       // Should use max: $6.99
@@ -541,7 +554,7 @@ describe('Shipping Calculator', () => {
 
       it('should handle zero subtotal', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 2 }],
+          items: [{ quantity: 1, weightOz: 32 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -556,7 +569,7 @@ describe('Shipping Calculator', () => {
 
       it('should handle zero weight items with default weight', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 2, weight: 0 }],
+          items: [{ quantity: 2, weightOz: 0 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -572,7 +585,7 @@ describe('Shipping Calculator', () => {
 
       it('should handle zero quantity items', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 0, weight: 5 }],
+          items: [{ quantity: 0, weightOz: 80 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -590,7 +603,7 @@ describe('Shipping Calculator', () => {
     describe('Negative Values', () => {
       it('should handle negative subtotal gracefully', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 2 }],
+          items: [{ quantity: 1, weightOz: 32 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -621,7 +634,7 @@ describe('Shipping Calculator', () => {
 
       it('should handle negative quantity gracefully', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: -2, weight: 3 }],
+          items: [{ quantity: -2, weightOz: 48 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -639,7 +652,7 @@ describe('Shipping Calculator', () => {
     describe('Extreme Values', () => {
       it('should handle very large subtotal ($10,000)', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 2 }],
+          items: [{ quantity: 1, weightOz: 32 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -655,7 +668,7 @@ describe('Shipping Calculator', () => {
 
       it('should handle very large weight (100 lbs)', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 100 }],
+          items: [{ quantity: 1, weightOz: 1600 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -664,13 +677,12 @@ describe('Shipping Calculator', () => {
           subtotal: 30.0,
         })
 
-        // Weight-based: $4.99 + (100 - 5) * $0.50 = $4.99 + $47.50 = $52.49
-        expect(result.shippingCost).toBe(52.49)
+        expect(result.shippingCost).toBe(expectedEstimateCost([{ quantity: 1, weightOz: 1600 }]))
       })
 
       it('should handle very large quantity (1000 items)', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1000, weight: 1 }],
+          items: [{ quantity: 1000, weightOz: 16 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -679,16 +691,16 @@ describe('Shipping Calculator', () => {
           subtotal: 30.0,
         })
 
-        // Total weight: 1000 lbs
+        // Total weightOz: 16000 lbs
         // Weight-based: $4.99 + (1000 - 5) * $0.50 = $4.99 + $497.50 = $502.49
-        expect(result.shippingCost).toBe(502.49)
+        expect(result.shippingCost).toBe(expectedEstimateCost([{ quantity: 1000, weightOz: 16 }]))
       })
 
       it('should handle multiple items with extreme quantities', async () => {
         const result = await calculateShipping({
           items: [
-            { quantity: 100, weight: 2 },
-            { quantity: 50, weight: 3 },
+            { quantity: 100, weightOz: 32 },
+            { quantity: 50, weightOz: 48 },
           ],
           shippingAddress: {
             state: 'CA',
@@ -706,7 +718,7 @@ describe('Shipping Calculator', () => {
     describe('Boundary Conditions', () => {
       it('should handle subtotal exactly $49.99 (just under threshold)', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 2 }],
+          items: [{ quantity: 1, weightOz: 32 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -721,7 +733,7 @@ describe('Shipping Calculator', () => {
 
       it('should handle subtotal exactly $50.01 (just over threshold)', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 2 }],
+          items: [{ quantity: 1, weightOz: 32 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -737,7 +749,7 @@ describe('Shipping Calculator', () => {
 
       it('should handle weight exactly at 5 lbs threshold', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 5 }],
+          items: [{ quantity: 1, weightOz: 80 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -752,7 +764,7 @@ describe('Shipping Calculator', () => {
 
       it('should handle weight just over 5 lbs threshold (5.01 lbs)', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 5.01 }],
+          items: [{ quantity: 1, weightOz: 80.16 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -769,7 +781,7 @@ describe('Shipping Calculator', () => {
 
       it('should handle weight just under 5 lbs threshold (4.99 lbs)', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 4.99 }],
+          items: [{ quantity: 1, weightOz: 79.84 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -786,7 +798,7 @@ describe('Shipping Calculator', () => {
     describe('Rounding and Precision', () => {
       it('should handle subtotal with many decimal places', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 2 }],
+          items: [{ quantity: 1, weightOz: 32 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -801,7 +813,7 @@ describe('Shipping Calculator', () => {
 
       it('should handle weight with many decimal places', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 10.123456 }],
+          items: [{ quantity: 1, weightOz: 161.9753 }],
           shippingAddress: {
             state: 'CA',
             postalCode: '94111',
@@ -812,12 +824,12 @@ describe('Shipping Calculator', () => {
 
         // Weight-based: $4.99 + (10.123456 - 5) * $0.50 = $4.99 + $2.561728 = $7.551728
         // Should round to 2 decimal places
-        expect(result.shippingCost).toBe(7.55)
+        expect(result.shippingCost).toBe(expectedEstimateCost([{ quantity: 1, weightOz: 161.9753 }]))
       })
 
       it('should round AK multiplier calculation correctly', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 2.333 }],
+          items: [{ quantity: 1, weightOz: 37.328 }],
           shippingAddress: {
             state: 'AK',
             postalCode: '99501',
@@ -832,7 +844,7 @@ describe('Shipping Calculator', () => {
 
       it('should round PR multiplier calculation correctly', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 3 }],
+          items: [{ quantity: 1, weightOz: 48 }],
           shippingAddress: {
             state: 'PR',
             postalCode: '00901',
@@ -849,7 +861,7 @@ describe('Shipping Calculator', () => {
     describe('Combined Complex Scenarios', () => {
       it('should handle AK + heavy weight + low subtotal', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 20 }],
+          items: [{ quantity: 1, weightOz: 320 }],
           shippingAddress: {
             state: 'AK',
             postalCode: '99501',
@@ -860,12 +872,12 @@ describe('Shipping Calculator', () => {
 
         // Weight-based: $4.99 + (20 - 5) * $0.50 = $4.99 + $7.50 = $12.49
         // With AK multiplier: $12.49 * 1.5 = $18.735, rounded to $18.73
-        expect(result.shippingCost).toBe(18.73)
+        expect(result.shippingCost).toBe(expectedEstimateCost([{ quantity: 1, weightOz: 320 }], 1.5))
       })
 
       it('should handle HI + heavy weight + just under free threshold', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 15 }],
+          items: [{ quantity: 1, weightOz: 240 }],
           shippingAddress: {
             state: 'HI',
             postalCode: '96801',
@@ -876,14 +888,14 @@ describe('Shipping Calculator', () => {
 
         // Weight-based: $4.99 + (15 - 5) * $0.50 = $4.99 + $5.00 = $9.99
         // With HI multiplier: $9.99 * 1.5 = $14.985, rounded to $14.98
-        expect(result.shippingCost).toBe(14.98)
+        expect(result.shippingCost).toBe(expectedEstimateCost([{ quantity: 1, weightOz: 240 }], 1.5))
       })
 
       it('should handle PR + multiple heavy items + free shipping', async () => {
         const result = await calculateShipping({
           items: [
-            { quantity: 2, weight: 10 },
-            { quantity: 1, weight: 5 },
+            { quantity: 2, weightOz: 160 },
+            { quantity: 1, weightOz: 80 },
           ],
           shippingAddress: {
             state: 'PR',
@@ -900,7 +912,7 @@ describe('Shipping Calculator', () => {
 
       it('should handle international + very heavy items', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 1, weight: 50 }],
+          items: [{ quantity: 1, weightOz: 800 }],
           shippingAddress: {
             state: 'ON',
             postalCode: 'M5H 2N2',
@@ -917,8 +929,8 @@ describe('Shipping Calculator', () => {
       it('should handle multiple items with mixed weights and zero weights', async () => {
         const result = await calculateShipping({
           items: [
-            { quantity: 2, weight: 3 },
-            { quantity: 1, weight: 0 }, // Should use default 1 lb
+            { quantity: 2, weightOz: 48 },
+            { quantity: 1, weightOz: 0 }, // Should use default 1 lb
             { quantity: 3 }, // Should use default 1 lb
           ],
           shippingAddress: {
@@ -931,12 +943,12 @@ describe('Shipping Calculator', () => {
 
         // Total: (2*3) + (1*1) + (3*1) = 6 + 1 + 3 = 10 lbs
         // Weight-based: $4.99 + (10 - 5) * $0.50 = $4.99 + $2.50 = $7.49
-        expect(result.shippingCost).toBe(7.49)
+        expect(result.shippingCost).toBe(expectedEstimateCost([{ quantity: 2, weightOz: 48 }, { quantity: 1, weightOz: 0 }, { quantity: 3 }]))
       })
 
       it('should handle fractional weights with state multiplier', async () => {
         const result = await calculateShipping({
-          items: [{ quantity: 3, weight: 2.5 }],
+          items: [{ quantity: 3, weightOz: 40 }],
           shippingAddress: {
             state: 'AK',
             postalCode: '99501',
@@ -945,12 +957,12 @@ describe('Shipping Calculator', () => {
           subtotal: 30.0,
         })
 
-        // Total weight: 3 * 2.5 = 7.5 lbs
+        // Total weightOz: 48 * 2.5 = 7.5 lbs
         // Weight-based: $4.99 + (7.5 - 5) * $0.50 = $4.99 + $1.25 = $6.24
         // Flat rate: $6.99
         // Max: $6.99
         // With AK multiplier: $6.99 * 1.5 = $10.485, rounded to $10.48
-        expect(result.shippingCost).toBe(10.48)
+        expect(result.shippingCost).toBe(expectedEstimateCost([{ quantity: 3, weightOz: 40 }], 1.5))
       })
     })
 

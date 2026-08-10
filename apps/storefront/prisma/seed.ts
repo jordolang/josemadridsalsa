@@ -651,7 +651,7 @@ async function main() {
       startDate: new Date('2024-03-01'),
       endDate: new Date('2024-04-30'),
       goal: 5000.00,
-      commissionRate: 40.00, // 40% commission
+      commissionRate: 50.00, // $5 of a $10 jar to the group
       status: 'ACTIVE',
       isActive: true,
     },

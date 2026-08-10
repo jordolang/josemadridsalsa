@@ -10,19 +10,37 @@ import {
   type Parcel,
 } from './shipping-api'
 import { prisma } from './prisma'
+import { describeMissingOrigin, getShippingOrigin } from './shipping/origin'
+import { packJars } from './shipping/jar-packing'
+
+/**
+ * One line of an order, as the shipping calculator needs it.
+ *
+ * `weightOz` carries its unit in its name on purpose. It used to be `weight`, documented as
+ * pounds — while every caller passed `Product.weight`, which is **ounces** (a jar is `16`; see
+ * `lib/feeds/products.ts`, which maps the same column to `weightOz` for the Google and Amazon
+ * feeds). Both code paths here then treated it as pounds, so every quote was 16× overweight: a
+ * single 16oz jar priced as 16 lb, which tripped the heavy-parcel surcharge and cost $10.49
+ * instead of $6.99, and a six-jar order quoted as 96 lb.
+ *
+ * Naming the unit is the fix that stops it recurring — a mismatch is now visible at the call
+ * site instead of hidden behind a comment that disagreed with reality.
+ */
+export interface ShippingItem {
+  /** Weight of a single unit, in **ounces**. */
+  weightOz?: number
+  /** Dimensions of a single unit, in inches. */
+  dimensions?: {
+    length?: number
+    width?: number
+    height?: number
+  }
+  quantity: number
+}
 
 export interface ShippingCalculationInput {
   /** Items in the order */
-  items: Array<{
-    weight?: number // Weight in pounds
-    dimensions?: {
-      // Dimensions in inches
-      length?: number
-      width?: number
-      height?: number
-    }
-    quantity: number
-  }>
+  items: ShippingItem[]
   /** Shipping address */
   shippingAddress: {
     line1?: string
@@ -54,6 +72,83 @@ export interface ShippingCalculationResult {
   fallback?: boolean
 }
 
+export const OUNCES_PER_POUND = 16
+
+/**
+ * Assumed weight of a unit whose product has none recorded.
+ *
+ * 16 oz, because the catalogue is 16oz jars — six of the thirty-four active products have a null
+ * `weight`, and assuming a jar is a jar is far closer than any generic default. It is deliberately
+ * a documented assumption rather than a silent `1`: an under-declared parcel gets rejected at the
+ * counter, so a wrong guess here should be wrong in the safe direction.
+ */
+export const DEFAULT_ITEM_WEIGHT_OZ = 16
+
+/**
+ * Assumed dimensions of a unit whose product has none recorded — which is currently **all** of
+ * them, since no product carries `lengthInches`/`widthInches`/`heightInches`. Roughly a 16oz jar.
+ *
+ * The box-selection logic below is real bin packing over `STANDARD_BOXES`; it is only ever as good
+ * as these numbers. Entering real per-product dimensions is what makes it accurate.
+ */
+export const DEFAULT_ITEM_DIMENSIONS = { length: 3.5, width: 3.5, height: 5 } as const
+
+/** Above this, the estimate path charges per pound instead of the flat rate. */
+export const WEIGHT_SURCHARGE_THRESHOLD_LB = 5
+
+/** Total parcel weight in ounces. One definition, so the two rate paths cannot disagree. */
+export function totalWeightOunces(items: ShippingItem[]): number {
+  return items.reduce(
+    (sum, item) => sum + (item.weightOz ?? DEFAULT_ITEM_WEIGHT_OZ) * item.quantity,
+    0
+  )
+}
+
+/** The product columns needed to ship a line. All nullable — nothing is guaranteed populated. */
+export interface ShippableProduct {
+  weight?: number | string | { toString(): string } | null
+  lengthInches?: number | string | { toString(): string } | null
+  widthInches?: number | string | { toString(): string } | null
+  heightInches?: number | string | { toString(): string } | null
+}
+
+const toNumber = (value: ShippableProduct[keyof ShippableProduct]): number | undefined => {
+  if (value === null || value === undefined) return undefined
+  const parsed = Number(value.toString())
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
+/**
+ * Turn order lines plus their products into shipping items.
+ *
+ * Five checkout routes each had their own copy of this mapping, all five spelling the weight
+ * `weight: Number(product.weight)` with a comment claiming pounds. One definition means a unit
+ * mistake can only be made once, and it is the only place that knows `Product.weight` is ounces
+ * and `Product.*Inches` are inches.
+ *
+ * Dimensions are included, which no caller used to pass — so every parcel was sized from the
+ * fallback regardless of what the catalogue knew.
+ */
+export function buildShippingItems<T extends { productId: string; quantity: number }>(
+  lines: T[],
+  products: Map<string, ShippableProduct>
+): ShippingItem[] {
+  return lines.map((line) => {
+    const product = products.get(line.productId)
+    const length = toNumber(product?.lengthInches)
+    const width = toNumber(product?.widthInches)
+    const height = toNumber(product?.heightInches)
+
+    return {
+      weightOz: toNumber(product?.weight),
+      // Omitted entirely when the product has no dimensions, so the documented fallback applies
+      // rather than a half-populated box with zeroes in it.
+      ...(length && width && height ? { dimensions: { length, width, height } } : {}),
+      quantity: line.quantity,
+    }
+  })
+}
+
 /**
  * Shipping rate configuration
  * Can be moved to database for dynamic configuration
@@ -75,12 +170,6 @@ const SHIPPING_RATES = {
     estimatedDays: '3-5 business days',
   },
 
-  // Express shipping
-  EXPRESS: {
-    cost: 14.99,
-    estimatedDays: '1-2 business days',
-  },
-
   // International shipping (flat rate for simplicity)
   INTERNATIONAL: {
     cost: 24.99,
@@ -95,17 +184,10 @@ const SHIPPING_RATES = {
   } as Record<string, number>,
 }
 
-/**
- * Default origin address for shipping calculations
- * Configurable via environment variables
- */
-const DEFAULT_ORIGIN_ADDRESS: ShippingAddress = {
-  street1: process.env.SHIPPING_ORIGIN_ADDRESS || '123 Main St',
-  city: process.env.SHIPPING_ORIGIN_CITY || 'San Francisco',
-  state: process.env.SHIPPING_ORIGIN_STATE || 'CA',
-  zip: process.env.SHIPPING_ORIGIN_ZIP || '94111',
-  country: 'US',
-}
+// The origin now comes from `lib/shipping/origin.ts`, which reads the admin setting first and the
+// environment second. It replaced a constant here that defaulted to `123 Main St, San Francisco,
+// CA 94111` — so an unconfigured deployment quoted every rate from the wrong coast and the
+// response looked entirely normal.
 
 /**
  * Detect if an address is a PO Box
@@ -191,7 +273,48 @@ const STANDARD_BOXES = [
 ] as const
 
 /**
- * Calculate parcel dimensions from order items using bin packing
+ * Whether an order is entirely jars, and therefore packs on the warehouse grid.
+ *
+ * A product with real dimensions recorded is something other than a jar — merchandise, a gift set —
+ * and goes through the generic volume fit below instead.
+ */
+function isAllJars(items: ShippingItem[]): boolean {
+  return items.length > 0 && items.every((item) => !item.dimensions)
+}
+
+/** Total jars in an order. Only meaningful once `isAllJars` says so. */
+function totalJarCount(items: ShippingItem[]): number {
+  return items.reduce((sum, item) => sum + item.quantity, 0)
+}
+
+/**
+ * The parcel a set of items actually ships in.
+ *
+ * **Jars take the warehouse grid** — three across, four lines to a case of twelve — via
+ * `lib/shipping/jar-packing.ts`, which also computes the *gross* weight: glass, lid, contents,
+ * dividers and box. That matters because `Product.weight` holds `16`, the jar size, and shipping a
+ * jar as 16 oz under-declares it by about two thirds.
+ *
+ * Anything with real recorded dimensions falls through to the generic volume fit against
+ * `STANDARD_BOXES`, which is the previous behaviour and is fine for non-cylinders.
+ */
+export function calculateOrderParcel(items: ShippingItem[]): Parcel {
+  if (isAllJars(items)) {
+    // Real per-item contents, not a count times a guess: a 32oz jar weighs twice a 16oz one.
+    const packed = packJars(totalJarCount(items), totalWeightOunces(items))
+    return {
+      length: packed.length,
+      width: packed.width,
+      height: packed.height,
+      weight: packed.weightOz,
+    }
+  }
+
+  return calculateParcelDimensions(items)
+}
+
+/**
+ * Generic bin packing for items that are not jars.
  *
  * Strategy:
  * 1. Calculate total volume of all items
@@ -202,23 +325,21 @@ const STANDARD_BOXES = [
 function calculateParcelDimensions(
   items: ShippingCalculationInput['items']
 ): Parcel {
-  let totalWeight = 0
+  // Through the shared helper rather than a second accumulator. Two paths computing parcel
+  // weight their own way is precisely how one of them ended up 16x out.
+  const totalWeight = totalWeightOunces(items)
   let totalVolume = 0
   let maxItemLength = 0
   let maxItemWidth = 0
   let maxItemHeight = 0
 
-  // Collect item dimensions and calculate totals
+  // Collect item dimensions
   for (const item of items) {
-    // Weight in pounds -> convert to ounces
-    const itemWeight = (item.weight || 1.0) * 16 // Default 1 lb = 16 oz
-    totalWeight += itemWeight * item.quantity
-
     // Dimensions - use defaults if not provided
-    const dims = item.dimensions || { length: 10, width: 8, height: 2 }
-    const length = dims.length || 10
-    const width = dims.width || 8
-    const height = dims.height || 2
+    const dims = item.dimensions || DEFAULT_ITEM_DIMENSIONS
+    const length = dims.length || DEFAULT_ITEM_DIMENSIONS.length
+    const width = dims.width || DEFAULT_ITEM_DIMENSIONS.width
+    const height = dims.height || DEFAULT_ITEM_DIMENSIONS.height
 
     // Calculate volume for each item instance
     const itemVolume = length * width * height
@@ -324,21 +445,20 @@ function calculateEstimateRates(
   // Check if destination is a PO Box
   const isPoBox = isPOBox(shippingAddress.line1) || isPOBox(shippingAddress.line2)
 
-  // Calculate total weight
-  const totalWeight = items.reduce((sum, item) => {
-    const itemWeight = item.weight || 1.0 // Default 1 lb per item if not specified
-    return sum + itemWeight * item.quantity
-  }, 0)
+  // The same parcel the carrier path would quote, so the estimate and the real rate are priced on
+  // one weight. Reading it off the parcel rather than recomputing is what stops the two drifting —
+  // the original bug was exactly two paths measuring weight their own way.
+  const totalPounds = calculateOrderParcel(items).weight / OUNCES_PER_POUND
 
   // Base shipping cost (flat rate)
   let baseCost = SHIPPING_RATES.FLAT_RATE.cost
 
   // Apply weight-based pricing if items are heavy
-  if (totalWeight > 5) {
+  if (totalPounds > WEIGHT_SURCHARGE_THRESHOLD_LB) {
     baseCost = Math.max(
       baseCost,
       SHIPPING_RATES.WEIGHT_BASED.baseRate +
-        (totalWeight - 5) * SHIPPING_RATES.WEIGHT_BASED.perPound
+        (totalPounds - WEIGHT_SURCHARGE_THRESHOLD_LB) * SHIPPING_RATES.WEIGHT_BASED.perPound
     )
   }
 
@@ -348,49 +468,16 @@ function calculateEstimateRates(
 
   const finalCost = baseCost * stateMultiplier
 
-  // Build available options based on address type
-  const availableOptions = []
-
-  if (isPoBox) {
-    // PO Box - only USPS options
-    const expressCost = SHIPPING_RATES.EXPRESS.cost * stateMultiplier
-
-    availableOptions.push(
-      {
-        method: 'USPS Ground Advantage',
-        cost: parseFloat(finalCost.toFixed(2)),
-        estimatedDays: SHIPPING_RATES.FLAT_RATE.estimatedDays,
-      },
-      {
-        method: 'USPS Priority Mail',
-        cost: parseFloat((finalCost * 1.5).toFixed(2)),
-        estimatedDays: '1-3 business days',
-      },
-      {
-        method: 'USPS Priority Mail Express',
-        // Make express free if it exceeds the subtotal
-        cost: expressCost > subtotal ? 0 : expressCost,
-        estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
-      }
-    )
-  } else {
-    // Regular address - all carriers available
-    const expressCost = parseFloat((SHIPPING_RATES.EXPRESS.cost * stateMultiplier).toFixed(2))
-
-    availableOptions.push(
-      {
-        method: 'Standard Shipping',
-        cost: parseFloat(finalCost.toFixed(2)),
-        estimatedDays: SHIPPING_RATES.FLAT_RATE.estimatedDays,
-      },
-      {
-        method: 'Express Shipping',
-        // Make express free if it exceeds the subtotal
-        cost: expressCost > subtotal ? 0 : expressCost,
-        estimatedDays: SHIPPING_RATES.EXPRESS.estimatedDays,
-      }
-    )
-  }
+  // Build the single available option based on address type.
+  // Standard shipping is the only method offered.
+  const availableOptions = [
+    {
+      // Only USPS can deliver to a PO Box
+      method: isPoBox ? 'USPS Ground Advantage' : 'Standard Shipping',
+      cost: parseFloat(finalCost.toFixed(2)),
+      estimatedDays: SHIPPING_RATES.FLAT_RATE.estimatedDays,
+    },
+  ]
 
   return {
     shippingCost: availableOptions[0].cost,
@@ -407,7 +494,7 @@ function calculateEstimateRates(
  * Strategy:
  * 1. Check free shipping threshold first
  * 2. Call real carrier API for accurate rates
- * 3. Return multiple shipping options (standard, expedited, express)
+ * 3. Return the single standard shipping option
  * 4. Fall back to estimate-based rates if API fails (never block checkout)
  *
  * Follows error handling pattern from lib/tax-calculator.ts
@@ -435,13 +522,21 @@ export async function calculateShipping(
     return calculateEstimateRates(input, freeShippingThreshold, false)
   }
 
+  // No origin means no honest carrier rate. Estimates are used instead and say so via `fallback`,
+  // rather than quoting real-looking prices from a placeholder address.
+  const originResult = await getShippingOrigin()
+  if (!originResult.ok) {
+    console.error(`[Shipping Calculator] ${describeMissingOrigin(originResult.missing)}`)
+    return calculateEstimateRates(input, freeShippingThreshold, true)
+  }
+
   try {
-    // Calculate parcel dimensions from items
-    const parcel = calculateParcelDimensions(items)
+    // Jars pack on the warehouse grid; anything else falls back to a volume fit.
+    const parcel = calculateOrderParcel(items)
 
     // Build shipping API request
     const shipmentRequest: ShipmentRequest = {
-      fromAddress: DEFAULT_ORIGIN_ADDRESS,
+      fromAddress: originResult.origin,
       toAddress: {
         street1: shippingAddress.line1 || '123 Main St', // Placeholder if not provided
         street2: shippingAddress.line2,
@@ -482,18 +577,20 @@ export async function calculateShipping(
       // Sort rates by cost (cheapest first)
       const sortedRates = [...filteredRates].sort((a, b) => a.rate - b.rate)
 
-      // Map API rates to our format
-      const availableOptions = sortedRates.map((rate) => ({
-        method: `${rate.carrier} ${rate.service}`,
-        cost: rate.rate,
-        estimatedDays: rate.deliveryDays
-          ? `${rate.deliveryDays} business days`
-          : '3-5 business days',
-        estimatedDeliveryDate: rate.deliveryDate || undefined,
-      }))
-
-      // Use cheapest rate as default
+      // Only standard shipping is offered, so expose a single option: the
+      // cheapest carrier rate. Expedited/express services are never surfaced.
       const cheapestRate = sortedRates[0]
+
+      const availableOptions = [
+        {
+          method: `${cheapestRate.carrier} ${cheapestRate.service}`,
+          cost: cheapestRate.rate,
+          estimatedDays: cheapestRate.deliveryDays
+            ? `${cheapestRate.deliveryDays} business days`
+            : '3-5 business days',
+          estimatedDeliveryDate: cheapestRate.deliveryDate || undefined,
+        },
+      ]
 
       return {
         shippingCost: cheapestRate.rate,

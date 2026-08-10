@@ -169,11 +169,20 @@ describe('Security Headers Configuration', () => {
       expect(csp).toContain("frame-ancestors 'none'")
     })
 
-    it('should include upgrade-insecure-requests directive', async () => {
-      const headers = await getHeadersConfig('development')
+    it('should include upgrade-insecure-requests directive in production', async () => {
+      const headers = await getHeadersConfig('production')
       const csp = findHeader(headers, 'Content-Security-Policy')
 
       expect(csp).toContain('upgrade-insecure-requests')
+    })
+
+    it('should omit upgrade-insecure-requests in development', async () => {
+      // Over http://localhost the directive upgrades every subresource to https,
+      // which Safari honours for localhost — breaking CSS, JS, and media in dev.
+      const headers = await getHeadersConfig('development')
+      const csp = findHeader(headers, 'Content-Security-Policy')
+
+      expect(csp).not.toContain('upgrade-insecure-requests')
     })
 
     it('should set object-src to none', async () => {

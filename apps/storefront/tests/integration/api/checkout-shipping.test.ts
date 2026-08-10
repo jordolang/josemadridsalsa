@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { POST } from '@/app/api/checkout/calculate-shipping/route'
 
 // Mock dependencies
-vi.mock('@/lib/shipping-calculator', () => ({
+// Only the rate call is stubbed. `buildShippingItems` is pure mapping — the thing that turns
+// catalogue rows into parcel weights and dimensions — so the real one is kept, and a unit
+// mistake in it fails these tests rather than being mocked away.
+vi.mock('@/lib/shipping-calculator', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/shipping-calculator')>()),
   calculateShipping: vi.fn(),
 }))
 
@@ -56,11 +60,6 @@ describe('Checkout Shipping Calculation API Integration Tests', () => {
         cost: 8.99,
         estimatedDays: '3-5 business days',
       },
-      {
-        method: 'USPS Priority Mail',
-        cost: 14.99,
-        estimatedDays: '1-3 business days',
-      },
     ],
   }
 
@@ -86,9 +85,8 @@ describe('Checkout Shipping Calculation API Integration Tests', () => {
       expect(data.shippingCost).toBe(8.99)
       expect(data.shippingMethod).toBe('USPS Ground Advantage')
       expect(data.estimatedDelivery).toBe('3-5 business days')
-      expect(data.availableOptions).toHaveLength(2)
+      expect(data.availableOptions).toHaveLength(1)
       expect(data.availableOptions[0].method).toBe('USPS Ground Advantage')
-      expect(data.availableOptions[1].method).toBe('USPS Priority Mail')
       expect(data.fallback).toBe(false) // fallback defaults to false when using real rates
 
       // Verify prisma was called to fetch product details
@@ -98,6 +96,9 @@ describe('Checkout Shipping Calculation API Integration Tests', () => {
           id: true,
           price: true,
           weight: true,
+          lengthInches: true,
+          widthInches: true,
+          heightInches: true,
         },
       })
 
@@ -105,7 +106,7 @@ describe('Checkout Shipping Calculation API Integration Tests', () => {
       expect(calculateShipping).toHaveBeenCalledWith({
         items: [
           {
-            weight: 1.5,
+            weightOz: 1.5,
             quantity: 2,
           },
         ],
@@ -176,8 +177,8 @@ describe('Checkout Shipping Calculation API Integration Tests', () => {
       // Verify shipping was calculated with combined weights
       expect(calculateShipping).toHaveBeenCalledWith({
         items: [
-          { weight: 1.5, quantity: 2 },
-          { weight: 2.0, quantity: 1 },
+          { weightOz: 1.5, quantity: 2 },
+          { weightOz: 2.0, quantity: 1 },
         ],
         shippingAddress: expect.any(Object),
         subtotal: 30.97,
@@ -215,7 +216,7 @@ describe('Checkout Shipping Calculation API Integration Tests', () => {
       // Verify default weight of 1.0 lb was used
       expect(calculateShipping).toHaveBeenCalledWith({
         items: [
-          { weight: 1.0, quantity: 2 }, // Default weight
+          { weightOz: undefined, quantity: 2 }, // no catalogue weight; the calculator applies the default
         ],
         shippingAddress: expect.any(Object),
         subtotal: 17.98,
@@ -248,7 +249,7 @@ describe('Checkout Shipping Calculation API Integration Tests', () => {
       // Verify default weight was used
       expect(calculateShipping).toHaveBeenCalledWith({
         items: [
-          { weight: 1.0, quantity: 2 }, // Default weight
+          { weightOz: undefined, quantity: 2 }, // no catalogue weight; the calculator applies the default
         ],
         shippingAddress: expect.any(Object),
         subtotal: 0,

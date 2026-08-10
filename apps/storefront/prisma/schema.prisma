@@ -14,6 +14,14 @@ model User {
   email                   String                        @unique
   name                    String?
   password                String?
+  /// TOTP shared secret, encrypted at rest with the credential vault key (lib/crypto.ts).
+  /// Never returned to the client once enrolment completes.
+  twoFactorSecret         String?
+  twoFactorSecretIv       String?
+  /// Non-null once the user has proved they can generate a valid code. A secret without
+  /// this is a half-finished enrolment and must not gate sign-in.
+  twoFactorEnabledAt      DateTime?
+  twoFactorRecoveryCodes  TwoFactorRecoveryCode[]
   role                    UserRole                      @default(CUSTOMER)
   isEmailVerified         Boolean                       @default(false)
   phone                   String?
@@ -40,6 +48,8 @@ model User {
   orders                  Order[]
   partnerApiKeys          PartnerApiKey[]
   passwordResetTokens     PasswordResetToken[]
+  purchaseOrders          PurchaseOrder[]
+  purchaseOrderReceipts   PurchaseOrderReceipt[]
   reviews                 Review[]
   shippingSettings        ShippingSettings[]
   unsubscribePreferences  UnsubscribePreference[]
@@ -49,8 +59,34 @@ model User {
   blogComments            BlogComment[]                 @relation("BlogCommenter")
   blogReactions           BlogReaction[]                @relation("BlogReactor")
   customer                Customer?
+  timeClockEntries        TimeClockEntry[]
 
   @@map("users")
+}
+
+/// An append-only staff timeclock punch pair. One row per clock-in/clock-out,
+/// so a lunch break simply creates a second row on the same day. Hours are
+/// always derived from the timestamps — never stored — and rows are never
+/// updated after clock-out, which is what keeps the record tamper-evident.
+/// A partial unique index (see the migration) allows at most one open row
+/// (clockOutAt IS NULL) per user.
+///
+/// Caveat: `onDelete: Cascade` matches the rest of this schema, which means
+/// deleting a User through /api/admin/users/[id] destroys their punch history
+/// too. Switch to Restrict if payroll records must outlive the account.
+model TimeClockEntry {
+  id         String    @id @default(cuid())
+  userId     String
+  clockInAt  DateTime  @default(now())
+  clockOutAt DateTime?
+  clockInIp  String?
+  clockOutIp String?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, clockInAt])
+  @@map("time_clock_entries")
 }
 
 /// A unified customer/contact record. Distinct from `User` (login accounts):
@@ -172,6 +208,7 @@ model Product {
   orderItems             OrderItem[]
   productIngredients     ProductIngredient[]
   productTags            ProductTag[]
+  purchaseOrderItems     PurchaseOrderItem[]
   variants               ProductVariant[]
   category               Category                @relation(fields: [categoryId], references: [id])
   restockNotifications   RestockNotification[]
@@ -481,6 +518,13 @@ model Order {
   shippingAddressId        String?
   billingAddressId         String?
   status                   OrderStatus            @default(PENDING)
+  /// Fulfillment is tracked separately from `status` and `paymentStatus` so an order can be
+  /// (for example) PAID + PARTIALLY_FULFILLED without either field lying. Always write this
+  /// through `lib/orders/fulfillment.ts` so it cannot drift from `status`.
+  fulfillmentStatus        FulfillmentStatus      @default(UNFULFILLED)
+  /// Where the order originated. Derived from paymentChannel/fundraiserId/shopifyOrderId/
+  /// importSource at creation time — see `lib/orders/sales-channel.ts` for the precedence.
+  salesChannel             SalesChannel           @default(WEBSITE)
   subtotal                 Decimal                @db.Decimal(10, 2)
   shippingCost             Decimal                @default(0) @db.Decimal(10, 2)
   tax                      Decimal                @default(0) @db.Decimal(10, 2)
@@ -523,6 +567,21 @@ model Order {
   shippedAt                DateTime?
   deliveredAt              DateTime?
   confirmationEmailSentAt  DateTime?
+  reviewRequestSentAt      DateTime?
+  /// When the customer was told their refund went through. Null means not yet told.
+  ///
+  /// Two things send this email — the admin status change, and the consumer that reacts to a
+  /// refund actually settling at the processor — and they are reached by different admin
+  /// actions on the same order. Without a shared marker a customer can be emailed twice about
+  /// the same money, which reads as two refunds.
+  refundEmailSentAt        DateTime?
+  /// Set once, by whichever path marks the order paid first. The claim on this column is what
+  /// stops the same sale being credited twice when a webhook and a completion route race.
+  commissionCreditedAt     DateTime?
+  /// What the group was actually paid for this order, recorded at the moment it was credited.
+  /// Null means not a fundraiser order, or not yet credited — never zero. The rate is editable
+  /// afterwards, so recomputing this later would disagree with what was really handed over.
+  fundraiserCommission     Decimal?               @db.Decimal(10, 2)
   fundraiserId             String?
   importSource             String?
   importBatchId            String?
@@ -546,26 +605,174 @@ model Order {
   abandonedCart            AbandonedCart?         @relation(fields: [abandonedCartId], references: [id])
   payments                 Payment[]
   shippingLabels           ShippingLabel[]
+  fulfillments             Fulfillment[]
+  returnRequests           ReturnRequest[]
+
+  /// Set when this order is a replacement raised by an exchange rather than a sale.
+  ///
+  /// **Non-null means "not a sale".** A replacement is a fulfillment obligation the customer
+  /// has already paid for on the original order, so its total is zero while its items still
+  /// carry a real `unitCost`. Left in the sales population it would report as revenue 0 against
+  /// cost > 0 — a loss on every exchange, blended into product and channel margin. Every
+  /// revenue report therefore filters `exchangeForReturnId: null`.
+  exchangeForReturnId      String?                @unique
+  exchangeForReturn        ReturnRequest?         @relation("ExchangeForReturn", fields: [exchangeForReturnId], references: [id])
 
   @@index([userId])
   @@index([participantId])
   @@index([abandonedCartId])
+  @@index([fulfillmentStatus])
+  @@index([salesChannel])
   @@map("orders")
 }
 
+/// A single shipment (or pickup handoff) covering some subset of an order's items.
+/// An order with one Fulfillment covering everything is the common case; multiple
+/// rows model split shipments.
+model Fulfillment {
+  id              String            @id @default(cuid())
+  orderId         String
+  status          FulfillmentStatus @default(FULFILLED)
+  trackingNumber  String?
+  carrierName     String?
+  trackingUrl     String?
+  shippingLabelId String?
+  notes           String?
+  createdById     String?
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  order           Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  items           FulfillmentItem[]
+
+  @@index([orderId])
+  @@index([status])
+  @@map("fulfillments")
+}
+
+model FulfillmentItem {
+  id            String      @id @default(cuid())
+  fulfillmentId String
+  orderItemId   String
+  quantity      Int
+  fulfillment   Fulfillment @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
+  orderItem     OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@unique([fulfillmentId, orderItemId])
+  @@index([orderItemId])
+  @@map("fulfillment_items")
+}
+
+/// A customer's request to send goods back. Only quantities that actually shipped can be
+/// returned, so this hangs off the fulfillment accounting rather than the raw order lines.
+model ReturnRequest {
+  id            String              @id @default(cuid())
+  rmaNumber     String              @unique
+  orderId       String
+  status        ReturnStatus        @default(REQUESTED)
+  reason        ReturnReason
+  resolution    ReturnResolution    @default(REFUND)
+  customerNote  String?
+  adminNote     String?
+  /// Withheld from the refund. Stored per-request because it is a judgement call.
+  restockingFee Decimal?            @db.Decimal(10, 2)
+  /// The refund this return produced, set when it is completed with a REFUND resolution.
+  refundId      String?             @unique
+  /// Store credit issued instead of a refund, set when completed with STORE_CREDIT. Exactly
+  /// one of `refundId` / `giftCertificateId` / `exchangeOrder` is ever populated — see
+  /// `lib/orders/return-resolution.ts`.
+  giftCertificateId String?         @unique
+  requestedById String?
+  approvedById  String?
+  approvedAt    DateTime?
+  receivedAt    DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+
+  order         Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  refund        Refund?             @relation(fields: [refundId], references: [id])
+  giftCertificate GiftCertificate?  @relation(fields: [giftCertificateId], references: [id])
+  /// The replacement order raised for an EXCHANGE resolution. The foreign key lives on `Order`
+  /// so revenue reports can exclude exchanges with a single `where` on the order itself.
+  exchangeOrder Order?              @relation("ExchangeForReturn")
+  items         ReturnRequestItem[]
+
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("return_requests")
+}
+
+model ReturnRequestItem {
+  id              String               @id @default(cuid())
+  returnRequestId String
+  orderItemId     String
+  quantity        Int
+  /// Recorded at inspection; decides whether the units go back on the shelf.
+  condition       ReturnItemCondition?
+  /// Whether stock has been put back for this line, so a re-run cannot double-restock.
+  restocked       Boolean              @default(false)
+  returnRequest   ReturnRequest        @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
+  orderItem       OrderItem            @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@unique([returnRequestId, orderItemId])
+  @@index([orderItemId])
+  @@map("return_request_items")
+}
+
+/// Append-only log of business facts (`order.created`, `payment.completed`, …).
+/// Consumers subscribe to these rather than being hand-wired at each call site;
+/// it also backs per-entity activity timelines. Write via `lib/domain-events/emit.ts`.
+model DomainEvent {
+  id          String    @id @default(cuid())
+  type        String
+  entityType  String
+  entityId    String
+  payload     Json?
+  actorUserId String?
+  createdAt   DateTime  @default(now())
+  /// When consumers finished handling this event. Null means still pending.
+  ///
+  /// This column is what makes `domain_events` a transactional outbox rather than only an
+  /// audit log. Events are emitted inside the caller's transaction (payment webhooks pass
+  /// their `tx` client), so handlers cannot run at emit time — they would fire for work that
+  /// may still roll back, and would hold a transaction open across network I/O. A poller
+  /// only ever sees committed rows, which makes the hand-off correct by construction.
+  consumedAt  DateTime?
+
+  @@index([entityType, entityId, createdAt])
+  @@index([type, createdAt])
+  @@index([createdAt])
+  @@index([consumedAt, createdAt])
+  @@map("domain_events")
+}
+
 model OrderItem {
-  id           String   @id @default(cuid())
-  orderId      String
-  productId    String
-  quantity     Int
-  unitPrice    Decimal  @db.Decimal(10, 2)
-  totalPrice   Decimal  @db.Decimal(10, 2)
-  productName  String
-  productSku   String
-  productImage String?
-  createdAt    DateTime @default(now())
-  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product      Product  @relation(fields: [productId], references: [id])
+  id                String              @id @default(cuid())
+  orderId           String
+  productId         String
+  quantity          Int
+  /// How many of `quantity` have shipped. Never exceeds `quantity`; the sum of this
+  /// column across an order is what derives `Order.fulfillmentStatus`.
+  quantityFulfilled Int                 @default(0)
+  unitPrice         Decimal             @db.Decimal(10, 2)
+  /// What this unit cost us at the moment of sale, snapshotted from `Product.costPrice`.
+  /// Margin has to be computed from this rather than the product's current cost, or last
+  /// year's margin gets recalculated with this year's prices every time a cost changes.
+  /// Null means the cost was unknown when the order was placed — never treat it as zero.
+  unitCost          Decimal?            @db.Decimal(10, 2)
+  totalPrice        Decimal             @db.Decimal(10, 2)
+  productName       String
+  productSku        String
+  productImage      String?
+  createdAt         DateTime            @default(now())
+  order             Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product           Product             @relation(fields: [productId], references: [id])
+  fulfillmentItems  FulfillmentItem[]
+  returnItems       ReturnRequestItem[]
 
   @@index([orderId])
   @@index([productId])
@@ -577,6 +784,15 @@ model Payment {
   stripePaymentIntentId    String?          @unique
   stripeCheckoutSessionId  String?          @unique
   amount                   Int
+  /// What the processor charged us to take this payment, in cents.
+  ///
+  /// Null means not yet known, which is the normal state immediately after a payment:
+  /// Square only computes its fee after settlement, and Stripe's requires expanding the
+  /// balance transaction. A reconciliation sweep fills it in. Null must never be read as
+  /// zero — that would report a fee-free payment and overstate profit.
+  processorFee             Int?
+  /// When the fee above was last looked up, so the sweep knows what it has already tried.
+  processorFeeCheckedAt    DateTime?
   currency                 String           @default("usd")
   status                   PaymentStatus    @default(PENDING)
   paymentMethod            String?
@@ -604,18 +820,28 @@ model Payment {
 }
 
 model Refund {
-  id             String       @id @default(cuid())
-  stripeRefundId String       @unique
+  id             String          @id @default(cuid())
+  /// The processor's refund ID. Despite the name this is provider-agnostic — PayPal and
+  /// Square refunds store their own IDs here. Pair it with `provider` to identify the
+  /// processor; the column is not renamed because doing so would drop existing IDs.
+  stripeRefundId String          @unique
+  provider       PaymentProvider @default(STRIPE)
   amount         Int
   reason         String?
-  status         RefundStatus @default(PENDING)
+  status         RefundStatus    @default(PENDING)
   paymentId      String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   processedAt    DateTime?
-  payment        Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  /// Fundraiser commission taken back because of this refund. Non-null is also the claim that
+  /// stops the same refund reversing twice. Null means not a fundraiser refund, or not yet
+  /// processed — never zero.
+  commissionReversed Decimal?    @db.Decimal(10, 2)
+  payment        Payment         @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  returnRequest  ReturnRequest?
 
   @@index([paymentId])
+  @@index([provider])
   @@map("refunds")
 }
 
@@ -743,6 +969,13 @@ model Fundraiser {
   commissionRate       Decimal                 @db.Decimal(5, 2)
   status               FundraiserStatus        @default(DRAFT)
   isActive             Boolean                 @default(false)
+  /// When the coordinator was told the campaign is live. Null means not yet sent.
+  ///
+  /// A sent-marker rather than a status check, because `status` can move back and forth while
+  /// an admin edits a campaign and the coordinator should not be re-announced each time.
+  launchEmailSentAt    DateTime?
+  /// When the coordinator was sent the closing summary. Null means not yet sent.
+  summaryEmailSentAt   DateTime?
   totalOrders          Int                     @default(0)
   totalRevenue         Decimal                 @default(0) @db.Decimal(10, 2)
   totalCommission      Decimal                 @default(0) @db.Decimal(10, 2)
@@ -832,6 +1065,13 @@ model FundraiserParticipant {
   totalOrders     Int                         @default(0)
   totalRevenue    Decimal                     @default(0) @db.Decimal(10, 2)
   totalCommission Decimal                     @default(0) @db.Decimal(10, 2)
+  /// Highest sales milestone this participant has already been congratulated for.
+  ///
+  /// A marker rather than a derived value because domain events are delivered at-least-once:
+  /// without it a replayed `payment.completed` would send a second "you reached 25 sales"
+  /// email. Comparing the highest milestone reached against this column also collapses a
+  /// burst of orders into one message instead of one per threshold crossed.
+  lastMilestoneNotified Int                    @default(0)
   createdAt       DateTime                    @default(now())
   updatedAt       DateTime                    @default(now()) @updatedAt
   fundraiser      Fundraiser                  @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
@@ -1329,6 +1569,11 @@ model SocialMediaPost {
   createdById      String?
   media            SocialMediaPostMedia[]
   publishes        SocialPostPublish[]
+
+  // Set when this post is a blog article cross-post. Unique so one article maps
+  // to at most one SocialMediaPost (see BlogPost.crosspost).
+  blogPostId String?   @unique
+  blogPost   BlogPost? @relation("BlogPostCrosspost", fields: [blogPostId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([scheduledAt])
@@ -1932,19 +2177,6 @@ model EmailSegment {
   @@map("email_segments")
 }
 
-model EmailWebhook {
-  id        String   @id @default(cuid())
-  name      String
-  url       String
-  events    String[]
-  secret    String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("email_webhooks")
-}
-
 model BrandKit {
   id              String   @id @default(cuid())
   logoUrl         String?
@@ -2049,6 +2281,21 @@ model EngagementRequest {
   @@map("engagement_requests")
 }
 
+/// Single-use fallback codes for when the authenticator device is lost. Only the hash is
+/// stored, so a database leak does not hand over working second factors.
+model TwoFactorRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, codeHash])
+  @@index([userId])
+  @@map("two_factor_recovery_codes")
+}
+
 model PasswordResetToken {
   id        String   @id @default(cuid())
   token     String   @unique
@@ -2122,6 +2369,8 @@ model GiftCertificate {
   redeemedAt     DateTime?
   usages         GiftCertificateUsage[]
   order          Order?                 @relation(fields: [orderId], references: [id])
+  /// Set when this certificate was issued as store credit for a return rather than bought.
+  returnRequest  ReturnRequest?
 
   @@index([code])
   @@index([purchaserEmail])
@@ -2224,20 +2473,33 @@ model OrderNotificationSetting {
 }
 
 model Notification {
-  id         String           @id @default(cuid())
+  id         String               @id @default(cuid())
   userId     String
   type       NotificationType
+  severity   NotificationSeverity @default(INFO)
   title      String
   message    String
   entityType String?
   entityId   String?
-  isRead     Boolean          @default(false)
+  /// Where clicking the notification should take the operator.
+  link       String?
+  /// Stable identifier for the underlying fact. Re-observing the same condition updates the
+  /// existing row instead of creating another, so a recurring check cannot flood the list.
+  dedupeKey  String?
+  isRead     Boolean              @default(false)
   readAt     DateTime?
-  createdAt  DateTime         @default(now())
+  createdAt  DateTime             @default(now())
 
+  @@unique([userId, dedupeKey])
   @@index([userId, isRead])
   @@index([createdAt])
   @@map("notifications")
+}
+
+enum NotificationSeverity {
+  INFO
+  WARNING
+  CRITICAL
 }
 
 model TrainingDocumentCategory {
@@ -2385,23 +2647,128 @@ model OrderNotificationRule {
 }
 
 model InventoryTransaction {
-  id            String                   @id @default(cuid())
-  productId     String
-  type          InventoryTransactionType
-  quantity      Int
-  previousStock Int
-  newStock      Int
-  reason        String?
-  notes         String?
-  orderId       String?
-  userId        String?
-  createdAt     DateTime                 @default(now())
-  product       Product                  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id              String                   @id @default(cuid())
+  productId       String
+  type            InventoryTransactionType
+  quantity        Int
+  previousStock   Int
+  newStock        Int
+  reason          String?
+  notes           String?
+  orderId         String?
+  // Set when the movement came from receiving a purchase order. Without it, "where did this
+  // stock come from" is only answerable from a free-text reason, which is not an answer.
+  purchaseOrderId String?
+  userId          String?
+  createdAt       DateTime                 @default(now())
+  product         Product                  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@index([type])
   @@index([createdAt])
+  @@index([purchaseOrderId])
   @@map("inventory_transactions")
+}
+
+/// A business the shop buys stock from.
+model Supplier {
+  id             String          @id @default(cuid())
+  name           String
+  contactName    String?
+  email          String?
+  phone          String?
+  address1       String?
+  address2       String?
+  city           String?
+  state          String?
+  postalCode     String?
+  country        String?         @default("US")
+  notes          String?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  purchaseOrders PurchaseOrder[]
+
+  @@index([isActive])
+  @@map("suppliers")
+}
+
+/// Stock ordered from a supplier, and the record of what actually turned up.
+model PurchaseOrder {
+  id           String                 @id @default(cuid())
+  poNumber     String                 @unique
+  supplierId   String
+  status       PurchaseOrderStatus    @default(DRAFT)
+  expectedAt   DateTime?
+  submittedAt  DateTime?
+  receivedAt   DateTime?
+  cancelledAt  DateTime?
+  shippingCost Decimal                @default(0) @db.Decimal(10, 2)
+  notes        String?
+  createdById  String?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  supplier     Supplier               @relation(fields: [supplierId], references: [id])
+  createdBy    User?                  @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  items        PurchaseOrderItem[]
+  receipts     PurchaseOrderReceipt[]
+
+  @@index([status])
+  @@index([supplierId])
+  @@index([expectedAt])
+  @@map("purchase_orders")
+}
+
+/// One product line on a purchase order.
+///
+/// `quantityReceived` is a cached rollup of this line's receipt items and must only ever be
+/// changed by the receiving path, which writes both in one transaction. Setting it directly
+/// breaks the invariant that it equals the sum of `receiptItems.quantity`.
+model PurchaseOrderItem {
+  id               String                     @id @default(cuid())
+  purchaseOrderId  String
+  productId        String
+  quantityOrdered  Int
+  quantityReceived Int                        @default(0)
+  unitCost         Decimal                    @db.Decimal(10, 2)
+  purchaseOrder    PurchaseOrder              @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product          Product                    @relation(fields: [productId], references: [id])
+  receiptItems     PurchaseOrderReceiptItem[]
+
+  @@unique([purchaseOrderId, productId])
+  @@index([productId])
+  @@map("purchase_order_items")
+}
+
+/// One delivery against a purchase order. A PO may be filled by several.
+model PurchaseOrderReceipt {
+  id              String                     @id @default(cuid())
+  purchaseOrderId String
+  /// Packing slip or supplier invoice number, so a receipt can be matched to paperwork.
+  reference       String?
+  notes           String?
+  receivedById    String?
+  receivedAt      DateTime                   @default(now())
+  createdAt       DateTime                   @default(now())
+  purchaseOrder   PurchaseOrder              @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  receivedBy      User?                      @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+  items           PurchaseOrderReceiptItem[]
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_receipts")
+}
+
+model PurchaseOrderReceiptItem {
+  id                  String               @id @default(cuid())
+  receiptId           String
+  purchaseOrderItemId String
+  quantity            Int
+  receipt             PurchaseOrderReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  purchaseOrderItem   PurchaseOrderItem    @relation(fields: [purchaseOrderItemId], references: [id], onDelete: Cascade)
+
+  @@index([receiptId])
+  @@index([purchaseOrderItemId])
+  @@map("purchase_order_receipt_items")
 }
 
 model InventoryAlert {
@@ -3127,6 +3494,63 @@ enum PaymentChannel {
   POS
 }
 
+/// Fulfillment lifecycle, kept independent of `OrderStatus` (which covers the order's
+/// commercial lifecycle) and `PaymentStatus` (which covers money).
+enum FulfillmentStatus {
+  UNFULFILLED
+  PARTIALLY_FULFILLED
+  FULFILLED
+  DELIVERED
+  RETURNED
+}
+
+/// Lifecycle of a return request. Terminal states are REJECTED, COMPLETED and CANCELLED.
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  RECEIVED
+  COMPLETED
+  CANCELLED
+}
+
+enum ReturnReason {
+  DAMAGED
+  WRONG_ITEM
+  NOT_AS_DESCRIBED
+  ARRIVED_LATE
+  CHANGED_MIND
+  QUALITY_ISSUE
+  OTHER
+}
+
+enum ReturnResolution {
+  REFUND
+  EXCHANGE
+  STORE_CREDIT
+}
+
+/// Condition a returned unit arrived in, recorded at inspection. Only RESELLABLE units go
+/// back into sellable stock; DAMAGED is tracked so the loss is visible.
+enum ReturnItemCondition {
+  RESELLABLE
+  DAMAGED
+  DISCARDED
+}
+
+/// Where an order came from. Replaces inferring origin from the combination of
+/// paymentChannel, fundraiserId, shopifyOrderId and importSource.
+enum SalesChannel {
+  WEBSITE
+  POS
+  FUNDRAISER
+  WHOLESALE
+  MANUAL
+  MARKETPLACE
+  PHONE
+  IMPORT
+}
+
 enum ReviewStatus {
   PENDING
   APPROVED
@@ -3334,6 +3758,13 @@ enum NotificationType {
   ORDER_HIGH_VALUE
   ORDER_MODIFIED
   SYSTEM
+  PAYMENT_FAILED
+  INVENTORY_LOW
+  INVENTORY_OUT_OF_STOCK
+  RETURN_REQUESTED
+  RETURN_AGING
+  INTEGRATION_FAILED
+  ORDER_UNFULFILLED_STALE
 }
 
 enum ChatDomain {
@@ -3382,6 +3813,18 @@ enum OrderNotificationEvent {
   ORDER_REFUNDED
   PAYMENT_FAILED
   HIGH_VALUE_ORDER
+}
+
+/// DRAFT, SUBMITTED and CANCELLED are lifecycle states a person sets. PARTIALLY_RECEIVED and
+/// RECEIVED are derived from received quantities and must never be set by hand — the same
+/// split as order fulfillment, where progress comes from item counts and everything else is
+/// an overlay.
+enum PurchaseOrderStatus {
+  DRAFT
+  SUBMITTED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
 }
 
 enum InventoryTransactionType {
@@ -3498,6 +3941,11 @@ model BlogPost {
   comments  BlogComment[]
   reactions BlogReaction[]
 
+  // The social-media cross-post created for this article, if any. Kept unique so
+  // repeated publishes/cross-posts reuse one SocialMediaPost and its per-account
+  // idempotency guards instead of duplicating the post on every save.
+  crosspost SocialMediaPost? @relation("BlogPostCrosspost")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3601,4 +4049,448 @@ enum BlogPostLayout {
   GALLERY
   VIDEO
   MINIMAL
+}
+
+// ---------------------------------------------------------------------------
+// Document-archive imports
+//
+// Structured data recovered from the local (gitignored) `Documents/` business
+// archive. Each row carries full provenance (source file + md5 + sheet/row) so
+// an import is auditable and re-runnable, and so rows can be traced back to the
+// spreadsheet they came from. See scripts/extract-mileage.py + import-mileage.ts.
+// ---------------------------------------------------------------------------
+
+/// A single business trip recovered from the yearly "Mileage Master" and
+/// related spreadsheets in `01 Financial/Mileage`. The source files use four
+/// different column layouts (some with odometer readings, some with computed
+/// miles, some with a Sales column) and overlap heavily across re-exports, so
+/// rows are normalized to this shape and de-duplicated on `contentHash`.
+model MileageEntry {
+  id            String           @id @default(cuid())
+  /// Trip (start) date. Rows without a resolvable date are dropped at import.
+  tripDate      DateTime
+  /// End date for multi-day shows; null for a same-day trip.
+  endDate       DateTime?
+  /// Where the trip went — the "Vendor"/"Show"/"Location"/"Reason" cell.
+  destination   String
+  city          String?
+  state         String?          @db.VarChar(4)
+  /// Round-trip miles as recorded. Null when the source left it blank.
+  miles         Int?
+  /// One-way miles, when the sheet tracked it separately.
+  oneWayMiles   Int?
+  /// Odometer readings, present only in the driver-kept "Matt Mileage" sheets.
+  odometerStart Int?
+  odometerEnd   Int?
+  /// Canonicalized driver name (Deb/Debbie -> "Debbie"; "?" -> null).
+  driver        String?
+  /// Booth/market sales recorded alongside the trip, when present.
+  sales         Decimal?         @db.Decimal(10, 2)
+  /// Derived trip type from the destination text; null when undetermined.
+  category      MileageCategory?
+  /// Calendar year of the trip, denormalized for cheap filtering/reporting.
+  year          Int
+
+  // Provenance — every field needed to trace this row to its spreadsheet.
+  sourceFile    String
+  sourceMd5     String
+  sourceSheet   String?
+  sourceRow     Int?
+  /// The original row, keyed by its source header, for audit.
+  rawRow        Json?
+  /// Stable hash of the normalized trip; unique so re-imports and the three
+  /// overlapping 2022 "Master" files collapse to one row.
+  contentHash   String   @unique
+  importSource  String   @default("document-archive")
+  importBatchId String?
+  importedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([year])
+  @@index([driver])
+  @@index([sourceMd5])
+  @@map("mileage_entries")
+}
+
+enum MileageCategory {
+  SHOW
+  FARMERS_MARKET
+  FUNDRAISER
+  VENDOR
+  ERRAND
+  MISC
+}
+
+/// One row per file in the local (gitignored) `Documents/` business archive —
+/// the searchable index over the ~3,100 PDFs/DOCX/scans and everything else that
+/// cannot become typed domain rows. Metadata comes from the archive's own
+/// `search_index.csv`; `extractedText` is full text we pull from the text-bearing
+/// formats (scans have none until OCR). `sensitivity` gates HR/tax/bank records
+/// so they are never exposed on public or customer-facing surfaces.
+model ArchiveDocument {
+  id             String                  @id @default(cuid())
+  /// Path relative to the archive root, e.g. "03 Fundraisers/2024/...".
+  path           String                  @unique
+  /// Top-level archive folder, e.g. "01 Financial".
+  category       String
+  filename       String
+  ext            String?
+  sizeBytes      Int?
+  md5            String?
+  /// Where the file originally lived before the archive was organized.
+  originalSource String?
+  /// Year parsed from the path when the archive filed it by year; else null.
+  year           Int?
+  /// Short preview shipped in the archive's search_index.csv (often empty).
+  textPreview    String?
+  /// Full extracted text. Null for image-only scans until OCR is run.
+  extractedText  String?
+  textChars      Int                     @default(0)
+  extraction     ArchiveExtractionStatus @default(PENDING)
+  /// True when the file is a scan/image with no recoverable text layer.
+  needsOcr       Boolean                 @default(false)
+  sensitivity    ArchiveSensitivity      @default(INTERNAL)
+  importSource   String                  @default("document-archive")
+  importBatchId  String?
+  importedAt     DateTime                @default(now())
+  createdAt      DateTime                @default(now())
+
+  @@index([category])
+  @@index([year])
+  @@index([sensitivity])
+  @@index([extraction])
+  @@map("archive_documents")
+}
+
+enum ArchiveExtractionStatus {
+  PENDING
+  EXTRACTED
+  EMPTY
+  SCANNED_NO_TEXT
+  UNSUPPORTED
+  ERROR
+}
+
+enum ArchiveSensitivity {
+  PUBLIC
+  INTERNAL
+  SENSITIVE
+}
+
+/// One fundraiser campaign instance recovered from an order-form file in
+/// `03 Fundraisers`. The archive holds two form shapes: an order-export sheet
+/// (one row per customer order, with a "Total Jars" column) and the hand-filled
+/// Jose Madrid order-form template (Organization/Submitted-by labels plus
+/// per-flavor quantities). Both collapse to this per-file summary. Jar counts are
+/// recoverable and trustworthy; dollar revenue usually is not, so it stays null
+/// rather than being guessed from a price assumption.
+model ArchivedFundraiser {
+  id               String                     @id @default(cuid())
+  organizationName String
+  year             Int?
+  orderDate        DateTime?
+  submittedBy      String?
+  contactEmail     String?
+  contactPhone     String?
+  formType         ArchivedFundraiserFormType @default(UNKNOWN)
+  /// Total jars ordered: summed "Total Jars" (order-export) or summed per-flavor
+  /// quantities (order-form template). Null when not recoverable.
+  totalJars        Int?
+  /// Number of underlying customer orders, for the order-export shape.
+  orderCount       Int?
+  /// Per-flavor quantity map for the order-form template shape.
+  flavorsJson      Json?
+
+  sourceFile    String   @unique
+  sourceMd5     String?
+  notes         String?
+  importSource  String   @default("document-archive")
+  importBatchId String?
+  importedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([year])
+  @@index([organizationName])
+  @@map("archived_fundraisers")
+}
+
+enum ArchivedFundraiserFormType {
+  ORDER_EXPORT
+  ORDER_FORM
+  UNKNOWN
+}
+
+/// A single show or farmers-market day's sales, recovered from the yearly sales
+/// sheets in `04 Shows & Events` (e.g. "2025 Show Sales", "2025 Farmers Market").
+/// One row per event day. Dollar sales here are the crew's own tallies, not QBO
+/// — treat as historical record, not authoritative accounting.
+model ArchivedShowSale {
+  id            String           @id @default(cuid())
+  showName      String
+  showDate      DateTime?
+  /// The raw date cell when it was a range like "1/3-5/2025" rather than a date.
+  dateText      String?
+  year          Int?
+  eventType     ArchivedShowType @default(SHOW)
+  sales         Decimal?         @db.Decimal(10, 2)
+  amountPaid    Decimal?         @db.Decimal(10, 2)
+  expenses      Decimal?         @db.Decimal(10, 2)
+  salesPerson   String?
+  sourceFile    String
+  sourceMd5     String?
+  sourceRow     Int?
+  contentHash   String           @unique
+  importSource  String           @default("document-archive")
+  importBatchId String?
+  importedAt    DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+
+  @@index([year])
+  @@index([eventType])
+  @@map("archived_show_sales")
+}
+
+enum ArchivedShowType {
+  SHOW
+  FARMERS_MARKET
+}
+
+// ============================================================================
+// Content Management System
+// ============================================================================
+
+enum ContentStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+/// SYSTEM pages map onto an existing hard-coded route and supply field
+/// overrides plus section ordering/visibility. LANDING pages are composed
+/// entirely in the admin from the block registry.
+enum PageKind {
+  SYSTEM
+  LANDING
+}
+
+model Page {
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  title        String
+  kind         PageKind      @default(LANDING)
+  status       ContentStatus @default(DRAFT)
+  publishedAt  DateTime?
+  scheduledFor DateTime?
+
+  // Per-page SEO; falls back to the global SeoConfiguration templates when null
+  seoTitle       String?
+  seoDescription String?
+  ogImage        String?
+  canonicalUrl   String?
+  noIndex        Boolean @default(false)
+
+  sections    PageSection[]
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([kind])
+  @@map("cms_pages")
+}
+
+model PageSection {
+  id                String           @id @default(cuid())
+  pageId            String
+  page              Page             @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  /// Key into the block registry in lib/cms/blocks.ts
+  type              String
+  sortOrder         Int              @default(0)
+  isVisible         Boolean          @default(true)
+  data              Json             @default("{}")
+  reusableSectionId String?
+  reusableSection   ReusableSection? @relation(fields: [reusableSectionId], references: [id], onDelete: SetNull)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([pageId, sortOrder])
+  @@index([reusableSectionId])
+  @@map("cms_page_sections")
+}
+
+model ReusableSection {
+  id        String        @id @default(cuid())
+  key       String        @unique
+  name      String
+  type      String
+  data      Json          @default("{}")
+  status    ContentStatus @default(PUBLISHED)
+  usages    PageSection[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@map("cms_reusable_sections")
+}
+
+enum BannerPlacement {
+  SITE_WIDE_TOP
+  HOMEPAGE_HERO
+  CATEGORY
+  CHECKOUT
+  FUNDRAISING
+}
+
+model Banner {
+  id          String          @id @default(cuid())
+  name        String
+  placement   BannerPlacement @default(SITE_WIDE_TOP)
+  headline    String?
+  body        String?
+  imageUrl    String?
+  imageAlt    String?
+  ctaText     String?
+  ctaHref     String?
+  status      ContentStatus   @default(DRAFT)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  priority    Int             @default(0)
+  /// Empty means every path; otherwise a list of path prefixes to match
+  targetPaths String[]        @default([])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([placement, status, priority])
+  @@map("cms_banners")
+}
+
+enum AnnouncementVariant {
+  INFO
+  PROMO
+  WARNING
+  SUCCESS
+}
+
+model Announcement {
+  id          String              @id @default(cuid())
+  message     String
+  ctaText     String?
+  ctaHref     String?
+  variant     AnnouncementVariant @default(INFO)
+  status      ContentStatus       @default(DRAFT)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  priority    Int                 @default(0)
+  /// Empty means every path; otherwise a list of path prefixes to match
+  targetPaths String[]            @default([])
+  dismissible Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([status, priority])
+  @@map("cms_announcements")
+}
+
+model FaqCategory {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  description String?
+  sortOrder   Int       @default(0)
+  items       FaqItem[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("cms_faq_categories")
+}
+
+model FaqItem {
+  id         String        @id @default(cuid())
+  question   String
+  answer     String
+  categoryId String?
+  category   FaqCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  sortOrder  Int           @default(0)
+  status     ContentStatus @default(PUBLISHED)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([categoryId, sortOrder])
+  @@index([status])
+  @@map("cms_faq_items")
+}
+
+enum NavigationLocation {
+  HEADER
+  FOOTER
+  MOBILE
+  UTILITY
+}
+
+model NavigationMenu {
+  id        String             @id @default(cuid())
+  location  NavigationLocation @unique
+  name      String
+  items     NavigationItem[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@map("cms_navigation_menus")
+}
+
+model NavigationItem {
+  id           String           @id @default(cuid())
+  menuId       String
+  menu         NavigationMenu   @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  parentId     String?
+  parent       NavigationItem?  @relation("NavigationItemChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children     NavigationItem[] @relation("NavigationItemChildren")
+  label        String
+  href         String
+  description  String?
+  iconName     String?
+  sortOrder    Int              @default(0)
+  isVisible    Boolean          @default(true)
+  openInNewTab Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([menuId, parentId, sortOrder])
+  @@map("cms_navigation_items")
+}
+
+/// Non-link footer content; the footer's link columns live in the
+/// NavigationMenu whose location is FOOTER.
+model FooterSettings {
+  id                String   @id @default(cuid())
+  tagline           String?
+  aboutText         String?
+  copyrightText     String?
+  newsletterHeading String?
+  newsletterBody    String?
+  /// { facebook, instagram, tiktok, x, youtube, ... }
+  socialLinks       Json?
+  contactEmail      String?
+  contactPhone      String?
+  addressLines      String[] @default([])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("cms_footer_settings")
+}
+
+model Redirect {
+  id          String    @id @default(cuid())
+  source      String    @unique
+  destination String
+  permanent   Boolean   @default(true)
+  isActive    Boolean   @default(true)
+  hitCount    Int       @default(0)
+  lastHitAt   DateTime?
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isActive])
+  @@map("cms_redirects")
 }

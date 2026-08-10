@@ -85,6 +85,11 @@ export default async function AccountPage() {
               </Link>
             )}
             {(user?.role === UserRole.ADMIN || user?.role === UserRole.DEVELOPER || user?.role === UserRole.STAFF) && (
+              <Link href="/account/timeclock">
+                <Button variant="secondary">Timeclock</Button>
+              </Link>
+            )}
+            {(user?.role === UserRole.ADMIN || user?.role === UserRole.DEVELOPER || user?.role === UserRole.STAFF) && (
               <Link href="/admin">
                 <Button variant="outline" className="border-salsa-500 text-salsa-600 hover:bg-salsa-50">
                   Admin Panel →

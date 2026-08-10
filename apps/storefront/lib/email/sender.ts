@@ -8,6 +8,9 @@ import { prisma } from '@/lib/prisma'
 import nodemailer from 'nodemailer'
 import { decrypt, isEncrypted } from '@/lib/encryption'
 import { getErrorMessage } from '@/lib/errors'
+import { substituteVariables } from './render'
+
+export { substituteVariables }
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -33,26 +36,6 @@ interface CampaignSendOptions {
   campaignId: string
   batchSize?: number
   delayBetweenBatches?: number // milliseconds
-}
-
-/**
- * Replace template variables with actual values
- */
-export function substituteVariables(
-  template: string,
-  variables: Record<string, unknown>
-): string {
-  let result = template
-
-  // Replace {{variable}} patterns
-  Object.keys(variables).forEach((key) => {
-    const value = variables[key] ?? ''
-    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const regex = new RegExp(`{{\\s*${escapedKey}\\s*}}`, 'g')
-    result = result.replace(regex, String(value))
-  })
-
-  return result
 }
 
 /**

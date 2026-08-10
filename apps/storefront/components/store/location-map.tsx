@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { MapPin, Navigation, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import Link from 'next/link'
 
 const BUSINESS_ADDRESS = '601 Putnam Ave, Zanesville, OH 43701'
 const BUSINESS_NAME = 'Jose Madrid Salsa'
@@ -271,9 +272,9 @@ export function LocationMap() {
                 variant="outline"
                 className="w-full border-salsa-600 text-salsa-600 hover:bg-salsa-50 dark:hover:bg-salsa-900/20"
               >
-                <a href="/contact">
+                <Link href="/contact">
                   Contact Us
-                </a>
+                </Link>
               </Button>
             </Card>
           </div>

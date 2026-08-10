@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma as db } from "@/lib/prisma";
 import { generateFundraiserApiKey } from "@/lib/fundraiser-auth";
 import { requireAdminSession } from "@/lib/admin-auth";
+import { logAuditWithRequest } from "@/lib/audit";
 import { z } from "zod";
 
 const DEFAULT_CHARACTERS = [
@@ -64,6 +65,26 @@ export async function POST(req: NextRequest) {
       data: { status: "APPROVED", reviewedBy: admin.id, reviewedAt: now, reviewNotes: reviewNotes ?? null, apiKeyShownAt: now },
     }),
   ]);
+
+  // Approval creates a live team and issues its API key, so it is recorded against the
+  // admin who approved it. The raw key is deliberately not part of the log.
+  await logAuditWithRequest(
+    {
+      userId: admin.id,
+      action: "approve",
+      entityType: "fundraiser_signup_request",
+      entityId: signupId,
+      changes: {
+        status: { from: signup.status, to: "APPROVED" },
+        teamId: team.id,
+        teamSlug: team.slug,
+        schoolName: signup.schoolName,
+        activePeriod,
+        reviewNotes: reviewNotes ?? null,
+      },
+    },
+    req
+  );
 
   const origin =
     process.env.APP_URL ??

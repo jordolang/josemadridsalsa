@@ -1,0 +1,56 @@
+# Local development stack: storefront dev server + Postgres.
+# Distinct from .devcontainer/docker-compose.yml, which backs the VS Code devcontainer.
+#
+#   docker compose -f docker-compose.dev.yml up
+#   docker compose -f docker-compose.dev.yml exec storefront npm run db:migrate
+#
+# To develop against a hosted database instead, delete the DATABASE_URL /
+# DATABASE_URL_UNPOOLED overrides below and let .env.local supply them.
+
+services:
+  storefront:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        NODE_VERSION: "20"
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/josemadrid
+      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@postgres:5432/josemadrid
+      NEXTAUTH_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      # Anonymous volumes keep the container's linux node_modules and build
+      # output from being shadowed by the host's (darwin-arm64) copies.
+      - /app/node_modules
+      - /app/apps/storefront/node_modules
+      - /app/apps/docs/node_modules
+      - /app/apps/storefront/.next
+      - /app/.turbo
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: josemadrid
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

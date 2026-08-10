@@ -7,6 +7,7 @@ import { Prisma, PaymentStatus, OrderStatus } from '@prisma/client'
 import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
 import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
+import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
 
 const CompleteSchema = z.object({
   orderId: z.string().cuid(),
@@ -23,6 +24,7 @@ type OrderWithItems = {
   paymentStatus: PaymentStatus
   status: OrderStatus
   total: Prisma.Decimal
+  subtotal: Prisma.Decimal
   discountCode: string | null
   discountAmount: Prisma.Decimal
   giftCertificateCode: string | null
@@ -71,6 +73,8 @@ export async function POST(request: Request) {
           paymentStatus: true,
           status: true,
           total: true,
+          // Commission is taken from merchandise, so the subtotal is loaded alongside the total.
+          subtotal: true,
           discountCode: true,
           discountAmount: true,
           giftCertificateCode: true,
@@ -230,35 +234,15 @@ export async function POST(request: Request) {
           }
         }
 
-        // Update participant totals if order is attributed to a participant
-        if (order!.participantId) {
-          const orderTotal = Number(order!.total)
-
-          // Get the fundraiser to calculate commission
-          const fundraiser = await tx.fundraiser.findUnique({
-            where: { id: order!.fundraiserId! },
-            select: { commissionRate: true },
+        // Credit the fundraiser. Idempotent and safe to race with the Stripe webhook, which
+        // completes the same order in parallel and now credits it too.
+        const credit = await creditFundraiserCommission(tx, order!.id)
+        if (credit.credited) {
+          console.log('[Checkout Complete] Credited fundraiser commission:', {
+            orderId: order!.id,
+            participantId: order!.participantId,
+            amount: credit.amount,
           })
-
-          if (fundraiser) {
-            const commissionAmount = orderTotal * (Number(fundraiser.commissionRate) / 100)
-
-            // Increment participant totals
-            await tx.fundraiserParticipant.update({
-              where: { id: order!.participantId },
-              data: {
-                totalOrders: { increment: 1 },
-                totalRevenue: { increment: new Prisma.Decimal(orderTotal.toFixed(2)) },
-                totalCommission: { increment: new Prisma.Decimal(commissionAmount.toFixed(2)) },
-              },
-            })
-
-            console.log('[Checkout Complete] Updated participant totals:', {
-              participantId: order!.participantId,
-              orderTotal,
-              commissionAmount,
-            })
-          }
         }
 
         // Deduct reserved inventory for each item inside the same transaction.

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { createChangeSnapshot, logAuditWithRequest } from '@/lib/audit'
 import prisma from '@/lib/prisma'
 
 const ProductSelectionSchema = z.object({
@@ -67,6 +68,17 @@ export async function PUT(
           })
         }
       })
+    )
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'update',
+        entityType: 'fundraiser',
+        entityId: fundraiserId,
+        changes: { productSelections: parsed.data.selections },
+      },
+      req
     )
 
     return NextResponse.json({ success: true, count: results.length })

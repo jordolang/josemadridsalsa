@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
+import { deriveSalesChannel } from '@/lib/orders/sales-channel'
+import { emitOrderCreated } from '@/lib/orders/events'
 import { getProvider } from '@/lib/payments'
 import { Prisma } from '@prisma/client'
 import { calculateTax } from '@/lib/tax-calculator'
-import { calculateShipping } from '@/lib/shipping-calculator'
+import { buildShippingItems, calculateShipping } from '@/lib/shipping-calculator'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
 import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manager'
 import { getReferralFromCode } from '@/lib/fundraising/referral-tracker'
+import { fundraiserUnitPrice } from '@/lib/fundraising/pricing'
+import { getFundraiserPriceOverrides } from '@/lib/fundraising/pricing.server'
 
 const PayPalCheckoutSchema = z.object({
   items: z
@@ -82,6 +86,11 @@ export async function POST(request: NextRequest) {
 
     const productMap = new Map(products.map((product) => [product.id, product]))
 
+    // A fundraiser sells at its own price, and the supporter was quoted that price on the
+    // fundraiser page. Resolved from the referral code here rather than accepted from the
+    // client, for the same reason shipping is recomputed server-side.
+    const fundraiserPrices = await getFundraiserPriceOverrides(referralCode, productIds)
+
     let subtotal = 0
     const orderItems = []
 
@@ -89,7 +98,7 @@ export async function POST(request: NextRequest) {
       const product = productMap.get(item.productId)
       if (!product) continue
 
-      const unitPrice = Number(product.price)
+      const unitPrice = fundraiserUnitPrice(product.price, fundraiserPrices.get(product.id))
       const lineTotal = unitPrice * item.quantity
       subtotal += lineTotal
 
@@ -97,6 +106,10 @@ export async function POST(request: NextRequest) {
         productId: product.id,
         quantity: item.quantity,
         unitPrice: toDecimal(unitPrice),
+        // Snapshot the cost at the moment of sale. Margin computed from the product's
+        // *current* cost would silently recalculate every past order whenever a supplier
+        // changes price. Null stays null — an unknown cost must not become zero.
+        unitCost: product.costPrice ?? undefined,
         totalPrice: toDecimal(lineTotal),
         productName: product.name,
         productSku: product.sku,
@@ -155,13 +168,7 @@ export async function POST(request: NextRequest) {
       let finalShippingMethod = 'Standard Shipping'
 
       try {
-        const itemsWithWeights = orderItems.map((item) => {
-          const product = productMap.get(item.productId)
-          return {
-            weight: product?.weight ? Number(product.weight) : 1.0,
-            quantity: item.quantity,
-          }
-        })
+        const itemsWithWeights = buildShippingItems(orderItems, productMap)
 
         const shippingResult = await calculateShipping({
           items: itemsWithWeights,
@@ -234,6 +241,11 @@ export async function POST(request: NextRequest) {
           status: 'PENDING',
           paymentProvider: 'PAYPAL',
           paymentChannel: 'ONLINE',
+          salesChannel: deriveSalesChannel({
+            participantId,
+            fundraiserId,
+            paymentChannel: 'ONLINE',
+          }),
           participantId,
           fundraiserId,
           items: {
@@ -243,6 +255,15 @@ export async function POST(request: NextRequest) {
         include: {
           items: true,
         },
+      })
+
+      await emitOrderCreated({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        total: order.total,
+        salesChannel: order.salesChannel,
+        itemCount: order.items.length,
+        actorUserId: user?.id ?? null,
       })
 
       // Create PayPal order via the adapter

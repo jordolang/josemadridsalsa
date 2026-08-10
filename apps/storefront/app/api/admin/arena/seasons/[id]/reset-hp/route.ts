@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma as db } from '@/lib/prisma'
 import { requireAdminSession } from '@/lib/admin-auth'
+import { logAuditWithRequest } from '@/lib/audit'
 import { resetSeasonHP } from '@/lib/arena/damage'
 
 /**
@@ -11,7 +12,7 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  await requireAdminSession()
+  const admin = await requireAdminSession()
   const { id: seasonId } = await params
 
   const season = await db.fundraiserSeason.findUnique({
@@ -26,6 +27,18 @@ export async function POST(
   }
 
   const resetCount = await resetSeasonHP(season.id)
+
+  await logAuditWithRequest(
+    {
+      userId: admin.id,
+      action: 'reset_hp',
+      entityType: 'fundraiser_season',
+      entityId: season.id,
+      changes: { period: season.period, teamsReset: resetCount },
+    },
+    _req,
+  )
+
   return NextResponse.json({
     success: true,
     seasonId: season.id,

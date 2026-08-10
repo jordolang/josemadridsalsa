@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getConnection } from '@/lib/quickbooks/connection'
 import { drainQueue, enqueuePaidOrders, enqueueRefunds } from '@/lib/quickbooks/sync'
+import { isAuthorizedCronRequest } from '@/lib/cron/auth'
 
 /**
  * GET /api/cron/quickbooks-sync
@@ -12,14 +13,8 @@ import { drainQueue, enqueuePaidOrders, enqueueRefunds } from '@/lib/quickbooks/
 
 export const dynamic = 'force-dynamic'
 
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return true // No secret configured → allow (matches other crons).
-  return request.headers.get('authorization') === `Bearer ${secret}`
-}
-
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

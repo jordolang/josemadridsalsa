@@ -1,0 +1,11 @@
+-- Records when a post-delivery review request was emailed for an order.
+--
+-- Previously `/api/cron/review-requests` used `confirmationEmailSentAt IS NULL` as a stand-in
+-- for "no review request sent yet". That predicate is inverted in practice: every successful
+-- checkout stamps `confirmationEmailSentAt`, so the only orders the cron could ever select
+-- were ones that never received an order confirmation. It then overwrote that column with the
+-- review-request time, destroying the confirmation timestamp for any order it did process.
+--
+-- A dedicated nullable column gives the cron a real idempotency marker, which is also what
+-- makes it safe to raise its frequency later.
+ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "reviewRequestSentAt" TIMESTAMP(3);

@@ -9,9 +9,29 @@ import {
   Eye,
 } from 'lucide-react'
 import { StatsCard } from '@/components/admin/StatsCard'
+import { OperationalQueues } from '@/components/admin/dashboard/OperationalQueues'
+import {
+  activeInventoryAlertsWhere,
+  needsShippingWhere,
+  openReturnsWhere,
+  paymentFailedWhere,
+  pendingFundraiserSignupsWhere,
+  pendingWholesaleWhere,
+  stuckPendingWhere,
+  STUCK_PENDING_MINUTES,
+  type QueueCounts,
+} from '@/lib/admin/operational-queues'
 import { SalesOverview } from '@/components/admin/SalesOverview'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
+import { SALES_ONLY } from '@/lib/orders/sales-population'
+import {
+  bucketByMonth,
+  bucketCustomerGrowth,
+  lastMonths,
+  seriesStart,
+} from '@/lib/analytics/monthly-series'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -78,32 +98,29 @@ async function getDashboardStats() {
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    const [revenue, avgRating, newUsersThisMonth, monthlySales, topProductRows, recentActivityData, monthlyCustomerGrowth] = await Promise.all([
-      prisma.order.aggregate({ _sum: { total: true }, where: { status: { not: 'CANCELLED' } } }),
+    // Six months of buckets, and the definition of a sale, resolved once so the charts and the
+    // tiles below cannot end up counting different things.
+    const dashboardMonths = lastMonths(6, now)
+    const dashboardSoldOrders: Prisma.OrderWhereInput = {
+      ...SALES_ONLY,
+      status: { not: 'CANCELLED' },
+    }
+
+    const [revenue, avgRating, newUsersThisMonth, monthlyOrders, topProductRows, recentActivityData, signupsInWindow, customersBeforeWindow] = await Promise.all([
+      prisma.order.aggregate({ _sum: { total: true }, where: dashboardSoldOrders }),
       prisma.review.aggregate({ _avg: { rating: true } }),
       prisma.user.count({ where: { createdAt: { gte: startOfMonth } } }),
-      prisma.$queryRaw<Array<{ month: string; sales: number; orders: number }>>`
-        SELECT
-          to_char(date_trunc('month', "createdAt"), 'Mon') AS month,
-          COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total ELSE 0 END), 0)::float AS sales,
-          COUNT(*)::int AS orders
-        FROM orders
-        WHERE "createdAt" >= date_trunc('month', NOW()) - interval '6 months'
-        GROUP BY date_trunc('month', "createdAt")
-        ORDER BY date_trunc('month', "createdAt") ASC
-      `,
-      prisma.$queryRaw<Array<{ name: string; sold: number; revenue: number }>>`
-        SELECT
-          oi."productName" AS name,
-          SUM(oi.quantity)::int AS sold,
-          SUM(oi."totalPrice")::float AS revenue
-        FROM order_items oi
-        JOIN orders o ON o.id = oi."orderId"
-        WHERE o.status != 'CANCELLED'
-        GROUP BY oi."productName"
-        ORDER BY sold DESC
-        LIMIT 5
-      `,
+      prisma.order.findMany({
+        where: { ...dashboardSoldOrders, createdAt: { gte: seriesStart(dashboardMonths) } },
+        select: { createdAt: true, total: true },
+      }),
+      prisma.orderItem.groupBy({
+        by: ['productName'],
+        where: { order: dashboardSoldOrders },
+        _sum: { quantity: true, totalPrice: true },
+        orderBy: { _sum: { quantity: 'desc' } },
+        take: 5,
+      }),
       Promise.all([
         prisma.order.findMany({
           take: 3, orderBy: { createdAt: 'desc' },
@@ -112,20 +129,11 @@ async function getDashboardStats() {
         prisma.user.findMany({ take: 2, orderBy: { createdAt: 'desc' }, select: { email: true, createdAt: true } }),
         prisma.review.findMany({ take: 2, orderBy: { createdAt: 'desc' }, select: { rating: true, createdAt: true, product: { select: { name: true } } } }),
       ]),
-      prisma.$queryRaw<Array<{ month: string; customers: number; new_customers: number }>>`
-        SELECT
-          to_char(months.m, 'Mon') AS month,
-          (SELECT COUNT(*) FROM users WHERE "createdAt" <= months.m + interval '1 month')::int AS customers,
-          (SELECT COUNT(*) FROM users WHERE "createdAt" >= months.m AND "createdAt" < months.m + interval '1 month')::int AS new_customers
-        FROM (
-          SELECT generate_series(
-            date_trunc('month', NOW()) - interval '6 months',
-            date_trunc('month', NOW()),
-            interval '1 month'
-          ) AS m
-        ) months
-        ORDER BY months.m ASC
-      `,
+      prisma.user.findMany({
+        where: { createdAt: { gte: seriesStart(dashboardMonths) } },
+        select: { createdAt: true },
+      }),
+      prisma.user.count({ where: { createdAt: { lt: seriesStart(dashboardMonths) } } }),
     ])
 
     const [latestOrders, latestUsers, latestReviews] = recentActivityData
@@ -163,10 +171,23 @@ async function getDashboardStats() {
         status: o.status,
         count: o._count.id,
       })),
-      monthlySales: monthlySales.map((m) => ({ month: m.month, sales: Number(m.sales), orders: Number(m.orders) })),
-      topProducts: topProductRows.map((p) => ({ name: p.name, sold: Number(p.sold), revenue: Number(p.revenue) })),
+      monthlySales: bucketByMonth(
+        monthlyOrders.map((order) => ({ createdAt: order.createdAt, amount: Number(order.total) })),
+        dashboardMonths,
+        'short'
+      ).map((m) => ({ month: m.month, sales: m.total, orders: m.count })),
+      topProducts: topProductRows.map((row) => ({
+        name: row.productName,
+        sold: row._sum.quantity ?? 0,
+        revenue: Number(row._sum.totalPrice ?? 0),
+      })),
       activityFeed,
-      customerGrowth: monthlyCustomerGrowth.map((m) => ({ month: m.month, customers: Number(m.customers), newCustomers: Number(m.new_customers) })),
+      customerGrowth: bucketCustomerGrowth(
+        signupsInWindow.map((user) => user.createdAt),
+        dashboardMonths,
+        customersBeforeWindow,
+        'short'
+      ).map((m) => ({ month: m.month, customers: m.totalCustomers, newCustomers: m.newCustomers })),
     }
   } catch (error) {
     console.error('[Admin Dashboard] Error fetching stats:', error)
@@ -184,6 +205,45 @@ function formatTimeAgo(date: Date): string {
   if (diffHr < 24) return `${diffHr}h ago`
   const diffDays = Math.floor(diffHr / 24)
   return `${diffDays}d ago`
+}
+
+/**
+ * Counts for the operational queues. Each uses the same `where` clause as the page it links
+ * to, so the number on a card and the rows behind it cannot drift apart.
+ *
+ * A queue that cannot be counted (a missing table on a partially migrated environment, say)
+ * reports zero rather than taking the whole dashboard down with it.
+ */
+async function getOperationalQueueCounts(): Promise<QueueCounts> {
+  const stuckSince = new Date(Date.now() - STUCK_PENDING_MINUTES * 60 * 1000)
+
+  const [
+    needsShipping,
+    paymentFailed,
+    stuckPending,
+    openReturns,
+    inventoryAlerts,
+    fundraiserSignups,
+    wholesaleApplications,
+  ] = await Promise.all([
+    prisma.order.count({ where: needsShippingWhere }).catch(() => 0),
+    prisma.order.count({ where: paymentFailedWhere }).catch(() => 0),
+    prisma.order.count({ where: stuckPendingWhere(stuckSince) }).catch(() => 0),
+    prisma.returnRequest.count({ where: openReturnsWhere }).catch(() => 0),
+    prisma.inventoryAlert.count({ where: activeInventoryAlertsWhere }).catch(() => 0),
+    prisma.fundraiserSignupRequest.count({ where: pendingFundraiserSignupsWhere }).catch(() => 0),
+    prisma.wholesaleAccount.count({ where: pendingWholesaleWhere }).catch(() => 0),
+  ])
+
+  return {
+    needsShipping,
+    paymentFailed,
+    stuckPending,
+    openReturns,
+    inventoryAlerts,
+    fundraiserSignups,
+    wholesaleApplications,
+  }
 }
 
 export default async function AdminDashboard() {
@@ -213,6 +273,8 @@ export default async function AdminDashboard() {
       bgColor: statusColorMap[s.status]?.bgColor ?? 'bg-muted/50 text-foreground',
     }))
 
+    const queueCounts = await getOperationalQueueCounts()
+
     // Map low stock inventory items
     const inventoryAlerts = stats.lowStockProducts.map((p) => ({
       name: p.name,
@@ -241,11 +303,27 @@ export default async function AdminDashboard() {
           </div>
         </div>
 
+        {/* What needs doing right now — every tile links into the list it counts.
+            Performance figures stay below, and in /admin/analytics. */}
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold">Needs attention</h2>
+            <Link
+              href="/admin/analytics"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Performance &rarr;
+            </Link>
+          </div>
+          <OperationalQueues counts={queueCounts} />
+        </section>
+
         {/* Stats Grid - Row 1 */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {canViewFinancials && (
             <StatsCard
               title="Total Revenue"
+              href="/admin/analytics/orders"
               value={`$${Number(stats.revenue).toLocaleString()}`}
               icon={DollarSign}
               color="green"
@@ -254,6 +332,7 @@ export default async function AdminDashboard() {
           {canViewOrders && (
             <StatsCard
               title="Total Orders"
+              href="/admin/orders"
               value={stats.totalOrders.toLocaleString()}
               icon={ShoppingCart}
               color="blue"
@@ -261,6 +340,7 @@ export default async function AdminDashboard() {
           )}
           <StatsCard
             title="Total Customers"
+              href="/admin/customers"
             value={stats.totalUsers.toLocaleString()}
             icon={Users}
             color="purple"
@@ -268,6 +348,7 @@ export default async function AdminDashboard() {
           />
           <StatsCard
             title="Products"
+              href="/admin/products"
             value={stats.totalProducts.toLocaleString()}
             icon={Package}
             color="orange"
@@ -278,6 +359,7 @@ export default async function AdminDashboard() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             title="Store Locations"
+              href="/admin/locations"
             value={stats.totalLocations.toLocaleString()}
             icon={MapPin}
             color="red"
@@ -285,6 +367,7 @@ export default async function AdminDashboard() {
           />
           <StatsCard
             title="Avg Rating"
+              href="/admin/reviews"
             value={stats.avgRating > 0 ? stats.avgRating.toFixed(1) : 'N/A'}
             icon={Star}
             color="teal"
@@ -293,6 +376,7 @@ export default async function AdminDashboard() {
           {canViewFinancials && (
             <StatsCard
               title="Avg Order Value"
+              href="/admin/analytics/orders"
               value={
                 stats.totalOrders > 0
                   ? `$${(Number(stats.revenue) / stats.totalOrders).toFixed(2)}`

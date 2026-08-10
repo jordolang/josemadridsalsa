@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma as db } from '@/lib/prisma'
 import { requireAdminSession } from '@/lib/admin-auth'
+import { logAuditWithRequest } from '@/lib/audit'
 
 /**
  * Admin API: list + attach products for a FundraiserTeam.
@@ -21,8 +22,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  let admin: Awaited<ReturnType<typeof requireAdminSession>>
   try {
-    await requireAdminSession()
+    admin = await requireAdminSession()
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -51,8 +53,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  let admin: Awaited<ReturnType<typeof requireAdminSession>>
   try {
-    await requireAdminSession()
+    admin = await requireAdminSession()
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -123,6 +126,18 @@ export async function POST(
         },
       },
     })
+
+    await logAuditWithRequest(
+      {
+        userId: admin.id,
+        action: 'update',
+        entityType: 'fundraiser_team_product',
+        entityId: row.id,
+        changes: { teamId, productId: parsed.data.productId, price: parsed.data.price ?? null },
+      },
+      req,
+    )
+
     return NextResponse.json({ teamProduct: row })
   } catch (err) {
     console.error('Attach team product failed:', err)

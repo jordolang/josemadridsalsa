@@ -34,6 +34,10 @@ function SignInFormInner() {
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Revealed only after the password has been accepted and the account turns out to have a
+  // second factor, so the form never advertises which accounts are protected.
+  const [needsTwoFactor, setNeedsTwoFactor] = useState(false)
+  const [twoFactorCode, setTwoFactorCode] = useState('')
 
   const {
     register,
@@ -56,11 +60,29 @@ function SignInFormInner() {
       const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
+        // Only sent once the account has asked for it; harmless otherwise.
+        totp: twoFactorCode.trim() || undefined,
         redirect: false,
         callbackUrl,
       })
 
       if (result?.error) {
+        // The password was right but a second factor is needed. Reveal the code field
+        // rather than reporting a credential failure, which would be misleading.
+        if (result.error.includes('TWO_FACTOR_REQUIRED')) {
+          setNeedsTwoFactor(true)
+          setError(null)
+          setIsLoading(false)
+          return
+        }
+
+        if (result.error.includes('TWO_FACTOR_INVALID')) {
+          setNeedsTwoFactor(true)
+          setError('That authentication code was not valid. Try again, or use a recovery code.')
+          setIsLoading(false)
+          return
+        }
+
         // Provide more specific error messages
         if (result.error === 'CredentialsSignin') {
           setError('Invalid email or password. Please try again.')
@@ -139,6 +161,25 @@ function SignInFormInner() {
               )}
             </div>
 
+            {needsTwoFactor && (
+              <div className="space-y-2">
+                <Label htmlFor="totp">Authentication code</Label>
+                <Input
+                  id="totp"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  placeholder="123456"
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value)}
+                  className="font-mono"
+                />
+                <p className="text-xs text-gray-500">
+                  Enter the code from your authenticator app, or one of your recovery codes.
+                </p>
+              </div>
+            )}
+
             {error && (
               <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
                 {error}
@@ -150,7 +191,7 @@ function SignInFormInner() {
               className="w-full bg-salsa-500 hover:bg-salsa-600"
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in…' : 'Sign in'}
+              {isLoading ? 'Signing in…' : needsTwoFactor ? 'Verify and sign in' : 'Sign in'}
             </Button>
           </form>
         </CardContent>

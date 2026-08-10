@@ -1,59 +1,58 @@
 import { NextResponse } from 'next/server'
+
 import { prisma } from '@/lib/prisma'
+import { isAuthorizedCronRequest } from '@/lib/cron/auth'
 import { sendReviewRequestEmail } from '@/lib/email/transactional'
+import { reviewRequestRecipient, reviewRequestWhere } from '@/lib/orders/review-requests'
 
-// Send review requests to customers whose orders were delivered 3–7 days ago
-// and haven't already received a review request.
-const MIN_DAYS_AFTER_DELIVERY = 3
-const MAX_DAYS_AFTER_DELIVERY = 7
+/**
+ * GET /api/cron/review-requests
+ *
+ * Asks customers whose orders were delivered 3-7 days ago what they thought. Selection and
+ * copy live in `lib/orders/review-requests.ts` so the window arithmetic and the "already asked"
+ * guard are testable — both have been wrong here before, silently.
+ */
 
-export async function GET() {
+export const dynamic = 'force-dynamic'
+
+/** Cap the batch so a backlog cannot turn one tick into a very long function. */
+const SEND_LIMIT = 50
+
+export async function GET(request: Request) {
+  if (!isAuthorizedCronRequest(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const now = new Date()
-    const minDelivery = new Date(now.getTime() - MAX_DAYS_AFTER_DELIVERY * 24 * 60 * 60 * 1000)
-    const maxDelivery = new Date(now.getTime() - MIN_DAYS_AFTER_DELIVERY * 24 * 60 * 60 * 1000)
 
     const orders = await prisma.order.findMany({
-      where: {
-        status: 'DELIVERED',
-        deliveredAt: { gte: minDelivery, lte: maxDelivery },
-        // Use confirmationEmailSentAt as a proxy for "review request sent"
-        // In a future migration this could be a dedicated reviewRequestSentAt field
-        confirmationEmailSentAt: null,
-        OR: [
-          { userId: { not: null } },
-          { guestEmail: { not: null } },
-        ],
-      },
+      where: reviewRequestWhere(now),
       include: {
         user: { select: { email: true, name: true } },
         items: { select: { productName: true }, take: 1 },
       },
-      take: 50,
+      take: SEND_LIMIT,
     })
 
     let sent = 0
     let skipped = 0
 
     for (const order of orders) {
-      const email = order.user?.email ?? order.guestEmail
-      if (!email) { skipped++; continue }
-
-      const name = order.user?.name ?? 'there'
-      const productName = order.items[0]?.productName ?? 'your José Madrid Salsa'
+      const recipient = reviewRequestRecipient(order)
+      if (!recipient) {
+        skipped++
+        continue
+      }
 
       try {
-        await sendReviewRequestEmail({
-          email,
-          name,
-          orderNumber: order.orderNumber,
-          productName,
-        })
+        await sendReviewRequestEmail(recipient)
 
-        // Mark review request sent so we don't re-send
+        // Its own column, so `confirmationEmailSentAt` keeps meaning what its name says. An
+        // earlier version overwrote that one here and lost the confirmation timestamp.
         await prisma.order.update({
           where: { id: order.id },
-          data: { confirmationEmailSentAt: now },
+          data: { reviewRequestSentAt: now },
         })
 
         sent++

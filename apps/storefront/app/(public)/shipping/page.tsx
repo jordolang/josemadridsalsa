@@ -34,18 +34,12 @@ export default function ShippingPolicyPage() {
 
             <h2>Shipping Methods and Costs</h2>
             <p>
-              We offer several shipping options to meet your needs:
+              We offer one shipping option:
             </p>
             <ul>
               <li>
                 <strong>Standard Shipping</strong>: 5-7 business days. Rates calculated at checkout based on order weight
                 and destination.
-              </li>
-              <li>
-                <strong>Expedited Shipping</strong>: 2-3 business days. Available for an additional fee calculated at checkout.
-              </li>
-              <li>
-                <strong>Express Shipping</strong>: 1-2 business days. Available for an additional fee calculated at checkout.
               </li>
             </ul>
             <p>

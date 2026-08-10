@@ -115,7 +115,9 @@ export async function POST(request: Request) {
           contactPhone,
           startDate: now,
           endDate: thirtyDaysLater,
-          commissionRate: 40,
+          // Standard terms: a $10 jar splits $5 to the group and $5 to us. The fundraiser
+          // starts as a DRAFT, so this is reviewed before anything sells.
+          commissionRate: 50,
           status: 'DRAFT',
           isActive: false,
         },

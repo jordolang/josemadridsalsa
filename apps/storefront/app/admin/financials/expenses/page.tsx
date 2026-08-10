@@ -17,6 +17,7 @@ import { expenseQueue, supportedUploadFormats } from '@/lib/financials/config'
 import QuickBooksExpensesCard from '@/components/admin/financials/quickbooks-expenses-card'
 import { FinancialUploadPanel } from '@/components/admin/financials/financial-upload-panel'
 import { createMetadata } from '@/lib/metadata'
+import Link from 'next/link'
 
 export const metadata: Metadata = createMetadata({
   title: 'Expenses - Jose Madrid Salsa Admin',
@@ -44,7 +45,7 @@ export default async function ExpensesPage() {
           </p>
         </div>
         <Button variant="default" asChild>
-          <a href="/admin/settings/integrations?service=quickbooks">Connect accounting suite</a>
+          <Link href="/admin/settings/integrations?service=quickbooks">Connect accounting suite</Link>
         </Button>
       </header>
 

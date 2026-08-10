@@ -1,0 +1,390 @@
+---
+title: Admin Platform Checklist
+description: Every capability from the original admin specification, marked against what the platform actually has today, with the remaining work reordered into a plan.
+---
+
+This audits the original admin-panel specification line by line against the code as it stands
+on **9 August 2026**. It is the working checklist; the reasoning behind the original estimates
+lives in the [gap analysis](/docs/guides/admin-platform-gap-analysis).
+
+| Mark | Meaning |
+|---|---|
+| ✅ | Built and reachable from the admin |
+| ❓ | Partly built, or the data model exists without a full workflow on top |
+| ❌ | Not built |
+
+Marks were set by reading the schema (172 models), the 40 admin route groups, and the library
+modules — not from memory. Where a keyword matched but the feature did not exist, the item is
+marked ❌ and the reason noted.
+
+<Callout type="warn" title="A mark needs a caller, not just a model">
+Six marks in the first version of this document were wrong, and three were wrong the same way:
+a model existed in `schema.prisma`, so the capability was recorded as present or partial, but
+**nothing in the codebase read or wrote it**. `OrderNotificationRule`, `OrderNotificationEvent`
+and `EmailSegment` all have zero references.
+
+Before marking anything from the schema, grep for the Prisma accessor. A model with no caller is
+a plan, not a feature.
+</Callout>
+
+---
+
+## Dashboard / command center
+
+- ✅ Today's sales, ✅ orders, ✅ revenue, ✅ average order value
+- ✅ Low-stock alerts — `InventoryAlertWidget`
+- ✅ Failed payments, ✅ unfulfilled orders — `OperationalQueues`, click-through to filtered lists
+- ✅ Recent customers, ✅ top products
+- ❓ Refunds — the model and the financials page have them; not surfaced as a dashboard figure
+- ❓ Conversion snapshots — traffic sources and visitor counts are there via Google Analytics;
+  conversion rate itself is not computed
+
+The operational/analytical split the spec asks for **is** in place: `/admin` answers "what needs
+doing", `/admin/analytics` answers "how are we performing".
+
+## Product management
+
+- ✅ Products, ✅ SKUs, ✅ pricing, ✅ sale pricing (`compareAtPrice`), ✅ categories, ✅ tags
+- ✅ Images/video, ✅ descriptions, ✅ SEO metadata, ✅ dimensions/weight
+- ✅ Cost of goods — `costPrice`, set on all 28 SKUs, plus bulk **Set cost** and **Cost from purchases**
+- ✅ Supplier info — `Supplier` model, linked through purchase orders
+- ✅ Availability, ✅ product status
+- ❓ Variants — `ProductVariant` exists with admin routes, but zero rows in either database and
+  nothing in checkout reads it
+- ❌ Collections
+- ❌ Bundles
+- ❌ Subscriptions
+- ❌ Scheduled launches
+- ❌ Related products
+- ❌ Custom attributes — heat level is a hard-coded enum, exactly what the spec warns against
+
+## Inventory management
+
+- ✅ Stock by SKU, ✅ available/reserved/on-hand, ✅ low-stock thresholds
+- ✅ Stock adjustments, ✅ inventory history — `InventoryTransaction`
+- ✅ Purchase orders, ✅ receiving — `Supplier`/`PurchaseOrder`/`PurchaseOrderReceipt`
+- ❓ Damaged inventory — `DAMAGED` exists as an adjustment reason and a return condition; there
+  is no damaged-stock workflow or write-off report
+- ❓ Transfers — `TRANSFER` is an adjustment reason with nowhere to transfer to
+- ❌ Backorders
+- ❌ Warehouse/location support
+
+## Order management
+
+- ✅ Order search, ✅ filters, ✅ status, ✅ fulfillment, ✅ partial fulfillment, ✅ split shipments
+- ✅ Cancellations, ✅ refunds, ✅ returns
+- ✅ Internal notes, ✅ customer notes, ✅ timeline/history
+- ✅ Invoice generation, ✅ packing slips, ✅ labels
+- ✅ Exchanges — completing a return as `EXCHANGE` raises a replacement order
+- ✅ Manual orders — `/admin/orders/new` for phone, wholesale and event sales
+
+## Customer management / CRM
+
+- ✅ Customer profiles, ✅ addresses, ✅ order history, ✅ notes
+- ✅ Lifetime value / average spend — `Customer.totalSpent`
+- ✅ Account status, ✅ loyalty data, ✅ abandoned carts, ✅ refunds
+- ✅ Wholesale status — `WholesaleAccount`
+- ❌ Segments — `EmailSegment` is schema with no code references, so segmentation is greenfield
+  rather than a generalisation of something already working in marketing
+- ❓ Communication history — email logs exist per campaign, not as a per-customer timeline
+- ❌ Customer tags
+- ❌ Disputes / chargebacks
+
+## Payments and accounting
+
+- ✅ Transaction history, ✅ payment status, ✅ refunds, ✅ discounts, ✅ shipping revenue
+- ✅ Processor fees — `Payment.processorFee` plus a sweep cron covering all three providers
+- ✅ Cost of goods, ✅ gross profit — `/admin/analytics/margin`
+- ✅ QuickBooks — OAuth connect and sync of paid orders, refunds, and live P&L
+- ✅ Taxes collected — `/admin/financials/taxes` by calendar period and destination state, with
+  a CSV export. County and city splits are not available: Stripe Tax returns them at checkout
+  but only the order total is stored
+- ✅ Net revenue — on `/admin/financials`, with fee coverage stated. The tile that computes
+  revenue minus refunds is now labelled **After Refunds**, because it counts every channel
+  including manual orders that have no payment record and knows nothing about processor fees
+- ❌ Chargebacks
+
+## Shipping and fulfillment
+
+- ✅ Carrier integrations (EasyPost), ✅ real-time rates, ✅ tracking
+- ✅ Label creation — a **real** EasyPost purchase. Until this release the route synthesised
+  `${CARRIER}${Date.now()}` as a tracking number, pointed `labelUrl` at a route that did not exist,
+  and bought no postage — so it marked orders shipped and showed customers a tracking number that
+  404s. The buy dialog invented the rates it displayed, too
+- ✅ Packing model — jars pack three to a line, four lines to a case of twelve
+  (`lib/shipping/jar-packing.ts`), which sizes and weighs the parcel for both the customer's quote
+  and the label bought against it
+- ✅ Postage bought elsewhere — Pirate Ship has no API, so tracking, carrier, service and **what we
+  actually paid** can be recorded by hand and land on the order as a shipment
+- ✅ Fulfillment status, ✅ automated customer notifications
+- ❓ Local pickup — `PICKUP` exists as a channel/method value without a pickup workflow
+- ❌ Shipping rules
+- ❌ Zones
+- ❌ Package presets
+- ❌ Shipping insurance
+- ❌ Multi-parcel quoting — an order over one case is quoted as one tall parcel. The weight is right
+  and the dimensional price is not, because the carrier client sends one parcel per shipment
+
+<Callout type="warn" title="Every shipping quote was 16x overweight">
+`Product.weight` is **ounces** — a jar is `16`, and `lib/feeds/products.ts` maps the same column to
+`weightOz` for the Google and Amazon feeds. Both paths in `lib/shipping-calculator.ts` treated it as
+pounds, so one 16oz jar priced as a 16 lb parcel: it tripped the heavy-parcel surcharge and cost
+**$10.49 instead of $6.99**, and a six-jar order quoted as 96 lb. Seven orders in the database show
+exactly that figure.
+
+Two related faults found with it: the warehouse address had three sources of truth under two
+environment-variable prefixes, with rate quoting **defaulting to a placeholder in San Francisco**;
+and `Product.weight` is the jar *size*, not the shipping weight, so gross weight is now computed
+from the glass, lid, contents and packaging rather than read off the catalogue.
+
+The unit is now in the field name (`weightOz`), one helper computes parcel weight for both paths,
+and one resolver supplies the origin to quoting and buying alike.
+</Callout>
+
+## Discounts and promotions
+
+- ✅ Coupon codes, ✅ percentage/fixed discounts, ✅ minimum spend, ✅ free shipping
+- ✅ Usage limits, ✅ start/end dates
+- ❌ Automatic discounts
+- ❌ Buy-X-get-Y
+- ❌ Bundles
+- ❌ Customer-specific discounts
+- ❌ Campaign attribution
+
+## Content management
+
+All delivered by the CMS built alongside this work.
+
+- ✅ Homepage content, ✅ banners, ✅ announcements, ✅ landing pages, ✅ FAQs
+- ✅ Navigation, ✅ footer content, ✅ redirects, ✅ media library, ✅ reusable page sections
+- ✅ Blogs — the Heat Index editorial section
+- ✅ SEO settings — `SeoConfiguration`, `StructuredData`
+
+## Marketing
+
+- ✅ Email integration (Resend), ✅ abandoned-cart campaigns, ✅ campaign tracking
+- ✅ Referral codes — fundraiser participant codes
+- ✅ Product feeds, ✅ Meta catalog
+- ❌ Customer segmentation — `EmailSegment` has no code behind it
+- ❌ SMS
+- ❌ Affiliate tracking
+- ❌ UTM attribution
+- ❌ Google Merchant Center
+- ❌ Remarketing integrations
+
+## Analytics and reporting
+
+- ✅ Revenue, ✅ units sold, ✅ profit, ✅ margins, ✅ best sellers
+- ✅ Channel attribution — `salesChannel` on every order
+- ✅ Refund rates, ✅ CSV exports across orders, products, customers, inventory and more
+- ✅ Tax reports — by calendar period and state, with a CSV export
+- ❓ Geographic sales — the tax report groups by destination state, which is the same data; there
+  is no sales-by-region report outside it
+- ❓ Slow movers — derivable from the margin table; not a report
+- ❌ Repeat purchases
+- ❌ Cohort retention — the only "cohort" in the codebase is the battle arena's
+- ❌ Inventory turnover
+- ❌ Custom date-range analytics export — entity exports exist, analytics exports do not
+
+All analytics now go through Prisma. The seven `prisma.$queryRaw` sites in `app/admin/page.tsx`
+and `app/admin/growth/page.tsx` were replaced — required by CLAUDE.md, and they had a real bug:
+because they grouped only rows that existed, a month with no orders was **absent** from the
+series rather than zero, so a chart joined the months either side and drew a trend that never
+happened. `lib/analytics/monthly-series.ts` always emits every month.
+
+## Reviews and social proof
+
+- ✅ Review moderation, ✅ ratings, ✅ verified purchase status, ✅ spam control
+- ✅ Testimonials — `SiteReview`
+- ✅ Review-request automation — fixed this release; `Order.reviewRequestSentAt`
+- ❌ Photo reviews
+- ❌ Q&A
+
+## Returns / RMA
+
+- ✅ Return requests, ✅ reasons, ✅ received status, ✅ inspection outcome
+- ✅ Refunds, ✅ restocking fees, ✅ damaged-product condition capture
+- ✅ Exchanges — a replacement order is raised, priced at zero and excluded from revenue
+- ✅ Store credit — a gift certificate for the return's value, coded `JMS-CR-…`
+- ✅ Eligibility rules — a 30-day window from fulfillment, enforced on the customer path with a
+  staff override (`RETURN_WINDOW_DAYS` in `lib/orders/returns.ts`)
+- ✅ Self-serve — a customer inside the window opens a return **without staff approval** and is
+  given the RMA and the warehouse address immediately
+- ❌ Return labels — deliberately not built. **The customer arranges and pays their own return
+  postage**, so there is no label to buy and nothing to claw back if the parcel never arrives
+
+All three resolutions settle to the same value, so which one staff pick changes the form the
+customer's compensation takes and never the amount. A return produces exactly one outcome; the
+mutual exclusion is in `lib/orders/return-resolution.ts` with tests.
+
+**The refund is goods + the tax collected on them**, plus the original shipping *only* when the
+return is our fault (`DAMAGED`, `WRONG_ITEM`, `QUALITY_ISSUE`) — everyone else paid for a delivery
+that happened. Tax is apportioned by the returned goods' share of the order rather than recomputed,
+because re-running Stripe Tax would price today's rates against yesterday's sale. Staff can override
+the shipping decision per return, and the breakdown is itemised on screen before they confirm.
+
+## User and staff administration
+
+- ✅ Admins, ✅ developers, ✅ role-based access — `UserRole` plus `Permission`/`RolePermission`
+- ✅ Fine-grained permissions seeded and enforced per route
+- ❓ Warehouse / customer-service / marketer / accountant roles — the permission system supports
+  them; those specific roles are not defined
+
+## Settings
+
+- ✅ Store identity, ✅ payments, ✅ shipping, ✅ email templates, ✅ integrations, ✅ API keys
+- ✅ Feature flags — GrowthBook
+- ❓ Notification preferences — `OrderNotificationSetting` is live (`lib/notifications/order-notifications.ts`).
+  `OrderNotificationRule` and `OrderNotificationEvent` are **schema with no code**: nothing in
+  the repository reads or writes either, so there is no trigger→action rule engine behind them
+- ❓ Tax configuration — Stripe Tax is wired; nothing configurable in the admin
+- ❌ Currency
+- ❌ Checkout settings
+- ❌ Domains
+- ❌ Legal pages as settings
+- ❌ Operational defaults
+
+## Audit log
+
+- ✅ Who changed what, when, and from where — 93 of 99 route files, six deliberate skips
+
+---
+
+## The four "commonly forgotten" areas
+
+1. **Workflow automation** — being built as separate work. The pieces it needs exist: domain
+   events, a notification centre, and a cron cadence that can run every minute. What does *not*
+   exist, contrary to what this document previously claimed, is a half-built order-side engine —
+   `OrderNotificationRule` and `OrderNotificationEvent` have no code behind them at all. The one
+   real engine is the email automation one (`lib/email/automation-engine.ts`), which is complete
+   and cron-driven but scoped to email.
+2. ✅ **Global search** — orders, customers, products, SKUs and more from one field.
+3. ✅ **Bulk operations** — products, orders, inventory, customers; price, cost, status, category,
+   export.
+4. ✅ **Activity timelines** — order timelines are built on the domain event log.
+
+## Architecture and design principles
+
+- ✅ **Navigation groups** — Overview → Orders → Products → Inventory → Customers → Marketing →
+  Content → Analytics → Finance → Operations → Settings
+- ✅ **Action-oriented interface** — dashboard queues link into filtered lists
+- ✅ **Operational vs analytical split**
+- ✅ **Powerful filtering and saved views** — Needs Shipping, High Value, Payment Failed and more
+- ✅ **State separation** — `paymentStatus`, `fulfillmentStatus` and `status` are three fields,
+  not one
+- ✅ **Event system** — `order.created`, `payment.completed`, `payment.failed`, `inventory.low`,
+  `inventory.out_of_stock`, `inventory.adjusted`, `shipment.created`, `customer.created`,
+  `order.returned`, `refund.completed`
+- ✅ **Notification centre** — with dedupe keys, severity, and stable identities
+- ✅ **Idempotency** — webhooks, inventory deduction, code redemption, review requests, and
+  fundraiser commission all carry persisted markers
+- ✅ **Sales channels** — `salesChannel` on every order
+- ✅ **Security** — 2FA, RBAC, rate limiting, audit logs, encrypted credential vault, signed
+  webhook verification, Zod validation on every input, no raw card data stored
+- ✅ **Observability** — Sentry, Amplitude, Vercel Analytics
+- ✅ **Feature flags** — GrowthBook
+- ❓ **API-first** — ~50 route groups and `PartnerApiKey` exist; no versioning, no scoped keys,
+  no public documentation
+- ❓ **Integration adapters** — payments and shipping are abstracted behind providers; tax, email,
+  SMS, accounting and storage are called directly
+- ❌ **Background job queue** — long work runs inline or on cron; no queue, no retry policy
+- ❌ **Dead-letter handling** — failed webhooks sit at `processed: false` and are only noticed by
+  the operations sweep
+- ❌ **Pricing engine** — one `price` column plus a fundraiser override; no wholesale, contract,
+  quantity-break, channel or scheduled pricing
+- ❌ **Ledgers for money-like value** — gift certificates and loyalty store mutable balances
+- ❌ **Financial reconciliation** against processor payouts
+- ❌ **Fulfillment routing**, ❌ **forecasting**, ❌ **experimentation**, ❌ **personalisation**
+- ❌ **Internationalisation**
+- ❌ **AI admin assistant** — the AI in the codebase is customer-facing chat and RAG
+- ❌ **Privacy workflows** — export, deletion, consent tracking, retention schedules
+
+---
+
+## The remaining plan
+
+Reordered by what the business actually needs next rather than by spec order. Estimates are
+engineer-days; at a part-time pace, roughly double the calendar time.
+
+### Tier 1 — finish what is half-built · complete
+
+Every item is done. Recorded here because the estimates were wrong in instructive ways: two
+items were already built and marked missing, and one was smaller than budgeted because half of
+it already existed.
+
+| Item | Estimated | Outcome |
+|---|---|---|
+| Fundraiser refund clawback | 1–2 d | Shipped. Reversed from all four paths that credit commission |
+| Square processor-fee lookup | ½ d | Shipped. `readSquareFee` already parsed the fee array correctly; only the API call was missing |
+| Manual order creation | 2 d | Shipped as `/admin/orders/new` |
+| Return eligibility rules | (part of 2 d) | **Was already built** — `RETURN_WINDOW_DAYS`, enforced on both the customer and admin paths since before the audit |
+| Return labels | (part of 2 d) | Shipped as a real EasyPost purchase. Note the outbound label route at `app/api/admin/orders/[id]/shipping-label` still synthesises a mock tracking number and does not buy anything |
+| Exchange workflow | 1–2 d | Shipped, plus store credit, which the audit did not mention was equally inert |
+| Tax report + taxes-collected view | 1 d | Shipped at `/admin/financials/taxes` with a CSV export |
+| Net revenue after fees | not listed | Shipped. `summariseNetRevenue` had been written and tested and read by nothing |
+| `/admin/inventory` sidebar entry | — | Shipped |
+| Raw SQL in analytics | not listed | Seven `$queryRaw` sites replaced with Prisma aggregates. They also dropped empty months from every chart |
+
+### Tier 2 — commercial depth (18–26 days)
+
+| Item | Days |
+|---|---|
+| Shipping zones, package presets, local pickup | 3–4 |
+| Bundles | 3–4 |
+| Cohort retention + repeat purchase rate | 3–4 |
+| Settings completion (currency, checkout, domains, defaults) | 2–3 |
+| Inventory turnover + slow movers | 2 |
+| Collections | 2 |
+| UTM attribution | 1–2 |
+| Adopt-or-drop the dead models | ½ |
+
+**Workflow automation is being built separately** and is deliberately absent from this table.
+Its foundation question — whether `OrderNotificationRule` is the thing to build on or the thing
+being replaced — belongs to that work.
+
+Four models are in the schema with nothing reading them: `OrderNotificationRule`,
+`OrderNotificationEvent`, `EmailSegment`, and `ProductVariant` (which has routes and zero rows).
+Each needs an explicit adopt-or-drop decision. Three of the corrections above happened
+*because* a schema model was read as a working feature.
+
+### Tier 3 — scale and resilience (18–26 days)
+
+Worth doing before a second client or a serious traffic increase, not before.
+
+| Item | Days |
+|---|---|
+| Background job queue + retry + dead-letter | 4–6 |
+| Pricing engine (wholesale, quantity breaks, channel, scheduled) | 4–6 |
+| Financial reconciliation against payouts | 3–4 |
+| Ledgers for gift certificates and loyalty | 2–3 |
+| Custom product attributes | 4–6 |
+| Multi-location inventory | 4–5 |
+
+### Tier 4 — optional (30–45 days)
+
+Subscriptions, AI admin assistant, affiliate tracking, SMS, disputes and chargebacks, photo
+reviews and Q&A, general customer segmentation, experimentation, personalisation,
+internationalisation, privacy workflows.
+
+---
+
+## Honest totals
+
+| | Items | Share |
+|---|---|---|
+| ✅ Built | 144 | 74% |
+| ❓ Partial | 13 | 7% |
+| ❌ Not built | 38 | 19% |
+
+195 items, counted across the feature checklist above. The architecture section is excluded,
+because "done" there is a matter of degree rather than a yes or no.
+
+Two of those moves are corrections rather than work: return eligibility rules were already
+built and marked ❌, and two "partial" marks resting on `EmailSegment` and
+`OrderNotificationRule` turned out to rest on models with no code, so they moved the other way.
+
+The heaviest concentrations of missing work are **discounts and promotions** (5 of 11 missing),
+**marketing attribution** (5 of 12), and **shipping rules and
+zones** (4 of 11). The strongest areas are content, orders, returns, audit and security — which
+is the right shape for a business that needs to ship reliably before it needs to merchandise
+cleverly.

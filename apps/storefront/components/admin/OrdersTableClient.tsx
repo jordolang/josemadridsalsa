@@ -25,11 +25,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formatOrderStatus, getOrderStatusVariant } from '@/lib/order-status'
+import type { FulfillmentStatus, SalesChannel } from '@prisma/client'
+import { FULFILLMENT_STATUS_LABELS, isAwaitingFulfillment } from '@/lib/orders/fulfillment'
+import { SALES_CHANNEL_LABELS } from '@/lib/orders/sales-channel'
 
 interface OrderRow {
   id: string
   orderNumber: string
   status: string
+  fulfillmentStatus: string
+  salesChannel: string
   total: string | number
   createdAt: string
   customerName: string
@@ -209,6 +214,8 @@ export function OrdersTableClient({ orders, canWrite }: OrdersTableClientProps) 
               <TableHead>Items</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Fulfillment</TableHead>
+              <TableHead>Channel</TableHead>
               <TableHead>Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -217,7 +224,7 @@ export function OrdersTableClient({ orders, canWrite }: OrdersTableClientProps) 
             {orders.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={canWrite ? 8 : 7}
+                  colSpan={canWrite ? 10 : 9}
                   className="py-12 text-center text-muted-foreground"
                 >
                   No orders found
@@ -260,6 +267,25 @@ export function OrdersTableClient({ orders, canWrite }: OrdersTableClientProps) 
                       <Badge variant={getOrderStatusVariant(order.status)}>
                         {order.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          isAwaitingFulfillment(
+                            order.fulfillmentStatus as FulfillmentStatus
+                          )
+                            ? 'outline'
+                            : 'secondary'
+                        }
+                      >
+                        {FULFILLMENT_STATUS_LABELS[
+                          order.fulfillmentStatus as FulfillmentStatus
+                        ] ?? order.fulfillmentStatus}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {SALES_CHANNEL_LABELS[order.salesChannel as SalesChannel] ??
+                        order.salesChannel}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(order.createdAt).toLocaleDateString()}

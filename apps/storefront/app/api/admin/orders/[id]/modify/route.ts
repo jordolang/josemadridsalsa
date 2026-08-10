@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { hasPermission } from '@/lib/rbac'
 import { modifyOrder } from '@/lib/orders/modify'
+import { logAuditWithRequest } from '@/lib/audit'
 import { z } from 'zod'
 
 const ModifyOrderSchema = z.object({
@@ -50,6 +51,17 @@ export async function PATCH(
       userId: (session.user as any).id,
       updates: validated,
     })
+
+    await logAuditWithRequest(
+      {
+        userId: (session.user as any).id,
+        action: 'update',
+        entityType: 'order',
+        entityId: id,
+        changes: validated,
+      },
+      request
+    )
 
     return NextResponse.json(result)
   } catch (error) {

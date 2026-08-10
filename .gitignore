@@ -77,7 +77,10 @@ data/
 public/location-photos.json
 
 # Business documents (local only — multi-GB scans/exports, never commit)
-Documents/
+# Anchored to the repo root: unanchored, this also matched any nested
+# `documents/` directory, and git is case-insensitive on macOS, so it silently
+# excluded the admin route at app/admin/archive/documents/.
+/Documents/
 
 # Examples and docs
 examples/
@@ -181,3 +184,10 @@ __pycache__/
 
 # Contact-export CSVs — customer PII, never commit
 apps/storefront/emails/lists/
+
+# Unused homepage hero source video — the scroll-scrubbed hero loads
+# hero-video-scrub.mp4 (tracked); this 7.4 MB original is not referenced.
+apps/storefront/public/images/home/hero-video.mp4
+
+# Ad-hoc analysis scripts — never commit
+*.tmp.ts

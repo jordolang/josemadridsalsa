@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 
 export async function GET(
   request: NextRequest,
@@ -72,6 +73,17 @@ export async function PUT(
       include: { steps: { orderBy: { order: 'asc' } } },
     })
 
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'update',
+        entityType: 'email_automation',
+        entityId: id,
+        changes: { name: updated?.name, isActive: updated?.isActive, trigger: updated?.trigger },
+      },
+      request
+    )
+
     return NextResponse.json({ success: true, automation: updated })
   } catch {
     return NextResponse.json({ error: 'Failed to update automation' }, { status: 500 })
@@ -90,6 +102,12 @@ export async function DELETE(
     }
 
     await prisma.emailAutomation.delete({ where: { id } })
+
+    await logAuditWithRequest(
+      { userId: user.id, action: 'delete', entityType: 'email_automation', entityId: id },
+      request
+    )
+
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json({ error: 'Failed to delete automation' }, { status: 500 })

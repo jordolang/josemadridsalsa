@@ -3,6 +3,9 @@ import type { Prisma } from '@prisma/client';
 import { InventoryTransactionType, InventoryAlertType, InventoryAlertStatus, StockStatus } from '@prisma/client';
 import { sendEmail } from '@/lib/email';
 import { sendLowStockAlert } from '@/lib/inventory-alerts';
+import { emitDomainEvent } from '@/lib/domain-events/emit';
+import { notifyOperators } from '@/lib/notifications/dispatch';
+import { inventoryAlertSpec } from '@/lib/inventory/alert-notifications';
 
 export interface InventoryAdjustment {
   productId: string;
@@ -11,6 +14,8 @@ export interface InventoryAdjustment {
   reason?: string;
   notes?: string;
   orderId?: string;
+  /** Set when the stock arrived by receiving a purchase order. */
+  purchaseOrderId?: string;
   userId?: string;
 }
 
@@ -63,7 +68,7 @@ async function withSerializableRetry<T>(fn: () => Promise<T>, maxRetries = 3): P
  * Adjust inventory for a product and create transaction record
  */
 export async function adjustInventory(adjustment: InventoryAdjustment) {
-  const { productId, quantity, type, reason, notes, orderId, userId } = adjustment;
+  const { productId, quantity, type, reason, notes, orderId, purchaseOrderId, userId } = adjustment;
 
   // Get current product
   const product = await prisma.product.findUnique({
@@ -119,6 +124,7 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
         reason,
         notes,
         orderId,
+        purchaseOrderId,
         userId,
       },
     }),
@@ -649,6 +655,7 @@ export async function checkAndUpdateAlerts(
         lowStockThreshold
       );
       await notifyLowStock(alert);
+      await announceAlert(alert, true, currentStock, lowStockThreshold);
     }
     return;
   }
@@ -667,7 +674,51 @@ export async function checkAndUpdateAlerts(
         lowStockThreshold
       );
       await notifyLowStock(alert);
+      await announceAlert(alert, false, currentStock, lowStockThreshold);
     }
+  }
+}
+
+/**
+ * Record a newly raised alert as a domain fact and put it in front of an operator.
+ *
+ * Called only where a new alert row is created, so this is edge-triggered: the event marks
+ * the moment stock crossed the line, not the ongoing state of being below it. Every failure
+ * is swallowed — the stock movement that caused this has already been committed, and losing
+ * the announcement must never undo it.
+ */
+async function announceAlert(
+  alert: Awaited<ReturnType<typeof createAlert>>,
+  outOfStock: boolean,
+  stockLevel: number,
+  threshold: number
+) {
+  try {
+    await emitDomainEvent({
+      type: outOfStock ? 'inventory.out_of_stock' : 'inventory.low',
+      entityType: 'product',
+      entityId: alert.productId,
+      payload: {
+        alertId: alert.id,
+        productName: alert.product.name,
+        sku: alert.product.sku,
+        stockLevel,
+        threshold,
+      },
+    });
+
+    await notifyOperators(
+      inventoryAlertSpec({
+        productId: alert.productId,
+        productName: alert.product.name,
+        sku: alert.product.sku,
+        stockLevel,
+        threshold,
+        outOfStock,
+      })
+    );
+  } catch (error) {
+    console.warn('[inventory] Could not announce alert for', alert.productId, error);
   }
 }
 

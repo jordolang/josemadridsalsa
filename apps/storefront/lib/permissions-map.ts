@@ -27,6 +27,18 @@ export const adminNavigation: NavItem[] = [
     permission: 'orders:read',
   },
   {
+    label: 'Notifications',
+    href: '/admin/notifications',
+    icon: 'Bell',
+    permission: 'orders:read',
+  },
+  {
+    label: 'Returns',
+    href: '/admin/returns',
+    icon: 'Undo2',
+    permission: 'orders:read',
+  },
+  {
     label: 'Gift Certificates',
     href: '/admin/gift-certificates',
     icon: 'Gift',
@@ -52,6 +64,21 @@ export const adminNavigation: NavItem[] = [
         label: 'Tags',
         href: '/admin/tags',
         permission: 'content:read',
+      },
+      {
+        label: 'Inventory',
+        href: '/admin/inventory',
+        permission: 'inventory:read',
+      },
+      {
+        label: 'Purchase Orders',
+        href: '/admin/purchase-orders',
+        permission: 'inventory:read',
+      },
+      {
+        label: 'Suppliers',
+        href: '/admin/purchase-orders/suppliers',
+        permission: 'inventory:read',
       },
     ],
   },
@@ -80,11 +107,79 @@ export const adminNavigation: NavItem[] = [
     ],
   },
   {
+    label: 'Document Archive',
+    href: '/admin/archive',
+    icon: 'Archive',
+    permission: 'analytics:read',
+    children: [
+      {
+        label: 'Documents',
+        href: '/admin/archive/documents',
+        permission: 'analytics:read',
+      },
+      {
+        label: 'Fundraiser Campaigns',
+        href: '/admin/archive/fundraisers',
+        permission: 'analytics:read',
+      },
+      {
+        label: 'Show & Market Sales',
+        href: '/admin/archive/shows',
+        permission: 'analytics:read',
+      },
+      {
+        label: 'Mileage',
+        href: '/admin/archive/mileage',
+        permission: 'analytics:read',
+      },
+    ],
+  },
+  {
     label: 'Content',
     href: '/admin/content',
     icon: 'FileText',
     permission: 'content:read',
     children: [
+      {
+        label: 'Pages',
+        href: '/admin/content/pages',
+        permission: 'content:read',
+      },
+      {
+        label: 'Banners',
+        href: '/admin/content/banners',
+        permission: 'content:write',
+      },
+      {
+        label: 'Announcements',
+        href: '/admin/content/announcements',
+        permission: 'content:write',
+      },
+      {
+        label: 'FAQs',
+        href: '/admin/content/faqs',
+        permission: 'content:write',
+      },
+      {
+        label: 'Navigation',
+        href: '/admin/content/navigation',
+        permission: 'content:write',
+      },
+      {
+        label: 'Footer',
+        href: '/admin/content/footer',
+        permission: 'content:write',
+      },
+      {
+        label: 'Reusable Sections',
+        href: '/admin/content/sections',
+        permission: 'content:write',
+      },
+      {
+        label: 'Redirects',
+        href: '/admin/content/redirects',
+        permission: 'content:write',
+      },
       {
         label: 'Media Library',
         href: '/admin/media',
@@ -172,6 +267,11 @@ export const adminNavigation: NavItem[] = [
       {
         label: 'Order Analytics',
         href: '/admin/analytics/orders',
+        permission: 'analytics:read',
+      },
+      {
+        label: 'Margin',
+        href: '/admin/analytics/margin',
         permission: 'analytics:read',
       },
     ],

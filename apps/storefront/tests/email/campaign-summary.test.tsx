@@ -15,7 +15,7 @@ describe('campaign summary email', () => {
     organizationName: 'Lincoln Elementary School',
     totalOrders: 45,
     totalRevenue: '$4,500.00',
-    totalRaised: '$1,350.00',
+    commissionEarned: '$1,350.00',
     participantCount: 12,
     campaignUrl: 'https://www.josemadridsalsa.com/fundraisers/spring-2024/dashboard',
     unsubscribeUrl: 'https://www.josemadridsalsa.com/account/preferences',
@@ -30,14 +30,14 @@ describe('campaign summary email', () => {
       expect(html).toContain('Lincoln Elementary School')
       expect(html).toContain('Total Orders: 45')
       expect(html).toContain('Total Revenue: $4,500.00')
-      expect(html).toContain('Total Raised: $1,350.00')
+      expect(html).toContain('Commission Earned: $1,350.00')
       expect(html).toContain('Active Participants: 12')
     })
 
-    it('should include preview text with campaign name and total raised', async () => {
+    it('quotes sales in the preview, since that is what a goal measures here', async () => {
       const html = await render(<CampaignSummaryEmail {...baseProps} />)
 
-      expect(html).toContain('Spring Fundraiser 2024 Campaign Summary - $1,350.00 raised!')
+      expect(html).toContain('Spring Fundraiser 2024 Campaign Summary - $4,500.00 raised!')
     })
 
     it('should include campaign dashboard link', async () => {
@@ -59,7 +59,7 @@ describe('campaign summary email', () => {
       expect(html).toContain('Campaign Totals:')
       expect(html).toContain('Total Orders: 45')
       expect(html).toContain('Total Revenue: $4,500.00')
-      expect(html).toContain('Total Raised: $1,350.00')
+      expect(html).toContain('Commission Earned: $1,350.00')
       expect(html).toContain('Active Participants: 12')
     })
   })
@@ -183,18 +183,21 @@ describe('campaign summary email', () => {
       }
     })
 
-    it('should handle different raised amounts', async () => {
+    it('reports the group share as commission, not as "raised"', async () => {
+      // A goal on this site is measured in sales, so "raised" is the sales figure.
+      // Labelling the commission that way named the wrong number.
       const amounts = ['$3,000.00', '$150.00', '$7,725.15']
 
-      for (const totalRaised of amounts) {
+      for (const commissionEarned of amounts) {
         const html = await render(
           React.createElement(CampaignSummaryEmail, {
             ...baseProps,
-            totalRaised,
+            commissionEarned,
           })
         )
 
-        expect(html).toContain(`Total Raised: ${totalRaised}`)
+        expect(html).toContain(`Commission Earned: ${commissionEarned}`)
+        expect(html).not.toContain('Total Raised')
       }
     })
 

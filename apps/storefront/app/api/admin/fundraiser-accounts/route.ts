@@ -3,6 +3,7 @@ import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { FundraiserAccountStatus } from '@prisma/client'
 import { requirePermission } from '@/lib/rbac'
+import { createChangeSnapshot, logAuditWithRequest } from '@/lib/audit'
 
 
 export async function GET(request: NextRequest) {
@@ -90,6 +91,21 @@ export async function PATCH(request: Request) {
         }),
       ])
     }
+
+    // Approving grants portal access and activates the campaign; suspending revokes both.
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action,
+        entityType: 'fundraiser_account',
+        entityId: accountId,
+        changes: {
+          status: { from: account.status, to: action === 'approve' ? 'APPROVED' : 'SUSPENDED' },
+          fundraiserId: account.fundraiserId,
+        },
+      },
+      request
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {

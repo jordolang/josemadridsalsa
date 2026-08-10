@@ -10,6 +10,7 @@
  *
  *   tsx scripts/import-archive-customers.ts --in ../../data/customer-extract
  *   tsx scripts/import-archive-customers.ts --in ../../data/customer-extract --commit
+ *   tsx scripts/import-archive-customers.ts --in <dir> --account-type FUNDRAISING --commit
  *
  * Upserts are keyed on email and fill blanks rather than overwriting stored
  * values, so re-running enriches an existing customer instead of erasing it.
@@ -33,19 +34,33 @@ const prisma = process.env.DATABASE_URL?.includes('prisma+postgres://')
   ? (baseClient.$extends(withAccelerate()) as unknown as PrismaClient)
   : baseClient
 
+const ACCOUNT_TYPES = ['STANDARD', 'FUNDRAISING', 'WHOLESALE'] as const
+type AccountTypeFilter = (typeof ACCOUNT_TYPES)[number]
+
 interface Args {
   inDir: string
   commit: boolean
   limit: number
+  /** Restrict the run to one designation. Empty means every customer. */
+  accountType: AccountTypeFilter | null
 }
 
 function parseArgs(argv: string[]): Args {
-  const out: Args = { inDir: '', commit: false, limit: 0 }
+  const out: Args = { inDir: '', commit: false, limit: 0, accountType: null }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--in') out.inDir = argv[++i]
     else if (a === '--commit') out.commit = true
     else if (a === '--limit') out.limit = Number(argv[++i])
+    else if (a === '--account-type') {
+      const value = (argv[++i] ?? '').toUpperCase() as AccountTypeFilter
+      if (!ACCOUNT_TYPES.includes(value)) {
+        throw new Error(
+          `--account-type must be one of ${ACCOUNT_TYPES.join(', ')} (got "${value}")`
+        )
+      }
+      out.accountType = value
+    }
   }
   if (!out.inDir) {
     throw new Error('--in <dir> is required (the stage-1 output directory)')
@@ -121,6 +136,17 @@ async function main(): Promise<void> {
   console.log(`  ${raw.length} raw records from ${new Set(raw.map((r) => r.sourceFile)).size} files`)
 
   let customers = mergeArchiveContacts(raw)
+
+  // Designation is decided by merging every source, so filtering after the
+  // merge (not before) keeps each customer's account type authoritative.
+  if (args.accountType) {
+    const before = customers.length
+    customers = customers.filter((c) => c.accountType === args.accountType)
+    console.log(
+      `  --account-type ${args.accountType}: ${customers.length} of ${before} customers`
+    )
+  }
+
   if (args.limit > 0) customers = customers.slice(0, args.limit)
 
   const byType = customers.reduce<Record<string, number>>((acc, c) => {

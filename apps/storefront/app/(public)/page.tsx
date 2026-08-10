@@ -3,17 +3,17 @@ import Link from 'next/link'
 import nextDynamic from 'next/dynamic'
 import type { Metadata } from 'next'
 import { ArrowRight } from 'lucide-react'
-import { getServerSession } from 'next-auth'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { createMetadata } from '@/lib/metadata'
 import { getCachedSeoConfiguration } from '@/lib/seo/configuration'
 import { OrganizationJsonLd } from '@/components/seo/organization-jsonld'
-import { authOptions } from '@/lib/auth'
 import { LocationMapClient } from '@/components/store/location-map-client'
 import { getReviewsData, getCalendarEvents } from '@/lib/server/google-data'
 import { ActiveCampaignsGrid } from '@/components/fundraiser/active-campaigns-grid'
-import { HeroWithFeatureFlag } from '@/components/growthbook/hero-with-feature-flag'
+import { ScrollVideoHeroHome } from '@/components/store/scroll-video-hero-home'
+import { getPageContent } from '@/lib/cms/queries'
+import { homeHeroPanels } from '@/lib/cms/home'
 import { FeaturedProductsSection } from '@/components/store/featured-products-section'
 import { FeaturedHeatIndexSection } from '@/components/store/featured-heat-index-section'
 
@@ -96,11 +96,13 @@ const FUNDRAISING_STATS = [
 // Zero Google API calls happen in the browser on load. The Refresh button
 // on the schedule map is the only path that ever triggers a client fetch.
 export default async function Home() {
-  // Fetch all data in parallel — session, reviews, and calendar
-  const [session, reviewsData, calendarEvents] = await Promise.all([
-    getServerSession(authOptions),
+  // Fetch all data in parallel — reviews and calendar
+  const [reviewsData, calendarEvents, content] = await Promise.all([
     getReviewsData(),
     getCalendarEvents(),
+    // CMS overrides for this page. Every lookup below supplies the original
+    // copy as its fallback, so an unedited homepage is byte-for-byte unchanged.
+    getPageContent('home'),
   ])
 
   return (
@@ -109,15 +111,107 @@ export default async function Home() {
         {/* Organization JSON-LD for rich results */}
         <OrganizationJsonLd />
 
-        {/* Hero — personalized for logged-in users, default for anonymous */}
-        <HeroWithFeatureFlag hasSession={!!session} />
+        {/* Hero — video scrubs frame-by-frame as the page scrolls; copy sits in
+            a left column over a left-edge legibility gradient */}
+        <ScrollVideoHeroHome panels={homeHeroPanels(content)} />
 
-        {/* Featured Products — pulled from Prisma (isFeatured=true, inStock=true) */}
-        <ErrorBoundary>
-          <FeaturedProductsSection />
-        </ErrorBoundary>
+        {/* Opaque white separator that also LIFTS the products area above the
+            hero. The hero is a positioned, isolated stacking context, so a plain
+            (static) bar would still paint beneath the pinned video. `relative
+            z-10 bg-background` paints this block — and the products inside it —
+            over the hero, so the video can never bleed behind the store text. */}
+        <div className="relative z-10 bg-background">
+          <div aria-hidden className="h-8 sm:h-12" />
+          {/* Featured Products — pulled from Prisma (isFeatured=true, inStock=true) */}
+          {content.isVisible('featuredProducts') && (
+            <ErrorBoundary>
+              <FeaturedProductsSection limit={content.number('featuredProducts', 'limit', 4)} />
+            </ErrorBoundary>
+          )}
+        </div>
+
+        {/* Fundraising — moved up to sit right below the products display */}
+        {content.isVisible('fundraisingPromo') && (
+        <section className="relative overflow-hidden bg-gradient-to-br from-verde-50 to-salsa-50 py-12 sm:py-16 md:py-20 dark:from-verde-950/20 dark:to-salsa-950/20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <ScrollReveal>
+              <div className="grid grid-cols-1 items-center gap-8 sm:gap-12 lg:grid-cols-2">
+                <div>
+                  <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-salsa-600">
+                    Earn 50% Profit
+                  </span>
+                  <h2 className="mb-4 font-serif text-3xl sm:text-4xl font-bold leading-tight tracking-[-0.02em] text-foreground md:text-5xl">
+                    {content.text('fundraisingPromo', 'heading') || (
+                      <>
+                        Fundraise With <span className="text-gradient">Jose!</span>
+                      </>
+                    )}
+                  </h2>
+                  <p className="mb-6 max-w-md text-base sm:text-lg leading-relaxed text-muted-foreground">
+                    {content.text(
+                      'fundraisingPromo',
+                      'body',
+                      'Looking for a fundraiser people actually want to buy? Our premium handcrafted salsas sell themselves — trusted by 500+ schools, teams, and nonprofits.'
+                    )}
+                  </p>
+
+                  {/* Punchy 3-up stat blocks with Volkhov numerals */}
+                  <dl className="mb-7 grid grid-cols-3 gap-2 sm:gap-4">
+                    {FUNDRAISING_STATS.map((stat) => (
+                      <div
+                        key={stat.label}
+                        className="rounded-xl border border-border bg-card p-3 sm:p-4 text-center surface-shadow"
+                      >
+                        <dt className="sr-only">{stat.label}</dt>
+                        <dd className="font-serif text-xl sm:text-2xl font-bold text-salsa-600">{stat.value}</dd>
+                        <p className="mt-1 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          {stat.label}
+                        </p>
+                      </div>
+                    ))}
+                  </dl>
+
+                  <div className="flex flex-wrap gap-3">
+                    <Link
+                      href="/fundraising"
+                      className="inline-flex items-center gap-2 rounded-full bg-salsa-500 px-7 py-3.5 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:bg-salsa-600 hover:shadow-[0_4px_12px_rgba(229,62,62,0.4)]"
+                    >
+                      Start Your Fundraiser
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                    <Link
+                      href="/auth/fundraiser-signup"
+                      className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-7 py-3.5 text-base font-semibold text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:border-salsa-300 hover:shadow-md"
+                    >
+                      Download Brochure
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="relative flex justify-center lg:justify-start">
+                  <div className="relative w-56 sm:w-72 lg:w-96" style={{ aspectRatio: '1000 / 733' }}>
+                    <Image
+                      src="/images/shared/fundraising-icon.png"
+                      alt="Jose Madrid Salsa Fundraising"
+                      fill
+                      className="object-contain drop-shadow-xl"
+                      sizes="(max-width: 640px) 224px, (max-width: 768px) 288px, 384px"
+                    />
+                  </div>
+                  {/* Floating "average raised" badge — signature kit element */}
+                  <div className="absolute right-0 top-0 sm:-right-2 sm:-top-4 rotate-3 rounded-2xl bg-salsa-500 p-3 sm:p-4 text-white shadow-xl lg:-right-4">
+                    <div className="font-serif text-xl sm:text-2xl font-bold leading-tight">$3,500+</div>
+                    <div className="text-[10px] sm:text-xs">average raised</div>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </section>
+        )}
 
         {/* Heat-Level Categories */}
+        {content.isVisible('heatLevels') && (
         <section className="bg-muted/30 py-12 sm:py-16 md:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <ScrollReveal>
@@ -126,10 +220,18 @@ export default async function Home() {
                   Heat Levels
                 </span>
                 <h2 className="mb-4 font-serif text-3xl sm:text-4xl font-bold tracking-[-0.02em] text-foreground md:text-5xl">
-                  Built for Every <span className="text-gradient">Palate</span>
+                  {content.text('heatLevels', 'heading') || (
+                    <>
+                      Built for Every <span className="text-gradient">Palate</span>
+                    </>
+                  )}
                 </h2>
                 <p className="mx-auto max-w-2xl text-base sm:text-lg text-muted-foreground">
-                  From those who like it mild to the heat seekers — we have the perfect salsa for everyone.
+                  {content.text(
+                    'heatLevels',
+                    'body',
+                    'From those who like it mild to the heat seekers — we have the perfect salsa for everyone.'
+                  )}
                 </p>
               </div>
             </ScrollReveal>
@@ -165,13 +267,17 @@ export default async function Home() {
             </div>
           </div>
         </section>
+        )}
 
         {/* Featured Blog — newest Heat Index stories */}
-        <ErrorBoundary>
-          <FeaturedHeatIndexSection />
-        </ErrorBoundary>
+        {content.isVisible('heatIndex') && (
+          <ErrorBoundary>
+            <FeaturedHeatIndexSection />
+          </ErrorBoundary>
+        )}
 
         {/* What Sets Us Apart */}
+        {content.isVisible('whatSetsUsApart') && (
         <section className="py-12 sm:py-16 md:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 items-center gap-12 sm:gap-16 lg:grid-cols-2">
@@ -239,8 +345,10 @@ export default async function Home() {
             </div>
           </div>
         </section>
+        )}
 
         {/* Where Is Jose — Live Schedule Map */}
+        {content.isVisible('whereIsJose') && (
         <section className="py-12 sm:py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <ScrollReveal>
@@ -268,93 +376,33 @@ export default async function Home() {
             </ScrollReveal>
           </div>
         </section>
-
-        {/* Fundraising */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-verde-50 to-salsa-50 py-12 sm:py-16 md:py-20 dark:from-verde-950/20 dark:to-salsa-950/20">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <ScrollReveal>
-              <div className="grid grid-cols-1 items-center gap-8 sm:gap-12 lg:grid-cols-2">
-                <div>
-                  <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-salsa-600">
-                    Earn 50% Profit
-                  </span>
-                  <h2 className="mb-4 font-serif text-3xl sm:text-4xl font-bold leading-tight tracking-[-0.02em] text-foreground md:text-5xl">
-                    Fundraise With <span className="text-gradient">Jose!</span>
-                  </h2>
-                  <p className="mb-6 max-w-md text-base sm:text-lg leading-relaxed text-muted-foreground">
-                    Looking for a fundraiser people actually want to buy? Our premium handcrafted salsas
-                    sell themselves — trusted by 500+ schools, teams, and nonprofits.
-                  </p>
-
-                  {/* Punchy 3-up stat blocks with Volkhov numerals */}
-                  <dl className="mb-7 grid grid-cols-3 gap-2 sm:gap-4">
-                    {FUNDRAISING_STATS.map((stat) => (
-                      <div
-                        key={stat.label}
-                        className="rounded-xl border border-border bg-card p-3 sm:p-4 text-center surface-shadow"
-                      >
-                        <dt className="sr-only">{stat.label}</dt>
-                        <dd className="font-serif text-xl sm:text-2xl font-bold text-salsa-600">{stat.value}</dd>
-                        <p className="mt-1 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          {stat.label}
-                        </p>
-                      </div>
-                    ))}
-                  </dl>
-
-                  <div className="flex flex-wrap gap-3">
-                    <Link
-                      href="/fundraising"
-                      className="inline-flex items-center gap-2 rounded-full bg-salsa-500 px-7 py-3.5 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:bg-salsa-600 hover:shadow-[0_4px_12px_rgba(229,62,62,0.4)]"
-                    >
-                      Start Your Fundraiser
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                    <Link
-                      href="/auth/fundraiser-signup"
-                      className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-7 py-3.5 text-base font-semibold text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:border-salsa-300 hover:shadow-md"
-                    >
-                      Download Brochure
-                    </Link>
-                  </div>
-                </div>
-
-                <div className="relative flex justify-center lg:justify-start">
-                  <div className="relative w-56 sm:w-72 lg:w-96" style={{ aspectRatio: '1000 / 733' }}>
-                    <Image
-                      src="/images/shared/fundraising-icon.png"
-                      alt="Jose Madrid Salsa Fundraising"
-                      fill
-                      className="object-contain drop-shadow-xl"
-                      sizes="(max-width: 640px) 224px, (max-width: 768px) 288px, 384px"
-                    />
-                  </div>
-                  {/* Floating "average raised" badge — signature kit element */}
-                  <div className="absolute right-0 top-0 sm:-right-2 sm:-top-4 rotate-3 rounded-2xl bg-salsa-500 p-3 sm:p-4 text-white shadow-xl lg:-right-4">
-                    <div className="font-serif text-xl sm:text-2xl font-bold leading-tight">$3,500+</div>
-                    <div className="text-[10px] sm:text-xs">average raised</div>
-                  </div>
-                </div>
-              </div>
-            </ScrollReveal>
-          </div>
-        </section>
+        )}
 
         {/* Active Fundraising Campaigns — team mascots */}
-        <ErrorBoundary>
-          <ActiveCampaignsGrid
-            limit={6}
-            heading="Teams Fundraising Right Now"
-            subheading="Meet the schools, clubs, and teams raising money with Jose Madrid Salsa. Back a team and every jar counts toward their goal."
-            className="bg-background"
-          />
-        </ErrorBoundary>
+        {content.isVisible('activeCampaigns') && (
+          <ErrorBoundary>
+            <ActiveCampaignsGrid
+              limit={6}
+              heading={content.text(
+                'activeCampaigns',
+                'heading',
+                'Teams Fundraising Right Now'
+              )}
+              subheading={content.text(
+                'activeCampaigns',
+                'body',
+                'Meet the schools, clubs, and teams raising money with Jose Madrid Salsa. Back a team and every jar counts toward their goal.'
+              )}
+              className="bg-background"
+            />
+          </ErrorBoundary>
+        )}
 
         {/* Gift Box Selector Section */}
-        <GiftBoxSelector />
+        {content.isVisible('giftBoxes') && <GiftBoxSelector />}
 
         {/* Location Map Section */}
-        <LocationMapClient />
+        {content.isVisible('locationMap') && <LocationMapClient />}
 
         {/* Reviews Section — data pre-fetched server-side, zero client API calls */}
         <AnimatedTestimonials reviewsData={reviewsData} />

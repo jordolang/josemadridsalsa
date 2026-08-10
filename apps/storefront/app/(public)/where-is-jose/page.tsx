@@ -1,8 +1,16 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { MapPin, Truck, Calendar, Store, Users, Compass, Mountain, Building, Utensils } from 'lucide-react';
+import { MapPin, Truck, Calendar, Store, Users, Compass, Mountain, Building, Utensils, Tag } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { GoogleScheduleMap } from '@/components/store/google-schedule-map';
 import { getCalendarEvents } from '@/lib/server/google-data';
 import { createMetadata } from '@/lib/metadata';
@@ -60,6 +68,46 @@ const regions = [
   }
 ];
 
+/**
+ * What we charge at the booth. These are the same everywhere we set up, which is the whole
+ * point of publishing them — nobody should have to guess, or wonder whether the market two
+ * states over is cheaper.
+ */
+const eventPricing = [
+  {
+    item: 'One Jar',
+    detail: 'Any salsa, any heat level',
+    price: '$10',
+  },
+  {
+    item: 'Three Jars',
+    detail: 'Mix and match',
+    price: '$25',
+  },
+  {
+    item: 'Four Jars',
+    detail: 'Mix and match',
+    price: '$32',
+  },
+  {
+    item: 'Five Jars + Tortilla Chips',
+    detail: 'Includes a bag of Jose Madrid Tortilla Chips',
+    price: '$40',
+    highlight: true,
+  },
+  {
+    item: 'Case of 12 Jars',
+    detail: 'Any combination of salsas',
+    price: '$80',
+    highlight: true,
+  },
+  {
+    item: 'Bag of Tortilla Chips',
+    detail: 'Sold individually',
+    price: '$3',
+  },
+];
+
 export default async function WhereIsJosePage() {
   const calendarEvents = await getCalendarEvents()
   return (
@@ -97,6 +145,64 @@ export default async function WhereIsJosePage() {
               </p>
             </div>
             <GoogleScheduleMap initialEvents={calendarEvents} />
+          </div>
+        </div>
+      </section>
+
+      {/* Event Pricing */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-4xl">
+            <div className="mx-auto mb-12 max-w-3xl text-center">
+              <Tag className="mx-auto mb-4 h-12 w-12 text-salsa-600" />
+              <h2 className="text-3xl font-serif font-bold text-foreground lg:text-4xl">
+                Event Pricing
+              </h2>
+              <p className="mt-4 text-lg text-muted-foreground">
+                Standard pricing at every event we work. So if you happen to see us out and
+                about in Michigan, Ohio, Pennsylvania—anywhere on the East Coast—these are the
+                prices you&apos;ll be looking to pay.
+              </p>
+            </div>
+
+            <Card className="card surface-shadow overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gradient-to-r from-salsa-600 to-chile-600 hover:bg-transparent">
+                    <TableHead className="text-white">What You Get</TableHead>
+                    <TableHead className="hidden text-white sm:table-cell">Details</TableHead>
+                    <TableHead className="text-right text-white">Price</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {eventPricing.map((tier) => (
+                    <TableRow key={tier.item} className={tier.highlight ? 'bg-salsa-50/60' : undefined}>
+                      <TableCell className="font-semibold text-foreground">
+                        {tier.item}
+                        {/* On narrow screens the details column is hidden, so it moves under the name. */}
+                        <span className="mt-1 block text-sm font-normal text-muted-foreground sm:hidden">
+                          {tier.detail}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden text-muted-foreground sm:table-cell">
+                        {tier.detail}
+                      </TableCell>
+                      <TableCell className="text-right text-lg font-bold text-salsa-700 tabular-nums">
+                        {tier.price}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Can&apos;t make it out to see us?{' '}
+              <Link href="/products" className="font-medium text-salsa-600 underline-offset-4 hover:underline">
+                Shop the full lineup online
+              </Link>
+              —online pricing and shipping are handled separately.
+            </p>
           </div>
         </div>
       </section>

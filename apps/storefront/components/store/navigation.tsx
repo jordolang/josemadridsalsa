@@ -50,8 +50,9 @@ interface NavSubItem {
   description: string;
 }
 
-interface NavGroup {
-  id: "shop" | "about" | "for-you";
+export interface NavGroup {
+  /** Stable key used for open/active state. */
+  id: string;
   title: string;
   featured?: { href: string; label: string; hint: string };
   items: NavSubItem[];
@@ -128,15 +129,20 @@ function NavigationFallback() {
   );
 }
 
-export function Navigation() {
+/**
+ * @param groups Optional CMS-managed menu from /admin/content/navigation.
+ *   Falls back to NAV_GROUPS above, so the header is unchanged until someone
+ *   builds a menu in the admin.
+ */
+export function Navigation({ groups }: { groups?: NavGroup[] } = {}) {
   return (
     <Suspense fallback={<NavigationFallback />}>
-      <NavigationContent />
+      <NavigationContent navGroups={groups && groups.length > 0 ? groups : NAV_GROUPS} />
     </Suspense>
   );
 }
 
-function NavigationContent() {
+function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -355,7 +361,7 @@ function NavigationContent() {
 
           {/* Center nav — editorial labels with underline-on-active */}
           <nav className="hidden lg:flex items-center gap-1 justify-self-center">
-            {NAV_GROUPS.map((group) => {
+            {navGroups.map((group) => {
               const isOpen = openGroupId === group.id;
               const isActive = isGroupActive(group, pathname || "");
               return (
@@ -605,7 +611,7 @@ function NavigationContent() {
                   </form>
 
                   <nav className="space-y-3">
-                    {NAV_GROUPS.map((group, groupIndex) => (
+                    {navGroups.map((group, groupIndex) => (
                       <Fragment key={group.id}>
                       <div
                         className="animate-in fade-in-0 slide-in-from-right-2 duration-300"
@@ -783,7 +789,7 @@ function NavigationContent() {
       </div>
 
       {/* Dropdown panels — positioned absolutely so they overlay content */}
-      {NAV_GROUPS.map((group) => {
+      {navGroups.map((group) => {
         const isOpen = openGroupId === group.id;
         const isShop = group.id === "shop";
         return (

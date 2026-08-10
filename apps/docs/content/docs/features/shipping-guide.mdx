@@ -190,7 +190,7 @@ The main entry point for all shipping calculations. Called by both the checkout 
    - Height: sum of item heights * quantities, capped at 24"; default 2" per item
 4. **Carrier API call** - Build `ShipmentRequest` with origin address and destination, call `getShippingRates()`
 5. **PO Box filter** - If destination is a PO Box, filter to USPS-only rates
-6. **Sort and return** - Sort rates by cost (cheapest first), return all as `availableOptions`
+6. **Sort and return** - Sort rates by cost (cheapest first), return the cheapest as the single entry in `availableOptions`
 7. **Fallback** - On any error, return estimate-based rates with `fallback: true` flag
 
 ### Estimate-Based Rates (Fallback)
@@ -203,7 +203,6 @@ Used when the carrier API is unavailable or returns no rates.
 | International (non-US) | $24.99 |
 | Standard domestic (flat rate) | $6.99 |
 | Weight > 5 lbs | $4.99 base + $0.50/lb over 5 lbs |
-| Express shipping | $14.99 |
 
 #### State Multipliers
 
@@ -215,22 +214,19 @@ Remote states have a cost multiplier applied:
 | Hawaii (HI) | 1.5x |
 | Puerto Rico (PR) | 2.0x |
 
-#### PO Box Estimate Options
+#### PO Box Estimate Option
 
-When the destination is a PO Box, only USPS options are offered:
+When the destination is a PO Box, the single option is USPS-only:
 
 | Service | Rate |
 |---------|------|
 | USPS Ground Advantage | base rate |
-| USPS Priority Mail | base rate x 1.5 |
-| USPS Priority Mail Express | express rate |
 
-#### Non-PO-Box Estimate Options
+#### Non-PO-Box Estimate Option
 
 | Service | Rate |
 |---------|------|
 | Standard Shipping | base rate |
-| Express Shipping | express rate |
 
 ---
 
@@ -263,7 +259,7 @@ The following patterns (case-insensitive, periods removed) trigger PO Box detect
 ### Behavior When PO Box Detected
 
 - **Carrier API mode:** Filters rates to USPS-only (UPS and FedEx cannot deliver to PO Boxes)
-- **Fallback mode:** Returns USPS Ground Advantage, Priority Mail, and Priority Mail Express options only
+- **Fallback mode:** Returns the USPS Ground Advantage option only
 - If no USPS rates are available from the carrier API, falls back to estimate rates
 
 ---

@@ -1,10 +1,9 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Download, Search, Ship } from 'lucide-react'
+import { Download, Plus, Ship } from 'lucide-react'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Pagination,
@@ -14,21 +13,13 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { OrdersTableClient } from '@/components/admin/OrdersTableClient'
+import { OrderFilters } from '@/components/admin/OrderFilters'
+import { buildOrderWhere, parseOrderFilters } from '@/lib/orders/order-filters'
+import { isNextControlFlowError } from '@/lib/next-errors'
 import { MobileOrdersList } from '@/components/admin/mobile/MobileOrdersList'
 
-interface SearchParams {
-  search?: string
-  status?: string
-  page?: string
-}
+type SearchParams = Record<string, string | undefined>
 
 async function getOrders(searchParams: SearchParams) {
   try {
@@ -36,28 +27,9 @@ async function getOrders(searchParams: SearchParams) {
     const limit = 50
     const skip = (page - 1) * limit
 
-    const where: any = {}
-
-    // Search filter
-    if (searchParams.search) {
-      where.OR = [
-        { orderNumber: { contains: searchParams.search, mode: 'insensitive' } },
-        { guestEmail: { contains: searchParams.search, mode: 'insensitive' } },
-        {
-          user: {
-            OR: [
-              { email: { contains: searchParams.search, mode: 'insensitive' } },
-              { name: { contains: searchParams.search, mode: 'insensitive' } },
-            ],
-          },
-        },
-      ]
-    }
-
-    // Status filter
-    if (searchParams.status && searchParams.status !== 'all') {
-      where.status = searchParams.status
-    }
+    // The where clause comes from the shared filter module rather than being assembled
+    // here, so the CSV export and the saved views describe exactly the same rows.
+    const where = buildOrderWhere(parseOrderFilters(searchParams))
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
@@ -116,19 +88,31 @@ export default async function OrdersPage({
       id: order.id,
       orderNumber: order.orderNumber,
       status: order.status,
+      fulfillmentStatus: order.fulfillmentStatus,
+      salesChannel: order.salesChannel,
       total: order.total.toString(),
       createdAt: order.createdAt.toISOString(),
       customerName: order.user?.name || order.guestEmail || 'Guest',
       itemCount: order._count.items,
     }))
 
+    // Paging and export both carry every active filter, so page 2 and the CSV always match
+    // what is on screen.
+    const filterQuery = new URLSearchParams(
+      Object.entries(params).filter(
+        ([key, value]) => key !== 'page' && typeof value === 'string' && value !== ''
+      ) as [string, string][]
+    )
+
     const buildPageHref = (targetPage: number) => {
-      const qs = new URLSearchParams()
+      const qs = new URLSearchParams(filterQuery)
       qs.set('page', String(targetPage))
-      if (params.status) qs.set('status', params.status)
-      if (params.search) qs.set('search', params.search)
       return `/admin/orders?${qs.toString()}`
     }
+
+    const exportHref = `/api/admin/orders/export${
+      filterQuery.size ? `?${filterQuery.toString()}` : ''
+    }`
 
     return (
     <>
@@ -159,47 +143,25 @@ export default async function OrdersPage({
           </Button>
           {canExport && (
             <Button variant="outline" asChild>
-              <a href="/api/admin/orders/export">
+              <a href={exportHref}>
                 <Download className="mr-2 size-4" />
                 Export
               </a>
+            </Button>
+          )}
+          {canWrite && (
+            <Button asChild>
+              <Link href="/admin/orders/new">
+                <Plus className="mr-2 size-4" />
+                New order
+              </Link>
             </Button>
           )}
         </div>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-4 md:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search by order number, customer..."
-                defaultValue={params.search}
-                name="search"
-                className="pl-9"
-              />
-            </div>
-            <Select defaultValue={params.status || 'all'}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                <SelectItem value="PROCESSING">Processing</SelectItem>
-                <SelectItem value="SHIPPED">Shipped</SelectItem>
-                <SelectItem value="DELIVERED">Delivered</SelectItem>
-                <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                <SelectItem value="REFUNDED">Refunded</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <OrderFilters />
 
       {/* Orders Table with Bulk Actions */}
       <OrdersTableClient orders={orderRows} canWrite={canWrite} />
@@ -236,6 +198,11 @@ export default async function OrdersPage({
     </>
     )
   } catch (error) {
+    // redirect() and notFound() signal themselves by throwing; re-wrapping those in a plain
+    // Error strips the marker Next.js dispatches on, so the permission redirect above was
+    // being turned into a render failure instead of a redirect.
+    if (isNextControlFlowError(error)) throw error
+
     console.error('[Orders] Error rendering:', error)
     throw new Error(error instanceof Error ? error.message : 'Failed to load orders page')
   }

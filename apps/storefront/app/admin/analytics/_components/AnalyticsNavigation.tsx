@@ -38,6 +38,12 @@ export function AnalyticsNavigation({ activeRange }: AnalyticsNavigationProps) {
       >
         Inventory
       </Link>
+      <Link
+        href={`/admin/analytics/margin?range=${activeRange}`}
+        className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-background/60"
+      >
+        Margin
+      </Link>
     </nav>
   )
 }

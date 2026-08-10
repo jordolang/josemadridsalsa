@@ -1,0 +1,72 @@
+# Build context excludes.
+#
+# Two things must NOT be added here even though next.config.mjs excludes them
+# from serverless traces: `scripts/` (the storefront `prebuild` runs
+# scripts/sync-findus.cjs) and `public/` (the runner serves it).
+
+# VCS and CI metadata
+.git
+.gitattributes
+.gitignore
+.github
+.husky
+
+# Installed / generated trees — rebuilt inside the image
+node_modules
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/.source
+.turbo
+**/.turbo
+.vercel
+**/.vercel
+**/*.tsbuildinfo
+
+# Secrets — never bake an env file into a layer
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!.env.local.example
+
+# Local-only business archive (multi-GB) and generated data
+Documents
+data
+
+# Agent / editor / tooling state
+.auto-claude
+.claude
+.codex
+.integration
+.obsidian
+.pi
+.playwright-mcp
+.qwen
+.remember
+.smart-env
+.smtcmp_json_db
+.smtcmp_vector_db.tar.gz
+.vscode
+.idea
+.worktrees
+.zenflow
+.devcontainer
+
+# Docker inputs themselves
+Dockerfile
+Dockerfile.*
+.dockerignore
+docker-compose*.yml
+
+# Junk
+.DS_Store
+**/.DS_Store
+*.log
+*.pem
+google-debug.png
+playwright-report
+test-results
+gitleaks-report.json

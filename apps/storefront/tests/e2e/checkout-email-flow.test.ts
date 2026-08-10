@@ -149,6 +149,14 @@ describe('E2E: Checkout Flow → Order Confirmation Email', () => {
             status: 'CONFIRMED',
             stripePaymentId: 'pi_test_e2e_123',
           }),
+          // The commission credit re-reads the order in the transaction and claims it with a
+          // conditional update. This one carries no participant, so it short-circuits.
+          findUnique: vi.fn().mockResolvedValue({
+            participantId: null,
+            fundraiserId: null,
+            commissionCreditedAt: null,
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         product: {
           update: vi.fn(),
@@ -246,7 +254,17 @@ describe('E2E: Checkout Flow → Order Confirmation Email', () => {
 
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
-    const mockTransaction = vi.fn(async (callback) => callback({ order: { update: vi.fn() }, product: { update: vi.fn() }, payment: { upsert: vi.fn() }, inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null) } }))
+    const mockTransaction = vi.fn(async (callback) => callback({
+      // The commission credit re-reads the order in the transaction; this one has no participant.
+      order: {
+        update: vi.fn(),
+        findUnique: vi.fn().mockResolvedValue({ participantId: null, fundraiserId: null, commissionCreditedAt: null }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      product: { update: vi.fn() },
+      payment: { upsert: vi.fn() },
+      inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null) },
+    }))
     vi.mocked(prisma.$transaction).mockImplementation(mockTransaction as any)
 
     const paymentSucceededEvent: Stripe.Event = {
@@ -302,7 +320,17 @@ describe('E2E: Checkout Flow → Order Confirmation Email', () => {
 
     vi.mocked(prisma.order.findUnique).mockResolvedValue(mockOrder as any)
 
-    const mockTransaction = vi.fn(async (callback) => callback({ order: { update: vi.fn() }, product: { update: vi.fn() }, payment: { upsert: vi.fn() }, inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null) } }))
+    const mockTransaction = vi.fn(async (callback) => callback({
+      // The commission credit re-reads the order in the transaction; this one has no participant.
+      order: {
+        update: vi.fn(),
+        findUnique: vi.fn().mockResolvedValue({ participantId: null, fundraiserId: null, commissionCreditedAt: null }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      product: { update: vi.fn() },
+      payment: { upsert: vi.fn() },
+      inventoryTransaction: { findFirst: vi.fn().mockResolvedValue(null) },
+    }))
     vi.mocked(prisma.$transaction).mockImplementation(mockTransaction as any)
 
     // Mock email send to reject/fail

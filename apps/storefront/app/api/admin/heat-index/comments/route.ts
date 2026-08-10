@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { ok, fail, notFound, serverError } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import prisma from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -56,6 +57,17 @@ export async function POST(req: NextRequest) {
       },
       select: { id: true, status: true, createdAt: true },
     })
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'create',
+        entityType: 'blog_comment',
+        entityId: created.id,
+        changes: { postId: parsed.data.postId, status: created.status },
+      },
+      req
+    )
 
     return ok(created, 201)
   } catch (error: unknown) {

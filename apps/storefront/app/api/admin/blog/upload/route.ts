@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { ok, fail, serverError } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
+import { logAudit, logAuditWithRequest } from '@/lib/audit'
 import prisma from '@/lib/prisma'
 import {
   BlobUploadError,
@@ -42,6 +43,17 @@ export async function POST(req: NextRequest) {
         caption,
       },
     })
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'create',
+        entityType: 'media',
+        entityId: media.id,
+        changes: { fileName: upload.filename, fileSize: upload.fileSize, isVideo: upload.isVideo },
+      },
+      req
+    )
 
     return ok(
       {

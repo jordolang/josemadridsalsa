@@ -213,8 +213,18 @@ export default async function OrderDetailPage({ params }: PageProps) {
         </Card>
       </div>
 
-      <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/account/orders" className="text-sm hover:underline">Back to orders</Link>
+        {/* Only offered once something has actually shipped — there is nothing to send back
+            before that, and offering it would just produce a rejected request. */}
+        {order.shippedAt && (
+          <Link
+            href={`/account/orders/${order.id}/return`}
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            Request a return →
+          </Link>
+        )}
       </div>
     </div>
   );

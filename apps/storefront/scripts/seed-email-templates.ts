@@ -9,11 +9,32 @@ import { emailTemplates } from '../lib/email/templates/index'
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🌱 Seeding email templates...')
+  // Seeding upserts, so a blanket run replaces the stored HTML of every
+  // template — including any edited in the admin panel. Pass keys to limit the
+  // run to specific templates:
+  //   npm run db:seed:email-templates -- announcement_single order_confirmation_light
+  const requestedKeys = process.argv.slice(2).filter((arg) => !arg.startsWith('-'))
 
-  for (const template of emailTemplates) {
+  const selected = requestedKeys.length
+    ? emailTemplates.filter((template) => requestedKeys.includes(template.key))
+    : emailTemplates
+
+  if (requestedKeys.length) {
+    const unknown = requestedKeys.filter(
+      (key) => !emailTemplates.some((template) => template.key === key)
+    )
+    if (unknown.length) {
+      console.error(`❌ Unknown template key(s): ${unknown.join(', ')}`)
+      process.exit(1)
+    }
+    console.log(`🌱 Seeding ${selected.length} selected email template(s)...`)
+  } else {
+    console.log('🌱 Seeding email templates...')
+  }
+
+  for (const template of selected) {
     console.log(`  ✓ Creating template: ${template.name}`)
-    
+
     await prisma.emailTemplate.upsert({
       where: { key: template.key },
       update: {
@@ -39,7 +60,7 @@ async function main() {
     })
   }
 
-  console.log(`\n✅ Successfully seeded ${emailTemplates.length} email templates!`)
+  console.log(`\n✅ Successfully seeded ${selected.length} email templates!`)
   
   // Display summary
   const counts = await prisma.emailTemplate.groupBy({

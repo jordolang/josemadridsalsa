@@ -6,7 +6,11 @@ import prisma from '@/lib/prisma'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { deductReservedInventoryInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
+import { dedupeKeys, notifyOperators, severityFor } from '@/lib/notifications/dispatch'
 import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
+import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
+import { reverseFundraiserCommission } from '@/lib/fundraising/reverse-commission'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -115,6 +119,21 @@ export async function POST(request: Request) {
             },
           })
 
+          await emitDomainEvent(
+            {
+              type: 'payment.completed',
+              entityType: 'order',
+              entityId: order.id,
+              payload: {
+                provider: 'STRIPE',
+                amount: paymentIntent.amount,
+                currency: paymentIntent.currency,
+                paymentIntentId: paymentIntent.id,
+              },
+            },
+            tx
+          )
+
           // Update or create Payment record
           await tx.payment.upsert({
             where: { stripePaymentIntentId: paymentIntent.id },
@@ -131,6 +150,12 @@ export async function POST(request: Request) {
               paymentMethod: paymentIntent.payment_method_types?.[0],
             },
           })
+
+          // Credit the fundraiser. This handler had no participant handling at all, so a
+          // webhook arriving before /api/checkout/complete left the group unpaid for that
+          // sale — the completion route returns early once the order is already paid.
+          // Idempotent on the order, so whichever path wins credits it exactly once.
+          await creditFundraiserCommission(tx, order.id)
 
           // Deduct reserved inventory for product orders (not gift certificates).
           // Uses deductReservedInventoryInTx to atomically decrement both
@@ -237,6 +262,20 @@ export async function POST(request: Request) {
               },
             })
           })
+
+          // Notified outside the transaction: a failed notification must not roll back the
+          // record of the failed payment.
+          await notifyOperators({
+            type: 'PAYMENT_FAILED',
+            severity: severityFor('PAYMENT_FAILED'),
+            title: 'Payment failed',
+            message: `Payment on order ${orderId} did not go through`,
+            entityType: 'order',
+            entityId: orderId,
+            link: '/admin/orders?view=payment-failed',
+            dedupeKey: dedupeKeys.paymentFailed(orderId),
+          })
+
           console.log('Order payment failed via webhook:', orderId)
         }
         break
@@ -255,6 +294,16 @@ export async function POST(request: Request) {
                 status: 'CANCELLED',
               },
             })
+
+            await emitDomainEvent(
+              {
+                type: 'payment.failed',
+                entityType: 'order',
+                entityId: orderId,
+                payload: { provider: 'STRIPE', paymentIntentId: paymentIntent.id },
+              },
+              tx
+            )
 
             // Update Payment record
             await tx.payment.upsert({
@@ -357,7 +406,7 @@ export async function POST(request: Request) {
           })
 
           // Create refund record
-          await tx.refund.upsert({
+          const refundRow = await tx.refund.upsert({
             where: { stripeRefundId: stripeRefund.id },
             create: {
               stripeRefundId: stripeRefund.id,
@@ -370,6 +419,10 @@ export async function POST(request: Request) {
               status: 'SUCCEEDED',
             },
           })
+
+          // Take the fundraising group's share back out. Idempotent on the refund, so a
+          // redelivered webhook cannot claw it back twice.
+          await reverseFundraiserCommission(tx, refundRow.id)
 
           // Restore inventory on full refunds only
           // Note: Partial refunds do not restore inventory as they may not correspond to specific items being returned.

@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
 const COOKIE_CONSENT_KEY = 'cookie-consent'
 
@@ -89,12 +90,12 @@ export function CookieConsentBanner({ onConsentChange }: CookieConsentBannerProp
           <div className="flex-1 text-sm">
             <p className="text-foreground">
               We use cookies to enhance your browsing experience and analyze our traffic. By clicking "Accept", you consent to our use of cookies.{' '}
-              <a
+              <Link
                 href="/privacy"
                 className="underline underline-offset-4 hover:text-primary"
               >
                 Learn more
-              </a>
+              </Link>
             </p>
           </div>
           <div className="flex gap-2 sm:flex-shrink-0">

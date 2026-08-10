@@ -2,9 +2,19 @@ import { prisma } from '@/lib/prisma'
 import { NotificationType, Order } from '@prisma/client'
 import { sendEmail } from '@/lib/email'
 
+/**
+ * The order-scoped notification types this helper knows how to render. Narrower than
+ * NotificationType, which also carries inventory, payment and integration categories that
+ * are dispatched through lib/notifications/dispatch.ts instead.
+ */
+export type OrderNotificationType = Extract<
+  NotificationType,
+  'ORDER_NEW' | 'ORDER_STATUS_CHANGE' | 'ORDER_HIGH_VALUE' | 'ORDER_MODIFIED' | 'SYSTEM'
+>
+
 export async function createOrderNotification(
   userId: string,
-  type: NotificationType,
+  type: OrderNotificationType,
   order: Order
 ): Promise<void> {
   const settings = await prisma.orderNotificationSetting.findUnique({

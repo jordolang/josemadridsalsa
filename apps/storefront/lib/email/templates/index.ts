@@ -48,6 +48,10 @@ import { birthdaySpecialTemplate } from './birthday-special'
 import { referralProgramTemplate } from './referral-program'
 import { giftCertificateDeliveryTemplate } from './gift-certificate-delivery'
 import { orderReadyPickupTemplate } from './order-ready-pickup'
+import { announcementNewsletterTemplate } from './announcement-newsletter'
+import { announcementSingleTemplate } from './announcement-single'
+import { orderConfirmationLightTemplate } from './order-confirmation-light'
+import { orderConfirmationDarkTemplate } from './order-confirmation-dark'
 
 // Export all templates individually for named imports
 export {
@@ -83,6 +87,10 @@ export {
   referralProgramTemplate,
   giftCertificateDeliveryTemplate,
   orderReadyPickupTemplate,
+  announcementNewsletterTemplate,
+  announcementSingleTemplate,
+  orderConfirmationLightTemplate,
+  orderConfirmationDarkTemplate,
 }
 
 // Export array for backward compatibility
@@ -119,4 +127,8 @@ export const emailTemplates = [
   referralProgramTemplate,
   giftCertificateDeliveryTemplate,
   orderReadyPickupTemplate,
+  announcementNewsletterTemplate,
+  announcementSingleTemplate,
+  orderConfirmationLightTemplate,
+  orderConfirmationDarkTemplate,
 ]

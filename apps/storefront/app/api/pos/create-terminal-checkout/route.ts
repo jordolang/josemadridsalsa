@@ -6,6 +6,7 @@ import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requirePermission } from '@/lib/rbac'
 import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manager'
+import { emitOrderCreated } from '@/lib/orders/events'
 
 const TerminalCheckoutSchema = z.object({
   items: z
@@ -82,11 +83,24 @@ export async function POST(request: NextRequest) {
     const taxDollars = taxAmount / 100
     const totalDollars = total / 100
 
+    // Costs come from the database, not the till payload — the client has no business
+    // asserting what stock cost us, and a POS sale should be as margin-visible as a web one.
+    const costByProduct = new Map(
+      (
+        await prisma.product.findMany({
+          where: { id: { in: items.map((item) => item.productId) } },
+          select: { id: true, costPrice: true },
+        })
+      ).map((product) => [product.id, product.costPrice])
+    )
+
     // Build order items for DB
     const orderItems = items.map((item) => ({
       productId: item.productId,
       quantity: item.quantity,
       unitPrice: toDecimal(item.price),
+      // Snapshotted at the moment of sale; null stays null rather than becoming zero.
+      unitCost: costByProduct.get(item.productId) ?? undefined,
       totalPrice: toDecimal(item.price * item.quantity),
       productName: item.name,
       productSku: item.sku ?? '',
@@ -122,11 +136,20 @@ export async function POST(request: NextRequest) {
           status: 'PENDING',
           paymentProvider: 'SQUARE',
           paymentChannel: 'POS',
+          salesChannel: 'POS',
           shippingMethod: 'IN_STORE_PICKUP',
           items: {
             create: orderItems,
           },
         },
+      })
+
+      await emitOrderCreated({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        total: order.total,
+        salesChannel: order.salesChannel,
+        itemCount: orderItems.length,
       })
 
       // Create Square Terminal Checkout

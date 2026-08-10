@@ -51,6 +51,10 @@ export default function TrackingDialog({
   const [open, setOpen] = useState(false)
   const [trackingNumber, setTrackingNumber] = useState(currentTrackingNumber || '')
   const [carrier, setCarrier] = useState('usps')
+  const [service, setService] = useState('')
+  // What we paid the carrier. Kept as a string so an empty box stays empty rather than becoming 0,
+  // which would record a free shipment.
+  const [costPaid, setCostPaid] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -71,7 +75,9 @@ export default function TrackingDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           trackingNumber: trackingNumber.trim(),
-          carrier,
+          carrier: selectedCarrier.label,
+          service: service.trim() || undefined,
+          costPaid: costPaid.trim() ? Number(costPaid) : undefined,
           trackingUrl: previewUrl || undefined,
           updateStatus: currentStatus !== 'SHIPPED' && currentStatus !== 'DELIVERED',
         }),
@@ -84,7 +90,9 @@ export default function TrackingDialog({
       }
 
       toast.success('Tracking saved', {
-        description: `Tracking attached to ${orderNumber}.`,
+        description: costPaid.trim()
+          ? `${orderNumber} — $${Number(costPaid).toFixed(2)} postage recorded.`
+          : `Tracking attached to ${orderNumber}.`,
       })
       setOpen(false)
       router.refresh()
@@ -106,9 +114,10 @@ export default function TrackingDialog({
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Shipment Tracking</DialogTitle>
+            <DialogTitle>Record a shipment</DialogTitle>
             <DialogDescription>
-              Add or update tracking info for order {orderNumber}
+              For postage bought outside the system — Pirate Ship, or over a counter. Paste what the
+              carrier gave you for order {orderNumber}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -140,6 +149,36 @@ export default function TrackingDialog({
                 required
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="service">Service</Label>
+                <Input
+                  id="service"
+                  value={service}
+                  onChange={(e) => setService(e.target.value)}
+                  placeholder="Ground Advantage"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="costPaid">Postage paid</Label>
+                <Input
+                  id="costPaid"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={costPaid}
+                  onChange={(e) => setCostPaid(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            {/* Without this the shipment looks free and margin overstates every order it appears on. */}
+            <p className="text-xs text-muted-foreground">
+              Enter what you actually paid — through Pirate Ship or anywhere else. This is recorded
+              against the order separately from what the customer was charged for shipping.
+            </p>
 
             {previewUrl && (
               <a

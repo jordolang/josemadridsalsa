@@ -30,7 +30,11 @@ vi.mock('@/lib/inventory-manager', () => ({
 }))
 
 // $20.00 of goods, $5 shipping, no tax — keeps the arithmetic checkable by hand.
-vi.mock('@/lib/shipping-calculator', () => ({
+vi.mock('@/lib/shipping-calculator', async (importOriginal) => ({
+  // Only the rate call is stubbed. `buildShippingItems` is pure mapping — the thing that turns
+  // catalogue rows into parcel weights and dimensions — so the real one is kept, and a unit
+  // mistake in it fails these tests rather than being mocked away.
+  ...(await importOriginal<typeof import('@/lib/shipping-calculator')>()),
   calculateShipping: vi.fn(async () => ({
     shippingCost: 5,
     shippingMethod: 'Standard Shipping',
@@ -92,7 +96,15 @@ function createdOrderData() {
 describe('POST /api/checkout — discount and gift certificate pricing', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockOrderCreate.mockResolvedValue({ id: 'clorderaaaaaaaaaaaaaaaaaa', orderNumber: 'JMS-1' })
+    // Mirrors what the route's own `include: { items: true }` returns. The stub previously
+    // carried only id and orderNumber, which no real call to this query can produce.
+    mockOrderCreate.mockResolvedValue({
+      id: 'clorderaaaaaaaaaaaaaaaaaa',
+      orderNumber: 'JMS-1',
+      total: 20,
+      salesChannel: 'WEBSITE',
+      items: [{ id: 'clitemaaaaaaaaaaaaaaaaaaa' }],
+    })
     mockCreatePayment.mockResolvedValue({ success: true, clientSecret: 'cs_test' })
     process.env.NEXTAUTH_SECRET = 'test-secret'
   })

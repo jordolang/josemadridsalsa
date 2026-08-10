@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 import Papa from 'papaparse'
 
 interface ImportResult {
@@ -153,6 +154,17 @@ export async function POST(
         }
       }
     }
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'import',
+        entityType: 'mailing_list',
+        entityId: id,
+        changes: { imported: result.imported, skipped: result.skipped },
+      },
+      request
+    )
 
     return NextResponse.json({ success: true, result })
   } catch (error) {

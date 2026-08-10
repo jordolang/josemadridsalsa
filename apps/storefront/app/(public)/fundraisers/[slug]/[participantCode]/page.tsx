@@ -11,6 +11,7 @@ import { ProductGrid } from '@/components/store/product-grid';
 import { ReferralHeader } from '@/components/fundraising/referral-header';
 import prisma from '@/lib/prisma';
 import { formatPrice } from '@/lib/utils';
+import { fundraiserUnitPrice } from '@/lib/fundraising/pricing'
 
 export const dynamic = 'force-dynamic'
 
@@ -151,7 +152,7 @@ export default async function ParticipantReferralPage({ params }: PageProps) {
   // Convert products to ProductGrid format
   const products = fundraiser.products.map((fp) => ({
     ...fp.product,
-    price: fp.price ? Number(fp.price) : Number(fp.product.price),
+    price: fundraiserUnitPrice(fp.product.price, fp.price),
     compareAtPrice: fp.product.compareAtPrice ? Number(fp.product.compareAtPrice) : null,
     weight: fp.product.weight ? fp.product.weight.toString() : null,
     dimensions: fp.product.dimensions ? fp.product.dimensions.toString() : null,

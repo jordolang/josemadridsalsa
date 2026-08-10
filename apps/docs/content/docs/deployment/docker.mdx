@@ -1,0 +1,147 @@
+---
+title: Docker Images
+description: Building and running the storefront in Docker — production, CI, and local development images.
+---
+
+# Docker Images
+
+Production hosting is Vercel. These images exist for the cases Vercel does not cover:
+running the storefront somewhere else, reproducing a clean-checkout build off the
+platform, and standing up a development environment without a local Node or Postgres
+install. Three Dockerfiles live at the repository root, one per purpose.
+
+| File | Purpose | Result |
+| --- | --- | --- |
+| `Dockerfile` | Production storefront | Runnable image serving port 3000 |
+| `Dockerfile.ci` | Verification | Runs lint, type-check, and build |
+| `Dockerfile.dev` | Local development | Dev server with the source bind-mounted |
+
+All three take a `NODE_VERSION` build argument (default `20`, matching `.nvmrc`) and
+install with `npm ci --legacy-peer-deps`, which this workspace requires.
+
+## Production image
+
+```bash
+docker build -t josemadridsalsa:latest --build-arg NODE_VERSION=20 -f Dockerfile .
+docker run --rm -p 3000:3000 --env-file .env.local josemadridsalsa:latest
+```
+
+The build is three stages: dependency install, `next build`, and a runtime stage that
+carries only the standalone output, the static assets, and `public/`.
+
+### Memory
+
+The TypeScript pass over this codebase needs more heap than Node allocates by default,
+and Node derives that default from the memory the container is given. The builder stage
+sets `--max-old-space-size=4096`; the Docker daemon must have at least 8 GB available
+for that to be honoured (Docker Desktop → Settings → Resources). A
+`FATAL ERROR: ... JavaScript heap out of memory` during "Running TypeScript" means
+either the daemon has less, or something else is competing for it. Raise the ceiling
+further with:
+
+```bash
+docker build --build-arg NODE_MAX_OLD_SPACE=6144 -t josemadridsalsa:latest .
+```
+
+### Build-time environment
+
+`NEXT_PUBLIC_*` values are compiled into the client bundle by `next build`, so they must
+be present during `docker build` — supplying them only at `docker run` is too late. Pass
+them as a BuildKit secret rather than a `--build-arg`, because build arguments are
+recorded in the image history:
+
+```bash
+docker build --no-cache-filter builder --secret id=build_env,src=.env.local \
+  -t josemadridsalsa:latest .
+```
+
+The file is mounted at `apps/storefront/.env.production` for the duration of the build
+step and never lands in a layer.
+
+`--no-cache-filter builder` is not optional decoration. BuildKit deliberately keeps
+secret contents out of the layer cache key, so **editing a value in the env file does not
+invalidate the build layer** — without the flag, a rebuild is a cache hit and the
+previous run's values stay compiled into the bundle, silently. The flag forces only the
+builder stage to re-run; the expensive dependency install stays cached. Everything else — `DATABASE_URL`, provider secrets,
+`NEXTAUTH_SECRET`, `MASTER_KEY` — is read at runtime and belongs in `--env-file` or the
+host's secret store.
+
+### `output: 'standalone'`
+
+`apps/storefront/next.config.mjs` enables Next.js standalone output only when
+`DOCKER_BUILD=1`, which the builder stage sets. The Vercel build path is unaffected.
+
+### Prisma
+
+`schema.prisma` declares `binaryTargets = ["native", "rhel-openssl-3.0.x"]` — the second
+is Vercel's runtime, and `native` resolves to whatever platform generated the client.
+Because of that, **the builder and runner stages must stay on the same base image**.
+Moving the runner to Alpine produces a query engine mismatch that only appears at
+runtime, on the first database call.
+
+### Migrations
+
+The image does not run migrations on start. Apply them separately against
+`DATABASE_URL_UNPOOLED`:
+
+```bash
+npm run db:deploy
+```
+
+### Image size
+
+`apps/storefront/public` is roughly 350 MB and is served by the runner, so it is copied
+in full. Expect the production image to be sized accordingly.
+
+## CI image
+
+```bash
+docker build -t josemadridsalsa:ci --build-arg NODE_VERSION=20 -f Dockerfile.ci .
+docker run --rm josemadridsalsa:ci
+```
+
+The default command runs `npm run lint && npm run type-check && npm run build` across
+every workspace. It takes the same `NODE_MAX_OLD_SPACE` build argument as the production
+image, and for the same reason — the type-check pass is what runs out of heap first. `npm run test` is not included: parts of the suite under
+`apps/storefront/tests/integration` connect to a live database. Run them with
+credentials supplied:
+
+```bash
+docker run --rm --env-file .env.local josemadridsalsa:ci npm run test
+```
+
+## Development image
+
+`docker-compose.dev.yml` wires the development image to a Postgres service and
+bind-mounts the working tree. (It is separate from `.devcontainer/docker-compose.yml`,
+which backs the VS Code devcontainer.)
+
+```bash
+docker compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml exec storefront npm run db:migrate
+```
+
+The storefront is then on http://localhost:3000 and Postgres on port 5432. The compose
+file overrides `DATABASE_URL` and `DATABASE_URL_UNPOOLED` to point at the bundled
+database; delete those two lines to develop against a hosted one instead. Any
+`.env.local` present is loaded, and is optional.
+
+`node_modules` and `.next` are held in anonymous volumes so the container's Linux
+binaries are not shadowed by the host's. After changing a dependency, rebuild:
+
+```bash
+docker compose -f docker-compose.dev.yml build storefront
+```
+
+To run a different workspace's dev server:
+
+```bash
+docker compose -f docker-compose.dev.yml run --rm --service-ports storefront npm run dev:admin
+```
+
+## Build context
+
+`.dockerignore` keeps the local `Documents/` archive, `node_modules`, build output, and
+every `.env` file out of the context. Two directories that `next.config.mjs` excludes
+from serverless traces must stay in it: `scripts/` (the storefront `prebuild` step runs
+`scripts/sync-findus.cjs`) and `public/` (the runner serves it).

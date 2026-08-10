@@ -30,15 +30,16 @@ vi.mock('@/lib/stripe', () => ({
   }),
 }))
 
-vi.mock('@/lib/shipping-calculator', () => ({
+// Only the rate call is stubbed. `buildShippingItems` is pure mapping — the thing that turns
+// catalogue rows into parcel weights and dimensions — so the real one is kept, and a unit
+// mistake in it fails these tests rather than being mocked away.
+vi.mock('@/lib/shipping-calculator', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/shipping-calculator')>()),
   calculateShipping: vi.fn().mockResolvedValue({
     shippingCost: 7.99,
     shippingMethod: 'Standard Shipping',
     estimatedDelivery: '3-5 business days',
-    availableOptions: [
-      { method: 'Standard Shipping', cost: 7.99 },
-      { method: 'Express Shipping', cost: 19.99 },
-    ],
+    availableOptions: [{ method: 'Standard Shipping', cost: 7.99 }],
   }),
 }))
 

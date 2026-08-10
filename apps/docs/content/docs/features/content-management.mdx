@@ -1,0 +1,131 @@
+---
+title: Content Management
+description: Edit the website's pages, banners, announcements, FAQs, navigation, footer, redirects and per-page SEO from the admin.
+---
+
+The content management system lives at `/admin/content` and covers everything a
+visitor reads on the site. It requires the `content:read` permission to view and
+`content:write` to change anything.
+
+## The two kinds of page
+
+The CMS deliberately treats existing pages and new pages differently.
+
+**Site pages** are routes that already exist as hand-written React — the
+homepage, About, Our Story, the policy pages. The CMS does not own their layout.
+It owns the words, the images, the links, the order of their sections and
+whether each section is shown. This keeps pages that already work and convert
+free from the regression risk of a rewrite.
+
+**Landing pages** are built entirely in the admin, section by section, from the
+block registry. They render at their own URL (`/summer-sale`). Existing routes
+always take priority over a landing page slug, so a landing page can never
+shadow a real page.
+
+### Blank means "keep what's there"
+
+Every field a site page exposes falls back to the copy the component already
+ships with. A page nobody has edited renders exactly as it did before the CMS
+existed, and clearing a field restores the original wording rather than leaving
+a gap.
+
+For that reason site pages are **not** pre-filled with their current text. A
+page shows placeholders until someone types — two copies of the same words would
+drift apart, and the component is the one that renders.
+
+A site page also has to be **Published** before its overrides go live. While it
+is a draft the site keeps showing its built-in copy.
+
+## What you can manage
+
+| Area | Where | Notes |
+|---|---|---|
+| Pages & landing pages | `/admin/content/pages` | Section order, visibility, copy, images, per-page SEO |
+| Banners | `/admin/content/banners` | Image, copy and button, by placement |
+| Announcements | `/admin/content/announcements` | The bar above the navigation |
+| FAQs | `/admin/content/faqs` | Grouped into categories; shown at `/faq` and in any page's FAQ block |
+| Navigation | `/admin/content/navigation` | The header menu |
+| Footer | `/admin/content/footer` | Blurb, contact details, social links, and the link columns |
+| Reusable sections | `/admin/content/sections` | Content shared across several pages |
+| Redirects | `/admin/content/redirects` | Old URL → new URL |
+| Media library | `/admin/media` | Images, reused by every image field |
+| Blog | `/admin/blog` | The Heat Index |
+| SEO | `/admin/seo` | Site-wide templates and structured data |
+
+## Scheduling and status
+
+Banners, announcements, FAQs and pages share the same controls:
+
+- **Status** — Draft, Scheduled, Published or Archived. Only Published (or
+  Scheduled once its publish time has passed) is visible to visitors.
+- **Start / end** — an optional window. Leave blank to start immediately and run
+  until the status changes.
+- **Priority** — when several banners or announcements are live at once, the
+  highest priority wins.
+- **Limit to paths** — leave blank for the whole site, or list path prefixes
+  (`/products` also matches `/products/salsa-verde`).
+
+## Navigation and footer menus
+
+Both menus are two levels deep, which is what the designs support.
+
+- In the **header**, each top-level group becomes a dropdown and the links
+  inside it become its entries.
+- In the **footer**, each top-level group becomes a column heading and the links
+  inside it become that column's links.
+
+Leaving a menu empty keeps the site's built-in links, so you can configure one
+menu without having to rebuild the other.
+
+## Redirects
+
+Redirects are applied on every request by `proxy.ts`, so they take effect
+immediately without a deploy — unlike the redirects in `next.config.mjs`, which
+are fixed at build time.
+
+The source must be a root-relative path (`/old-page`); a trailing slash is
+ignored when matching, and the query string is carried over to the destination.
+Destinations may be internal paths or full external URLs. Permanent redirects
+are sent as `308` and temporary ones as `307`, which preserve the request
+method.
+
+The redirect table is fetched from an internal endpoint and cached for a minute
+rather than queried per request, so routing never opens a database connection.
+If it cannot be loaded, the request proceeds normally.
+
+## Per-page SEO
+
+Each page has an SEO tab for its meta title, description, social share image,
+canonical URL and a "hide from search engines" switch. Anything left blank falls
+back to the global templates in `/admin/seo`.
+
+## Blocks
+
+A block is one editable section type. The registry in `lib/cms/blocks.ts`
+describes each block once, and that single definition drives the admin form, the
+validation of what gets stored, and the public renderer.
+
+Available blocks include hero, video hero, rich text, image + text, product
+grid, FAQ, call to action, testimonials, Heat Index posts and newsletter signup.
+Some blocks are marked system-only — the homepage hero and the store locator
+wrap behaviour that only exists on specific routes, so they are not offered when
+composing a landing page.
+
+To add a new block, add a definition to the registry and a case to
+`components/cms/section-renderer.tsx`. To make another existing route editable,
+add it to `lib/cms/system-pages.ts` and read its fields in the page component.
+
+### Rich text
+
+Rich-text fields accept basic HTML formatting and are sanitised against an
+allowlist before rendering. Scripts, event handlers and `javascript:` links are
+stripped. Links to other pages on the site open in place; external links open in
+a new tab.
+
+## Known limits
+
+- Product grids show either featured products or one category. There is no
+  hand-picked product selector yet.
+- Menus are two levels deep.
+- There is no preview of unpublished changes; use Draft status and publish when
+  the wording is right.

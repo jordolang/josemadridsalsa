@@ -336,6 +336,7 @@ async function createOrderFromItems(
       shippingAddressId: shippingAddress.id,
       billingAddressId: billingAddress.id,
       status: firstItem.status as OrderStatus,
+      salesChannel: 'IMPORT',
       paymentStatus: firstItem.paymentStatus as PaymentStatus,
       paymentMethod: firstItem.paymentMethod,
       subtotal,

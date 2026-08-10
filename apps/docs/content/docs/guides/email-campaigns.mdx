@@ -178,6 +178,26 @@ await runCampaignSender(campaignId)
 </Tab>
 </Tabs>
 
+### Announcement and order-confirmation layouts
+
+Four standalone layouts ship as selectable templates. Their source HTML lives in
+`public/templates/` and is registered in `lib/email/templates/`:
+
+| Key | Category | Layout |
+| --- | --- | --- |
+| `announcement_newsletter` | MARKETING | Multi-story newsletter with stacked sections |
+| `announcement_single` | MARKETING | One headline, one call to action |
+| `order_confirmation_light` | TRANSACTIONAL | Itemized receipt, light background |
+| `order_confirmation_dark` | TRANSACTIONAL | Itemized receipt, dark background |
+
+The two order-confirmation layouts iterate `line_items` with `{{#each}}` and
+expect `subtotal`, `shipping_cost`, `tax`, and `total`. They are additional
+options — the transactional send path still uses the `order_confirmation`
+template.
+
+The two announcement layouts are also previewable and exportable from
+`/admin/email-templates`.
+
 ## Monitoring Campaign Progress
 
 Campaign progress is tracked via real-time events:
@@ -203,6 +223,26 @@ Unsubscribe links are processed at `/api/unsubscribe`.
 Always include an unsubscribe link in marketing emails. The platform tracks unsubscribe preferences per user to comply with CAN-SPAM requirements.
 </Callout>
 
+## Template Rendering
+
+Template bodies are rendered with [Handlebars](https://handlebarsjs.com) by
+`substituteVariables()` in `lib/email/render.ts`, shared by the send path and
+the admin preview so the two cannot drift.
+
+Alongside flat `{{variable}}` substitution, templates may use block helpers:
+
+```handlebars
+{{#each line_items}}
+  <tr><td>{{item_name}}</td><td>{{item_qty}}</td><td>{{item_line_total}}</td></tr>
+{{/each}}
+
+{{#if tracking_url}}<a href="{{tracking_url}}">Track your order</a>{{/if}}
+```
+
+Values are inserted **unescaped** (`noEscape`), because templates pass
+pre-rendered HTML through variables such as `{{orderItems}}`. A template that
+fails to compile falls back to flat substitution rather than failing the send.
+
 ## Seeding Email Templates
 
 Use the seed script to populate default templates:
@@ -210,3 +250,13 @@ Use the seed script to populate default templates:
 ```bash
 npm run db:seed:email-templates
 ```
+
+<Callout type="warn" title="Seeding overwrites stored template bodies">
+The seed upserts, so a blanket run replaces the subject and HTML of every
+template it defines — including any edited in the admin panel. Pass template
+keys to limit the run:
+
+```bash
+npm run db:seed:email-templates -- announcement_single order_confirmation_light
+```
+</Callout>

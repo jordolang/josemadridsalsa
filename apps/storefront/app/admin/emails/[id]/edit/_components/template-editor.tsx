@@ -26,19 +26,9 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-// Client-side variable substitution (can't import from sender.ts due to nodemailer)
-function substituteVariables(
-  template: string,
-  variables: Record<string, string>,
-): string {
-  let result = template
-  Object.keys(variables).forEach((key) => {
-    const value = variables[key] ?? ''
-    const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g')
-    result = result.replace(regex, String(value))
-  })
-  return result
-}
+// Imported from lib/email/render rather than sender.ts, which pulls in
+// nodemailer. Sharing the renderer keeps this preview identical to what sends.
+import { substituteVariables } from '@/lib/email/render'
 
 interface Template {
   id: string

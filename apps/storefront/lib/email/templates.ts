@@ -1,4 +1,6 @@
 import type { NewsletterBlock, NewsletterTemplate } from '@/types/email'
+import { announcementNewsletterTemplate } from './templates/announcement-newsletter'
+import { announcementSingleTemplate } from './templates/announcement-single'
 
 type BuildTemplateOptions = {
   heroTitle: string
@@ -287,6 +289,24 @@ export const newsletterTemplates: NewsletterTemplate[] = [
     ],
     tags: ['event', 'invitation'],
   }),
+  // Standalone announcement layouts. Their markup lives alongside the seeded
+  // template definitions so the gallery and the send path share one source.
+  {
+    id: 'announcement-newsletter',
+    name: announcementNewsletterTemplate.name,
+    subject: announcementNewsletterTemplate.subject,
+    description: announcementNewsletterTemplate.description,
+    tags: ['announcement', 'newsletter'],
+    html: announcementNewsletterTemplate.html,
+  },
+  {
+    id: 'announcement-single',
+    name: announcementSingleTemplate.name,
+    subject: announcementSingleTemplate.subject,
+    description: announcementSingleTemplate.description,
+    tags: ['announcement'],
+    html: announcementSingleTemplate.html,
+  },
 ]
 
 export const newsletterBlocks: NewsletterBlock[] = [

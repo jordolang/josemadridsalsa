@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { createChangeSnapshot, logAuditWithRequest } from '@/lib/audit'
 import prisma from '@/lib/prisma'
 
 const ParticipantStatusSchema = z.object({
@@ -44,6 +45,17 @@ export async function PATCH(
       where: { id: participantId },
       data: { status },
     })
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'update',
+        entityType: 'fundraiser_participant',
+        entityId: participantId,
+        changes: { status: { from: participant.status, to: status }, fundraiserId },
+      },
+      req
+    )
 
     return NextResponse.json(updated)
   } catch (error: unknown) {

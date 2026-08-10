@@ -15,6 +15,7 @@ import { FundraiserSidebar } from '@/components/fundraiser/fundraiser-sidebar'
 import { BattleArenaPanel } from '@/components/fundraiser/battle-arena-panel'
 import type { SupporterFeedItem } from '@/components/fundraiser/supporter-feed'
 import prisma from '@/lib/prisma'
+import { fundraiserUnitPrice } from '@/lib/fundraising/pricing'
 
 export const dynamic = 'force-dynamic'
 
@@ -145,7 +146,7 @@ export default async function FundraiserPage({ params }: PageProps) {
     name: fp.product.name,
     slug: fp.product.slug,
     description: fp.product.description,
-    price: fp.price ? Number(fp.price) : Number(fp.product.price),
+    price: fundraiserUnitPrice(fp.product.price, fp.price),
     compareAtPrice: fp.product.compareAtPrice ? Number(fp.product.compareAtPrice) : null,
     featuredImage: fp.product.featuredImage,
     heatLevel: fp.product.heatLevel as string,

@@ -1,18 +1,49 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { POST } from '@/app/api/checkout/calculate-tax/route'
+import { prisma } from '@/lib/prisma'
 
 // Mock dependencies
 vi.mock('@/lib/tax-calculator', () => ({
   calculateTax: vi.fn(),
 }))
 
-vi.mock('@/lib/shipping-calculator', () => ({
+// Only the rate call is stubbed. `buildShippingItems` is pure mapping — the thing that turns
+// catalogue rows into parcel weights and dimensions — so the real one is kept, and a unit
+// mistake in it fails these tests rather than being mocked away.
+vi.mock('@/lib/shipping-calculator', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/shipping-calculator')>()),
   calculateShipping: vi.fn(),
+}))
+
+// The route reads parcel weight and dimensions from the catalogue rather than the request. It used
+// to accept a client-supplied `weight`, which our own checkout never sent and which would have let
+// a caller understate the parcel to quote itself cheaper shipping.
+vi.mock('@/lib/prisma', () => ({
+  prisma: {
+    product: { findMany: vi.fn() },
+  },
 }))
 
 describe('Checkout Tax Calculation API Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default catalogue: one 1.5oz product, matching `validTaxRequest`.
+    vi.mocked(prisma.product.findMany).mockResolvedValue([
+      {
+        id: 'clxxx1234567890abc',
+        weight: 1.5,
+        lengthInches: null,
+        widthInches: null,
+        heightInches: null,
+      },
+      {
+        id: 'clxxx0987654321xyz',
+        weight: 2.0,
+        lengthInches: null,
+        widthInches: null,
+        heightInches: null,
+      },
+    ] as never)
   })
 
   const validTaxRequest = {
@@ -102,7 +133,7 @@ describe('Checkout Tax Calculation API Integration Tests', () => {
       expect(calculateShipping).toHaveBeenCalledWith({
         items: [
           {
-            weight: 1.5,
+            weightOz: 1.5,
             quantity: 2,
           },
         ],
@@ -166,8 +197,8 @@ describe('Checkout Tax Calculation API Integration Tests', () => {
       // Verify shipping was calculated with combined weights
       expect(calculateShipping).toHaveBeenCalledWith({
         items: [
-          { weight: 1.5, quantity: 2 },
-          { weight: 2.0, quantity: 1 },
+          { weightOz: 1.5, quantity: 2 },
+          { weightOz: 2.0, quantity: 1 },
         ],
         shippingAddress: expect.any(Object),
         subtotal: 30.97,
@@ -184,11 +215,22 @@ describe('Checkout Tax Calculation API Integration Tests', () => {
             productId: 'clxxx1234567890abc',
             quantity: 2,
             price: 8.99,
-            // weight not provided
           },
         ],
         shippingAddress: validTaxRequest.shippingAddress,
       }
+
+      // The weight is absent from the *catalogue* now, not from the request — the route stopped
+      // accepting a client-supplied one. A null column is what makes the default apply.
+      vi.mocked(prisma.product.findMany).mockResolvedValue([
+        {
+          id: 'clxxx1234567890abc',
+          weight: null,
+          lengthInches: null,
+          widthInches: null,
+          heightInches: null,
+        },
+      ] as never)
 
       vi.mocked(calculateTax).mockResolvedValue(mockTaxResult)
       vi.mocked(calculateShipping).mockReturnValue(mockShippingResult)
@@ -208,7 +250,7 @@ describe('Checkout Tax Calculation API Integration Tests', () => {
       expect(calculateShipping).toHaveBeenCalledWith({
         items: [
           {
-            weight: 1.0, // Default weight
+            weightOz: undefined, // no catalogue weight; the calculator applies the documented default
             quantity: 2,
           },
         ],

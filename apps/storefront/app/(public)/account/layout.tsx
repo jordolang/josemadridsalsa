@@ -41,6 +41,9 @@ export default async function AccountLayout({ children }: Props) {
             {isStaff && (
               <>
                 <Separator className="my-2" />
+                <Link href="/account/timeclock" className="text-sm hover:underline font-medium">
+                  Timeclock
+                </Link>
                 <Link href="/admin" className="text-sm hover:underline font-medium text-blue-600">
                   Admin Panel
                 </Link>

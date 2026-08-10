@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { logAuditWithRequest } from '@/lib/audit'
 
 export async function POST(
   request: NextRequest,
@@ -30,6 +31,17 @@ export async function POST(
         trackClicks: original.trackClicks,
       },
     })
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'create',
+        entityType: 'email_campaign',
+        entityId: duplicate.id,
+        changes: { duplicatedFrom: id, name: duplicate.name },
+      },
+      request
+    )
 
     return NextResponse.json({ success: true, campaignId: duplicate.id })
   } catch {

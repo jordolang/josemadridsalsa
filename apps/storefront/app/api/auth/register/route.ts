@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
 import { sendWelcomeEmail } from '@/lib/email/automation'
 import { logEngagementRequest } from '@/lib/engagements'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -50,6 +51,17 @@ export async function POST(request: Request) {
         password: hashedPassword,
         role: 'CUSTOMER',
       },
+    })
+
+    // The customer identity here is the `User` row: `Customer` is a CRM rollup keyed by
+    // email that may not exist yet for a brand-new account, so the payload carries the
+    // email for a consumer that needs to resolve one.
+    await emitDomainEvent({
+      type: 'customer.created',
+      entityType: 'customer',
+      entityId: user.id,
+      actorUserId: user.id,
+      payload: { email: normalizedEmail, name, via: 'password-registration' },
     })
 
     await Promise.allSettled([

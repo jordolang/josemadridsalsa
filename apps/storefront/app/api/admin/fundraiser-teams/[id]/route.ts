@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma as db } from '@/lib/prisma'
 import { requireAdminSession } from '@/lib/admin-auth'
+import { logAuditWithRequest } from '@/lib/audit'
 
 const updateSchema = z.object({
   logoUrl: z.string().url().max(500).nullable().optional(),
@@ -16,8 +17,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  let admin: Awaited<ReturnType<typeof requireAdminSession>>
   try {
-    await requireAdminSession()
+    admin = await requireAdminSession()
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -63,6 +65,18 @@ export async function PATCH(
         storyHtml: true,
       },
     })
+
+    await logAuditWithRequest(
+      {
+        userId: admin.id,
+        action: 'update',
+        entityType: 'fundraiser_team',
+        entityId: id,
+        changes: { fields: Object.keys(data) },
+      },
+      req,
+    )
+
     return NextResponse.json({ team })
   } catch (err: unknown) {
     if (

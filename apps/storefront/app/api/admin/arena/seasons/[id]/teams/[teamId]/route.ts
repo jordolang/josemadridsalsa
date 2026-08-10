@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma as db } from '@/lib/prisma'
 import { requireAdminSession } from '@/lib/admin-auth'
+import { logAuditWithRequest } from '@/lib/audit'
 
 /**
  * DELETE /api/admin/arena/seasons/[id]/teams/[teamId]
@@ -15,7 +16,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string; teamId: string }> },
 ) {
-  await requireAdminSession()
+  const admin = await requireAdminSession()
   const { id: seasonId, teamId } = await params
 
   const team = await db.fundraiserTeam.findUnique({
@@ -39,5 +40,16 @@ export async function DELETE(
     where: { id: team.id },
     data: { seasonId: null },
   })
+  await logAuditWithRequest(
+    {
+      userId: admin.id,
+      action: 'update',
+      entityType: 'fundraiser_team',
+      entityId: team.id,
+      changes: { seasonId: { from: seasonId, to: null } },
+    },
+    _req,
+  )
+
   return NextResponse.json({ success: true, teamId: team.id })
 }

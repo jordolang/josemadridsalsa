@@ -6,7 +6,9 @@ import { usePathname } from 'next/navigation'
 import {
   Activity,
   BarChart3,
+  Bell,
   Building2,
+  Archive,
   CalendarDays,
   ChefHat,
   ChevronRight,
@@ -27,6 +29,7 @@ import {
   ShoppingCart,
   Terminal,
   TrendingUp,
+  Undo2,
   Users,
 } from 'lucide-react'
 
@@ -56,6 +59,8 @@ import type { NavItem } from '@/lib/permissions-map'
 
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard,
+  Bell,
+  Archive,
   ShoppingCart,
   Package,
   Users,
@@ -73,6 +78,7 @@ const iconMap: Record<string, LucideIcon> = {
   Settings,
   Gift,
   TrendingUp,
+  Undo2,
   Lock,
   Mail,
   Terminal,

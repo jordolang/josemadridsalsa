@@ -370,82 +370,6 @@ export async function sendCampaignLaunchEmail(options: {
   })
 }
 
-interface CartItemData {
-  id: string
-  name: string
-  slug: string
-  price: number
-  image: string
-  quantity: number
-  sku: string
-  heatLevel: string
-}
-
-export async function sendAbandonedCartEmail(options: {
-  email: string
-  name?: string | null
-  cartItems: CartItemData[]
-  totalPrice: number
-  recoveryToken: string
-}) {
-  const name = options.name || 'there'
-  const recoveryUrl = `${defaultAppUrl}/checkout?recover=${options.recoveryToken}`
-  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
-
-  const emailContent = React.createElement(
-    EmailLayout,
-    { previewText: "Don't forget your salsa!" },
-    React.createElement(EmailHeader, null),
-    React.createElement(
-      Section,
-      { style: { padding: '0', margin: '24px 0' } },
-      React.createElement(
-        Text,
-        { style: { margin: '0 0 24px', fontSize: '24px', fontWeight: '700', color: '#dc2626', fontFamily: 'Arial, sans-serif', lineHeight: '1.3' } },
-        "Don't forget your salsa!"
-      ),
-      React.createElement(
-        Text,
-        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
-        `Hi ${name},`
-      ),
-      React.createElement(
-        Text,
-        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
-        "You left some delicious items in your cart. We've saved them for you!"
-      ),
-      React.createElement(
-        Text,
-        { style: { margin: '16px 0', fontSize: '16px', fontWeight: '600', color: '#1f2937', fontFamily: 'Arial, sans-serif' } },
-        `Total: $${options.totalPrice.toFixed(2)}`
-      ),
-      React.createElement(
-        Text,
-        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
-        'Special offer: Use code COMEBACK10 at checkout to save 10% on your order!'
-      )
-    ),
-    React.createElement(
-      Section,
-      { style: { padding: '24px 0', textAlign: 'center' as const } },
-      React.createElement(Button, {
-        href: recoveryUrl,
-        variant: 'primary',
-        size: 'medium',
-      }, 'Complete Your Order')
-    ),
-    React.createElement(EmailFooter, { unsubscribeUrl })
-  )
-
-  return sendEmail({
-    to: options.email,
-    subject: 'You left something behind! Complete your order now',
-    react: emailContent,
-    replyTo: 'mike@josemadridsalsa.com',
-    type: 'abandoned-cart',
-  })
-}
-
 export async function sendParticipantWelcomeEmail(options: {
   email: string
   participantName: string
@@ -547,9 +471,10 @@ export async function sendCampaignSummaryEmail(fundraiserId: string) {
     (sum: number, order: { total: import('@prisma/client').Prisma.Decimal }) => sum + Number(order.total),
     0
   )
-  // Use commissionRate as profit margin proxy
+  // The group's share. Reported as commission, not as "raised" — a goal on this site is
+  // measured in sales, so calling the commission "raised" named it the other figure.
   const commissionRate = Number(fundraiser.commissionRate ?? 0)
-  const totalRaised = totalRevenue * (commissionRate / 100)
+  const commissionEarned = totalRevenue * (commissionRate / 100)
 
   const participantSales = new Map<string, { name: string; sales: number }>()
   fundraiser.participants.forEach((participant: { id: string; name: string }) => {
@@ -578,7 +503,7 @@ export async function sendCampaignSummaryEmail(fundraiserId: string) {
     organizationName: fundraiser.organizationName,
     totalOrders,
     totalRevenue: `$${totalRevenue.toFixed(2)}`,
-    totalRaised: `$${totalRaised.toFixed(2)}`,
+    commissionEarned: `$${commissionEarned.toFixed(2)}`,
     participantCount: fundraiser.participants.length,
     topParticipants,
     campaignUrl,

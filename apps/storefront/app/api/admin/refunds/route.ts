@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
-import { getProvider } from '@/lib/payments'
-import type { PaymentProvider } from '@/lib/payments/types'
+import { logAuditWithRequest } from '@/lib/audit'
+import { refundPaymentInTx } from '@/lib/payments/refund'
 
 const RefundRequestSchema = z.object({
   paymentId: z.string().min(1, 'Payment ID is required'),
@@ -13,7 +13,7 @@ const RefundRequestSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    await requirePermission('orders:write')
+    const actor = await requirePermission('orders:write')
 
     const json = await request.json()
     const parsed = RefundRequestSchema.safeParse(json)
@@ -28,95 +28,29 @@ export async function POST(request: Request) {
     const { paymentId, amount, reason } = parsed.data
 
     // Wrap refund amount computation, provider call, and payment update in a single
-    // transaction to prevent double-refund race conditions.
-    const result = await prisma.$transaction(async (tx) => {
-      // Re-fetch payment with refunds inside transaction for consistent state
-      const payment = await tx.payment.findUnique({
-        where: { id: paymentId },
-        include: { refunds: true },
-      })
+    // transaction to prevent double-refund race conditions. The body lives in
+    // `lib/payments/refund.ts` so return completion refunds through the same code.
+    const result = await prisma.$transaction(async (tx) =>
+      refundPaymentInTx(tx, { paymentId, amountCents: amount, reason })
+    )
 
-      if (!payment) throw Object.assign(new Error('Payment not found'), { code: 'NOT_FOUND' })
-
-      if (payment.status !== 'SUCCEEDED') {
-        throw Object.assign(new Error('Can only refund successful payments'), { code: 'NOT_SUCCEEDED' })
-      }
-
-      // Resolve the provider payment ID based on which provider processed the payment
-      const provider = (payment.provider || 'STRIPE') as PaymentProvider
-      const providerPaymentId =
-        payment.providerPaymentId ||
-        payment.stripePaymentIntentId ||
-        payment.squarePaymentId ||
-        payment.paypalCaptureId
-
-      if (!providerPaymentId) {
-        throw Object.assign(new Error('No provider payment ID found for this payment'), { code: 'NO_PROVIDER_ID' })
-      }
-
-      // Calculate refundable amount within the transaction
-      const totalRefunded = payment.refunds.reduce((sum, refund) => {
-        if (refund.status === 'SUCCEEDED') {
-          return sum + refund.amount
-        }
-        return sum
-      }, 0)
-
-      const refundableAmount = payment.amount - totalRefunded
-      const refundAmount = amount || refundableAmount
-
-      if (refundAmount > refundableAmount) {
-        throw Object.assign(
-          new Error(`Cannot refund ${refundAmount} cents. Only ${refundableAmount} cents available for refund.`),
-          { code: 'EXCEEDS_REFUNDABLE' }
-        )
-      }
-
-      if (refundAmount <= 0) {
-        throw Object.assign(new Error('Refund amount must be greater than 0'), { code: 'INVALID_AMOUNT' })
-      }
-
-      // Process refund through the appropriate provider adapter
-      const adapter = getProvider(provider)
-      const refundResult = await adapter.refund({
-        providerPaymentId,
-        amount: refundAmount,
-        reason,
-      })
-
-      if (!refundResult.success) {
-        throw Object.assign(
-          new Error(refundResult.error || 'Refund failed at payment provider'),
-          { code: 'PROVIDER_ERROR' }
-        )
-      }
-
-      // Create refund record in database
-      const refund = await tx.refund.create({
-        data: {
-          stripeRefundId: provider === 'STRIPE' ? (refundResult.providerRefundId ?? '') : '',
-          amount: refundAmount,
-          reason: reason || undefined,
-          status: refundResult.status,
-          paymentId: payment.id,
-          processedAt: refundResult.status === 'SUCCEEDED' ? new Date() : null,
+    // Logged after the transaction commits, so a rolled-back refund leaves no audit entry
+    // claiming money moved. Amounts are in cents, matching the Refund record.
+    await logAuditWithRequest(
+      {
+        userId: actor.id,
+        action: 'refund',
+        entityType: 'payment',
+        entityId: paymentId,
+        changes: {
+          refundId: result.id,
+          amount: result.amount,
+          status: result.status,
+          reason: reason ?? null,
         },
-      })
-
-      // Update payment status when refund succeeds
-      if (refundResult.status === 'SUCCEEDED') {
-        const newTotalRefunded = totalRefunded + refundAmount
-        const newPaymentStatus =
-          newTotalRefunded >= payment.amount ? 'REFUNDED' : 'PARTIALLY_REFUNDED'
-
-        await tx.payment.update({
-          where: { id: payment.id },
-          data: { status: newPaymentStatus },
-        })
-      }
-
-      return refund
-    })
+      },
+      request
+    )
 
     return NextResponse.json({
       refundId: result.id,

@@ -8,6 +8,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { logAuditWithRequest } from '@/lib/audit'
 import { requirePermission } from '@/lib/rbac'
 import { parseFindUsMarkdown, readFindUsMarkdownAbsolute } from '@/lib/find-us-parser'
 import { findPlaceByNameAddress, getBestPhotoUrlForPlace } from '@/lib/google-places'
@@ -18,8 +19,9 @@ export const maxDuration = 300
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export async function POST(req: NextRequest) {
+  let actor: Awaited<ReturnType<typeof requirePermission>>
   try {
-    await requirePermission('content:write')
+    actor = await requirePermission('content:write')
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -139,6 +141,16 @@ export async function POST(req: NextRequest) {
       results.push({ name: loc.businessName, city: loc.city, state: loc.state, status: `error: ${e.message?.slice(0, 80)}`, geo: false, photo: false })
     }
   }
+
+  await logAuditWithRequest(
+    {
+      userId: actor.id,
+      action: 'import',
+      entityType: 'retail_location',
+      changes: { total: locations.length, imported, geocoded, photosFound: photos, failed, dryRun },
+    },
+    req
+  )
 
   return NextResponse.json({
     total: locations.length,

@@ -199,6 +199,7 @@ npm run test && npm run lint && npm run type-check && npm run build
 | `npm run test` / `test:e2e` | Vitest suite (Turbo) / Playwright |
 | `npm run db:migrate` / `db:generate` / `db:seed` | Migrate / regenerate client / seed |
 | `npm run db:studio` / `db:reset` | Prisma Studio / drop & recreate (destructive) |
+| `npm run version:feature` / `version:increment` / `version:major` | Cut a release — see Part 15 |
 
 The storefront workspace has many operational scripts (`npm run <name> --workspace @jose-madrid/storefront`): seeds (`db:seed:permissions|recipes|nutrition|email-templates|fundraiser`), `create-admin` / `create-developer`, `credentials:grant-access`, location tooling (`locations:import|geocode|photos`), `products:import`/`transform`, `email:mass-send`, `security:scan`/`baseline`, and production DB helpers (`db:production:*`). Prefer these over ad-hoc scripts.
 
@@ -237,6 +238,8 @@ The storefront workspace has many operational scripts (`npm run <name> --workspa
 ## Part 15 — Commit & Pull Request Guidelines
 
 Commit format — `<Prefix>: <imperative summary>`; accepted prefixes: `Add`, `Fix`, `Refactor`, `Chore`, `Docs`, `Test`, `Remove`. One logical change per commit; reference issues (`Fix: broken checkout (#123)`); no WIP commits; no secrets in messages or diffs.
+
+**Versioning.** The project version is `MAJOR.MINOR` with an optional letter — a large feature bumps the minor (`2.0` → `2.1`), everything smaller takes a letter (`2.1` → `2.1a`), and `2.x` → `3.0` happens **only when explicitly asked**. Cut a release with `npm run version:feature` / `version:increment`, which bumps every workspace and closes off the `[Unreleased]` changelog section. `projectVersion` in the root `package.json` is canonical; `version` is the derived SemVer npm needs. Full rule: `apps/docs/content/docs/guides/versioning.mdx`. Do not hand-edit version numbers.
 
 Every PR includes: a summary of what/why, linked issue if any, the verification checklist (tests ✓ lint ✓ types ✓), screenshots/Loom for UI changes, and a note on any schema or env-var changes. Squash-merge into `main`; delete the branch after merge.
 

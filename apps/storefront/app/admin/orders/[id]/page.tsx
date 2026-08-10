@@ -34,6 +34,9 @@ import { getStripe } from '@/lib/stripe'
 import { Decimal } from '@prisma/client/runtime/library'
 import type { PaymentStatus } from '@prisma/client'
 import { isPaid } from '@/lib/payments/status'
+import { buildOrderTimeline } from '@/lib/orders/order-timeline'
+import { OrderTimeline } from '@/components/admin/OrderTimeline'
+import { FulfillItemsDialog } from '@/components/admin/FulfillItemsDialog'
 
 async function getOrder(id: string) {
   const order = await prisma.order.findUnique({
@@ -47,10 +50,43 @@ async function getOrder(id: string) {
       },
       shippingAddress: true,
       billingAddress: true,
+      payments: {
+        include: { refunds: true },
+        orderBy: { createdAt: 'asc' },
+      },
     },
   })
 
   return order
+}
+
+/**
+ * Build the order's activity history. Recorded domain events are merged with the timestamps
+ * already stored on the order, so orders placed before the event log still show a history
+ * rather than an empty card.
+ */
+async function getOrderTimeline(order: {
+  id: string
+  createdAt: Date
+  shippedAt: Date | null
+  deliveredAt: Date | null
+  confirmationEmailSentAt: Date | null
+  invoiceSentAt: Date | null
+  printedInvoiceAt: Date | null
+  printedPackingSlipAt: Date | null
+  payments: { paidAt: Date | null; amount: number; provider: string | null; refunds: { processedAt: Date | null; createdAt: Date; amount: number; provider: string | null }[] }[]
+}) {
+  const events = await prisma.domainEvent.findMany({
+    where: { entityType: 'order', entityId: order.id },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  return buildOrderTimeline({
+    order,
+    payments: order.payments,
+    refunds: order.payments.flatMap((p) => p.refunds),
+    events,
+  })
 }
 
 async function getRefundableAmount(order: {
@@ -129,6 +165,7 @@ export default async function OrderDetailPage({
   }
 
   const canWrite = await hasPermission(user, 'orders:write')
+  const timeline = await getOrderTimeline(order)
 
   // Calculate actual refundable amount
   const refundableAmount = await getRefundableAmount({
@@ -200,6 +237,7 @@ export default async function OrderDetailPage({
       productSku: item.productSku,
       productImage: item.productImage,
       quantity: item.quantity,
+      quantityFulfilled: item.quantityFulfilled,
       unitPrice: Number(item.unitPrice),
       totalPrice: Number(item.totalPrice),
     })),
@@ -213,6 +251,7 @@ export default async function OrderDetailPage({
       order={mobileOrder}
       actionContext={actionContext}
       canWrite={canWrite}
+      timeline={timeline}
     />
     <div className="hidden md:block space-y-6">
       {/* Header */}
@@ -251,10 +290,26 @@ export default async function OrderDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Content */}
         <div className="space-y-6 lg:col-span-2">
+          <OrderTimeline entries={timeline} />
+
           {/* Order Items */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle>Order Items</CardTitle>
+              {canWrite &&
+                order.status !== 'CANCELLED' &&
+                order.status !== 'REFUNDED' && (
+                  <FulfillItemsDialog
+                    orderId={order.id}
+                    items={order.items.map((item) => ({
+                      id: item.id,
+                      productName: item.productName,
+                      productSku: item.productSku,
+                      quantity: item.quantity,
+                      quantityFulfilled: item.quantityFulfilled,
+                    }))}
+                  />
+                )}
             </CardHeader>
             <CardContent className="space-y-4">
               {order.items.map((item) => (
@@ -278,6 +333,11 @@ export default async function OrderDetailPage({
                     <p className="text-sm text-muted-foreground">
                       Quantity: {item.quantity} × $
                       {Number(item.unitPrice).toFixed(2)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.quantityFulfilled >= item.quantity
+                        ? 'Fulfilled'
+                        : `${item.quantityFulfilled} of ${item.quantity} fulfilled`}
                     </p>
                   </div>
                   <div className="text-right">

@@ -113,6 +113,10 @@ describe('Checkout Complete API Integration Tests', () => {
   const buildTx = () => ({
     order: {
       update: vi.fn().mockResolvedValue({ ...mockOrder, paymentStatus: 'PAID', status: 'CONFIRMED' }),
+      // The commission credit re-reads the order inside the transaction and claims it with a
+      // conditional update. This one carries no participant, so it short-circuits.
+      findUnique: vi.fn().mockResolvedValue({ ...mockOrder, commissionCreditedAt: null }),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     abandonedCart: {
       update: vi.fn().mockResolvedValue({ count: 1 }),

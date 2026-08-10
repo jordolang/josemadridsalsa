@@ -76,7 +76,8 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
       startDate: fundraiser?.startDate ? new Date(fundraiser.startDate).toISOString().split('T')[0] : '',
       endDate: fundraiser?.endDate ? new Date(fundraiser.endDate).toISOString().split('T')[0] : '',
       goal: fundraiser?.goal?.toString() || '',
-      commissionRate: fundraiser?.commissionRate.toString() || '20',
+      // Standard terms: a $10 jar splits $5 to the group and $5 to us. Editable per fundraiser.
+      commissionRate: fundraiser?.commissionRate.toString() || '50',
       status: fundraiser?.status || 'DRAFT',
       isActive: fundraiser?.isActive ?? false,
       subdomain: fundraiser?.subdomain || '',
