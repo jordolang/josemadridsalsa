@@ -133,7 +133,7 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 37 | Shipping label purchase | **MANUAL — by design** | `admin/orders/[id]/shipping-label` POST is operator-driven. See *Money gate* below. |
 | 38 | Tracking webhook → order status | VERIFIED | `lib/tracking/webhook-handlers.ts` |
 | 39 | Label purchase → `shipment.created` | WIRED | `shipping-label/route:194` |
-| 40 | QuickBooks paid-order sync | WIRED | `cron/quickbooks-sync` (hourly, off the checkout path by design) |
+| 40 | QuickBooks paid-order sync | **VERIFIED** | `tests/lib/quickbooks-sync.test.ts` (21 cases); hourly, off the checkout path by design |
 | 41 | QuickBooks refund sync | **VERIFIED** | same |
 | 42 | Processor fee capture | **VERIFIED** | `tests/lib/payments/processor-fees.test.ts` |
 | 43 | `dashboard-analysis` cron | **REMOVED** ✅ | Phase 4 — unreferenced, unscheduled, unauthenticated; deleted with sign-off |
