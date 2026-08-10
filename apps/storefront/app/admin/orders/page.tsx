@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Download, Plus } from 'lucide-react'
+import { Download, Plus, Ship } from 'lucide-react'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
@@ -135,6 +135,12 @@ export default async function OrdersPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/admin/shipping">
+              <Ship className="mr-2 size-4" />
+              Ship Orders
+            </Link>
+          </Button>
           {canExport && (
             <Button variant="outline" asChild>
               <a href={exportHref}>
