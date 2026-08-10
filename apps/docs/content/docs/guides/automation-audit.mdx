@@ -49,6 +49,26 @@ resurrects the entire marketing-automation product and fixes the structural caus
    `20260807190000_notification_centre`. This mattered because `emitDomainEvent` swallows every error
    by design — a missing table would have been silently invisible.
 
+## State in production
+
+Merged and deployed **2026-08-10** (`f297f02a`). All seven migrations were applied to the production
+database ahead of the deploy and verified by querying it directly; the five new columns are present,
+`email_webhooks` is gone, and no migration is unfinished. The site returns 200, and an
+unauthenticated `GET` to a cron route returns **401** — the fail-open guard fix, confirmed on the
+deployed system rather than asserted.
+
+One honest limit on all of this. **Production has taken 8 orders in its entire history, the most
+recent on 2026-05-12.** The real business still runs on the legacy BigCommerce storefront while this
+platform is built toward cutover. So `domain_events` in production is empty, and will stay empty until
+a real order arrives — which is correct, not broken: no payment, no fact, no event.
+
+That means every automation here is **deployed and armed, not observed working in production**. The
+confidence behind the percentages below comes from 1618 passing tests, from exercising the drain and
+the lifecycle sweep against the dev database, and from black-box probes of the deployed routes. It
+does not come from watching a live order flow through, because there has not been one. Stating that
+plainly matters more than a cleaner-sounding claim: the first real order after cutover is the true
+test, and the thing to watch is whether `domain_events` starts filling and draining.
+
 ## Rubric
 
 Five states, not two. "Built" and "works" are different questions, and the gap between them is the report.
