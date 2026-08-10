@@ -3,9 +3,7 @@ import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
-import { getProvider } from '@/lib/payments'
-import type { PaymentProvider } from '@/lib/payments/types'
-import { reverseFundraiserCommission } from '@/lib/fundraising/reverse-commission'
+import { refundPaymentInTx } from '@/lib/payments/refund'
 
 const RefundRequestSchema = z.object({
   paymentId: z.string().min(1, 'Payment ID is required'),
@@ -30,116 +28,11 @@ export async function POST(request: Request) {
     const { paymentId, amount, reason } = parsed.data
 
     // Wrap refund amount computation, provider call, and payment update in a single
-    // transaction to prevent double-refund race conditions.
-    const result = await prisma.$transaction(async (tx) => {
-      // Re-fetch payment with refunds inside transaction for consistent state
-      const payment = await tx.payment.findUnique({
-        where: { id: paymentId },
-        include: { refunds: true },
-      })
-
-      if (!payment) throw Object.assign(new Error('Payment not found'), { code: 'NOT_FOUND' })
-
-      if (payment.status !== 'SUCCEEDED') {
-        throw Object.assign(new Error('Can only refund successful payments'), { code: 'NOT_SUCCEEDED' })
-      }
-
-      // Resolve the provider payment ID based on which provider processed the payment
-      const provider = (payment.provider || 'STRIPE') as PaymentProvider
-      const providerPaymentId =
-        payment.providerPaymentId ||
-        payment.stripePaymentIntentId ||
-        payment.squarePaymentId ||
-        payment.paypalCaptureId
-
-      if (!providerPaymentId) {
-        throw Object.assign(new Error('No provider payment ID found for this payment'), { code: 'NO_PROVIDER_ID' })
-      }
-
-      // Calculate refundable amount within the transaction
-      const totalRefunded = payment.refunds.reduce((sum, refund) => {
-        if (refund.status === 'SUCCEEDED') {
-          return sum + refund.amount
-        }
-        return sum
-      }, 0)
-
-      const refundableAmount = payment.amount - totalRefunded
-      const refundAmount = amount || refundableAmount
-
-      if (refundAmount > refundableAmount) {
-        throw Object.assign(
-          new Error(`Cannot refund ${refundAmount} cents. Only ${refundableAmount} cents available for refund.`),
-          { code: 'EXCEEDS_REFUNDABLE' }
-        )
-      }
-
-      if (refundAmount <= 0) {
-        throw Object.assign(new Error('Refund amount must be greater than 0'), { code: 'INVALID_AMOUNT' })
-      }
-
-      // Process refund through the appropriate provider adapter
-      const adapter = getProvider(provider)
-      const refundResult = await adapter.refund({
-        providerPaymentId,
-        amount: refundAmount,
-        reason,
-      })
-
-      if (!refundResult.success) {
-        throw Object.assign(
-          new Error(refundResult.error || 'Refund failed at payment provider'),
-          { code: 'PROVIDER_ERROR' }
-        )
-      }
-
-      // Create refund record in database
-      // stripeRefundId is provider-agnostic despite the name (see Refund.provider), and it
-      // is UNIQUE — the previous `provider === 'STRIPE' ? id : ''` wrote an empty string for
-      // every PayPal and Square refund, so the second non-Stripe refund ever taken would hit
-      // the unique constraint and roll the whole refund back. Store the real provider ID.
-      if (!refundResult.providerRefundId) {
-        // Fail rather than synthesise an ID. A fabricated identifier in a financial table
-        // can never be reconciled against the processor, which is worse than a refund that
-        // visibly failed to record — the money moved, so this needs a human to look at it.
-        throw Object.assign(
-          new Error(
-            `${provider} reported a ${refundResult.status} refund with no refund ID; refund not recorded`
-          ),
-          { code: 'PROVIDER_ERROR' }
-        )
-      }
-
-      const refund = await tx.refund.create({
-        data: {
-          stripeRefundId: refundResult.providerRefundId,
-          provider,
-          amount: refundAmount,
-          reason: reason || undefined,
-          status: refundResult.status,
-          paymentId: payment.id,
-          processedAt: refundResult.status === 'SUCCEEDED' ? new Date() : null,
-        },
-      })
-
-      // Update payment status when refund succeeds
-      if (refundResult.status === 'SUCCEEDED') {
-        // Take the fundraising group's share back out. Only on a succeeded refund — a pending
-        // one has not returned any money yet, and the webhook will reverse it when it lands.
-        await reverseFundraiserCommission(tx, refund.id)
-
-        const newTotalRefunded = totalRefunded + refundAmount
-        const newPaymentStatus =
-          newTotalRefunded >= payment.amount ? 'REFUNDED' : 'PARTIALLY_REFUNDED'
-
-        await tx.payment.update({
-          where: { id: payment.id },
-          data: { status: newPaymentStatus },
-        })
-      }
-
-      return refund
-    })
+    // transaction to prevent double-refund race conditions. The body lives in
+    // `lib/payments/refund.ts` so return completion refunds through the same code.
+    const result = await prisma.$transaction(async (tx) =>
+      refundPaymentInTx(tx, { paymentId, amountCents: amount, reason })
+    )
 
     // Logged after the transaction commits, so a rolled-back refund leaves no audit entry
     // claiming money moved. Amounts are in cents, matching the Refund record.

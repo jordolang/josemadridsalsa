@@ -568,6 +568,13 @@ model Order {
   deliveredAt              DateTime?
   confirmationEmailSentAt  DateTime?
   reviewRequestSentAt      DateTime?
+  /// When the customer was told their refund went through. Null means not yet told.
+  ///
+  /// Two things send this email — the admin status change, and the consumer that reacts to a
+  /// refund actually settling at the processor — and they are reached by different admin
+  /// actions on the same order. Without a shared marker a customer can be emailed twice about
+  /// the same money, which reads as two refunds.
+  refundEmailSentAt        DateTime?
   /// Set once, by whichever path marks the order paid first. The claim on this column is what
   /// stops the same sale being credited twice when a webhook and a completion route race.
   commissionCreditedAt     DateTime?
@@ -600,6 +607,16 @@ model Order {
   shippingLabels           ShippingLabel[]
   fulfillments             Fulfillment[]
   returnRequests           ReturnRequest[]
+
+  /// Set when this order is a replacement raised by an exchange rather than a sale.
+  ///
+  /// **Non-null means "not a sale".** A replacement is a fulfillment obligation the customer
+  /// has already paid for on the original order, so its total is zero while its items still
+  /// carry a real `unitCost`. Left in the sales population it would report as revenue 0 against
+  /// cost > 0 — a loss on every exchange, blended into product and channel margin. Every
+  /// revenue report therefore filters `exchangeForReturnId: null`.
+  exchangeForReturnId      String?                @unique
+  exchangeForReturn        ReturnRequest?         @relation("ExchangeForReturn", fields: [exchangeForReturnId], references: [id])
 
   @@index([userId])
   @@index([participantId])
@@ -660,9 +677,12 @@ model ReturnRequest {
   adminNote     String?
   /// Withheld from the refund. Stored per-request because it is a judgement call.
   restockingFee Decimal?            @db.Decimal(10, 2)
-  /// Set once money is actually sent back, linking to the refund the existing admin refund
-  /// path created — returns never call the payment provider themselves.
+  /// The refund this return produced, set when it is completed with a REFUND resolution.
   refundId      String?             @unique
+  /// Store credit issued instead of a refund, set when completed with STORE_CREDIT. Exactly
+  /// one of `refundId` / `giftCertificateId` / `exchangeOrder` is ever populated — see
+  /// `lib/orders/return-resolution.ts`.
+  giftCertificateId String?         @unique
   requestedById String?
   approvedById  String?
   approvedAt    DateTime?
@@ -670,8 +690,14 @@ model ReturnRequest {
   completedAt   DateTime?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
+
+
   order         Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   refund        Refund?             @relation(fields: [refundId], references: [id])
+  giftCertificate GiftCertificate?  @relation(fields: [giftCertificateId], references: [id])
+  /// The replacement order raised for an EXCHANGE resolution. The foreign key lives on `Order`
+  /// so revenue reports can exclude exchanges with a single `where` on the order itself.
+  exchangeOrder Order?              @relation("ExchangeForReturn")
   items         ReturnRequestItem[]
 
   @@index([orderId])
@@ -701,17 +727,26 @@ model ReturnRequestItem {
 /// Consumers subscribe to these rather than being hand-wired at each call site;
 /// it also backs per-entity activity timelines. Write via `lib/domain-events/emit.ts`.
 model DomainEvent {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   type        String
   entityType  String
   entityId    String
   payload     Json?
   actorUserId String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  /// When consumers finished handling this event. Null means still pending.
+  ///
+  /// This column is what makes `domain_events` a transactional outbox rather than only an
+  /// audit log. Events are emitted inside the caller's transaction (payment webhooks pass
+  /// their `tx` client), so handlers cannot run at emit time — they would fire for work that
+  /// may still roll back, and would hold a transaction open across network I/O. A poller
+  /// only ever sees committed rows, which makes the hand-off correct by construction.
+  consumedAt  DateTime?
 
   @@index([entityType, entityId, createdAt])
   @@index([type, createdAt])
   @@index([createdAt])
+  @@index([consumedAt, createdAt])
   @@map("domain_events")
 }
 
@@ -934,6 +969,13 @@ model Fundraiser {
   commissionRate       Decimal                 @db.Decimal(5, 2)
   status               FundraiserStatus        @default(DRAFT)
   isActive             Boolean                 @default(false)
+  /// When the coordinator was told the campaign is live. Null means not yet sent.
+  ///
+  /// A sent-marker rather than a status check, because `status` can move back and forth while
+  /// an admin edits a campaign and the coordinator should not be re-announced each time.
+  launchEmailSentAt    DateTime?
+  /// When the coordinator was sent the closing summary. Null means not yet sent.
+  summaryEmailSentAt   DateTime?
   totalOrders          Int                     @default(0)
   totalRevenue         Decimal                 @default(0) @db.Decimal(10, 2)
   totalCommission      Decimal                 @default(0) @db.Decimal(10, 2)
@@ -1023,6 +1065,13 @@ model FundraiserParticipant {
   totalOrders     Int                         @default(0)
   totalRevenue    Decimal                     @default(0) @db.Decimal(10, 2)
   totalCommission Decimal                     @default(0) @db.Decimal(10, 2)
+  /// Highest sales milestone this participant has already been congratulated for.
+  ///
+  /// A marker rather than a derived value because domain events are delivered at-least-once:
+  /// without it a replayed `payment.completed` would send a second "you reached 25 sales"
+  /// email. Comparing the highest milestone reached against this column also collapses a
+  /// burst of orders into one message instead of one per threshold crossed.
+  lastMilestoneNotified Int                    @default(0)
   createdAt       DateTime                    @default(now())
   updatedAt       DateTime                    @default(now()) @updatedAt
   fundraiser      Fundraiser                  @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
@@ -2128,19 +2177,6 @@ model EmailSegment {
   @@map("email_segments")
 }
 
-model EmailWebhook {
-  id        String   @id @default(cuid())
-  name      String
-  url       String
-  events    String[]
-  secret    String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("email_webhooks")
-}
-
 model BrandKit {
   id              String   @id @default(cuid())
   logoUrl         String?
@@ -2333,6 +2369,8 @@ model GiftCertificate {
   redeemedAt     DateTime?
   usages         GiftCertificateUsage[]
   order          Order?                 @relation(fields: [orderId], references: [id])
+  /// Set when this certificate was issued as store credit for a return rather than bought.
+  returnRequest  ReturnRequest?
 
   @@index([code])
   @@index([purchaserEmail])

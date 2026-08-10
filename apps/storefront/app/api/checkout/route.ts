@@ -7,7 +7,7 @@ import { getProvider } from '@/lib/payments'
 import { Prisma } from '@prisma/client'
 import { queueShopifySync } from '@/lib/shopify/sync'
 import { calculateTax } from '@/lib/tax-calculator'
-import { calculateShipping } from '@/lib/shipping-calculator'
+import { buildShippingItems, calculateShipping } from '@/lib/shipping-calculator'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
 import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manager'
@@ -220,13 +220,7 @@ export async function POST(request: NextRequest) {
     let finalShippingMethod = 'Standard Shipping'
 
     try {
-      const itemsWithWeights = orderItems.map((item) => {
-        const product = productMap.get(item.productId)
-        return {
-          weight: product?.weight ? Number(product.weight) : 1.0,
-          quantity: item.quantity,
-        }
-      })
+      const itemsWithWeights = buildShippingItems(orderItems, productMap)
 
       const shippingResult = await calculateShipping({
         items: itemsWithWeights,

@@ -103,7 +103,11 @@ vi.mock('@/lib/tax-calculator', () => ({
   ),
 }))
 
-vi.mock('@/lib/shipping-calculator', () => ({
+// Only the rate call is stubbed. `buildShippingItems` is pure mapping — the thing that turns
+// catalogue rows into parcel weights and dimensions — so the real one is kept, and a unit
+// mistake in it fails these tests rather than being mocked away.
+vi.mock('@/lib/shipping-calculator', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/shipping-calculator')>()),
   calculateShipping: vi.fn(() => ({
     shippingCost: 8.99,
     shippingMethod: 'Standard Shipping',
@@ -301,7 +305,7 @@ describe('Checkout API Integration Tests', () => {
         expect.objectContaining({
           items: expect.arrayContaining([
             expect.objectContaining({
-              weight: 1.5,
+              weightOz: 1.5,
               quantity: 2,
             }),
           ]),
@@ -724,7 +728,7 @@ describe('Checkout API Integration Tests', () => {
         expect.objectContaining({
           items: expect.arrayContaining([
             expect.objectContaining({
-              weight: 1.0, // Default weight
+              weightOz: undefined, // no catalogue weight; the calculator applies the documented default
               quantity: 2,
             }),
           ]),
@@ -1085,11 +1089,11 @@ describe('Checkout API Integration Tests', () => {
         expect.objectContaining({
           items: expect.arrayContaining([
             expect.objectContaining({
-              weight: 1.5,
+              weightOz: 1.5,
               quantity: 2,
             }),
             expect.objectContaining({
-              weight: 2.0,
+              weightOz: 2.0,
               quantity: 1,
             }),
           ]),

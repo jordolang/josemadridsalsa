@@ -1,5 +1,6 @@
 import { getStripe } from '@/lib/stripe'
 import { getPayPalAccessToken } from '@/lib/payments/providers/paypal'
+import { getSquareClient } from '@/lib/payments/providers/square'
 
 /**
  * Look up what a processor actually charged for a payment.
@@ -91,21 +92,36 @@ export async function fetchPayPalFee(captureId: string): Promise<FeeLookupResult
 }
 
 /**
- * Square returns `processing_fee` as an array — a payment can carry more than one fee entry —
- * and frequently omits it entirely until the payment settles. Summing the array is correct;
- * treating an absent array as zero is not.
+ * One entry from Square's `processingFee` array.
+ *
+ * Field names are the Square **SDK's** camelCase, not the snake_case of the raw REST and
+ * webhook payloads. That matters: reading `processing_fee` off an SDK response finds nothing
+ * and looks exactly like an unsettled payment. Anything reading a webhook body has to adapt
+ * to this shape rather than the reverse.
  */
-export function readSquareFee(payment: {
-  processing_fee?: Array<{ amount_money?: { amount?: number | bigint } }> | null
-}): FeeLookupResult {
-  const entries = payment.processing_fee
+export interface SquareProcessingFee {
+  amountMoney?: { amount?: number | bigint | null } | null
+}
+
+/**
+ * Square reports its cut as an array, because a payment can carry more than one fee entry —
+ * an `INITIAL` assessment plus later `ADJUSTMENT` rows, and an adjustment may be **negative**
+ * where Square returns funds. Summing is therefore correct, and a negative total is a real
+ * answer rather than corrupt data.
+ *
+ * An absent or empty array means the payment has not settled. Treating that as a zero fee
+ * would book gross as net.
+ */
+export function readSquareFee(
+  entries: SquareProcessingFee[] | null | undefined
+): FeeLookupResult {
   if (!entries || entries.length === 0) {
     return { feeCents: null, reason: 'square has not settled the fee yet' }
   }
 
   let total = 0
   for (const entry of entries) {
-    const amount = entry.amount_money?.amount
+    const amount = entry.amountMoney?.amount
     if (amount === undefined || amount === null) {
       return { feeCents: null, reason: 'square fee entry missing an amount' }
     }
@@ -113,6 +129,26 @@ export function readSquareFee(payment: {
   }
 
   return { feeCents: total }
+}
+
+/**
+ * Square's fee lives on the payment object, so unlike Stripe there is nothing to expand — but
+ * it is absent until settlement, which is the whole reason this module is a sweep.
+ */
+export async function fetchSquareFee(paymentId: string): Promise<FeeLookupResult> {
+  try {
+    const client = getSquareClient()
+
+    const response = await client.payments.get({ paymentId })
+    const payment = response.payment
+    if (!payment) {
+      return { feeCents: null, reason: 'square payment not found' }
+    }
+
+    return readSquareFee(payment.processingFee)
+  } catch (error) {
+    return { feeCents: null, reason: `square lookup failed: ${(error as Error).message}` }
+  }
 }
 
 /**

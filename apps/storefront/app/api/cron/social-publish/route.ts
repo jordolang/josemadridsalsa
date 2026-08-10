@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { publishPost } from '@/lib/social/publisher'
+import { isAuthorizedCronRequest } from '@/lib/cron/auth'
 
 // Publishes scheduled social posts whose time has arrived. Triggered every 5 minutes by
 // Vercel Cron. Without this, "Schedule" only ever saved a row and never actually posted —
@@ -14,14 +15,8 @@ import { publishPost } from '@/lib/social/publisher'
 
 export const dynamic = 'force-dynamic'
 
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return true // No secret configured → allow (matches other crons).
-  return request.headers.get('authorization') === `Bearer ${secret}`
-}
-
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

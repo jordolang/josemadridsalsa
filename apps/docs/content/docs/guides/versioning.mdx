@@ -1,0 +1,87 @@
+---
+title: Versioning
+description: How the project's version number moves, which bump a change deserves, and the command that cuts a release
+---
+
+The project version is `MAJOR.MINOR` with an optional letter:
+
+```
+2.0    2.1    2.1a   2.1b   2.2    2.2a   3.0
+```
+
+| Bump | Moves | For |
+|---|---|---|
+| **Feature** | `2.0` → `2.1` | A large feature. A new admin area, a new subsystem, a capability the business did not have yesterday |
+| **Increment** | `2.1` → `2.1a` → `2.1b` | Everything smaller. Bug fixes, data changes, filling a gap in a feature that already shipped, documentation corrections |
+| **Major** | `2.x` → `3.0` | A release the business is calling a new version of the platform. **Only ever on an explicit instruction** |
+
+A feature bump drops the letter: the release after `2.1b` is `2.2`, not `2.2b`. The letter counts
+increments *within* a minor and means nothing once the minor moves.
+
+## Why not SemVer
+
+`CHANGELOG.md` used to claim SemVer and the repository sat on `2.0.0` for months, which is the
+honest signal that nobody was reaching for a third number. SemVer's patch component exists so
+consumers can judge whether an upgrade is safe; nothing consumes this repository as a package.
+`2.6a` reads as "a small change on top of 2.6" to the person running the business more clearly
+than `2.6.1` does.
+
+npm still requires valid SemVer in `package.json`, so both exist and neither is guessed at:
+
+- **`projectVersion`** in the root `package.json` is canonical — `"2.1a"`.
+- **`version`** in the root and every workspace is the derived SemVer — `"2.1.1"`.
+
+The mapping is positional and stable: the letter's place in the alphabet is the patch number, so
+`a` is `.1`, `b` is `.2`, and `2.1` with no letter is `.0`. It stays monotonic, so any tool that
+compares version numbers still orders releases correctly. `toSemver` and `fromSemver` in
+`lib/version.ts` convert both ways and are tested to round-trip.
+
+Letters carry past `z` rather than wrapping — `2.1z` is followed by `2.1aa`. Twenty-six
+increments between features is not a limit worth hitting, but wrapping back to `a` would collide
+with a version already released.
+
+## Cutting a release
+
+```bash
+npm run version:feature -- --title "Returns & Reporting"
+npm run version:increment
+npm run version:major          # only when asked
+```
+
+Each one:
+
+1. Bumps `projectVersion` in the root `package.json`.
+2. Writes the derived SemVer to `version` in the root and all four workspaces.
+3. Renames the `## [Unreleased]` heading in `CHANGELOG.md` to the new version with today's date
+   and the title, and opens a fresh empty `## [Unreleased]` above it.
+
+Add `--dry-run` to see the plan without writing anything.
+
+**It refuses when `[Unreleased]` has no entries.** A version whose changelog section is empty is
+worse than no bump at all, because it looks like a release nobody bothered to document.
+
+**It does not commit, tag, or push.** Review the diff first, then tag:
+
+```bash
+git tag v2.1
+```
+
+A release that tags itself before anyone has read the diff is how a wrong version number becomes
+permanent.
+
+## Choosing the bump
+
+The question is whether someone using the admin could tell something new exists. A margin
+dashboard where there was none is a feature. Making a dropdown that was already there actually do
+something is an increment — even when the work behind it is larger, because the version number
+describes the product, not the effort.
+
+`suggestBump()` in `lib/version.ts` offers a guess from the changelog entries. It is a prompt, not
+a rule, and it is deliberately biased toward `increment`: over-bumping the minor is what makes a
+version number stop meaning anything. It can never return `major`.
+
+## The changelog is the input
+
+Because the release command reads `## [Unreleased]`, the changelog is not paperwork done after the
+fact — it is what the version is cut from. Write the entry with the change, and cutting a version
+is one command.

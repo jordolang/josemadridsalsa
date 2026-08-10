@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requirePermission } from '@/lib/rbac'
 import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 type TerminalStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED' | 'FAILED'
 
@@ -147,6 +148,26 @@ export async function GET(request: NextRequest) {
               lowStockThreshold: result.product.lowStockThreshold,
             })
           }
+
+          // The counter sale is a payment like any other, and until this was emitted the POS
+          // was the one path the shop learned nothing from: no confirmation to the customer,
+          // no new-order notification, no automation enrolment. Emitted with the transaction
+          // client so the fact is only durable if the sale is, matching the card webhooks.
+          await emitDomainEvent(
+            {
+              type: 'payment.completed',
+              entityType: 'order',
+              entityId: order.id,
+              payload: {
+                provider: 'SQUARE',
+                channel: 'POS',
+                amount: amountInCents,
+                currency: 'usd',
+                squarePaymentId,
+              },
+            },
+            tx
+          )
         },
         { isolationLevel: 'Serializable' }
       )

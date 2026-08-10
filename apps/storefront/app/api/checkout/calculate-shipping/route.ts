@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { calculateShipping } from '@/lib/shipping-calculator'
+import { buildShippingItems, calculateShipping } from '@/lib/shipping-calculator'
 import prisma from '@/lib/prisma'
 
 /**
@@ -106,34 +106,28 @@ export async function POST(request: Request) {
         id: true,
         price: true,
         weight: true,
+        lengthInches: true,
+        widthInches: true,
+        heightInches: true,
       },
     })
 
     const productMap = new Map(products.map((p) => [p.id, p]))
 
-    // Calculate subtotal and prepare items with weights
-    const itemsWithWeights = items.map((item) => {
+    for (const item of items) {
       const product = productMap.get(item.productId)
       if (!product) {
-        // Log missing product but don't block checkout
+        // Logged but not fatal: a missing product should not block a quote, and
+        // buildShippingItems falls back to the documented per-unit defaults for it.
         console.warn(
           `[Shipping Calculation API] Product ${item.productId} not found, using defaults`
         )
-        // Use default values to allow shipping calculation to continue
-        return {
-          weight: 1.0, // Default 1 lb
-          quantity: item.quantity,
-        }
+        continue
       }
+      subtotal += Number(product.price) * item.quantity
+    }
 
-      const price = Number(product.price)
-      subtotal += price * item.quantity
-
-      return {
-        weight: product.weight ? Number(product.weight) : 1.0, // Default 1 lb
-        quantity: item.quantity,
-      }
-    })
+    const itemsWithWeights = buildShippingItems(items, productMap)
 
     // Calculate shipping - this function has internal error handling
     // and will fall back to estimate rates if the carrier API fails

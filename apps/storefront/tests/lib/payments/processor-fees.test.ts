@@ -9,35 +9,36 @@ import {
 describe('readSquareFee', () => {
   it('sums the fee entries, since a payment can carry more than one', () => {
     expect(
-      readSquareFee({
-        processing_fee: [
-          { amount_money: { amount: 320 } },
-          { amount_money: { amount: 15 } },
-        ],
-      }).feeCents
+      readSquareFee([{ amountMoney: { amount: 320 } }, { amountMoney: { amount: 15 } }]).feeCents
     ).toBe(335)
   })
 
   it('handles the bigint amounts the Square SDK returns', () => {
-    expect(readSquareFee({ processing_fee: [{ amount_money: { amount: 320n } }] }).feeCents).toBe(
-      320
-    )
+    expect(readSquareFee([{ amountMoney: { amount: 320n } }]).feeCents).toBe(320)
+  })
+
+  it('subtracts an adjustment that returned funds', () => {
+    // Square sends negative ADJUSTMENT amounts when it gives part of the fee back. A negative
+    // entry is a real answer, so the sum stands rather than being clamped at zero.
+    expect(
+      readSquareFee([{ amountMoney: { amount: 320 } }, { amountMoney: { amount: -40 } }]).feeCents
+    ).toBe(280)
   })
 
   it('returns null when Square has not settled the fee yet', () => {
     // The common case right after payment.completed — not a zero-fee payment.
-    expect(readSquareFee({ processing_fee: null }).feeCents).toBeNull()
-    expect(readSquareFee({}).feeCents).toBeNull()
-    expect(readSquareFee({ processing_fee: [] }).feeCents).toBeNull()
+    expect(readSquareFee(null).feeCents).toBeNull()
+    expect(readSquareFee(undefined).feeCents).toBeNull()
+    expect(readSquareFee([]).feeCents).toBeNull()
   })
 
   it('explains why it could not read a fee', () => {
-    expect(readSquareFee({ processing_fee: [] }).reason).toContain('not settled')
+    expect(readSquareFee([]).reason).toContain('not settled')
   })
 
   it('refuses to guess when an entry is missing its amount', () => {
     // Partial data would produce a fee that is too low, which overstates profit.
-    const result = readSquareFee({ processing_fee: [{ amount_money: { amount: 320 } }, {}] })
+    const result = readSquareFee([{ amountMoney: { amount: 320 } }, {}])
     expect(result.feeCents).toBeNull()
     expect(result.reason).toContain('missing an amount')
   })

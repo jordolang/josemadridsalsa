@@ -99,6 +99,8 @@ export async function upsertNotification(
 
 /** Deterministic dedupe keys, so the same fact always collapses onto the same row. */
 export const dedupeKeys = {
+  newOrder: (orderId: string) => `new-order:${orderId}`,
+  highValueOrder: (orderId: string) => `high-value-order:${orderId}`,
   paymentFailed: (orderId: string) => `payment-failed:${orderId}`,
   inventoryLow: (productId: string) => `inventory-low:${productId}`,
   inventoryOut: (productId: string) => `inventory-out:${productId}`,

@@ -1,0 +1,389 @@
+---
+title: Automation Engine Audit
+description: What is automated today, what is built but never fires, and the phased plan to close the gap.
+---
+
+# Automation Engine Audit
+
+Audit date: **2026-08-09**. Method: static call-site census across `apps/storefront`, cross-referenced
+against `prisma/schema.prisma`, `vercel.json` cron schedules, and a targeted Vitest run.
+
+## Headline
+
+The starting assumption for this audit was that the automation layer was designed but never built.
+**That is not what the code shows.** Roughly **87%** of the automation surface has code behind it and
+**~72% is wired to a real trigger and works today** — order confirmations fire on three of four payment
+paths, shipped/delivered emails fire off the EasyPost tracking webhook, and the operations sweep
+genuinely finds stale orders, aging returns and stuck webhooks.
+
+The real problem is narrower and more interesting than "nothing exists":
+
+> **`lib/domain-events` has 13 producers and zero consumers.**
+> Sixteen business facts are recorded to `domain_events` on every order, payment, refund, shipment and
+> inventory movement — and **nothing reads them**. `getEntityTimeline()` has no callers; `prisma.domainEvent`
+> appears exactly once outside the emitter.
+
+Every automation in the repo is instead hand-wired into the individual route that causes it. That is
+precisely why some went dead without anyone noticing, and why the same automation is implemented three
+times on three payment paths and forgotten on the fourth.
+
+The second finding follows from the first:
+
+> **`enrollInAutomation()` has zero callers.**
+> The `EmailAutomation` / `AutomationStep` / `AutomationEnrollment` schema, the 17-value `AutomationTrigger`
+> enum, the admin builder at `app/admin/email-marketing/automations`, the CRUD API, and the 5-minute
+> `email-automation` cron that drains due steps — all of it exists and is correct. **Nobody is ever enrolled**,
+> so the cron drains an empty queue forever.
+
+One change — a consumer layer over `emitDomainEvent` that routes events into `enrollInAutomation` —
+resurrects the entire marketing-automation product and fixes the structural cause of the dead spots.
+
+## Two things checked first, because either would have changed the report
+
+1. **Are the sub-daily crons actually running in production?** Yes. Commit `ec71426d` (2026-08-07)
+   restored `*/5` schedules *"now that the project is on Vercel Pro."* Pro allows per-minute crons;
+   the earlier Hobby-era daily downgrade (`e8ae9749`) no longer binds. All 8 scheduled crons are valid.
+2. **Do the tables exist in the deployed databases?** Yes. `domain_events` ships in migration
+   `20260807120000_add_fulfillment_channel_domain_events`; `notifications` and its
+   `notifications_userId_dedupeKey_key` unique index ship in `20260317000000_baseline` and
+   `20260807190000_notification_centre`. This mattered because `emitDomainEvent` swallows every error
+   by design — a missing table would have been silently invisible.
+
+## State in production
+
+Merged and deployed **2026-08-10** (`f297f02a`). All seven migrations were applied to the production
+database ahead of the deploy and verified by querying it directly; the five new columns are present,
+`email_webhooks` is gone, and no migration is unfinished. The site returns 200, and an
+unauthenticated `GET` to a cron route returns **401** — the fail-open guard fix, confirmed on the
+deployed system rather than asserted.
+
+One honest limit on all of this. **Production has taken 8 orders in its entire history, the most
+recent on 2026-05-12.** The real business still runs on the legacy BigCommerce storefront while this
+platform is built toward cutover. So `domain_events` in production is empty, and will stay empty until
+a real order arrives — which is correct, not broken: no payment, no fact, no event.
+
+That means every automation here is **deployed and armed, not observed working in production**. The
+confidence behind the percentages below comes from 1618 passing tests, from exercising the drain and
+the lifecycle sweep against the dev database, and from black-box probes of the deployed routes. It
+does not come from watching a live order flow through, because there has not been one. Stating that
+plainly matters more than a cleaner-sounding claim: the first real order after cutover is the true
+test, and the thing to watch is whether `domain_events` starts filling and draining.
+
+## Rubric
+
+Five states, not two. "Built" and "works" are different questions, and the gap between them is the report.
+
+| State | Meaning |
+|---|---|
+| **VERIFIED** | Wired to a real trigger *and* covered by a passing test |
+| **WIRED** | Reachable from a real trigger; no test proving it |
+| **ORPHANED** | Code exists and is correct; **zero callers** |
+| **SCHEMA-ONLY** | Prisma model exists; **zero code references** |
+| **MISSING** | Neither schema nor code |
+
+## Inventory
+
+### A. Customer order communications
+
+| # | Automation | State | Evidence |
+|---|---|---|---|
+| 1 | Order confirmation — Stripe | VERIFIED | `webhooks/stripe:229`; `tests/email/order-confirmation.test.tsx` |
+| 2 | Order confirmation — PayPal | WIRED | `webhooks/paypal:242`, `checkout/paypal/capture-order:226` |
+| 3 | Order confirmation — Square | WIRED | `webhooks/square:179`, `checkout/square/process-payment:227` |
+| 4 | Order confirmation — POS / manual order | **VERIFIED** ✅ | Phase 3 — `handlers/order-confirmation.ts`, 11 tests |
+| 5 | Order shipped email | VERIFIED | `lib/tracking/webhook-handlers:149`; `tests/unit/tracking/webhook-handlers.test.ts` |
+| 6 | Order delivered email | VERIFIED | `lib/tracking/webhook-handlers:155`; `tests/email/delivery-confirmation.test.tsx` |
+| 7 | Refund processed email — admin-initiated | WIRED | `admin/orders/[id]/update-status:132` |
+| 8 | Refund processed email — refund-initiated | **VERIFIED** ✅ | Phase 3 — `handlers/refund-notification.ts` + new producer, 9 tests |
+| 9 | Order cancellation email | WIRED | `lib/email/transactional:19`, 1 call site |
+| 10 | Order ready-for-pickup email | **VERIFIED** ✅ | Phase 2 — `handlers/pickup-ready.ts` on `order.fulfilled`, 7 tests |
+| 11 | Review request (3–7d post-delivery) | **VERIFIED** ✅ | Phase 5 — `lib/orders/review-requests.ts`, 13 tests |
+
+### B. Operator notifications
+
+| # | Automation | State | Evidence |
+|---|---|---|---|
+| 12 | Payment failed → operators | VERIFIED | `webhooks/stripe:268`; `tests/lib/notifications/dispatch.test.ts` |
+| 13 | Inventory low → operators | VERIFIED | `lib/inventory-manager:710`; `tests/lib/inventory/alert-notifications.test.ts` |
+| 14 | Inventory out-of-stock → operators | VERIFIED | same |
+| 15 | Return requested (customer path) | WIRED | `api/account/returns:131` |
+| 16 | Return requested (admin path) | WIRED | `api/admin/returns:153` |
+| 17 | Stale unfulfilled orders sweep | **VERIFIED** | `cron/operations-sweep`; `tests/lib/operations/aging.test.ts` (31 cases) |
+| 18 | Aging returns sweep | **VERIFIED** | same |
+| 19 | Stuck webhooks sweep | **VERIFIED** | same |
+| 20 | New-order in-app notification | **VERIFIED** ✅ | Phase 2 — `handlers/order-notifications.ts` on `payment.completed`, 15 tests |
+| 21 | High-value order alert | **VERIFIED** ✅ | Phase 2 — separate dedupe key, $100 threshold |
+| 21a | Admin new-order **email** | **VERIFIED** ✅ | Phase 2 — was orphaned, not Stripe-only; see correction below |
+| 22 | Per-rule email/Slack routing | **VERIFIED** ✅ | Phase 4 — `handlers/order-rules.ts`, 20 tests |
+
+### C-0. Infrastructure
+
+| # | Automation | State | Evidence |
+|---|---|---|---|
+| 54 | **Domain event consumer layer** | **VERIFIED** ✅ | Phase 1 — `lib/domain-events/subscribe.ts`, 10 tests. Not an email feature; every consumer below depends on it. |
+
+### C. Email marketing automation engine
+
+| # | Automation | State | Evidence |
+|---|---|---|---|
+| 23 | Automation CRUD + admin builder UI | WIRED | `app/api/admin/automations`, `app/admin/email-marketing/automations` |
+| 24 | **Trigger → enrollment** | **VERIFIED** ✅ | Phase 1 — `lib/domain-events/handlers/automation-enrollment.ts`, 12 tests |
+| 25 | Due-step drain (5-min cron) | WIRED | `cron/email-automation` — now fed by the outbox drain on the same tick |
+| 26 | `AutomationTrigger` values firing | WIRED ✅ | Phases 1+3 — 5 of 17 mapped, incl. `ORDER_REFUNDED` |
+| 27 | Scheduled campaign send | WIRED | `cron/email-campaigns` |
+| 28 | Resend webhook → bounce/suppression | WIRED | `app/api/webhooks/resend` (123 lines) |
+| 29 | `EmailWebhook` model | **REMOVED** ✅ | Outbound webhook registry, never built. Dropped with a guarded migration that refuses if prod holds rows. |
+
+### D. Cart, inventory & purchasing
+
+| # | Automation | State | Evidence |
+|---|---|---|---|
+| 30 | Abandoned cart, 3 stages | **VERIFIED** ✅ | Phase 5 — `lib/checkout/abandoned-cart.ts`, 20 tests |
+| 31 | Duplicate abandoned-cart sender | **REMOVED** ✅ | Removed with sign-off. The working automation is the cron's own copy and is unaffected. |
+| 32 | Stock decrement on payment | **VERIFIED** | `tests/lib/inventory-manager.test.ts` (44 cases) + `tests/integration/inventory-order-completion` |
+| 33 | `InventoryAlert` creation | **VERIFIED** | `tests/lib/inventory-manager.test.ts` — alert creation flow |
+| 34 | Restock email to staff | **VERIFIED** ✅ | Phase 4 — `handlers/restock-alert.ts`, 6 tests. *Audit mislabelled this as customer-facing; it is a staff restock recommendation, and was orphaned rather than schema-only.* |
+| 35 | PO receiving → stock + event | **VERIFIED** | `tests/lib/purchasing/receiving.test.ts` (31 cases) |
+
+### E. Fulfillment, shipping, financial, social, identity
+
+| # | Automation | State | Evidence |
+|---|---|---|---|
+| 36 | Fulfillment status derivation | VERIFIED | `lib/orders/fulfillment.ts`; `tests/lib/orders/fulfillment.test.ts` |
+| 37 | Shipping label purchase | **MANUAL — by design** | `admin/orders/[id]/shipping-label` POST is operator-driven. See *Money gate* below. |
+| 38 | Tracking webhook → order status | VERIFIED | `lib/tracking/webhook-handlers.ts` |
+| 39 | Label purchase → `shipment.created` | WIRED | `shipping-label/route:194` |
+| 40 | QuickBooks paid-order sync | **VERIFIED** | `tests/lib/quickbooks-sync.test.ts` (21 cases); hourly, off the checkout path by design |
+| 41 | QuickBooks refund sync | **VERIFIED** | same |
+| 42 | Processor fee capture | **VERIFIED** | `tests/lib/payments/processor-fees.test.ts` |
+| 43 | `dashboard-analysis` cron | **REMOVED** ✅ | Phase 4 — unreferenced, unscheduled, unauthenticated; deleted with sign-off |
+| 44 | Fundraiser donation receipt | WIRED | 6 call sites |
+| 45 | Participant welcome | WIRED | 1 call site |
+| 46 | Fundraiser follow-up | WIRED | 1 call site |
+| 47 | Participant milestone | **VERIFIED** ✅ | Phase 2 — `handlers/participant-milestone.ts`, 16 tests |
+| 48 | Campaign summary | **VERIFIED** ✅ | Phase 2 — `cron/fundraiser-lifecycle`, 16 tests |
+| 49 | Campaign launch | **VERIFIED** ✅ | Phase 2 — `cron/fundraiser-lifecycle` |
+| 50 | Scheduled social publish | WIRED | `cron/social-publish`, single-scheduler guarantee documented |
+| 51 | Welcome email on registration | WIRED | `api/auth/register` |
+| 52 | Newsletter welcome | WIRED | 1 call site |
+| 53 | Contact-form confirmation | WIRED | 1 call site |
+| 54 | `customer.created` domain event | WIRED | `api/auth/register:59`, `lib/auth.ts:237` |
+
+## The three percentages
+
+Across **54** scored automation candidates (53 at audit time, plus the consumer layer built in Phase 1):
+
+| Measure | At audit | Phase 1 | Phase 2 | Phase 3 | Phase 4 | After Phase 5 |
+|---|---|---|---|---|---|---|
+| **Built** — code exists (VERIFIED + WIRED + ORPHANED) | 46 / 87% | 48 / 89% | 48 / 89% | 50 / 93% | 52 / 98% | **52 / 98%** |
+| **Functions correctly today** (VERIFIED + WIRED) | 38 / 72% | 41 / 76% | 47 / 87% | 49 / 91% | 51 / 96% | **51 / 96%** |
+| **Proven by an automated test** (VERIFIED only) | 8 / 15% | 10 / 19% | 16 / 30% | 18 / 33% | 20 / 38% | **30 / 57%** |
+| **Needs work** (ORPHANED + SCHEMA-ONLY + MISSING + stub) | 15 / 28% | 13 / 24% | 7 / 13% | 5 / 9% | 2 / 4% | **2 / 4%** |
+
+#### A third correction: the VERIFIED column was undercounting
+
+Phase 5 added tests for two automations (items 11 and 30) but the figure moves by ten, because a
+re-audit found eight more that were **already covered and never credited** — the operations sweep
+(`aging.test.ts`, 31 cases), stock decrement and alert creation (`inventory-manager.test.ts`, 44),
+purchase-order receiving (31), QuickBooks sync (21) and processor fees. The original audit counted
+only tests it had traced by hand, so 15% understated the real starting position. The honest reading
+is that this codebase was better tested than the first pass credited — the same direction as the
+headline finding.
+
+The denominator falls to **53** at Phase 4: item 43 was a dead stub and is deleted rather than
+scored. The two remaining are item 29 (`EmailWebhook`, a schema-only model) and item 31 (the
+duplicate abandoned-cart sender, reported not removed) — neither is a missing automation.
+
+Item 21a (the admin new-order email) is a correction note rather than a separately scored candidate,
+so the denominator stays 54.
+
+#### Correction to the original audit
+
+The audit recorded the admin new-order email as wired on the Stripe path. **It was not wired at
+all.** Its only caller is `lib/stripe/webhooks.ts`, and nothing imports that module — it is dead
+code. So a new order notified nobody, by any mechanism, on any payment path: `notifyAdminsOfNewOrder`
+had no callers and would have returned early anyway (it reads `OrderNotificationSetting`, a table with
+no rows, no seed and no UI), and the email sender was unreachable. Phase 2 fixes all three at once.
+
+The gap between *87% built* and *72% working* is the 8 orphaned automations — finished code with no
+caller. The gap between *72% working* and *15% verified* is the real risk: most of what works is
+working unwitnessed, and would break silently.
+
+Test baseline: `tests/lib/domain-events`, `tests/lib/notifications`, `tests/lib/orders/fulfillment`,
+`tests/lib/inventory`, `tests/lib/cron`, `tests/unit/tracking` → **9 files, 137 tests, all passing**.
+
+## Design decision that needs a signature: the money gate
+
+"Automate everything" has to carve out actions that **spend money or are hard to reverse**: buying
+postage, issuing refunds, sending mass marketing email, publishing to social.
+
+The proposed rule is **automate the preparation, gate the commit**:
+
+- **Auto-prepare, one-click commit** — rate-shop the parcel, pre-fill the cheapest service, and surface
+  a "Buy label" button. Do *not* auto-purchase postage.
+- **Fully automatic** — anything that only writes to our own database or sends a *transactional* email
+  the customer is expecting (confirmation, shipped, delivered, receipt).
+- **Threshold-gated** — refunds under an operator-set ceiling can auto-issue; above it, queue for approval.
+
+Item #37 (`shipping label purchase`) is currently manual, and under this rule it stays manual. That is a
+recommendation, not a finding — it needs an explicit decision.
+
+## Plan
+
+Each phase is one commit, ships with a Vitest regression test, and is gated on an explicit "proceed".
+
+### Phase 1 — The consumer layer ✅ *shipped*
+
+`lib/domain-events/subscribe.ts` holds a registry mapping `DomainEventType` → handlers, and
+`lib/domain-events/handlers/automation-enrollment.ts` registers the first consumer: **domain event →
+`enrollInAutomation`**. Items 24, 25 and 26 are live — the marketing-automation product, its admin UI
+and the 5-minute cron all now do work.
+
+**Design changed during implementation, and the reason matters.** The plan said handlers would be
+invoked from `emitDomainEvent` after the write. They are not: emitters pass their own transaction
+client — `app/api/webhooks/stripe` marks a payment failed and emits inside one `$transaction` — so
+invoking a handler at emit time would act on work that can still roll back, and would hold a database
+transaction open across email sends. Instead `domain_events` became a **transactional outbox**: a
+`consumedAt` column, and a poller that only ever sees committed rows. The drain runs at the head of the
+existing `email-automation` cron, so no new schedule was added.
+
+Delivery is **at-least-once and handlers must be idempotent** — an event is marked consumed only after
+its handlers finish, so a crash mid-batch replays rather than silently dropping an enrollment.
+`enrollInAutomation` already skips anyone on an ACTIVE enrollment, so a replay is a no-op.
+
+#### Before this runs anywhere
+
+Migration `20260809120000_domain_event_outbox` adds `domain_events.consumedAt` and must be applied
+before the drain does any work. It is additive — `ADD COLUMN`, a backfill, `CREATE INDEX` — and existing
+rows are backfilled to consumed so the first poll does not replay the entire order history.
+
+The drain **degrades to a no-op with a warning** if the column is absent (`isMissingColumnError`, P2022 —
+the sibling of the existing P2021 handling). That is deliberate: `vercel-build` wraps
+`prisma migrate deploy` in a warning rather than a failure, so code can land ahead of its migration on a
+green deploy. Without the guard, an unapplied migration would throw at the head of the cron and take the
+step processor down with it. Apply the migration first regardless; the guard is a seatbelt, not a plan.
+
+#### Triggers mapped
+
+| Event | Trigger |
+|---|---|
+| `payment.completed` | `ORDER_PLACED` |
+| `order.fulfilled` | `ORDER_SHIPPED` |
+| `order.delivered` | `ORDER_DELIVERED` |
+| `customer.created` | `USER_REGISTERED` |
+
+#### Triggers not yet mapped, and why
+
+Two mappings from the original plan were deliberately **not** made, because each would have registered
+a handler that reads as working while never firing:
+
+- **`ORDER_PLACED` keys off `payment.completed`, not `order.created`.** The checkout, PayPal and Square
+  routes all create the order *before* taking payment, so `order.created` also fires for checkouts
+  abandoned at the payment step — a post-purchase series keyed off it would email people who never
+  bought anything. (Note: the comment at `lib/orders/order-timeline.ts:138` claiming `order.created` is
+  never emitted is stale — `emitOrderCreated` is called from 6 routes.)
+- **`ORDER_REFUNDED` is unmapped.** Nothing emits `payment.refunded` or `refund.completed` today. The
+  producer is Phase 3 work; mapping the trigger first would be a silent no-op.
+- **`LOW_STOCK` is unmapped.** `enrollInAutomation` takes a customer email, and a low-stock fact has no
+  customer — it is an operator concern, handled by `notifyOperators` (items 13–14). Routing it through
+  the marketing engine would need an operator-recipient concept that does not exist yet.
+
+### Phase 2 — Close the orphans *(in progress: 3 of 8 done)*
+
+**Done — new-order notifications (items 20, 21, 21a).** `handlers/order-notifications.ts` subscribes to
+`payment.completed` and raises the in-app notification, the high-value flag above $100, and the admin
+email. One handler covers Stripe, PayPal and Square — and any payment path added later — instead of a
+fourth hand-wired copy in each route, which is the pattern that produced the problem.
+
+`OrderNotificationSetting` was **not** seeded as originally planned. That table has no rows, no seed
+and no UI to create one, so reading it would reintroduce the silent no-op this was meant to fix. The
+threshold is a documented constant matching the column's default, and notifications go through
+`notifyOperators` — the same dispatcher the operations sweep and inventory alerts already use, which
+needs no per-user row. `notifyAdminsOfNewOrder`, `createOrderNotification` and
+`OrderNotificationSetting` are consequently legacy; they are reported here, not deleted.
+
+**Done — ready-for-pickup (item 10).** A local-pickup order got nothing: the shipped email comes from
+the EasyPost tracking webhook and a pickup order never has a label. `handlers/pickup-ready.ts`
+subscribes to `order.fulfilled` and filters out shipped orders in the same handler, so no customer is
+told both to expect a parcel and to come and collect it.
+
+**Done — participant milestone (item 47).** Passing 5/10/25/50/100 sales sends the congratulation that
+had no caller. A new `lastMilestoneNotified` marker makes it replay-safe and collapses a burst of sales
+into one message; existing participants are backfilled so switching it on does not congratulate a whole
+roster retroactively.
+
+**Done — campaign launch and summary (items 48, 49).** A coordinator set a fundraiser up and heard
+nothing when it went live, and nothing when it finished — including the totals, the one thing they need
+in order to hand money to a school. `cron/fundraiser-lifecycle` (daily) announces campaigns that have
+opened, closes campaigns whose end date has passed, and sends the closing summary.
+
+This one is a **sweep rather than an event consumer, and deliberately so**: a campaign ending is a date
+passing. No route runs, no request is made, and nothing would ever emit an event for it. Since the sweep
+must exist for that, the launch announcement rides along instead of being wired into the admin route.
+Both are gated on sent-markers, and existing campaigns are backfilled so switching it on does not
+announce a fundraiser that started in March or summarise every campaign the shop has ever run.
+
+**Phase 2 complete.** The one remaining orphan, item 31, is a *duplicate* rather than a gap:
+`lib/email/automation.ts:384` is shadowed by the abandoned-cart cron's own local copy, so the working
+automation is unaffected. Per CLAUDE.md §3 it is reported here rather than deleted — removing it is a
+separate, explicitly-approved change.
+
+### Phase 3 — Close the parity gaps (3 items)
+
+✅ **Complete.** All three, including the one that was easy to drop:
+
+1. **Order confirmation on the POS / manual path** (item 4) — a consumer on `payment.completed` and
+   `order.created`, gated on `confirmationEmailSentAt` so it cannot double-send alongside the six
+   hand-wired senders. The POS terminal also now emits `payment.completed`, which it never did; that
+   single missing fact was why a counter sale raised no notification, enrolled nobody, and counted
+   toward no milestone either.
+2. **Refund email** (item 8) — reports what was *actually* refunded rather than the order total, and
+   shares `Order.refundEmailSentAt` with the admin status-change sender so one refund cannot produce
+   two emails.
+3. **The `payment.refunded` producer** — emitted from `lib/payments/refund.ts` inside the refund
+   transaction, on SUCCEEDED only. `ORDER_REFUNDED` is now mapped. Shipping the email without this
+   would have left the trigger dead while looking finished. (The admin new-order gap
+originally listed here was closed in Phase 2; see the correction above.) These are the "same
+automation, forgotten on the fourth path" bugs that Phase 1 makes structurally impossible going
+forward, since a consumer fires for the fact rather than for one route.
+
+### Phase 4 — Build the missing engines ✅ *complete*
+
+**Order notification rules (item 22).** The model had zero code references anywhere — a table
+describing which events go to which addresses and Slack channels, that nothing read. Now evaluated
+against the domain events. Deliberately separate from `notifyOperators`, which is the built-in
+operational floor every operator sees; these are rules an admin writes, to recipients who may not be
+operators at all. `ORDER_CANCELLED` is deliberately unmapped because nothing emits `order.cancelled`
+— a rule using it would sit in the table looking configured and never fire, the same mistake as
+mapping `ORDER_REFUNDED` before its producer existed.
+
+**Restock emails (item 34).** `createRestockNotification` already computed urgency, days of stock
+remaining and a recommended order quantity — and had no callers, so a low stock level produced only
+an in-app badge saying a product was low, not what to do about it. Now hangs off `inventory.low` and
+`inventory.out_of_stock` with a seven-day per-product cooldown, because stock stays below threshold
+until someone restocks and the event fires on every sale that keeps it there.
+
+*Two corrections to the original audit here.* Item 34 was recorded as a customer-facing "notify me
+when back in stock" and as SCHEMA-ONLY. It is neither: it is a **staff restock recommendation**, and
+the code existed with no callers, making it ORPHANED.
+
+**`dashboard-analysis` (item 43) — removed.** Five lines returning `{success: true}`, referenced by
+nothing, not scheduled in `vercel.json`, and the only cron route with no authorisation check.
+
+### Phase 5 — Raise the verified floor
+
+Bring the 15% VERIFIED number up by testing the 30 WIRED automations, prioritising the money paths
+(payments, refunds, QuickBooks, inventory decrement).
+
+## Working process
+
+- **One automation per commit**, `<Prefix>: <imperative summary>` per CLAUDE.md Part 15.
+- **Every commit ships a regression test.** Verification = targeted `vitest run` on the touched
+  modules, plus `lint` and `type-check`. It is *not* full-suite green: `npm run test` has 8–9
+  pre-existing failures in `tests/integration/*` caused by remote-Neon latency and shared state,
+  unrelated to this work.
+- **This table is the work queue.** Rows move ORPHANED → WIRED → VERIFIED and this page is updated in
+  the same commit, so progress is visible and the work is resumable across sessions.
+- **Dead code is reported, not deleted** (CLAUDE.md Part 1 §3). `OrderNotificationRule`,
+  `EmailWebhook`, and the duplicate abandoned-cart sender are listed above as findings; removing them
+  is a separate, explicitly-approved change.

@@ -25,6 +25,30 @@ export function isMissingTableError(error: unknown): boolean {
   return false
 }
 
+// Detect Prisma P2022 ("column does not exist"). The sibling of P2021, and the shape a
+// deploy takes when code lands ahead of its migration: `vercel-build` wraps
+// `prisma migrate deploy` in a `|| echo WARN`, so a failed migration still ships a green
+// build and the new code then queries a column that was never added.
+export function isMissingColumnError(error: unknown): boolean {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2022'
+  ) {
+    return true
+  }
+
+  if (error instanceof Error) {
+    const msg = error.message
+    const lower = msg.toLowerCase()
+    return (
+      msg.includes('P2022') ||
+      (lower.includes('column') && lower.includes('does not exist'))
+    )
+  }
+
+  return false
+}
+
 // Standardised log line so missing-table warnings are easy to grep across
 // all admin surfaces (RBAC, credentials, future modules).
 export function logMissingTableWarning(scope: string, tableName: string): void {
