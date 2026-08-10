@@ -601,6 +601,16 @@ model Order {
   fulfillments             Fulfillment[]
   returnRequests           ReturnRequest[]
 
+  /// Set when this order is a replacement raised by an exchange rather than a sale.
+  ///
+  /// **Non-null means "not a sale".** A replacement is a fulfillment obligation the customer
+  /// has already paid for on the original order, so its total is zero while its items still
+  /// carry a real `unitCost`. Left in the sales population it would report as revenue 0 against
+  /// cost > 0 — a loss on every exchange, blended into product and channel margin. Every
+  /// revenue report therefore filters `exchangeForReturnId: null`.
+  exchangeForReturnId      String?                @unique
+  exchangeForReturn        ReturnRequest?         @relation("ExchangeForReturn", fields: [exchangeForReturnId], references: [id])
+
   @@index([userId])
   @@index([participantId])
   @@index([abandonedCartId])
@@ -660,9 +670,12 @@ model ReturnRequest {
   adminNote     String?
   /// Withheld from the refund. Stored per-request because it is a judgement call.
   restockingFee Decimal?            @db.Decimal(10, 2)
-  /// Set once money is actually sent back, linking to the refund the existing admin refund
-  /// path created — returns never call the payment provider themselves.
+  /// The refund this return produced, set when it is completed with a REFUND resolution.
   refundId      String?             @unique
+  /// Store credit issued instead of a refund, set when completed with STORE_CREDIT. Exactly
+  /// one of `refundId` / `giftCertificateId` / `exchangeOrder` is ever populated — see
+  /// `lib/orders/return-resolution.ts`.
+  giftCertificateId String?         @unique
   requestedById String?
   approvedById  String?
   approvedAt    DateTime?
@@ -670,8 +683,29 @@ model ReturnRequest {
   completedAt   DateTime?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
+
+  /// Prepaid label emailed to the customer so they can send the goods back.
+  ///
+  /// Stored here rather than as a `ShippingLabel` row on purpose. `lib/tracking/webhook-handlers.ts`
+  /// looks a label up by `trackingCode` and advances **that label's order** to shipped and then
+  /// delivered — so a return label would mark the customer's order DELIVERED the moment the
+  /// parcel reached the warehouse. Keeping return labels out of that table makes the collision
+  /// impossible rather than guarded. The cost is that return shipments are not tracked.
+  returnLabelShipmentId  String?    @unique
+  returnLabelTrackingCode String?
+  returnLabelUrl         String?
+  returnLabelCarrier     String?
+  returnLabelService     String?
+  /// In cents, matching Payment.processorFee. Null means no label bought, never free.
+  returnLabelCostCents   Int?
+  returnLabelPurchasedAt DateTime?
+
   order         Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   refund        Refund?             @relation(fields: [refundId], references: [id])
+  giftCertificate GiftCertificate?  @relation(fields: [giftCertificateId], references: [id])
+  /// The replacement order raised for an EXCHANGE resolution. The foreign key lives on `Order`
+  /// so revenue reports can exclude exchanges with a single `where` on the order itself.
+  exchangeOrder Order?              @relation("ExchangeForReturn")
   items         ReturnRequestItem[]
 
   @@index([orderId])
@@ -2337,6 +2371,8 @@ model GiftCertificate {
   redeemedAt     DateTime?
   usages         GiftCertificateUsage[]
   order          Order?                 @relation(fields: [orderId], references: [id])
+  /// Set when this certificate was issued as store credit for a return rather than bought.
+  returnRequest  ReturnRequest?
 
   @@index([code])
   @@index([purchaserEmail])

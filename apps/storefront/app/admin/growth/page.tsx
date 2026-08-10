@@ -1,8 +1,16 @@
 import type { Metadata } from 'next'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { redirect } from 'next/navigation'
 import { GrowthDashboardView } from '@/components/dashboard/growth-dashboard'
+import { SALES_ONLY } from '@/lib/orders/sales-population'
+import {
+  bucketByMonth,
+  bucketCustomerGrowth,
+  lastMonths,
+  seriesStart,
+} from '@/lib/analytics/monthly-series'
 
 export const metadata: Metadata = {
   title: 'Growth Dashboard | Jose Madrid Salsa Admin',
@@ -10,50 +18,74 @@ export const metadata: Metadata = {
 }
 
 async function getGrowthData() {
-  const [monthlyRevenue, monthlyCustomers, totalStats, topProducts, ordersByMonth] = await Promise.all([
-    prisma.$queryRaw<Array<{ month: string; revenue: number; orders: number }>>`
-      SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') AS month,
-        COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total ELSE 0 END), 0)::float AS revenue,
-        COUNT(CASE WHEN status != 'CANCELLED' THEN 1 END)::int AS orders
-      FROM orders WHERE "createdAt" >= date_trunc('month', NOW()) - interval '11 months'
-      GROUP BY date_trunc('month', "createdAt") ORDER BY date_trunc('month', "createdAt") ASC
-    `,
-    prisma.$queryRaw<Array<{ month: string; new_customers: number; total_customers: number }>>`
-      SELECT to_char(months.m, 'Mon YYYY') AS month,
-        (SELECT COUNT(*) FROM users WHERE "createdAt" >= months.m AND "createdAt" < months.m + interval '1 month')::int AS new_customers,
-        (SELECT COUNT(*) FROM users WHERE "createdAt" < months.m + interval '1 month')::int AS total_customers
-      FROM (SELECT generate_series(date_trunc('month', NOW()) - interval '11 months', date_trunc('month', NOW()), interval '1 month') AS m) months
-      ORDER BY months.m ASC
-    `,
+  const months = lastMonths(12)
+  const windowStart = seriesStart(months)
+
+  // A sale, excluding cancellations and exchange replacements. Shared by every figure below so
+  // the tiles and the charts cannot disagree about what counts.
+  const soldOrders: Prisma.OrderWhereInput = {
+    ...SALES_ONLY,
+    status: { not: 'CANCELLED' },
+  }
+
+  const [
+    ordersInWindow,
+    signupsInWindow,
+    customersBeforeWindow,
+    totalStats,
+    topProductGroups,
+  ] = await Promise.all([
+    prisma.order.findMany({
+      where: { ...soldOrders, createdAt: { gte: windowStart } },
+      select: { createdAt: true, total: true },
+    }),
+    prisma.user.findMany({
+      where: { createdAt: { gte: windowStart } },
+      select: { createdAt: true },
+    }),
+    // Counted once instead of a correlated subquery per month, which is what the SQL this
+    // replaced did — twelve full scans of `users` to draw one line.
+    prisma.user.count({ where: { createdAt: { lt: windowStart } } }),
     Promise.all([
-      prisma.order.count({ where: { status: { not: 'CANCELLED' } } }),
-      prisma.order.aggregate({ _sum: { total: true }, where: { status: { not: 'CANCELLED' } } }),
+      prisma.order.count({ where: soldOrders }),
+      prisma.order.aggregate({ _sum: { total: true }, where: soldOrders }),
       prisma.user.count(),
       prisma.product.count({ where: { isActive: true } }),
       prisma.retailLocation.count(),
       prisma.review.count(),
       prisma.review.aggregate({ _avg: { rating: true } }),
     ]),
-    prisma.$queryRaw<Array<{ name: string; units_sold: number; revenue: number }>>`
-      SELECT oi."productName" AS name, SUM(oi.quantity)::int AS units_sold, SUM(oi."totalPrice")::float AS revenue
-      FROM order_items oi JOIN orders o ON o.id = oi."orderId" WHERE o.status != 'CANCELLED'
-      GROUP BY oi."productName" ORDER BY units_sold DESC LIMIT 10
-    `,
-    prisma.$queryRaw<Array<{ month: string; count: number }>>`
-      SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') AS month, COUNT(*)::int AS count
-      FROM orders WHERE "createdAt" >= date_trunc('month', NOW()) - interval '11 months' AND status != 'CANCELLED'
-      GROUP BY date_trunc('month', "createdAt") ORDER BY date_trunc('month', "createdAt") ASC
-    `,
+    prisma.orderItem.groupBy({
+      by: ['productName'],
+      where: { order: soldOrders },
+      _sum: { quantity: true, totalPrice: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take: 10,
+    }),
   ])
 
   const [totalOrders, revenueAgg, totalCustomers, totalProducts, totalLocations, totalReviews, avgRating] = totalStats
 
+  const revenueSeries = bucketByMonth(
+    ordersInWindow.map((order) => ({ createdAt: order.createdAt, amount: Number(order.total) })),
+    months
+  )
+
   return {
-    monthlyRevenue: monthlyRevenue.map((m) => ({ month: m.month, revenue: Number(m.revenue), orders: Number(m.orders) })),
-    monthlyCustomers: monthlyCustomers.map((m) => ({ month: m.month, newCustomers: Number(m.new_customers), totalCustomers: Number(m.total_customers) })),
+    monthlyRevenue: revenueSeries.map((m) => ({ month: m.month, revenue: m.total, orders: m.count })),
+    monthlyCustomers: bucketCustomerGrowth(
+      signupsInWindow.map((user) => user.createdAt),
+      months,
+      customersBeforeWindow
+    ),
     totals: { orders: totalOrders, revenue: Number(revenueAgg._sum.total || 0), customers: totalCustomers, products: totalProducts, locations: totalLocations, reviews: totalReviews, avgRating: Number(avgRating._avg.rating || 0) },
-    topProducts: topProducts.map((p) => ({ name: p.name, unitsSold: Number(p.units_sold), revenue: Number(p.revenue) })),
-    ordersByMonth: ordersByMonth.map((m) => ({ month: m.month, count: Number(m.count) })),
+    topProducts: topProductGroups.map((row) => ({
+      name: row.productName,
+      unitsSold: row._sum.quantity ?? 0,
+      revenue: Number(row._sum.totalPrice ?? 0),
+    })),
+    // The same orders the revenue chart counts, so the two charts cannot disagree.
+    ordersByMonth: revenueSeries.map((m) => ({ month: m.month, count: m.count })),
   }
 }
 

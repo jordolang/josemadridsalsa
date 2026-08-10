@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { ReturnActions } from '@/components/admin/ReturnActions'
+import { ReturnLabelPanel } from '@/components/admin/ReturnLabelPanel'
 import {
   RETURN_STATUS_LABELS,
   computeReturnRefundCents,
@@ -52,6 +53,8 @@ export default async function ReturnDetailPage({
         },
         items: { include: { orderItem: true } },
         refund: true,
+        giftCertificate: { select: { code: true, balance: true, expiresAt: true } },
+        exchangeOrder: { select: { id: true, orderNumber: true, status: true } },
       },
     })
 
@@ -166,10 +169,33 @@ export default async function ReturnDetailPage({
                       quantity: item.quantity,
                       condition: item.condition,
                     }))}
+                    resolution={returnRequest.resolution}
+                    refundValueCents={refundCents}
                   />
                 </CardContent>
               </Card>
             )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Return label</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ReturnLabelPanel
+                  returnId={returnRequest.id}
+                  canWrite={canWrite}
+                  isTerminal={isTerminalReturnStatus(returnRequest.status)}
+                  label={{
+                    url: returnRequest.returnLabelUrl,
+                    trackingCode: returnRequest.returnLabelTrackingCode,
+                    carrier: returnRequest.returnLabelCarrier,
+                    service: returnRequest.returnLabelService,
+                    costCents: returnRequest.returnLabelCostCents,
+                    purchasedAt: returnRequest.returnLabelPurchasedAt,
+                  }}
+                />
+              </CardContent>
+            </Card>
           </div>
 
           <Card className="h-fit">
@@ -194,6 +220,44 @@ export default async function ReturnDetailPage({
               )}
               {returnRequest.adminNote && (
                 <Detail label="Internal note" value={returnRequest.adminNote} />
+              )}
+
+              {/* What the resolution actually produced. Present on exactly one of the three. */}
+              {returnRequest.refund && (
+                <Detail
+                  label="Refunded"
+                  value={`$${(returnRequest.refund.amount / 100).toFixed(2)} — ${returnRequest.refund.status.toLowerCase()}`}
+                />
+              )}
+              {returnRequest.giftCertificate && (
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Store credit
+                  </p>
+                  <p className="font-mono text-sm">{returnRequest.giftCertificate.code}</p>
+                  <p className="text-xs text-muted-foreground">
+                    ${Number(returnRequest.giftCertificate.balance).toFixed(2)} remaining
+                    {returnRequest.giftCertificate.expiresAt
+                      ? ` · expires ${returnRequest.giftCertificate.expiresAt.toLocaleDateString()}`
+                      : ''}
+                  </p>
+                </div>
+              )}
+              {returnRequest.exchangeOrder && (
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Replacement order
+                  </p>
+                  <Link
+                    href={`/admin/orders/${returnRequest.exchangeOrder.id}`}
+                    className="text-sm underline underline-offset-2"
+                  >
+                    {returnRequest.exchangeOrder.orderNumber}
+                  </Link>
+                  <p className="text-xs text-muted-foreground">
+                    {returnRequest.exchangeOrder.status.toLowerCase()}
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>

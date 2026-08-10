@@ -1,6 +1,7 @@
 import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
+import { SALES_ONLY } from '@/lib/orders/sales-population'
 
 import { getDateRange, type AnalyticsRangeKey } from './date-range'
 import type { MarginSummary } from './margin'
@@ -40,6 +41,7 @@ export async function getMarginReport(range: AnalyticsRangeKey): Promise<MarginR
   // The same filter the order analytics page uses, so the two pages never report different
   // revenue for the same window.
   const orderFilter: Prisma.OrderWhereInput = {
+    ...SALES_ONLY,
     createdAt: { gte: start, lte: end },
     status: { notIn: [OrderStatus.CANCELLED, OrderStatus.REFUNDED] },
     paymentStatus: { in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED] },

@@ -24,6 +24,14 @@ import {
 import { SalesOverview } from '@/components/admin/SalesOverview'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
+import { SALES_ONLY } from '@/lib/orders/sales-population'
+import {
+  bucketByMonth,
+  bucketCustomerGrowth,
+  lastMonths,
+  seriesStart,
+} from '@/lib/analytics/monthly-series'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -90,32 +98,29 @@ async function getDashboardStats() {
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    const [revenue, avgRating, newUsersThisMonth, monthlySales, topProductRows, recentActivityData, monthlyCustomerGrowth] = await Promise.all([
-      prisma.order.aggregate({ _sum: { total: true }, where: { status: { not: 'CANCELLED' } } }),
+    // Six months of buckets, and the definition of a sale, resolved once so the charts and the
+    // tiles below cannot end up counting different things.
+    const dashboardMonths = lastMonths(6, now)
+    const dashboardSoldOrders: Prisma.OrderWhereInput = {
+      ...SALES_ONLY,
+      status: { not: 'CANCELLED' },
+    }
+
+    const [revenue, avgRating, newUsersThisMonth, monthlyOrders, topProductRows, recentActivityData, signupsInWindow, customersBeforeWindow] = await Promise.all([
+      prisma.order.aggregate({ _sum: { total: true }, where: dashboardSoldOrders }),
       prisma.review.aggregate({ _avg: { rating: true } }),
       prisma.user.count({ where: { createdAt: { gte: startOfMonth } } }),
-      prisma.$queryRaw<Array<{ month: string; sales: number; orders: number }>>`
-        SELECT
-          to_char(date_trunc('month', "createdAt"), 'Mon') AS month,
-          COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total ELSE 0 END), 0)::float AS sales,
-          COUNT(*)::int AS orders
-        FROM orders
-        WHERE "createdAt" >= date_trunc('month', NOW()) - interval '6 months'
-        GROUP BY date_trunc('month', "createdAt")
-        ORDER BY date_trunc('month', "createdAt") ASC
-      `,
-      prisma.$queryRaw<Array<{ name: string; sold: number; revenue: number }>>`
-        SELECT
-          oi."productName" AS name,
-          SUM(oi.quantity)::int AS sold,
-          SUM(oi."totalPrice")::float AS revenue
-        FROM order_items oi
-        JOIN orders o ON o.id = oi."orderId"
-        WHERE o.status != 'CANCELLED'
-        GROUP BY oi."productName"
-        ORDER BY sold DESC
-        LIMIT 5
-      `,
+      prisma.order.findMany({
+        where: { ...dashboardSoldOrders, createdAt: { gte: seriesStart(dashboardMonths) } },
+        select: { createdAt: true, total: true },
+      }),
+      prisma.orderItem.groupBy({
+        by: ['productName'],
+        where: { order: dashboardSoldOrders },
+        _sum: { quantity: true, totalPrice: true },
+        orderBy: { _sum: { quantity: 'desc' } },
+        take: 5,
+      }),
       Promise.all([
         prisma.order.findMany({
           take: 3, orderBy: { createdAt: 'desc' },
@@ -124,20 +129,11 @@ async function getDashboardStats() {
         prisma.user.findMany({ take: 2, orderBy: { createdAt: 'desc' }, select: { email: true, createdAt: true } }),
         prisma.review.findMany({ take: 2, orderBy: { createdAt: 'desc' }, select: { rating: true, createdAt: true, product: { select: { name: true } } } }),
       ]),
-      prisma.$queryRaw<Array<{ month: string; customers: number; new_customers: number }>>`
-        SELECT
-          to_char(months.m, 'Mon') AS month,
-          (SELECT COUNT(*) FROM users WHERE "createdAt" <= months.m + interval '1 month')::int AS customers,
-          (SELECT COUNT(*) FROM users WHERE "createdAt" >= months.m AND "createdAt" < months.m + interval '1 month')::int AS new_customers
-        FROM (
-          SELECT generate_series(
-            date_trunc('month', NOW()) - interval '6 months',
-            date_trunc('month', NOW()),
-            interval '1 month'
-          ) AS m
-        ) months
-        ORDER BY months.m ASC
-      `,
+      prisma.user.findMany({
+        where: { createdAt: { gte: seriesStart(dashboardMonths) } },
+        select: { createdAt: true },
+      }),
+      prisma.user.count({ where: { createdAt: { lt: seriesStart(dashboardMonths) } } }),
     ])
 
     const [latestOrders, latestUsers, latestReviews] = recentActivityData
@@ -175,10 +171,23 @@ async function getDashboardStats() {
         status: o.status,
         count: o._count.id,
       })),
-      monthlySales: monthlySales.map((m) => ({ month: m.month, sales: Number(m.sales), orders: Number(m.orders) })),
-      topProducts: topProductRows.map((p) => ({ name: p.name, sold: Number(p.sold), revenue: Number(p.revenue) })),
+      monthlySales: bucketByMonth(
+        monthlyOrders.map((order) => ({ createdAt: order.createdAt, amount: Number(order.total) })),
+        dashboardMonths,
+        'short'
+      ).map((m) => ({ month: m.month, sales: m.total, orders: m.count })),
+      topProducts: topProductRows.map((row) => ({
+        name: row.productName,
+        sold: row._sum.quantity ?? 0,
+        revenue: Number(row._sum.totalPrice ?? 0),
+      })),
       activityFeed,
-      customerGrowth: monthlyCustomerGrowth.map((m) => ({ month: m.month, customers: Number(m.customers), newCustomers: Number(m.new_customers) })),
+      customerGrowth: bucketCustomerGrowth(
+        signupsInWindow.map((user) => user.createdAt),
+        dashboardMonths,
+        customersBeforeWindow,
+        'short'
+      ).map((m) => ({ month: m.month, customers: m.totalCustomers, newCustomers: m.newCustomers })),
     }
   } catch (error) {
     console.error('[Admin Dashboard] Error fetching stats:', error)

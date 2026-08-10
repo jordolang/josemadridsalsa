@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { isAuthorizedCronRequest } from '@/lib/cron/auth'
 import {
   fetchPayPalFee,
+  fetchSquareFee,
   fetchStripeFee,
   FEE_LOOKUP_MAX_AGE_DAYS,
   isWorthCheckingFee,
@@ -18,7 +19,7 @@ import {
  * This is a sweep and not webhook work because Square does not know its own fee at
  * `payment.completed` — it settles the fee hours later. Since a sweep is unavoidable for
  * Square, all providers use it, which also keeps a third-party call out of the webhook
- * handlers that must not fail.
+ * handlers that must not fail. All three providers are now covered.
  *
  * Every payment it touches gets `processorFeeCheckedAt` stamped whether or not a fee came
  * back, so an unanswerable payment is retried on a schedule rather than on every tick, and
@@ -56,6 +57,7 @@ export async function GET(request: Request) {
         stripePaymentIntentId: true,
         paypalCaptureId: true,
         providerPaymentId: true,
+        squarePaymentId: true,
       },
       orderBy: { createdAt: 'asc' },
       take: BATCH,
@@ -91,11 +93,16 @@ export async function GET(request: Request) {
         feeCents = result.feeCents
         reason = result.reason ?? ''
       } else if (payment.provider === 'SQUARE') {
-        // Square's fee arrives on the payment object itself, which the webhook already sees.
-        // Re-fetching it here would need the Square client and an extra call per payment;
-        // until that is wired the sweep records the attempt so it is visibly not covered
-        // rather than silently skipped.
-        reason = 'square fee lookup not implemented'
+        // `squarePaymentId` first: on a terminal sale `providerPaymentId` can hold the
+        // terminal *checkout* ID, which `payments.get` rejects as not found.
+        const squareId = payment.squarePaymentId ?? payment.providerPaymentId
+        if (squareId) {
+          const result = await fetchSquareFee(squareId)
+          feeCents = result.feeCents
+          reason = result.reason ?? ''
+        } else {
+          reason = 'square payment has no payment id'
+        }
       }
 
       // Stamp the attempt either way — that is what stops an unanswerable payment being

@@ -24,7 +24,12 @@ function getSquareConfig() {
 
 let squareClient: SquareClient | null = null
 
-function getSquareClient(): SquareClient {
+/**
+ * Exported so the processor-fee sweep can reach Square without a second copy of the
+ * credential and sandbox handling — getting the environment wrong there would silently
+ * look up production payments against sandbox, which returns "not found" rather than an error.
+ */
+export function getSquareClient(): SquareClient {
   if (squareClient) return squareClient
 
   const config = getSquareConfig()

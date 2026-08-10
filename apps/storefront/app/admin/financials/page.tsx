@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button'
 import { FinancialUploadPanel } from '@/components/admin/financials/financial-upload-panel'
 import QuickBooksProfitAndLossCard from '@/components/admin/financials/quickbooks-pl-card'
 import { PAID_PAYMENT_STATUSES } from '@/lib/payments/status'
+import { effectiveFeeRate, summariseNetRevenue } from '@/lib/analytics/margin'
+import { SALES_ONLY } from '@/lib/orders/sales-population'
 import {
   financialIntegrations,
   mapIntegrationStatus,
@@ -56,12 +58,32 @@ type FinancialOverview = {
   summary: {
     revenue: number
     refunds: number
-    netRevenue: number
+    /**
+     * Order revenue less refunds. Deliberately **not** called net revenue: it counts every
+     * sales channel, including manual orders that never create a `Payment` row, and it knows
+     * nothing about what the processors charged. `processorFees` below is the net-of-fees
+     * figure, over a narrower population.
+     */
+    afterRefunds: number
     orders: number
     averageOrderValue: number
     taxCollected: number
     shippingCollected: number
     discounts: number
+  }
+  /**
+   * Net revenue after what the processors actually kept, over payments only. Fee coverage is
+   * reported rather than averaged away, because a net figure computed across payments whose
+   * fee is still unknown is optimistic and the reader has to know by how much.
+   */
+  processorFees: {
+    grossCents: number
+    feesCents: number
+    netCents: number
+    feeCoverageRatio: number
+    paymentsTotal: number
+    paymentsWithKnownFee: number
+    effectiveRate: number | null
   }
   outstanding: {
     total: number
@@ -127,6 +149,7 @@ async function getFinancialOverview(range: RangeKey): Promise<FinancialOverview>
   ]
 
   const orderFilter: Prisma.OrderWhereInput = {
+    ...SALES_ONLY,
     createdAt: createdAtRange,
     status: { notIn: excludedStatuses },
     paymentStatus: { in: includedPayments },
@@ -142,6 +165,7 @@ async function getFinancialOverview(range: RangeKey): Promise<FinancialOverview>
     draftInvoiceCount,
     upcomingInvoices,
     recentOrders,
+    paymentsInRange,
   ] = await Promise.all([
     prisma.order.aggregate({
       where: orderFilter,
@@ -234,6 +258,24 @@ async function getFinancialOverview(range: RangeKey): Promise<FinancialOverview>
       orderBy: { createdAt: 'desc' },
       take: 8,
     }),
+    // Payments rather than orders, because a fee belongs to a processor charge. Refunds come
+    // from the refund rows themselves so a partial refund counts for what it actually was.
+    prisma.payment.findMany({
+      where: {
+        createdAt: createdAtRange,
+        // A fully refunded payment still cost a fee and still moved gross, so it belongs in
+        // the denominator — the refund is subtracted rather than the payment excluded.
+        status: { in: [...PAID_PAYMENT_STATUSES, 'PARTIALLY_REFUNDED', 'REFUNDED'] },
+      },
+      select: {
+        amount: true,
+        processorFee: true,
+        refunds: {
+          where: { status: 'SUCCEEDED' },
+          select: { amount: true },
+        },
+      },
+    }),
   ])
 
   const revenue = Number(revenueAggregate._sum?.total || 0)
@@ -243,7 +285,15 @@ async function getFinancialOverview(range: RangeKey): Promise<FinancialOverview>
   const refundTotal = Number(refundAggregate._sum?.total || 0)
 
   const averageOrderValue = orderCount === 0 ? 0 : revenue / orderCount
-  const netRevenue = revenue - refundTotal
+  const afterRefunds = revenue - refundTotal
+
+  const netRevenueSummary = summariseNetRevenue(
+    paymentsInRange.map((payment) => ({
+      amountCents: payment.amount,
+      feeCents: payment.processorFee,
+      refundedCents: payment.refunds.reduce((sum, refund) => sum + refund.amount, 0),
+    }))
+  )
 
   const monthlyBuckets = createMonthlyBuckets(12)
   ordersForTrend.forEach((order) => {
@@ -257,12 +307,21 @@ async function getFinancialOverview(range: RangeKey): Promise<FinancialOverview>
     summary: {
       revenue,
       refunds: refundTotal,
-      netRevenue,
+      afterRefunds,
       orders: orderCount,
       averageOrderValue,
       taxCollected,
       shippingCollected,
       discounts,
+    },
+    processorFees: {
+      grossCents: netRevenueSummary.grossCents,
+      feesCents: netRevenueSummary.feesCents,
+      netCents: netRevenueSummary.netCents,
+      feeCoverageRatio: netRevenueSummary.feeCoverageRatio,
+      paymentsTotal: netRevenueSummary.paymentsTotal,
+      paymentsWithKnownFee: netRevenueSummary.paymentsWithKnownFee,
+      effectiveRate: effectiveFeeRate(netRevenueSummary),
     },
     outstanding: {
       total: Number(outstandingInvoices._sum.total || 0),
@@ -288,6 +347,66 @@ async function getFinancialOverview(range: RangeKey): Promise<FinancialOverview>
       createdAt: order.createdAt,
     })),
   }
+}
+
+/**
+ * Net revenue after what the processors kept.
+ *
+ * Kept separate from the tiles above because it answers a narrower question than they do —
+ * payments only, so cash and cheque sales taken as manual orders are absent — and because the
+ * number is worthless without its fee coverage. Quoting a net figure while a third of the fees
+ * are still unknown, without saying so, is how gross gets mistaken for net.
+ */
+function NetOfFeesCard({ fees }: { fees: FinancialOverview['processorFees'] }) {
+  if (fees.paymentsTotal === 0) {
+    return null
+  }
+
+  const coveragePercent = Math.round(fees.feeCoverageRatio * 100)
+  const complete = fees.paymentsWithKnownFee === fees.paymentsTotal
+
+  return (
+    <Card className="p-6">
+      <h2 className="text-lg font-semibold text-foreground">Net of processor fees</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Card payments only. Manual orders — phone, wholesale, festival — never create a payment
+        record, so they are counted in the tiles above but not here.
+      </p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-4">
+        <div>
+          <p className="text-sm text-muted-foreground">Processed</p>
+          <p className="text-xl font-semibold tabular-nums text-foreground">
+            {formatPrice(fees.grossCents / 100)}
+          </p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Processor fees</p>
+          <p className="text-xl font-semibold tabular-nums text-foreground">
+            −{formatPrice(fees.feesCents / 100)}
+          </p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Net</p>
+          <p className="text-xl font-semibold tabular-nums text-foreground">
+            {formatPrice(fees.netCents / 100)}
+          </p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Effective rate</p>
+          <p className="text-xl font-semibold tabular-nums text-foreground">
+            {fees.effectiveRate === null ? '—' : `${(fees.effectiveRate * 100).toFixed(2)}%`}
+          </p>
+        </div>
+      </div>
+      <p
+        className={`mt-4 text-sm ${complete ? 'text-muted-foreground' : 'text-amber-700 dark:text-amber-400'}`}
+      >
+        {complete
+          ? `Fees known for all ${fees.paymentsTotal} payment${fees.paymentsTotal === 1 ? '' : 's'} in this period.`
+          : `Fees known for ${fees.paymentsWithKnownFee} of ${fees.paymentsTotal} payments — ${coveragePercent}% of processed volume. The rest have not settled yet, so net is flattering by whatever they turn out to cost.`}
+      </p>
+    </Card>
+  )
 }
 
 export default async function FinancialsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -353,7 +472,12 @@ export default async function FinancialsPage({ searchParams }: { searchParams: P
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatsCard title="Gross Revenue" value={formatPrice(data.summary.revenue)} icon={DollarSign} />
-        <StatsCard title="Net Revenue" value={formatPrice(data.summary.netRevenue)} icon={Wallet} />
+        <StatsCard
+          title="After Refunds"
+          value={formatPrice(data.summary.afterRefunds)}
+          subtitle="all channels, before processor fees"
+          icon={Wallet}
+        />
         <StatsCard
           title="Avg. Order Value"
           value={formatPrice(data.summary.averageOrderValue)}
@@ -365,6 +489,8 @@ export default async function FinancialsPage({ searchParams }: { searchParams: P
           icon={Receipt}
         />
       </div>
+
+      <NetOfFeesCard fees={data.processorFees} />
 
       {/* Renders nothing when QuickBooks isn't connected. */}
       <QuickBooksProfitAndLossCard

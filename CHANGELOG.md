@@ -2,7 +2,12 @@
 
 All notable changes to the Jose Madrid Salsa e-commerce platform are documented in this file.
 
-This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format.
+This project follows the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format and its
+own version scheme: `MAJOR.MINOR` with an optional letter, where a large feature bumps the minor
+(`2.0` → `2.1`) and everything smaller takes a letter (`2.1` → `2.1a`). See
+[Versioning](https://josemadrid.net/docs/guides/versioning) for the full rule and the release
+command. `package.json` carries the derived SemVer form so npm stays happy; `projectVersion` in
+the root `package.json` is canonical.
 
 ---
 
@@ -19,7 +24,39 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
   Two mappings are deliberately absent rather than plausible-looking no-ops. `ORDER_PLACED` keys off `payment.completed`, not `order.created`, because the checkout, PayPal and Square routes all create the order *before* taking payment — keying a post-purchase series off creation would email people who abandoned at the payment step. And there is no `ORDER_REFUNDED` mapping at all, because nothing emits `payment.refunded` or `refund.completed` today; registering it would read as though refund automations worked.
 
-  The drain degrades to a logged no-op if `consumedAt` is missing (`isMissingColumnError`, P2022 — the sibling of the existing P2021 handling), because `vercel-build` wraps `prisma migrate deploy` in a warning rather than a failure, so code can land ahead of its migration on a green deploy. Without that guard an unapplied migration would throw at the head of the cron and take the step processor down with it.
+- **A version scheme the project will actually use** — `CHANGELOG.md` claimed Semantic Versioning while the repository sat on `2.0.0` for months. That is the honest signal that nobody was reaching for a third number: SemVer's patch component exists so consumers can judge whether an upgrade is safe, and nothing consumes this repository as a package.
+
+  The scheme is now `MAJOR.MINOR` with an optional letter. A large feature bumps the minor (`2.0` → `2.1`); everything smaller takes a letter (`2.1` → `2.1a` → `2.1b`); `2.x` → `3.0` happens only on an explicit instruction and `suggestBump()` cannot return it. A feature bump drops the letter, because the letter counts increments within a minor and means nothing once the minor moves.
+
+  npm still requires valid SemVer, so both exist rather than one being fudged: `projectVersion` in the root `package.json` is canonical (`"2.1a"`) and `version` is derived (`"2.1.1"`). The mapping is positional — the letter's place in the alphabet is the patch number — so it stays monotonic and any tool comparing versions still orders releases correctly. Letters carry past `z` to `aa` rather than wrapping onto a version already released.
+
+  `npm run version:feature|increment|major` bumps every workspace, renames `## [Unreleased]` to the new version with today's date, and opens a fresh one. It refuses when `[Unreleased]` is empty — a version with no changelog section looks like a release nobody documented — and it does not commit, tag or push, because a release that tags itself before anyone reads the diff makes a wrong version number permanent.
+
+- **Return resolutions do something** — `ReturnRequest.resolution` accepted `REFUND`, `EXCHANGE` and `STORE_CREDIT`, stored the choice, displayed it on the return detail page, and never branched on it. Completing a return restocked the resellable units and stopped. So a staff member could resolve a return as an exchange and nothing distinguished it from a refund — except that no refund happened either, because nothing wrote `ReturnRequest.refundId`.
+
+  All three now settle, to the **same value**: `REFUND` issues at the processor, `STORE_CREDIT` issues a gift certificate coded `JMS-CR-…` valid a year, `EXCHANGE` raises a replacement order. Which button staff press changes the form the customer's compensation takes, never the amount.
+
+  A return produces exactly one outcome. Unique columns give at-most-one of each; at-most-one *in total* is a rule they cannot express, so it lives in `lib/orders/return-resolution.ts` with tests — including the case that matters, where someone refunds a customer and then also tries to issue credit for the same goods.
+
+  Settlement runs *before* the status is written. Refusing leaves the return in `RECEIVED`, which is recoverable; recording `COMPLETED` and then failing to pay the customer is not, because `COMPLETED` is terminal and cannot be re-driven.
+
+  The resolution is settable up until the return settles. Customer-raised returns are always created as `REFUND` — the customer is not offered a choice — so without that, store credit and exchange would only ever have been reachable on staff-raised returns.
+
+- **An exchange order is not a sale** — a replacement carries a real `unitCost` against a zero total, because the customer paid for those goods once already on the original order. Left in the sales population it reports a loss on every exchange, blended into product and channel margin, and drags average order value down with a $0 order. `Order.exchangeForReturnId` marks it, and `SALES_ONLY` in `lib/orders/sales-population.ts` is the one definition every revenue query composes — spelled out once because the failure mode is a new report that forgets the clause and quietly disagrees with all the others.
+
+- **Return shipping labels** — a real EasyPost purchase from the customer's address back to the warehouse, cheapest rate by default since the business is paying for its own or the customer's mistake. Refuses rather than guessing on an incomplete warehouse address: EasyPost accepts a partial address and prints an undeliverable label, which a customer discovers when their parcel comes back to them.
+
+  Stored on `ReturnRequest`, deliberately not as a `ShippingLabel` row. `lib/tracking/webhook-handlers.ts` resolves a label to its order and advances that order to shipped and then delivered — a return label in that table would mark the customer's original order **delivered** the moment their return reached the warehouse. Keeping return labels out makes the collision impossible rather than guarded; the cost is that return shipments are not tracked.
+
+  It also does not reuse `app/api/admin/orders/[id]/shipping-label`, because that route never calls the carrier: it synthesises `${CARRIER}${Date.now()}` as a tracking number and a local URL as the label. A label a customer is emailed has to be real.
+
+- **Taxes collected** — `/admin/financials/taxes` reports tax by period and destination state with a CSV export. Tax was charged and stored on every order and nothing read it back.
+
+  Calendar periods, not the rolling `7d`/`30d` keys the other analytics use: a return covers a named month or quarter, and a rolling 90 days cannot be filed against anything. Jurisdiction comes from the shipping address, which is the finest split available — Stripe Tax returns a state/county/city breakdown at checkout but only the order total is persisted, so a county-level report would be null for every order already taken. Refunded orders and orders with no address are counted and called out rather than silently kept or silently dropped.
+
+- **Net revenue after processor fees** on `/admin/financials`. `summariseNetRevenue` had been written and tested and read by nothing, while the page computed revenue minus refunds and called *that* "Net Revenue" — two different figures under one name. The computed one is now labelled **After Refunds**, and the fee-aware figure states its coverage, because a net number quoted while a third of the fees are unknown is gross wearing a different hat.
+
+- **Square processor fees** — the sweep now covers all three providers. `readSquareFee` already parsed the fee array correctly, including negative settlement adjustments; only the API call was missing. Two traps it had to clear: the parser was written against snake_case (`processing_fee`) while the v43 SDK returns camelCase, which would have read as "not settled yet" forever, and the sweep prefers `squarePaymentId` over `providerPaymentId` because on a terminal sale the latter can hold the terminal *checkout* ID, which `payments.get` rejects as not found.
 
 - **Manual orders** — `/admin/orders/new` records a sale taken somewhere other than the website: over the phone, at a wholesale table, at a festival stand. Until now those had nowhere to go; the bulk importer replays history and is not the same thing.
 
@@ -59,6 +96,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Operations sweep cron** — A new `/api/cron/operations-sweep` runs every two hours and raises a notification for work that has gone quiet: paid orders still unshipped after 48 hours, return requests left undecided for 72 hours, and webhooks received more than 30 minutes ago that never finished processing. The webhook case is the one that costs money silently — the provider took the payment and called us, the handler threw partway, and the row sits at `processed: false` with nothing watching it — so it is raised as CRITICAL and reported as counts per provider, since the useful question is whether one integration is broken or one event is bad. Detection only: replaying a payment webhook unattended is not a decision to automate. It reuses the `INTEGRATION_FAILED` type and dedupe identity the notification centre already defined and nothing had used. None of the three conditions throws an error or fires a webhook — the rows just sit — so nothing else was noticing them. Each sweep collapses onto a single rolling notification rather than one per row, because twelve unshipped orders is one situation and a list that reports it twelve times is a list operators learn to ignore. The stale-order query reuses the exact `where` clause behind the "Needs Shipping" saved view, so the notification and the link it points at cannot disagree about which orders count, and a quiet sweep writes nothing at all rather than an "all clear" that would re-surface itself on every tick.
 
 ### Changed
+- **Admin analytics no longer build raw SQL** — Seven `prisma.$queryRaw` template literals in `app/admin/page.tsx` and `app/admin/growth/page.tsx` are now Prisma aggregates and `groupBy`. CLAUDE.md forbids raw SQL, and the count had been growing: the gap analysis recorded four in the growth page, and the operational dashboard had since picked up the same pattern.
+
+  They were never an injection risk, being parameter-free, but they carried a real bug. Because they grouped only rows that exist, **a month with no orders was absent from the series rather than zero** — so every chart drawn from them joined the months either side of an empty one and showed a trend that had not happened. `lib/analytics/monthly-series.ts` always emits every month in the window, and drops the correlated per-month subqueries that counted the whole `users` table once for each point on a line.
+
+  The one remaining `$queryRaw` is `SELECT 1` in the developer console's connectivity probe, which builds no SQL from data.
+
+- **Refund execution extracted to `lib/payments/refund.ts`** — A refund has four consequences that must all happen or none: the provider call, the `Refund` row, the payment status, and the fundraiser commission clawback. Return completion needed to issue refunds too, and two implementations of that would have drifted on the first change to any of the four. The admin refund route now calls the same function.
+
+- **`/admin/inventory` is in the sidebar.** The page worked and nothing linked to it.
+
 - **Jar pricing raised to $9, and the catalogue priced uniformly** — All 28 products move from $7.00 to $9.00 in both databases and in `lib/seed.ts`, so a reseed cannot quietly restore the old figure. The three SKUs that carried a `compareAtPrice` (Original Mild, Garden Cilantro Hot, Mango Habanero) have it cleared: the storefront renders a strikethrough and a "Save 18%" badge whenever that column exceeds the price, which would have shown a phantom sale on three arbitrary items out of twenty-eight while the rest showed nothing.
 
   Bulk product operations gain **Set price**, because a percentage adjustment cannot land on a round figure from an arbitrary starting price, and `set-cost` already existed without a price counterpart. It is planned per row rather than issued as one `updateMany` — every row lands on the same number, but the audit entry needs to record what each one *was*, which is the only thing that makes the change reversible. The bulk actions bar also finally exposes **Set cost** and **Cost from purchases**: both shipped in the API last release with no control to reach them.
