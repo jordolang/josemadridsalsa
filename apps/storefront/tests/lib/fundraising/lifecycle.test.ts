@@ -150,16 +150,29 @@ describe('summariseEndedCampaigns', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
   })
 
-  it('picks up campaigns ended by hand as well as by the sweep', async () => {
+  it('picks up campaigns ended by hand as well as by the sweep, within the window', async () => {
     findMany.mockResolvedValue([])
 
-    await summariseEndedCampaigns()
+    await summariseEndedCampaigns(NOW)
 
     // Keyed off the marker, not off who ended the campaign.
-    expect(findMany.mock.calls[0][0].where).toEqual({
+    expect(findMany.mock.calls[0][0].where).toMatchObject({
       status: 'ENDED',
       summaryEmailSentAt: null,
     })
+  })
+
+  it('will not summarise a campaign that finished long ago, even with no marker', async () => {
+    // The markers are backfilled by migration, but `vercel-build` only WARNs on a failed
+    // `migrate deploy`. Without this window, a deploy that skipped the backfill would mail every
+    // coordinator whose campaign ever finished. Correctness must not rest on a skippable step.
+    findMany.mockResolvedValue([])
+
+    await summariseEndedCampaigns(NOW)
+
+    const cutoff = findMany.mock.calls[0][0].where.endDate.gte as Date
+    const daysBack = Math.round((NOW.getTime() - cutoff.getTime()) / 86_400_000)
+    expect(daysBack).toBe(30)
   })
 
   it('stamps the marker after a successful send', async () => {

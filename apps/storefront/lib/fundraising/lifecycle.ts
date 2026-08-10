@@ -17,6 +17,20 @@ import { sendCampaignLaunchEmail, sendCampaignSummaryEmail } from '@/lib/email/a
 /** How many campaigns one tick will handle, so a backlog cannot stall the cron. */
 const SWEEP_LIMIT = 50
 
+/**
+ * How recently a campaign must have finished for its closing summary to still be worth sending.
+ *
+ * This is a correctness guard, not a preference. The sent-markers are backfilled by migration,
+ * but `vercel-build` wraps `prisma migrate deploy` in a warning rather than a failure — a deploy
+ * where the backfill did not apply would otherwise mail a closing summary to every coordinator
+ * whose campaign ever finished. Relying on a data backfill for that is relying on a step that
+ * can silently be skipped; a window cannot be skipped.
+ *
+ * It is also just true on its own terms: nobody needs a summary of a fundraiser that closed last
+ * spring, and receiving one reads as a system malfunction rather than a service.
+ */
+const SUMMARY_WINDOW_DAYS = 30
+
 const appUrl =
   process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? 'https://www.josemadrid.net'
 
@@ -36,6 +50,13 @@ function formatDate(value: Date): string {
  * Gated on `startDate` as well as status so a campaign staged in advance — set up in June to
  * run in September — is announced when it actually opens rather than the moment an admin saves
  * it.
+ *
+ * Unlike the domain-event handlers, idempotency here rests on timing rather than a constraint:
+ * the marker is read and written in separate statements with no unique index behind it, so two
+ * overlapping runs — a manual trigger during the scheduled one — could both see a null marker
+ * and both send. At a daily cadence that is close to unreachable and costs one duplicate email,
+ * which is why it is documented rather than locked. Do not raise the frequency without adding a
+ * conditional update.
  */
 export async function announceLaunchedCampaigns(now: Date): Promise<number> {
   const due = await prisma.fundraiser.findMany({
@@ -89,10 +110,22 @@ export async function endExpiredCampaigns(now: Date): Promise<number> {
   return count
 }
 
-/** Send the closing summary for campaigns that have ended and not had one. */
-export async function summariseEndedCampaigns(): Promise<number> {
+/**
+ * Send the closing summary for campaigns that have ended recently and not had one.
+ *
+ * The recency window is what makes this safe independently of the backfill migration — see
+ * `SUMMARY_WINDOW_DAYS`. Both guards are deliberate: the marker stops a repeat, the window stops
+ * a first send for ancient history.
+ */
+export async function summariseEndedCampaigns(now: Date = new Date()): Promise<number> {
+  const windowStart = new Date(now.getTime() - SUMMARY_WINDOW_DAYS * 24 * 60 * 60 * 1000)
+
   const due = await prisma.fundraiser.findMany({
-    where: { status: 'ENDED', summaryEmailSentAt: null },
+    where: {
+      status: 'ENDED',
+      summaryEmailSentAt: null,
+      endDate: { gte: windowStart },
+    },
     select: { id: true },
     orderBy: { endDate: 'asc' },
     take: SWEEP_LIMIT,
@@ -134,7 +167,7 @@ export async function summariseEndedCampaigns(): Promise<number> {
 export async function runFundraiserLifecycle(now: Date = new Date()): Promise<LifecycleResult> {
   const launched = await announceLaunchedCampaigns(now)
   const ended = await endExpiredCampaigns(now)
-  const summarised = await summariseEndedCampaigns()
+  const summarised = await summariseEndedCampaigns(now)
 
   return { launched, ended, summarised }
 }

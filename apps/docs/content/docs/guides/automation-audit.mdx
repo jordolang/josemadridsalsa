@@ -96,6 +96,12 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 21a | Admin new-order **email** | **VERIFIED** ✅ | Phase 2 — was orphaned, not Stripe-only; see correction below |
 | 22 | Per-rule email/Slack routing | **SCHEMA-ONLY** | `OrderNotificationRule` model — 0 code references anywhere |
 
+### C-0. Infrastructure
+
+| # | Automation | State | Evidence |
+|---|---|---|---|
+| 54 | **Domain event consumer layer** | **VERIFIED** ✅ | Phase 1 — `lib/domain-events/subscribe.ts`, 10 tests. Not an email feature; every consumer below depends on it. |
+
 ### C. Email marketing automation engine
 
 | # | Automation | State | Evidence |
@@ -104,7 +110,6 @@ Five states, not two. "Built" and "works" are different questions, and the gap b
 | 24 | **Trigger → enrollment** | **VERIFIED** ✅ | Phase 1 — `lib/domain-events/handlers/automation-enrollment.ts`, 12 tests |
 | 25 | Due-step drain (5-min cron) | WIRED | `cron/email-automation` — now fed by the outbox drain on the same tick |
 | 26 | `AutomationTrigger` values firing | WIRED ✅ | Phase 1 — 4 of 17 mapped; see *Triggers not yet mapped* |
-| 54 | **Domain event consumer layer** | **VERIFIED** ✅ | Phase 1 — `lib/domain-events/subscribe.ts`, 10 tests |
 | 27 | Scheduled campaign send | WIRED | `cron/email-campaigns` |
 | 28 | Resend webhook → bounce/suppression | WIRED | `app/api/webhooks/resend` (123 lines) |
 | 29 | `EmailWebhook` model | **SCHEMA-ONLY** | 0 `prisma.emailWebhook` references |
@@ -291,8 +296,14 @@ separate, explicitly-approved change.
 
 ### Phase 3 — Close the parity gaps (3 items)
 
-Order confirmation on the POS/manual path, and refund email on the webhook path — which also needs a
-`payment.refunded` producer, without which `ORDER_REFUNDED` stays unmappable. (The admin new-order gap
+Three things, and the third is the one that is easy to drop:
+
+1. **Order confirmation on the POS / manual path** (item 4).
+2. **Refund email on the webhook path** (item 8).
+3. **A `payment.refunded` producer.** Nothing emits it today. Until something does, the refund email
+   has no fact to hang off *and* `ORDER_REFUNDED` — one of the four automation triggers — stays
+   permanently unmappable. Shipping the email without the producer would leave the trigger dead and
+   look finished. (The admin new-order gap
 originally listed here was closed in Phase 2; see the correction above.) These are the "same
 automation, forgotten on the fourth path" bugs that Phase 1 makes structurally impossible going
 forward, since a consumer fires for the fact rather than for one route.
