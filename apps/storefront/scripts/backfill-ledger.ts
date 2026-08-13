@@ -27,7 +27,7 @@ async function backfillOrders(): Promise<{ orders: number; rows: number }> {
     const batch = await prisma.order.findMany({
       // Same recordable-status rule as the live writer (shared constant so the two cannot drift):
       // refunded orders still count — their sale and fee stand, and their refunds are contra rows.
-      where: { paymentStatus: { in: SETTLED_PAYMENT } },
+      where: { paymentStatus: { in: [...SETTLED_PAYMENT] } },
       select: { id: true },
       orderBy: { createdAt: 'asc' },
       skip,

@@ -25,7 +25,12 @@ import {
  * the sale and its processor fee are still recorded, and the refund is a separate contra row.
  * Exported so the backfill applies the same rule and cannot drift from the live writer.
  */
-export const SETTLED_PAYMENT: PaymentStatus[] = ['PAID', 'SUCCEEDED', 'PARTIALLY_REFUNDED', 'REFUNDED']
+export const SETTLED_PAYMENT: readonly PaymentStatus[] = Object.freeze([
+  'PAID',
+  'SUCCEEDED',
+  'PARTIALLY_REFUNDED',
+  'REFUNDED',
+] as const)
 
 /** Upsert derived drafts by their dedupe key. Returns how many rows were written. */
 export async function upsertLedgerDrafts(drafts: LedgerEntryDraft[]): Promise<number> {

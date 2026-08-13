@@ -48,7 +48,7 @@ export async function GET(request: Request) {
         // A refund does not un-charge the processor's fee, so refunded payments still need their
         // fee looked up — otherwise a refunded order's cost is silently missing from net revenue
         // and the ledger. Same "money arrived" set the ledger records against.
-        status: { in: SETTLED_PAYMENT },
+        status: { in: [...SETTLED_PAYMENT] },
         createdAt: { gte: oldest },
       },
       select: {
