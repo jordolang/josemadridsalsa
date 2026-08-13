@@ -1,25 +1,14 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createHash, createHmac } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { checkRateLimit } from '@/lib/email/rate-limit'
+import { verifyUnsubscribeToken } from '@/lib/email/unsubscribe-url'
 
 const UnsubscribeSchema = z.object({
   email: z.string().email(),
   categories: z.array(z.string()).optional(),
   unsubscribeAll: z.boolean().optional(),
 })
-
-/** Generate a signed token for email verification */
-function generateEmailToken(email: string): string {
-  const secret = process.env.UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-secret'
-  return createHmac('sha256', secret).update(email.toLowerCase().trim()).digest('hex').slice(0, 32)
-}
-
-/** Verify a signed token for an email */
-function verifyEmailToken(email: string, token: string): boolean {
-  return generateEmailToken(email) === token
-}
 
 export async function POST(request: Request) {
   try {
@@ -89,7 +78,7 @@ export async function GET(request: Request) {
     }
 
     // Validate signed token to prevent email enumeration
-    if (!token || !verifyEmailToken(email, token)) {
+    if (!token || !verifyUnsubscribeToken(email, token)) {
       // Return empty defaults instead of revealing whether email exists
       return NextResponse.json({
         unsubscribeAll: false,

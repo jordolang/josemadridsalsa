@@ -4,7 +4,7 @@ import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { getProvider } from '@/lib/payments'
 import { Prisma, PaymentStatus, OrderStatus } from '@prisma/client'
-import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
+import { deductReservedInventoryOnceInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
 import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
@@ -272,24 +272,12 @@ export async function POST(request: Request) {
 
         // Deduct reserved inventory for each item inside the same transaction.
         // The Stripe webhook completes the same order in parallel and deducts the
-        // same items, so skip any item it already recorded. deductReservedInventoryInTx
-        // is not idempotent on its own: without this guard a second deduction either
-        // throws (the reservation is gone) or silently consumes another customer's
+        // same items, so skip any item it already recorded — deductReservedInventoryOnceInTx
+        // is idempotent per order item. Without it a second deduction either throws
+        // (the reservation is gone) or silently consumes another customer's
         // reservation, overselling the product.
         for (const item of order!.items) {
-          const existingDeduction = await tx.inventoryTransaction.findFirst({
-            where: {
-              productId: item.productId,
-              orderId: order!.id,
-              reason: 'ORDER_COMPLETION',
-            },
-          })
-
-          if (existingDeduction) {
-            continue
-          }
-
-          const result = await deductReservedInventoryInTx(
+          const result = await deductReservedInventoryOnceInTx(
             {
               productId: item.productId,
               quantity: item.quantity,
@@ -299,6 +287,11 @@ export async function POST(request: Request) {
             },
             tx
           )
+
+          if (!result) {
+            continue
+          }
+
           itemDeductions.push({
             productId: item.productId,
             newInventory: result.newInventory,

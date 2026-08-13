@@ -14,7 +14,7 @@ describe('participant welcome email', () => {
     fundraiserName: 'Lincoln Elementary Spring Fundraiser',
     referralCode: 'FR-ABC1-2345',
     fundraiserUrl: 'https://www.josemadridsalsa.com/fundraisers/spring-2024',
-    unsubscribeUrl: 'https://www.josemadridsalsa.com/account/preferences',
+    unsubscribeUrl: 'https://josemadrid.net/unsubscribe?email=fixture%40example.com',
   }
 
   describe('rendering with required props', () => {

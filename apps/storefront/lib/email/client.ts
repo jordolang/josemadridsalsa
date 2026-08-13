@@ -8,6 +8,7 @@ import { render } from '@react-email/render'
 import React from 'react'
 import { createHash } from 'crypto'
 import { logEmailSend, checkUnsubscribed } from './logger'
+import { getEmailBaseUrl } from './unsubscribe-url'
 import { getErrorMessage } from '@/lib/errors'
 
 const resend = process.env.RESEND_API_KEY
@@ -95,7 +96,7 @@ export async function sendEmail({
     const html = await render(react)
 
     // Construct unsubscribe URL
-    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://josemadrid.net'}/unsubscribe?email=${encodeURIComponent(recipientEmail)}`
+    const unsubscribeUrl = `${getEmailBaseUrl()}/unsubscribe?email=${encodeURIComponent(recipientEmail)}`
 
     // Send email via Resend with List-Unsubscribe header for compliance
     const { data, error: sendError } = await resend.emails.send({
