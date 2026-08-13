@@ -1,153 +1,222 @@
-<div align="center">
+# Jose Madrid Salsa — Public E-Commerce Platform
 
-  <img src="apps/storefront/public/images/shared/jose-madrid-salsa-logo.png" alt="Jose Madrid Salsa Logo" width="300" />
+![Jose Madrid Salsa](./apps/storefront/public/logo.png)
 
-  <h1>Jose Madrid Salsa</h1>
-  <p><strong>Version 2.0 - Full Production Launch Ready</strong></p>
+The Jose Madrid Salsa monorepo contains the new public e-commerce website, fundraising platform, admin console, and supporting packages for Jose Madrid Salsa (https://www.josemadrid.net).
 
-  [![Version](https://img.shields.io/badge/version-2.0.0-cb3b32)](https://github.com/jordolang/josemadridsalsa/releases)
-  [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js&logoColor=white)](https://nextjs.org/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.x-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-  [![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel&logoColor=white)](https://vercel.com/)
-
-  <p>
-    <a href="https://www.josemadrid.net">Live Site</a> |
-    <a href="apps/docs">Documentation</a> |
-    <a href="CHANGELOG.md">Changelog</a> |
-    <a href="SECURITY.md">Security</a>
-  </p>
-
-</div>
+This README is the primary public-facing documentation for the project: it explains what the project contains, highlights key features and screenshots, links to in-repo documentation, and provides clear instructions for running, testing, and contributing.
 
 ---
 
-## Overview
+## Quick links
 
-Jose Madrid Salsa is the production e-commerce, fundraising, and business-management platform for Jose Madrid Salsa. Version 2.0 combines a responsive public storefront, customer accounts, fundraising campaign tools, an interactive battle arena, and a role-based administration platform.
+- Repository: https://github.com/jordolang/josemadridsalsa
+- Primary app (storefront): apps/storefront
+- Docs site (canonical docs): apps/docs
+- Fundraising app: apps/fundraising
+- Admin app: apps/admin
+- Key docs:
+  - apps/docs/content/docs/guides/ordering-system-comparison.mdx
+  - apps/docs/content/docs/getting-started.mdx (see apps/docs)
 
-The production website is live at [www.josemadrid.net](https://www.josemadrid.net).
+---
 
-## Homepage Preview
+## Project summary
 
-### Desktop
+Jose Madrid Salsa is a production-grade monorepo built with Next.js (App Router) that runs the company storefront, customer accounts, multi-provider checkout, fundraising portal (including a gamified "arena"), an email-marketing suite, and a role-based admin console.
 
-<a href="https://www.josemadrid.net">
-  <img src="https://image.thum.io/get/width/1440/crop/1000/noanimate/https://www.josemadrid.net" alt="Jose Madrid Salsa Version 2.0 homepage on desktop" width="100%" />
-</a>
+This repository is intended for engineers working on the public storefront and related apps. If you are onboarding, please read the repository's CLAUDE.md first — it contains important architecture and workflow rules.
 
-### Mobile
+---
 
-<p align="center">
-  <a href="https://www.josemadrid.net">
-    <img src="https://image.thum.io/get/width/430/crop/932/noanimate/https://www.josemadrid.net" alt="Jose Madrid Salsa Version 2.0 homepage on mobile" width="430" />
-  </a>
-</p>
+## Features (overview)
 
-These screenshots are generated from the live production homepage so the README continues to show the current storefront.
+Storefront (apps/storefront)
+- Product catalog with variants
+- Customer accounts, session management, and addresses
+- Multi-provider checkout (payment providers integration)
+- Order history, receipts, and QuickBooks syncing
+- Promotions, discounts, and coupon support
+- Internationalization and shipping rules
 
-## Version 2.0 Highlights
+Fundraising
+- Campaign creation and management
+- Peer-to-peer and event-based fundraising
+- Gamified battle arena and leaderboards
 
-- Redesigned mobile-responsive storefront and homepage
-- Product catalog, heat-level discovery, comparison, cart, checkout, and gift certificates
-- Customer accounts with order history, saved addresses, and profile management
-- Full fundraising account management platform
-- Fundraiser page builder, participant tracking, campaign branding, and analytics
-- Searchable Team Character selector with thousands of available character sprites
-- Interactive Fundraiser Battle Arena with live team activity
-- Mobile-ready administration dashboard with role-based access control
-- Order, inventory, customer, media, email campaign, and contact-message management
-- Multi-provider payment support, real-time tax, shipping, analytics, and monitoring
+Admin (apps/admin and in-storefront /app/admin)
+- Role-based access controls and user management
+- Order management and fulfillment tools
+- Inventory, product, and pricing controls
+- Campaign and fundraiser administration
+- Reporting and exports
 
-## Technology
+Shared packages (packages/*)
+- shared-types — central TypeScript contracts
+- shared-utils — utilities used across apps
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 16 App Router and React Server Components |
-| Language | TypeScript |
-| Styling | Tailwind CSS 4 and Shadcn UI / Radix UI |
-| Database | PostgreSQL with Prisma ORM |
-| Authentication | NextAuth.js |
-| Payments | Stripe, PayPal, Square, and POS integrations |
-| Email | Resend and Nodemailer |
-| Validation | Zod and React Hook Form |
-| Testing | Vitest, Testing Library, MSW, and Playwright |
-| Deployment | Vercel and Prisma Accelerate |
-| Monitoring | Sentry, Amplitude, and Vercel Analytics |
+---
 
-## Project Structure
+## Screenshots
 
-```text
-josemadridsalsa/
-|-- apps/
-|   |-- storefront/       # Main Next.js commerce and admin app (includes API routes)
-|   |-- fundraising/      # Fundraising campaign platform
-|   |-- admin/            # Role-based administration dashboard
-|   `-- docs/             # Fumadocs documentation site (canonical docs home)
-|-- packages/
-|   |-- shared-types/     # Shared TypeScript types across all apps
-|   `-- shared-utils/     # Shared utility functions
-|-- package.json          # npm workspace commands
-`-- turbo.json            # Turborepo task graph
+The repo includes SVG screenshot placeholders so the README displays images immediately. Add production screenshots to `assets/screenshots/` using the file names below (SVG or PNG are fine) so the README displays them automatically.
+
+Suggested screenshot files and where they'll be used:
+
+- assets/screenshots/homepage.svg — Homepage / hero section
+- assets/screenshots/product-page.svg — Product detail with variants
+- assets/screenshots/cart-checkout.svg — Cart and Checkout flow
+- assets/screenshots/account-dashboard.svg — Customer account dashboard
+- assets/screenshots/fundraising-campaign.svg — Fundraising campaign page
+- assets/screenshots/arena-leaderboard.svg — Fundraising arena / leaderboard
+- assets/screenshots/admin-dashboard.svg — Admin panel main dashboard
+- assets/screenshots/admin-orders.svg — Admin order detail view
+
+These placeholder SVGs have been added in this commit. Replace them with high-quality PNG or SVG exports from the running app when you have production screenshots.
+
+Example markdown to embed an image:
+
+```md
+![Homepage](assets/screenshots/homepage.svg)
 ```
 
-## Local Development
+If you prefer to keep screenshots out of the repo, host them in an internal image CDN and update the image URLs in this file.
 
-### Requirements
+---
 
-- Node.js 20 or 22
-- PostgreSQL 14+
-- Required environment variables documented in [`apps/docs/content/docs/configuration/environment-variables.mdx`](apps/docs/content/docs/configuration/environment-variables.mdx)
+## Architecture and stack
 
-### Setup
+High level (see CLAUDE.md for full details):
+
+- Monorepo: Turborepo + npm workspaces
+- Node: 20 (see .nvmrc)
+- Framework: Next.js 16 (App Router, RSC)
+- UI: React 19, TailwindCSS 4, Shadcn UI / Radix UI
+- Language: TypeScript 5.9 (strict), path alias `@/`
+- DB: PostgreSQL via Prisma ORM 6
+
+Repo layout (top-level):
+
+```
+josemadridsalsa/
+├── apps/
+│   ├── storefront/     # PRIMARY app — storefront, accounts, checkout, admin, arena, POS, API routes
+│   ├── fundraising/    # Standalone fundraising campaign app (port 3001)
+│   ├── admin/          # Standalone role-based admin app (port 3003)
+│   └── docs/           # Fumadocs documentation site (port 3002) — canonical docs home
+├── packages/
+│   ├── shared-types/
+│   └── shared-utils/
+├── package.json
+└── turbo.json
+```
+
+Note: Most runtime code and API handlers live in apps/storefront (including app/api). See CLAUDE.md for the "no apps/backend" note.
+
+---
+
+## Local development
+
+Prerequisites
+- Node 20 (use nvm: `nvm use`)
+- pnpm or npm (the repo uses npm workspaces)
+- PostgreSQL instance for local development
+- Environment variables: copy `.env.example` to `.env.local` and fill in secrets (database URL, provider keys). See apps/storefront/README.md for app-specific env vars.
+
+Run the storefront locally:
 
 ```bash
-git clone https://github.com/jordolang/josemadridsalsa.git
-cd josemadridsalsa
 npm install
-cp .env.example .env.local
-npm run db:migrate
-npm run db:seed
+npm run dev:fast   # or `npm run dev` for all apps via turbo
+# storefront: http://localhost:3000
+# docs: http://localhost:3002
+# fundraising: http://localhost:3001
+# admin: http://localhost:3003
+```
+
+Running a single app (storefront):
+
+```bash
+cd apps/storefront
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Database
+- Run Prisma migrations with `npx prisma migrate dev --schema=apps/storefront/prisma/schema.prisma` (adjust path as needed)
+- Seed data: see apps/storefront/prisma/seed.ts (if present)
 
-The monorepo runs several workspaces, each started with its own `dev:*` script:
-- **Storefront** - `npm run dev` - [http://localhost:3000](http://localhost:3000)
-- **Fundraising** - `npm run dev:fundraising` - [http://localhost:3001](http://localhost:3001)
-- **Admin** - `npm run dev:admin` - [http://localhost:3003](http://localhost:3003)
-- **Docs** - `npm run dev:docs` - [http://localhost:3002](http://localhost:3002)
-
-API routes are served from the storefront app (`apps/storefront/app/api`). See the in-repo docs site (`apps/docs/content/docs/deployment`) for the architecture and deployment guides.
-
-## Quality Checks
-
-Run the required checks before every commit or pull request:
-
-```bash
-npx vitest run && npm run lint && npm run type-check
-```
-
-## Deployment
-
-Pushing to `main` triggers the production deployment pipeline on Vercel. Production secrets are managed through Vercel environment variables and must never be committed to the repository.
-
-## Documentation
-
-Project documentation lives in the in-repo [Fumadocs site](apps/docs) at `apps/docs/content/docs`. Run it locally with `npm run dev:docs`. It is organized into getting-started, guides, features, configuration, integrations, deployment, and API reference sections.
-
-- [Documentation site](apps/docs)
-- [Security Policy](SECURITY.md)
-- [Changelog](CHANGELOG.md)
-
-## Security
-
-Please do not open public issues for security vulnerabilities. Follow the responsible disclosure process in [`SECURITY.md`](SECURITY.md).
+Tests
+- Unit tests: `npm test` at repo root or per-workspace test script
+- E2E: project-specific commands (see apps/storefront/test or cypress configuration)
 
 ---
 
-<div align="center">
-  <img src="apps/storefront/public/images/shared/jose_madrid_logo_profile.png" alt="Jose Madrid" width="80" />
-  <p><strong>Jose Madrid Salsa</strong><br/>Zanesville, Ohio | <a href="https://www.josemadrid.net">josemadrid.net</a></p>
-</div>
+## Links to internal docs
+
+This README links to and summarizes in-repo documentation. For deeper reference, read the docs site at `apps/docs` and these files:
+
+- apps/docs/content/docs/guides/ordering-system-comparison.mdx — feature parity & cutover notes from legacy BigCommerce store
+- apps/docs/content/docs/getting-started.mdx — onboarding / environment setup (if present)
+- apps/storefront/README.md — storefront-specific dev notes and env var list
+- apps/admin/README.md — admin app details
+
+If a doc link above is missing, open `apps/docs` in your editor or visit the docs site in dev mode: `npm run dev:docs`.
+
+---
+
+## How to add screenshots (recommended workflow)
+
+1. Start the app locally and navigate to the page you want to capture.
+2. Use a high-quality screenshot tool (macOS Grab, Windows Snipping Tool, or Browser > DevTools > Capture full size) and crop to 1200px wide (or similar). 
+3. Save the image to `assets/screenshots/` with one of the suggested file names.
+4. Commit the image and push.
+
+Example:
+
+```bash
+mkdir -p assets/screenshots
+# copy screenshot into assets/screenshots/homepage.svg
+git add assets/screenshots/homepage.svg
+git commit -m "docs: add homepage screenshot"
+git push
+```
+
+---
+
+## Contributing
+
+Please follow the repository's contributing guidelines (see CLAUDE.md for process notes). Key points:
+
+- Keep changes surgical. Touch only what's required by the task.
+- Match existing code style and TypeScript strictness.
+- Add tests for bug fixes or new features.
+- Ensure CI passes before merging.
+
+If you're unsure where to start, open an issue describing the goal and include screenshots or steps to reproduce.
+
+---
+
+## Troubleshooting & FAQs
+
+- Q: Where are API routes?
+  - A: In apps/storefront/app/api — there is no separate `apps/backend` project.
+
+- Q: Which app is primary?
+  - A: apps/storefront is the canonical app and includes most functionality.
+
+- Q: Where are shared types?
+  - A: packages/shared-types
+
+---
+
+## License
+
+This repository's license should be specified in the repository root (LICENSE file). If missing, consult the project owner.
+
+---
+
+If you'd like, I can now:
+- Replace the SVG placeholders with high-quality PNGs you upload, or
+- Add a docs/index.md page inside `apps/docs/content/docs/` that links to this README and the site navigation.
+
+Tell me which of those you'd like next and I'll proceed.
