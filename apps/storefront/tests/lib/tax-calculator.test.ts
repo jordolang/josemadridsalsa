@@ -7,25 +7,30 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { calculateTax } from '@/lib/tax-calculator'
 import { prisma } from '@/lib/prisma'
 
-// Mock Stripe
+// Mock Stripe. The tax-calculation call is a shared, hoisted mock so individual tests can
+// override it (e.g. make the Stripe Tax client throw) without re-mocking the whole module.
+const { mockTaxCreate } = vi.hoisted(() => ({ mockTaxCreate: vi.fn() }))
+
 vi.mock('@/lib/stripe', () => ({
   getStripe: () => ({
     tax: {
       calculations: {
-        create: vi.fn().mockResolvedValue({
-          tax_amount_exclusive: 850, // $8.50 in cents
-          tax_breakdown: [
-            {
-              jurisdiction: { display_name: 'California' },
-              tax_rate_details: { percentage_decimal: '8.5' },
-              tax_amount: 850,
-            },
-          ],
-        }),
+        create: mockTaxCreate,
       },
     },
   }),
 }))
+
+const successfulTaxCalculation = {
+  tax_amount_exclusive: 850, // $8.50 in cents
+  tax_breakdown: [
+    {
+      jurisdiction: { display_name: 'California' },
+      tax_rate_details: { percentage_decimal: '8.5' },
+      tax_amount: 850,
+    },
+  ],
+}
 
 // Mock Prisma
 vi.mock('@/lib/prisma', () => ({
@@ -39,6 +44,7 @@ vi.mock('@/lib/prisma', () => ({
 describe('Tax Calculator', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockTaxCreate.mockResolvedValue(successfulTaxCalculation)
   })
 
   describe('calculateTax', () => {
@@ -227,6 +233,26 @@ describe('Tax Calculator', () => {
       expect(result.taxExempt).toBe(false)
       expect(result.taxAmount).toBe(850)
       expect(prisma.user.findUnique).not.toHaveBeenCalled()
+    })
+
+    it('should propagate errors from the Stripe Tax client rather than returning silent $0', async () => {
+      // A misconfigured Stripe Tax key must not degrade into an untaxed order: a silent $0 is
+      // indistinguishable from a legitimately untaxed order, so the failure has to surface.
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
+      mockTaxCreate.mockRejectedValueOnce(new Error('Invalid API Key provided'))
+
+      await expect(
+        calculateTax({
+          lineItems: [{ amount: 10000, reference: 'product-1', taxCode: 'txcd_30011000' }],
+          shippingAddress: {
+            line1: '123 Main St',
+            city: 'San Francisco',
+            state: 'CA',
+            postalCode: '94111',
+            country: 'US',
+          },
+        })
+      ).rejects.toThrow('Invalid API Key provided')
     })
   })
 })
