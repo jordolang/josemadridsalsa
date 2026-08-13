@@ -145,3 +145,13 @@ with nothing in the response to indicate it.
 |---|---|---|
 | `SERVICE_API_KEY` | No | Shared secret for internal service-to-service API calls |
 | `NEXT_PUBLIC_BASE_URL` | No | Public-facing base URL. Defaults to `https://josemadrid.net`. |
+
+## Platform Agent (`apps/agent`)
+
+Set these in `apps/agent/.env.local`, not the storefront's.
+
+| Variable | Required | Description |
+|---|---|---|
+| `AI_GATEWAY_API_KEY` | One of these | Vercel AI Gateway key used to reach the agent's model |
+| `VERCEL_OIDC_TOKEN` | One of these | Pulled automatically by `eve link`; the alternative to an AI Gateway key |
+| `STOREFRONT_API_URL` | No | Base URL the agent's read-only tools call. Defaults to `https://www.josemadrid.net`. Point it at `http://localhost:3000` to run against a local storefront. |

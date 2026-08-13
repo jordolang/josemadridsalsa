@@ -1,0 +1,29 @@
+{
+  "name": "@jose-madrid/agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./agent/*",
+    "#evals/*": "./evals/*"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "eve build",
+    "dev": "eve dev --no-ui",
+    "start": "eve start",
+    "type-check": "tsc"
+  },
+  "dependencies": {
+    "@vercel/connect": "0.4.3",
+    "ai": "^7.0.58",
+    "eve": "^0.32.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.x",
+    "typescript": "7.0.2"
+  }
+}

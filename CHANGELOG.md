@@ -15,6 +15,13 @@ the root `package.json` is canonical.
 
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
+### Added
+- **`apps/agent` — the platform agent**, an [eve](https://eve.dev) agent whose remit is the repository, the business, the document archive, and the cutover from the legacy BigCommerce store. `agent/instructions.md` carries the always-on purpose plus the guardrails that keep it honest: read-only by default, explicit human approval before anything that writes, sends, charges, refunds, publishes, or deploys, and the four business facts that are easy to get backwards (production is pre-traffic, fundraiser goals are gross sales, QuickBooks Online is the accounting source of truth, `Product.weight` is ounces).
+
+  Its first tool, `search_catalog`, is a read-only wrapper over the storefront's own `/api/products/search`, so the agent and the storefront share one definition of "the catalog" rather than the agent standing up a second Prisma client. Verified against the 28 live products on production.
+
+  The workspace pins its own toolchain — Node 24 and TypeScript 7, both required by eve — in `apps/agent/package.json` rather than at the repo root, so the other five workspaces keep Node 20 and TypeScript 5.9. `eve build` runs without model credentials, so the workspace joining the root `build` gate does not make that gate depend on a secret.
+
 ### Removed
 - **Free shipping, entirely** — the business does not offer it and never has. Two mechanisms did: a `freeShippingThreshold` on `ShippingSettings` that zeroed the shipping line above a subtotal, falling back to **$50 in code** when null, and a `FREE_SHIPPING` discount type that did the same on demand. A loyalty reward spent 300 points on it.
 
