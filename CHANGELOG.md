@@ -23,6 +23,10 @@ the root `package.json` is canonical.
   The workspace pins its own toolchain — Node 24 and TypeScript 7, both required by eve — in `apps/agent/package.json` rather than at the repo root, so the other five workspaces keep Node 20 and TypeScript 5.9. `eve build` runs without model credentials, so the workspace joining the root `build` gate does not make that gate depend on a secret.
 
 ### Removed
+- **The dead Stripe webhook handler** — `apps/storefront/lib/stripe/webhooks.ts` (`processWebhookEvent` and friends) was never wired into any route; only two test files imported it, and a comment in `lib/domain-events/handlers/order-notifications.ts` already noted that nothing else did. The live Stripe webhook is `app/api/webhooks/stripe/route.ts`, which has its own inline, idempotent handler — it skips any order item that already carries an `ORDER_COMPLETION` inventory transaction before deducting, and it handles `charge.refunded` too, so nothing reachable was lost.
+
+  The orphan mattered because its `handlePaymentIntentSucceeded` called `deductReservedInventoryInTx` with **no** such guard — the same oversell race PR #421 is fixing on the PayPal and Square paths. Deleting it removes the one unguarded deduction path rather than leaving a trap for a future caller. Removed with its two orphaned tests (`tests/stripe/webhooks.test.ts`, `tests/integration/inventory-order-completion.test.ts`); `lib/stripe/types.ts` is untouched.
+
 - **Free shipping, entirely** — the business does not offer it and never has. Two mechanisms did: a `freeShippingThreshold` on `ShippingSettings` that zeroed the shipping line above a subtotal, falling back to **$50 in code** when null, and a `FREE_SHIPPING` discount type that did the same on demand. A loyalty reward spent 300 points on it.
 
   Both were live and expensive. Once real carrier rates reached checkout, the $50 default meant a **six-jar order shipped free at a cost of ~$11.88** to the business and a **twelve-jar case at ~$35.74** — on exactly the orders worth having. At $9 a jar the threshold triggered at six.
