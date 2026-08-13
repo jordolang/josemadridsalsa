@@ -111,6 +111,10 @@ describe('estimateManifestRevenue', () => {
   it('ignores a negative sold count', () => {
     expect(estimateManifestRevenue([{ soldUnits: -5, unitPrice: 9 }])).toBe(0)
   })
+
+  it('clamps a negative price so a bad catalogue value cannot subtract revenue', () => {
+    expect(estimateManifestRevenue([{ soldUnits: 10, unitPrice: -9 }])).toBe(0)
+  })
 })
 
 describe('ShowFinancialsInputSchema', () => {

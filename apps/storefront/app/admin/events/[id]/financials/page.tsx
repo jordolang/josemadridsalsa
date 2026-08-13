@@ -18,7 +18,9 @@ export default async function EventFinancialsPage({
 }) {
   const { id } = await params
   const user = await getCurrentUser()
-  if (!user || !(await hasPermission(user, 'events:read'))) {
+  // This is an editor, not a report: saving needs events:write, so gate the page on the same
+  // permission rather than letting a read-only user open a form every save will reject.
+  if (!user || !(await hasPermission(user, 'events:write'))) {
     redirect('/admin')
   }
 

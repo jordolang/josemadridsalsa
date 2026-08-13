@@ -102,7 +102,10 @@ export function estimateManifestRevenue(
 ): number {
   const total = lines.reduce((acc, l) => {
     const units = Number.isFinite(l.soldUnits) ? Math.max(0, l.soldUnits) : 0
-    const price = typeof l.unitPrice === 'number' && Number.isFinite(l.unitPrice) ? l.unitPrice : 0
+    // Clamp price at zero: a catalogue price should never be negative, and a bad one must not
+    // subtract from the cross-check total.
+    const price =
+      typeof l.unitPrice === 'number' && Number.isFinite(l.unitPrice) ? Math.max(0, l.unitPrice) : 0
     return acc + units * price
   }, 0)
   return round2(total)

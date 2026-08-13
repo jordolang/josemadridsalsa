@@ -61,6 +61,7 @@ export default function FinancialsEditor({ eventId }: { eventId: string }) {
   const [manifest, setManifest] = useState<ManifestCrossCheck>({ unitsSold: 0, estimatedRevenue: 0 })
   const [eventTitle, setEventTitle] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -71,6 +72,7 @@ export default function FinancialsEditor({ eventId }: { eventId: string }) {
         if (!res.ok) throw new Error('Failed to load financials')
         const data = await res.json()
         if (!active) return
+        setLoadFailed(false)
         setEventTitle(data.event?.title ?? '')
         setValues({ ...EMPTY, ...(data.financials ?? {}) })
         setManifest({
@@ -78,6 +80,7 @@ export default function FinancialsEditor({ eventId }: { eventId: string }) {
           estimatedRevenue: data.manifest?.estimatedRevenue ?? 0,
         })
       } catch (err) {
+        if (active) setLoadFailed(true)
         toast.error(err instanceof Error ? err.message : 'Failed to load financials')
       } finally {
         if (active) setLoading(false)
@@ -96,6 +99,12 @@ export default function FinancialsEditor({ eventId }: { eventId: string }) {
   }
 
   async function handleSave() {
+    // Never save on top of a failed load: the form is showing blank defaults, not the real
+    // figures, so a save would wipe whatever the event already had.
+    if (loadFailed) {
+      toast.error('Financials could not be loaded — reload the page before saving.')
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch(`/api/admin/events/${eventId}/financials`, {
@@ -139,11 +148,18 @@ export default function FinancialsEditor({ eventId }: { eventId: string }) {
             <p className="text-muted-foreground">{eventTitle}</p>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={saving}>
+        <Button onClick={handleSave} disabled={saving || loadFailed}>
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Save Financials
         </Button>
       </div>
+
+      {loadFailed && (
+        <Card className="border-red-500/40 bg-red-500/5 p-4 text-sm text-red-700">
+          These financials could not be loaded, so the figures below are blank defaults rather than
+          this show’s saved values. Reload the page before entering or saving anything.
+        </Card>
+      )}
 
       {/* Break-even summary */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -289,7 +305,7 @@ export default function FinancialsEditor({ eventId }: { eventId: string }) {
             ? `Profit ${formatPrice(summary.netProfit)}`
             : `${formatPrice(summary.amountToBreakEven)} to break even`}
         </Badge>
-        <Button onClick={handleSave} disabled={saving}>
+        <Button onClick={handleSave} disabled={saving || loadFailed}>
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Save Financials
         </Button>

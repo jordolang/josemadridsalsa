@@ -25,6 +25,13 @@ and `EmailSegment` all have zero references.
 
 Before marking anything from the schema, grep for the Prisma accessor. A model with no caller is
 a plan, not a feature.
+
+**Update (13 August 2026):** all four dead models flagged in this document have since been
+resolved — see [Adopt-or-drop the dead models](#adopt-or-drop-the-dead-models--complete) under
+Tier 2. `OrderNotificationRule`/`OrderNotificationEvent` were adopted (they now have an
+evaluation module, a registered handler, and tests); `EmailSegment` and `ProductVariant` were
+dropped. The line-by-line marks below are left as the 9 August snapshot; where one names those
+models, read it against that resolution.
 </Callout>
 
 ---

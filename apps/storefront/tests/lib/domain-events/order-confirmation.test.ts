@@ -71,7 +71,7 @@ describe('order confirmation handler', () => {
   })
 
   describe('on order.created', () => {
-    it.each(['MANUAL', 'PHONE', 'WHOLESALE'])(
+    it.each(['MANUAL', 'PHONE', 'WHOLESALE', 'EVENT'])(
       'confirms a %s order, where creating it is the sale',
       async (salesChannel) => {
         orderFindUnique.mockResolvedValue(order({ salesChannel }))
