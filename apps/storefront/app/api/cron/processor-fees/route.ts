@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
 import { isAuthorizedCronRequest } from '@/lib/cron/auth'
+import { recordOrderInLedger } from '@/lib/financials/ledger-writer'
 import {
   fetchPayPalFee,
   fetchSquareFee,
@@ -49,6 +50,7 @@ export async function GET(request: Request) {
       },
       select: {
         id: true,
+        orderId: true,
         provider: true,
         createdAt: true,
         paidAt: true,
@@ -117,6 +119,14 @@ export async function GET(request: Request) {
 
       if (feeCents !== null) {
         resolved += 1
+        // The fee is now known, so refresh this order's ledger rows — the live writer left the
+        // PROCESSOR_FEES row off while the fee was still null. Idempotent, and never allowed to
+        // fail the sweep.
+        try {
+          await recordOrderInLedger(payment.orderId)
+        } catch (error) {
+          console.warn('[cron/processor-fees] ledger refresh failed', { orderId: payment.orderId, error })
+        }
       } else {
         unresolved[reason || 'unknown'] = (unresolved[reason || 'unknown'] ?? 0) + 1
       }

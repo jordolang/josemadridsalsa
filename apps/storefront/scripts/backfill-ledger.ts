@@ -24,7 +24,9 @@ async function backfillOrders(): Promise<{ orders: number; rows: number }> {
 
   for (;;) {
     const batch = await prisma.order.findMany({
-      where: { paymentStatus: { in: ['PAID', 'SUCCEEDED'] } },
+      // Include refunded orders: their original sale and fee still count, and their refunds are
+      // recorded as contra rows. Skipping them would drop both the sale and the refund.
+      where: { paymentStatus: { in: ['PAID', 'SUCCEEDED', 'PARTIALLY_REFUNDED', 'REFUNDED'] } },
       select: { id: true },
       orderBy: { createdAt: 'asc' },
       skip,

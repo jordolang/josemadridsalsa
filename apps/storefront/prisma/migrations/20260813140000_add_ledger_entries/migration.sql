@@ -55,3 +55,14 @@ CREATE INDEX "ledger_entries_source_sourceId_idx" ON "ledger_entries"("source", 
 
 -- CreateIndex
 CREATE INDEX "ledger_entries_exportedAt_idx" ON "ledger_entries"("exportedAt");
+
+-- Invariants the code relies on, enforced at the database so a stray write cannot break them:
+--  * amounts are always positive (the sign lives in `direction`), so totals cannot be skewed;
+--  * a manual row is exactly a MANUAL-source hand entry, and any derived row carries the
+--    `dedupeKey` + `sourceId` that make its upsert idempotent — no derived row can slip in without
+--    the key that stops it being written twice.
+ALTER TABLE "ledger_entries" ADD CONSTRAINT "ledger_entries_amount_positive" CHECK ("amountCents" > 0);
+ALTER TABLE "ledger_entries" ADD CONSTRAINT "ledger_entries_source_shape" CHECK (
+  ("isManual" = true AND "source" = 'MANUAL') OR
+  ("isManual" = false AND "dedupeKey" IS NOT NULL AND "sourceId" IS NOT NULL)
+);

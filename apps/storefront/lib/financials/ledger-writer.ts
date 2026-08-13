@@ -19,8 +19,12 @@ import {
   type OrderLedgerInput,
 } from './ledger'
 
-/** Payment states that mean the money actually arrived. */
-const SETTLED_PAYMENT: PaymentStatus[] = ['PAID', 'SUCCEEDED']
+/**
+ * Payment states that mean the money actually arrived. A later refund does not un-happen the
+ * original sale, so `REFUNDED`/`PARTIALLY_REFUNDED` stay in the set — the sale and its processor
+ * fee are still recorded, and the refund is a separate contra row.
+ */
+const SETTLED_PAYMENT: PaymentStatus[] = ['PAID', 'SUCCEEDED', 'PARTIALLY_REFUNDED', 'REFUNDED']
 
 /** Upsert derived drafts by their dedupe key. Returns how many rows were written. */
 export async function upsertLedgerDrafts(drafts: LedgerEntryDraft[]): Promise<number> {
@@ -68,8 +72,12 @@ export function orderToInput(order: OrderWithMoney): OrderLedgerInput {
     return sum + dollarsToCents(Number(it.unitCost)) * it.quantity
   }, 0)
 
+  // A null fee means "not known yet" (Square settles its fee hours later; Stripe needs a
+  // balance-transaction lookup), never "no fee". Reading it as zero would report a fee-free
+  // payment and overstate profit, so only known fees are summed — the fee sweep re-records the
+  // order once it fills them in. If none are known yet, no PROCESSOR_FEES row is written at all.
   const processorFeeCents = order.payments
-    .filter((p) => SETTLED_PAYMENT.includes(p.status))
+    .filter((p) => SETTLED_PAYMENT.includes(p.status) && p.processorFee != null)
     .reduce((sum, p) => sum + (p.processorFee ?? 0), 0)
 
   return {

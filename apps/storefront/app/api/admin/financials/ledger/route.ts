@@ -3,13 +3,16 @@ import type { Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
-import { ok, fail } from '@/lib/api'
+import { ok, fail, failFromError } from '@/lib/api'
 import { logAudit } from '@/lib/audit'
 import {
   CATEGORY_DIRECTION,
+  LEDGER_CATEGORY_VALUES,
   ManualLedgerEntrySchema,
   dollarsToCents,
 } from '@/lib/financials/ledger'
+
+const LEDGER_SOURCE_VALUES = ['ORDER', 'REFUND', 'SHOW_ARCHIVE', 'FUNDRAISER', 'MANUAL', 'IMPORT'] as const
 
 const PAGE_SIZE = 100
 
@@ -30,10 +33,14 @@ function buildWhere(params: URLSearchParams): Prisma.LedgerEntryWhereInput {
   if (direction === 'INCOME' || direction === 'EXPENSE') where.direction = direction
 
   const category = params.get('category')
-  if (category && category in CATEGORY_DIRECTION) where.category = category as Prisma.LedgerEntryWhereInput['category']
+  if (category && (LEDGER_CATEGORY_VALUES as readonly string[]).includes(category)) {
+    where.category = category as Prisma.LedgerEntryWhereInput['category']
+  }
 
   const source = params.get('source')
-  if (source) where.source = source as Prisma.LedgerEntryWhereInput['source']
+  if (source && (LEDGER_SOURCE_VALUES as readonly string[]).includes(source)) {
+    where.source = source as Prisma.LedgerEntryWhereInput['source']
+  }
 
   const q = params.get('q')?.trim()
   if (q) {
@@ -56,7 +63,8 @@ export async function GET(req: NextRequest) {
     await requirePermission('financials:read')
     const params = req.nextUrl.searchParams
     const where = buildWhere(params)
-    const page = Math.max(1, Number(params.get('page')) || 1)
+    const parsedPage = Number.parseInt(params.get('page') ?? '1', 10)
+    const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1
 
     const [entries, totalCount, byDirection] = await Promise.all([
       prisma.ledgerEntry.findMany({
@@ -81,7 +89,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (error: any) {
     console.error('[GET /api/admin/financials/ledger] Error:', error)
-    return fail(error.message || 'Failed to load ledger', 500)
+    return failFromError(error, 'Failed to load ledger')
   }
 }
 
@@ -127,6 +135,6 @@ export async function POST(req: NextRequest) {
     return ok({ entry })
   } catch (error: any) {
     console.error('[POST /api/admin/financials/ledger] Error:', error)
-    return fail(error.message || 'Failed to create entry', 500)
+    return failFromError(error, 'Failed to create entry')
   }
 }

@@ -91,9 +91,16 @@ export const LEDGER_CATEGORY_LABELS: Record<LedgerCategory, string> = {
  * a refund or discount is a positive amount under a contra category, not a negative sale.
  */
 export const ManualLedgerEntrySchema = z.object({
-  date: z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'Enter a valid date'),
+  // Strict YYYY-MM-DD with a round-trip check, so an impossible date (2026-02-31) is rejected
+  // rather than silently normalised by the Date parser.
+  date: z.string().refine((v) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false
+    const d = new Date(`${v}T00:00:00.000Z`)
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v
+  }, 'Enter a valid date (YYYY-MM-DD)'),
   category: z.enum(LEDGER_CATEGORY_VALUES),
-  amountDollars: z.number().positive('Must be greater than zero').max(1_000_000, 'That looks like a typo'),
+  // At least a cent: a smaller value rounds to zero cents and would create a $0 row.
+  amountDollars: z.number().min(0.01, 'Must be at least $0.01').max(1_000_000, 'That looks like a typo'),
   description: z.string().trim().min(1, 'Add a description').max(300),
   counterparty: z.string().trim().max(200).nullable().optional(),
   paymentMethod: z.string().trim().max(60).nullable().optional(),
@@ -253,7 +260,9 @@ export function summariseLedger(entries: LedgerLike[]): LedgerSummary {
 
   for (const e of entries) {
     const amount = Number.isFinite(e.amountCents) ? Math.max(0, e.amountCents) : 0
-    if (e.direction === 'INCOME') incomeCents += amount
+    // Classify from the category, the same source `profitAndLoss` uses, so the totals and the
+    // per-line breakdown can never disagree even if a stored `direction` were ever inconsistent.
+    if (CATEGORY_DIRECTION[e.category] === 'INCOME') incomeCents += amount
     else expenseCents += amount
     byCategory[e.category] = (byCategory[e.category] ?? 0) + amount
   }

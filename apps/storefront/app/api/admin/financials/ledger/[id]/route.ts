@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
-import { ok, fail } from '@/lib/api'
+import { ok, fail, failFromError } from '@/lib/api'
 import { logAudit } from '@/lib/audit'
 import {
   CATEGORY_DIRECTION,
@@ -61,6 +61,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         counterparty: input.counterparty?.trim() || null,
         paymentMethod: input.paymentMethod?.trim() || null,
         memo: input.memo?.trim() || null,
+        enteredById: user.id,
       },
     })
 
@@ -75,7 +76,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return ok({ entry })
   } catch (error: any) {
     console.error('[PATCH /api/admin/financials/ledger/[id]] Error:', error)
-    return fail(error.message || 'Failed to update entry', 500)
+    return failFromError(error, 'Failed to update entry')
   }
 }
 
@@ -108,6 +109,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     return ok({ deleted: true })
   } catch (error: any) {
     console.error('[DELETE /api/admin/financials/ledger/[id]] Error:', error)
-    return fail(error.message || 'Failed to delete entry', 500)
+    return failFromError(error, 'Failed to delete entry')
   }
 }

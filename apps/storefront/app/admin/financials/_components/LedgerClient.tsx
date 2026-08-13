@@ -47,6 +47,8 @@ const today = () => new Date().toISOString().slice(0, 10)
 
 interface FormState {
   id: string | null
+  /** Manual rows are fully editable; derived rows (from orders/refunds/shows) allow only a note. */
+  manual: boolean
   date: string
   category: (typeof LEDGER_CATEGORY_VALUES)[number]
   amountDollars: string
@@ -58,6 +60,7 @@ interface FormState {
 
 const EMPTY_FORM: FormState = {
   id: null,
+  manual: true,
   date: today(),
   category: 'OTHER_EXPENSE',
   amountDollars: '',
@@ -66,6 +69,8 @@ const EMPTY_FORM: FormState = {
   paymentMethod: '',
   memo: '',
 }
+
+const PAGE_SIZE = 100
 
 export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
   const [entries, setEntries] = useState<Entry[]>([])
@@ -80,9 +85,16 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
   const [direction, setDirection] = useState('all')
   const [category, setCategory] = useState('all')
   const [q, setQ] = useState('')
+  const [page, setPage] = useState(1)
 
   // Add/edit form
   const [form, setForm] = useState<FormState | null>(null)
+
+  // A filter change should always return to the first page, or the new, smaller result set can
+  // leave you stranded on a page that no longer exists.
+  useEffect(() => {
+    setPage(1)
+  }, [from, to, direction, category, q])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -93,6 +105,7 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
       if (direction !== 'all') p.set('direction', direction)
       if (category !== 'all') p.set('category', category)
       if (q.trim()) p.set('q', q.trim())
+      p.set('page', String(page))
 
       const res = await fetch(`/api/admin/financials/ledger?${p.toString()}`)
       if (!res.ok) throw new Error('Failed to load ledger')
@@ -105,7 +118,7 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
     } finally {
       setLoading(false)
     }
-  }, [from, to, direction, category, q])
+  }, [from, to, direction, category, q, page])
 
   useEffect(() => {
     load()
@@ -118,6 +131,7 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
   function startEdit(entry: Entry) {
     setForm({
       id: entry.id,
+      manual: entry.isManual,
       date: entry.date.slice(0, 10),
       category: entry.category,
       amountDollars: (entry.amountCents / 100).toFixed(2),
@@ -130,9 +144,32 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
 
   async function saveForm() {
     if (!form) return
+
+    // Derived rows: the server accepts only a note, so send only that rather than a full payload
+    // it would silently discard.
+    if (form.id && !form.manual) {
+      setSaving(true)
+      try {
+        const res = await fetch(`/api/admin/financials/ledger/${form.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ memo: form.memo.trim() || null }),
+        })
+        if (!res.ok) throw new Error((await res.json()).error || 'Save failed')
+        toast.success('Note updated')
+        setForm(null)
+        await load()
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to save note')
+      } finally {
+        setSaving(false)
+      }
+      return
+    }
+
     const amount = Number(form.amountDollars)
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error('Enter an amount greater than zero')
+    if (!Number.isFinite(amount) || amount < 0.01) {
+      toast.error('Enter an amount of at least $0.01')
       return
     }
     if (!form.description.trim()) {
@@ -262,63 +299,80 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
       {form && (
         <Card className="p-6 space-y-4 border-primary/40">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold">{form.id ? 'Edit entry' : 'New entry'}</h2>
+            <h2 className="font-semibold">
+              {!form.manual ? 'Add a note' : form.id ? 'Edit entry' : 'New entry'}
+            </h2>
             <Button variant="ghost" size="sm" onClick={() => setForm(null)}><X className="h-4 w-4" /></Button>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <Label>Date</Label>
-              <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          {!form.manual ? (
+            <div className="space-y-3">
+              <div className="rounded-lg bg-muted/40 p-3 text-sm">
+                <div className="font-medium">{form.description}</div>
+                <div className="text-xs text-muted-foreground">
+                  This row is kept in sync from its source, so only a note can be edited here.
+                </div>
+              </div>
+              <div>
+                <Label>Note</Label>
+                <Input value={form.memo} onChange={(e) => setForm({ ...form, memo: e.target.value })} />
+              </div>
             </div>
-            <div>
-              <Label>Category</Label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v as FormState['category'] })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {LEDGER_CATEGORY_VALUES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {LEDGER_CATEGORY_LABELS[c]} ({CATEGORY_DIRECTION[c] === 'INCOME' ? 'in' : 'out'})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <Label>Date</Label>
+                <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              </div>
+              <div>
+                <Label>Category</Label>
+                <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v as FormState['category'] })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {LEDGER_CATEGORY_VALUES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {LEDGER_CATEGORY_LABELS[c]} ({CATEGORY_DIRECTION[c] === 'INCOME' ? 'in' : 'out'})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Amount ($)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.amountDollars}
+                  onChange={(e) => setForm({ ...form, amountDollars: e.target.value })}
+                />
+                {formDirection && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Counts as money {formDirection === 'INCOME' ? 'in' : 'out'}.
+                  </p>
+                )}
+              </div>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <Label>Description</Label>
+                <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="What was this?" />
+              </div>
+              <div>
+                <Label>Who (customer / vendor)</Label>
+                <Input value={form.counterparty} onChange={(e) => setForm({ ...form, counterparty: e.target.value })} />
+              </div>
+              <div>
+                <Label>Paid by</Label>
+                <Input value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} placeholder="cash, card, check…" />
+              </div>
+              <div>
+                <Label>Note</Label>
+                <Input value={form.memo} onChange={(e) => setForm({ ...form, memo: e.target.value })} />
+              </div>
             </div>
-            <div>
-              <Label>Amount ($)</Label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.amountDollars}
-                onChange={(e) => setForm({ ...form, amountDollars: e.target.value })}
-              />
-              {formDirection && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Counts as money {formDirection === 'INCOME' ? 'in' : 'out'}.
-                </p>
-              )}
-            </div>
-            <div className="sm:col-span-2 lg:col-span-3">
-              <Label>Description</Label>
-              <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="What was this?" />
-            </div>
-            <div>
-              <Label>Who (customer / vendor)</Label>
-              <Input value={form.counterparty} onChange={(e) => setForm({ ...form, counterparty: e.target.value })} />
-            </div>
-            <div>
-              <Label>Paid by</Label>
-              <Input value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} placeholder="cash, card, check…" />
-            </div>
-            <div>
-              <Label>Note</Label>
-              <Input value={form.memo} onChange={(e) => setForm({ ...form, memo: e.target.value })} />
-            </div>
-          </div>
+          )}
           <div className="flex justify-end">
             <Button onClick={saveForm} disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              {form.id ? 'Save changes' : 'Add entry'}
+              {!form.manual ? 'Save note' : form.id ? 'Save changes' : 'Add entry'}
             </Button>
           </div>
         </Card>
@@ -382,11 +436,31 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
         </div>
       </Card>
 
-      <p className="text-xs text-muted-foreground">
-        Showing {entries.length} of {totalCount} entries. Derived rows (from orders, refunds and
-        shows) can have their note edited but are kept in sync automatically; only manual rows can be
-        deleted.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          Showing {entries.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{(page - 1) * PAGE_SIZE + entries.length} of{' '}
+          {totalCount}. Derived rows (from orders, refunds and shows) can have their note edited but
+          are kept in sync automatically; only manual rows can be deleted.
+        </p>
+        {totalCount > PAGE_SIZE && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              Previous
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Page {page} of {Math.max(1, Math.ceil(totalCount / PAGE_SIZE))}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= Math.ceil(totalCount / PAGE_SIZE) || loading}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

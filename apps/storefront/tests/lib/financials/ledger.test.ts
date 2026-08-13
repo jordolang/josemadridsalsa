@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   CATEGORY_DIRECTION,
+  ManualLedgerEntrySchema,
   archivedShowSaleToLedgerDrafts,
   dollarsToCents,
   orderToLedgerDrafts,
@@ -148,6 +149,24 @@ describe('CATEGORY_DIRECTION', () => {
       }),
     ]
     for (const d of all) expect(d.direction).toBe(CATEGORY_DIRECTION[d.category])
+  })
+})
+
+describe('ManualLedgerEntrySchema', () => {
+  const base = { date: '2026-08-13', category: 'SUPPLIES', amountDollars: 12.5, description: 'Ice' }
+
+  it('accepts a well-formed entry', () => {
+    expect(ManualLedgerEntrySchema.safeParse(base).success).toBe(true)
+  })
+
+  it('rejects an impossible calendar date rather than normalising it', () => {
+    expect(ManualLedgerEntrySchema.safeParse({ ...base, date: '2026-02-31' }).success).toBe(false)
+    expect(ManualLedgerEntrySchema.safeParse({ ...base, date: '08/13/2026' }).success).toBe(false)
+  })
+
+  it('rejects an amount that would round to zero cents', () => {
+    expect(ManualLedgerEntrySchema.safeParse({ ...base, amountDollars: 0.004 }).success).toBe(false)
+    expect(ManualLedgerEntrySchema.safeParse({ ...base, amountDollars: 0.01 }).success).toBe(true)
   })
 })
 

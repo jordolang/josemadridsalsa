@@ -77,6 +77,19 @@ export function notFound(message = 'Not found') {
 }
 
 /**
+ * Turn a thrown error into the right response: 401/403 for the auth errors `requirePermission`
+ * throws, 404 for "not found", else a 500 with a generic message. Mirrors `tryCatch`'s mapping for
+ * handlers that keep their own try/catch.
+ */
+export function failFromError(error: unknown, fallbackMessage: string) {
+  const message = getErrorMessage(error)
+  if (message.includes('Unauthorized')) return unauthorized(message)
+  if (message.includes('Forbidden')) return forbidden(message)
+  if (message.includes('Not found')) return notFound(message)
+  return fail(fallbackMessage, 500)
+}
+
+/**
  * Parse query parameters from request
  */
 export function parseQuery(request: NextRequest) {
