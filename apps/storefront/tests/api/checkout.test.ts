@@ -97,6 +97,13 @@ vi.mock('@/lib/tax-calculator', () => ({
   ),
 }))
 
+// Stub only the operator-alert dispatch; keep the real severityFor/dedupeKeys so the spec the
+// route builds is exercised for real (dispatch itself hits Prisma, which is mocked here).
+vi.mock('@/lib/notifications/dispatch', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/notifications/dispatch')>()),
+  notifyOperators: vi.fn(() => Promise.resolve(1)),
+}))
+
 vi.mock('@/lib/shipping-calculator', async (importOriginal) => ({
   // Only the rate call is stubbed. `buildShippingItems` is pure mapping — the thing that turns
   // catalogue rows into parcel weights and dimensions — so the real one is kept, and a unit
@@ -444,14 +451,16 @@ describe('Checkout API', () => {
       expect(data.error).toBe('Unable to initiate checkout. Please try again.')
     })
 
-    it('should continue checkout if tax calculation fails', async () => {
+    it('should alert operators and continue checkout when tax calculation fails', async () => {
       const { prisma } = await import('@/lib/prisma')
       const { getServerSession } = await import('next-auth')
       const { calculateTax } = await import('@/lib/tax-calculator')
+      const { notifyOperators } = await import('@/lib/notifications/dispatch')
 
       vi.mocked(getServerSession).mockResolvedValueOnce(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
       vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
+      // Simulate the Stripe Tax client failing (a bad key throws on every call).
       vi.mocked(calculateTax).mockRejectedValue(new Error('Tax API error'))
 
       const request = new NextRequest('http://localhost/api/checkout', {
@@ -461,7 +470,16 @@ describe('Checkout API', () => {
 
       const response = await POST(request)
 
+      // Checkout still completes (untaxed orders are recoverable; blocking all checkout is not),
+      // but the failure is now observable: operators get a deduped CRITICAL alert.
       expect(response.status).toBe(200)
+      expect(notifyOperators).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'INTEGRATION_FAILED',
+          severity: 'CRITICAL',
+          dedupeKey: 'integration-failed:stripe-tax',
+        })
+      )
       expect(prisma.order.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({

@@ -91,11 +91,15 @@ async function checkTaxExemption(customerEmail?: string): Promise<boolean> {
  * handles product taxability rules, and applies the correct jurisdiction
  * rates (state, county, city), keeping up with law changes automatically.
  *
- * Falls back to zero tax (rather than blocking checkout) if Stripe Tax
- * returns an error.
+ * Throws if Stripe Tax returns an error, rather than silently reporting $0.
+ * A silent zero is indistinguishable from a legitimately untaxed order, so
+ * swallowing the failure here could ship untaxed orders indefinitely with
+ * nothing surfacing it. Callers decide how to handle the failure (the checkout
+ * routes alert operators; the frontend estimate helper degrades to 0 on its own).
  *
  * @param {TaxCalculationInput} input - Line items, shipping address, and optional customer email.
  * @returns {Promise<TaxCalculationResult>} Tax amount, effective rate, per-jurisdiction breakdown, and exemption flag.
+ * @throws Propagates any error from the Stripe Tax API.
  */
 export async function calculateTax(
   input: TaxCalculationInput
@@ -181,21 +185,15 @@ export async function calculateTax(
     }
   } catch (error) {
     console.error('[Tax Calculator] Error calculating tax:', error)
-
-    // For production: log error but return 0 tax to not block checkout
-    // You may want to enable a fallback tax rate or notify admins
     if (error instanceof Error) {
       console.error('[Tax Calculator] Error details:', error.message)
     }
 
-    // Return zero tax rather than failing checkout
-    return {
-      taxAmount: 0,
-      taxAmountDecimal: 0,
-      taxRate: 0,
-      taxBreakdown: [],
-      taxExempt: false,
-    }
+    // Propagate rather than returning a silent $0. A zero result here would be
+    // indistinguishable from a legitimately untaxed order, letting a misconfigured
+    // Stripe Tax key ship untaxed orders with nothing surfacing it. Each caller
+    // decides how to handle the failure.
+    throw error
   }
 }
 

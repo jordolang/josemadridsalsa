@@ -7,6 +7,7 @@ import { getStripe } from '@/lib/stripe'
 import { queueShopifySync } from '@/lib/shopify/sync'
 import { calculateTax } from '@/lib/tax-calculator'
 import { calculateShipping } from '@/lib/shipping-calculator'
+import { notifyOperators, severityFor, dedupeKeys } from '@/lib/notifications/dispatch'
 import { logAuditWithRequest } from '@/lib/audit'
 import { rateLimit } from '@/lib/rateLimit'
 import { CreateOrderSchema, OrderQuerySchema } from '@/lib/validations/orders'
@@ -141,8 +142,22 @@ export async function POST(req: NextRequest) {
     })
 
     taxAmount = taxResult.taxAmountDecimal
-  } catch {
-    // Continue with 0 tax rather than blocking checkout
+  } catch (error) {
+    console.error('[Orders] Tax calculation failed, proceeding with $0 tax:', error)
+    // Previously swallowed silently — a bad Stripe Tax key could ship untaxed orders with
+    // nothing surfacing it. Alert operators (deduped so a sustained outage is one row, not
+    // one per order) and continue rather than blocking all checkout on a tax outage.
+    await notifyOperators({
+      type: 'INTEGRATION_FAILED',
+      severity: severityFor('INTEGRATION_FAILED'),
+      title: 'Tax calculation failed',
+      message:
+        'Stripe Tax did not return a calculation during checkout. Orders are being recorded with $0 tax until this is resolved.',
+      entityType: 'integration',
+      entityId: 'stripe-tax',
+      link: '/admin/settings/integrations',
+      dedupeKey: dedupeKeys.integrationFailed('stripe-tax'),
+    })
   }
 
   // Calculate shipping cost
