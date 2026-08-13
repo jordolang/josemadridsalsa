@@ -342,6 +342,11 @@ export const adminNavigation: NavItem[] = [
         permission: 'financials:read',
       },
       {
+        label: 'Ledger',
+        href: '/admin/financials/ledger',
+        permission: 'financials:read',
+      },
+      {
         label: 'Invoices',
         href: '/admin/invoices',
         permission: 'financials:read',
