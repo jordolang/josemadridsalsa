@@ -8,11 +8,10 @@ import { logAudit } from '@/lib/audit'
 import {
   CATEGORY_DIRECTION,
   LEDGER_CATEGORY_VALUES,
+  LEDGER_SOURCE_VALUES,
   ManualLedgerEntrySchema,
   dollarsToCents,
 } from '@/lib/financials/ledger'
-
-const LEDGER_SOURCE_VALUES = ['ORDER', 'REFUND', 'SHOW_ARCHIVE', 'FUNDRAISER', 'MANUAL', 'IMPORT'] as const
 
 const PAGE_SIZE = 100
 

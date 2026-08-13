@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -86,17 +86,22 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
   const [category, setCategory] = useState('all')
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
+  // The server owns the page size; mirror what it reports rather than hard-coding a second copy.
+  const [pageSize, setPageSize] = useState(PAGE_SIZE)
+  const requestRef = useRef(0)
 
   // Add/edit form
   const [form, setForm] = useState<FormState | null>(null)
 
-  // A filter change should always return to the first page, or the new, smaller result set can
-  // leave you stranded on a page that no longer exists.
-  useEffect(() => {
+  // Apply a filter change and return to page 1 in the same update, so exactly one request goes out
+  // (rather than one for the old page and another after a separate reset).
+  function changeFilter(apply: () => void) {
+    apply()
     setPage(1)
-  }, [from, to, direction, category, q])
+  }
 
   const load = useCallback(async () => {
+    const requestId = ++requestRef.current
     setLoading(true)
     try {
       const p = new URLSearchParams()
@@ -110,19 +115,31 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
       const res = await fetch(`/api/admin/financials/ledger?${p.toString()}`)
       if (!res.ok) throw new Error('Failed to load ledger')
       const data = await res.json()
+      // Ignore a response that a newer request has already superseded, so a slow old page cannot
+      // overwrite the current view.
+      if (requestId !== requestRef.current) return
       setEntries(data.entries ?? [])
       setSummary(data.summary ?? { incomeCents: 0, expenseCents: 0, netCents: 0 })
       setTotalCount(data.totalCount ?? 0)
+      if (typeof data.pageSize === 'number' && data.pageSize > 0) setPageSize(data.pageSize)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load ledger')
+      if (requestId === requestRef.current) {
+        toast.error(err instanceof Error ? err.message : 'Failed to load ledger')
+      }
     } finally {
-      setLoading(false)
+      if (requestId === requestRef.current) setLoading(false)
     }
   }, [from, to, direction, category, q, page])
 
   useEffect(() => {
     load()
   }, [load])
+
+  // After a load, if a delete shrank the results past the current page, step back onto a real one.
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(totalCount / pageSize))
+    if (page > maxPage) setPage(maxPage)
+  }, [totalCount, pageSize, page])
 
   function startAdd() {
     setForm({ ...EMPTY_FORM, date: today() })
@@ -259,15 +276,15 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <Label className="text-xs">From</Label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <Input type="date" value={from} onChange={(e) => changeFilter(() => setFrom(e.target.value))} />
           </div>
           <div>
             <Label className="text-xs">To</Label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            <Input type="date" value={to} onChange={(e) => changeFilter(() => setTo(e.target.value))} />
           </div>
           <div>
             <Label className="text-xs">Direction</Label>
-            <Select value={direction} onValueChange={setDirection}>
+            <Select value={direction} onValueChange={(v) => changeFilter(() => setDirection(v))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
@@ -278,7 +295,7 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
           </div>
           <div>
             <Label className="text-xs">Category</Label>
-            <Select value={category} onValueChange={setCategory}>
+            <Select value={category} onValueChange={(v) => changeFilter(() => setCategory(v))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
@@ -290,7 +307,7 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
           </div>
           <div>
             <Label className="text-xs">Search</Label>
-            <Input placeholder="Description, name…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <Input placeholder="Description, name…" value={q} onChange={(e) => changeFilter(() => setQ(e.target.value))} />
           </div>
         </div>
       </Card>
@@ -438,22 +455,22 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          Showing {entries.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{(page - 1) * PAGE_SIZE + entries.length} of{' '}
+          Showing {entries.length ? (page - 1) * pageSize + 1 : 0}–{(page - 1) * pageSize + entries.length} of{' '}
           {totalCount}. Derived rows (from orders, refunds and shows) can have their note edited but
           are kept in sync automatically; only manual rows can be deleted.
         </p>
-        {totalCount > PAGE_SIZE && (
+        {totalCount > pageSize && (
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
               Previous
             </Button>
             <span className="text-xs text-muted-foreground">
-              Page {page} of {Math.max(1, Math.ceil(totalCount / PAGE_SIZE))}
+              Page {page} of {Math.max(1, Math.ceil(totalCount / pageSize))}
             </span>
             <Button
               variant="outline"
               size="sm"
-              disabled={page >= Math.ceil(totalCount / PAGE_SIZE) || loading}
+              disabled={page >= Math.ceil(totalCount / pageSize) || loading}
               onClick={() => setPage((p) => p + 1)}
             >
               Next

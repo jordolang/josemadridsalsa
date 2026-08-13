@@ -10,6 +10,7 @@
  */
 import { prisma } from '@/lib/prisma'
 import {
+  SETTLED_PAYMENT,
   recordArchivedShowInLedger,
   recordOrderInLedger,
   recordOrderRefundsInLedger,
@@ -24,9 +25,9 @@ async function backfillOrders(): Promise<{ orders: number; rows: number }> {
 
   for (;;) {
     const batch = await prisma.order.findMany({
-      // Include refunded orders: their original sale and fee still count, and their refunds are
-      // recorded as contra rows. Skipping them would drop both the sale and the refund.
-      where: { paymentStatus: { in: ['PAID', 'SUCCEEDED', 'PARTIALLY_REFUNDED', 'REFUNDED'] } },
+      // Same recordable-status rule as the live writer (shared constant so the two cannot drift):
+      // refunded orders still count — their sale and fee stand, and their refunds are contra rows.
+      where: { paymentStatus: { in: SETTLED_PAYMENT } },
       select: { id: true },
       orderBy: { createdAt: 'asc' },
       skip,

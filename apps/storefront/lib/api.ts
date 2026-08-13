@@ -86,7 +86,8 @@ export function failFromError(error: unknown, fallbackMessage: string) {
   if (message.includes('Unauthorized')) return unauthorized(message)
   if (message.includes('Forbidden')) return forbidden(message)
   if (message.includes('Not found')) return notFound(message)
-  return fail(fallbackMessage, 500)
+  // Route real failures through serverError so they are logged with detail, exactly as tryCatch does.
+  return serverError(fallbackMessage, error)
 }
 
 /**

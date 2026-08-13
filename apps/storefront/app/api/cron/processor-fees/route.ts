@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
 import { isAuthorizedCronRequest } from '@/lib/cron/auth'
-import { recordOrderInLedger } from '@/lib/financials/ledger-writer'
+import { SETTLED_PAYMENT, recordOrderInLedger } from '@/lib/financials/ledger-writer'
 import {
   fetchPayPalFee,
   fetchSquareFee,
@@ -45,7 +45,10 @@ export async function GET(request: Request) {
     const candidates = await prisma.payment.findMany({
       where: {
         processorFee: null,
-        status: 'SUCCEEDED',
+        // A refund does not un-charge the processor's fee, so refunded payments still need their
+        // fee looked up — otherwise a refunded order's cost is silently missing from net revenue
+        // and the ledger. Same "money arrived" set the ledger records against.
+        status: { in: SETTLED_PAYMENT },
         createdAt: { gte: oldest },
       },
       select: {
@@ -121,7 +124,9 @@ export async function GET(request: Request) {
         resolved += 1
         // The fee is now known, so refresh this order's ledger rows — the live writer left the
         // PROCESSOR_FEES row off while the fee was still null. Idempotent, and never allowed to
-        // fail the sweep.
+        // fail the sweep. If it does fail, the row is not lost for good: `ledger:backfill`
+        // re-records every settled order idempotently and is the reconciliation net for exactly
+        // this gap.
         try {
           await recordOrderInLedger(payment.orderId)
         } catch (error) {

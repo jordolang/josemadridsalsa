@@ -43,6 +43,16 @@ export const CATEGORY_DIRECTION: Record<LedgerCategory, LedgerDirection> = {
   OTHER_EXPENSE: 'EXPENSE',
 }
 
+/** Every ledger source, for filter validation kept in step with the Prisma `LedgerSource` enum. */
+export const LEDGER_SOURCE_VALUES = [
+  'ORDER',
+  'REFUND',
+  'SHOW_ARCHIVE',
+  'FUNDRAISER',
+  'MANUAL',
+  'IMPORT',
+] as const
+
 /** Every category, in display order (income first). Drives the picker and the manual-entry schema. */
 export const LEDGER_CATEGORY_VALUES = [
   'PRODUCT_SALES',

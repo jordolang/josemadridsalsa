@@ -63,6 +63,9 @@ CREATE INDEX "ledger_entries_exportedAt_idx" ON "ledger_entries"("exportedAt");
 --    the key that stops it being written twice.
 ALTER TABLE "ledger_entries" ADD CONSTRAINT "ledger_entries_amount_positive" CHECK ("amountCents" > 0);
 ALTER TABLE "ledger_entries" ADD CONSTRAINT "ledger_entries_source_shape" CHECK (
-  ("isManual" = true AND "source" = 'MANUAL') OR
-  ("isManual" = false AND "dedupeKey" IS NOT NULL AND "sourceId" IS NOT NULL)
+  -- Mutually exclusive shapes: a manual row is a MANUAL-source hand entry with no dedupe key;
+  -- a derived row is any other source and must carry both the dedupeKey and sourceId that make
+  -- its upsert idempotent. Nothing in between is allowed.
+  ("isManual" = true AND "source" = 'MANUAL' AND "dedupeKey" IS NULL) OR
+  ("isManual" = false AND "source" <> 'MANUAL' AND "dedupeKey" IS NOT NULL AND "sourceId" IS NOT NULL)
 );

@@ -20,11 +20,12 @@ import {
 } from './ledger'
 
 /**
- * Payment states that mean the money actually arrived. A later refund does not un-happen the
- * original sale, so `REFUNDED`/`PARTIALLY_REFUNDED` stay in the set — the sale and its processor
- * fee are still recorded, and the refund is a separate contra row.
+ * Payment/order states that mean the money actually arrived and should be on the ledger. A later
+ * refund does not un-happen the original sale, so `REFUNDED`/`PARTIALLY_REFUNDED` stay in the set —
+ * the sale and its processor fee are still recorded, and the refund is a separate contra row.
+ * Exported so the backfill applies the same rule and cannot drift from the live writer.
  */
-const SETTLED_PAYMENT: PaymentStatus[] = ['PAID', 'SUCCEEDED', 'PARTIALLY_REFUNDED', 'REFUNDED']
+export const SETTLED_PAYMENT: PaymentStatus[] = ['PAID', 'SUCCEEDED', 'PARTIALLY_REFUNDED', 'REFUNDED']
 
 /** Upsert derived drafts by their dedupe key. Returns how many rows were written. */
 export async function upsertLedgerDrafts(drafts: LedgerEntryDraft[]): Promise<number> {
