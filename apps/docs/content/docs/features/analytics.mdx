@@ -132,6 +132,25 @@ need no cost and work regardless. The arithmetic is in `lib/analytics/inventory-
 the query in `inventory-turnover.server.ts` reuses the same sales filter as the margin and
 orders reports. Read-only, gated on `analytics:read`.
 
+### Retention & Repeat Purchase
+
+`/admin/analytics/retention` (Analytics → Retention & Repeat Purchase) answers whether buyers
+come back — as one rate and as a cohort grid.
+
+- **Repeat-purchase rate** — the share of distinct buyers who placed two or more orders, plus
+  orders-per-buyer.
+- **Cohort retention triangle** — buyers grouped by the month they were first seen; each later
+  column is the share of that cohort who ordered again that many months on.
+
+Buyer identity is the signed-in `userId` when present, otherwise the normalised guest email;
+there is no `Customer` foreign key on `Order`. Orders with **neither** cannot be tied to a person
+and are excluded (their count is surfaced) rather than counted as one-time buyers, which would
+deflate every figure. Two honesty rules the grid depends on: month 0 is the acquisition month and
+is 100% by definition, and a cell the data cannot see yet is **blank, never 0%** (a cohort
+acquired last month has no "three months later" column). The math is in
+`lib/analytics/cohort-retention.ts`; the query in `cohort-retention.server.ts` reuses the same
+sales filter as the other reports. Read-only, gated on `analytics:read`.
+
 ### Date Range Filtering
 
 The `lib/analytics/date-range.ts` utility provides predefined date ranges:

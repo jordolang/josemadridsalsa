@@ -50,6 +50,12 @@ export function AnalyticsNavigation({ activeRange }: AnalyticsNavigationProps) {
       >
         Margin
       </Link>
+      <Link
+        href={`/admin/analytics/retention?range=${activeRange}`}
+        className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-background/60"
+      >
+        Retention
+      </Link>
     </nav>
   )
 }
