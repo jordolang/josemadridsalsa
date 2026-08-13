@@ -7,6 +7,7 @@ import { getProvider } from '@/lib/payments'
 import { Prisma } from '@prisma/client'
 import { calculateTax } from '@/lib/tax-calculator'
 import { buildShippingItems, calculateShipping } from '@/lib/shipping-calculator'
+import { notifyOperators, severityFor, dedupeKeys } from '@/lib/notifications/dispatch'
 import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
 import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manager'
@@ -160,7 +161,21 @@ export async function POST(request: NextRequest) {
 
         taxAmount = taxResult.taxAmountDecimal
       } catch (error) {
-        console.error('[PayPal Checkout] Tax calculation failed, using $0:', error)
+        console.error('[PayPal Checkout] Tax calculation failed, proceeding with $0 tax:', error)
+        // Previously swallowed silently — a bad Stripe Tax key could ship untaxed orders with
+        // nothing surfacing it. Alert operators (deduped so a sustained outage is one row, not
+        // one per order) and continue rather than blocking all checkout on a tax outage.
+        await notifyOperators({
+          type: 'INTEGRATION_FAILED',
+          severity: severityFor('INTEGRATION_FAILED'),
+          title: 'Tax calculation failed',
+          message:
+            'Stripe Tax did not return a calculation during checkout. Orders are being recorded with $0 tax until this is resolved.',
+          entityType: 'integration',
+          entityId: 'stripe-tax',
+          link: '/admin/settings/integrations',
+          dedupeKey: dedupeKeys.integrationFailed('stripe-tax'),
+        })
       }
 
       // Calculate shipping server-side
