@@ -4255,6 +4255,100 @@ enum ArchivedShowType {
   FARMERS_MARKET
 }
 
+/// The unified bookkeeping ledger: one row per money movement, from every channel, in one
+/// place that can be summed, edited, and exported to QuickBooks.
+///
+/// This is a *reporting and backup* ledger, not the system of record for any domain. Orders,
+/// refunds, and show sales keep their own tables; entries here are derived from them (and kept
+/// idempotent by `dedupeKey`) or hand-entered by staff. The rule that keeps the totals honest:
+/// each dollar is recorded from exactly one source. Online/manual/fundraiser/event sales are
+/// recorded from `Order` + `Refund` (the transactional truth); `ArchivedShowSale` covers the
+/// pre-database paper years, which do not overlap the orders. Rollup tables that merely
+/// summarise those same sales (`Fundraiser.totalRevenue`, the per-show cash/card fields) are
+/// deliberately NOT backfilled, because doing so would count the same money twice.
+model LedgerEntry {
+  id            String          @id @default(cuid())
+  /// The accounting date — when the money actually moved, not when this row was written.
+  date          DateTime
+  /// The sign of the entry. Amounts are always stored positive; the direction carries the sign.
+  direction     LedgerDirection
+  /// Cents, always positive. Cents (not Decimal dollars) so a column of them sums exactly, and
+  /// to match how `Payment` and `Refund` already store money.
+  amountCents   Int
+  category      LedgerCategory
+  source        LedgerSource
+  /// The originating record's id (order, refund, archived show), for tracing back to the truth.
+  sourceId      String?
+  /// Stable idempotency key, e.g. `order:<id>:product_sales`. Unique, so re-running the backfill
+  /// updates the existing row instead of creating a duplicate. Null for free-form manual rows.
+  dedupeKey     String?         @unique
+  description   String
+  /// Customer or vendor name, free text.
+  counterparty  String?
+  /// Sales attribution, reusing the order channel vocabulary where it applies.
+  channel       SalesChannel?
+  /// How the money moved: cash, card, check, online, etc. Free text.
+  paymentMethod String?
+  /// True for rows a person typed in; false for anything derived from another record. A manual
+  /// row is never overwritten by the backfill.
+  isManual      Boolean         @default(false)
+  /// Free-text note, and the place to jot tax classification until a real chart of accounts exists.
+  memo          String?
+  /// When this entry was written into a QuickBooks export/sync. Null means not yet exported.
+  exportedAt    DateTime?
+  /// The admin who entered or last edited a manual row. Plain id, not a relation, to keep the
+  /// User model untouched.
+  enteredById   String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([date])
+  @@index([direction])
+  @@index([category])
+  @@index([source, sourceId])
+  @@index([exportedAt])
+  @@map("ledger_entries")
+}
+
+enum LedgerDirection {
+  INCOME
+  EXPENSE
+}
+
+enum LedgerSource {
+  ORDER
+  REFUND
+  SHOW_ARCHIVE
+  FUNDRAISER
+  MANUAL
+  IMPORT
+}
+
+/// Income and expense categories. Contra items (refunds, discounts) are stored as EXPENSE so a
+/// simple `sum(income) - sum(expense)` nets correctly; they are not literally costs. Each maps to
+/// a QuickBooks account when the ledger is exported.
+enum LedgerCategory {
+  // Income
+  PRODUCT_SALES
+  SHIPPING_INCOME
+  SALES_TAX_COLLECTED
+  SHOW_SALES
+  OTHER_INCOME
+  // Expense (and contra-income)
+  COGS
+  PROCESSOR_FEES
+  SHIPPING_COST
+  SHOW_EXPENSES
+  REFUNDS
+  DISCOUNTS
+  BOOTH_FEE
+  TRAVEL
+  MEALS
+  SUPPLIES
+  PAYROLL
+  OTHER_EXPENSE
+}
+
 // ============================================================================
 // Content Management System
 // ============================================================================

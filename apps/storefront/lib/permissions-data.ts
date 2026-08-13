@@ -46,6 +46,7 @@ export const permissionDefinitions: PermissionDefinition[] = [
 
   // Financials
   { name: 'financials:read', description: 'View financial data', category: 'FINANCIALS' },
+  { name: 'financials:write', description: 'Add and edit ledger entries', category: 'FINANCIALS' },
   { name: 'financials:refunds', description: 'Process refunds', category: 'FINANCIALS' },
   { name: 'financials:export', description: 'Export financial reports', category: 'FINANCIALS' },
 
