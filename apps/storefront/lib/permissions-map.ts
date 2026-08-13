@@ -274,6 +274,11 @@ export const adminNavigation: NavItem[] = [
         href: '/admin/analytics/margin',
         permission: 'analytics:read',
       },
+      {
+        label: 'Turnover & Slow Movers',
+        href: '/admin/analytics/inventory-turnover',
+        permission: 'analytics:read',
+      },
     ],
   },
   {

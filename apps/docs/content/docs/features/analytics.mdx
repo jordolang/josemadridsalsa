@@ -113,6 +113,25 @@ The admin analytics page (`/admin/analytics`) provides:
 - Top-selling products by quantity and revenue
 - Order source tracking
 
+### Inventory Turnover & Slow Movers
+
+`/admin/analytics/inventory-turnover` (Analytics → Turnover & Slow Movers) answers how fast
+stock is selling and what is sitting still.
+
+- **Overall turnover** — how many times the shelf sold through in the window, annualised, plus
+  the days on hand needed to clear current stock at that pace.
+- **Per-product table**, ranked slowest-first: products holding stock with **no sales** lead,
+  then the longest **days of supply** (current stock ÷ the window's daily selling pace). The
+  slow-mover flag fires past 90 days of supply, or immediately for stock that sold nothing.
+
+Both COGS and inventory are valued at the **current** cost price (the platform keeps no
+historical inventory snapshots to average against), and — as on the margin page — **a missing
+cost is missing, never zero**: uncosted products are excluded from the ratio and value figures
+and counted against a stated coverage percentage. The velocity columns (units, days of supply)
+need no cost and work regardless. The arithmetic is in `lib/analytics/inventory-turnover.ts`;
+the query in `inventory-turnover.server.ts` reuses the same sales filter as the margin and
+orders reports. Read-only, gated on `analytics:read`.
+
 ### Date Range Filtering
 
 The `lib/analytics/date-range.ts` utility provides predefined date ranges:
