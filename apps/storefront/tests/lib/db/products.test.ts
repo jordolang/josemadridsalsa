@@ -31,7 +31,6 @@ describe('getProducts', () => {
         compareAtPrice: null,
         costPrice: null,
         weight: null,
-        variants: [],
         nutritionalInfo: null,
         category: { slug: 'mild-salsas' },
         productTags: [],
@@ -65,7 +64,6 @@ describe('getProducts', () => {
         compareAtPrice: null,
         costPrice: null,
         weight: null,
-        variants: [],
       },
     ]
 
@@ -93,7 +91,6 @@ describe('getProducts', () => {
         compareAtPrice: null,
         costPrice: null,
         weight: null,
-        variants: [],
       },
     ]
 
@@ -124,7 +121,6 @@ describe('getProducts', () => {
         compareAtPrice: null,
         costPrice: null,
         weight: null,
-        variants: [],
       },
     ]
 
@@ -144,7 +140,7 @@ describe('getProducts', () => {
     )
   })
 
-  it('should include variants and nutritionalInfo relations', async () => {
+  it('should include nutritionalInfo relations', async () => {
     const mockProducts = [
       {
         id: '1',
@@ -153,9 +149,6 @@ describe('getProducts', () => {
         compareAtPrice: null,
         costPrice: null,
         weight: null,
-        variants: [
-          { id: 'v1', name: '16 oz', type: 'size', price: 12.99, inStock: true },
-        ],
         nutritionalInfo: {
           id: 'n1',
           servingSize: '2 tbsp',
@@ -172,12 +165,10 @@ describe('getProducts', () => {
     expect(prisma.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         include: expect.objectContaining({
-          variants: true,
           nutritionalInfo: true,
         }),
       })
     )
-    expect(result[0].variants).toHaveLength(1)
     expect(result[0].nutritionalInfo).toBeDefined()
   })
 
@@ -205,13 +196,6 @@ describe('getProducts', () => {
         compareAtPrice: mockDecimal(12.99),
         costPrice: mockDecimal(5.0),
         weight: mockDecimal(16.0),
-        variants: [
-          {
-            id: 'v1',
-            name: 'Large',
-            price: mockDecimal(14.99),
-          },
-        ],
       },
     ]
 
@@ -228,8 +212,6 @@ describe('getProducts', () => {
     expect(result[0].costPrice).toBe(5.0)
     expect(typeof result[0].weight).toBe('number')
     expect(result[0].weight).toBe(16.0)
-    expect(typeof result[0].variants[0].price).toBe('number')
-    expect(result[0].variants[0].price).toBe(14.99)
   })
 
   it('should filter by inStock status', async () => {
@@ -242,7 +224,6 @@ describe('getProducts', () => {
         compareAtPrice: null,
         costPrice: null,
         weight: null,
-        variants: [],
       },
     ]
 
@@ -268,7 +249,6 @@ describe('getProducts', () => {
         compareAtPrice: null,
         costPrice: null,
         weight: null,
-        variants: [],
         productTags: [{ tag: { slug: 'organic' } }],
       },
     ]
@@ -301,7 +281,6 @@ describe('getProducts', () => {
         compareAtPrice: null,
         costPrice: null,
         weight: null,
-        variants: [],
       },
     ]
 
@@ -333,9 +312,6 @@ describe('getProductBySlug', () => {
       costPrice: null,
       weight: null,
       category: { id: 'c1', name: 'Mild Salsas', slug: 'mild-salsas' },
-      variants: [
-        { id: 'v1', name: '16 oz', type: 'size', price: 12.99, inStock: true },
-      ],
       nutritionalInfo: {
         id: 'n1',
         servingSize: '2 tbsp',
@@ -352,7 +328,6 @@ describe('getProductBySlug', () => {
       where: { slug: 'test-salsa' },
       include: {
         category: true,
-        variants: true,
         nutritionalInfo: true,
         productIngredients: {
           include: {
@@ -371,7 +346,6 @@ describe('getProductBySlug', () => {
     })
     expect(result).toBeDefined()
     expect(result?.category).toBeDefined()
-    expect(result?.variants).toHaveLength(1)
     expect(result?.nutritionalInfo).toBeDefined()
   })
 
@@ -398,13 +372,6 @@ describe('getProductBySlug', () => {
       compareAtPrice: mockDecimal(12.99),
       costPrice: mockDecimal(5.0),
       weight: mockDecimal(16.0),
-      variants: [
-        {
-          id: 'v1',
-          name: 'Large',
-          price: mockDecimal(14.99),
-        },
-      ],
     }
 
     vi.mocked(prisma.product.findUnique).mockResolvedValue(mockProduct as any)
@@ -414,8 +381,6 @@ describe('getProductBySlug', () => {
     expect(result).toBeDefined()
     expect(typeof result?.price).toBe('number')
     expect(result?.price).toBe(9.99)
-    expect(typeof result?.variants[0].price).toBe('number')
-    expect(result?.variants[0].price).toBe(14.99)
   })
 })
 

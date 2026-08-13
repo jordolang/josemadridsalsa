@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Calendar,
   ClipboardList,
+  DollarSign,
   Edit,
   ExternalLink,
   ListFilter,
@@ -587,6 +588,11 @@ function EventCard({
           <Link href={`/admin/events/${event.id}/manifest`}>
             <Button size="sm" variant="ghost" title="Product manifest">
               <ClipboardList className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href={`/admin/events/${event.id}/financials`}>
+            <Button size="sm" variant="ghost" title="Show financials & break-even">
+              <DollarSign className="h-4 w-4" />
             </Button>
           </Link>
           <Link href={`/admin/events/${event.id}/edit`}>

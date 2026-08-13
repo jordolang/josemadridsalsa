@@ -5,7 +5,7 @@ import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { createMetadata } from '@/lib/metadata'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, ClipboardList } from 'lucide-react'
+import { ArrowLeft, ClipboardList, DollarSign } from 'lucide-react'
 import EventForm, { type EventFormData } from '../../_components/EventForm'
 
 export const metadata: Metadata = createMetadata({
@@ -81,12 +81,20 @@ export default async function EditEventPage({
             <p className="text-muted-foreground">{event.title}</p>
           </div>
         </div>
-        <Link href={`/admin/events/${event.id}/manifest`}>
-          <Button variant="outline">
-            <ClipboardList className="mr-2 h-4 w-4" />
-            Product Manifest
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href={`/admin/events/${event.id}/manifest`}>
+            <Button variant="outline">
+              <ClipboardList className="mr-2 h-4 w-4" />
+              Product Manifest
+            </Button>
+          </Link>
+          <Link href={`/admin/events/${event.id}/financials`}>
+            <Button variant="outline">
+              <DollarSign className="mr-2 h-4 w-4" />
+              Show Financials
+            </Button>
+          </Link>
+        </div>
       </div>
       <EventForm event={formData} />
     </div>

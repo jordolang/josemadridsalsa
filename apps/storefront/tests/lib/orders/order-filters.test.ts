@@ -46,6 +46,14 @@ describe('buildOrderWhere', () => {
     expect(where.salesChannel).toBe('FUNDRAISER')
   })
 
+  it('filters by the EVENT channel rather than falling back to no filters', () => {
+    // EVENT is offered in the dropdown (via SALES_CHANNEL_LABELS); the filter schema must accept
+    // it, or an invalid value fails the whole parse and silently drops every filter.
+    const where = buildOrderWhere(parseOrderFilters({ status: 'PROCESSING', salesChannel: 'EVENT' }))
+    expect(where.salesChannel).toBe('EVENT')
+    expect(where.status).toBe('PROCESSING')
+  })
+
   it('treats a picked end date as the whole day, not midnight', () => {
     // Regression: "To: Feb 1" resolved to Feb 1 00:00 UTC and excluded everything ordered
     // that day. Date pickers are inclusive of the day selected.

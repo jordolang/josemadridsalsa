@@ -27,12 +27,12 @@ import type { DomainEventRecord } from '../subscribe'
  *
  * `order.created` fires on every path that opens an order, and the website, PayPal, Square and
  * POS routes all open one **before** taking payment — confirming those at creation would email
- * people who abandoned checkout. These three are different: an admin recording a phone call, a
- * wholesale table or an event sale is writing down a deal that has already been struck, so there
- * is no later payment fact to wait for. `IMPORT` is absent because the bulk importer
+ * people who abandoned checkout. These four are different: an admin recording a manual sale, a
+ * phone call, a wholesale table or an event sale is writing down a deal that has already been
+ * struck, so there is no later payment fact to wait for. `IMPORT` is absent because the bulk importer
  * deliberately emits nothing; `MARKETPLACE` is absent because its settlement is not modelled yet.
  */
-const FINAL_AT_CREATION: SalesChannel[] = ['MANUAL', 'PHONE', 'WHOLESALE']
+const FINAL_AT_CREATION: SalesChannel[] = ['MANUAL', 'PHONE', 'WHOLESALE', 'EVENT']
 
 /**
  * Send the confirmation for one order, if it has not had one.

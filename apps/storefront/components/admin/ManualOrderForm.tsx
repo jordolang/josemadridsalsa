@@ -36,6 +36,7 @@ interface LineDraft {
 const CHANNELS = [
   { value: 'PHONE', label: 'Phone order' },
   { value: 'WHOLESALE', label: 'Wholesale' },
+  { value: 'EVENT', label: 'Event sale' },
   { value: 'MANUAL', label: 'Manual / other' },
   { value: 'MARKETPLACE', label: 'Marketplace' },
 ]

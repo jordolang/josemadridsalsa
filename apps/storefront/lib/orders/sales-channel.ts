@@ -44,6 +44,7 @@ export const SALES_CHANNEL_LABELS: Record<SalesChannel, string> = {
   POS: 'Point of Sale',
   FUNDRAISER: 'Fundraiser',
   WHOLESALE: 'Wholesale',
+  EVENT: 'Event',
   MANUAL: 'Manual',
   MARKETPLACE: 'Marketplace',
   PHONE: 'Phone',
