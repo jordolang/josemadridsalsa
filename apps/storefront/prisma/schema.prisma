@@ -1353,6 +1353,13 @@ model FeaturedEvent {
   costOfFuel              Decimal?           @db.Decimal(10, 2)
   lodging                 Decimal?           @db.Decimal(10, 2)
   meals                   Decimal?           @db.Decimal(10, 2)
+  /// Show financials, entered by hand on return from the show. Costs beyond the four fixed lines
+  /// above (tolls, ice, a replacement table) go in `otherExpenses`; the money taken is split into
+  /// cash and card so the two can be reconciled against the till. All feed the break-even figure.
+  otherExpenses           Decimal?           @db.Decimal(10, 2)
+  otherExpensesNote       String?
+  cashSales               Decimal?           @db.Decimal(10, 2)
+  cardSales               Decimal?           @db.Decimal(10, 2)
   /// How to apply, as written by the promoter.
   applicationInfo         String?
   /// Where this event record came from (manual entry, Google Calendar, a
