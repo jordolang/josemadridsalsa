@@ -30,7 +30,7 @@ vi.mock('@/lib/payments', () => ({
 }))
 
 vi.mock('@/lib/inventory-manager', () => ({
-  deductReservedInventoryInTx: vi.fn(async () => ({
+  deductReservedInventoryOnceInTx: vi.fn(async () => ({
     newInventory: 5,
     product: { lowStockThreshold: 2 },
   })),

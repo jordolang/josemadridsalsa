@@ -41,7 +41,7 @@ vi.mock('@/lib/email/automation', () => ({
 }))
 
 vi.mock('@/lib/inventory-manager', () => ({
-  deductReservedInventoryInTx: vi.fn(() =>
+  deductReservedInventoryOnceInTx: vi.fn(() =>
     Promise.resolve({
       product: {
         id: 'prod-1',

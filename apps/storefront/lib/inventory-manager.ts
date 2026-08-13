@@ -601,6 +601,51 @@ export async function deductReservedInventoryInTx(
 }
 
 /**
+ * Idempotent wrapper around {@link deductReservedInventoryInTx}.
+ *
+ * A paid order can be finalized by two separate code paths — the checkout route
+ * and the provider webhook — that each complete the same order. The danger is not
+ * the truly-concurrent case (Serializable isolation forces one side to roll back);
+ * it is the webhook arriving *after* the route has already committed. In that
+ * sequential replay `deductReservedInventoryInTx` would deduct a second time: the
+ * reservation for this order is already gone, so it either throws or silently
+ * consumes another customer's reservation, overselling the product.
+ *
+ * This guard makes the deduction idempotent per order item: it skips any item that
+ * already has an `ORDER_COMPLETION` transaction for the order. Returns the deduction
+ * result, or `null` when the item was already deducted.
+ *
+ * Must run inside the enclosing (Serializable) transaction so the check-then-deduct
+ * is atomic. `orderId` is required — the whole guard keys on it, and Prisma would
+ * silently drop an `undefined` `orderId` predicate and match any product's completed
+ * deduction, skipping a legitimate one.
+ */
+export async function deductReservedInventoryOnceInTx(
+  reservation: InventoryReservation,
+  tx: Prisma.TransactionClient
+) {
+  const { productId, orderId } = reservation;
+
+  if (!orderId) {
+    throw new Error('deductReservedInventoryOnceInTx requires an orderId to guard against double-deduction');
+  }
+
+  const existingDeduction = await tx.inventoryTransaction.findFirst({
+    where: {
+      productId,
+      orderId,
+      reason: 'ORDER_COMPLETION',
+    },
+  });
+
+  if (existingDeduction) {
+    return null;
+  }
+
+  return deductReservedInventoryInTx(reservation, tx);
+}
+
+/**
  * Check inventory levels and create/resolve alerts.
  * Exported so callers can fire alerts after a committed transaction.
  */
