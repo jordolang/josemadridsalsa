@@ -4,7 +4,7 @@ import Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
-import { deductReservedInventoryInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
+import { deductReservedInventoryOnceInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
 import { dedupeKeys, notifyOperators, severityFor } from '@/lib/notifications/dispatch'
@@ -158,11 +158,11 @@ export async function POST(request: Request) {
           await creditFundraiserCommission(tx, order.id)
 
           // Deduct reserved inventory for product orders (not gift certificates).
-          // Uses deductReservedInventoryInTx to atomically decrement both
-          // `inventory` and `stockReserved`, preventing double-counting.
-          // Item-level idempotency: skip items that already have an
-          // ORDER_COMPLETION transaction for this order to guard against
-          // the race between transaction commit and the `processed` marker.
+          // Atomically decrements both `inventory` and `stockReserved`.
+          // deductReservedInventoryOnceInTx is idempotent per order item: it skips
+          // items that already have an ORDER_COMPLETION transaction for this order,
+          // guarding against /api/checkout/complete finalizing the same order in
+          // parallel (and the commit-vs-`processed`-marker race).
           const deductionResults: Array<{
             productId: string
             newInventory: number
@@ -171,19 +171,7 @@ export async function POST(request: Request) {
 
           if (order.items.length > 0) {
             for (const item of order.items) {
-              const existingDeduction = await tx.inventoryTransaction.findFirst({
-                where: {
-                  productId: item.productId,
-                  orderId: order.id,
-                  reason: 'ORDER_COMPLETION',
-                },
-              })
-
-              if (existingDeduction) {
-                continue
-              }
-
-              const result = await deductReservedInventoryInTx(
+              const result = await deductReservedInventoryOnceInTx(
                 {
                   productId: item.productId,
                   quantity: item.quantity,
@@ -192,6 +180,10 @@ export async function POST(request: Request) {
                 },
                 tx
               )
+
+              if (!result) {
+                continue
+              }
 
               deductionResults.push({
                 productId: item.productId,

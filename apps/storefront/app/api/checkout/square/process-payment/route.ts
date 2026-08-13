@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { getCurrentUser } from '@/lib/rbac'
-import { deductReservedInventoryInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
+import { deductReservedInventoryOnceInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { createOrderAccessToken } from '@/lib/orders/access-token'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
@@ -209,9 +209,12 @@ export async function POST(request: NextRequest) {
         // which completes the same order in parallel and now credits it too.
         await creditFundraiserCommission(tx, order.id)
 
-        // Deduct reserved inventory
+        // Deduct reserved inventory. The payment webhook completes the same order
+        // in parallel and deducts the same items, so skip any item it already
+        // recorded — deductReservedInventoryOnceInTx is idempotent per order item.
+        // Without it a second deduction oversells (see the helper's docs).
         for (const item of order.items) {
-          const deductionResult = await deductReservedInventoryInTx(
+          const deductionResult = await deductReservedInventoryOnceInTx(
             {
               productId: item.productId,
               quantity: item.quantity,
@@ -221,6 +224,9 @@ export async function POST(request: NextRequest) {
             },
             tx
           )
+          if (!deductionResult) {
+            continue
+          }
           itemDeductions.push({
             productId: item.productId,
             newInventory: deductionResult.newInventory,
