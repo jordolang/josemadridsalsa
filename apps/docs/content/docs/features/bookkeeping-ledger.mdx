@@ -1,0 +1,75 @@
+---
+title: Bookkeeping Ledger
+description: One running record of every dollar in and out — editable, backfillable, and built to export to QuickBooks.
+---
+
+The bookkeeping ledger is the single place that answers "what money came in, what went out, and
+where did it go." Until it existed, those figures were scattered across payments, refunds, order
+columns, per-show cash and card fields, and fundraiser rollups, with nothing joining them. The
+`LedgerEntry` model is that join.
+
+## What it is — and is not
+
+It is a **reporting and backup** ledger, not a new system of record. Orders, refunds, and shows
+keep their own tables and remain the truth for their domain. Every ledger row is one of two things:
+
+- **Derived** from a source record (an order, a refund, an archived show), written idempotently and
+  keyed by a `dedupeKey` so re-running the backfill updates rather than duplicates.
+- **Manual** — typed in by staff (an expense, a correction, a cash sale), carrying no dedupe key so
+  the backfill never touches it.
+
+## The one rule: each dollar from exactly one source
+
+The ledger's totals are only trustworthy because nothing is counted twice. Money is recorded from a
+single source per era and channel:
+
+- **`Order` + `Refund`** — every online, manual, phone, wholesale, fundraiser, and event sale, plus
+  its refunds. This is the transactional truth for the database years.
+- **`ArchivedShowSale`** — the pre-database paper years of festival and market sales, which do not
+  overlap the orders.
+
+Rollup tables that merely *re-summarise* those same sales — `Fundraiser.totalRevenue`, the per-show
+cash/card fields on `FeaturedEvent` — are **not** backfilled. Adding them on top of the orders they
+summarise would double-count the money.
+
+## How an order becomes ledger rows
+
+An order is split into its parts, each a separate categorised row:
+
+| Row | Category | Side |
+|---|---|---|
+| Goods total | `PRODUCT_SALES` | Income |
+| Shipping charged | `SHIPPING_INCOME` | Income |
+| Sales tax collected | `SALES_TAX_COLLECTED` | Income |
+| Discount given | `DISCOUNTS` | Expense (contra) |
+| Cost of goods (from item cost snapshots) | `COGS` | Expense |
+| Processor fee | `PROCESSOR_FEES` | Expense |
+
+A refund is a single `REFUNDS` row. Refunds and discounts are stored as positive amounts under
+expense-side categories so that a plain `sum(income) − sum(expense)` nets correctly — they are
+contra-income, not literal costs. Every amount is stored in **integer cents** so a column of entries
+sums without rounding drift.
+
+## Keeping it current
+
+- **Live:** a domain-event handler writes each order and refund into the ledger the moment its money
+  settles (`payment.completed`, `payment.refunded`). No nightly job required.
+- **Backfill:** `npm run ledger:backfill` reconstructs the whole ledger from existing settled orders,
+  their refunds, and the archived shows. It is idempotent — safe to run as often as you like.
+
+## The admin page
+
+`/admin/financials/ledger` (under **Financials → Ledger**) shows money-in, money-out, and net over
+any date range, with filters for direction, category, and free-text search. Staff with
+`financials:write` can **add, edit, and delete** manual entries — the place to record an expense or
+correct a figure. Derived rows can have a note added but are otherwise kept in sync automatically and
+cannot be deleted (the backfill would recreate them); to change one, edit the underlying order,
+refund, or show.
+
+## Roadmap
+
+This ledger is the foundation for the QuickBooks work that follows: a downloadable,
+QuickBooks-importable export (CSV/IIF/journal) built from these entries, and an extension of the
+existing QuickBooks sync so cash, show, and fundraiser money reaches the books alongside online
+orders. QuickBooks Online remains the source of truth for accounting; the ledger is how everything
+gets there accurately and stays backed up.
