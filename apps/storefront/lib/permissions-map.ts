@@ -274,6 +274,11 @@ export const adminNavigation: NavItem[] = [
         href: '/admin/analytics/margin',
         permission: 'analytics:read',
       },
+      {
+        label: 'Retention & Repeat Purchase',
+        href: '/admin/analytics/retention',
+        permission: 'analytics:read',
+      },
     ],
   },
   {
