@@ -275,6 +275,11 @@ export const adminNavigation: NavItem[] = [
         permission: 'analytics:read',
       },
       {
+        label: 'Turnover & Slow Movers',
+        href: '/admin/analytics/inventory-turnover',
+        permission: 'analytics:read',
+      },
+      {
         label: 'Retention & Repeat Purchase',
         href: '/admin/analytics/retention',
         permission: 'analytics:read',
