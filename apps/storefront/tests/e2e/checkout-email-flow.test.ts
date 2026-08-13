@@ -40,7 +40,7 @@ vi.mock('@/lib/email/automation', () => ({
 }))
 
 vi.mock('@/lib/inventory-manager', () => ({
-  deductReservedInventoryInTx: vi.fn(() =>
+  deductReservedInventoryOnceInTx: vi.fn(() =>
     Promise.resolve({ newInventory: 10, product: { lowStockThreshold: 5 } })
   ),
   checkAndUpdateAlerts: vi.fn(() => Promise.resolve()),

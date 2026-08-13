@@ -33,7 +33,10 @@ vi.mock('@/lib/prisma', () => {
 })
 
 vi.mock('@/lib/inventory-manager', () => ({
-  deductReservedInventoryInTx: vi.fn(),
+  deductReservedInventoryOnceInTx: vi.fn(async () => ({
+    newInventory: 5,
+    product: { lowStockThreshold: 2 },
+  })),
   releaseInventory: vi.fn(),
   checkAndUpdateAlerts: vi.fn(),
 }))

@@ -62,7 +62,7 @@ const mockDeductReservedInventoryInTx = vi.fn(() =>
 )
 
 vi.mock('@/lib/inventory-manager', () => ({
-  deductReservedInventoryInTx: (...args: unknown[]) => mockDeductReservedInventoryInTx(...args),
+  deductReservedInventoryOnceInTx: (...args: unknown[]) => mockDeductReservedInventoryInTx(...args),
   releaseInventory: vi.fn(() => Promise.resolve()),
   checkAndUpdateAlerts: vi.fn(() => Promise.resolve()),
 }))
