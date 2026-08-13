@@ -2,9 +2,7 @@ import { Package, Palette, Shirt, Truck } from 'lucide-react'
 import type {
   MerchCollection,
   MerchHighlight,
-  MerchProduct,
   MerchSetupStep,
-  MerchVendorCredential,
 } from '@/types/merchandise'
 
 const printerContactEmail =
@@ -84,69 +82,6 @@ export const merchSetupSteps: MerchSetupStep[] = [
   {
     id: 'go-live',
     label: 'Review pricing, margins, and shipping methods before publishing the catalog live.',
-  },
-]
-
-export const adminMerchProducts: MerchProduct[] = [
-  {
-    id: 'prod-vintage-tee',
-    sku: 'JM-TEE-VIN-RED',
-    name: 'Vintage Logo Tee',
-    category: 'Signature Apparel',
-    status: 'active',
-    baseCost: 14.5,
-    retailPrice: 28,
-    margin: 13.5,
-    lastSyncedAt: '2025-01-06T09:15:00Z',
-  },
-  {
-    id: 'prod-apron-embroidered',
-    sku: 'JM-APR-EMB-BLK',
-    name: 'Embroidered Kitchen Apron',
-    category: 'Signature Apparel',
-    status: 'active',
-    baseCost: 18,
-    retailPrice: 36,
-    margin: 18,
-    lastSyncedAt: '2025-01-06T09:15:00Z',
-  },
-  {
-    id: 'prod-table-runner',
-    sku: 'JM-TABLE-STD',
-    name: 'Collapsible Table Runner',
-    category: 'Event Gear',
-    status: 'out-of-stock',
-    baseCost: 29,
-    retailPrice: 59,
-    margin: 30,
-    lastSyncedAt: '2025-01-05T21:42:00Z',
-  },
-  {
-    id: 'prod-market-tote',
-    sku: 'JM-TOTE-CANVAS',
-    name: 'Market Tote',
-    category: 'Fan Accessories',
-    status: 'draft',
-    baseCost: 11,
-    retailPrice: 24,
-    margin: 13,
-    lastSyncedAt: '2025-01-04T16:10:00Z',
-  },
-]
-
-export const adminVendorCredentials: MerchVendorCredential[] = [
-  {
-    platform: printerName,
-    status: 'connected',
-    lastChecked: '2025-01-06T09:20:00Z',
-    actionLabel: 'Open portal',
-    actionHref: printerPortalUrl,
-  },
-  {
-    platform: 'SFTP Feed',
-    status: 'pending',
-    actionLabel: 'View instructions',
-    actionHref: '/docs/merch-sftp-setup',
   },
 ]
 

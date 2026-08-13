@@ -16,7 +16,7 @@
     "dev:admin": "turbo run dev --filter=@jose-madrid/admin --env-mode=loose",
     "dev:docs": "turbo run dev --filter=@jose-madrid/docs --env-mode=loose",
     "start": "npm run start --workspace=@jose-madrid/storefront",
-    "build": "turbo run build --env-mode=loose",
+    "build": "turbo run build --filter=!@jose-madrid/agent --env-mode=loose",
     "lint": "turbo run lint --env-mode=loose",
     "type-check": "turbo run type-check --env-mode=loose",
     "test": "turbo run test --env-mode=loose",

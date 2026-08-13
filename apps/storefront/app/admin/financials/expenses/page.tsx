@@ -1,19 +1,10 @@
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
-import { formatPrice } from '@/lib/utils'
-import { expenseQueue, supportedUploadFormats } from '@/lib/financials/config'
+import { getConnection } from '@/lib/quickbooks/connection'
+import { supportedUploadFormats } from '@/lib/financials/config'
 import QuickBooksExpensesCard from '@/components/admin/financials/quickbooks-expenses-card'
 import { FinancialUploadPanel } from '@/components/admin/financials/financial-upload-panel'
 import { createMetadata } from '@/lib/metadata'
@@ -32,7 +23,7 @@ export default async function ExpensesPage() {
     redirect('/admin')
   }
 
-  const awaitingApproval = expenseQueue.filter((expense) => expense.status === 'submitted')
+  const connection = await getConnection()
 
   return (
     <div className="space-y-6">
@@ -51,64 +42,23 @@ export default async function ExpensesPage() {
 
       <FinancialUploadPanel acceptedExtensions={supportedUploadFormats} />
 
-      {/* Renders nothing when QuickBooks isn't connected. */}
-      <QuickBooksExpensesCard />
-
-      <Card className="space-y-4 p-6">
-        <div className="flex items-center justify-between">
+      {connection ? (
+        <QuickBooksExpensesCard />
+      ) : (
+        <Card className="space-y-3 p-6">
+          <h2 className="text-xl font-semibold text-foreground">Expenses &amp; payables</h2>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            QuickBooks Online is the source of truth for money going out — purchases, bills, and
+            vendor balances, including receipts captured with its own tool. Connect QuickBooks to
+            read them here. Nothing is entered or stored on this side.
+          </p>
           <div>
-            <h2 className="text-xl font-semibold text-foreground">Submission queue</h2>
-            <p className="text-sm text-muted-foreground">
-              Filter by status and push approved expenses directly to your general ledger.
-            </p>
+            <Button variant="default" asChild>
+              <Link href="/admin/settings/integrations?service=quickbooks">Connect QuickBooks</Link>
+            </Button>
           </div>
-          <Badge className="bg-muted text-muted-foreground">
-            {awaitingApproval.length} awaiting approval
-          </Badge>
-        </div>
-        <div className="overflow-x-auto">
-          <Table className="min-w-[720px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Vendor</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Submitted by</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {expenseQueue.map((expense) => (
-                <TableRow key={expense.id}>
-                  <TableCell className="font-medium text-foreground">{expense.vendor}</TableCell>
-                  <TableCell>{expense.category}</TableCell>
-                  <TableCell>{expense.submittedBy}</TableCell>
-                  <TableCell>{new Date(expense.submittedAt).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right font-semibold text-foreground">{formatPrice(expense.amount)}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        expense.status === 'reimbursed'
-                          ? 'default'
-                          : expense.status === 'approved'
-                            ? 'secondary'
-                            : 'outline'
-                      }
-                    >
-                      {expense.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="rounded-xl border border-border bg-muted/50 p-4 text-xs text-muted-foreground">
-          Tip: attach PDF or JPG receipts to each expense entry. Approved reimbursements sync nightly when the QuickBooks
-          integration is connected.
-        </div>
-      </Card>
+        </Card>
+      )}
 
       <Card className="space-y-3 p-6">
         <h2 className="text-xl font-semibold text-foreground">Automation roadmap</h2>
