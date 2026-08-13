@@ -209,7 +209,6 @@ model Product {
   productIngredients     ProductIngredient[]
   productTags            ProductTag[]
   purchaseOrderItems     PurchaseOrderItem[]
-  variants               ProductVariant[]
   category               Category                @relation(fields: [categoryId], references: [id])
   restockNotifications   RestockNotification[]
   reviews                Review[]
@@ -218,22 +217,6 @@ model Product {
 
   @@index([stockStatus])
   @@map("products")
-}
-
-model ProductVariant {
-  id        String   @id @default(cuid())
-  productId String
-  name      String
-  type      String
-  price     Decimal? @db.Decimal(10, 2)
-  sku       String?  @unique
-  inStock   Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([productId])
-  @@map("product_variants")
 }
 
 model NutritionalInfo {
@@ -1992,7 +1975,6 @@ model MailingList {
   createdAt   DateTime                @default(now())
   updatedAt   DateTime                @updatedAt
   campaigns   EmailCampaign[]
-  segments    EmailSegment[]
   subscribers MailingListSubscriber[]
 
   @@index([isDefault])
@@ -2158,22 +2140,6 @@ model EmailSuppression {
 
   @@index([reason])
   @@map("email_suppressions")
-}
-
-model EmailSegment {
-  id               String       @id @default(cuid())
-  name             String
-  description      String?
-  listId           String?
-  conditions       Json
-  subscriberCount  Int          @default(0)
-  lastCalculatedAt DateTime?
-  createdById      String?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  list             MailingList? @relation(fields: [listId], references: [id])
-
-  @@map("email_segments")
 }
 
 model BrandKit {
@@ -3545,6 +3511,7 @@ enum SalesChannel {
   POS
   FUNDRAISER
   WHOLESALE
+  EVENT
   MANUAL
   MARKETPLACE
   PHONE

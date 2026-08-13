@@ -120,7 +120,6 @@ export async function getProducts(filters: ProductFilters = {}) {
       take,
       include: {
         category: true,
-        variants: true,
         nutritionalInfo: true,
         productIngredients: {
           include: { ingredient: true },
@@ -143,10 +142,6 @@ export async function getProducts(filters: ProductFilters = {}) {
         : null,
       costPrice: product.costPrice ? parseFloat(String(product.costPrice)) : null,
       weight: product.weight ? parseFloat(String(product.weight)) : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        price: variant.price ? parseFloat(String(variant.price)) : null,
-      })),
     }))
   } catch (error: unknown) {
     console.error('Error fetching products:', error)
@@ -163,7 +158,6 @@ export async function getProductBySlug(slug: string) {
       where: { slug },
       include: {
         category: true,
-        variants: true,
         nutritionalInfo: true,
         productIngredients: {
           include: { ingredient: true },
@@ -190,10 +184,6 @@ export async function getProductBySlug(slug: string) {
         : null,
       costPrice: product.costPrice ? parseFloat(String(product.costPrice)) : null,
       weight: product.weight ? parseFloat(String(product.weight)) : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        price: variant.price ? parseFloat(String(variant.price)) : null,
-      })),
     }
   } catch (error: unknown) {
     console.error('Error fetching product by slug:', error)

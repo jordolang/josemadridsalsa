@@ -17,7 +17,7 @@ import { z } from 'zod'
  */
 
 /** Channels a person can pick. Website, POS, fundraiser and import are set by their own paths. */
-export const MANUAL_SALES_CHANNELS = ['MANUAL', 'PHONE', 'WHOLESALE', 'MARKETPLACE'] as const
+export const MANUAL_SALES_CHANNELS = ['MANUAL', 'PHONE', 'WHOLESALE', 'EVENT', 'MARKETPLACE'] as const
 
 export const ManualOrderSchema = z.object({
   customer: z.object({

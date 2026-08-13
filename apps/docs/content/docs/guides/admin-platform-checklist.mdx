@@ -338,16 +338,32 @@ it already existed.
 | Inventory turnover + slow movers | 2 |
 | Collections | 2 |
 | UTM attribution | 1–2 |
-| Adopt-or-drop the dead models | ½ |
+| Adopt-or-drop the dead models | ½ · complete |
 
 **Workflow automation is being built separately** and is deliberately absent from this table.
 Its foundation question — whether `OrderNotificationRule` is the thing to build on or the thing
 being replaced — belongs to that work.
 
-Four models are in the schema with nothing reading them: `OrderNotificationRule`,
-`OrderNotificationEvent`, `EmailSegment`, and `ProductVariant` (which has routes and zero rows).
-Each needs an explicit adopt-or-drop decision. Three of the corrections above happened
-*because* a schema model was read as a working feature.
+#### Adopt-or-drop the dead models · complete
+
+The audit named four models in the schema with nothing reading them. Each now has an explicit
+decision, taken by reading the code as it stands rather than the audit's August snapshot.
+
+| Model | Decision | Why |
+|---|---|---|
+| `OrderNotificationRule` / `OrderNotificationEvent` | **Adopted** — no change here | The separate workflow-automation work already gave these an evaluation module (`lib/notifications/order-rules.ts`), a registered domain-event handler (`lib/domain-events/handlers/order-rules.ts`), and tests. They route named order events to admin-configured email and Slack recipients. The remaining gap is a write path — nothing in the admin creates a rule yet — and that UI belongs to the workflow-automation effort, not to this cleanup |
+| `EmailSegment` | **Dropped** | Schema plus a `MailingList` relation, zero code — no segment was ever calculated and no campaign ever targeted by one. Real customer segmentation is a dedicated feature and will be designed as one |
+| `ProductVariant` | **Dropped** | Decorative everywhere: an admin editor and a customer "Select Options" control existed, but the selection reached nothing — no `order_items` column recorded it, and add-to-cart used the base price and SKU. The distinct pricing and handling the business needs is expressed by `SalesChannel`, not by product-level variants |
+
+The drops are guarded migrations (`20260813120000_drop_product_variants`,
+`20260813120100_drop_email_segments`) that refuse to run if the table holds any rows, so a
+non-empty production table survives and is noticed rather than silently deleted.
+
+While confirming that `SalesChannel` — not `ProductVariant` — is where a sale's type lives, one
+gap surfaced against the four kinds of sale the business actually rings up (retail, fundraiser,
+wholesale, **event**): there was no `EVENT` channel, so festival and market sales were being
+folded into `MANUAL` or `POS`. `EVENT` was added to the enum and to the manual-order form, so
+event sales can now be recorded, filtered and reported on their own.
 
 ### Tier 3 — scale and resilience (18–26 days)
 

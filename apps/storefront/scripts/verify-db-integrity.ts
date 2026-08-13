@@ -15,49 +15,8 @@ async function verifyDatabaseIntegrity() {
     console.log('🔍 Database Integrity Verification\n')
     console.log('='.repeat(60))
 
-    // 1. Verify ProductVariant records have valid productId foreign keys
-    console.log('\n📦 1. ProductVariant Foreign Key Integrity')
-    const variants = await prisma.productVariant.findMany({
-      include: { product: { select: { id: true, name: true } } },
-    })
-    const orphanedVariants = variants.filter((v) => !v.product)
-
-    if (orphanedVariants.length > 0) {
-      results.push({
-        check: 'ProductVariant foreign keys',
-        status: 'FAIL',
-        details: `${orphanedVariants.length} orphaned variants found (missing product)`,
-      })
-      console.log(`   ❌ ${orphanedVariants.length} orphaned variants detected`)
-    } else {
-      results.push({
-        check: 'ProductVariant foreign keys',
-        status: 'PASS',
-        details: `All ${variants.length} variants have valid productId references`,
-      })
-      console.log(`   ✅ All ${variants.length} variants have valid productId references`)
-    }
-
-    // Check required fields on variants
-    const incompleteVariants = variants.filter((v) => !v.name || !v.type)
-    if (incompleteVariants.length > 0) {
-      results.push({
-        check: 'ProductVariant required fields',
-        status: 'FAIL',
-        details: `${incompleteVariants.length} variants missing name or type`,
-      })
-      console.log(`   ❌ ${incompleteVariants.length} variants missing required fields (name/type)`)
-    } else {
-      results.push({
-        check: 'ProductVariant required fields',
-        status: 'PASS',
-        details: `All variants have name and type populated`,
-      })
-      console.log(`   ✅ All variants have required fields (name, type) populated`)
-    }
-
-    // 2. Verify Product.images array integrity
-    console.log('\n🖼️  2. Product Images Integrity')
+    // 1. Verify Product.images array integrity
+    console.log('\n🖼️  1. Product Images Integrity')
     const products = await prisma.product.findMany({
       select: {
         id: true,
@@ -110,8 +69,8 @@ async function verifyDatabaseIntegrity() {
       console.log(`   ✅ All image URLs appear valid`)
     }
 
-    // 3. Check for orphaned OrderItems (referencing non-existent products)
-    console.log('\n🛒 3. Order & OrderItem Integrity')
+    // 2. Check for orphaned OrderItems (referencing non-existent products)
+    console.log('\n🛒 2. Order & OrderItem Integrity')
     const orderItems = await prisma.orderItem.findMany({
       include: {
         product: { select: { id: true } },
@@ -135,8 +94,8 @@ async function verifyDatabaseIntegrity() {
       console.log(`   ✅ All ${orderItems.length} order items have valid product & order references`)
     }
 
-    // 4. Verify Product required fields
-    console.log('\n📋 4. Product Required Fields')
+    // 3. Verify Product required fields
+    console.log('\n📋 3. Product Required Fields')
     const incompleteProducts = await prisma.product.findMany({
       where: {
         OR: [
@@ -165,8 +124,8 @@ async function verifyDatabaseIntegrity() {
       console.log(`   ✅ All products have required fields populated`)
     }
 
-    // 5. Check Order payment/status consistency
-    console.log('\n💰 5. Order Status Consistency')
+    // 4. Check Order payment/status consistency
+    console.log('\n💰 4. Order Status Consistency')
     const orders = await prisma.order.findMany({
       select: {
         id: true,
@@ -199,23 +158,15 @@ async function verifyDatabaseIntegrity() {
       console.log(`   ✅ All ${orders.length} orders have consistent status fields`)
     }
 
-    // 6. Check for duplicate SKUs across products and variants
-    console.log('\n🏷️  6. SKU Uniqueness')
+    // 5. Check for duplicate SKUs across products
+    console.log('\n🏷️  5. SKU Uniqueness')
     const allProductSkus = await prisma.product.findMany({ select: { sku: true } })
-    const allVariantSkus = await prisma.productVariant.findMany({
-      where: { sku: { not: null } },
-      select: { sku: true },
-    })
 
     const skuSet = new Set<string>()
     const duplicateSkus: string[] = []
     for (const p of allProductSkus) {
       if (skuSet.has(p.sku)) duplicateSkus.push(p.sku)
       skuSet.add(p.sku)
-    }
-    for (const v of allVariantSkus) {
-      if (v.sku && skuSet.has(v.sku)) duplicateSkus.push(v.sku)
-      if (v.sku) skuSet.add(v.sku)
     }
 
     if (duplicateSkus.length > 0) {
@@ -229,7 +180,7 @@ async function verifyDatabaseIntegrity() {
       results.push({
         check: 'SKU uniqueness',
         status: 'PASS',
-        details: 'All SKUs are unique across products and variants',
+        details: 'All SKUs are unique across products',
       })
       console.log(`   ✅ All SKUs are unique`)
     }
