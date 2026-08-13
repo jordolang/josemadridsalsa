@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { deriveSalesChannel } from '@/lib/orders/sales-channel'
+import { SALES_CHANNEL_LABELS, deriveSalesChannel } from '@/lib/orders/sales-channel'
 
 describe('deriveSalesChannel', () => {
   it('defaults to the website when nothing else applies', () => {
@@ -40,5 +40,17 @@ describe('deriveSalesChannel', () => {
     expect(deriveSalesChannel({ fundraiserId: '', shopifyOrderId: '', importSource: '' })).toBe(
       'WEBSITE'
     )
+  })
+
+  it('honours an explicit event sale channel', () => {
+    // Event sales are entered by hand, so they arrive as an explicit channel rather than being
+    // derived from a signal.
+    expect(deriveSalesChannel({ explicitChannel: 'EVENT' })).toBe('EVENT')
+  })
+})
+
+describe('SALES_CHANNEL_LABELS', () => {
+  it('labels the event channel so it shows in filters and reports', () => {
+    expect(SALES_CHANNEL_LABELS.EVENT).toBe('Event')
   })
 })

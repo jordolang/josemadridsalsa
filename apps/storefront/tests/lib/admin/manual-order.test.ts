@@ -52,6 +52,12 @@ describe('ManualOrderSchema', () => {
     ).toBe(false)
   })
 
+  it('accepts the channels a person rings up by hand, including event sales', () => {
+    for (const salesChannel of ['MANUAL', 'PHONE', 'WHOLESALE', 'EVENT', 'MARKETPLACE']) {
+      expect(ManualOrderSchema.safeParse(input({ salesChannel } as never)).success).toBe(true)
+    }
+  })
+
   it('refuses the channels that belong to other paths', () => {
     // WEBSITE, POS, FUNDRAISER and IMPORT are set by the paths that own them; letting someone
     // pick them here would make channel reporting a matter of opinion.

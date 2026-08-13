@@ -3,7 +3,6 @@ import { getProductBySlug } from '@/lib/db/products'
 import { formatPrice, getHeatLevelColor, getHeatLevelText } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { ImageGallery } from '@/components/products/ImageGallery'
-import { VariantSelector } from '@/components/products/VariantSelector'
 import { NutritionalInfo } from '@/components/products/NutritionalInfo'
 import { ProductReviews } from '@/components/reviews/product-reviews'
 import { AddToCartButton } from '@/components/store/add-to-cart-button'
@@ -244,19 +243,6 @@ export default async function ProductDetailPage({ params }: Props) {
                 </div>
               )}
             </div>
-
-            {/* Variant Selector */}
-            {product.variants && product.variants.length > 0 && (
-              <div className="bg-card rounded-lg p-4 surface-shadow">
-                <h3 className="text-lg font-semibold text-foreground mb-3">
-                  Select Options
-                </h3>
-                <VariantSelector
-                  variants={product.variants}
-                  basePrice={product.price}
-                />
-              </div>
-            )}
 
             {/* Add to Cart Button */}
             <AddToCartButton

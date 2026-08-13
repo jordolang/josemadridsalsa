@@ -45,6 +45,7 @@ const SALES_CHANNELS = [
   'POS',
   'FUNDRAISER',
   'WHOLESALE',
+  'EVENT',
   'MANUAL',
   'MARKETPLACE',
   'PHONE',
