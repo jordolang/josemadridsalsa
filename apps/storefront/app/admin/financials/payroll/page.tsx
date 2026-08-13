@@ -3,17 +3,7 @@ import type { Metadata } from 'next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
-import { formatPrice } from '@/lib/utils'
-import { payrollRuns, payrollEmployees } from '@/lib/financials/config'
 import { createMetadata } from '@/lib/metadata'
 import Link from 'next/link'
 
@@ -29,8 +19,6 @@ export default async function PayrollPage() {
   if (!user || !(await hasPermission(user, 'financials:read'))) {
     redirect('/admin')
   }
-
-  const latestRun = payrollRuns[0]
 
   return (
     <div className="space-y-6">
@@ -48,80 +36,20 @@ export default async function PayrollPage() {
       </header>
 
       <Card className="space-y-4 p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs uppercase text-muted-foreground">Current pay run</p>
-            <h2 className="text-xl font-semibold text-foreground">{latestRun.period}</h2>
-            <p className="text-sm text-muted-foreground">
-              Pay date {new Date(latestRun.payDate).toLocaleDateString()} • Status{' '}
-              <span className="font-semibold text-foreground">{latestRun.status}</span>
-            </p>
-          </div>
-          <div className="flex gap-3 text-sm text-muted-foreground">
-            <div>
-              <p className="text-xs uppercase text-muted-foreground">Gross pay</p>
-              <p className="text-sm font-semibold text-foreground">{formatPrice(latestRun.grossPay)}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase text-muted-foreground">Taxes</p>
-              <p className="text-sm font-semibold text-foreground">{formatPrice(latestRun.taxesWithheld)}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase text-muted-foreground">Net pay</p>
-              <p className="text-sm font-semibold text-foreground">{formatPrice(latestRun.netPay)}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
-          Export this run to ADP or QuickBooks Payroll once you confirm hours below. Need to adjust rates? Update
-          employee profiles and regenerate the run.
-        </div>
-      </Card>
-
-      <Card className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-foreground">Employee earnings</h2>
-            <p className="text-sm text-muted-foreground">
-              Hours, gross pay, taxes, and net pay for the current period.
-            </p>
-          </div>
-          <Button variant="outline" size="sm">
-            Export CSV
+        <Badge className="bg-muted text-muted-foreground">Not connected</Badge>
+        <h2 className="text-xl font-semibold text-foreground">No payroll provider is connected</h2>
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          Pay runs and employee earnings are read from your payroll provider — Jose Madrid Salsa does
+          not store them here. Connect ADP Workforce Now or QuickBooks Payroll to bring runs, hours,
+          taxes, and net pay into this workspace.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Button variant="default" asChild>
+            <Link href="/admin/settings/integrations?service=adp">Connect ADP Workforce Now</Link>
           </Button>
-        </div>
-
-        <div className="mt-4 overflow-x-auto">
-          <Table className="min-w-[720px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Pay type</TableHead>
-                <TableHead className="text-right">Rate</TableHead>
-                <TableHead className="text-right">Hours</TableHead>
-                <TableHead className="text-right">Gross</TableHead>
-                <TableHead className="text-right">Taxes</TableHead>
-                <TableHead className="text-right">Net</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {payrollEmployees.map((employee) => (
-                <TableRow key={employee.id}>
-                  <TableCell>
-                    <p className="font-medium text-foreground">{employee.name}</p>
-                  </TableCell>
-                  <TableCell>{employee.role}</TableCell>
-                  <TableCell className="capitalize">{employee.payType}</TableCell>
-                  <TableCell className="text-right">{formatPrice(employee.rate)}</TableCell>
-                  <TableCell className="text-right">{employee.hoursThisPeriod.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">{formatPrice(employee.grossPay)}</TableCell>
-                  <TableCell className="text-right">{formatPrice(employee.taxes)}</TableCell>
-                  <TableCell className="text-right font-semibold text-foreground">{formatPrice(employee.netPay)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <Button variant="outline" asChild>
+            <Link href="/admin/settings/integrations?service=quickbooks">Connect QuickBooks Payroll</Link>
+          </Button>
         </div>
       </Card>
 
@@ -129,13 +57,13 @@ export default async function PayrollPage() {
         <h2 className="text-xl font-semibold text-foreground">Next steps</h2>
         <ul className="space-y-2 text-sm text-muted-foreground">
           <li>
-            <span className="font-semibold text-foreground">1.</span> Import time tracking CSV or sync from POS terminals.
+            <span className="font-semibold text-foreground">1.</span> Connect a payroll provider (ADP Workforce Now or QuickBooks Payroll).
           </li>
           <li>
-            <span className="font-semibold text-foreground">2.</span> Approve hours and adjust overtime rules, benefits, or deductions.
+            <span className="font-semibold text-foreground">2.</span> Import time tracking or sync hours from POS terminals.
           </li>
           <li>
-            <span className="font-semibold text-foreground">3.</span> Export to ADP Workforce Now or QuickBooks Payroll and log the confirmation number.
+            <span className="font-semibold text-foreground">3.</span> Review runs here, then export and log the confirmation number.
           </li>
         </ul>
         <Badge className="bg-primary/10 text-primary">

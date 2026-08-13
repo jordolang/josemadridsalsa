@@ -20,13 +20,10 @@ import QuickBooksProfitAndLossCard from '@/components/admin/financials/quickbook
 import { PAID_PAYMENT_STATUSES } from '@/lib/payments/status'
 import { effectiveFeeRate, summariseNetRevenue } from '@/lib/analytics/margin'
 import { SALES_ONLY } from '@/lib/orders/sales-population'
+import { getConnection } from '@/lib/quickbooks/connection'
 import {
   financialIntegrations,
   mapIntegrationStatus,
-  payrollRuns,
-  payrollEmployees,
-  expenseQueue,
-  taxPreparationTasks,
   supportedUploadFormats,
 } from '@/lib/financials/config'
 
@@ -436,8 +433,7 @@ export default async function FinancialsPage({ searchParams }: { searchParams: P
     },
   })
   const integrationStatus = mapIntegrationStatus(integrationRecords)
-  const nextPayroll = payrollRuns.find((run) => run.status !== 'paid')
-  const openTaxTasks = taxPreparationTasks.filter((task) => task.status !== 'completed')
+  const quickBooksConnection = await getConnection()
   const maxRevenue = data.monthlyTrends.reduce((max, item) => Math.max(max, item.revenue), 0)
 
   return (
@@ -667,69 +663,19 @@ export default async function FinancialsPage({ searchParams }: { searchParams: P
                 <CardDescription className="text-xs font-medium uppercase tracking-wide">
                   Payroll
                 </CardDescription>
-                <CardTitle>Upcoming pay run</CardTitle>
+                <CardTitle>Pay runs</CardTitle>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Review hours, taxes, and net pay before exporting to ADP or
                   QuickBooks Payroll.
                 </p>
               </div>
-              <Badge variant="outline">
-                {nextPayroll ? nextPayroll.status : 'No runs'}
-              </Badge>
+              <Badge variant="outline">Not connected</Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {nextPayroll ? (
-              <div className="rounded-lg border bg-muted/50 p-4">
-                <p className="text-sm font-semibold">{nextPayroll.period}</p>
-                <p className="text-xs text-muted-foreground">
-                  Pay date{' '}
-                  {new Date(nextPayroll.payDate).toLocaleDateString()}
-                </p>
-                <div className="mt-3 grid grid-cols-3 gap-3 text-xs text-muted-foreground">
-                  <div>
-                    <p className="font-semibold text-foreground tabular-nums">
-                      {formatPrice(nextPayroll.grossPay)}
-                    </p>
-                    <p>Gross</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground tabular-nums">
-                      {formatPrice(nextPayroll.taxesWithheld)}
-                    </p>
-                    <p>Taxes</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground tabular-nums">
-                      {formatPrice(nextPayroll.netPay)}
-                    </p>
-                    <p>Net</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed bg-muted/50 p-6 text-center text-sm text-muted-foreground">
-                No pay runs are scheduled. Generate one or import from your
-                POS.
-              </div>
-            )}
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Top earners this period
-              </p>
-              <ul className="mt-2 space-y-2 text-sm">
-                {payrollEmployees.slice(0, 3).map((employee) => (
-                  <li
-                    key={employee.id}
-                    className="flex items-center justify-between"
-                  >
-                    <span>{employee.name}</span>
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      {formatPrice(employee.netPay)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+            <div className="rounded-lg border border-dashed bg-muted/50 p-6 text-center text-sm text-muted-foreground">
+              No payroll provider is connected. Pay runs and earnings are read
+              from ADP or QuickBooks Payroll once you link one.
             </div>
             <Button asChild variant="outline" size="sm">
               <Link href="/admin/financials/payroll">
@@ -746,49 +692,23 @@ export default async function FinancialsPage({ searchParams }: { searchParams: P
                 <CardDescription className="text-xs font-medium uppercase tracking-wide">
                   Expenses
                 </CardDescription>
-                <CardTitle>Expense approvals</CardTitle>
+                <CardTitle>Expenses &amp; payables</CardTitle>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Approve reimbursements and sync approved spend to your
-                  accounting platform.
+                  Purchases, bills, and vendor balances read live from
+                  QuickBooks — the source of truth for spend.
                 </p>
               </div>
-              <Badge variant="outline">
-                {
-                  expenseQueue.filter(
-                    (expense) => expense.status === 'submitted'
-                  ).length
-                }{' '}
-                awaiting
+              <Badge variant={quickBooksConnection ? 'default' : 'warning'}>
+                {quickBooksConnection ? 'Connected' : 'Not connected'}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {expenseQueue.map((expense) => (
-              <div key={expense.id} className="rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">{expense.vendor}</p>
-                  <span className="text-sm font-semibold tabular-nums">
-                    {formatPrice(expense.amount)}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {expense.category} • Submitted by {expense.submittedBy} on{' '}
-                  {new Date(expense.submittedAt).toLocaleDateString()}
-                </p>
-                <Badge
-                  variant={
-                    expense.status === 'reimbursed'
-                      ? 'default'
-                      : expense.status === 'approved'
-                        ? 'secondary'
-                        : 'warning'
-                  }
-                  className="mt-3"
-                >
-                  {expense.status}
-                </Badge>
-              </div>
-            ))}
+            <div className="rounded-lg border border-dashed bg-muted/50 p-6 text-center text-sm text-muted-foreground">
+              {quickBooksConnection
+                ? 'Open the expenses workspace to review purchases, unpaid bills, and vendor balances from QuickBooks.'
+                : 'Connect QuickBooks to bring purchases, bills, and vendor balances into this workspace.'}
+            </div>
             <Button asChild variant="outline" size="sm">
               <Link href="/admin/financials/expenses">Review expenses</Link>
             </Button>
@@ -802,45 +722,21 @@ export default async function FinancialsPage({ searchParams }: { searchParams: P
                 <CardDescription className="text-xs font-medium uppercase tracking-wide">
                   Tax prep
                 </CardDescription>
-                <CardTitle>Upcoming filings</CardTitle>
+                <CardTitle>Sales tax</CardTitle>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Track compliance tasks, owners, and due dates for state and
-                  federal filings.
+                  Sales tax collected by period and jurisdiction, derived from
+                  paid orders.
                 </p>
               </div>
-              <Badge variant="outline">{openTaxTasks.length} open</Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {taxPreparationTasks.map((task) => (
-              <div key={task.id} className="rounded-lg border p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold">{task.label}</p>
-                  <Badge
-                    variant={
-                      task.status === 'completed'
-                        ? 'default'
-                        : task.status === 'overdue'
-                          ? 'destructive'
-                          : 'warning'
-                    }
-                  >
-                    {task.status}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Due {new Date(task.dueDate).toLocaleDateString()} • Owner{' '}
-                  {task.owner}
-                </p>
-                {task.notes ? (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {task.notes}
-                  </p>
-                ) : null}
-              </div>
-            ))}
+            <div className="rounded-lg border border-dashed bg-muted/50 p-6 text-center text-sm text-muted-foreground">
+              Open the tax workspace for collected tax by state and channel,
+              plus the caveats that travel with each figure.
+            </div>
             <Button asChild variant="outline" size="sm">
-              <Link href="/admin/financials/taxes">Manage tasks</Link>
+              <Link href="/admin/financials/taxes">Open tax workspace</Link>
             </Button>
           </CardContent>
         </Card>
