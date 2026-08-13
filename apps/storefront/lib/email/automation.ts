@@ -1,6 +1,7 @@
 import { format } from 'date-fns'
 import React from 'react'
 import { sendEmail } from '@/lib/email/client'
+import { buildUnsubscribeUrl } from '@/lib/email/unsubscribe-url'
 import { prisma } from '@/lib/prisma'
 import { OrderConfirmationEmail } from '@/emails/order-confirmation'
 import { FundraiserDonationReceipt } from '@/emails/fundraiser-donation-receipt'
@@ -28,7 +29,7 @@ export async function sendWelcomeEmail(options: {
 }) {
   const name = options.name || 'Friend'
   const discountCode = options.discountCode || 'WELCOME15'
-  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const unsubscribeUrl = buildUnsubscribeUrl(options.email)
 
   const emailContent = React.createElement(
     EmailLayout,
@@ -107,7 +108,7 @@ export async function sendOrderConfirmationEmail(orderId: string) {
       ? `${defaultAppUrl}/track/${order.trackingNumber}`
       : `${defaultAppUrl}/account/orders`
 
-  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const unsubscribeUrl = buildUnsubscribeUrl(recipientEmail)
 
   const emailContent = React.createElement(OrderConfirmationEmail, {
     name: order.user?.name || 'there',
@@ -175,7 +176,7 @@ export async function sendFundraiserDonationReceipt(options: {
   }).format(amountCents / 100)
 
   const teamPageUrl = `${defaultAppUrl}/fundraise/${teamSlug}`
-  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const unsubscribeUrl = buildUnsubscribeUrl(donorEmail)
 
   const emailContent = React.createElement(FundraiserDonationReceipt, {
     donorName,
@@ -205,7 +206,7 @@ export async function sendNewsletterWelcomeEmail(options: {
   name?: string
 }) {
   const name = options.name ?? 'Salsa Fan'
-  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const unsubscribeUrl = buildUnsubscribeUrl(options.email)
 
   const emailContent = React.createElement(
     EmailLayout,
@@ -248,7 +249,7 @@ export async function sendContactConfirmationEmail(options: {
 }) {
   const name = options.name ?? 'there'
   const messageSubject = options.subject ?? 'your recent message'
-  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const unsubscribeUrl = buildUnsubscribeUrl(options.email)
 
   const emailContent = React.createElement(
     EmailLayout,
@@ -292,7 +293,7 @@ export async function sendFundraiserFollowupEmail(options: {
   goal?: string
   supportEmail?: string
 }) {
-  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const unsubscribeUrl = buildUnsubscribeUrl(options.email)
   const supportEmail = options.supportEmail || 'mike@josemadridsalsa.com'
 
   const emailContent = React.createElement(
@@ -346,7 +347,7 @@ export async function sendCampaignLaunchEmail(options: {
   goalAmount?: string
   supportEmail?: string
 }) {
-  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const unsubscribeUrl = buildUnsubscribeUrl(options.email)
   const supportEmail = options.supportEmail || 'mike@josemadridsalsa.com'
 
   const emailContent = React.createElement(CampaignLaunchEmail, {
@@ -378,7 +379,7 @@ export async function sendParticipantWelcomeEmail(options: {
   fundraiserId: string
   supportEmail?: string
 }) {
-  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const unsubscribeUrl = buildUnsubscribeUrl(options.email)
   const fundraiserUrl = `${defaultAppUrl}/fundraisers/${options.fundraiserId}`
   const supportEmail = options.supportEmail || 'mike@josemadridsalsa.com'
 
@@ -410,7 +411,7 @@ export async function sendParticipantMilestoneEmail(options: {
   fundraiserId: string
   supportEmail?: string
 }) {
-  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const unsubscribeUrl = buildUnsubscribeUrl(options.email)
   const dashboardUrl = `${defaultAppUrl}/fundraisers/${options.fundraiserId}/dashboard`
   const supportEmail = options.supportEmail || 'mike@josemadridsalsa.com'
   const totalRaised = `$${options.totalRaised.toFixed(2)}`
@@ -493,7 +494,7 @@ export async function sendCampaignSummaryEmail(fundraiserId: string) {
     .sort((a, b) => b.sales - a.sales)
     .slice(0, 5)
 
-  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const unsubscribeUrl = buildUnsubscribeUrl(coordinatorEmail)
   const campaignUrl = `${defaultAppUrl}/fundraisers/${fundraiser.id}/dashboard`
   const supportEmail = 'mike@josemadridsalsa.com'
 
@@ -663,7 +664,7 @@ export async function sendOrderShippedEmail(orderId: string) {
 
   const trackingLink = `${defaultAppUrl}/track/${order.trackingNumber}`
 
-  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const unsubscribeUrl = buildUnsubscribeUrl(recipientEmail)
 
   const emailContent = React.createElement(OrderShippedEmail, {
     name: order.user?.name || 'there',
@@ -726,7 +727,7 @@ export async function sendOrderDeliveredEmail(orderId: string) {
 
   const orderHistoryLink = `${defaultAppUrl}/account/orders`
 
-  const unsubscribeUrl = `${defaultAppUrl}/account/preferences`
+  const unsubscribeUrl = buildUnsubscribeUrl(recipientEmail)
 
   const emailContent = React.createElement(OrderDeliveredEmail, {
     name: order.user?.name || 'there',

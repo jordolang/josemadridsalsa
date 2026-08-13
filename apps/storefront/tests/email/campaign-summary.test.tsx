@@ -18,7 +18,7 @@ describe('campaign summary email', () => {
     commissionEarned: '$1,350.00',
     participantCount: 12,
     campaignUrl: 'https://www.josemadridsalsa.com/fundraisers/spring-2024/dashboard',
-    unsubscribeUrl: 'https://www.josemadridsalsa.com/account/preferences',
+    unsubscribeUrl: 'https://josemadrid.net/unsubscribe?email=fixture%40example.com',
   }
 
   describe('rendering with required props', () => {

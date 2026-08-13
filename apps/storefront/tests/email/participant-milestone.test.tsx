@@ -16,7 +16,7 @@ describe('milestone email', () => {
     totalSales: 1,
     totalRaised: '$25.00',
     dashboardUrl: 'https://www.josemadridsalsa.com/fundraisers/spring-2024/dashboard',
-    unsubscribeUrl: 'https://www.josemadridsalsa.com/account/preferences',
+    unsubscribeUrl: 'https://josemadrid.net/unsubscribe?email=fixture%40example.com',
   }
 
   describe('milestone 1st sale', () => {

@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
@@ -166,6 +168,16 @@ describe('sendOrderConfirmationEmail', () => {
     expect(props.orderTotal).toBe('$42.50')
     expect(props.items[0].totalPrice).toBe('$21.25')
   })
+
+  it('footers the recipient to the working /unsubscribe flow, not the 404 preferences page', async () => {
+    orderFindUnique.mockResolvedValue(order())
+
+    await sendOrderConfirmationEmail('order_1')
+
+    const { unsubscribeUrl } = sentEmail().react.props
+    expect(unsubscribeUrl).toContain('/unsubscribe?email=guest%40example.com')
+    expect(unsubscribeUrl).not.toContain('/account/preferences')
+  })
 })
 
 describe('sendFundraiserDonationReceipt', () => {
@@ -204,6 +216,14 @@ describe('sendFundraiserDonationReceipt', () => {
 
     expect(sentEmail().react.props.teamPageUrl).toContain('/fundraise/zanesville-band')
   })
+
+  it('footers the donor to the working /unsubscribe flow', async () => {
+    await sendFundraiserDonationReceipt(donation)
+
+    const { unsubscribeUrl } = sentEmail().react.props
+    expect(unsubscribeUrl).toContain('/unsubscribe?email=donor%40example.com')
+    expect(unsubscribeUrl).not.toContain('/account/preferences')
+  })
 })
 
 describe('sendParticipantWelcomeEmail', () => {
@@ -232,6 +252,14 @@ describe('sendParticipantWelcomeEmail', () => {
     sendEmail.mockResolvedValue({ success: true })
     await sendParticipantWelcomeEmail({ ...participant, supportEmail: 'band@school.edu' })
     expect(sentEmail().replyTo).toBe('band@school.edu')
+  })
+
+  it('footers the participant to the working /unsubscribe flow', async () => {
+    await sendParticipantWelcomeEmail(participant)
+
+    const { unsubscribeUrl } = sentEmail().react.props
+    expect(unsubscribeUrl).toContain('/unsubscribe?email=seller%40example.com')
+    expect(unsubscribeUrl).not.toContain('/account/preferences')
   })
 })
 
@@ -290,5 +318,17 @@ describe('sendContactConfirmationEmail', () => {
       type: 'contact-confirmation',
       replyTo: 'mike@josemadridsalsa.com',
     })
+  })
+})
+
+describe('unsubscribe footer target', () => {
+  it('no sender still points at the dead /account/preferences route', () => {
+    // Prop assertions above only reach the template-based senders; the inline-footer senders
+    // (welcome, newsletter, contact, fundraiser-followup) bury unsubscribeUrl on a nested
+    // EmailFooter. This source guard covers every sender in the file at once and catches the
+    // 404 from creeping back in.
+    const source = readFileSync(join(__dirname, '../../../lib/email/automation.ts'), 'utf8')
+    expect(source).not.toContain('/account/preferences')
+    expect(source).toContain('buildUnsubscribeUrl(')
   })
 })
