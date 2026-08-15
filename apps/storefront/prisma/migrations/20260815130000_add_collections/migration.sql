@@ -37,9 +37,7 @@ CREATE UNIQUE INDEX "collections_name_key" ON "collections"("name");
 CREATE UNIQUE INDEX "collections_slug_key" ON "collections"("slug");
 
 -- CreateIndex
-CREATE INDEX "collection_products_collectionId_idx" ON "collection_products"("collectionId");
-
--- CreateIndex
+-- (No single-column index on collectionId: the composite unique index below leads with it.)
 CREATE INDEX "collection_products_productId_idx" ON "collection_products"("productId");
 
 -- CreateIndex

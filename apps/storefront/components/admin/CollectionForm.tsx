@@ -47,23 +47,60 @@ export default function CollectionForm({ collection, onSuccess, onCancel }: Coll
   const [productFilter, setProductFilter] = useState('')
 
   const isEditing = !!collection
+  // When editing, the current membership loads asynchronously. Until it has, submitting would send
+  // an empty productIds and the PATCH would wipe the collection — so submit is blocked until it
+  // loads, and a load failure surfaces rather than silently emptying the set. Creating has nothing
+  // to load, so it starts ready.
+  const [membershipLoaded, setMembershipLoaded] = useState(!collection)
+  const [membershipError, setMembershipError] = useState(false)
 
-  // Load the catalogue for the picker, and (when editing) this collection's current members in
-  // their saved order.
+  // Load the whole catalogue for the picker (the admin products API caps `limit` at 100, so page
+  // through it) and, when editing, this collection's current members in their saved order.
   useEffect(() => {
-    fetch('/api/admin/products?limit=500')
-      .then((r) => r.json())
-      .then((d) => setProducts((d.products || []).map((p: ProductOption) => ({ id: p.id, name: p.name, sku: p.sku }))))
-      .catch(() => setProducts([]))
+    let cancelled = false
+
+    async function loadProducts() {
+      const all: ProductOption[] = []
+      const pageSize = 100
+      for (let page = 1; page <= 50; page += 1) {
+        const res = await fetch(`/api/admin/products?limit=${pageSize}&page=${page}`)
+        if (!res.ok) break
+        const data = await res.json()
+        const batch: ProductOption[] = (data.products || []).map((p: ProductOption) => ({
+          id: p.id,
+          name: p.name,
+          sku: p.sku,
+        }))
+        all.push(...batch)
+        const total = typeof data.totalCount === 'number' ? data.totalCount : all.length
+        if (batch.length === 0 || all.length >= total) break
+      }
+      if (!cancelled) setProducts(all)
+    }
+
+    loadProducts().catch(() => {
+      if (!cancelled) setProducts([])
+    })
 
     if (collection) {
       fetch(`/api/admin/collections/${collection.id}`)
-        .then((r) => r.json())
+        .then(async (r) => {
+          if (!r.ok) throw new Error('Failed to load collection members')
+          return r.json()
+        })
         .then((d) => {
+          if (cancelled) return
           const rows = d.collection?.products || []
           setSelectedIds(rows.map((row: { product: { id: string } }) => row.product.id))
+          setMembershipLoaded(true)
         })
-        .catch(() => setSelectedIds([]))
+        .catch(() => {
+          if (!cancelled) setMembershipError(true)
+        })
+    }
+
+    return () => {
+      cancelled = true
     }
   }, [collection])
 
@@ -83,6 +120,18 @@ export default function CollectionForm({ collection, onSuccess, onCancel }: Coll
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Never submit an edit whose current membership has not loaded — that would replace the set
+    // with whatever is (not) selected and wipe the collection.
+    if (isEditing && !membershipLoaded) {
+      setError(
+        membershipError
+          ? "Couldn't load this collection's products, so it can't be saved without risking its contents. Reopen the editor to try again."
+          : "Still loading this collection's products — please wait a moment and try again."
+      )
+      return
+    }
+
     setIsSubmitting(true)
     setError(null)
 
@@ -93,7 +142,7 @@ export default function CollectionForm({ collection, onSuccess, onCancel }: Coll
         description: description || null,
         image: image || null,
         isActive,
-        sortOrder: parseInt(sortOrder),
+        sortOrder: sortOrder.trim() ? parseInt(sortOrder, 10) : 0,
         metaTitle: metaTitle || null,
         metaDescription: metaDescription || null,
         ogImage: ogImage || null,
@@ -125,6 +174,13 @@ export default function CollectionForm({ collection, onSuccess, onCancel }: Coll
       {error && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {error}
+        </div>
+      )}
+
+      {isEditing && membershipError && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-4 text-sm text-foreground dark:bg-amber-950/20">
+          Couldn&apos;t load this collection&apos;s current products, so saving is disabled to avoid
+          emptying it. Close and reopen the editor to try again.
         </div>
       )}
 
@@ -221,7 +277,10 @@ export default function CollectionForm({ collection, onSuccess, onCancel }: Coll
       </Card>
 
       <div className="flex gap-4">
-        <Button type="submit" disabled={isSubmitting}>
+        <Button
+          type="submit"
+          disabled={isSubmitting || (isEditing && (!membershipLoaded || membershipError))}
+        >
           {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />{isEditing ? 'Update' : 'Create'}</>}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>

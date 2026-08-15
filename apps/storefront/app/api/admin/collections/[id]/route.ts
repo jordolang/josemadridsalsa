@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
-import { ok, fail } from '@/lib/api'
+import { ok, fail, failFromError } from '@/lib/api'
 import { logAudit } from '@/lib/audit'
 import { z } from 'zod'
 import { collectionProductRows } from '@/lib/collections'
@@ -39,8 +39,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     })
     if (!collection) return fail('Collection not found', 404)
     return ok({ collection })
-  } catch (error: any) {
-    return fail(error.message, error.status)
+  } catch (error) {
+    return failFromError(error, 'Failed to load collection')
   }
 }
 
@@ -82,13 +82,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     return ok({ collection })
   } catch (error: any) {
+    if (error?.name === 'ZodError') return fail('Invalid collection data', 400, error.issues)
     if (error.code === 'P2002') {
       return fail('Collection with this name or slug already exists', 409)
     }
     if (error.code === 'P2003' || error.code === 'P2025') {
       return fail('One or more selected products could not be found', 400)
     }
-    return fail(error.message, 400)
+    return failFromError(error, 'Failed to update collection')
   }
 }
 
@@ -113,7 +114,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     })
 
     return ok({ message: 'Collection deleted' })
-  } catch (error: any) {
-    return fail(error.message, 400)
+  } catch (error) {
+    return failFromError(error, 'Failed to delete collection')
   }
 }

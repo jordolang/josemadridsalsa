@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
-import { ok, fail } from '@/lib/api'
+import { ok, fail, failFromError } from '@/lib/api'
 import { logAudit } from '@/lib/audit'
 import { z } from 'zod'
 import { collectionProductRows } from '@/lib/collections'
@@ -38,15 +38,24 @@ export async function GET(req: NextRequest) {
     if (isActive === 'true') where.isActive = true
     if (isActive === 'false') where.isActive = false
 
-    const collections = await prisma.collection.findMany({
-      where,
-      orderBy: { sortOrder: 'asc' },
-      include: { _count: { select: { products: true } } },
-    })
+    const page = Math.max(1, Number(searchParams.get('page')) || 1)
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get('limit')) || 100))
+    const skip = (page - 1) * pageSize
 
-    return ok({ collections })
-  } catch (error: any) {
-    return fail(error.message, error.status)
+    const [collections, total] = await Promise.all([
+      prisma.collection.findMany({
+        where,
+        orderBy: { sortOrder: 'asc' },
+        skip,
+        take: pageSize,
+        include: { _count: { select: { products: true } } },
+      }),
+      prisma.collection.count({ where }),
+    ])
+
+    return ok({ collections, total, page, pageSize })
+  } catch (error) {
+    return failFromError(error, 'Failed to load collections')
   }
 }
 
@@ -75,12 +84,13 @@ export async function POST(req: NextRequest) {
 
     return ok({ collection }, 201)
   } catch (error: any) {
+    if (error?.name === 'ZodError') return fail('Invalid collection data', 400, error.issues)
     if (error.code === 'P2002') {
       return fail('Collection with this name or slug already exists', 409)
     }
     if (error.code === 'P2003' || error.code === 'P2025') {
       return fail('One or more selected products could not be found', 400)
     }
-    return fail(error.message, 400)
+    return failFromError(error, 'Failed to create collection')
   }
 }

@@ -63,7 +63,7 @@ export const adminNavigation: NavItem[] = [
       {
         label: 'Collections',
         href: '/admin/collections',
-        permission: 'products:read',
+        permission: 'content:read',
       },
       {
         label: 'Tags',

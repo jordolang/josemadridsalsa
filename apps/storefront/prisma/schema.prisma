@@ -196,7 +196,8 @@ model CollectionProduct {
   product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([collectionId, productId])
-  @@index([collectionId])
+  // No separate index on collectionId: the composite unique above already leads with it, so a
+  // lookup by collectionId alone uses that index. productId is not a prefix, so it needs its own.
   @@index([productId])
   @@map("collection_products")
 }

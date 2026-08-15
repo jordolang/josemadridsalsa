@@ -26,7 +26,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function CollectionPage({ params }: PageProps) {
   const { slug } = await params
-  const result = await getCollectionBySlug(slug)
+  // Degrade the same way generateMetadata does: a DB/network error becomes not-found rather than a
+  // 500, so the page and its metadata never disagree.
+  const result = await getCollectionBySlug(slug).catch(() => null)
   if (!result) notFound()
 
   const { collection, products } = result

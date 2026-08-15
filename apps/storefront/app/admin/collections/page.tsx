@@ -35,6 +35,7 @@ import {
 export default function CollectionsPage() {
   const [collections, setCollections] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [deleting, setDeleting] = useState<any>(null)
@@ -43,10 +44,16 @@ export default function CollectionsPage() {
   const fetchCollections = async () => {
     try {
       const response = await fetch('/api/admin/collections')
+      if (!response.ok) {
+        setLoadError(true)
+        return
+      }
       const data = await response.json()
       setCollections(data.collections || [])
+      setLoadError(false)
     } catch (error) {
       console.error('Failed to fetch collections:', error)
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -67,6 +74,9 @@ export default function CollectionsPage() {
         return
       }
       toast.success('Collection deleted', { description: `${deleting.name} has been removed.` })
+      // Only dismiss the confirmation on success, so a failed delete can be retried without
+      // reopening the dialog.
+      setDeleting(null)
       fetchCollections()
     } catch (error) {
       toast.error('Failed to delete collection', {
@@ -74,7 +84,6 @@ export default function CollectionsPage() {
       })
     } finally {
       setIsDeleting(false)
-      setDeleting(null)
     }
   }
 
@@ -93,6 +102,30 @@ export default function CollectionsPage() {
             <Skeleton key={i} className="h-64 w-full" />
           ))}
         </div>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold tracking-tight">Collections</h1>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-destructive">Couldn&apos;t load collections.</p>
+            <Button
+              className="mt-4"
+              variant="outline"
+              onClick={() => {
+                setLoading(true)
+                setLoadError(false)
+                fetchCollections()
+              }}
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -121,6 +154,10 @@ export default function CollectionsPage() {
                   src={collection.image}
                   alt={collection.name}
                   fill
+                  // Admins may paste an image URL from any host; `unoptimized` skips the Next image
+                  // optimizer (and its remotePatterns allowlist) so an off-allowlist host renders
+                  // instead of throwing and breaking the page.
+                  unoptimized
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
