@@ -1680,6 +1680,10 @@ enum QuickBooksEntityType {
   ITEM
   SALES_RECEIPT
   REFUND_RECEIPT
+  /// A ledger row posted as a double-entry JournalEntry. Used for money that never became an
+  /// order — cash and show takings, hand-entered expenses, imported statement rows — because
+  /// there is no customer or line detail to build a SalesReceipt from.
+  JOURNAL_ENTRY
 }
 
 enum QuickBooksSyncStatus {
@@ -1761,6 +1765,15 @@ model QuickBooksSettings {
   /// no line detail, so anything less than a whole-order refund needs one
   /// designated item to land on.
   refundItemId             String?
+  /// Chart-of-accounts mapping for the bookkeeping ledger, keyed by `LedgerCategory`:
+  /// `{ PRODUCT_SALES: { accountId, accountName, offsetId, offsetName }, … }`.
+  ///
+  /// Json rather than a table because it is a small fixed-key map edited on one screen, and a
+  /// row per category would need a migration every time a category is added. The *names* feed
+  /// the journal-entry file export, which a human reviews before importing; the *ids* are what
+  /// the automated journal sync requires — and it blocks rather than guessing when one is
+  /// missing, because a posted entry against the wrong account is silent and hard to unpick.
+  ledgerAccountMap         Json?
   /// Orders before this date are left out of the books entirely.
   syncStartDate            DateTime?
   /// Master switch. Off until the accounts above are mapped.

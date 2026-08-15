@@ -66,10 +66,63 @@ correct a figure. Derived rows can have a note added but are otherwise kept in s
 cannot be deleted (the backfill would recreate them); to change one, edit the underlying order,
 refund, or show.
 
-## Roadmap
+## Getting it into QuickBooks
 
-This ledger is the foundation for the QuickBooks work that follows: a downloadable,
-QuickBooks-importable export (CSV/IIF/journal) built from these entries, and an extension of the
-existing QuickBooks sync so cash, show, and fundraiser money reaches the books alongside online
-orders. QuickBooks Online remains the source of truth for accounting; the ledger is how everything
-gets there accurately and stays backed up.
+QuickBooks Online remains the source of truth for accounting. The ledger is how everything reaches
+it accurately — by file, by automatic posting, or both.
+
+### Downloading a file
+
+**Financials → Ledger → Export** downloads exactly the rows your filters are showing, oldest first,
+in one of three shapes:
+
+| Format | What it is for |
+|---|---|
+| **Full detail** | Every column of every row. A spreadsheet and a backup — not an import file. |
+| **QuickBooks bank upload** | The four-column `Date, Description, Credit, Debit` CSV that QuickBooks Online reads under **Banking → Upload from file**. |
+| **QuickBooks journal entries** | The journal-entry import in QuickBooks Online Advanced. Full double-entry: every row becomes a balanced debit and credit. |
+
+Two options sit alongside the format:
+
+- **Only rows not yet sent to QuickBooks** — everything since the last export you marked.
+- **Mark these rows as exported** — stamps `exportedAt`, which is what makes the filter above mean
+  anything. It is deliberately opt-in, so taking a second copy of last month's file does not make
+  rows look filed when they are not.
+
+<Callout type="warn" title="The bank upload leaves two categories out">
+A bank upload is a list of money that actually entered or left an account. **Cost of goods** and
+**discounts** did not: the cash for stock left when the ingredients were bought, and a discount is
+money that never arrived. Including them would invent bank transactions that never happened, so they
+are omitted. They are present in the detail and journal formats, where they belong.
+</Callout>
+
+<Callout type="info" title="Why IIF is not offered">
+IIF is a QuickBooks **Desktop** format; QuickBooks Online cannot import it. The original plan listed
+it, and it was dropped once that was checked rather than shipped as a file nobody here can use.
+</Callout>
+
+### Posting automatically
+
+The hourly QuickBooks sync already pushes paid orders as sales receipts and refunds as refund
+receipts. It now also posts **ledger rows whose money never became an order** — historical show
+takings, hand-entered expenses, imported statement rows — as **journal entries**.
+
+The rule that keeps this from doubling the books: rows sourced from an `ORDER` or a `REFUND` are
+*already* in QuickBooks as receipts, so they are never journalled. The mapper refuses them outright
+rather than relying on the sweep to filter them out.
+
+A journal entry needs an account on both sides, so **Settings → Integrations → QuickBooks** now
+carries a ledger account mapping: one cash/clearing account, one inventory account, and the account
+each category is booked to. Two details there are worth knowing, because getting either wrong
+misstates a set of books quietly:
+
+- **Sales tax collected is a liability, not income.** The ledger files it under money-in because
+  that describes the direction it moved, but it is owed to the state. It must be credited to
+  **Sales Tax Payable**, or revenue is overstated by every dollar of tax ever collected.
+- **Cost of goods offsets against inventory, not cash.** That payment already left the bank when the
+  stock was bought.
+
+Where a category has no account mapped, the row is **held** for a person to look at rather than
+posted to a guessed account — the same refuse-rather-than-guess contract the order sync uses. The
+downloadable file is more forgiving: it falls back to a suggested standard QuickBooks account name,
+because a person reads that file before importing it.
