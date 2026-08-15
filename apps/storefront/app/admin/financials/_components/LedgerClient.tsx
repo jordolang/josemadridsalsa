@@ -13,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Download, Loader2, Plus, Save, Trash2, X } from 'lucide-react'
+import Link from 'next/link'
+import { Download, Loader2, Plus, Save, Trash2, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
 import {
@@ -261,6 +262,13 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
           <p className="text-muted-foreground">Every dollar in and out — one running total.</p>
         </div>
         <div className="flex gap-2">
+          {canWrite && (
+            <Button variant="outline" asChild>
+              <Link href="/admin/financials/ledger/import">
+                <Upload className="mr-2 h-4 w-4" /> Import statement
+              </Link>
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setShowExport((v) => !v)}>
             <Download className="mr-2 h-4 w-4" /> Export
           </Button>

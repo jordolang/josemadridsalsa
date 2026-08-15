@@ -4297,6 +4297,29 @@ model LedgerEntry {
   @@map("ledger_entries")
 }
 
+/// One upload of a bank or card statement. Ledger rows created from it carry `source: IMPORT`
+/// and `sourceId` set to this batch's id, so an import can be reviewed — or undone — as a unit.
+model LedgerImportBatch {
+  id           String   @id @default(cuid())
+  /// The uploaded file's name, purely so a person recognises which import this was.
+  filename     String
+  /// Which account the statement came from, e.g. "Chase business checking". Part of the row
+  /// content hash: the same amount on the same day is a different transaction on a different
+  /// account, and without this the second account's rows would be swallowed as duplicates.
+  accountLabel String
+  /// Rows read from the file, rows actually written, and rows the reviewer left out. Kept as
+  /// counts rather than derived later, because entries can be edited or deleted afterwards and
+  /// the record of what this import did should not change with them.
+  rowsParsed   Int      @default(0)
+  rowsImported Int      @default(0)
+  rowsSkipped  Int      @default(0)
+  importedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("ledger_import_batches")
+}
+
 enum LedgerDirection {
   INCOME
   EXPENSE

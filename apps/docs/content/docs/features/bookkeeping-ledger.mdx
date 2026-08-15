@@ -56,6 +56,58 @@ sums without rounding drift.
   settles (`payment.completed`, `payment.refunded`). No nightly job required.
 - **Backfill:** `npm run ledger:backfill` reconstructs the whole ledger from existing settled orders,
   their refunds, and the archived shows. It is idempotent — safe to run as often as you like.
+- **Statement import:** the expenses nothing else records — fuel, booth fees, supplier payments,
+  bank charges — come in from a bank or card statement. See below.
+
+## Importing a bank or card statement
+
+**Financials → Ledger → Import statement** reads a CSV export from a bank or card account.
+
+<Callout type="warn" title="A statement is mostly money the ledger already has">
+This is the thing to understand before using it. Every card deposit on a bank statement is money
+already recorded, from the orders that produced it. Importing a statement wholesale would book that
+revenue a second time and double every figure the ledger reports.
+
+So the importer is built around **detection, not ingestion**. Rows that look like money already
+recorded are **excluded by default** — you opt a suspected duplicate back in, rather than having to
+remember to opt it out.
+</Callout>
+
+Two exclusions, both stated on the row:
+
+- **The ledger already holds this amount.** Same amount, within three days — the window exists
+  because card settlement lands a day or three after the sale, so matching on the exact date would
+  miss almost every real duplicate.
+- **It looks like a processor payout.** A deposit from Stripe, PayPal or Square is many orders
+  netted together with fees taken out. **No rule can split that back into the orders it contains**,
+  so it is not matched approximately and reported as reconciled — it is excluded on the strength of
+  its description, and the reason is said out loud.
+
+What is left is the genuinely new material, with a suggested category you can change. The category
+picker only offers categories on the same side as the money moved: a withdrawal filed under an
+income category would flip the sign of a figure in every report built on the ledger, so it is
+refused rather than quietly corrected.
+
+### The steps
+
+1. Choose the CSV and name the account it came from ("Chase business checking"). The name is
+   recorded on every row and is part of how a repeated line is recognised — the same amount on the
+   same day is a different transaction on a different account.
+2. Columns are detected automatically. If the file is unusual you are asked to pick them; a date,
+   a description, and either a signed amount column or a debit/credit pair are enough.
+3. Review the marked-up list, tick what belongs, and import.
+
+Re-importing an overlapping export is safe: each row carries a content hash, so a line that appears
+in two statement downloads updates the row it already created instead of duplicating it. Rows that
+have been imported before are labelled as such.
+
+Some rows are read and some are not, and the ones that are not are listed with a reason rather than
+dropped quietly. Amounts in accounting parentheses (`(12.34)`) are read as negative; European
+decimal notation (`1.234,56`) is **rejected**, because it is ambiguous against US thousands
+separators and guessing would mis-scale the amount by a thousand without ever failing.
+
+Each import is recorded as a `LedgerImportBatch` with what it read, wrote, and skipped, and every
+row it created points back to it.
 
 ## The admin page
 
