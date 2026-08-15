@@ -1680,6 +1680,10 @@ enum QuickBooksEntityType {
   ITEM
   SALES_RECEIPT
   REFUND_RECEIPT
+  /// A ledger row posted as a double-entry JournalEntry. Used for money that never became an
+  /// order — cash and show takings, hand-entered expenses, imported statement rows — because
+  /// there is no customer or line detail to build a SalesReceipt from.
+  JOURNAL_ENTRY
 }
 
 enum QuickBooksSyncStatus {
@@ -1761,6 +1765,15 @@ model QuickBooksSettings {
   /// no line detail, so anything less than a whole-order refund needs one
   /// designated item to land on.
   refundItemId             String?
+  /// Chart-of-accounts mapping for the bookkeeping ledger, keyed by `LedgerCategory`:
+  /// `{ PRODUCT_SALES: { accountId, accountName, offsetId, offsetName }, … }`.
+  ///
+  /// Json rather than a table because it is a small fixed-key map edited on one screen, and a
+  /// row per category would need a migration every time a category is added. The *names* feed
+  /// the journal-entry file export, which a human reviews before importing; the *ids* are what
+  /// the automated journal sync requires — and it blocks rather than guessing when one is
+  /// missing, because a posted entry against the wrong account is silent and hard to unpick.
+  ledgerAccountMap         Json?
   /// Orders before this date are left out of the books entirely.
   syncStartDate            DateTime?
   /// Master switch. Off until the accounts above are mapped.
@@ -4282,6 +4295,29 @@ model LedgerEntry {
   @@index([source, sourceId])
   @@index([exportedAt])
   @@map("ledger_entries")
+}
+
+/// One upload of a bank or card statement. Ledger rows created from it carry `source: IMPORT`
+/// and `sourceId` set to this batch's id, so an import can be reviewed — or undone — as a unit.
+model LedgerImportBatch {
+  id           String   @id @default(cuid())
+  /// The uploaded file's name, purely so a person recognises which import this was.
+  filename     String
+  /// Which account the statement came from, e.g. "Chase business checking". Part of the row
+  /// content hash: the same amount on the same day is a different transaction on a different
+  /// account, and without this the second account's rows would be swallowed as duplicates.
+  accountLabel String
+  /// Rows read from the file, rows actually written, and rows the reviewer left out. Kept as
+  /// counts rather than derived later, because entries can be edited or deleted afterwards and
+  /// the record of what this import did should not change with them.
+  rowsParsed   Int      @default(0)
+  rowsImported Int      @default(0)
+  rowsSkipped  Int      @default(0)
+  importedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("ledger_import_batches")
 }
 
 enum LedgerDirection {

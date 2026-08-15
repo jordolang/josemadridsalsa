@@ -10,6 +10,8 @@ import {
   centsToDollars,
   type OrderForSync,
 } from './mappers'
+import { buildJournalEntry, journalDocNumber, JOURNAL_SYNC_SOURCES } from './journal'
+import { getLedgerAccountMap } from './ledger-account-settings'
 
 /**
  * Pushes paid website orders into QuickBooks Online as SalesReceipts.
@@ -406,6 +408,130 @@ export async function syncRefund(refundId: string): Promise<SyncOutcome> {
 }
 
 /**
+ * Post one bookkeeping-ledger row as a JournalEntry.
+ *
+ * This is how money that never became an order — historical show takings, hand-entered expenses,
+ * imported statement rows — reaches the books. Orders and refunds are excluded at the mapper (see
+ * `isJournalSyncable`); posting one here would book the same sale twice, once as a receipt and
+ * once as a journal entry.
+ *
+ * Same contract as `syncOrder`: BLOCKED for anything a retry cannot fix, and a duplicate guard
+ * before creating, so a crash between "created in QuickBooks" and "wrote our record of it" does
+ * not post the money twice on the next attempt.
+ */
+export async function syncLedgerEntry(ledgerEntryId: string): Promise<SyncOutcome> {
+  const { realmId } = await getValidAccessToken()
+
+  const entry = await prisma.ledgerEntry.findUnique({
+    where: { id: ledgerEntryId },
+    select: {
+      id: true,
+      date: true,
+      amountCents: true,
+      category: true,
+      source: true,
+      description: true,
+      counterparty: true,
+      memo: true,
+    },
+  })
+  if (!entry) return { status: 'BLOCKED', reason: 'Ledger entry no longer exists' }
+
+  const settings = await getSettings(realmId)
+  // The ledger's own dates run back years before the books were opened; the same cut-off that
+  // keeps old orders out has to keep old ledger rows out, or connecting QuickBooks would import
+  // a decade of history nobody asked for.
+  if (settings?.syncStartDate && entry.date < settings.syncStartDate) {
+    return { status: 'BLOCKED', reason: 'Entry predates the configured sync start date' }
+  }
+
+  const accounts = await getLedgerAccountMap(realmId)
+  const mapped = buildJournalEntry({ entry, accounts })
+  if (!mapped.ok) return { status: 'BLOCKED', reason: mapped.reason }
+
+  const docNumber = journalDocNumber(entry.id)
+  const existing = await queryFirst<{ Id: string }>(
+    'JournalEntry',
+    `DocNumber = '${escapeQueryLiteral(docNumber)}'`
+  )
+  if (existing?.Id) {
+    await saveMapping({
+      realmId,
+      entityType: 'JOURNAL_ENTRY',
+      localId: entry.id,
+      quickbooksId: existing.Id,
+    })
+    return { status: 'SYNCED', quickbooksId: existing.Id }
+  }
+
+  const created = await quickBooksFetch<{ JournalEntry: { Id: string } }>('journalentry', {
+    method: 'POST',
+    body: mapped.payload,
+  })
+
+  await saveMapping({
+    realmId,
+    entityType: 'JOURNAL_ENTRY',
+    localId: entry.id,
+    quickbooksId: created.JournalEntry.Id,
+  })
+  // `exportedAt` means "this row has reached QuickBooks", by file or by sync. Stamping it here
+  // keeps the ledger's "not yet exported" filter honest for someone who uses both routes.
+  await prisma.ledgerEntry.update({
+    where: { id: entry.id },
+    data: { exportedAt: new Date() },
+  })
+  await markSynced(realmId)
+
+  return {
+    status: 'SYNCED',
+    quickbooksId: created.JournalEntry.Id,
+    payload: mapped.payload,
+  }
+}
+
+/**
+ * Enqueue ledger rows that carry money QuickBooks has not seen.
+ *
+ * Deliberately restricted to `JOURNAL_SYNC_SOURCES`: an `ORDER` or `REFUND` row is a second view
+ * of money already posted as a receipt, so sweeping it up here would double the books.
+ */
+export async function enqueueLedgerEntries(limit = 100): Promise<number> {
+  const { realmId } = await getValidAccessToken()
+  const settings = await getSettings(realmId)
+  if (!settings?.autoSyncEnabled) return 0
+
+  // Already-queued rows are excluded *in the query* rather than filtered out of a page that was
+  // already taken. Taking the oldest N and then dropping the ones already queued stalls as soon as
+  // N rows have been queued: every sweep re-reads the same page, finds nothing new, and the row
+  // after it is never reached. (`enqueuePaidOrders` and `enqueueRefunds` above are written the
+  // earlier way; at this business's volume neither has hit the ceiling, but they will.)
+  const queued = await prisma.quickBooksSyncRecord.findMany({
+    where: { entityType: 'JOURNAL_ENTRY' },
+    select: { entityId: true },
+  })
+
+  const fresh = await prisma.ledgerEntry.findMany({
+    where: {
+      source: { in: [...JOURNAL_SYNC_SOURCES] },
+      amountCents: { gt: 0 },
+      ...(queued.length > 0 && { id: { notIn: queued.map((r) => r.entityId) } }),
+      ...(settings.syncStartDate && { date: { gte: settings.syncStartDate } }),
+    },
+    select: { id: true },
+    orderBy: { date: 'asc' },
+    take: limit,
+  })
+  if (fresh.length === 0) return 0
+
+  const result = await prisma.quickBooksSyncRecord.createMany({
+    data: fresh.map((e) => ({ entityType: 'JOURNAL_ENTRY' as const, entityId: e.id })),
+    skipDuplicates: true,
+  })
+  return result.count
+}
+
+/**
  * Find paid orders that have never been queued and enqueue them.
  *
  * A sweeper rather than a hook on the payment paths: orders reach PAID through
@@ -485,13 +611,16 @@ export async function drainQueue(limit = 25) {
   const now = new Date()
   const due = await prisma.quickBooksSyncRecord.findMany({
     where: {
-      entityType: { in: ['SALES_RECEIPT', 'REFUND_RECEIPT'] },
+      entityType: { in: ['SALES_RECEIPT', 'REFUND_RECEIPT', 'JOURNAL_ENTRY'] },
       status: { in: ['PENDING', 'FAILED'] },
       attempts: { lt: MAX_ATTEMPTS },
       OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
     },
     // Oldest first, and receipts ahead of refunds within the same instant so a
-    // refund never posts before the sale it reverses.
+    // refund never posts before the sale it reverses. That ordering is the enum's
+    // declaration order, which is why `JOURNAL_ENTRY` was appended to the end of
+    // `QuickBooksEntityType` rather than inserted: journal entries stand alone, but
+    // moving `REFUND_RECEIPT` ahead of `SALES_RECEIPT` would break the invariant.
     orderBy: [{ createdAt: 'asc' }, { entityType: 'asc' }],
     take: limit,
   })
@@ -511,7 +640,9 @@ export async function drainQueue(limit = 25) {
       outcome =
         record.entityType === 'REFUND_RECEIPT'
           ? await syncRefund(record.entityId)
-          : await syncOrder(record.entityId)
+          : record.entityType === 'JOURNAL_ENTRY'
+            ? await syncLedgerEntry(record.entityId)
+            : await syncOrder(record.entityId)
     } catch (error) {
       // Intuit's trace id goes into the stored error: it is the first thing
       // their support asks for, and it only exists on the failed response.

@@ -74,6 +74,24 @@ export const LEDGER_CATEGORY_VALUES = [
   'OTHER_EXPENSE',
 ] as const
 
+/**
+ * The shapes the ledger can be downloaded in.
+ *
+ * These live here rather than beside the serialisers in `ledger-export.ts` because the export
+ * dialog is a client component, and that module reaches `lib/csv` — and so PapaParse — which no
+ * client bundle in this app currently carries. The vocabulary belongs with the rest of the
+ * ledger's vocabulary; the serialisers stay on the server.
+ */
+export const LEDGER_EXPORT_FORMATS = ['detail', 'qbo-bank', 'qbo-journal'] as const
+
+export type LedgerExportFormat = (typeof LEDGER_EXPORT_FORMATS)[number]
+
+export const LEDGER_EXPORT_FORMAT_LABELS: Record<LedgerExportFormat, string> = {
+  detail: 'Full detail (spreadsheet)',
+  'qbo-bank': 'QuickBooks bank upload',
+  'qbo-journal': 'QuickBooks journal entries',
+}
+
 /** Human labels for the categories. */
 export const LEDGER_CATEGORY_LABELS: Record<LedgerCategory, string> = {
   PRODUCT_SALES: 'Product sales',
