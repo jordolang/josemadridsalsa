@@ -27,6 +27,7 @@ export default async function ContactPage() {
     settings.businessAddress ??
     process.env.NEXT_PUBLIC_HQ_LOCATION ??
     '601 Putnam Ave, Zanesville, OH 43701'
+  const businessName = settings.businessName?.trim() || null
 
   const contactDetails = [
     {
@@ -44,8 +45,11 @@ export default async function ContactPage() {
     {
       icon: MapPin,
       label: 'Headquarters',
-      value: headquartersLocation,
-      href: `https://maps.google.com/?q=${encodeURIComponent(headquartersLocation)}`,
+      // Lead with the business name when it's been set, so the identity field is actually shown.
+      value: businessName ? `${businessName}, ${headquartersLocation}` : headquartersLocation,
+      href: `https://maps.google.com/?q=${encodeURIComponent(
+        businessName ? `${businessName}, ${headquartersLocation}` : headquartersLocation
+      )}`,
     },
   ]
 

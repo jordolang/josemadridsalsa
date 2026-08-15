@@ -18,7 +18,9 @@ interface LegalPageProps {
  * curated static copy in `children` renders unchanged.
  */
 export function LegalPage({ title, content, children }: LegalPageProps) {
-  const override = content?.trim()
+  // Trim only to decide whether an override exists; render the saved text verbatim so any
+  // intentional leading/trailing whitespace the admin typed is preserved.
+  const hasOverride = content != null && content.trim().length > 0
 
   return (
     <div className="min-h-screen bg-background">
@@ -28,9 +30,9 @@ export function LegalPage({ title, content, children }: LegalPageProps) {
             {title}
           </h1>
 
-          {override ? (
+          {hasOverride ? (
             <div className="prose prose-slate dark:prose-invert max-w-none whitespace-pre-wrap">
-              {override}
+              {content}
             </div>
           ) : (
             children

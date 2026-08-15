@@ -1,6 +1,6 @@
 import { cache } from 'react'
 
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { isMissingTableError } from '@/lib/prisma-errors'
 
 /**

@@ -20,7 +20,11 @@ const StoreSettingsSchema = z.object({
   allowGuestCheckout: z.boolean().optional(),
   minimumOrderCents: z.number().int().min(0).max(100_000_000).optional(),
   businessName: nullableText,
-  supportEmail: z.string().trim().email().nullable().optional().or(z.literal('').transform(() => null)),
+  // Same empty-string→null normalisation as the other identity fields, with an email check layered on.
+  supportEmail: nullableText.refine(
+    (v) => v == null || z.string().email().safeParse(v).success,
+    { message: 'Invalid email address' }
+  ),
   supportPhone: nullableText,
   businessAddress: nullableText,
   defaultLowStockThreshold: z.number().int().min(0).max(1_000_000).optional(),

@@ -42,12 +42,21 @@ export function StoreSettingsForm({ initial, canWrite }: StoreSettingsFormProps)
     e.preventDefault()
     setSaving(true)
     try {
+      // Parse the whole string with Number (not parseFloat/parseInt, which accept a valid
+      // prefix like "12abc" or truncate "1e2") and reject anything that isn't a clean value.
       const minTrim = minimumOrder.trim()
-      const minimumOrderCents = minTrim ? Math.round(parseFloat(minTrim) * 100) : 0
-      if (Number.isNaN(minimumOrderCents) || minimumOrderCents < 0) {
+      const minimumOrderDollars = minTrim ? Number(minTrim) : 0
+      if (!Number.isFinite(minimumOrderDollars) || minimumOrderDollars < 0) {
         throw new Error('Minimum order must be a non-negative amount.')
       }
-      const threshold = parseInt(defaultLowStockThreshold, 10)
+      const minimumOrderCents = Math.round(minimumOrderDollars * 100)
+
+      // A cleared threshold is an error, not a silent reset — the column is non-null, and
+      // coercing back to a hardcoded default is exactly what this setting exists to replace.
+      const threshold = Number(defaultLowStockThreshold.trim())
+      if (!Number.isInteger(threshold) || threshold < 0) {
+        throw new Error('Low-stock threshold must be a whole number of 0 or more.')
+      }
 
       const payload = {
         allowGuestCheckout,
@@ -56,7 +65,7 @@ export function StoreSettingsForm({ initial, canWrite }: StoreSettingsFormProps)
         supportEmail: supportEmail.trim() || null,
         supportPhone: supportPhone.trim() || null,
         businessAddress: businessAddress.trim() || null,
-        defaultLowStockThreshold: Number.isNaN(threshold) ? 5 : threshold,
+        defaultLowStockThreshold: threshold,
         termsContent: termsContent.trim() || null,
         privacyContent: privacyContent.trim() || null,
         returnsContent: returnsContent.trim() || null,
@@ -81,18 +90,26 @@ export function StoreSettingsForm({ initial, canWrite }: StoreSettingsFormProps)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Disable every control for read-only users, and while a save is in flight so an edit
+          can't be lost between the request and the refresh. */}
+      <fieldset disabled={!canWrite || saving} className="m-0 space-y-6 border-0 p-0">
       <Card className="p-6">
         <h2 className="mb-1 text-lg font-semibold">Checkout</h2>
         <p className="mb-4 text-sm text-muted-foreground">Rules enforced on every online order.</p>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label>Allow guest checkout</Label>
+              <Label htmlFor="allowGuestCheckout">Allow guest checkout</Label>
               <p className="text-sm text-muted-foreground">
                 When off, shoppers must sign in before placing an order.
               </p>
             </div>
-            <Switch checked={allowGuestCheckout} onCheckedChange={setAllowGuestCheckout} />
+            <Switch
+              id="allowGuestCheckout"
+              aria-label="Allow guest checkout"
+              checked={allowGuestCheckout}
+              onCheckedChange={setAllowGuestCheckout}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="minimumOrder">Minimum order amount ($)</Label>
@@ -174,6 +191,7 @@ export function StoreSettingsForm({ initial, canWrite }: StoreSettingsFormProps)
           </div>
         </div>
       </Card>
+      </fieldset>
 
       {canWrite ? (
         <Button type="submit" disabled={saving}>
