@@ -163,6 +163,44 @@ model Category {
   @@map("categories")
 }
 
+/// A curated, marketing-facing group of products — "Gift Sets", "New Arrivals", "Staff Picks".
+/// Unlike a Category (a taxonomy each product belongs to exactly one of), a Collection is a
+/// hand-picked set: a product can appear in many collections and a collection holds many products,
+/// so the relation is many-to-many through `CollectionProduct` (which also carries the display order
+/// within the collection).
+model Collection {
+  id              String              @id @default(cuid())
+  name            String              @unique
+  slug            String              @unique
+  description     String?
+  image           String?
+  metaTitle       String?
+  metaDescription String?
+  ogImage         String?
+  isActive        Boolean             @default(true)
+  sortOrder       Int                 @default(0)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  products        CollectionProduct[]
+
+  @@map("collections")
+}
+
+model CollectionProduct {
+  id           String     @id @default(cuid())
+  collectionId String
+  productId    String
+  /// Position of the product within this collection, so a collection can be arranged by hand.
+  sortOrder    Int        @default(0)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, productId])
+  @@index([collectionId])
+  @@index([productId])
+  @@map("collection_products")
+}
+
 model Product {
   id                     String                  @id @default(cuid())
   name                   String
@@ -199,6 +237,7 @@ model Product {
   stockStatus            StockStatus             @default(IN_STOCK)
   unitsPerCase           Int                     @default(12)
   cartItems              CartItem[]
+  collectionProducts     CollectionProduct[]
   eventManifestItems     EventManifestItem[]
   fundraiserProducts     FundraiserProduct[]
   fundraiserTeamProducts FundraiserTeamProduct[]
