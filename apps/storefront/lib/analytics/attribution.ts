@@ -51,11 +51,14 @@ const EMPTY: AttributionFields = {
   landingPage: null,
 }
 
-/** One trimmed, length-capped field, or null when blank. */
+/**
+ * One trimmed, length-capped field, or null when blank. Over-length values are **truncated**, not
+ * rejected — the writer already caps each field, and rejecting here would throw away a whole cookie
+ * (every field) over one long value.
+ */
 const field = z
   .string()
-  .trim()
-  .max(MAX_LEN)
+  .transform((s) => s.trim().slice(0, MAX_LEN))
   .transform((s) => (s.length > 0 ? s : null))
   .nullish()
   .transform((s) => s ?? null)
@@ -70,9 +73,24 @@ const AttributionSchema = z.object({
   landingPage: field,
 })
 
-/** True when at least one field carries a value — i.e. there is something worth recording. */
+/**
+ * The fields that constitute a real marketing signal — a UTM tag or an external referrer.
+ * `landingPage` is deliberately excluded: it is context that rides along with a signal, not a signal
+ * itself, and every page load has one. Counting it would set a "direct" cookie on the first visit
+ * and lock out a genuine campaign click that arrives later.
+ */
+const SIGNAL_KEYS = [
+  'utmSource',
+  'utmMedium',
+  'utmCampaign',
+  'utmTerm',
+  'utmContent',
+  'referrer',
+] as const
+
+/** True when there is a real marketing signal worth recording (a UTM tag or an external referrer). */
 export function hasAttribution(fields: AttributionFields): boolean {
-  return Object.values(fields).some((v) => v !== null)
+  return SIGNAL_KEYS.some((key) => fields[key] !== null)
 }
 
 /**
@@ -82,14 +100,33 @@ export function hasAttribution(fields: AttributionFields): boolean {
  */
 export function parseAttributionCookie(raw: string | undefined | null): AttributionFields | null {
   if (!raw) return null
+
+  // The value may arrive still URL-encoded (raw `document.cookie`) or already decoded (Next's
+  // RequestCookies decodes for us). Try it as-is first, then decoded — never decode twice, which
+  // would corrupt a value containing a literal `%` and drop the whole cookie.
+  const object = tryParseJson(raw) ?? tryParseJson(safeDecodeURIComponent(raw))
+  if (object === undefined) return null
+
+  const parsed = AttributionSchema.safeParse(object)
+  if (!parsed.success) return null
+
+  const fields = { ...EMPTY, ...parsed.data }
+  return hasAttribution(fields) ? fields : null
+}
+
+function tryParseJson(text: string): unknown {
   try {
-    const decoded = decodeURIComponent(raw)
-    const parsed = AttributionSchema.safeParse(JSON.parse(decoded))
-    if (!parsed.success) return null
-    const fields = { ...EMPTY, ...parsed.data }
-    return hasAttribution(fields) ? fields : null
+    return JSON.parse(text)
   } catch {
-    return null
+    return undefined
+  }
+}
+
+function safeDecodeURIComponent(text: string): string {
+  try {
+    return decodeURIComponent(text)
+  } catch {
+    return text
   }
 }
 

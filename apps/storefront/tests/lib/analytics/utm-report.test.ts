@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  DIRECT_LABEL,
+  DIRECT_KEY,
   groupByDimension,
   summariseAttribution,
   type AttributedOrder,
@@ -57,7 +57,7 @@ describe('groupByDimension', () => {
       ],
       'source'
     )
-    expect(rows.map((r) => r.key)).toEqual(['facebook', 'google', DIRECT_LABEL])
+    expect(rows.map((r) => r.key)).toEqual(['facebook', 'google', DIRECT_KEY])
 
     const google = rows.find((r) => r.key === 'google')!
     expect(google.orders).toBe(2)
@@ -65,7 +65,7 @@ describe('groupByDimension', () => {
     expect(google.aovCents).toBe(750)
     expect(google.direct).toBe(false)
 
-    const direct = rows.find((r) => r.key === DIRECT_LABEL)!
+    const direct = rows.find((r) => r.key === DIRECT_KEY)!
     expect(direct.direct).toBe(true)
     expect(direct.orders).toBe(1)
   })
@@ -80,6 +80,23 @@ describe('groupByDimension', () => {
     expect(summed).toBe(1250)
   })
 
+  it('does not merge a crafted value equal to the display label into the direct bucket', () => {
+    // A malicious ?utm_source=Direct / none must stay its own row, distinct from the null bucket.
+    const rows = groupByDimension(
+      [
+        order({ utmSource: 'Direct / none', revenueCents: 100 }),
+        order({ revenueCents: 50 }), // genuinely direct
+      ],
+      'source'
+    )
+    const crafted = rows.find((r) => r.key === 'Direct / none')!
+    expect(crafted.direct).toBe(false)
+    expect(crafted.orders).toBe(1)
+    const real = rows.find((r) => r.key === DIRECT_KEY)!
+    expect(real.direct).toBe(true)
+    expect(real.orders).toBe(1)
+  })
+
   it('groups by referrer, bucketing missing referrers as direct', () => {
     const rows = groupByDimension(
       [
@@ -89,6 +106,6 @@ describe('groupByDimension', () => {
       'referrer'
     )
     expect(rows.find((r) => r.key === 'google.com')?.orders).toBe(1)
-    expect(rows.find((r) => r.key === DIRECT_LABEL)?.orders).toBe(1)
+    expect(rows.find((r) => r.key === DIRECT_KEY)?.orders).toBe(1)
   })
 })

@@ -75,10 +75,16 @@ describe('buildAttribution', () => {
 })
 
 describe('hasAttribution', () => {
-  it('is false only when every field is null', () => {
+  it('requires a real marketing signal (utm or external referrer)', () => {
     expect(hasAttribution(fields())).toBe(false)
     expect(hasAttribution(fields({ referrer: 'google.com' }))).toBe(true)
     expect(hasAttribution(fields({ utmSource: 'x' }))).toBe(true)
+  })
+
+  it('does not count landingPage as a signal', () => {
+    // A direct visit still has a landing path; if that counted, its cookie would lock out a later
+    // campaign click as the first touch.
+    expect(hasAttribution(fields({ landingPage: '/products' }))).toBe(false)
   })
 })
 
@@ -98,6 +104,18 @@ describe('serialise / parse round-trip', () => {
     expect(parseAttributionCookie(raw)).toEqual(
       fields({ utmSource: 'google', utmMedium: 'organic' })
     )
+  })
+
+  it('parses an already-decoded value (as Next RequestCookies delivers it)', () => {
+    // No URL-encoding: JSON.parse succeeds directly, so the value is never decoded a second time.
+    const raw = JSON.stringify({ utmSource: 'newsletter' })
+    expect(parseAttributionCookie(raw)).toEqual(fields({ utmSource: 'newsletter' }))
+  })
+
+  it('does not double-decode a value containing a literal percent sign', () => {
+    // "50%off" would break a second decodeURIComponent; the parser must read it as-is.
+    const raw = JSON.stringify({ utmCampaign: '50%off' })
+    expect(parseAttributionCookie(raw)).toEqual(fields({ utmCampaign: '50%off' }))
   })
 })
 

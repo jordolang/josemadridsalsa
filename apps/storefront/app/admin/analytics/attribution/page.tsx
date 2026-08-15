@@ -18,6 +18,7 @@ import { RANGE_OPTIONS, type AnalyticsRangeKey } from '@/lib/analytics/date-rang
 import { formatCents, formatRatio } from '@/lib/analytics/margin'
 import {
   ATTRIBUTION_DIMENSIONS,
+  DIRECT_LABEL,
   type AttributionDimension,
 } from '@/lib/analytics/utm-report'
 import { getAttributionReport } from '@/lib/analytics/utm-report.server'
@@ -59,13 +60,17 @@ export default async function AttributionPage({
   const dimensionLabel =
     ATTRIBUTION_DIMENSIONS.find((d) => d.value === dimension)?.label ?? 'Source'
 
+  // The "no value" row means different things per dimension: on source it is genuinely direct
+  // traffic; on medium/campaign/referrer it is an attributed order that simply lacks that one field.
+  const emptyLabel = dimension === 'source' ? DIRECT_LABEL : `No ${dimensionLabel.toLowerCase()}`
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Attribution</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Where orders come from, by first-touch UTM source, medium, and campaign
+            Where orders come from, by first-touch UTM source, medium, campaign, and referrer
           </p>
         </div>
         <div className="flex rounded-lg border border-border bg-card">
@@ -164,7 +169,7 @@ export default async function AttributionPage({
                     <TableCell>
                       {row.direct ? (
                         <Badge variant="secondary" className="text-[11px]">
-                          {row.key}
+                          {emptyLabel}
                         </Badge>
                       ) : (
                         <span className="font-medium text-foreground">{row.key}</span>

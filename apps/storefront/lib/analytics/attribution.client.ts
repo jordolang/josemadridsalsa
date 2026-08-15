@@ -4,6 +4,7 @@ import {
   buildAttribution,
   hasAttribution,
   serialiseAttribution,
+  type AttributionFields,
 } from './attribution'
 
 /** Whether the first-touch cookie is already present (client-side). */
@@ -14,10 +15,40 @@ function attributionCookieExists(): boolean {
 }
 
 /**
+ * Comfortably under the ~4KB per-cookie limit, leaving room for the name and attributes. A payload
+ * over this (only reachable with long non-ASCII UTM values) has optional fields dropped rather than
+ * failing the whole write silently.
+ */
+const MAX_ENCODED_BYTES = 3500
+
+/** Least-important first: the fields to shed when the encoded payload is too large. */
+const DROPPABLE: Array<keyof AttributionFields> = [
+  'landingPage',
+  'utmContent',
+  'utmTerm',
+  'referrer',
+]
+
+/** Encoded cookie value that fits the budget, dropping optional fields as needed. */
+function fitToBudget(fields: AttributionFields): string | null {
+  const working = { ...fields }
+  let encoded = encodeURIComponent(serialiseAttribution(working))
+  for (const key of DROPPABLE) {
+    if (encoded.length <= MAX_ENCODED_BYTES) break
+    if (working[key] !== null) {
+      working[key] = null
+      encoded = encodeURIComponent(serialiseAttribution(working))
+    }
+  }
+  // Still over budget (e.g. one enormous utm_source) — better to record nothing than a broken write.
+  return encoded.length <= MAX_ENCODED_BYTES && hasAttribution(working) ? encoded : null
+}
+
+/**
  * Record the first meaningful touch, once.
  *
- * No-op when the cookie already exists (first touch wins) or when this landing carries nothing to
- * attribute (a purely direct visit is left uncaptured so a later campaign click can be the first
+ * No-op when the cookie already exists (first touch wins) or when this landing carries no marketing
+ * signal (a purely direct visit is left uncaptured so a later campaign click can be the first
  * touch). Safe to call on every page load.
  */
 export function captureFirstTouchAttribution(): void {
@@ -33,8 +64,10 @@ export function captureFirstTouchAttribution(): void {
 
   if (!hasAttribution(fields)) return
 
+  const encoded = fitToBudget(fields)
+  if (encoded === null) return
+
   const expires = new Date(Date.now() + ATTRIBUTION_MAX_AGE_DAYS * 24 * 60 * 60 * 1000).toUTCString()
-  document.cookie = `${ATTRIBUTION_COOKIE}=${encodeURIComponent(
-    serialiseAttribution(fields)
-  )}; path=/; expires=${expires}; SameSite=Lax`
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie = `${ATTRIBUTION_COOKIE}=${encoded}; path=/; expires=${expires}; SameSite=Lax${secure}`
 }
