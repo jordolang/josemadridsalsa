@@ -32,14 +32,18 @@ const MAX_ROWS = 20_000
 
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission('financials:export')
-    const user = await requirePermission('financials:read')
+    const user = await requirePermission('financials:export')
 
     const params = req.nextUrl.searchParams
     const format = (params.get('format') ?? 'detail') as LedgerExportFormat
     if (!(LEDGER_EXPORT_FORMATS as readonly string[]).includes(format)) {
       return fail(`Unknown export format "${format}"`, 400)
     }
+
+    // Downloading is a read; *marking* rows as exported changes what the ledger reports as
+    // outstanding, so it needs write access on top rather than riding along with the download.
+    const markExported = params.get('markExported') === 'true'
+    if (markExported) await requirePermission('financials:write')
 
     const where = buildLedgerWhere(params)
     const entries = await prisma.ledgerEntry.findMany({
@@ -58,7 +62,7 @@ export async function GET(req: NextRequest) {
       accounts: resolveAccountMap(await getLedgerAccountOverrides()),
     })
 
-    if (params.get('markExported') === 'true') {
+    if (markExported) {
       await prisma.ledgerEntry.updateMany({
         where: { id: { in: entries.map((e) => e.id) } },
         data: { exportedAt: new Date() },
@@ -73,7 +77,7 @@ export async function GET(req: NextRequest) {
       changes: {
         format,
         rows: entries.length,
-        marked: params.get('markExported') === 'true',
+        marked: markExported,
         truncated: entries.length === MAX_ROWS,
       },
     })
