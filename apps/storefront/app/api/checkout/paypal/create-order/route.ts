@@ -14,6 +14,7 @@ import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manag
 import { getReferralFromCode } from '@/lib/fundraising/referral-tracker'
 import { fundraiserUnitPrice } from '@/lib/fundraising/pricing'
 import { getFundraiserPriceOverrides } from '@/lib/fundraising/pricing.server'
+import { getStoreSettings, isBelowMinimumOrder, formatMinimumOrder } from '@/lib/store-settings'
 
 const PayPalCheckoutSchema = z.object({
   items: z
@@ -59,6 +60,11 @@ const generateOrderNumber = () => {
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
+
+    const storeSettings = await getStoreSettings()
+    if (!user && !storeSettings.allowGuestCheckout) {
+      return NextResponse.json({ error: 'Please sign in to place your order.' }, { status: 401 })
+    }
 
     const json = await request.json()
     const parsed = PayPalCheckoutSchema.safeParse(json)
@@ -116,6 +122,13 @@ export async function POST(request: NextRequest) {
         productSku: product.sku,
         productImage: product.featuredImage ?? undefined,
       })
+    }
+
+    if (isBelowMinimumOrder(Math.round(subtotal * 100), storeSettings.minimumOrderCents)) {
+      return NextResponse.json(
+        { error: `Orders must total at least ${formatMinimumOrder(storeSettings.minimumOrderCents)}.` },
+        { status: 400 }
+      )
     }
 
     // Reserve inventory atomically

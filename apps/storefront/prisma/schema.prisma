@@ -1176,6 +1176,41 @@ model ShippingSettings {
   @@map("shipping_settings")
 }
 
+/// Store-wide settings — one global row, keyed by `singleton` like ShippingSettings. Each field
+/// drives real behaviour (see `lib/store-settings.ts`): the checkout controls gate the checkout
+/// routes, the identity fields feed the contact page, the low-stock default seeds new products, and
+/// the legal bodies override the built-in Terms/Privacy/Returns prose when set.
+model StoreSettings {
+  id        String @id @default(cuid())
+  singleton String @unique @default("singleton")
+
+  // Checkout controls
+  allowGuestCheckout Boolean @default(true)
+  /// Minimum order subtotal in whole cents; 0 means no minimum.
+  minimumOrderCents  Int     @default(0)
+
+  // Store identity (shown on the storefront; null falls back to the built-in defaults)
+  businessName    String?
+  supportEmail    String?
+  supportPhone    String?
+  businessAddress String?
+
+  // Operational defaults
+  /// The low-stock threshold a newly created product gets when none is specified.
+  defaultLowStockThreshold Int @default(5)
+
+  // Legal page bodies (plain text / Markdown-ish). Null → the built-in static page is shown.
+  termsContent   String?
+  privacyContent String?
+  returnsContent String?
+
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("store_settings")
+}
+
 model Permission {
   id              String             @id @default(cuid())
   name            String             @unique

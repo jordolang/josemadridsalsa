@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { createMetadata } from '@/lib/metadata';
+import { LegalPage } from '@/components/store/legal-page';
+import { getStoreSettings } from '@/lib/store-settings';
 
 export const metadata: Metadata = createMetadata({
   title: 'Terms of Service - Jose Madrid Salsa',
@@ -7,16 +9,17 @@ export const metadata: Metadata = createMetadata({
   pathname: '/terms',
 });
 
-export default function TermsOfServicePage() {
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-6">Terms of Service</h1>
-          <p className="text-sm text-muted-foreground mb-10">Last updated: 2026</p>
+export const dynamic = 'force-dynamic';
 
-          <div className="prose prose-slate dark:prose-invert max-w-none">
-            <p>
+export default async function TermsOfServicePage() {
+  const settings = await getStoreSettings();
+
+  return (
+    <LegalPage title="Terms of Service" content={settings.termsContent}>
+      <p className="text-sm text-muted-foreground mb-10">Last updated: 2026</p>
+
+      <div className="prose prose-slate dark:prose-invert max-w-none">
+        <p>
               These Terms of Service ("Terms") govern your access to and use of our website and services.
               By accessing or using our site, you agree to be bound by these Terms.
             </p>
@@ -90,10 +93,8 @@ export default function TermsOfServicePage() {
               For questions about these Terms, contact us at
               <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a>.
             </p>
-          </div>
-        </div>
       </div>
-    </div>
+    </LegalPage>
   );
 }
 
