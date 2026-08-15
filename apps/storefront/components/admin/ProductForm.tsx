@@ -353,7 +353,9 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
             <Input
               id="lowStockThreshold"
               type="number"
-              placeholder="Store default"
+              // Only new products fall back to the store default when left blank; on an existing
+              // product the field is pre-filled, so no "Store default" affordance is shown.
+              placeholder={product ? undefined : 'Store default'}
               {...register('lowStockThreshold')}
             />
           </div>

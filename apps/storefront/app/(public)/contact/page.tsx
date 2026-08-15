@@ -28,6 +28,10 @@ export default async function ContactPage() {
     process.env.NEXT_PUBLIC_HQ_LOCATION ??
     '601 Putnam Ave, Zanesville, OH 43701'
   const businessName = settings.businessName?.trim() || null
+  // Lead with the business name when it's been set, so the identity field is actually shown.
+  const fullLocation = businessName
+    ? `${businessName}, ${headquartersLocation}`
+    : headquartersLocation
 
   const contactDetails = [
     {
@@ -45,11 +49,8 @@ export default async function ContactPage() {
     {
       icon: MapPin,
       label: 'Headquarters',
-      // Lead with the business name when it's been set, so the identity field is actually shown.
-      value: businessName ? `${businessName}, ${headquartersLocation}` : headquartersLocation,
-      href: `https://maps.google.com/?q=${encodeURIComponent(
-        businessName ? `${businessName}, ${headquartersLocation}` : headquartersLocation
-      )}`,
+      value: fullLocation,
+      href: `https://maps.google.com/?q=${encodeURIComponent(fullLocation)}`,
     },
   ]
 

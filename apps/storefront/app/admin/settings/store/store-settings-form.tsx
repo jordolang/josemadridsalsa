@@ -53,7 +53,9 @@ export function StoreSettingsForm({ initial, canWrite }: StoreSettingsFormProps)
 
       // A cleared threshold is an error, not a silent reset — the column is non-null, and
       // coercing back to a hardcoded default is exactly what this setting exists to replace.
-      const threshold = Number(defaultLowStockThreshold.trim())
+      // Guard the empty string explicitly: Number('') is 0, which would pass the range check.
+      const thresholdText = defaultLowStockThreshold.trim()
+      const threshold = thresholdText ? Number(thresholdText) : Number.NaN
       if (!Number.isInteger(threshold) || threshold < 0) {
         throw new Error('Low-stock threshold must be a whole number of 0 or more.')
       }
