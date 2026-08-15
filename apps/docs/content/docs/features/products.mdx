@@ -127,9 +127,11 @@ also carries each product's display order within the collection.
   mirrors `Category`; membership and per-collection order live on `CollectionProduct`
   (`@@unique([collectionId, productId])`).
 - **Admin CRUD:** `app/admin/collections` (list + create/edit dialogs) and
-  `app/api/admin/collections/**` (`content:read`/`content:write`, audit-logged). The form includes a
-  searchable product multi-select; products are stored in the order selected. Deleting a collection
-  detaches its products (the join rows cascade) — the products themselves are never deleted.
+  `app/api/admin/collections/**` (`products:read`/`products:write`, audit-logged — the nav item, the
+  API, and the Products parent menu all share the same permission so visibility and access line up).
+  The form includes a searchable product multi-select; products are stored in the order selected.
+  Deleting a collection detaches its products (the join rows cascade) — the products themselves are
+  never deleted.
 - **Storefront:** `/collections/[slug]` renders the collection's active products, in order, through
   the same `ProductCard` grid as the catalog. Query: `getCollectionBySlug` in `lib/db/products.ts`.
 - **Slug + rows** logic is in `lib/collections.ts` (pure, tested). Migration

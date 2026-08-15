@@ -258,7 +258,12 @@ export default function CollectionsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
+              // preventDefault stops Radix from auto-closing the dialog on click; handleDelete then
+              // closes it (via setDeleting(null)) only on success, so a failed delete stays open.
+              onClick={(e) => {
+                e.preventDefault()
+                handleDelete()
+              }}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

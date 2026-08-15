@@ -21,7 +21,7 @@ const collectionSchema = z.object({
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requirePermission('content:read')
+    await requirePermission('products:read')
     const { id } = await params
     const collection = await prisma.collection.findUnique({
       where: { id },
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requirePermission('content:write')
+    const user = await requirePermission('products:write')
     const body = await req.json()
     const { productIds, ...data } = collectionSchema.partial().parse(body)
     const { id } = await params
@@ -82,6 +82,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     return ok({ collection })
   } catch (error: any) {
+    if (error instanceof SyntaxError) return fail('Invalid JSON body', 400)
     if (error?.name === 'ZodError') return fail('Invalid collection data', 400, error.issues)
     if (error.code === 'P2002') {
       return fail('Collection with this name or slug already exists', 409)
@@ -95,7 +96,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requirePermission('content:write')
+    const user = await requirePermission('products:write')
     const { id } = await params
 
     const existing = await prisma.collection.findUnique({ where: { id } })

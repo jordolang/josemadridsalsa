@@ -22,7 +22,7 @@ const collectionSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission('content:read')
+    await requirePermission('products:read')
 
     const { searchParams } = new URL(req.url)
     const search = searchParams.get('search') || ''
@@ -38,14 +38,19 @@ export async function GET(req: NextRequest) {
     if (isActive === 'true') where.isActive = true
     if (isActive === 'false') where.isActive = false
 
-    const page = Math.max(1, Number(searchParams.get('page')) || 1)
-    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get('limit')) || 100))
+    const rawPage = Number(searchParams.get('page'))
+    const rawLimit = Number(searchParams.get('limit'))
+    const page = Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1
+    const pageSize =
+      Number.isSafeInteger(rawLimit) && rawLimit > 0 ? Math.min(100, rawLimit) : 100
     const skip = (page - 1) * pageSize
 
     const [collections, total] = await Promise.all([
       prisma.collection.findMany({
         where,
-        orderBy: { sortOrder: 'asc' },
+        // sortOrder first, then id as a stable tie-breaker so paging is deterministic when
+        // several collections share the default sortOrder.
+        orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
         skip,
         take: pageSize,
         include: { _count: { select: { products: true } } },
@@ -61,7 +66,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requirePermission('content:write')
+    const user = await requirePermission('products:write')
     const body = await req.json()
     const { productIds, ...data } = collectionSchema.parse(body)
 
@@ -84,6 +89,7 @@ export async function POST(req: NextRequest) {
 
     return ok({ collection }, 201)
   } catch (error: any) {
+    if (error instanceof SyntaxError) return fail('Invalid JSON body', 400)
     if (error?.name === 'ZodError') return fail('Invalid collection data', 400, error.issues)
     if (error.code === 'P2002') {
       return fail('Collection with this name or slug already exists', 409)

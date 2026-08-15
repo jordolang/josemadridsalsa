@@ -13,7 +13,9 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
-  const result = await getCollectionBySlug(slug).catch(() => null)
+  // A genuinely missing collection is null → "not found"; a DB/network error throws and surfaces as
+  // a real 500 (not a fake 404), matching the page below so the two never disagree.
+  const result = await getCollectionBySlug(slug)
   if (!result) return { title: 'Collection not found' }
 
   const { collection } = result
@@ -26,9 +28,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function CollectionPage({ params }: PageProps) {
   const { slug } = await params
-  // Degrade the same way generateMetadata does: a DB/network error becomes not-found rather than a
-  // 500, so the page and its metadata never disagree.
-  const result = await getCollectionBySlug(slug).catch(() => null)
+  // Same as generateMetadata: null → notFound (genuinely missing); a thrown DB/network error
+  // surfaces as a 500 rather than being disguised as a 404.
+  const result = await getCollectionBySlug(slug)
   if (!result) notFound()
 
   const { collection, products } = result
