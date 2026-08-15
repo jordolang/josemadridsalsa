@@ -29,6 +29,16 @@ export const ATTRIBUTION_MAX_AGE_DAYS = 90
 /** Per-field cap so a crafted URL cannot store an unbounded string on the order. */
 const MAX_LEN = 256
 
+/**
+ * Cap a string to MAX_LEN, counting by **code point** rather than UTF-16 unit. A plain `slice`
+ * could cut through a surrogate pair (an emoji, a CJK-extension char) and leave a lone surrogate,
+ * which is not valid UTF-8 and can corrupt or break the write when persisted onto the order.
+ */
+function capLength(value: string): string {
+  const points = Array.from(value)
+  return points.length > MAX_LEN ? points.slice(0, MAX_LEN).join('') : value
+}
+
 export interface AttributionFields {
   utmSource: string | null
   utmMedium: string | null
@@ -58,7 +68,7 @@ const EMPTY: AttributionFields = {
  */
 const field = z
   .string()
-  .transform((s) => s.trim().slice(0, MAX_LEN))
+  .transform((s) => capLength(s.trim()))
   .transform((s) => (s.length > 0 ? s : null))
   .nullish()
   .transform((s) => s ?? null)
@@ -142,7 +152,7 @@ export function referrerHost(referrer: string | null | undefined, selfHost: stri
     const host = new URL(referrer).host
     if (!host) return null
     if (selfHost && host === selfHost) return null
-    return host.slice(0, MAX_LEN)
+    return capLength(host)
   } catch {
     return null
   }
@@ -162,7 +172,7 @@ export function buildAttribution(input: {
   const get = (key: string) => {
     const value = input.params.get(key)
     if (value === null) return null
-    const trimmed = value.trim().slice(0, MAX_LEN)
+    const trimmed = capLength(value.trim())
     return trimmed.length > 0 ? trimmed : null
   }
 
@@ -173,7 +183,7 @@ export function buildAttribution(input: {
     utmTerm: get('utm_term'),
     utmContent: get('utm_content'),
     referrer: referrerHost(input.referrer, input.selfHost),
-    landingPage: input.landingPage ? input.landingPage.slice(0, MAX_LEN) : null,
+    landingPage: input.landingPage ? capLength(input.landingPage) : null,
   }
 }
 

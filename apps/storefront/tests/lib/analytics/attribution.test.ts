@@ -59,6 +59,22 @@ describe('buildAttribution', () => {
     })
   })
 
+  it('truncates an over-long value by code point without splitting a surrogate pair', () => {
+    // 300 emoji (each a surrogate pair) — a naive slice(0, 256) would cut one in half and leave a
+    // lone surrogate. Code-point truncation keeps every kept character whole.
+    const long = '😀'.repeat(300)
+    const result = buildAttribution({
+      params: new URLSearchParams(`utm_source=${encodeURIComponent(long)}`),
+      referrer: null,
+      landingPage: null,
+      selfHost: 'josemadrid.net',
+    })
+    expect(result.utmSource).not.toBeNull()
+    // 256 whole code points, no unpaired surrogate → round-trips through JSON/UTF-8 cleanly.
+    expect([...(result.utmSource as string)]).toHaveLength(256)
+    expect(result.utmSource).toBe('😀'.repeat(256))
+  })
+
   it('leaves missing params null and trims blanks', () => {
     const result = buildAttribution({
       params: new URLSearchParams('utm_source=%20%20&utm_campaign=spring'),
