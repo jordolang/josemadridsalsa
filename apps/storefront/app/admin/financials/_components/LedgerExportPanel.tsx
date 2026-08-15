@@ -15,11 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+// From `ledger` rather than `ledger-export`: the latter reaches `lib/csv`, and PapaParse has no
+// business in a browser bundle just to render three option labels.
 import {
   LEDGER_EXPORT_FORMATS,
   LEDGER_EXPORT_FORMAT_LABELS,
   type LedgerExportFormat,
-} from '@/lib/financials/ledger-export'
+} from '@/lib/financials/ledger'
 
 /** What each format is for, in the words of the person deciding which one they need. */
 const FORMAT_HELP: Record<LedgerExportFormat, string> = {

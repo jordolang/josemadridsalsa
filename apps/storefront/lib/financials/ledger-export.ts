@@ -24,14 +24,15 @@ import { toCsv } from '@/lib/csv'
 
 import { CATEGORY_DIRECTION, LEDGER_CATEGORY_LABELS } from './ledger'
 
-export const LEDGER_EXPORT_FORMATS = ['detail', 'qbo-bank', 'qbo-journal'] as const
-export type LedgerExportFormat = (typeof LEDGER_EXPORT_FORMATS)[number]
-
-export const LEDGER_EXPORT_FORMAT_LABELS: Record<LedgerExportFormat, string> = {
-  detail: 'Full detail (spreadsheet)',
-  'qbo-bank': 'QuickBooks bank upload',
-  'qbo-journal': 'QuickBooks journal entries',
-}
+// The format names and their labels live in `ledger.ts`, which the export dialog can import
+// without dragging `lib/csv` — and PapaParse — into a client bundle. Re-exported so server-side
+// callers of this module still find everything about an export in one place.
+export {
+  LEDGER_EXPORT_FORMATS,
+  LEDGER_EXPORT_FORMAT_LABELS,
+  type LedgerExportFormat,
+} from './ledger'
+import type { LedgerExportFormat } from './ledger'
 
 /** The fields an export reads. A subset of `LedgerEntry`, so a test can build one by hand. */
 export interface ExportableEntry {
