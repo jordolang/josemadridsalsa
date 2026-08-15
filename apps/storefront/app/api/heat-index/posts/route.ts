@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { ok, fail, serverError, parsePagination, paginated } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
-import { blogPostSchema } from '@/lib/blog/schemas'
+import { blogPostSchema, checkPostSeo } from '@/lib/blog/schemas'
 import { postCardSelect } from '@/lib/blog/queries'
 import { publishBlogPost } from '@/lib/blog/publish'
 import { crosspostAccountIdsSchema, crosspostBlogPost } from '@/lib/social/blog-crosspost'
@@ -63,6 +63,9 @@ export async function POST(req: NextRequest) {
     }
 
     const data = parsed.data
+    const seoError = checkPostSeo(data)
+    if (seoError) return fail(seoError)
+
     const crosspostParsed = crosspostAccountIdsSchema.safeParse(body.crosspostAccountIds)
     if (!crosspostParsed.success) {
       return fail(`Validation error: ${crosspostParsed.error.issues[0].message}`)

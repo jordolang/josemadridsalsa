@@ -117,27 +117,27 @@ interface CostTier {
 
 const costTiers: readonly CostTier[] = [
   {
-    tier: 'Senior Contractor',
-    low: 225000,
-    high: 300000,
+    tier: 'Off-the-Shelf Alternative',
+    low: 1500,
+    high: 5000,
     description:
-      '1,500 hrs × $150–$200/hr — a single highly experienced full-stack contractor billing solo rates.',
+      'A themed Shopify or BigCommerce store with paid apps and someone to configure it — what a business this size would realistically buy instead.',
     accent: 'from-verde-500 to-verde-700',
   },
   {
-    tier: 'Mid-Tier US Agency',
-    low: 400000,
-    high: 600000,
+    tier: 'Freelance Rebuild',
+    low: 8000,
+    high: 18000,
     description:
-      'Staffed engagement: tech lead, 1–2 full-stack devs, designer, PM & QA at standard agency margins.',
+      'An independent developer rebuilding the shipped feature set to spec, working from a finished reference rather than an open-ended discovery phase.',
     accent: 'from-chile-500 to-salsa-600',
   },
   {
-    tier: 'Premium Agency / Consultancy',
-    low: 750000,
-    high: 1200000,
+    tier: 'Upper Bound',
+    low: 20000,
+    high: 30000,
     description:
-      'Top-tier US firms (Thoughtbot, Slalom, Big Four digital) for a custom Next.js + Prisma + multi-payment + mobile build.',
+      'Everything at once — storefront, fundraising, admin, iOS app — scoped as one fixed-price project. A ceiling, not an expectation.',
     accent: 'from-salsa-600 to-purple-700',
   },
 ] as const
@@ -146,11 +146,9 @@ function formatNumber(n: number): string {
   return n.toLocaleString('en-US')
 }
 
+/** Exact dollars — rounding $1,500 to "$2K" would overstate the figure it is meant to report. */
 function formatUSD(n: number): string {
-  if (n >= 1_000_000) {
-    return `$${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
-  }
-  return `$${(n / 1000).toFixed(0)}K`
+  return `$${n.toLocaleString('en-US')}`
 }
 
 function CountUp({ end, duration = 1.6 }: { end: number; duration?: number }) {
@@ -247,7 +245,7 @@ export function DeveloperStats() {
         </div>
       </div>
 
-      {/* What this would cost — agency commission breakdown */}
+      {/* What this would cost — replacement-cost breakdown */}
       <div>
         <DeveloperScrollSection>
           <div className="text-center mb-10">
@@ -255,12 +253,12 @@ export function DeveloperStats() {
               <DollarSign className="w-7 h-7 text-white" />
             </div>
             <h3 className="text-2xl lg:text-3xl font-serif font-bold text-foreground mb-3">
-              What This Would Cost If Commissioned
+              What It Would Cost to Replace
             </h3>
             <p className="text-base text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              A custom Next.js e-commerce platform with multi-payment integration, fundraising
-              subsystem, iOS app, admin panel, lead-gen scraper, email pipeline, and observability
-              stack — built by a US professional firm — would typically command the following:
+              Not what the hours would bill at — what a small salsa company would actually pay to
+              have this storefront, fundraising portal, admin panel, and iOS app stood up by
+              someone else:
             </p>
           </div>
         </DeveloperScrollSection>
@@ -291,17 +289,17 @@ export function DeveloperStats() {
             <div className="grid md:grid-cols-3 gap-6 items-center">
               <div className="md:col-span-2">
                 <div className="text-xs font-semibold uppercase tracking-wider text-salsa-700 dark:text-salsa-300 mb-2">
-                  Real-world fair-market value
+                  What it is actually worth
                 </div>
                 <div className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-2">
-                  $250,000 – $750,000+
+                  Under $30,000
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Based on 1,500+ documented development hours, 200,000+ lines of production
-                  TypeScript, 218 API endpoints, 125 database models, a native iOS app, and a
-                  full multi-payment commerce + fundraising stack. Industry comparable: a custom
-                  Shopify Plus + Headless Next.js build alone runs $150K–$400K before mobile,
-                  fundraising, or admin tooling.
+                  A platform is worth what someone will pay for it, and nobody has been asked to.
+                  This one is pre-revenue — no order history, no traffic record, no proven sales to
+                  underwrite a price — so its honest value is what it would cost to replace, not
+                  what the hours could have billed at. The line count and the release history say
+                  the work is real; they do not set the price.
                 </p>
               </div>
               <div className="md:text-right">
@@ -323,10 +321,10 @@ export function DeveloperStats() {
 
         <DeveloperScrollSection delay={0.15}>
           <p className="text-xs text-muted-foreground text-center mt-6 max-w-3xl mx-auto leading-relaxed">
-            Cost ranges reference 2025–2026 US market rates: senior full-stack contractors
-            ($125–$225/hr), mid-tier digital agencies ($150–$250/hr), and premium consultancies
-            ($250–$400/hr) per Clutch, Toptal, and BLS occupational data. Hour totals reflect
-            documented solo development across 14 versioned releases.
+            These are replacement estimates for a pre-revenue storefront, not agency bill rates and
+            not an appraisal. The counts above — lines, endpoints, models, releases — are measured
+            from the repository; the dollar ranges are judgement, and the only figure on this page
+            that is certain is the one on the right.
           </p>
         </DeveloperScrollSection>
       </div>
