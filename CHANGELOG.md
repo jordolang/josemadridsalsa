@@ -15,6 +15,9 @@ the root `package.json` is canonical.
 
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
+### Fixed
+- **Analytics report review follow-ups** — small correctness and clarity fixes to the two new analytics reports after review. The turnover report's *inventory-at-cost* caveat is now decided on the exact coverage ratio rather than a rounded percent, so 99.6%-covered no longer rounds to 100% and hides the "some stock is uncosted" warning; and the slow-mover ranking compares stock value only when both products have a known cost, falling back to units on hand otherwise, so a large pile of uncosted dead stock is no longer sorted beneath a single cheap costed jar (a missing cost is not "worth zero"). The retention grid's cohort math floors its observable-offset count at zero, so a future-dated `now` degrades to an unobservable column instead of a negative array length; a dead rectangular-padding branch was removed; and the cohort report no longer accepts a caller-supplied `now` that could disagree with the query window. All covered by new regression tests.
+
 ### Added
 - **Inventory turnover & slow-movers report** — a new analytics page (`/admin/analytics/inventory-turnover`, under Analytics → Turnover & Slow Movers) answering two questions the platform could not: how fast stock is selling, and what is sitting still. It reports an overall turnover ratio — how many times the shelf sold through in the window, annualised — and days on hand to clear current stock at that pace, then a per-product table ranked **slowest-first**: products holding stock with no sales lead, followed by the longest days of supply. The slow-mover flag fires past 90 days of supply, or immediately when a product holds stock and sold nothing.
 

@@ -28,10 +28,11 @@ function normaliseEmail(email: string | null): string | null {
   return cleaned.length > 0 ? cleaned : null
 }
 
-export async function getCohortReport(
-  range: AnalyticsRangeKey,
-  now: Date = new Date()
-): Promise<CohortReport> {
+export async function getCohortReport(range: AnalyticsRangeKey): Promise<CohortReport> {
+  // A caller-supplied `now` used to be accepted here, but the query window is derived from the
+  // current time (via getDateRange), so a custom `now` could disagree with the data it selected.
+  // Anchoring cohort observability to the current time too keeps the two consistent.
+  const now = new Date()
   const { start, end } = getDateRange(range)
 
   // Same sales definition as the margin and orders reports, so buyer counts never disagree.
