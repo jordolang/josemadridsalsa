@@ -46,6 +46,19 @@ the root `package.json` is canonical.
 
   The workspace pins its own toolchain — Node 24 and TypeScript 7, both required by eve — in `apps/agent/package.json` rather than at the repo root, so the other five workspaces keep Node 20 and TypeScript 5.9. `eve build` runs without model credentials, so building it depends on no secret; it is, however, excluded from the aggregate `npm run build` gate (see Fixed) because that gate runs on the repo's Node 20/22 baseline and `eve build` requires Node 24.
 
+### Changed
+- **Blog post SEO limits are now enforced, not merely scored** — the SEO analyzer has always graded pages on snippet length, but nothing stopped a post being published with a 21-character title or a 198-character description; the score was advice nobody had to take. The Heat Index write path now holds posts to the analyzer's own thresholds — meta title **30–60 characters**, meta description **160 or fewer** — and the analyzer's constants are exported and imported by the schema and the editor, so a value the API accepts can never be one the analyzer then flags.
+
+  The rule is checked against **what a crawler actually renders**, not the override fields. `seoTitle` falls back to the post title and `seoDescription` to the excerpt, so validating only the overrides would have left the common case — no override set — completely unguarded, which is exactly how a 21-character title reached production. `checkPostSeo` resolves the fallback first, then reports against whichever value is in play: a short *override* asks for more characters, a short *post title* asks for an SEO title to be set instead, so the message names the field the author has to go fix.
+
+  **Drafts and archived posts are exempt.** The rules bite on `PUBLISHED` and `SCHEDULED` only, so a half-written post still saves; the gate is publication, not typing. The `PATCH` route checks the post as it will be *after* the patch (stored values merged with the change), so flipping status to published cannot slip past a check that only looked at the fields the request happened to include.
+
+  In the editor, the SEO panel counts the **effective** value — labelled `(from title)` / `(from excerpt)` when no override is set — caps both inputs at their limits, opens itself when an existing post already breaks a rule, and blocks the save with the specific failure rather than a generic API error.
+
+  **All nine published posts currently fail this rule** (excerpts of 164–478 characters, three titles under 30 too) and will need an SEO description before they can next be saved. That is the intended consequence, not an accident of the rollout.
+
+### Removed
+
 ### Removed
 - **`ProductVariant`, a decorative model wired to no sale** — one of four dead models the admin-platform audit flagged for an explicit adopt-or-drop decision. It had an admin editor and a customer-facing "Select Options" control, but the selection reached nothing: no `order_items` or `cart_items` column recorded it, and the add-to-cart button ignored it and used the base product's price and SKU. A shopper could pick a variant and it changed neither the price charged, the SKU shipped, nor the stock deducted — UI attached to no behaviour. The distinct pricing and handling the business actually needs is expressed by `SalesChannel` (retail, fundraiser, wholesale, event), not by product-level variants. Removed the model, its `Product` relation, the `getProductBySlug`/`getProducts` includes, the customer `VariantSelector` and its render on the product page, the admin `VariantEditor`/`VariantEditorWrapper`, the `/api/admin/products/[id]/variants` routes, the variant checks in `scripts/verify-db-integrity.ts`, and the variant-only `ProductCard` test. Guarded migration `20260813120000_drop_product_variants` refuses to run if the table holds any rows.
 
