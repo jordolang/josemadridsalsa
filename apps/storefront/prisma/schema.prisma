@@ -576,6 +576,19 @@ model Order {
   paymentProvider          PaymentProvider?       @default(STRIPE)
   providerPaymentId        String?
   abandonedCartId          String?
+  /// First-touch marketing attribution, captured when the visitor first lands on the site and
+  /// carried to the order through a cookie (see `lib/analytics/attribution.ts`). Every field is
+  /// nullable and never inferred: a direct visit, an offline order (POS/manual/phone/event), and
+  /// any order placed before this feature simply have none.
+  utmSource                String?
+  utmMedium                String?
+  utmCampaign              String?
+  utmTerm                  String?
+  utmContent               String?
+  /// The referring site's host (e.g. `google.com`), or null for a direct/typed-in visit.
+  referrer                 String?
+  /// The path of the first page the visitor landed on (query string stripped).
+  landingPage              String?
   supportMessages          FundraiserMessage[]
   giftCertificateUsages    GiftCertificateUsage[]
   giftCertificates         GiftCertificate[]
@@ -606,6 +619,8 @@ model Order {
   @@index([abandonedCartId])
   @@index([fulfillmentStatus])
   @@index([salesChannel])
+  @@index([utmSource])
+  @@index([utmCampaign])
   @@map("orders")
 }
 

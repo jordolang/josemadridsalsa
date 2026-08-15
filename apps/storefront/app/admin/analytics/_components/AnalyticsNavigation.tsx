@@ -56,6 +56,12 @@ export function AnalyticsNavigation({ activeRange }: AnalyticsNavigationProps) {
       >
         Retention
       </Link>
+      <Link
+        href={`/admin/analytics/attribution?range=${activeRange}`}
+        className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-background/60"
+      >
+        Attribution
+      </Link>
     </nav>
   )
 }

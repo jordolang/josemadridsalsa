@@ -5,6 +5,7 @@ import { Navigation } from '@/components/store/navigation'
 import Footer from '@/components/ui/footer-column'
 import { AiChatWidget } from '@/components/chat/ai-chat-widget'
 import { AmplitudeAnalytics } from '@/components/analytics/amplitude-analytics'
+import { AttributionTracker } from '@/components/analytics/attribution-tracker'
 import { AnnouncementBar } from '@/components/store/announcement-bar'
 import { Analytics } from '@vercel/analytics/react'
 import { WishlistSyncProvider } from '@/components/providers/wishlist-sync-provider'
@@ -39,6 +40,7 @@ export default async function PublicLayout({
   return (
     <>
       <AmplitudeAnalytics />
+      <AttributionTracker />
       <WishlistSyncProvider />
       <Suspense fallback={null}>
         <ComparisonURLHandler />
