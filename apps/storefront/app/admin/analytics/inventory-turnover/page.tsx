@@ -56,10 +56,12 @@ export default async function InventoryTurnoverPage({
   const { summary, products, days, uncostedProductCount } = await getTurnoverReport(range)
 
   const slowMoverCount = products.filter((p) => p.slowMover).length
-  const coveragePct = Math.round(summary.coverageRatio * 100)
-  // Whether coverage is short is decided on the exact ratio, not the rounded percent — 99.6% must
-  // not round to 100 and silently drop the caveat.
+  // The exact ratio decides the caveat, and the number shown must agree with it. Truncate (never
+  // round) to one decimal so incomplete coverage cannot display as "100%" beside the warning.
   const coverageComplete = summary.coverageRatio >= 1
+  const coveragePct = coverageComplete
+    ? '100'
+    : (Math.floor(summary.coverageRatio * 1000) / 10).toFixed(1)
 
   return (
     <div className="space-y-8">

@@ -29,11 +29,10 @@ function normaliseEmail(email: string | null): string | null {
 }
 
 export async function getCohortReport(range: AnalyticsRangeKey): Promise<CohortReport> {
-  // A caller-supplied `now` used to be accepted here, but the query window is derived from the
-  // current time (via getDateRange), so a custom `now` could disagree with the data it selected.
-  // Anchoring cohort observability to the current time too keeps the two consistent.
+  // One timestamp for both halves: the query window and the cohort observability are derived from
+  // the same `now`, so they cannot land in different months if the call straddles a boundary.
   const now = new Date()
-  const { start, end } = getDateRange(range)
+  const { start, end } = getDateRange(range, now)
 
   // Same sales definition as the margin and orders reports, so buyer counts never disagree.
   const orderFilter: Prisma.OrderWhereInput = {

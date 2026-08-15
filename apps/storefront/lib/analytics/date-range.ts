@@ -18,8 +18,8 @@ export function getRangeDayCount(range: AnalyticsRangeKey): number {
   return RANGE_DAY_MAP[range]
 }
 
-export function getDateRange(range: AnalyticsRangeKey) {
-  const end = new Date()
+export function getDateRange(range: AnalyticsRangeKey, now: Date = new Date()) {
+  const end = new Date(now)
   end.setHours(23, 59, 59, 999)
 
   const days = getRangeDayCount(range)
