@@ -15,6 +15,13 @@ the root `package.json` is canonical.
 
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
+### Fixed
+- **A fundraiser tracking sheet counted as a single campaign** — `ArchivedFundraiser` reported **7,334,516** jars raised. At $10 a jar that is $73M, which the business has plainly never done. One file caused 97.8% of it: `5 year completed JMSFundraisers.xlsx`, a five-year rollup of every campaign, recorded as if it were one. Three yearly trackers ("Fundraisers for 2021", "Fundraisers 2022") did the same on a smaller scale.
+
+  The extractor locates a form's quantity columns positionally, so on a rollup sheet it latched onto the column that sheet happens to list down the side — coordinator names, "Randy", "Cheryl", "Karen" — and read their running totals as one campaign's flavor quantities. The tell is what those columns are *named*: every flavor on the JMS order form carries a heat level, and a roster of people carries none. Measured across the archive the split is total — 281 forms name a heat level on at least half their columns, 7 name one on none, and **nothing falls in between** — so `looksLikeSalsaFlavors()` demotes the sheet to `UNKNOWN` and drops its figures rather than attributing them to an invented campaign. The corrected total is **101,963** jars across 621 campaigns, averaging 164.
+
+  The guard is in the normalizer, not the extractor, because the extractor's positional read is what makes it work on the hundred slightly-different copies of the order form; the judgement about whether the result *is* an order form is domain logic and is unit-tested as such.
+
 ### Added
 - **Bank and card statements read into the ledger (Stage 3)** — the last of the three ledger stages, and the one that fills `LedgerSource.IMPORT`, which had sat in the schema since Stage 1 with nothing writing it. *Financials → Ledger → Import statement* reads a CSV export from a bank or card account and turns the parts nothing else records — fuel, booth fees, supplier payments, bank charges — into ledger rows.
 
