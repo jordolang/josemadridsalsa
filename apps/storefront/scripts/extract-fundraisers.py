@@ -29,10 +29,7 @@ import re
 import sys
 from pathlib import Path
 
-try:
-    import openpyxl
-except ImportError:
-    sys.exit("openpyxl required")
+from _spreadsheet import read_first_sheet
 
 SUBPATH = "03 Fundraisers"
 LABELS = ("organization", "date", "submitted by", "e-mail", "email", "phone", "name")
@@ -196,9 +193,7 @@ def main() -> None:
         for path in files:
             rel = str(path.relative_to(archive_root))
             try:
-                wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-                ws = wb[wb.sheetnames[0]]
-                rows = list(ws.iter_rows(values_only=True))
+                rows = read_first_sheet(path)
             except Exception as exc:  # noqa: BLE001
                 print(f"  ! {rel}: {exc}", file=sys.stderr)
                 counts["ERROR"] = counts.get("ERROR", 0) + 1
