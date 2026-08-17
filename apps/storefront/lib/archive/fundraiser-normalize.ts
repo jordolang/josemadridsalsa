@@ -54,6 +54,26 @@ export function isBusinessEmail(email: string | null | undefined): boolean {
   return !!email && BUSINESS_EMAIL.test(email)
 }
 
+/** Every flavor on the JMS order-form template carries a heat level. */
+const HEAT_LEVEL = /\b(mild|medium|hot|x-?hot|extra hot)\b/i
+
+/**
+ * Whether a form's quantity columns are really salsa flavors.
+ *
+ * The extractor finds the quantity columns positionally, so on a multi-campaign
+ * *tracking* sheet it latches onto whatever that sheet lists down the side —
+ * coordinator names ("Randy", "Cheryl", "Mandy Boyd") — and reads their running
+ * jar totals as if they were one campaign's flavor quantities. The two shapes
+ * separate cleanly: real order forms name a heat level on essentially every
+ * column, tracking sheets on none.
+ */
+export function looksLikeSalsaFlavors(flavors: Record<string, number>): boolean {
+  const keys = Object.keys(flavors)
+  if (keys.length === 0) return false
+  const withHeat = keys.filter((k) => HEAT_LEVEL.test(k)).length
+  return withHeat / keys.length >= 0.5
+}
+
 /**
  * Strip the dated/keyword noise off a filename-derived org name:
  * "Morgan hs marching band 5-20-24" -> "Morgan hs marching band",
@@ -124,6 +144,12 @@ export function normalizeFundraiser(raw: RawFundraiser): NormalizedFundraiser {
   const isEmptyTemplate =
     raw.shape === 'ORDER_FORM' && !raw.labels?.organization && !flavors && !raw.totalJars
 
+  // A tracking sheet rolls up many campaigns, so its totals belong to no single
+  // one. Recording it as an order form both invents a campaign and inflates the
+  // jar count by orders of magnitude, so surface it as UNKNOWN without figures.
+  const isAggregateSheet =
+    raw.shape === 'ORDER_FORM' && !!flavors && !looksLikeSalsaFlavors(flavors)
+
   const year = raw.year ?? (orderDate ? Number(orderDate.slice(0, 4)) : null)
 
   return {
@@ -133,12 +159,16 @@ export function normalizeFundraiser(raw: RawFundraiser): NormalizedFundraiser {
     submittedBy: raw.labels?.['submitted by']?.trim() ?? null,
     contactEmail,
     contactPhone: raw.labels?.phone?.replace(/[^0-9]/g, '').trim() || null,
-    formType: raw.shape,
-    totalJars: raw.totalJars ?? null,
-    orderCount: raw.orderCount ?? null,
-    flavorsJson: flavors,
+    formType: isAggregateSheet ? 'UNKNOWN' : raw.shape,
+    totalJars: isAggregateSheet ? null : raw.totalJars ?? null,
+    orderCount: isAggregateSheet ? null : raw.orderCount ?? null,
+    flavorsJson: isAggregateSheet ? null : flavors,
     sourceFile: raw.sourceFile,
     sourceMd5: raw.sourceMd5,
-    notes: isEmptyTemplate ? 'Blank order-form template (no org or quantities)' : null,
+    notes: isEmptyTemplate
+      ? 'Blank order-form template (no org or quantities)'
+      : isAggregateSheet
+        ? 'Multi-campaign tracking sheet — totals span many fundraisers, not recorded'
+        : null,
   }
 }
