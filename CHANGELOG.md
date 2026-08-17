@@ -30,6 +30,8 @@ the root `package.json` is canonical.
 
   Recovered: 73 fundraiser campaigns, extraction errors 73 → **0**, and a year range that now reaches back to **2011** instead of starting at 2018.
 
+- **QuickBooks company files were not treated as sensitive** — `.qbw`/`.qbb` files carry the entire general ledger (payroll, bank accounts, every customer), but the archive's sensitivity rules keyed on folder names and would have filed one under `01 Financial` as merely `INTERNAL`. They are now sensitive wherever they sit, which is the only workable rule for a file whose folder never says what it holds.
+
 ### Added
 - **Bank and card statements read into the ledger (Stage 3)** — the last of the three ledger stages, and the one that fills `LedgerSource.IMPORT`, which had sat in the schema since Stage 1 with nothing writing it. *Financials → Ledger → Import statement* reads a CSV export from a bank or card account and turns the parts nothing else records — fuel, booth fees, supplier payments, bank charges — into ledger rows.
 
