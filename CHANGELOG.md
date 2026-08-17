@@ -22,6 +22,14 @@ the root `package.json` is canonical.
 
   The guard is in the normalizer, not the extractor, because the extractor's positional read is what makes it work on the hundred slightly-different copies of the order form; the judgement about whether the result *is* an order form is domain logic and is unit-tested as such.
 
+- **112 legacy `.xls` files were silently unreadable** — openpyxl cannot read the old BIFF format at all, so every `.xls` in the archive was skipped: the text extractor returned an empty string for them by design ("rare enough to leave for OCR/manual"), and the fundraiser extractor logged 73 errors and moved on. They were not rare, and they were not junk — they are the *oldest* campaigns, and losing them is why `ArchivedFundraiser` appeared to begin in 2018.
+
+  `scripts/_spreadsheet.py` reads either generation, because `xlrd` 2.x handles `.xls` and only `.xls` (it dropped `.xlsx` in 2.0), making the two libraries exactly complementary. Callers get plain row tuples and never learn which one ran — xlrd hands back raw floats for dates and empty strings for blanks, so values are normalized to what openpyxl would have produced, including the whole-number-to-`int` narrowing the order-form parsers depend on.
+
+  The extension is treated as a hint, not a fact. The archive contains `.xls` files that are really `.xlsx` and vice versa, so the other reader is tried before giving up — and the fallback opens a **file handle rather than a path**, because openpyxl rejects a `.xls` *filename* outright without ever looking inside, which is what kept one genuinely-xlsx file failing after the first fix.
+
+  Recovered: 73 fundraiser campaigns, extraction errors 73 → **0**, and a year range that now reaches back to **2011** instead of starting at 2018.
+
 ### Added
 - **Bank and card statements read into the ledger (Stage 3)** — the last of the three ledger stages, and the one that fills `LedgerSource.IMPORT`, which had sat in the schema since Stage 1 with nothing writing it. *Financials → Ledger → Import statement* reads a CSV export from a bank or card account and turns the parts nothing else records — fuel, booth fees, supplier payments, bank charges — into ledger rows.
 
