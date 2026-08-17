@@ -1,0 +1,511 @@
+{
+ "generated": "2026-08-15",
+ "note": "Every jar shown is the real product photograph, background-removed and composited. Only the surrounding kitchen scene is AI-generated. No product label is ever drawn by a model.",
+ "products": [
+  {
+   "slug": "jose-madrid-original-mild",
+   "name": "Jose Madrid Original Mild",
+   "labelText": "MILD",
+   "featuredImage": "/images/new-products/mild.png",
+   "images": [
+    "/images/new-products/mild.png",
+    "/images/new-products/generated/jose-madrid-original-mild-table.webp",
+    "/images/new-products/generated/jose-madrid-original-mild-served.webp",
+    "/images/new-products/generated/jose-madrid-original-mild-counter.webp",
+    "/images/new-products/generated/jose-madrid-original-mild-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "clovis-medium-salsa",
+   "name": "Clovis Medium Salsa",
+   "labelText": "CLOVIS MEDIUM",
+   "featuredImage": "/images/new-products/clovis-medium.png",
+   "images": [
+    "/images/new-products/clovis-medium.png",
+    "/images/new-products/generated/clovis-medium-salsa-table.webp",
+    "/images/new-products/generated/clovis-medium-salsa-served.webp",
+    "/images/new-products/generated/clovis-medium-salsa-counter.webp",
+    "/images/new-products/generated/clovis-medium-salsa-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "original-hot",
+   "name": "Original Hot",
+   "labelText": "HOT",
+   "featuredImage": "/images/new-products/hot.png",
+   "images": [
+    "/images/new-products/hot.png",
+    "/images/new-products/generated/original-hot-table.webp",
+    "/images/new-products/generated/original-hot-served.webp",
+    "/images/new-products/generated/original-hot-counter.webp",
+    "/images/new-products/generated/original-hot-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "original-x-hot",
+   "name": "Original X Hot",
+   "labelText": "X HOT",
+   "featuredImage": "/images/new-products/x-hot.png",
+   "images": [
+    "/images/new-products/x-hot.png",
+    "/images/new-products/generated/original-x-hot-table.webp",
+    "/images/new-products/generated/original-x-hot-served.webp",
+    "/images/new-products/generated/original-x-hot-counter.webp",
+    "/images/new-products/generated/original-x-hot-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "black-bean-corn-poblano",
+   "name": "Black Bean Corn Poblano",
+   "labelText": "BLACK BEAN CORN SALSA",
+   "featuredImage": "/images/new-products/black-bean-corn-poblano.png",
+   "images": [
+    "/images/new-products/black-bean-corn-poblano.png",
+    "/images/new-products/generated/black-bean-corn-poblano-table.webp",
+    "/images/new-products/generated/black-bean-corn-poblano-served.webp",
+    "/images/new-products/generated/black-bean-corn-poblano-counter.webp",
+    "/images/new-products/generated/black-bean-corn-poblano-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "cherry-chocolate-hot",
+   "name": "Cherry Chocolate Hot",
+   "labelText": "CHERRY CHOCOLATE HOT",
+   "featuredImage": "/images/new-products/cherry-chocolate-hot.png",
+   "images": [
+    "/images/new-products/cherry-chocolate-hot.png",
+    "/images/new-products/generated/cherry-chocolate-hot-table.webp",
+    "/images/new-products/generated/cherry-chocolate-hot-served.webp",
+    "/images/new-products/generated/cherry-chocolate-hot-counter.webp",
+    "/images/new-products/generated/cherry-chocolate-hot-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "cherry-mild-salsa",
+   "name": "Cherri Mild Salsa",
+   "labelText": "CHERRY MILD",
+   "featuredImage": "/images/new-products/cherry-mild.png",
+   "images": [
+    "/images/new-products/cherry-mild.png",
+    "/images/new-products/generated/cherry-mild-salsa-table.webp",
+    "/images/new-products/generated/cherry-mild-salsa-served.webp",
+    "/images/new-products/generated/cherry-mild-salsa-counter.webp",
+    "/images/new-products/generated/cherry-mild-salsa-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "chipotle-con-queso-salsa",
+   "name": "Chipotle Con Queso",
+   "labelText": "CHIPOTLE CON QUESO",
+   "featuredImage": "/images/new-products/chipotle-con-queso.png",
+   "images": [
+    "/images/new-products/chipotle-con-queso.png",
+    "/images/new-products/generated/chipotle-con-queso-salsa-table.webp",
+    "/images/new-products/generated/chipotle-con-queso-salsa-served.webp",
+    "/images/new-products/generated/chipotle-con-queso-salsa-counter.webp",
+    "/images/new-products/generated/chipotle-con-queso-salsa-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "chipotle-hot-salsa",
+   "name": "Chipotle Hot",
+   "labelText": "CHIPOTLE HOT",
+   "featuredImage": "/images/new-products/chipotle-hot.png",
+   "images": [
+    "/images/new-products/chipotle-hot.png",
+    "/images/new-products/generated/chipotle-hot-salsa-table.webp",
+    "/images/new-products/generated/chipotle-hot-salsa-served.webp",
+    "/images/new-products/generated/chipotle-hot-salsa-counter.webp",
+    "/images/new-products/generated/chipotle-hot-salsa-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "garden-cilantro-mild-salsa",
+   "name": "Garden Cilantro Salsa Mild",
+   "labelText": "GARDEN CILANTRO SALSA MILD",
+   "featuredImage": "/images/new-products/garden-cilantro-salsa-mild.png",
+   "images": [
+    "/images/new-products/garden-cilantro-salsa-mild.png",
+    "/images/new-products/generated/garden-cilantro-mild-salsa-table.webp",
+    "/images/new-products/generated/garden-cilantro-mild-salsa-served.webp",
+    "/images/new-products/generated/garden-cilantro-mild-salsa-counter.webp",
+    "/images/new-products/generated/garden-cilantro-mild-salsa-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "garden-cilantro-hot-salsa",
+   "name": "Garden Cilantro Salsa Hot",
+   "labelText": "GARDEN CILANTRO SALSA HOT",
+   "featuredImage": "/images/new-products/garden-cilantro-salsa-hot.png",
+   "images": [
+    "/images/new-products/garden-cilantro-salsa-hot.png",
+    "/images/new-products/generated/garden-cilantro-hot-salsa-table.webp",
+    "/images/new-products/generated/garden-cilantro-hot-salsa-served.webp",
+    "/images/new-products/generated/garden-cilantro-hot-salsa-counter.webp",
+    "/images/new-products/generated/garden-cilantro-hot-salsa-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "jamaican-jerk-salsa",
+   "name": "Jamaican Jerk",
+   "labelText": "JAMAICAN JERK",
+   "featuredImage": "/images/new-products/jamaican-jerk.png",
+   "images": [
+    "/images/new-products/jamaican-jerk.png",
+    "/images/new-products/generated/jamaican-jerk-salsa-table.webp",
+    "/images/new-products/generated/jamaican-jerk-salsa-served.webp",
+    "/images/new-products/generated/jamaican-jerk-salsa-counter.webp",
+    "/images/new-products/generated/jamaican-jerk-salsa-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "ghost-of-clovis",
+   "name": "Ghost of Clovis",
+   "labelText": "GHOST OF CLOVIS",
+   "featuredImage": "/images/new-products/ghost-clovis.png",
+   "images": [
+    "/images/new-products/ghost-clovis.png",
+    "/images/new-products/generated/ghost-of-clovis-table.webp",
+    "/images/new-products/generated/ghost-of-clovis-served.webp",
+    "/images/new-products/generated/ghost-of-clovis-counter.webp",
+    "/images/new-products/generated/ghost-of-clovis-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "mango-mild-salsa",
+   "name": "Mango Mild Salsa",
+   "labelText": "MANGO MILD",
+   "featuredImage": "/images/new-products/mango-mild.png",
+   "images": [
+    "/images/new-products/mango-mild.png",
+    "/images/new-products/generated/mango-mild-salsa-table.webp",
+    "/images/new-products/generated/mango-mild-salsa-served.webp",
+    "/images/new-products/generated/mango-mild-salsa-counter.webp",
+    "/images/new-products/generated/mango-mild-salsa-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "mango-habanero-salsa",
+   "name": "Mango Habanero Salsa",
+   "labelText": "MANGO HABANERO",
+   "featuredImage": "/images/new-products/mango-habanero.png",
+   "images": [
+    "/images/new-products/mango-habanero.png",
+    "/images/new-products/generated/mango-habanero-salsa-table.webp",
+    "/images/new-products/generated/mango-habanero-salsa-served.webp",
+    "/images/new-products/generated/mango-habanero-salsa-counter.webp",
+    "/images/new-products/generated/mango-habanero-salsa-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "peach-mild-salsa",
+   "name": "Peach Mild",
+   "labelText": "PEACH MILD",
+   "featuredImage": "/images/new-products/peach-mild.png",
+   "images": [
+    "/images/new-products/peach-mild.png",
+    "/images/new-products/generated/peach-mild-salsa-table.webp",
+    "/images/new-products/generated/peach-mild-salsa-served.webp",
+    "/images/new-products/generated/peach-mild-salsa-counter.webp",
+    "/images/new-products/generated/peach-mild-salsa-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "pineapple-mild-salsa",
+   "name": "Pineapple Mild Salsa",
+   "labelText": "PINEAPPLE MILD",
+   "featuredImage": "/images/new-products/pineapple-mild.png",
+   "images": [
+    "/images/new-products/pineapple-mild.png",
+    "/images/new-products/generated/pineapple-mild-salsa-table.webp",
+    "/images/new-products/generated/pineapple-mild-salsa-served.webp",
+    "/images/new-products/generated/pineapple-mild-salsa-counter.webp",
+    "/images/new-products/generated/pineapple-mild-salsa-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "raspberry-bbq-chipotle",
+   "name": "Raspberry BBQ Chipotle",
+   "labelText": "RASPBERRY BBQ CHIPOTLE",
+   "featuredImage": "/images/new-products/raspberry-bbq-chipotle.png",
+   "images": [
+    "/images/new-products/raspberry-bbq-chipotle.png",
+    "/images/new-products/generated/raspberry-bbq-chipotle-table.webp",
+    "/images/new-products/generated/raspberry-bbq-chipotle-served.webp",
+    "/images/new-products/generated/raspberry-bbq-chipotle-counter.webp",
+    "/images/new-products/generated/raspberry-bbq-chipotle-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "raspberry-mild-salsa",
+   "name": "Raspberry Mild Salsa",
+   "labelText": "RASPBERRY MILD",
+   "featuredImage": "/images/new-products/raspberry-mild.png",
+   "images": [
+    "/images/new-products/raspberry-mild.png",
+    "/images/new-products/generated/raspberry-mild-salsa-table.webp",
+    "/images/new-products/generated/raspberry-mild-salsa-served.webp",
+    "/images/new-products/generated/raspberry-mild-salsa-counter.webp",
+    "/images/new-products/generated/raspberry-mild-salsa-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "roasted-garlic-olives",
+   "name": "Roasted Garlic & Olives",
+   "labelText": "ROASTED GARLIC & OLIVES",
+   "featuredImage": "/images/new-products/roasted-garlic-olives.png",
+   "images": [
+    "/images/new-products/roasted-garlic-olives.png",
+    "/images/new-products/generated/roasted-garlic-olives-table.webp",
+    "/images/new-products/generated/roasted-garlic-olives-served.webp",
+    "/images/new-products/generated/roasted-garlic-olives-counter.webp",
+    "/images/new-products/generated/roasted-garlic-olives-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "roasted-pineapple-habanero-hot",
+   "name": "Roasted Pineapple Habanero Hot",
+   "labelText": "ROASTED PINEAPPLE HABANERO HOT",
+   "featuredImage": "/images/new-products/roasted-pineapple.jpeg",
+   "images": [
+    "/images/new-products/roasted-pineapple.jpeg",
+    "/images/new-products/generated/roasted-pineapple-habanero-hot-table.webp",
+    "/images/new-products/generated/roasted-pineapple-habanero-hot-served.webp",
+    "/images/new-products/generated/roasted-pineapple-habanero-hot-counter.webp",
+    "/images/new-products/generated/roasted-pineapple-habanero-hot-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "spanish-verde-mild",
+   "name": "Spanish Verde Mild",
+   "labelText": "SPANISH VERDE MILD",
+   "featuredImage": "/images/new-products/spaish-verde-mild.jpeg",
+   "images": [
+    "/images/new-products/spaish-verde-mild.jpeg",
+    "/images/new-products/generated/spanish-verde-mild-table.webp",
+    "/images/new-products/generated/spanish-verde-mild-served.webp",
+    "/images/new-products/generated/spanish-verde-mild-counter.webp",
+    "/images/new-products/generated/spanish-verde-mild-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "spanish-verde-hot",
+   "name": "Spanish Verde Hot",
+   "labelText": "SPANISH VERDE HOT",
+   "featuredImage": "/images/new-products/spanish-verde-hot.jpeg",
+   "images": [
+    "/images/new-products/spanish-verde-hot.jpeg",
+    "/images/new-products/generated/spanish-verde-hot-table.webp",
+    "/images/new-products/generated/spanish-verde-hot-served.webp",
+    "/images/new-products/generated/spanish-verde-hot-counter.webp",
+    "/images/new-products/generated/spanish-verde-hot-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "spanish-verde-xx-hot",
+   "name": "Spanish Verde XX Hot",
+   "labelText": "SPANISH VERDE X X HOT",
+   "featuredImage": "/images/new-products/spanish-verde-xx-hot.jpeg",
+   "images": [
+    "/images/new-products/spanish-verde-xx-hot.jpeg",
+    "/images/new-products/generated/spanish-verde-xx-hot-table.webp",
+    "/images/new-products/generated/spanish-verde-xx-hot-served.webp",
+    "/images/new-products/generated/spanish-verde-xx-hot-counter.webp",
+    "/images/new-products/generated/spanish-verde-xx-hot-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "strawberry-mild",
+   "name": "Strawberry Mild",
+   "labelText": "STRAWBERRY MILD",
+   "featuredImage": "/images/new-products/strawberry-mild.jpeg",
+   "images": [
+    "/images/new-products/strawberry-mild.jpeg",
+    "/images/new-products/generated/strawberry-mild-table.webp",
+    "/images/new-products/generated/strawberry-mild-served.webp",
+    "/images/new-products/generated/strawberry-mild-counter.webp",
+    "/images/new-products/generated/strawberry-mild-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "cherry-hot",
+   "name": "Cherry Hot",
+   "labelText": "CHERRY HOT",
+   "featuredImage": "/images/new-products/cherry-hot.png",
+   "images": [
+    "/images/new-products/cherry-hot.png",
+    "/images/new-products/generated/cherry-hot-table.webp",
+    "/images/new-products/generated/cherry-hot-served.webp",
+    "/images/new-products/generated/cherry-hot-counter.webp",
+    "/images/new-products/generated/cherry-hot-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "green-apple",
+   "name": "Green Apple",
+   "labelText": "GREEN APPLE",
+   "featuredImage": "/images/new-products/green-apple.png",
+   "images": [
+    "/images/new-products/green-apple.png",
+    "/images/new-products/generated/green-apple-table.webp",
+    "/images/new-products/generated/green-apple-served.webp",
+    "/images/new-products/generated/green-apple-counter.webp",
+    "/images/new-products/generated/green-apple-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  },
+  {
+   "slug": "blueberry-mild-salsa",
+   "name": "Blueberry Mild Salsa",
+   "labelText": "BLUEBERRY SALSA",
+   "featuredImage": "/images/new-products/blueberry-mild.png",
+   "images": [
+    "/images/new-products/blueberry-mild.png",
+    "/images/new-products/generated/blueberry-mild-salsa-table.webp",
+    "/images/new-products/generated/blueberry-mild-salsa-served.webp",
+    "/images/new-products/generated/blueberry-mild-salsa-counter.webp",
+    "/images/new-products/generated/blueberry-mild-salsa-cutout.webp"
+   ],
+   "provenance": {
+    "studio": "real photograph",
+    "table/served/counter": "real photographed jar composited into AI-generated scene",
+    "cutout": "real photograph, background removed"
+   }
+  }
+ ],
+ "method": "real photographed jar composited into an AI-generated scene"
+}
