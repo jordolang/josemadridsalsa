@@ -118,6 +118,12 @@ export function FundraiserContactsTable({
   const [cappedAt, setCappedAt] = useState<{ selected: number; total: number } | null>(null)
 
   const filterKeyRef = useRef('')
+  /**
+   * Bumped by every deliberate selection change. `selectAllMatching` captures it and discards
+   * its response if it moved — otherwise clicking Clear (or unticking a row) while "Selecting…"
+   * is in flight would be undone when the response landed.
+   */
+  const selectionGeneration = useRef(0)
   const filterKey = [
     'search',
     'status',
@@ -141,6 +147,7 @@ export function FundraiserContactsTable({
   }, [filterKey])
 
   const clearSelection = useCallback(() => {
+    selectionGeneration.current += 1
     setSelected(new Set())
     setAllMatchingSelected(false)
     setCappedAt(null)
@@ -178,6 +185,7 @@ export function FundraiserContactsTable({
   )
 
   const toggleRow = useCallback((id: string) => {
+    selectionGeneration.current += 1
     setAllMatchingSelected(false)
     setCappedAt(null)
     setSelected((prev) => {
@@ -189,6 +197,7 @@ export function FundraiserContactsTable({
   }, [])
 
   const togglePage = useCallback(() => {
+    selectionGeneration.current += 1
     setAllMatchingSelected(false)
     setCappedAt(null)
     setSelected((prev) => {
@@ -238,6 +247,7 @@ export function FundraiserContactsTable({
     // response describes a view the operator has already navigated away from, and installing
     // its ids would arm the bulk buttons against rows that are no longer on screen.
     const issuedFor = filterKey
+    const generation = selectionGeneration.current
     try {
       const query = new URLSearchParams()
       for (const key of ['search', 'status', 'source', 'active', 'hasEmail', 'withHistory', 'year']) {
@@ -247,7 +257,8 @@ export function FundraiserContactsTable({
       const response = await fetch(`/api/admin/fundraiser-contacts/ids?${query.toString()}`)
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error ?? 'Could not select all matching contacts')
-      if (issuedFor !== filterKeyRef.current) return
+      // Stale on either axis: the filters moved, or the operator changed the selection by hand.
+      if (issuedFor !== filterKeyRef.current || generation !== selectionGeneration.current) return
 
       // `ok()` serializes its argument directly — there is no `data` envelope.
       const ids: string[] = body?.ids ?? []
@@ -278,8 +289,8 @@ export function FundraiserContactsTable({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ids: chunk, action }),
           })
+          const body = await response.json().catch(() => null)
           if (!response.ok) {
-            const body = await response.json().catch(() => null)
             // Chunks commit independently, so a late failure leaves earlier ones applied.
             // Saying how many landed is the difference between "nothing happened, retry" and
             // "part of your selection changed" — the operator cannot tell them apart from the
@@ -290,7 +301,9 @@ export function FundraiserContactsTable({
                 : ''
             throw new Error(`${body?.error ?? 'Bulk update failed'}.${detail}`)
           }
-          applied += chunk.length
+          // Rows can vanish between id resolution and the update, so trust the route's count
+          // rather than the size of what we asked for.
+          applied += typeof body?.updated === 'number' ? body.updated : chunk.length
         }
         router.refresh()
       } catch (err) {

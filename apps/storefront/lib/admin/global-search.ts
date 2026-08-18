@@ -9,16 +9,43 @@
  * callers.
  *
  * Query classification exists so that pasting an order number goes straight to that order
- * instead of ranking it among fuzzy name matches.
+ * instead of ranking it among fuzzy name matches. Free text, by contrast, deliberately
+ * fans out across everything the operator can see — live commerce records, the document
+ * archive, and website content — because "search a name and find every trace of it" is the
+ * whole point of the box.
  */
 
 export type SearchEntity =
+  // Live commerce and operations
   | 'order'
+  | 'return'
   | 'customer'
   | 'product'
-  | 'return'
   | 'fundraiser'
+  | 'participant'
+  | 'contact'
+  | 'user'
+  | 'supplier'
+  | 'location'
+  | 'event'
   | 'discount'
+  // Documents and files
+  | 'document'
+  | 'training'
+  | 'media'
+  | 'invoice'
+  | 'purchase-order'
+  | 'gift-certificate'
+  // Website content
+  | 'blog'
+  | 'page'
+  | 'recipe'
+  | 'campaign'
+  // Historical archive and financial data
+  | 'archived-fundraiser'
+  | 'show-sale'
+  | 'mileage'
+  | 'ledger'
 
 export interface SearchResult {
   entity: SearchEntity
@@ -28,6 +55,12 @@ export interface SearchResult {
   href: string
   /** Higher sorts first. Exact identifier matches outrank fuzzy text. */
   score: number
+  /**
+   * Where inside the record the query was found, when it was not the title — a line of the
+   * extracted document text, a note, a description. Shown so an operator can tell why a
+   * document with an unrelated filename came back.
+   */
+  excerpt?: string | null
 }
 
 export type QueryShape =
@@ -78,13 +111,51 @@ export const MATCH_SCORES = {
   sku: 80,
   nameStartsWith: 50,
   nameContains: 30,
+  /**
+   * The query was found in a body of text — extracted document text, a note, a description —
+   * rather than in anything that names the record. Below `nameContains` so a document
+   * actually called "Zanesville High" outranks one that merely mentions it.
+   */
+  bodyContains: 15,
 } as const
+
+/** Every entity the free-text fan-out covers, in the order results are grouped. */
+const ALL_ENTITIES: SearchEntity[] = [
+  'order',
+  'return',
+  'customer',
+  'product',
+  'fundraiser',
+  'participant',
+  'contact',
+  'user',
+  'supplier',
+  'location',
+  'event',
+  'discount',
+  'document',
+  'training',
+  'media',
+  'invoice',
+  'purchase-order',
+  'gift-certificate',
+  'blog',
+  'page',
+  'recipe',
+  'campaign',
+  'archived-fundraiser',
+  'show-sale',
+  'mileage',
+  'ledger',
+]
 
 /**
  * Which entities are worth querying for a given query shape.
  *
  * A pasted email should not scan product descriptions, and an order number should not
- * scan customers — narrowing here is what keeps a federated search fast.
+ * scan customers — narrowing here is what keeps a federated search fast. Free text is the
+ * exception: it scans everything, because a fundraiser name can appear in a campaign
+ * record, an archived order form, and the text of a scanned document all at once.
  */
 export function searchTargets(shape: QueryShape): SearchEntity[] {
   switch (shape) {
@@ -97,11 +168,31 @@ export function searchTargets(shape: QueryShape): SearchEntity[] {
     case 'sku':
       return ['product', 'order']
     case 'email':
-      return ['customer', 'order', 'fundraiser']
+      return [
+        'customer',
+        'order',
+        'fundraiser',
+        'participant',
+        'contact',
+        'user',
+        'supplier',
+        'gift-certificate',
+        'archived-fundraiser',
+      ]
     case 'phone':
-      return ['customer', 'order']
+      return [
+        'customer',
+        'order',
+        'fundraiser',
+        'participant',
+        'contact',
+        'user',
+        'supplier',
+        'location',
+        'archived-fundraiser',
+      ]
     case 'text':
-      return ['order', 'customer', 'product', 'fundraiser', 'discount', 'return']
+      return [...ALL_ENTITIES]
   }
 }
 
@@ -117,18 +208,32 @@ export function scoreTextMatch(field: string, query: string): number {
 }
 
 /**
+ * Pull the sentence around the first occurrence of the query out of a long body of text.
+ *
+ * Document rows carry the entire extracted text, so returning the field itself would ship
+ * megabytes to the palette. Returns null when the query is not in the text at all, which
+ * is how a caller tells a title match from a body match.
+ */
+export function extractExcerpt(text: string | null | undefined, query: string, radius = 60): string | null {
+  if (!text) return null
+  const at = text.toLowerCase().indexOf(query.trim().toLowerCase())
+  if (at === -1) return null
+
+  const start = Math.max(0, at - radius)
+  const end = Math.min(text.length, at + query.trim().length + radius)
+  const snippet = text.slice(start, end).replace(/\s+/g, ' ').trim()
+
+  return `${start > 0 ? '…' : ''}${snippet}${end < text.length ? '…' : ''}`
+}
+
+/**
  * Order results for display: score first, then entity priority so that a tie between an
  * order and a product puts the order first (staff search for orders far more often), then
  * alphabetically for stability across identical queries.
  */
-const ENTITY_PRIORITY: Record<SearchEntity, number> = {
-  order: 0,
-  return: 1,
-  customer: 2,
-  product: 3,
-  fundraiser: 4,
-  discount: 5,
-}
+const ENTITY_PRIORITY: Record<SearchEntity, number> = Object.fromEntries(
+  ALL_ENTITIES.map((entity, index) => [entity, index])
+) as Record<SearchEntity, number>
 
 export function rankResults(results: SearchResult[], limit = 20): SearchResult[] {
   return [...results]
@@ -161,7 +266,27 @@ export const ENTITY_LABELS: Record<SearchEntity, string> = {
   customer: 'Customers',
   product: 'Products',
   fundraiser: 'Fundraisers',
+  participant: 'Participants',
+  contact: 'Fundraiser contacts',
+  user: 'Users',
+  supplier: 'Suppliers',
+  location: 'Retail locations',
+  event: 'Events',
   discount: 'Discounts',
+  document: 'Archive documents',
+  training: 'Training documents',
+  media: 'Media',
+  invoice: 'Invoices',
+  'purchase-order': 'Purchase orders',
+  'gift-certificate': 'Gift certificates',
+  blog: 'Blog posts',
+  page: 'Pages',
+  recipe: 'Recipes',
+  campaign: 'Email campaigns',
+  'archived-fundraiser': 'Archived fundraisers',
+  'show-sale': 'Show sales',
+  mileage: 'Mileage',
+  ledger: 'Ledger entries',
 }
 
 /** Shortest query worth running. Below this every list in the admin would match. */

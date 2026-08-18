@@ -1,24 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { sendSolicitations } from '@/lib/fundraising/solicit'
+import { resolveRecipients, sendSolicitations } from '@/lib/fundraising/solicit'
 import prisma from '@/lib/prisma'
 import { sendEmail } from '@/lib/email/sender'
-import { checkSuppression } from '@/lib/email/suppression'
 
 vi.mock('@/lib/prisma', () => {
   const client = {
     fundraiserContact: { findMany: vi.fn(), update: vi.fn() },
     fundraiserOutreachLog: { create: vi.fn() },
+    emailSuppression: { findMany: vi.fn() },
+    unsubscribePreference: { findMany: vi.fn() },
   }
   return { default: client, prisma: client }
 })
 
 vi.mock('@/lib/email/sender', () => ({ sendEmail: vi.fn() }))
-vi.mock('@/lib/email/suppression', () => ({ checkSuppression: vi.fn() }))
 
 const mockPrisma = prisma as unknown as {
   fundraiserContact: { findMany: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> }
   fundraiserOutreachLog: { create: ReturnType<typeof vi.fn> }
+  emailSuppression: { findMany: ReturnType<typeof vi.fn> }
+  unsubscribePreference: { findMany: ReturnType<typeof vi.fn> }
 }
 
 function contact(overrides: Record<string, unknown> = {}) {
@@ -45,7 +47,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockPrisma.fundraiserContact.update.mockResolvedValue({})
   mockPrisma.fundraiserOutreachLog.create.mockResolvedValue({})
-  vi.mocked(checkSuppression).mockResolvedValue(false)
+  mockPrisma.emailSuppression.findMany.mockResolvedValue([])
+  mockPrisma.unsubscribePreference.findMany.mockResolvedValue([])
   vi.mocked(sendEmail).mockResolvedValue({ success: true, messageId: 'msg_1' })
 })
 
@@ -100,7 +103,7 @@ describe('sendSolicitations', () => {
 
   it('skips a suppressed address without mailing it', async () => {
     mockPrisma.fundraiserContact.findMany.mockResolvedValue([contact()])
-    vi.mocked(checkSuppression).mockResolvedValue(true)
+    mockPrisma.emailSuppression.findMany.mockResolvedValue([{ email: 'pat@anderson.org' }])
 
     const result = await sendSolicitations({ contactIds: ['c1'] })
 
@@ -122,7 +125,8 @@ describe('sendSolicitations', () => {
     expect(result.sent).toBe(1)
     expect(result.skippedDuplicate).toBe(1)
     expect(sendEmail).toHaveBeenCalledOnce()
-    expect(loggedStatuses()).toEqual(['SENT', 'SKIPPED_SUPPRESSED'])
+    // Skips are recorded up front, sends as they complete, so compare as a set.
+    expect(loggedStatuses().sort()).toEqual(['SENT', 'SKIPPED_SUPPRESSED'])
   })
 
   it('matches addresses case-insensitively when deduplicating', async () => {
@@ -202,5 +206,77 @@ describe('sendSolicitations', () => {
     const result = await sendSolicitations({ contactIds: ['c1'] })
 
     expect(result.sent).toBe(1)
+  })
+})
+
+
+describe('resolveRecipients', () => {
+  it('collapses a coordinator who runs two organizations to one recipient', async () => {
+    mockPrisma.fundraiserContact.findMany.mockResolvedValue([
+      contact({ id: 'c1', organizationName: 'Avon HS Crew' }),
+      contact({ id: 'c2', organizationName: 'Avon MS Choir' }),
+    ])
+
+    const resolution = await resolveRecipients(['c1', 'c2'])
+
+    expect(resolution.recipients).toHaveLength(1)
+    expect(resolution.skipped.filter((s) => s.reason === 'DUPLICATE')).toHaveLength(1)
+  })
+
+  it('resolves the whole selection at once, so chunked sends cannot duplicate an address', async () => {
+    // The regression this exists for: with per-request dedup, c1 and c2 landing in different
+    // send chunks would each be mailed. Resolution happens once, over every id, so the
+    // duplicate is removed before any chunking occurs.
+    mockPrisma.fundraiserContact.findMany.mockResolvedValue([
+      contact({ id: 'c1', email: 'shared@example.com' }),
+      contact({ id: 'c2', email: 'SHARED@example.com' }),
+      contact({ id: 'c3', email: 'other@example.com' }),
+    ])
+
+    const resolution = await resolveRecipients(['c1', 'c2', 'c3'])
+    const emails = resolution.recipients.map((r) => r.email)
+
+    expect(new Set(emails).size).toBe(emails.length)
+    expect(emails).toEqual(['shared@example.com', 'other@example.com'])
+  })
+
+  it('counts ids the eligibility query dropped', async () => {
+    mockPrisma.fundraiserContact.findMany.mockResolvedValue([contact({ id: 'c1' })])
+
+    const resolution = await resolveRecipients(['c1', 'c2', 'c3'])
+
+    expect(resolution.requested).toBe(3)
+    expect(resolution.skipped.filter((s) => s.reason === 'INELIGIBLE')).toHaveLength(2)
+  })
+
+  it('looks suppression up in batch rather than per address', async () => {
+    mockPrisma.fundraiserContact.findMany.mockResolvedValue([
+      contact({ id: 'c1', email: 'a@example.com' }),
+      contact({ id: 'c2', email: 'b@example.com' }),
+      contact({ id: 'c3', email: 'c@example.com' }),
+    ])
+    mockPrisma.emailSuppression.findMany.mockResolvedValue([{ email: 'b@example.com' }])
+    mockPrisma.unsubscribePreference.findMany.mockResolvedValue([{ email: 'c@example.com' }])
+
+    const resolution = await resolveRecipients(['c1', 'c2', 'c3'])
+
+    expect(mockPrisma.emailSuppression.findMany).toHaveBeenCalledOnce()
+    expect(mockPrisma.unsubscribePreference.findMany).toHaveBeenCalledOnce()
+    expect(resolution.recipients.map((r) => r.email)).toEqual(['a@example.com'])
+    expect(resolution.skipped.filter((s) => s.reason === 'SUPPRESSED')).toHaveLength(2)
+  })
+
+  it('keeps the same row of a duplicate pair on repeated resolutions', async () => {
+    // The preflight and the send resolve separately; if they disagreed on which row to keep,
+    // the ids handed back would not match the ids that get mailed.
+    mockPrisma.fundraiserContact.findMany.mockResolvedValue([
+      contact({ id: 'c1', email: 'shared@example.com' }),
+      contact({ id: 'c2', email: 'shared@example.com' }),
+    ])
+
+    const first = await resolveRecipients(['c1', 'c2'])
+    const second = await resolveRecipients(['c2', 'c1'])
+
+    expect(first.recipients[0].contactId).toBe(second.recipients[0].contactId)
   })
 })

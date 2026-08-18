@@ -118,13 +118,19 @@ Safeguards, in order:
 3. Inactive contacts and anyone marked `DO_NOT_CONTACT` are excluded by the query.
 4. Every address is checked against `EmailSuppression` and `UnsubscribePreference` at send
    time.
-5. Addresses are deduplicated within the batch — `FundraiserContact.email` is not unique,
-   because one coordinator can legitimately run two groups.
+5. Addresses are deduplicated across the **whole selection**, not per request.
+   `POST /solicit/preview` resolves eligibility once — it sends nothing, so it can answer for
+   the entire list in one call — and returns the deduplicated ids the dialog then sends in
+   chunks. Deduplicating per chunk instead would mail a coordinator who runs two groups twice,
+   once for each chunk their rows landed in. `FundraiserContact.email` is not unique on
+   purpose, so this is a real case, not a theoretical one.
 6. Sends are paced to stay under the mail provider's rate limit, and the client sends at most
    200 contacts per request. A whole-database selection would otherwise run for twenty minutes
    in a single request and be killed part-way through with no record of who had been mailed.
-   Progress is shown as chunks complete, and a failure part-way reports how many invitations
-   already went out.
+   Progress is shown as chunks complete. A failure part-way through is terminal — it reports
+   how many invitations went out and how many did not, and asks the operator to re-select the
+   uninvited contacts. It deliberately does not offer a retry, because retrying from the first
+   chunk would mail everyone who already received one.
 
 Every contact produces a `FundraiserOutreachLog` row, including the skips. A suppressed
 address needs to read as *deliberately not mailed*, not as an absence that invites a retry.
