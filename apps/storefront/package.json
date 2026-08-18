@@ -25,6 +25,7 @@
     "db:seed:cms": "tsx scripts/seed-cms-demo.ts",
     "ledger:backfill": "tsx scripts/backfill-ledger.ts",
     "db:cleanup:fundraiser": "tsx scripts/cleanup-fundraiser-demo.ts",
+    "fundraisers:build-contacts": "tsx scripts/build-fundraiser-contacts.ts",
     "locations:import": "tsx scripts/import-locations-from-markdown.ts",
     "locations:verify": "tsx scripts/verify-locations.ts",
     "locations:photos": "node scripts/generate-location-photos.cjs",

@@ -242,6 +242,11 @@ export const adminNavigation: NavItem[] = [
         permission: 'orders:write',
       },
       {
+        label: 'Contact Database',
+        href: '/admin/fundraisers/contacts',
+        permission: 'users:read',
+      },
+      {
         label: 'Import Fundraisers',
         href: '/admin/fundraisers/import',
         permission: 'content:write',
