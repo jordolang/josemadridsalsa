@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -35,11 +35,15 @@ interface SolicitResult {
  * without noticing that the filter was wrong.
  */
 export function SolicitContactsDialog({
-  contacts,
+  contactIds,
+  previewContacts,
   onClose,
   onSent,
 }: {
-  contacts: FundraiserContactRow[]
+  /** Every selected contact, which may extend far beyond the loaded page. */
+  contactIds: string[]
+  /** The subset whose rows are loaded, used only to show the operator concrete examples. */
+  previewContacts: FundraiserContactRow[]
   onClose: () => void
   onSent: () => void
 }) {
@@ -47,13 +51,41 @@ export function SolicitContactsDialog({
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<SolicitResult | null>(null)
+  const [preflight, setPreflight] = useState<SolicitResult | null>(null)
 
-  // One coordinator can appear under two organizations; the send path mails each address
-  // once, so show the number of people who will actually receive mail.
-  const uniqueAddresses = new Set(
-    contacts.map((c) => c.email?.toLowerCase()).filter(Boolean) as string[],
-  )
-  const previously = contacts.filter((c) => c.solicitationCount > 0).length
+  /**
+   * Resolves the real recipient count before anything is sent.
+   *
+   * The selection can cover thousands of rows the client never loaded, so counting the
+   * loaded ones would understate — or badly overstate — what is about to go out. The dry run
+   * applies the same filtering the send does (inactive, do-not-contact, suppressed,
+   * unsubscribed, duplicate addresses) and writes nothing.
+   */
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const response = await fetch('/api/admin/fundraiser-contacts/solicit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contactIds, dryRun: true }),
+        })
+        const body = await response.json().catch(() => null)
+        if (!response.ok) throw new Error(body?.error ?? 'Could not resolve the recipient list')
+        if (!cancelled) setPreflight(body?.data?.result ?? null)
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Could not resolve the recipient list')
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [contactIds])
+
+  const recipientCount = preflight?.sent ?? null
+  const previously = previewContacts.filter((c) => c.solicitationCount > 0).length
 
   async function send() {
     setSending(true)
@@ -62,10 +94,7 @@ export function SolicitContactsDialog({
       const response = await fetch('/api/admin/fundraiser-contacts/solicit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contactIds: contacts.map((c) => c.id),
-          confirm: true,
-        }),
+        body: JSON.stringify({ contactIds, confirm: true }),
       })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error ?? 'Send failed')
@@ -116,7 +145,11 @@ export function SolicitContactsDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Invite {uniqueAddresses.size.toLocaleString()} contacts to sign up</DialogTitle>
+          <DialogTitle>
+            {recipientCount === null
+              ? 'Checking who will receive this…'
+              : `Invite ${recipientCount.toLocaleString()} contacts to sign up`}
+          </DialogTitle>
           <DialogDescription>
             Each one gets a personalized email referencing their past campaigns, with a link to
             start a new fundraiser and a working unsubscribe link.
@@ -129,12 +162,20 @@ export function SolicitContactsDialog({
             <div>
               <p className="font-medium">This sends real email and cannot be undone.</p>
               <p className="text-muted-foreground mt-1 text-xs">
-                Addresses that have unsubscribed or been suppressed are skipped automatically.
+                {contactIds.length.toLocaleString()} contacts are selected
+                {preflight &&
+                  `; ${(
+                    preflight.skippedSuppressed +
+                    preflight.skippedNoEmail +
+                    preflight.skippedDuplicate
+                  ).toLocaleString()} will be skipped as unsubscribed, suppressed, duplicate, or
+                  address-less`}
+                .
                 {previously > 0 && (
                   <>
                     {' '}
                     <span className="font-medium">
-                      {previously.toLocaleString()} of these have been invited before.
+                      At least {previously.toLocaleString()} have been invited before.
                     </span>
                   </>
                 )}
@@ -143,15 +184,19 @@ export function SolicitContactsDialog({
           </div>
 
           <div className="max-h-40 overflow-y-auto rounded-md border p-2 text-xs">
-            {contacts.slice(0, 25).map((c) => (
+            {previewContacts.slice(0, 25).map((c) => (
               <p key={c.id} className="truncate">
                 <span className="font-medium">{c.organizationName}</span>{' '}
                 <span className="text-muted-foreground">{c.email}</span>
               </p>
             ))}
-            {contacts.length > 25 && (
+            {contactIds.length > Math.min(previewContacts.length, 25) && (
               <p className="text-muted-foreground mt-1">
-                …and {(contacts.length - 25).toLocaleString()} more
+                …and{' '}
+                {(
+                  contactIds.length - Math.min(previewContacts.length, 25)
+                ).toLocaleString()}{' '}
+                more not shown
               </p>
             )}
           </div>
@@ -163,8 +208,8 @@ export function SolicitContactsDialog({
               onCheckedChange={(checked) => setAcknowledged(checked === true)}
             />
             <Label htmlFor="acknowledge" className="text-sm leading-snug font-normal">
-              I have reviewed this list and want to email these {uniqueAddresses.size.toLocaleString()}{' '}
-              people.
+              I have reviewed this list and want to email these{' '}
+              {(recipientCount ?? 0).toLocaleString()} people.
             </Label>
           </div>
 
@@ -175,8 +220,13 @@ export function SolicitContactsDialog({
           <Button variant="outline" onClick={onClose} disabled={sending}>
             Cancel
           </Button>
-          <Button onClick={send} disabled={!acknowledged || sending || contacts.length === 0}>
-            {sending ? 'Sending…' : `Send ${uniqueAddresses.size.toLocaleString()} invitations`}
+          <Button
+            onClick={send}
+            disabled={!acknowledged || sending || !recipientCount}
+          >
+            {sending
+              ? 'Sending…'
+              : `Send ${(recipientCount ?? 0).toLocaleString()} invitations`}
           </Button>
         </DialogFooter>
       </DialogContent>

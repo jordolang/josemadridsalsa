@@ -6,9 +6,11 @@
  *   1. Nothing is sent without an explicit list of contact ids from the admin. There is no
  *      "send to everyone" path and no scheduled trigger — a mistake here mails hundreds of
  *      real people and cannot be recalled.
- *   2. Every contact produces a `FundraiserOutreachLog` row, including the skips. A contact
- *      that was suppressed needs to read as "we deliberately did not mail this one", not as
- *      an absence that invites a retry.
+ *   2. Every real attempt produces a `FundraiserOutreachLog` row, including the skips. A
+ *      contact that was suppressed needs to read as "we deliberately did not mail this one",
+ *      not as an absence that invites a retry. A `dryRun` writes nothing at all — it is a
+ *      preflight the admin dialog runs to count recipients, and logging it would leave a
+ *      record of sends that never happened.
  *   3. Addresses are deduplicated before sending. `FundraiserContact.email` is not unique —
  *      one coordinator can run two groups — and mailing the same person twice in one batch is
  *      the fastest way to earn a spam complaint.
@@ -88,9 +90,11 @@ export async function sendSolicitations(options: SolicitOptions): Promise<Solici
     const email = contact.email?.trim().toLowerCase()
     if (!email) {
       result.skippedNoEmail += 1
-      await logOutreach(contact.id, '', 'SKIPPED_NO_EMAIL', sentById, {
-        error: 'Contact has no email address',
-      })
+      if (!dryRun) {
+        await logOutreach(contact.id, '', 'SKIPPED_NO_EMAIL', sentById, {
+          error: 'Contact has no email address',
+        })
+      }
       continue
     }
 
@@ -98,18 +102,22 @@ export async function sendSolicitations(options: SolicitOptions): Promise<Solici
       // Logged as suppressed-for-duplicate rather than silently dropped, so the second group
       // run by the same coordinator still shows why it was not mailed.
       result.skippedDuplicate += 1
-      await logOutreach(contact.id, email, 'SKIPPED_SUPPRESSED', sentById, {
-        error: 'Duplicate address already mailed in this batch',
-      })
+      if (!dryRun) {
+        await logOutreach(contact.id, email, 'SKIPPED_SUPPRESSED', sentById, {
+          error: 'Duplicate address already mailed in this batch',
+        })
+      }
       continue
     }
     seen.add(email)
 
     if (await checkSuppression(email)) {
       result.skippedSuppressed += 1
-      await logOutreach(contact.id, email, 'SKIPPED_SUPPRESSED', sentById, {
-        error: 'Address is suppressed or unsubscribed',
-      })
+      if (!dryRun) {
+        await logOutreach(contact.id, email, 'SKIPPED_SUPPRESSED', sentById, {
+          error: 'Address is suppressed or unsubscribed',
+        })
+      }
       continue
     }
 
