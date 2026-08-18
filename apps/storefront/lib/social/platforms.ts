@@ -2,7 +2,7 @@ import type { ShopPlatform, SocialMediaPlatform } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { encryptSecret, decryptSecret } from '@/lib/crypto'
 import { getProviderCredentials, type SocialProvider } from './credentials'
-import { FACEBOOK_OAUTH_SCOPES } from './scopes'
+import { FACEBOOK_OAUTH_SCOPES, FACEBOOK_PAGE_SCOPES } from './scopes'
 
 /** Map a publishing platform to the credential provider that powers it. */
 export function platformToProvider(platform: SocialMediaPlatform): SocialProvider {
@@ -186,7 +186,11 @@ export async function getOAuthUrl(
     case 'FACEBOOK':
     case 'INSTAGRAM': {
       if (!creds) throw new Error('Facebook is not configured. Add your Facebook App ID and Secret in the admin panel (Social → Accounts → Facebook → Show setup steps).')
-      const scopes = FACEBOOK_OAUTH_SCOPES.join(',')
+      // A Page-only reconnect must not request Instagram scopes. Meta rejects
+      // unapproved Instagram permissions as invalid and aborts the entire login.
+      const requestedScopes =
+        platform === 'FACEBOOK' ? FACEBOOK_PAGE_SCOPES : FACEBOOK_OAUTH_SCOPES
+      const scopes = requestedScopes.join(',')
       return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${creds.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&response_type=code`
     }
     case 'TWITTER': {

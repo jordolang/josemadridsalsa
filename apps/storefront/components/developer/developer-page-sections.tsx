@@ -96,8 +96,8 @@ export function DeveloperPageSections({ changelogVersions, content }: DeveloperP
                   </div>
                   <h3 className="text-lg font-bold text-foreground mb-2">100% Free</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Real fair-market value: $250K–$750K+ if commissioned from a US firm.
-                    Delivered at no cost — as originally promised.
+                    Replacing it would run somewhere under $30,000. Delivered at no cost — as
+                    originally promised.
                   </p>
                 </div>
               </DeveloperScrollSection>
