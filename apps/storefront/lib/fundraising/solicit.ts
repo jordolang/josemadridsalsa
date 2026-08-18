@@ -29,12 +29,22 @@ import {
 const DELAY_MS = 600
 
 export interface SolicitResult {
+  /** Ids handed in by the caller, before any filtering. */
+  requested: number
   attempted: number
   sent: number
   failed: number
   skippedSuppressed: number
   skippedNoEmail: number
   skippedDuplicate: number
+  /**
+   * Selected contacts the query excluded outright — inactive, or marked do-not-contact.
+   *
+   * Counted rather than left implicit: the query drops these before the loop sees them, so
+   * without this the dialog would report "0 skipped" while silently discarding most of a
+   * selection, and an operator would read that as "everything I picked is being mailed".
+   */
+  skippedIneligible: number
   errors: { organizationName: string; email: string; error: string }[]
 }
 
@@ -54,12 +64,14 @@ export async function sendSolicitations(options: SolicitOptions): Promise<Solici
   const { contactIds, sentById = null, dryRun = false } = options
 
   const result: SolicitResult = {
+    requested: contactIds.length,
     attempted: 0,
     sent: 0,
     failed: 0,
     skippedSuppressed: 0,
     skippedNoEmail: 0,
     skippedDuplicate: 0,
+    skippedIneligible: 0,
     errors: [],
   }
 
@@ -81,6 +93,9 @@ export async function sendSolicitations(options: SolicitOptions): Promise<Solici
       status: true,
     },
   })
+
+  // Whatever the id list asked for but the eligibility query did not return.
+  result.skippedIneligible = new Set(contactIds).size - contacts.length
 
   const seen = new Set<string>()
 

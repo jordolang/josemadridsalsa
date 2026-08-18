@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowDown,
@@ -76,6 +76,9 @@ const SOURCE_LABELS: Record<string, string> = {
 /** Matches the `ids` array cap on POST /api/admin/fundraiser-contacts/bulk, with headroom. */
 const BULK_CHUNK = 1000
 
+/** Mirrors MAX_IDS in GET /api/admin/fundraiser-contacts/ids. */
+const SELECTION_CAP = 10_000
+
 interface Props {
   contacts: FundraiserContactRow[]
   sortBy: ContactSortColumn
@@ -106,7 +109,15 @@ export function FundraiserContactsTable({
   const [bulkBusy, setBulkBusy] = useState(false)
   // True once the selection was expanded past the visible page, so the banner can say so.
   const [allMatchingSelected, setAllMatchingSelected] = useState(false)
+  /**
+   * Set when the server could not return every matching id. A capped selection is *not*
+   * "everything matching", and saying so would let an operator run a bulk action believing it
+   * covered rows it never touched — so this survives alongside the selection rather than
+   * living in the transient error slot.
+   */
+  const [cappedAt, setCappedAt] = useState<{ selected: number; total: number } | null>(null)
 
+  const filterKeyRef = useRef('')
   const filterKey = [
     'search',
     'status',
@@ -123,13 +134,16 @@ export function FundraiserContactsTable({
   // a filter change: the ticked rows would no longer be on screen while the send button still
   // offered to mail them.
   useEffect(() => {
+    filterKeyRef.current = filterKey
     setSelected(new Set())
     setAllMatchingSelected(false)
+    setCappedAt(null)
   }, [filterKey])
 
   const clearSelection = useCallback(() => {
     setSelected(new Set())
     setAllMatchingSelected(false)
+    setCappedAt(null)
   }, [])
 
   const pageIds = useMemo(() => contacts.map((c) => c.id), [contacts])
@@ -165,6 +179,7 @@ export function FundraiserContactsTable({
 
   const toggleRow = useCallback((id: string) => {
     setAllMatchingSelected(false)
+    setCappedAt(null)
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -175,6 +190,7 @@ export function FundraiserContactsTable({
 
   const togglePage = useCallback(() => {
     setAllMatchingSelected(false)
+    setCappedAt(null)
     setSelected((prev) => {
       const next = new Set(prev)
       const selectAll = !pageIds.every((id) => next.has(id))
@@ -218,6 +234,10 @@ export function FundraiserContactsTable({
   const selectAllMatching = useCallback(async () => {
     setBulkBusy(true)
     setError(null)
+    // The filters this request was issued for. If they change while it is in flight, the
+    // response describes a view the operator has already navigated away from, and installing
+    // its ids would arm the bulk buttons against rows that are no longer on screen.
+    const issuedFor = filterKey
     try {
       const query = new URLSearchParams()
       for (const key of ['search', 'status', 'source', 'active', 'hasEmail', 'withHistory', 'year']) {
@@ -227,21 +247,19 @@ export function FundraiserContactsTable({
       const response = await fetch(`/api/admin/fundraiser-contacts/ids?${query.toString()}`)
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error ?? 'Could not select all matching contacts')
+      if (issuedFor !== filterKeyRef.current) return
 
-      const ids: string[] = body?.data?.ids ?? []
+      // `ok()` serializes its argument directly — there is no `data` envelope.
+      const ids: string[] = body?.ids ?? []
       setSelected(new Set(ids))
       setAllMatchingSelected(true)
-      if (body?.data?.truncated) {
-        setError(
-          `Selection capped at ${ids.length.toLocaleString()} contacts. Narrow the filters to cover the rest.`,
-        )
-      }
+      setCappedAt(body?.truncated ? { selected: ids.length, total: body?.total ?? ids.length } : null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not select all matching contacts')
     } finally {
       setBulkBusy(false)
     }
-  }, [searchParams])
+  }, [searchParams, filterKey])
 
   const runBulk = useCallback(
     async (action: 'activate' | 'deactivate') => {
@@ -252,20 +270,33 @@ export function FundraiserContactsTable({
         // The bulk route caps ids per request; a whole-set selection can exceed that, so send
         // it in chunks rather than letting the request bounce.
         const ids = [...selected]
+        let applied = 0
         for (let i = 0; i < ids.length; i += BULK_CHUNK) {
+          const chunk = ids.slice(i, i + BULK_CHUNK)
           const response = await fetch('/api/admin/fundraiser-contacts/bulk', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids: ids.slice(i, i + BULK_CHUNK), action }),
+            body: JSON.stringify({ ids: chunk, action }),
           })
           if (!response.ok) {
             const body = await response.json().catch(() => null)
-            throw new Error(body?.error ?? 'Bulk update failed')
+            // Chunks commit independently, so a late failure leaves earlier ones applied.
+            // Saying how many landed is the difference between "nothing happened, retry" and
+            // "part of your selection changed" — the operator cannot tell them apart from the
+            // table alone.
+            const detail =
+              applied > 0
+                ? ` ${applied.toLocaleString()} of ${ids.length.toLocaleString()} contacts were already updated before this failed.`
+                : ''
+            throw new Error(`${body?.error ?? 'Bulk update failed'}.${detail}`)
           }
+          applied += chunk.length
         }
         router.refresh()
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Bulk update failed')
+        // Some chunks may have committed; re-read so the rows on screen match the database.
+        router.refresh()
       } finally {
         setBulkBusy(false)
       }
@@ -340,7 +371,7 @@ export function FundraiserContactsTable({
           {canSend && (
             <Button
               size="sm"
-              disabled={selected.size === 0}
+              disabled={selected.size === 0 || bulkBusy}
               onClick={() => setSolicitOpen(true)}
             >
               <Mail className="mr-2 h-4 w-4" />
@@ -365,15 +396,39 @@ export function FundraiserContactsTable({
           className="bg-muted/50 flex flex-wrap items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm"
         >
           {allMatchingSelected ? (
-            <>
-              <span>
-                All <span className="font-medium">{selected.size.toLocaleString()}</span> contacts
-                matching these filters are selected.
-              </span>
-              <Button variant="link" size="sm" className="h-auto px-1 py-0" onClick={clearSelection}>
-                Clear selection
-              </Button>
-            </>
+            cappedAt ? (
+              <>
+                <span className="text-amber-700 dark:text-amber-500">
+                  Only the first{' '}
+                  <span className="font-medium">{cappedAt.selected.toLocaleString()}</span> of{' '}
+                  {cappedAt.total.toLocaleString()} matching contacts are selected — this list is
+                  capped. Narrow the filters to reach the rest.
+                </span>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto px-1 py-0"
+                  onClick={clearSelection}
+                >
+                  Clear selection
+                </Button>
+              </>
+            ) : (
+              <>
+                <span>
+                  All <span className="font-medium">{selected.size.toLocaleString()}</span> contacts
+                  matching these filters are selected.
+                </span>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto px-1 py-0"
+                  onClick={clearSelection}
+                >
+                  Clear selection
+                </Button>
+              </>
+            )
           ) : (
             <>
               <span>
@@ -388,7 +443,8 @@ export function FundraiserContactsTable({
               >
                 {bulkBusy
                   ? 'Selecting…'
-                  : `Select all ${totalMatching.toLocaleString()} matching these filters`}
+                  : /* Never advertise more than the endpoint will return. */
+                    `Select all ${Math.min(totalMatching, SELECTION_CAP).toLocaleString()} matching these filters`}
               </Button>
             </>
           )}

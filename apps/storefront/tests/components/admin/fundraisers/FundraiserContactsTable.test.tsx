@@ -67,7 +67,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.stubGlobal(
     'fetch',
-    vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: {} }) }),
+    vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }),
   )
 })
 
@@ -192,8 +192,8 @@ describe('selecting every contact matching the filters', () => {
         ok: true,
         json: async () =>
           String(url).startsWith('/api/admin/fundraiser-contacts/ids')
-            ? { data: { ids: beyondPage, total: 500, truncated: false } }
-            : { data: {} },
+            ? { ids: beyondPage, total: 500, truncated: false }
+            : {},
       }) as unknown as Promise<Response>,
     )
 
@@ -220,8 +220,8 @@ describe('selecting every contact matching the filters', () => {
         ok: true,
         json: async () =>
           String(url).startsWith('/api/admin/fundraiser-contacts/ids')
-            ? { data: { ids: many, total: 2082, truncated: false } }
-            : { data: {} },
+            ? { ids: many, total: 2082, truncated: false }
+            : {},
       }) as unknown as Promise<Response>,
     )
 
@@ -246,16 +246,22 @@ describe('selecting every contact matching the filters', () => {
         ok: true,
         json: async () =>
           String(url).startsWith('/api/admin/fundraiser-contacts/ids')
-            ? { data: { ids: ['a', 'b'], total: 99999, truncated: true } }
-            : { data: {} },
+            ? { ids: ['a', 'b'], total: 99999, truncated: true }
+            : {},
       }) as unknown as Promise<Response>,
     )
 
     renderTable({ totalMatching: 99999 })
     await user.click(selectAllCheckbox())
-    await user.click(screen.getByRole('button', { name: /select all 99,999/i }))
+    // The offer is clamped to what the endpoint can actually return, not totalMatching.
+    await user.click(screen.getByRole('button', { name: /select all 10,000/i }))
 
-    expect(screen.getByText(/selection capped at 2 contacts/i)).toBeInTheDocument()
+    expect(screen.getByTestId('selection-banner')).toHaveTextContent(
+      /only the first\s*2\s*of 99,999 matching contacts are selected/i,
+    )
+    expect(screen.queryByTestId('selection-banner')).not.toHaveTextContent(
+      /all .* matching these filters are selected/i,
+    )
   })
 
   it('drops the widened selection when a row is individually unticked', async () => {
@@ -265,8 +271,8 @@ describe('selecting every contact matching the filters', () => {
         ok: true,
         json: async () =>
           String(url).startsWith('/api/admin/fundraiser-contacts/ids')
-            ? { data: { ids: ['c1', 'c2', 'c3', 'x1'], total: 4, truncated: false } }
-            : { data: {} },
+            ? { ids: ['c1', 'c2', 'c3', 'x1'], total: 4, truncated: false }
+            : {},
       }) as unknown as Promise<Response>,
     )
 
@@ -280,5 +286,76 @@ describe('selecting every contact matching the filters', () => {
     await user.click(screen.getByRole('checkbox', { name: /select anderson hs band/i }))
 
     expect(screen.queryByTestId('selection-banner')).not.toBeInTheDocument()
+  })
+})
+
+
+describe('guards against acting on the wrong rows', () => {
+  it('reads ids from the response body the API actually returns', async () => {
+    const user = userEvent.setup()
+    // Mirrors `ok({ ids, total, truncated })` -> NextResponse.json(...), i.e. no envelope.
+    vi.mocked(fetch).mockImplementation((url) =>
+      Promise.resolve({
+        ok: true,
+        json: async () =>
+          String(url).startsWith('/api/admin/fundraiser-contacts/ids')
+            ? { ids: ['c1', 'c2', 'c3', 'x1', 'x2'], total: 5, truncated: false }
+            : {},
+      }) as unknown as Promise<Response>,
+    )
+
+    renderTable({ totalMatching: 5 })
+    await user.click(selectAllCheckbox())
+    await user.click(screen.getByRole('button', { name: /select all 5/i }))
+
+    expect(screen.getByTestId('selection-count')).toHaveTextContent('5')
+    expect(screen.getByRole('button', { name: /set 5 inactive/i })).toBeInTheDocument()
+  })
+
+  it('reports how many contacts were already updated when a later chunk fails', async () => {
+    const user = userEvent.setup()
+    const many = Array.from({ length: 2082 }, (_, i) => `x${i}`)
+    let bulkCalls = 0
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).startsWith('/api/admin/fundraiser-contacts/ids')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ ids: many, total: 2082, truncated: false }),
+        }) as unknown as Promise<Response>
+      }
+      bulkCalls += 1
+      // First chunk commits, second fails.
+      return Promise.resolve({
+        ok: bulkCalls === 1,
+        json: async () => ({ error: 'Bulk update failed' }),
+      }) as unknown as Promise<Response>
+    })
+
+    renderTable({ totalMatching: 2082 })
+    await user.click(selectAllCheckbox())
+    await user.click(screen.getByRole('button', { name: /select all 2,082/i }))
+    await user.click(screen.getByRole('button', { name: /set 2,082 inactive/i }))
+
+    expect(screen.getByText(/1,000 of 2,082 contacts were already updated/i)).toBeInTheDocument()
+  })
+
+  it('does not invite while a bulk update is still changing the same rows', async () => {
+    const user = userEvent.setup()
+    let releaseBulk: (() => void) | null = null
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).startsWith('/api/admin/fundraiser-contacts/bulk')) {
+        return new Promise((resolve) => {
+          releaseBulk = () => resolve({ ok: true, json: async () => ({}) } as Response)
+        })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) }) as unknown as Promise<Response>
+    })
+
+    renderTable()
+    await user.click(selectAllCheckbox())
+    await user.click(screen.getByRole('button', { name: /set 3 inactive/i }))
+
+    expect(screen.getByRole('button', { name: /invite 3 selected/i })).toBeDisabled()
+    releaseBulk?.()
   })
 })
