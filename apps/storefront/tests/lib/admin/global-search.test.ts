@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
   classifyQuery,
   digitsOnly,
+  ENTITY_LABELS,
+  extractExcerpt,
   groupResults,
   isSearchable,
   MATCH_SCORES,
@@ -91,8 +93,83 @@ describe('searchTargets', () => {
     )
   })
 
+  it('reaches documents and archive data for free text', () => {
+    // The whole point of the box: a fundraiser name should turn up the scanned order form
+    // as well as the live campaign.
+    expect(searchTargets('text')).toEqual(
+      expect.arrayContaining([
+        'document',
+        'training',
+        'media',
+        'contact',
+        'archived-fundraiser',
+        'show-sale',
+        'ledger',
+        'blog',
+        'page',
+        'recipe',
+      ])
+    )
+  })
+
   it('does not scan products for an email', () => {
     expect(searchTargets('email')).not.toContain('product')
+  })
+
+  it('does not scan document text for an email or phone number', () => {
+    // Scanning every extracted document body for a pasted phone number would be the most
+    // expensive query in the app and would never match anything useful.
+    expect(searchTargets('email')).not.toContain('document')
+    expect(searchTargets('phone')).not.toContain('document')
+  })
+
+  it('reaches the fundraiser contact database for an email and a phone number', () => {
+    expect(searchTargets('email')).toContain('contact')
+    expect(searchTargets('phone')).toContain('contact')
+  })
+
+  it('labels every entity it can return', () => {
+    for (const entity of searchTargets('text')) {
+      expect(ENTITY_LABELS[entity]).toBeTruthy()
+    }
+  })
+})
+
+describe('extractExcerpt', () => {
+  const text = 'The Zanesville High School band sold 240 jars of salsa in the autumn campaign.'
+
+  it('returns the text around the match', () => {
+    const excerpt = extractExcerpt(text, 'band')
+    expect(excerpt).toContain('band')
+  })
+
+  it('is case-insensitive', () => {
+    expect(extractExcerpt(text, 'ZANESVILLE')).toContain('Zanesville')
+  })
+
+  it('returns null when the query is not in the text', () => {
+    // Callers use null to tell a title match from a body match, so a miss must not
+    // return a snippet of unrelated text.
+    expect(extractExcerpt(text, 'Lancaster')).toBeNull()
+  })
+
+  it('returns null for missing text rather than throwing', () => {
+    expect(extractExcerpt(null, 'anything')).toBeNull()
+    expect(extractExcerpt(undefined, 'anything')).toBeNull()
+  })
+
+  it('marks a trimmed excerpt with ellipses', () => {
+    const long = `${'x'.repeat(500)} needle ${'y'.repeat(500)}`
+    const excerpt = extractExcerpt(long, 'needle')
+    expect(excerpt?.startsWith('…')).toBe(true)
+    expect(excerpt?.endsWith('…')).toBe(true)
+    expect(excerpt!.length).toBeLessThan(200)
+  })
+
+  it('collapses whitespace so a snippet stays on one line', () => {
+    expect(extractExcerpt('order   form\n\n  for Maysville', 'Maysville')).toBe(
+      'order form for Maysville'
+    )
   })
 })
 
@@ -123,6 +200,15 @@ describe('rankResults', () => {
       result({ id: 'high', score: 100 }),
     ])
     expect(ranked.map((r) => r.id)).toEqual(['high', 'low'])
+  })
+
+  it('ranks a title match above a match found in document text', () => {
+    // Otherwise a document that merely mentions a group buries the one named after it.
+    const ranked = rankResults([
+      result({ entity: 'document', id: 'mention', score: MATCH_SCORES.bodyContains }),
+      result({ entity: 'document', id: 'named', score: MATCH_SCORES.nameContains }),
+    ])
+    expect(ranked.map((r) => r.id)).toEqual(['named', 'mention'])
   })
 
   it('breaks a score tie by entity, favouring orders', () => {
@@ -156,6 +242,16 @@ describe('groupResults', () => {
       result({ entity: 'customer', id: 'c' }),
     ])
     expect(grouped.map(([entity]) => entity)).toEqual(['order', 'customer', 'product'])
+  })
+
+  it('puts live records above archive and content sections', () => {
+    // An operator searching a group name wants the open campaign before the scanned form.
+    const grouped = groupResults([
+      result({ entity: 'document', id: 'd' }),
+      result({ entity: 'blog', id: 'b' }),
+      result({ entity: 'fundraiser', id: 'f' }),
+    ])
+    expect(grouped.map(([entity]) => entity)).toEqual(['fundraiser', 'document', 'blog'])
   })
 
   it('preserves rank within a group', () => {
