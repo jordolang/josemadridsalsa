@@ -61,6 +61,18 @@ describe('classifyQuery', () => {
     expect(classifyQuery('12345')).toBe('text')
   })
 
+  it('reads a bare 10-digit number as a phone number, not a tracking number', () => {
+    // It satisfies the tracking shape too. Classifying it as tracking sends the search to
+    // orders alone and returns nothing for what is plainly a customer's phone number.
+    expect(classifyQuery('7405550132')).toBe('phone')
+    expect(classifyQuery('17405550132')).toBe('phone')
+  })
+
+  it('still reads a longer or lettered code as tracking', () => {
+    expect(classifyQuery('1Z999AA10123456784')).toBe('tracking')
+    expect(classifyQuery('940010123456784')).toBe('tracking')
+  })
+
   it('falls back to text for a name', () => {
     expect(classifyQuery('Sanchez')).toBe('text')
     expect(classifyQuery('hot salsa')).toBe('text')
@@ -112,6 +124,15 @@ describe('searchTargets', () => {
     )
   })
 
+  it('sends a gift-certificate or purchase-order code to its own record', () => {
+    // Both satisfy the SKU shape, so without this they scan products and find nothing.
+    expect(classifyQuery('JMS-GC-4821-9930')).toBe('sku')
+    expect(classifyQuery('PO-20260808-1234')).toBe('sku')
+    expect(searchTargets('sku')).toEqual(
+      expect.arrayContaining(['gift-certificate', 'purchase-order'])
+    )
+  })
+
   it('does not scan products for an email', () => {
     expect(searchTargets('email')).not.toContain('product')
   })
@@ -156,6 +177,13 @@ describe('extractExcerpt', () => {
   it('returns null for missing text rather than throwing', () => {
     expect(extractExcerpt(null, 'anything')).toBeNull()
     expect(extractExcerpt(undefined, 'anything')).toBeNull()
+  })
+
+  it('refuses a blank query instead of excerpting the opening line', () => {
+    // An empty string is found at index 0 of everything, which would attach a meaningless
+    // excerpt — and a body-match score — to every document.
+    expect(extractExcerpt(text, '')).toBeNull()
+    expect(extractExcerpt(text, '   ')).toBeNull()
   })
 
   it('marks a trimmed excerpt with ellipses', () => {

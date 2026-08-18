@@ -94,9 +94,21 @@ export function classifyQuery(raw: string): QueryShape {
   if (RMA_NUMBER.test(q)) return 'rma-number'
   if (EMAIL.test(q)) return 'email'
   if (SKU.test(q)) return 'sku'
+  // Before the tracking rule, which a bare 10-digit string also satisfies: an all-digit
+  // query of exactly 10 digits (or 11 behind a US country code) is a phone number typed
+  // without its separators. Carrier numbers are longer than that or carry letters, so
+  // nothing that is really a tracking number is caught here.
+  if (isBarePhoneNumber(q)) return 'phone'
   if (TRACKING.test(q) && /\d/.test(q)) return 'tracking'
   if (PHONE.test(q) && digitsOnly(q).length >= 10) return 'phone'
   return 'text'
+}
+
+/** An unpunctuated US phone number: digits only, 10 long, or 11 starting with a 1. */
+function isBarePhoneNumber(q: string): boolean {
+  if (/[a-z]/i.test(q)) return false
+  const digits = digitsOnly(q)
+  return digits.length === 10 || (digits.length === 11 && digits.startsWith('1'))
 }
 
 export function digitsOnly(value: string): string {
@@ -166,7 +178,10 @@ export function searchTargets(shape: QueryShape): SearchEntity[] {
     case 'tracking':
       return ['order']
     case 'sku':
-      return ['product', 'order']
+      // Gift-certificate codes (`JMS-GC-…`) and purchase-order numbers (`PO-20260808-…`)
+      // satisfy the SKU shape too, so pasting either has to reach its own record rather
+      // than scanning products and finding nothing.
+      return ['product', 'order', 'gift-certificate', 'purchase-order']
     case 'email':
       return [
         'customer',
@@ -215,7 +230,9 @@ export function scoreTextMatch(field: string, query: string): number {
  * is how a caller tells a title match from a body match.
  */
 export function extractExcerpt(text: string | null | undefined, query: string, radius = 60): string | null {
-  if (!text) return null
+  // A blank query matches at index 0 in every string, which would excerpt the opening line
+  // of every document. `scoreTextMatch` refuses one for the same reason.
+  if (!text || !query.trim()) return null
   const at = text.toLowerCase().indexOf(query.trim().toLowerCase())
   if (at === -1) return null
 

@@ -74,7 +74,14 @@ const EMPTY_FORM: FormState = {
 
 const PAGE_SIZE = 100
 
-export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
+export default function LedgerClient({
+  canWrite,
+  initialQuery = '',
+}: {
+  canWrite: boolean
+  /** Seeds the text filter so a link can point at one entry — see the ledger page. */
+  initialQuery?: string
+}) {
   const [entries, setEntries] = useState<Entry[]>([])
   const [summary, setSummary] = useState<Summary>({ incomeCents: 0, expenseCents: 0, netCents: 0 })
   const [totalCount, setTotalCount] = useState(0)
@@ -86,7 +93,7 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
   const [to, setTo] = useState('')
   const [direction, setDirection] = useState('all')
   const [category, setCategory] = useState('all')
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(initialQuery)
   const [page, setPage] = useState(1)
   // The server owns the page size; mirror what it reports rather than hard-coding a second copy.
   const [pageSize, setPageSize] = useState(PAGE_SIZE)

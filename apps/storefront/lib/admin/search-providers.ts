@@ -37,8 +37,15 @@ export interface SearchContext {
   shape: QueryShape
   /** Prisma filter fragment for a case-insensitive substring match. */
   contains: Prisma.StringFilter
-  /** The query with separators stripped, for phone columns. */
-  digits: string
+  /**
+   * Predicates for a phone column, to be spread into an `OR`. Phone numbers are stored
+   * two ways — digits-only by the archive imports, formatted by everything typed into the
+   * admin — so a single `contains` misses half the table. Matching both the stripped and
+   * the raw query covers each storage style when the operator types it the same way it was
+   * stored; a formatted column searched with unformatted input still cannot match without
+   * a normalized column to compare against.
+   */
+  phoneOn: <K extends string>(column: K) => Record<K, Prisma.StringFilter>[]
   /** Rows to take from each table. */
   take: number
 }
@@ -86,7 +93,7 @@ const PROVIDERS: SearchProvider[] = [
   {
     entity: 'order',
     permission: 'orders:read',
-    async run({ query, shape, contains, digits, take }) {
+    async run({ query, shape, contains, phoneOn, take }) {
       const orders = await prisma.order.findMany({
         where: {
           OR: [
@@ -94,7 +101,7 @@ const PROVIDERS: SearchProvider[] = [
             { trackingNumber: contains },
             { guestEmail: contains },
             { user: { OR: [{ email: contains }, { name: contains }] } },
-            ...(shape === 'phone' ? [{ guestPhone: { contains: digits } }] : []),
+            ...(shape === 'phone' ? phoneOn('guestPhone') : []),
           ],
         },
         take,
@@ -159,7 +166,7 @@ const PROVIDERS: SearchProvider[] = [
   {
     entity: 'customer',
     permission: 'users:read',
-    async run({ query, shape, contains, digits, take }) {
+    async run({ query, shape, contains, phoneOn, take }) {
       const customers = await prisma.customer.findMany({
         where: {
           OR: [
@@ -167,7 +174,7 @@ const PROVIDERS: SearchProvider[] = [
             { firstName: contains },
             { lastName: contains },
             { sourceName: contains },
-            ...(shape === 'phone' ? [{ phone: { contains: digits } }] : []),
+            ...(shape === 'phone' ? phoneOn('phone') : []),
           ],
         },
         take,
@@ -228,7 +235,7 @@ const PROVIDERS: SearchProvider[] = [
   {
     entity: 'fundraiser',
     permission: 'orders:read',
-    async run({ query, shape, contains, digits, take }) {
+    async run({ query, shape, contains, phoneOn, take }) {
       const fundraisers = await prisma.fundraiser.findMany({
         where: {
           OR: [
@@ -238,7 +245,7 @@ const PROVIDERS: SearchProvider[] = [
             { slug: contains },
             { description: contains },
             { missionStatement: contains },
-            ...(shape === 'phone' ? [{ contactPhone: { contains: digits } }] : []),
+            ...(shape === 'phone' ? phoneOn('contactPhone') : []),
           ],
         },
         take,
@@ -274,14 +281,14 @@ const PROVIDERS: SearchProvider[] = [
   {
     entity: 'participant',
     permission: 'orders:read',
-    async run({ query, shape, contains, digits, take }) {
+    async run({ query, shape, contains, phoneOn, take }) {
       const participants = await prisma.fundraiserParticipant.findMany({
         where: {
           OR: [
             { name: contains },
             { email: contains },
             { referralCode: contains },
-            ...(shape === 'phone' ? [{ phone: { contains: digits } }] : []),
+            ...(shape === 'phone' ? phoneOn('phone') : []),
           ],
         },
         take,
@@ -313,7 +320,7 @@ const PROVIDERS: SearchProvider[] = [
   {
     entity: 'contact',
     permission: 'users:read',
-    async run({ query, shape, contains, digits, take }) {
+    async run({ query, shape, contains, phoneOn, take }) {
       const contacts = await prisma.fundraiserContact.findMany({
         where: {
           OR: [
@@ -321,7 +328,7 @@ const PROVIDERS: SearchProvider[] = [
             { contactName: contains },
             { email: contains },
             { notes: contains },
-            ...(shape === 'phone' ? [{ phone: { contains: digits } }] : []),
+            ...(shape === 'phone' ? phoneOn('phone') : []),
           ],
         },
         take,
@@ -357,13 +364,13 @@ const PROVIDERS: SearchProvider[] = [
   {
     entity: 'user',
     permission: 'users:read',
-    async run({ query, shape, contains, digits, take }) {
+    async run({ query, shape, contains, phoneOn, take }) {
       const users = await prisma.user.findMany({
         where: {
           OR: [
             { name: contains },
             { email: contains },
-            ...(shape === 'phone' ? [{ phone: { contains: digits } }] : []),
+            ...(shape === 'phone' ? phoneOn('phone') : []),
           ],
         },
         take,
@@ -387,7 +394,7 @@ const PROVIDERS: SearchProvider[] = [
   {
     entity: 'supplier',
     permission: 'inventory:read',
-    async run({ query, shape, contains, digits, take }) {
+    async run({ query, shape, contains, phoneOn, take }) {
       const suppliers = await prisma.supplier.findMany({
         where: {
           OR: [
@@ -395,7 +402,7 @@ const PROVIDERS: SearchProvider[] = [
             { contactName: contains },
             { email: contains },
             { notes: contains },
-            ...(shape === 'phone' ? [{ phone: { contains: digits } }] : []),
+            ...(shape === 'phone' ? phoneOn('phone') : []),
           ],
         },
         take,
@@ -422,7 +429,7 @@ const PROVIDERS: SearchProvider[] = [
   {
     entity: 'location',
     permission: 'locations:read',
-    async run({ query, shape, contains, digits, take }) {
+    async run({ query, shape, contains, phoneOn, take }) {
       const locations = await prisma.retailLocation.findMany({
         where: {
           OR: [
@@ -431,7 +438,7 @@ const PROVIDERS: SearchProvider[] = [
             { city: contains },
             { county: contains },
             { zipCode: contains },
-            ...(shape === 'phone' ? [{ phone: { contains: digits } }] : []),
+            ...(shape === 'phone' ? phoneOn('phone') : []),
           ],
         },
         take,
@@ -486,7 +493,9 @@ const PROVIDERS: SearchProvider[] = [
           id: e.id,
           title: e.title,
           subtitle: `${e.startDate.toISOString().slice(0, 10)}${where ? ` · ${where}` : ''}`,
-          href: `/admin/events/${e.id}/edit`,
+          // The edit page needs events:write; the manifest is the events:read view, so a
+          // read-only operator lands on the event instead of being bounced to /admin.
+          href: `/admin/events/${e.id}/manifest`,
           score,
           excerpt,
         }
@@ -530,31 +539,46 @@ const PROVIDERS: SearchProvider[] = [
     entity: 'document',
     permission: 'analytics:read',
     async run({ query, contains, take }) {
-      const documents = await prisma.archiveDocument.findMany({
-        where: {
-          OR: [
-            { filename: contains },
-            { path: contains },
-            { category: contains },
-            { textPreview: contains },
-            { extractedText: contains },
-          ],
-        },
-        take,
-        orderBy: { year: 'desc' },
-        select: {
-          id: true,
-          filename: true,
-          path: true,
-          category: true,
-          year: true,
-          sensitivity: true,
-          extractedText: true,
-          textPreview: true,
-        },
-      })
+      const select = {
+        id: true,
+        filename: true,
+        path: true,
+        category: true,
+        year: true,
+        sensitivity: true,
+        extractedText: true,
+        textPreview: true,
+      } as const
 
-      return documents.map((d) => {
+      // Two queries rather than one OR, because the row cap is applied by the database
+      // before anything is scored: a single newest-first query would spend all five slots
+      // on recent text mentions and drop the file actually *named* after the query. Asking
+      // for the named matches separately guarantees they survive to the ranking step.
+      const namedWhere = {
+        OR: [{ filename: contains }, { path: contains }, { category: contains }],
+      }
+
+      const [named, mentioned] = await Promise.all([
+        prisma.archiveDocument.findMany({
+          where: namedWhere,
+          take,
+          orderBy: { year: 'desc' },
+          select,
+        }),
+        prisma.archiveDocument.findMany({
+          where: {
+            AND: [
+              { OR: [{ textPreview: contains }, { extractedText: contains }] },
+              { NOT: namedWhere },
+            ],
+          },
+          take,
+          orderBy: { year: 'desc' },
+          select,
+        }),
+      ])
+
+      return [...named, ...mentioned].map((d) => {
         const { score, excerpt } = bodyMatch(d.filename, query, [d.textPreview, d.extractedText])
         // A scan filed under "03 Fundraisers/Maysville/…" is named by its folder as much as
         // by its filename, so a path hit counts as naming the document, not as body text.
@@ -579,7 +603,9 @@ const PROVIDERS: SearchProvider[] = [
 
   {
     entity: 'training',
-    permission: 'ai:view-training',
+    // `/admin/training-data` gates on content:write, so gating the search on
+    // ai:view-training would hide results from the very staff who can open the page.
+    permission: 'content:write',
     async run({ query, contains, take }) {
       const documents = await prisma.trainingDocument.findMany({
         where: {
@@ -877,11 +903,20 @@ const PROVIDERS: SearchProvider[] = [
           sentCount: true,
           totalRecipients: true,
           notes: true,
+          previewText: true,
+          fromEmail: true,
         },
       })
 
       return campaigns.map((c) => {
-        const { score, excerpt } = bodyMatch(c.name, query, [c.subject, c.notes])
+        // Every field in the `where` above is offered to bodyMatch: a campaign found by its
+        // preview text would otherwise score as a name hit and show no reason for matching.
+        const { score, excerpt } = bodyMatch(c.name, query, [
+          c.subject,
+          c.notes,
+          c.previewText,
+          c.fromEmail,
+        ])
         return {
           entity: 'campaign' as const,
           id: c.id,
@@ -898,7 +933,7 @@ const PROVIDERS: SearchProvider[] = [
   {
     entity: 'archived-fundraiser',
     permission: 'analytics:read',
-    async run({ query, shape, contains, digits, take }) {
+    async run({ query, shape, contains, phoneOn, take }) {
       const archived = await prisma.archivedFundraiser.findMany({
         where: {
           OR: [
@@ -907,7 +942,7 @@ const PROVIDERS: SearchProvider[] = [
             { contactEmail: contains },
             { sourceFile: contains },
             { notes: contains },
-            ...(shape === 'phone' ? [{ contactPhone: { contains: digits } }] : []),
+            ...(shape === 'phone' ? phoneOn('contactPhone') : []),
           ],
         },
         take,
@@ -1028,7 +1063,9 @@ const PROVIDERS: SearchProvider[] = [
           id: e.id,
           title: e.description,
           subtitle: `${e.date.toISOString().slice(0, 10)} · ${lower(e.direction)} ${money(e.amountCents / 100)}${e.counterparty ? ` · ${e.counterparty}` : ''}`,
-          href: '/admin/financials/ledger',
+          // The ledger loads its newest page only, so an older matched row would be invisible
+          // on arrival unless the query travels with the link.
+          href: `/admin/financials/ledger?q=${encodeURIComponent(query)}`,
           score,
           excerpt,
         }
@@ -1088,7 +1125,11 @@ export async function runGlobalSearch(
     query,
     shape,
     contains: { contains: query, mode: 'insensitive' },
-    digits: digitsOnly(query),
+    phoneOn: (column) => {
+      const digits = digitsOnly(query)
+      const variants = digits === query ? [digits] : [digits, query]
+      return variants.map((value) => ({ [column]: { contains: value } })) as never
+    },
     take: options.perEntityLimit ?? DEFAULT_PER_ENTITY_LIMIT,
   }
 

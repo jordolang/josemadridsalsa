@@ -5,7 +5,7 @@ import type { Metadata } from 'next'
 import { createMetadata } from '@/lib/metadata'
 import { getCurrentUser } from '@/lib/rbac'
 import { ENTITY_LABELS, groupResults, isSearchable } from '@/lib/admin/global-search'
-import { runGlobalSearch } from '@/lib/admin/search-providers'
+import { runGlobalSearch, SEARCH_PROVIDER_ENTITIES } from '@/lib/admin/search-providers'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +17,12 @@ export const metadata: Metadata = createMetadata({
 
 /** Deeper than the ⌘K palette, which only has room for the top few per section. */
 const PER_ENTITY_LIMIT = 25
-const RESULT_LIMIT = 250
+/**
+ * High enough that the overall cap can never trim a section below its own cap. If it could,
+ * a section that really did hit `PER_ENTITY_LIMIT` might render a smaller number with no
+ * "+", telling the operator they had seen everything when they had not.
+ */
+const RESULT_LIMIT = SEARCH_PROVIDER_ENTITIES.length * PER_ENTITY_LIMIT
 
 /**
  * The whole result set for a query, grouped by what it found.
@@ -29,12 +34,15 @@ const RESULT_LIMIT = 250
 export default async function AdminSearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string | string[] }>
 }) {
   const user = await getCurrentUser()
   if (!user) redirect('/auth/signin?callbackUrl=/admin/search')
 
-  const query = (await searchParams).q?.trim() ?? ''
+  // `?q=a&q=b` arrives as an array; taking the last one keeps the newest submission rather
+  // than throwing on `.trim()`.
+  const raw = (await searchParams).q
+  const query = (Array.isArray(raw) ? raw[raw.length - 1] : raw)?.trim() ?? ''
   const { results } = await runGlobalSearch(user, query, {
     perEntityLimit: PER_ENTITY_LIMIT,
     limit: RESULT_LIMIT,
@@ -55,6 +63,7 @@ export default async function AdminSearchPage({
         <input
           type="search"
           name="q"
+          aria-label="Search admin records"
           defaultValue={query}
           autoFocus
           placeholder="Fundraiser name, document title, email, order number…"
@@ -75,10 +84,8 @@ export default async function AdminSearchPage({
       ) : (
         <>
           <p className="text-sm text-muted-foreground">
-            {results.length}
-            {results.length === RESULT_LIMIT ? '+' : ''} result
-            {results.length === 1 ? '' : 's'} across {grouped.length} section
-            {grouped.length === 1 ? '' : 's'}.
+            {results.length} result{results.length === 1 ? '' : 's'} across {grouped.length}{' '}
+            section{grouped.length === 1 ? '' : 's'}.
           </p>
 
           <div className="space-y-6">
@@ -88,7 +95,7 @@ export default async function AdminSearchPage({
                   {ENTITY_LABELS[entity]}
                   <span className="ml-2 font-normal normal-case">
                     {items.length}
-                    {items.length === PER_ENTITY_LIMIT ? '+' : ''}
+                    {items.length >= PER_ENTITY_LIMIT ? '+' : ''}
                   </span>
                 </h2>
                 <ul className="divide-y">
