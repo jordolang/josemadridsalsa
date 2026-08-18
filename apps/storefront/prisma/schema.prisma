@@ -4211,6 +4211,111 @@ enum ArchivedFundraiserFormType {
   UNKNOWN
 }
 
+model FundraiserContact {
+  id String @id @default(cuid())
+
+  /// Stable identity for re-import: the normalized email, else `org:<organizationKey>`.
+  /// Hidden from the admin UI on purpose — matching on `organizationName` would fork a
+  /// duplicate the moment someone corrects a group's spelling, and re-running the archive
+  /// consolidation is expected to be safe.
+  dedupeKey String @unique
+
+  organizationName String
+  contactName      String?
+  /// Lowercased. Indexed, not unique: one coordinator can legitimately run two groups, and
+  /// forcing uniqueness would collapse them into a single record. The send path dedupes
+  /// recipients by address instead, so a shared coordinator is still only mailed once.
+  email            String?
+  /// Digits only, as stored in the archive forms; formatted for display, never for dialing logic.
+  phone            String?
+
+  /// Lifetime jars ordered across every campaign matched to this organization. Jars rather
+  /// than dollars because the archive's per-jar price varied by era ($6, $8, $10 form runs)
+  /// and no order form records a line total, so revenue cannot be recovered without guessing.
+  totalJars       Int       @default(0)
+  /// Underlying customer orders, summed from the order-export sheets that record them.
+  totalOrders     Int       @default(0)
+  /// Number of distinct archive campaign files matched to this organization.
+  campaignCount   Int       @default(0)
+  firstCampaignAt DateTime?
+  lastCampaignAt  DateTime?
+  /// Campaign years seen, ascending. Denormalized so the admin list can show "2019, 2021-2023"
+  /// without a join back to the archive rows.
+  years           Int[]
+
+  /// Admin's on/off switch. False hides the row from outreach selection without deleting the
+  /// recovered history, which is the whole point of keeping the archive immutable.
+  isActive Boolean                 @default(true)
+  status   FundraiserContactStatus @default(NEW)
+
+  lastSolicitedAt   DateTime?
+  solicitationCount Int       @default(0)
+
+  source      FundraiserContactSource @default(ARCHIVE_ORDER_FORM)
+  /// Every archive file or CSV this record drew from, for provenance when a merge looks wrong.
+  sourceFiles String[]
+  notes       String?
+
+  importBatchId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  outreach FundraiserOutreachLog[]
+
+  @@index([isActive, status])
+  @@index([email])
+  @@index([organizationName])
+  @@index([lastSolicitedAt])
+  @@map("fundraiser_contacts")
+}
+
+enum FundraiserContactStatus {
+  NEW
+  CONTACTED
+  RESPONDED
+  CONVERTED
+  DO_NOT_CONTACT
+}
+
+enum FundraiserContactSource {
+  ARCHIVE_ORDER_FORM
+  ARCHIVE_ORDER_EXPORT
+  CONSTANT_CONTACT
+  WEBSITE_EXPORT
+  MANUAL
+}
+
+/// One solicitation send attempt. Written for failures as well as successes so a retry can
+/// tell "never attempted" from "attempted and bounced", and so the admin list can show why a
+/// contact was skipped (suppressed, unsubscribed, no email) rather than silently omitting it.
+model FundraiserOutreachLog {
+  id        String                   @id @default(cuid())
+  contactId String
+  email     String
+  subject   String
+  status    FundraiserOutreachStatus
+  /// Provider message id on success; null otherwise.
+  messageId String?
+  error     String?
+  /// Admin user who triggered the send.
+  sentById  String?
+  createdAt DateTime                 @default(now())
+
+  contact FundraiserContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("fundraiser_outreach_logs")
+}
+
+enum FundraiserOutreachStatus {
+  SENT
+  FAILED
+  SKIPPED_SUPPRESSED
+  SKIPPED_NO_EMAIL
+}
+
 /// A single show or farmers-market day's sales, recovered from the yearly sales
 /// sheets in `04 Shows & Events` (e.g. "2025 Show Sales", "2025 Farmers Market").
 /// One row per event day. Dollar sales here are the crew's own tallies, not QBO
