@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowDown, ArrowUp, ChevronsUpDown, Mail, Pencil } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronsUpDown,
+  Mail,
+  Pencil,
+  ToggleLeft,
+  ToggleRight,
+} from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -65,6 +73,9 @@ const SOURCE_LABELS: Record<string, string> = {
   MANUAL: 'Manual',
 }
 
+/** Matches the `ids` array cap on POST /api/admin/fundraiser-contacts/bulk, with headroom. */
+const BULK_CHUNK = 1000
+
 interface Props {
   contacts: FundraiserContactRow[]
   sortBy: ContactSortColumn
@@ -92,6 +103,9 @@ export function FundraiserContactsTable({
   const [solicitOpen, setSolicitOpen] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [bulkBusy, setBulkBusy] = useState(false)
+  // True once the selection was expanded past the visible page, so the banner can say so.
+  const [allMatchingSelected, setAllMatchingSelected] = useState(false)
 
   const filterKey = [
     'search',
@@ -110,10 +124,27 @@ export function FundraiserContactsTable({
   // offered to mail them.
   useEffect(() => {
     setSelected(new Set())
+    setAllMatchingSelected(false)
   }, [filterKey])
+
+  const clearSelection = useCallback(() => {
+    setSelected(new Set())
+    setAllMatchingSelected(false)
+  }, [])
 
   const pageIds = useMemo(() => contacts.map((c) => c.id), [contacts])
   const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id))
+  const someOnPageSelected = pageIds.some((id) => selected.has(id))
+  // Radix renders 'indeterminate' as a dash, which is what a partly-ticked page should look
+  // like — a plain unchecked box implies clicking it would select nothing new.
+  const headerCheckboxState = allOnPageSelected
+    ? true
+    : someOnPageSelected
+      ? 'indeterminate'
+      : false
+
+  /** More rows match the filters than the page can show, so "select all" has somewhere to go. */
+  const hasMoreThanPage = totalMatching > contacts.length
 
   const selectedContacts = useMemo(
     () => contacts.filter((c) => selected.has(c.id)),
@@ -133,6 +164,7 @@ export function FundraiserContactsTable({
   )
 
   const toggleRow = useCallback((id: string) => {
+    setAllMatchingSelected(false)
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -142,6 +174,7 @@ export function FundraiserContactsTable({
   }, [])
 
   const togglePage = useCallback(() => {
+    setAllMatchingSelected(false)
     setSelected((prev) => {
       const next = new Set(prev)
       const selectAll = !pageIds.every((id) => next.has(id))
@@ -177,31 +210,76 @@ export function FundraiserContactsTable({
     [router],
   )
 
+  /**
+   * Pulls every id matching the current filters, not just the visible page. Selecting 2,000
+   * contacts one page at a time is the thing this list is worst at, and turning a whole
+   * filtered segment on or off is the main reason to bulk-edit at all.
+   */
+  const selectAllMatching = useCallback(async () => {
+    setBulkBusy(true)
+    setError(null)
+    try {
+      const query = new URLSearchParams()
+      for (const key of ['search', 'status', 'source', 'active', 'hasEmail', 'withHistory', 'year']) {
+        const value = searchParams.get(key)
+        if (value) query.set(key, value)
+      }
+      const response = await fetch(`/api/admin/fundraiser-contacts/ids?${query.toString()}`)
+      const body = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(body?.error ?? 'Could not select all matching contacts')
+
+      const ids: string[] = body?.data?.ids ?? []
+      setSelected(new Set(ids))
+      setAllMatchingSelected(true)
+      if (body?.data?.truncated) {
+        setError(
+          `Selection capped at ${ids.length.toLocaleString()} contacts. Narrow the filters to cover the rest.`,
+        )
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not select all matching contacts')
+    } finally {
+      setBulkBusy(false)
+    }
+  }, [searchParams])
+
   const runBulk = useCallback(
     async (action: 'activate' | 'deactivate') => {
       if (selected.size === 0) return
+      setBulkBusy(true)
       setError(null)
       try {
-        const response = await fetch('/api/admin/fundraiser-contacts/bulk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids: [...selected], action }),
-        })
-        if (!response.ok) {
-          const body = await response.json().catch(() => null)
-          throw new Error(body?.error ?? 'Bulk update failed')
+        // The bulk route caps ids per request; a whole-set selection can exceed that, so send
+        // it in chunks rather than letting the request bounce.
+        const ids = [...selected]
+        for (let i = 0; i < ids.length; i += BULK_CHUNK) {
+          const response = await fetch('/api/admin/fundraiser-contacts/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: ids.slice(i, i + BULK_CHUNK), action }),
+          })
+          if (!response.ok) {
+            const body = await response.json().catch(() => null)
+            throw new Error(body?.error ?? 'Bulk update failed')
+          }
         }
         router.refresh()
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Bulk update failed')
+      } finally {
+        setBulkBusy(false)
       }
     },
     [router, selected],
   )
 
+  // Loaded rows that look mailable — used for the dialog's preview list only. The real
+  // recipient count is resolved server-side, because the selection can cover rows this page
+  // never loaded.
   const mailableSelected = selectedContacts.filter(
     (c) => c.email && c.isActive && c.status !== 'DO_NOT_CONTACT',
   )
+  const selectedIds = useMemo(() => [...selected], [selected])
 
   return (
     <div className="space-y-3">
@@ -215,13 +293,15 @@ export function FundraiserContactsTable({
         <p className="text-muted-foreground text-sm">
           {selected.size > 0 ? (
             <>
-              <span className="text-foreground font-medium">{selected.size.toLocaleString()}</span>{' '}
+              <span className="text-foreground font-medium" data-testid="selection-count">
+                {selected.size.toLocaleString()}
+              </span>{' '}
               selected
               <Button
                 variant="link"
                 size="sm"
                 className="h-auto px-2 py-0"
-                onClick={() => setSelected(new Set())}
+                onClick={clearSelection}
               >
                 Clear
               </Button>
@@ -237,28 +317,83 @@ export function FundraiserContactsTable({
         <div className="flex flex-wrap items-center gap-2">
           {canWrite && selected.size > 0 && (
             <>
-              <Button variant="outline" size="sm" onClick={() => runBulk('activate')}>
-                Turn on
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={bulkBusy}
+                onClick={() => runBulk('activate')}
+              >
+                <ToggleRight className="mr-2 h-4 w-4" />
+                Set {selected.size.toLocaleString()} active
               </Button>
-              <Button variant="outline" size="sm" onClick={() => runBulk('deactivate')}>
-                Turn off
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={bulkBusy}
+                onClick={() => runBulk('deactivate')}
+              >
+                <ToggleLeft className="mr-2 h-4 w-4" />
+                Set {selected.size.toLocaleString()} inactive
               </Button>
             </>
           )}
           {canSend && (
             <Button
               size="sm"
-              disabled={mailableSelected.length === 0}
+              disabled={selected.size === 0}
               onClick={() => setSolicitOpen(true)}
             >
               <Mail className="mr-2 h-4 w-4" />
-              {mailableSelected.length > 0
-                ? `Invite ${mailableSelected.length.toLocaleString()} to sign up`
+              {selected.size > 0
+                ? `Invite ${selected.size.toLocaleString()} selected`
                 : 'Select contacts to invite'}
             </Button>
           )}
         </div>
       </div>
+
+      {/*
+        Offered only once the page is fully ticked, which is the moment the page-vs-everything
+        distinction becomes real: before that, "select all 2,082" would be a surprise. Once the
+        selection has been widened it stays visible regardless — that state has to be
+        dismissible, and it is the only thing telling the operator that the buttons above act
+        on rows they cannot see.
+      */}
+      {((allOnPageSelected && hasMoreThanPage) || allMatchingSelected) && (
+        <div
+          data-testid="selection-banner"
+          className="bg-muted/50 flex flex-wrap items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm"
+        >
+          {allMatchingSelected ? (
+            <>
+              <span>
+                All <span className="font-medium">{selected.size.toLocaleString()}</span> contacts
+                matching these filters are selected.
+              </span>
+              <Button variant="link" size="sm" className="h-auto px-1 py-0" onClick={clearSelection}>
+                Clear selection
+              </Button>
+            </>
+          ) : (
+            <>
+              <span>
+                All {contacts.length.toLocaleString()} contacts on this page are selected.
+              </span>
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto px-1 py-0"
+                disabled={bulkBusy}
+                onClick={selectAllMatching}
+              >
+                {bulkBusy
+                  ? 'Selecting…'
+                  : `Select all ${totalMatching.toLocaleString()} matching these filters`}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       <div className={cn('rounded-lg border', isPending && 'opacity-60')}>
         <Table>
@@ -266,7 +401,7 @@ export function FundraiserContactsTable({
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-10">
                 <Checkbox
-                  checked={allOnPageSelected}
+                  checked={headerCheckboxState}
                   onCheckedChange={togglePage}
                   aria-label="Select all contacts on this page"
                 />
@@ -391,11 +526,12 @@ export function FundraiserContactsTable({
 
       {solicitOpen && (
         <SolicitContactsDialog
-          contacts={mailableSelected}
+          contactIds={selectedIds}
+          previewContacts={mailableSelected}
           onClose={() => setSolicitOpen(false)}
           onSent={() => {
             setSolicitOpen(false)
-            setSelected(new Set())
+            clearSelection()
             router.refresh()
           }}
         />

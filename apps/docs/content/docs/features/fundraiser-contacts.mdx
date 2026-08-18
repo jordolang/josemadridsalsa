@@ -78,13 +78,21 @@ sending requires `content:write`.
   the record has recovered campaign history, and campaign year.
 - **Sort** any column. Nullable columns push blanks to the end in both directions so the
   thousand history-less mailing-list contacts do not monopolise the first page.
-- **Toggle** a contact on or off per row, or in bulk from the selection. Off keeps the
-  recovered history and excludes the record from outreach.
+- **Toggle** a contact on or off per row, or in bulk from the selection — **Set N active** /
+  **Set N inactive**. Off keeps the recovered history and excludes the record from outreach.
+- **Select** the whole page from the header checkbox. Once the page is fully ticked, a banner
+  offers *"Select all N matching these filters"*, which pulls every matching id — across all
+  pages — so a filtered segment can be switched on or off in one action.
 - **Edit** organization, contact name, email, phone, status, and notes. Sales rollups are
   shown read-only, because a re-import recomputes them.
 
 Selection survives paging — picking contacts across pages is the point — but is cleared when a
 filter changes, so the send button can never act on rows that are no longer on screen.
+
+Bulk actions always send explicit ids. The bulk route deliberately does not accept a filter: a
+filter re-resolved on the server could match a different set than the operator was looking at,
+and the route's whole safety property is that it only touches rows someone chose. Selections
+larger than the route's per-request cap are chunked by the client rather than rejected.
 
 ## Sending the re-signup invitation
 
@@ -94,8 +102,13 @@ quoting their own history ("Hardin Valley Middle School Band sold 3,838 jars wit
 
 Safeguards, in order:
 
-1. The dialog will not arm until the operator ticks an acknowledgement against the real
-   recipient count, and it lists the first 25 addresses so a wrong filter is visible.
+1. The dialog opens by running the `dryRun` preflight and shows the count the server actually
+   resolves — after suppression, unsubscribes, duplicate coordinators, and missing addresses —
+   so the number on the confirm button is the number of emails that will be sent. This matters
+   most when the selection covers rows the page never loaded: counting in the browser would
+   understate a 2,000-contact selection badly. It will not arm until the operator ticks an
+   acknowledgement against that count, and it lists sample addresses so a wrong filter is
+   visible. A dry run writes no outreach-log rows.
 2. `POST /api/admin/fundraiser-contacts/solicit` refuses to send without `confirm: true` in
    the body. `dryRun: true` resolves and reports the same recipient set without contacting the
    mail provider.
