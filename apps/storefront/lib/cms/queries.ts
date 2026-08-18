@@ -219,6 +219,39 @@ export const getPublishedLandingSlugs = cache(async (): Promise<string[]> => {
   }
 })
 
+export interface SitemapLandingPage {
+  slug: string
+  updatedAt: Date
+}
+
+/**
+ * Landing pages that belong in the XML sitemap.
+ *
+ * Same publish rule the public renderer uses — `isLive()` over status and the
+ * scheduling window — minus any page the editor marked `noIndex`, since asking
+ * Google to crawl a URL we then tell it not to index is a contradiction.
+ */
+export const getSitemapLandingPages = cache(async (): Promise<SitemapLandingPage[]> => {
+  try {
+    const pages = await prisma.page.findMany({
+      where: {
+        kind: 'LANDING',
+        status: { in: ['PUBLISHED', 'SCHEDULED'] },
+        noIndex: false,
+      },
+      select: { slug: true, status: true, publishedAt: true, updatedAt: true },
+    })
+    return pages
+      .filter((page) => isLive(page))
+      .map((page) => ({ slug: page.slug, updatedAt: page.updatedAt }))
+  } catch (error) {
+    if (!isMissingTableError(error)) {
+      console.error('[cms] failed to list landing pages for the sitemap:', error)
+    }
+    return []
+  }
+})
+
 /** The highest-priority live announcement for a path, if any. */
 export const getActiveAnnouncement = cache(async (pathname: string) => {
   try {
