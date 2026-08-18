@@ -277,3 +277,23 @@ Every PR includes: a summary of what/why, linked issue if any, the verification 
 4. **Consolidate** overlapping docs into one authoritative file; delete redundant ones.
 5. **No junk files** (`.DS_Store`, `*.bak`, `*.log`, temp scripts, verification reports) in the repo.
 6. **Maintain `.gitignore`** so common junk never lands. The local multi-GB `Documents/` business-data directory is gitignored and must stay out of version control.
+
+---
+
+## Part 18 — Search & Indexing Rules
+
+Google's guidance, bound to this repo. Applies to **any** change that adds, moves, or removes a public URL. Shipping a page Google cannot find is an unfinished task.
+
+**Adding new content**
+1. **Register the URL** in `apps/storefront/app/sitemap.ts` — collections (products, recipes, blog posts, locations) come from Prisma there, so extend the query rather than hardcoding a row. A page absent from the sitemap is a page you asked Google not to crawl.
+2. **Decide crawlability deliberately.** `robots: { index: false }` in page metadata keeps a reachable page out of the index; `app/robots.ts` and the `SeoConfiguration.robotsTxt` row stop the crawl of whole trees. `/admin/` and `/api/` stay disallowed. The two are not interchangeable — a page blocked in robots.txt is never read, so a `noindex` tag on it is never seen.
+3. **Meta title 30–60 characters, meta description ≤160.** Enforced for blog posts in `lib/blog/schemas.ts` against effective values (`seoTitle ?? title`, `seoDescription ?? excerpt`); hold every other page to the same numbers.
+4. **Hand off what you cannot do.** No agent has Search Console access. End the task by telling the human to run **URL Inspection** on the new URL, and to confirm a few weeks later that indexed-page count is rising.
+
+**Adding new properties** — prefer one responsive site. A separate mobile or regional property must be added to Search Console and linked with `<link rel="alternate">`; country- or language-specific pages follow Google's international/multilingual guidelines (hreflang).
+
+**Changing the domain** — update `SeoConfiguration.siteUrl` and every hardcoded canonical in the same change, then tell the human to run Search Console's **Change of Address** tool. It is never a code-only change.
+
+**Removing a page** — default to deleting or 301-redirecting it and letting Google drop it. Only when live content is wrong, private, or damaging: remove it from the web first, then hand the **Removals** tool to the human. To keep a page online but unlisted, use `noindex`, not deletion.
+
+> **Never report a Search Console step as done.** URL Inspection, Removals, and Change of Address are always handoff items.
