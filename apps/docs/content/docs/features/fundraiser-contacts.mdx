@@ -80,9 +80,12 @@ sending requires `content:write`.
   thousand history-less mailing-list contacts do not monopolise the first page.
 - **Toggle** a contact on or off per row, or in bulk from the selection — **Set N active** /
   **Set N inactive**. Off keeps the recovered history and excludes the record from outreach.
-- **Select** the whole page from the header checkbox. Once the page is fully ticked, a banner
-  offers *"Select all N matching these filters"*, which pulls every matching id — across all
-  pages — so a filtered segment can be switched on or off in one action.
+- **Select** the whole page from the header checkbox, which shows a dash when the page is only
+  partly selected. Once the page is fully ticked, a banner offers *"Select all N matching these
+  filters"*, which pulls every matching id — across all pages — so a filtered segment can be
+  switched on or off in one action. The ids endpoint returns at most 10,000; beyond that the
+  banner says plainly that only the first N of M are selected rather than claiming the whole
+  set.
 - **Edit** organization, contact name, email, phone, status, and notes. Sales rollups are
   shown read-only, because a re-import recomputes them.
 
@@ -117,7 +120,11 @@ Safeguards, in order:
    time.
 5. Addresses are deduplicated within the batch — `FundraiserContact.email` is not unique,
    because one coordinator can legitimately run two groups.
-6. Sends are paced to stay under the mail provider's rate limit.
+6. Sends are paced to stay under the mail provider's rate limit, and the client sends at most
+   200 contacts per request. A whole-database selection would otherwise run for twenty minutes
+   in a single request and be killed part-way through with no record of who had been mailed.
+   Progress is shown as chunks complete, and a failure part-way reports how many invitations
+   already went out.
 
 Every contact produces a `FundraiserOutreachLog` row, including the skips. A suppressed
 address needs to read as *deliberately not mailed*, not as an absence that invites a retry.

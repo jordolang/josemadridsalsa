@@ -162,6 +162,29 @@ describe('sendSolicitations', () => {
     expect(mockPrisma.fundraiserContact.update).not.toHaveBeenCalled()
   })
 
+  it('counts selected contacts the eligibility query dropped', async () => {
+    // Three ids asked for, one eligible row returned: the other two were inactive or
+    // do-not-contact and never reach the loop.
+    mockPrisma.fundraiserContact.findMany.mockResolvedValue([contact()])
+
+    const result = await sendSolicitations({ contactIds: ['c1', 'c2', 'c3'] })
+
+    expect(result.requested).toBe(3)
+    expect(result.skippedIneligible).toBe(2)
+    expect(result.sent).toBe(1)
+  })
+
+  it('writes no outreach rows at all on a dry run, including for skips', async () => {
+    mockPrisma.fundraiserContact.findMany.mockResolvedValue([
+      contact({ id: 'c1' }),
+      contact({ id: 'c2', email: null }),
+    ])
+
+    await sendSolicitations({ contactIds: ['c1', 'c2'], dryRun: true })
+
+    expect(mockPrisma.fundraiserOutreachLog.create).not.toHaveBeenCalled()
+  })
+
   it('contacts no mail provider on a dry run', async () => {
     mockPrisma.fundraiserContact.findMany.mockResolvedValue([contact()])
 
