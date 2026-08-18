@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -95,42 +95,43 @@ export function SolicitContactsDialog({
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<SolicitResult | null>(null)
   const [preflight, setPreflight] = useState<SolicitResult | null>(null)
-  const cancelled = useRef(false)
+  /** Deduplicated, eligible ids returned by the preview — the only ids ever sent. */
+  const [recipientIds, setRecipientIds] = useState<string[] | null>(null)
+  /** Set when a chunk failed after earlier chunks had already mailed. Terminal. */
+  const [partial, setPartial] = useState<string | null>(null)
 
   /**
-   * Resolves the real recipient count before anything is sent.
+   * Resolves the real recipient set before anything is sent.
    *
-   * The selection can cover thousands of rows the client never loaded, so counting the loaded
-   * ones would misreport what is about to go out. The dry run applies the same filtering the
-   * send does — inactive, do-not-contact, suppressed, unsubscribed, duplicate addresses — and
-   * writes nothing.
+   * One request for the whole selection, not one per send-chunk: duplicate addresses are
+   * collapsed against the entire set here, so a coordinator who runs two organizations cannot
+   * receive two invitations by landing in different chunks.
    */
   useEffect(() => {
-    cancelled.current = false
+    // Local to this effect run. A shared ref would be reset to false by the next run before
+    // the previous request finished, letting a stale response overwrite the new selection.
+    let cancelled = false
     ;(async () => {
       try {
-        let total = EMPTY
-        for (const batch of chunk(contactIds, SOLICIT_CHUNK)) {
-          const response = await fetch('/api/admin/fundraiser-contacts/solicit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contactIds: batch, dryRun: true }),
-          })
-          const body = await response.json().catch(() => null)
-          if (!response.ok) throw new Error(body?.error ?? 'Could not resolve the recipient list')
-          if (cancelled.current) return
-          // `ok()` serializes its argument directly — there is no `data` envelope.
-          total = merge(total, body?.result ?? EMPTY)
-        }
-        if (!cancelled.current) setPreflight(total)
+        const response = await fetch('/api/admin/fundraiser-contacts/solicit/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contactIds }),
+        })
+        const body = await response.json().catch(() => null)
+        if (!response.ok) throw new Error(body?.error ?? 'Could not resolve the recipient list')
+        if (cancelled) return
+        // `ok()` serializes its argument directly — there is no `data` envelope.
+        setRecipientIds(body?.recipientIds ?? [])
+        setPreflight(body?.counts ?? EMPTY)
       } catch (err) {
-        if (!cancelled.current) {
+        if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Could not resolve the recipient list')
         }
       }
     })()
     return () => {
-      cancelled.current = true
+      cancelled = true
     }
   }, [contactIds])
 
@@ -143,12 +144,14 @@ export function SolicitContactsDialog({
     : null
 
   async function send() {
+    if (!recipientIds) return
     setSending(true)
     setError(null)
     setProgress(0)
+
+    const batches = chunk(recipientIds, SOLICIT_CHUNK)
+    let total = EMPTY
     try {
-      const batches = chunk(contactIds, SOLICIT_CHUNK)
-      let total = EMPTY
       for (const [index, batch] of batches.entries()) {
         const response = await fetch('/api/admin/fundraiser-contacts/solicit', {
           method: 'POST',
@@ -156,33 +159,39 @@ export function SolicitContactsDialog({
           body: JSON.stringify({ contactIds: batch, confirm: true }),
         })
         const body = await response.json().catch(() => null)
-        if (!response.ok) {
-          // Earlier batches have already been mailed and cannot be recalled, so report what
-          // went out rather than presenting this as an all-or-nothing failure.
-          setResult(total)
-          throw new Error(
-            `${body?.error ?? 'Send failed'}. ${total.sent.toLocaleString()} invitations were already sent before this failed.`,
-          )
-        }
+        if (!response.ok) throw new Error(body?.error ?? 'Send failed')
         total = merge(total, body?.result ?? EMPTY)
         setProgress(Math.round(((index + 1) / batches.length) * 100))
       }
       setResult(total)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Send failed')
+      // Earlier batches are already mailed and cannot be recalled. Going back to an armed
+      // confirmation screen would let a retry start from the first batch and mail them again,
+      // so this state is terminal: report what went out and close.
+      const remaining = recipientIds.length - total.sent
+      setPartial(
+        `${err instanceof Error ? err.message : 'Send failed'}. ${total.sent.toLocaleString()} invitations were sent before this failed; ${remaining.toLocaleString()} were not. Re-select the contacts that were not invited rather than resending this batch.`,
+      )
+      setResult(total)
     } finally {
       setSending(false)
     }
   }
 
-  if (result && !error) {
+  if (result) {
     return (
       <Dialog open onOpenChange={() => onSent()}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Invitations sent</DialogTitle>
+            <DialogTitle>{partial ? 'Sending stopped part-way' : 'Invitations sent'}</DialogTitle>
             <DialogDescription>Here is what happened to each contact.</DialogDescription>
           </DialogHeader>
+
+          {partial && (
+            <p className="text-destructive rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
+              {partial}
+            </p>
+          )}
 
           <dl className="grid grid-cols-2 gap-2 text-sm">
             <Row label="Sent" value={result.sent} />
@@ -281,7 +290,7 @@ export function SolicitContactsDialog({
           <Button variant="outline" onClick={onClose} disabled={sending}>
             {result ? 'Close' : 'Cancel'}
           </Button>
-          <Button onClick={send} disabled={!acknowledged || sending || !recipientCount}>
+          <Button onClick={send} disabled={!acknowledged || sending || !recipientIds?.length}>
             {sending
               ? `Sending… ${progress}%`
               : `Send ${(recipientCount ?? 0).toLocaleString()} invitations`}

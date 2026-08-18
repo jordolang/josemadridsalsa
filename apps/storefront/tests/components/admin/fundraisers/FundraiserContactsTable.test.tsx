@@ -359,3 +359,63 @@ describe('guards against acting on the wrong rows', () => {
     releaseBulk?.()
   })
 })
+
+
+describe('in-flight select-all cannot undo a deliberate change', () => {
+  it('stays cleared when the operator clears while ids are still resolving', async () => {
+    const user = userEvent.setup()
+    let releaseIds: ((ids: string[]) => void) | null = null
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).startsWith('/api/admin/fundraiser-contacts/ids')) {
+        return new Promise((resolve) => {
+          releaseIds = (ids) =>
+            resolve({
+              ok: true,
+              json: async () => ({ ids, total: ids.length, truncated: false }),
+            } as Response)
+        })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) }) as unknown as Promise<Response>
+    })
+
+    renderTable({ totalMatching: 500 })
+    await user.click(selectAllCheckbox())
+    await user.click(screen.getByRole('button', { name: /select all 500/i }))
+
+    // Operator changes their mind before the response lands.
+    await user.click(screen.getByRole('button', { name: /^clear$/i }))
+    expect(screen.queryByTestId('selection-count')).not.toBeInTheDocument()
+
+    releaseIds?.(Array.from({ length: 500 }, (_, i) => `x${i}`))
+
+    // The late response must not resurrect the selection that was just cleared.
+    expect(screen.queryByTestId('selection-count')).not.toBeInTheDocument()
+  })
+
+  it('counts rows the bulk route reports, not the size of the chunk requested', async () => {
+    const user = userEvent.setup()
+    const many = Array.from({ length: 2082 }, (_, i) => `x${i}`)
+    let bulkCalls = 0
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).startsWith('/api/admin/fundraiser-contacts/ids')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ ids: many, total: 2082, truncated: false }),
+        }) as unknown as Promise<Response>
+      }
+      bulkCalls += 1
+      // First chunk asked for 1,000 but only 990 rows still existed.
+      return Promise.resolve({
+        ok: bulkCalls === 1,
+        json: async () => (bulkCalls === 1 ? { updated: 990 } : { error: 'Bulk update failed' }),
+      }) as unknown as Promise<Response>
+    })
+
+    renderTable({ totalMatching: 2082 })
+    await user.click(selectAllCheckbox())
+    await user.click(screen.getByRole('button', { name: /select all 2,082/i }))
+    await user.click(screen.getByRole('button', { name: /set 2,082 inactive/i }))
+
+    expect(screen.getByText(/990 of 2,082 contacts were already updated/i)).toBeInTheDocument()
+  })
+})
