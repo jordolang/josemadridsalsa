@@ -101,15 +101,16 @@ export function GlobalSearch() {
         <kbd className="hidden rounded border px-1.5 text-[0.65rem] sm:inline">⌘K</kbd>
       </Button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      {/* Results arrive already matched and ranked by the server, and their cmdk values are
+          ids. Left on, cmdk's client-side filter scores "order-clx123" against the typed
+          query, matches nothing, and empties the whole list. */}
+      <CommandDialog open={open} onOpenChange={setOpen} shouldFilter={false}>
         <CommandInput
           placeholder="Order, customer, fundraiser, document title, SKU, tracking…"
           value={query}
           onValueChange={setQuery}
         />
         <CommandList>
-          {/* cmdk filters client-side by default; results are already ranked server-side,
-              so every returned item is shown as-is. */}
           {!isSearchable(query) ? (
             <CommandEmpty>Type at least two characters.</CommandEmpty>
           ) : isLoading ? (

@@ -121,6 +121,34 @@ describe('runGlobalSearch', () => {
     expect(results.map((r) => r.id)).toEqual(['f1'])
   })
 
+  it('asks for named document matches separately from text mentions', async () => {
+    // The row cap is applied by the database before anything is scored, so one combined
+    // query would spend every slot on recent text mentions and drop the file actually
+    // named after the query.
+    await runGlobalSearch(user, 'Maysville')
+
+    expect(model('archiveDocument').findMany).toHaveBeenCalledTimes(2)
+    const [named, mentioned] = model('archiveDocument').findMany.mock.calls.map(([a]) => a)
+    expect(JSON.stringify(named.where)).toContain('filename')
+    expect(JSON.stringify(named.where)).not.toContain('extractedText')
+    expect(JSON.stringify(mentioned.where)).toContain('extractedText')
+  })
+
+  it('reaches gift certificates and purchase orders for a SKU-shaped code', async () => {
+    await runGlobalSearch(user, 'JMS-GC-4821-9930')
+
+    expect(model('giftCertificate').findMany).toHaveBeenCalled()
+    expect(model('purchaseOrder').findMany).toHaveBeenCalled()
+  })
+
+  it('gates training documents on the permission their page requires', async () => {
+    // /admin/training-data gates on content:write; gating the search differently would hide
+    // results from exactly the staff who can open the destination.
+    allow((permission) => permission !== 'content:write')
+    await runGlobalSearch(user, 'Zanesville')
+    expect(models.has('trainingDocument')).toBe(false)
+  })
+
   it('caps the number of results returned', async () => {
     model('fundraiserContact').findMany.mockResolvedValue(
       Array.from({ length: 40 }, (_, i) => ({
