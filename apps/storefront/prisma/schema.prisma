@@ -4441,6 +4441,9 @@ enum LedgerSource {
   FUNDRAISER
   MANUAL
   IMPORT
+  /// Read off a photographed paper form via `FormCapture`. Distinct from MANUAL:
+  /// a person confirmed the number, but the number came off a document we still hold.
+  FORM_CAPTURE
 }
 
 /// Income and expense categories. Contra items (refunds, discounts) are stored as EXPENSE so a
@@ -4706,4 +4709,133 @@ model Redirect {
 
   @@index([isActive])
   @@map("cms_redirects")
+}
+
+/// A photographed paper form on its way to becoming ledger rows.
+///
+/// The business still runs on paper: show settlement sheets, mileage logs, receipts. Rather than
+/// wait for that habit to change, a photo of the form is the input. Extraction reads it, a person
+/// confirms only what the machine was unsure about, and approval writes `LedgerEntry` rows that the
+/// existing QuickBooks sync already knows how to post.
+///
+/// The document itself is never discarded — `fileUrl` stays as the evidence behind every figure.
+model FormCapture {
+  id               String            @id @default(cuid())
+  formType         CaptureFormType
+  status           CaptureStatus     @default(UPLOADED)
+
+  /// The stored photo/PDF. This is the audit trail; do not delete it after posting.
+  fileUrl          String
+  fileName         String?
+  mimeType         String?
+  /// SHA-256 of the uploaded bytes. Unique, so re-uploading the identical photo is rejected
+  /// instead of quietly double-posting the same money.
+  fileHash         String            @unique
+
+  /// The date written *on the form*, not the upload date. Null until extraction finds one.
+  capturedOn       DateTime?
+  /// Optional link to the show this form came from. Plain id, matching `LedgerEntry.enteredById`,
+  /// to keep `FeaturedEvent` untouched.
+  eventId          String?
+
+  uploadedById     String
+  uploadedAt       DateTime          @default(now())
+
+  extractedAt      DateTime?
+  /// The exact model id that read the form, so a future re-read is comparable.
+  extractionModel  String?
+  /// The unedited model output, kept for audit even after a human corrects the lines.
+  rawExtraction    Json?
+  extractionError  String?
+  /// Lowest line confidence on the form; the gate for auto-approval.
+  minConfidence    Decimal?          @db.Decimal(4, 3)
+  /// The total printed on the form, when it states one. Reconciled against the sum of lines.
+  statedTotalCents Int?
+  /// True when the stated total matches the line sum. Null when the form states no total.
+  reconciled       Boolean?
+
+  reviewedById     String?
+  reviewedAt       DateTime?
+  reviewNotes      String?
+  /// Set when this form looks like a re-photograph of one already captured (same type, date and
+  /// event). Advisory only — the reviewer decides.
+  duplicateOfId    String?
+
+  postedAt         DateTime?
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  lines            FormCaptureLine[]
+
+  @@index([status])
+  @@index([formType, capturedOn])
+  @@index([eventId])
+  @@index([uploadedById])
+  @@map("form_captures")
+}
+
+/// One money line read off a captured form. Each becomes at most one `LedgerEntry`.
+model FormCaptureLine {
+  id            String          @id @default(cuid())
+  captureId     String
+  /// Order on the form, 1-based, so a reviewer reads the screen in the order the paper reads.
+  lineNumber    Int
+
+  /// The row label as it appears on the form ("Cash", "Credit", "Booth fee", "Mileage").
+  label         String
+  direction     LedgerDirection
+  category      LedgerCategory
+  /// Cents, always positive; `direction` carries the sign. Matches `LedgerEntry.amountCents`.
+  amountCents   Int
+  /// Units where the form records them (jars sold, miles driven). Not money.
+  quantity      Int?
+
+  /// Model confidence for this line, 0.000–1.000. Null on a line a person added by hand.
+  confidence    Decimal?        @db.Decimal(4, 3)
+  /// Exactly what the model read, before parsing. The audit trail for a corrected figure.
+  rawValue      String?
+  /// True once a human changed any field on this line.
+  edited        Boolean         @default(false)
+  /// Excluded lines are kept (so the form still reads whole) but never posted.
+  excluded      Boolean         @default(false)
+
+  /// The ledger row this line produced. Unique: a line can never post twice.
+  ledgerEntryId String?         @unique
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  capture       FormCapture     @relation(fields: [captureId], references: [id], onDelete: Cascade)
+
+  @@unique([captureId, lineNumber])
+  @@index([captureId])
+  @@map("form_capture_lines")
+}
+
+/// The kinds of paper this business actually produces. Each maps to an extraction spec in
+/// `lib/form-capture/form-specs.ts`.
+enum CaptureFormType {
+  SHOW_SETTLEMENT
+  FARMERS_MARKET
+  FUNDRAISER_ORDER
+  MILEAGE_LOG
+  EXPENSE_RECEIPT
+  OTHER
+}
+
+enum CaptureStatus {
+  UPLOADED
+  EXTRACTING
+  /// Extraction succeeded but something needs a person: a low-confidence line, or a stated
+  /// total that does not match the sum of lines.
+  NEEDS_REVIEW
+  /// Cleared for posting — either auto-approved or confirmed by a reviewer.
+  APPROVED
+  /// Ledger rows written. Terminal.
+  POSTED
+  /// Extraction failed. Re-runnable.
+  FAILED
+  /// A person judged the form unusable or a duplicate. Terminal, never posts.
+  REJECTED
 }

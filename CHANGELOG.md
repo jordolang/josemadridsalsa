@@ -16,6 +16,16 @@ the root `package.json` is canonical.
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
 ### Added
+- **Form Capture — photograph a paper form and it becomes ledger entries.** Most of this company's revenue has never passed through a system: shows and farmers markets are settled on paper, and QuickBooks only ever sees invoiced customers — 29.8% of filed gross receipts in 2023, 27.0% in 2024. Rather than wait for the paper habit to change, the photo is now the input. A new `FormCapture`/`FormCaptureLine` pair records the image, an extraction pass reads it, and approval writes `LedgerEntry` rows with `source = FORM_CAPTURE`, which the existing `enqueueLedgerEntries` sweep already carries into QuickBooks — no new sync code.
+
+  Six form types are modelled from the sheets actually in the document archive (show settlement, farmers market, fundraiser order, mileage log, expense receipt, and a catch-all), each with its own label → ledger-category rules in `lib/form-capture/form-specs.ts`.
+
+  A form posts without asking anyone anything when every line was read at confidence ≥ 0.9 *and* the total printed on the page equals the sum of the income lines exactly. Everything else goes to a review queue, so a person only ever sees the forms whose arithmetic or handwriting could not be settled automatically.
+
+  Double-counting is guarded three ways, because that is the specific failure the feature exists to end: `FormCapture.fileHash` is a unique SHA-256 of the bytes (the same photo cannot be captured twice, and a repeat returns `409` naming the original), `LedgerEntry.dedupeKey` is `capture:<lineId>` and unique, and `FormCaptureLine.ledgerEntryId` is unique. Separately, any row labelled "Total" is discarded during extraction — on these forms a total summarises the rows above it, so posting it alongside them would double the day's takings.
+
+  Two decisions worth knowing: an unreadable figure is dropped rather than posted as zero (a silent zero looks like a day with no sales; the resulting gap sends the form to review instead), and the accounting date is the date written on the form, never the upload date — forms are routinely photographed weeks later, which is how the historical data drifted in the first place. Capture screen at `/admin/financials/capture`, gated on `financials:read`/`financials:write`.
+
 - **Ledger reconciliation — how much of the business the ledger has actually captured.** The bookkeeping ledger can be internally perfect and still describe a fraction of the company: every row correct, every total consistent, and most of the year never written down. Nothing inside the ledger detects that, because the missing rows leave no trace.
 
   `lib/financials/anchors.ts` records the gross-receipts figure printed on each year's filed Schedule C or year-end P&L, recovered from the document archive, with its source file and an evidence grade. `lib/financials/reconciliation.ts` puts ledger income next to those figures and reports the gap; `/admin/financials/reconciliation` renders it, gated on `financials:read`.
