@@ -15,6 +15,19 @@ the root `package.json` is canonical.
 
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
+### Added
+- **Ledger reconciliation — how much of the business the ledger has actually captured.** The bookkeeping ledger can be internally perfect and still describe a fraction of the company: every row correct, every total consistent, and most of the year never written down. Nothing inside the ledger detects that, because the missing rows leave no trace.
+
+  `lib/financials/anchors.ts` records the gross-receipts figure printed on each year's filed Schedule C or year-end P&L, recovered from the document archive, with its source file and an evidence grade. `lib/financials/reconciliation.ts` puts ledger income next to those figures and reports the gap; `/admin/financials/reconciliation` renders it, gated on `financials:read`.
+
+  The anchors live in code rather than a table on purpose: fourteen immutable rows describing closed years, where being reviewable in a diff and un-editable by accident matter more than being queryable. A filed return does not change — if one is ever amended, that is a commit.
+
+  Years with no company-wide document carry a `FLOOR` anchor built from the surviving channel records. A floor is a lower bound, not a target, so ledger income exceeding one reports as `ABOVE_FLOOR` rather than as a discrepancy, and floors are excluded from every aggregate ratio — otherwise the system's ambition would be quietly capped at whatever a spreadsheet happened to record in 2017.
+
+  Starting point on measurement: **7.3%** of attested revenue captured across the seven fully documented years, 0 of 7 reconciled, $3,125,370 proven by paperwork and absent from the ledger.
+
+- **`QUICKBOOKS_ENVIRONMENT` is now documented.** It has no admin-panel equivalent, defaults to `sandbox`, and decides which Intuit environment the Connect button reaches. Left unset in production the OAuth flow completes successfully against a sandbox company and syncs nothing real — a silent failure with no error to notice.
+
 ### Fixed
 - **The admin search palette showed nothing, for any query** — `CommandDialog` never set `shouldFilter={false}`, so cmdk's client-side filter ran on top of the server's results and re-scored each row against its own `value`. Those values are ids (`order-clx123abc`), so typing "Maysville" scored every row at zero and unmounted the entire list, including the "See all results" action. The palette rendered an empty box while the API returned matches. This predates the archive work — item values have been ids since the search box shipped — and the code carried a comment asserting the opposite, which is why it survived review twice. The dialog now forwards `shouldFilter`, the palette turns filtering off, and a component test renders the palette and asserts a body-text hit whose title shares no characters with the query is still displayed.
 
