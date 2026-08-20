@@ -87,13 +87,15 @@ const ShippingCalculationSchema = z.object({
     address2: z.string().optional(),
     city: z.string().min(1, 'City is required'),
     state: z.string().min(2, 'State is required'),
-    postalCode: z.string().min(1, 'Postal code is required'),
+    // Trimmed, so a whitespace-only value cannot clear the floor for any country
+    // and go on to be quoted and cached as though it were a real address.
+    postalCode: z.string().trim().min(1, 'Postal code is required'),
     country: z.string().default('US'),
   })
     // US ZIPs stay at 5 characters. Applying that floor worldwide rejected every
     // shorter format — Australia's four-digit postcodes among them — so
     // international shipping 400'd despite having a published rate.
-    .refine((a) => a.country.toUpperCase() !== 'US' || a.postalCode.trim().length >= 5, {
+    .refine((a) => a.country.toUpperCase() !== 'US' || a.postalCode.length >= 5, {
       message: 'ZIP code is required',
       path: ['postalCode'],
     }),
