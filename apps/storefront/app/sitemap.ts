@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
+import { getSitemapLandingPages } from '@/lib/cms/queries'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let baseUrl = 'https://www.josemadrid.net'
@@ -55,6 +56,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${baseUrl}/contact`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/faq`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/laperla`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.6,
@@ -126,6 +139,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     },
     {
+      url: `${baseUrl}/live`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.6,
+    },
+    {
       url: `${baseUrl}/shipping`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
@@ -133,6 +152,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${baseUrl}/returns`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
+    {
+      url: `${baseUrl}/refunds`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.4,
@@ -299,6 +324,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   } catch (error) {
     console.error('Failed to fetch fundraisers for sitemap:', error)
+  }
+
+  try {
+    const landingPages = await getSitemapLandingPages()
+
+    landingPages.forEach((page) => {
+      urls.push({
+        url: `${baseUrl}/${page.slug}`,
+        lastModified: page.updatedAt,
+        changeFrequency: 'weekly',
+        priority: priorities.landingPage || 0.6,
+      })
+    })
+  } catch (error) {
+    console.error('Failed to fetch CMS landing pages for sitemap:', error)
   }
 
   try {

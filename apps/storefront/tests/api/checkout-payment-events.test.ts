@@ -42,6 +42,9 @@ vi.mock('@/lib/orders/redeem-codes', () => ({ redeemOrderCodesInTx: vi.fn() }))
 vi.mock('@/lib/fundraising/credit-commission', () => ({
   creditFundraiserCommission: vi.fn(async () => ({ credited: false, amount: 0 })),
 }))
+vi.mock('@/lib/loyalty', () => ({
+  creditPurchaseLoyaltyPoints: vi.fn(async () => ({ awarded: false, points: 0 })),
+}))
 
 vi.mock('@/lib/prisma', () => {
   const tx = {

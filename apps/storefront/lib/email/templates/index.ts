@@ -37,6 +37,7 @@ import { flashSaleTemplate } from './flash-sale'
 import { productLaunchTemplate } from './product-launch'
 import { fundraiserKickoffTemplate } from './fundraiser-kickoff'
 import { fundraiserUpdateTemplate } from './fundraiser-update'
+import { fundraiserMonthlyOutreachTemplate } from './fundraiser-monthly-outreach'
 import { monthlyNewsletterTemplate } from './monthly-newsletter'
 import { eventInvitationTemplate } from './event-invitation'
 import seasonalSummerTemplate from './seasonal-summer'
@@ -76,6 +77,7 @@ export {
   productLaunchTemplate,
   fundraiserKickoffTemplate,
   fundraiserUpdateTemplate,
+  fundraiserMonthlyOutreachTemplate,
   monthlyNewsletterTemplate,
   eventInvitationTemplate,
   seasonalSummerTemplate,
@@ -116,6 +118,7 @@ export const emailTemplates = [
   productLaunchTemplate,
   fundraiserKickoffTemplate,
   fundraiserUpdateTemplate,
+  fundraiserMonthlyOutreachTemplate,
   monthlyNewsletterTemplate,
   eventInvitationTemplate,
   seasonalSummerTemplate,

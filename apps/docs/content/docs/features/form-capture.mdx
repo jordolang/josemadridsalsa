@@ -1,0 +1,134 @@
+---
+title: Form Capture
+description: Photograph a paper form and let it become ledger entries — extraction, reconciliation, review, and posting to QuickBooks.
+---
+
+Most of this company's revenue has never passed through a system. Shows and farmers markets are
+settled on paper at the end of the day, and QuickBooks only ever sees the customers who got an
+invoice — around **27–30% of filed gross receipts** in 2023 and 2024. The rest was written on a
+sheet, added up by hand, and typed in weeks later if at all.
+
+Form Capture closes that gap without asking anyone to change how they work. The paper form stays.
+You photograph it, and the photo becomes ledger rows.
+
+## The pipeline
+
+```
+photo ─▶ FormCapture ─▶ extraction ─▶ reconcile ─▶ review (only if needed) ─▶ LedgerEntry ─▶ QuickBooks
+```
+
+Each step is a distinct, resumable state on the `FormCapture` record:
+
+| Status | Meaning |
+|---|---|
+| `UPLOADED` | Photo stored, not yet read. |
+| `EXTRACTING` | Being read. |
+| `NEEDS_REVIEW` | A person must look — see [When you get asked](#when-you-get-asked). |
+| `APPROVED` | Cleared to post. |
+| `POSTED` | Ledger rows written. Terminal. |
+| `FAILED` | Extraction failed. Re-runnable. |
+| `REJECTED` | Judged unusable. Terminal, never posts. |
+
+Posting writes `LedgerEntry` rows with `source = FORM_CAPTURE`. Nothing further is needed for
+QuickBooks: `enqueueLedgerEntries` in `lib/quickbooks/sync.ts` already sweeps up ledger rows
+QuickBooks has not seen and posts them as journal entries.
+
+## Using it
+
+Go to **`/admin/financials/capture`** on a phone. Pick what the form is, tap **Take photo**, and
+shoot the sheet. You can shoot a stack — up to ten at once, which is the normal case for a driver
+coming home from a weekend of shows.
+
+Requires `financials:read` to view and `financials:write` to capture or post.
+
+## When you get asked
+
+The whole point is that you are asked as little as possible. A form posts on its own when **both**
+are true:
+
+1. Every line was read with confidence ≥ **0.9**, and
+2. the total printed on the form equals the sum of the income lines, exactly.
+
+Anything else goes to the review queue. In practice that means you are shown the forms where the
+handwriting was genuinely ambiguous, or where the arithmetic on the page does not work — which is
+information worth having anyway.
+
+A form is also always sent to review if it looks like a **re-photograph**: same form type, same
+date, same event as one already captured. That is advisory, not a block — two markets on one day
+is a real thing.
+
+## How duplicates are prevented
+
+Double-counting is the specific failure this feature exists to end, so there are three independent
+guards:
+
+- **`FormCapture.fileHash`** is a unique SHA-256 of the uploaded bytes. The identical photo cannot
+  be captured twice, however many times someone taps upload on a bad connection. A repeat returns
+  `409` naming the existing capture.
+- **`LedgerEntry.dedupeKey`** is `capture:<lineId>` and unique, so re-running a post upserts rather
+  than inserting.
+- **`FormCaptureLine.ledgerEntryId`** is unique, so a line that has already posted is skipped.
+
+Separately, the extractor **discards any row labelled "Total"**. On these forms a total summarises
+the rows above it; posting it alongside them would double the day's takings. This is enforced in
+`isTotalLabel()` and covered by test.
+
+## What gets read, per form type
+
+Extraction is driven by `lib/form-capture/form-specs.ts`, which holds one spec per form type —
+the fields to look for and how each label maps into the ledger. The vocabulary comes from the
+forms actually in the document archive.
+
+| Form type | Posts as |
+|---|---|
+| `SHOW_SETTLEMENT` | Tender rows → `SHOW_SALES` income; booth/show fees → `BOOTH_FEE`; hotels, gas, tolls → `TRAVEL`; meals → `MEALS`. Channel `EVENT`. |
+| `FARMERS_MARKET` | As above. Channel `EVENT`. |
+| `FUNDRAISER_ORDER` | Payments → `PRODUCT_SALES`. Channel `FUNDRAISER`. |
+| `MILEAGE_LOG` | Miles as quantity; tolls and fuel → `TRAVEL`. |
+| `EXPENSE_RECEIPT` | Jars, lids, labels, ingredients → `COGS`; shipping → `SHIPPING_COST`; otherwise `OTHER_EXPENSE`. |
+| `OTHER` | Extracted and left for a person to classify. |
+
+Rules are ordered, first match wins, and expense rules are listed before tender rules on purpose:
+"Cash show fee" is money going out, not takings.
+
+**When a new label starts appearing on the paper, add a rule to the matching spec** rather than
+inventing a new form type.
+
+## Things it deliberately does not do
+
+- **An unreadable figure is never posted as zero.** `parseMoneyToCents` returns null, the line is
+  dropped, and the resulting gap against the stated total sends the form to review. A silent zero
+  would look like a day with no sales.
+- **Quantity rows carry no dollars.** Jars sold and miles driven are recorded on the capture for
+  reporting but never reach the ledger.
+- **The accounting date is the date on the form**, not the upload date. Forms are routinely
+  photographed weeks later; dating rows by upload is exactly how the historical data drifted.
+- **A posted capture cannot be edited or re-read.** Correct the ledger entry instead.
+- **The photo is never deleted.** `fileUrl` is the evidence behind every figure.
+
+## Configuration
+
+No new environment variables. Uses the existing `ANTHROPIC_API_KEY` (extraction) and UploadThing
+credentials (storage). Extraction runs on `claude-opus-5` — handwriting on a decade-old carbon form
+is the hardest input in this codebase and a misread digit becomes a wrong figure in QuickBooks.
+
+If `ANTHROPIC_API_KEY` is unset, extraction throws rather than returning empty output: a capture
+that silently produced no lines would look like an empty form instead of a broken pipeline.
+
+## Code map
+
+| Path | What it is |
+|---|---|
+| `lib/form-capture/form-specs.ts` | Per-form-type specs and label → ledger classification. |
+| `lib/form-capture/parse.ts` | Money/quantity/date parsing, reconciliation, the auto-approve gate. |
+| `lib/form-capture/extract.ts` | The vision call and classification of its output. |
+| `lib/form-capture/post.ts` | Approved capture → `LedgerEntry` rows, idempotently. |
+| `lib/form-capture/service.ts` | Orchestration: create, extract, approve, reject. |
+| `app/api/admin/form-captures/` | REST surface for the queue and the three reviewer actions. |
+| `app/admin/financials/capture/` | The mobile capture and review screen. |
+| `tests/lib/form-capture/` | 64 tests over the parsing, classification and posting logic. |
+
+## Related
+
+- [Bookkeeping Ledger](/docs/features/bookkeeping-ledger) — where captured money lands.
+- [QuickBooks](/docs/integrations/quickbooks) — how ledger rows reach the books.

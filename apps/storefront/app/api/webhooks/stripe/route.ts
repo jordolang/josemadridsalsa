@@ -10,6 +10,7 @@ import { emitDomainEvent } from '@/lib/domain-events/emit'
 import { dedupeKeys, notifyOperators, severityFor } from '@/lib/notifications/dispatch'
 import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
+import { creditPurchaseLoyaltyPoints } from '@/lib/loyalty'
 import { reverseFundraiserCommission } from '@/lib/fundraising/reverse-commission'
 
 export const runtime = 'nodejs'
@@ -156,6 +157,10 @@ export async function POST(request: Request) {
           // sale — the completion route returns early once the order is already paid.
           // Idempotent on the order, so whichever path wins credits it exactly once.
           await creditFundraiserCommission(tx, order.id)
+
+          // Award purchase loyalty points, idempotent on the order like the credit above, so
+          // the webhook racing the completion route awards them exactly once.
+          await creditPurchaseLoyaltyPoints(tx, order.id)
 
           // Deduct reserved inventory for product orders (not gift certificates).
           // Atomically decrements both `inventory` and `stockReserved`.
