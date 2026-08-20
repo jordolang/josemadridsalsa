@@ -149,7 +149,9 @@ export function analyseCohorts(orders: BuyerOrder[], now: Date): CohortAnalysis 
   const cohortKeys = [...cohortMembers.keys()].sort()
 
   // The widest offset any cohort could observe is from the earliest cohort to the current month.
-  const maxOffset = cohortKeys.length > 0 ? monthOffset(cohortKeys[0], nowMonth) : 0
+  // Floored at 0 so a future-dated cohort (only reachable with a `now` before the data) yields a
+  // single acquisition column rather than a negative column count downstream.
+  const maxOffset = cohortKeys.length > 0 ? Math.max(0, monthOffset(cohortKeys[0], nowMonth)) : 0
 
   const cohorts: CohortRow[] = cohortKeys.map((cohort) => {
     const members = cohortMembers.get(cohort) ?? []
@@ -157,7 +159,9 @@ export function analyseCohorts(orders: BuyerOrder[], now: Date): CohortAnalysis 
     // How many offsets this cohort can actually see: acquisition month through the current month.
     const observable = monthOffset(cohort, nowMonth)
 
-    const returned = new Array<number>(observable + 1).fill(0)
+    // Clamp: a future-dated cohort (only reachable with a `now` earlier than the data) would give
+    // a negative length and throw. Such a cohort has no observable offset, so an empty array is right.
+    const returned = new Array<number>(Math.max(0, observable + 1)).fill(0)
     for (const facts of members) {
       for (const month of facts.activeMonths) {
         const offset = monthOffset(cohort, month)

@@ -68,6 +68,9 @@ the root `package.json` is canonical.
 
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
+### Fixed
+- **Analytics report review follow-ups** — small correctness and clarity fixes to the two new analytics reports after review. The turnover report's *inventory-at-cost* caveat is now decided on the exact coverage ratio rather than a rounded percent, so 99.6%-covered no longer rounds to 100% and hides the "some stock is uncosted" warning; and the slow-mover ranking compares stock value only when both products have a known cost, falling back to units on hand otherwise, so a large pile of uncosted dead stock is no longer sorted beneath a single cheap costed jar (a missing cost is not "worth zero"). The retention grid's cohort math floors its observable-offset count at zero, so a future-dated `now` degrades to an unobservable column instead of a negative array length; a dead rectangular-padding branch was removed; and the cohort report no longer accepts a caller-supplied `now` that could disagree with the query window. All covered by new regression tests.
+
 ### Added
 - **Form Capture — photograph a paper form and it becomes ledger entries.** Most of this company's revenue has never passed through a system: shows and farmers markets are settled on paper, and QuickBooks only ever sees invoiced customers — 29.8% of filed gross receipts in 2023, 27.0% in 2024. Rather than wait for the paper habit to change, the photo is now the input. A new `FormCapture`/`FormCaptureLine` pair records the image, an extraction pass reads it, and approval writes `LedgerEntry` rows with `source = FORM_CAPTURE`, which the existing `enqueueLedgerEntries` sweep already carries into QuickBooks — no new sync code.
 
