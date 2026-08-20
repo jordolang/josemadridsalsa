@@ -18,13 +18,24 @@ export interface LocalImage {
 }
 
 export interface MigrationEntry {
-  /** The reference as it appears in code and the database, e.g. `https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/salsa-bowl.webp`. */
+  /** The reference as it appears in code and the database, e.g. `/images/<dir>/salsa-bowl.png`. */
   localRef: string
-  /** Where it lands in the blob store, e.g. `site/images/shared/salsa-bowl.webp`. */
+  /** Where the reference points once migrated — the WebP when converting, e.g. `site/images/shared/salsa-bowl.webp`. */
   blobPathname: string
+  /**
+   * Where the untouched original lands, e.g. `site/images/shared/salsa-bowl.png`.
+   *
+   * The original is uploaded alongside any conversion rather than replaced by it, so a consumer
+   * that cannot read WebP still has a URL to point at. Equal to `blobPathname` when the file is
+   * not converted.
+   */
+  originalBlobPathname: string
   converted: boolean
   sizeBytes: number
 }
+
+/** Which of an entry's two uploads a reference should resolve to. */
+export type UrlVariant = 'converted' | 'original'
 
 /** The prefix all migrated site images live under, keeping them clear of `products/` uploads. */
 export const SITE_PREFIX = 'site'
@@ -44,9 +55,12 @@ export function planFile(image: LocalImage, convert: boolean): MigrationEntry {
   const outName = outputFileName(fileName, converting)
   const outDir = segments.slice(0, -1).join('/')
 
+  const prefix = `${SITE_PREFIX}/${outDir ? `${outDir}/` : ''}`
+
   return {
     localRef: `/${image.relativePath}`,
-    blobPathname: `${SITE_PREFIX}/${outDir ? `${outDir}/` : ''}${outName}`,
+    blobPathname: `${prefix}${outName}`,
+    originalBlobPathname: `${prefix}${fileName}`,
     converted: converting,
     sizeBytes: image.sizeBytes,
   }
@@ -62,13 +76,15 @@ export function planFile(image: LocalImage, convert: boolean): MigrationEntry {
 export function buildRewriteMap(
   entries: MigrationEntry[],
   storeBaseUrl: string,
-  siteOrigins: string[]
+  siteOrigins: string[],
+  variant: UrlVariant = 'converted'
 ): Map<string, string> {
   const map = new Map<string, string>()
   const base = storeBaseUrl.replace(/\/+$/, '')
 
   for (const entry of entries) {
-    const blobUrl = `${base}/${entry.blobPathname}`
+    const pathname = variant === 'original' ? entry.originalBlobPathname : entry.blobPathname
+    const blobUrl = `${base}/${pathname}`
     map.set(entry.localRef, blobUrl)
     for (const origin of siteOrigins) {
       map.set(`${origin.replace(/\/+$/, '')}${entry.localRef}`, blobUrl)
@@ -81,7 +97,25 @@ export function buildRewriteMap(
 export interface RewriteResult {
   text: string
   replacements: Array<{ from: string; to: string; count: number }>
+  /**
+   * References found inside a template literal (`${SITE_URL}/images/x.png`) and deliberately left
+   * alone. Replacing only the path would stitch an absolute blob URL onto the variable and yield
+   * `${SITE_URL}https://.../x.png`, so these are reported for a human instead of mangled.
+   */
+  needsReview: Array<{ ref: string; count: number }>
 }
+
+/**
+ * A reference only counts when it starts at a delimiter.
+ *
+ * Without this, a migrated URL is a match for its own key: `site/images/x.png` ends with
+ * `/images/x.png`, so a second pass would prefix it again and produce
+ * `.../sitehttps://.../site/images/x.png`. Requiring a leading boundary makes the rewrite
+ * idempotent, which matters now that the original is uploaded under its own name and every
+ * unconverted entry maps onto a URL containing its key verbatim.
+ */
+const LEADING_BOUNDARY = String.raw`(?<=^|["'\`(=\s,;>\[])`
+const TRAILING_BOUNDARY = String.raw`(?=["'\`)\s,;>}]|$)`
 
 /**
  * Replace every known image reference in a blob of text.
@@ -98,9 +132,17 @@ export function rewriteText(text: string, map: Map<string, string>): RewriteResu
   const replacements: RewriteResult['replacements'] = []
   let out = text
 
+  const needsReview: RewriteResult['needsReview'] = []
+
   for (const key of keys) {
     const to = map.get(key)!
-    const pattern = new RegExp(`${escapeRegExp(key)}(?=["'\`)\\s,;>}]|$)`, 'g')
+    const escaped = escapeRegExp(key)
+
+    // `${VAR}/images/x.png` — the path is real but the prefix is code, so leave it for a human.
+    const templated = out.match(new RegExp(`(?<=\\})${escaped}${TRAILING_BOUNDARY}`, 'g'))
+    if (templated?.length) needsReview.push({ ref: key, count: templated.length })
+
+    const pattern = new RegExp(`${LEADING_BOUNDARY}${escaped}${TRAILING_BOUNDARY}`, 'g')
     const matches = out.match(pattern)
     if (!matches?.length) continue
 
@@ -108,7 +150,7 @@ export function rewriteText(text: string, map: Map<string, string>): RewriteResu
     replacements.push({ from: key, to, count: matches.length })
   }
 
-  return { text: out, replacements }
+  return { text: out, replacements, needsReview }
 }
 
 function escapeRegExp(value: string): string {

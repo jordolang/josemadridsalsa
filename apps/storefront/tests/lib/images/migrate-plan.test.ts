@@ -125,7 +125,7 @@ describe('rewriteText', () => {
 
   it('leaves text with no references untouched', () => {
     const input = 'const x = 1'
-    expect(rewriteText(input, map)).toEqual({ text: input, replacements: [] })
+    expect(rewriteText(input, map)).toEqual({ text: input, replacements: [], needsReview: [] })
   })
 
   it('is idempotent — running it twice changes nothing the second time', () => {
@@ -136,11 +136,71 @@ describe('rewriteText', () => {
   })
 })
 
+describe('preserving the original alongside the conversion', () => {
+  it('records where the untouched original lands as well as the WebP', () => {
+    const entry = planFile({ relativePath: 'images/shared/salsa-bowl.png', sizeBytes: 337_000 }, true)
+    expect(entry.blobPathname).toBe(`${SITE_PREFIX}/images/shared/salsa-bowl.webp`)
+    expect(entry.originalBlobPathname).toBe(`${SITE_PREFIX}/images/shared/salsa-bowl.png`)
+  })
+
+  it('points both pathnames at the same file when nothing is converted', () => {
+    const entry = planFile({ relativePath: 'images/opengraph/home.png', sizeBytes: 500 }, true)
+    expect(entry.originalBlobPathname).toBe(entry.blobPathname)
+  })
+
+  it('resolves references to the original when asked for that variant', () => {
+    const entries = [planFile({ relativePath: 'images/shared/salsa-bowl.png', sizeBytes: 1 }, true)]
+    const converted = buildRewriteMap(entries, STORE, [SITE])
+    const original = buildRewriteMap(entries, STORE, [SITE], 'original')
+    expect(converted.get('/images/shared/salsa-bowl.png')).toBe(
+      `${STORE}/${SITE_PREFIX}/images/shared/salsa-bowl.webp`,
+    )
+    expect(original.get('/images/shared/salsa-bowl.png')).toBe(
+      `${STORE}/${SITE_PREFIX}/images/shared/salsa-bowl.png`,
+    )
+  })
+
+  it('does not re-prefix an already-migrated URL whose key it still contains', () => {
+    // The regression that produced `.../sitehttps://.../site/images/...` in production: an
+    // unconverted entry maps onto a URL ending in its own key, so an unguarded second pass
+    // matched inside its own output.
+    const entries = [planFile({ relativePath: 'images/opengraph/home.png', sizeBytes: 1 }, true)]
+    const map = buildRewriteMap(entries, STORE, [SITE])
+    const once = rewriteText(`<meta content="/images/opengraph/home.png">`, map)
+    expect(once.text).toContain(`${STORE}/${SITE_PREFIX}/images/opengraph/home.png`)
+
+    const twice = rewriteText(once.text, map)
+    expect(twice.text).toBe(once.text)
+    expect(twice.replacements).toEqual([])
+    expect(twice.text).not.toContain('sitehttps://')
+  })
+
+  it('reports a templated reference for review instead of stranding the variable', () => {
+    const entries = [planFile({ relativePath: 'images/shared/logo.png', sizeBytes: 1 }, true)]
+    const map = buildRewriteMap(entries, STORE, [SITE])
+    const result = rewriteText('url: `${SITE_URL}/images/shared/logo.png`', map)
+    expect(result.text).toBe('url: `${SITE_URL}/images/shared/logo.png`')
+    expect(result.needsReview).toEqual([{ ref: '/images/shared/logo.png', count: 1 }])
+  })
+})
+
 describe('summariseMigration', () => {
   it('separates converted from preserved files', () => {
     const entries: MigrationEntry[] = [
-      { localRef: '/a.png', blobPathname: 'site/a.webp', converted: true, sizeBytes: 1000 },
-      { localRef: '/og.png', blobPathname: 'site/og.png', converted: false, sizeBytes: 500 },
+      {
+        localRef: '/a.png',
+        blobPathname: 'site/a.webp',
+        originalBlobPathname: 'site/a.png',
+        converted: true,
+        sizeBytes: 1000,
+      },
+      {
+        localRef: '/og.png',
+        blobPathname: 'site/og.png',
+        originalBlobPathname: 'site/og.png',
+        converted: false,
+        sizeBytes: 500,
+      },
     ]
     expect(summariseMigration(entries)).toEqual({
       files: 2,
