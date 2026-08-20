@@ -32,10 +32,12 @@ const prisma = (await import('@/lib/prisma')).default
 const SLUG = 'home'
 let pageId: string
 
-// Vitest does not load .env, so a plain `vitest` run has no DATABASE_URL and
-// every Prisma call fails datasource validation. Skip the file in that case
-// instead of failing it — same gate the other database-backed tests use.
-const runIntegration = !!(process.env.DATABASE_URL || process.env.RUN_INTEGRATION_TESTS)
+// This file deletes and recreates the 'home' page, so it needs a database it
+// owns. DATABASE_URL cannot signal that: @prisma/client loads .env itself, so
+// it is set on every developer machine and would aim those deletes at shared
+// dev. CI opts in explicitly; without the flag the file skips rather than
+// failing on an unreachable datasource.
+const runIntegration = !!process.env.RUN_INTEGRATION_TESTS
 
 function patchRequest(body: unknown) {
   return new NextRequest(`https://store.example.com/api/admin/cms/pages/${pageId}`, {

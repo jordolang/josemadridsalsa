@@ -15,7 +15,12 @@ import prisma from '@/lib/prisma'
 import Papa from 'papaparse'
 import ExcelJS from 'exceljs'
 
-const runIntegration = !!(process.env.DATABASE_URL || process.env.RUN_INTEGRATION_TESTS)
+// These tests create, mutate and delete rows, so they need a database they own.
+// DATABASE_URL cannot signal that: @prisma/client loads apps/storefront/.env
+// itself, so it is set on every developer machine and used to point this suite
+// at shared dev — where the assertions below fail against real data and the
+// writes land on rows someone else cares about. CI opts in explicitly.
+const runIntegration = !!process.env.RUN_INTEGRATION_TESTS
 
 describe.skipIf(!runIntegration)('Import/Export Round-Trip', () => {
   let testProducts: any[] = []

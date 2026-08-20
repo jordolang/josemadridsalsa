@@ -38,6 +38,10 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/jms_test
       DATABASE_URL_UNPOOLED: postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/jms_test
+      # The database-backed tests create and delete rows, so they run only where the
+      # database is disposable. This throwaway Postgres is; a developer's .env is not,
+      # which is why they opt in on this flag rather than on DATABASE_URL being present.
+      RUN_INTEGRATION_TESTS: 'true'
 
     steps:
       - name: Checkout code
