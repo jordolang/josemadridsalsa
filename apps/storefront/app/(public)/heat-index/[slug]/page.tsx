@@ -26,6 +26,13 @@ export const revalidate = 300
 
 const SITE_URL = 'https://www.josemadrid.net'
 
+// Fallback share image for a post with no cover image. og:image must be set
+// unconditionally: Next.js only falls back to a file-based opengraph-image when
+// the page's own metadata has no `openGraph.images` key at all, so leaving it
+// off for cover-less posts silently swaps in a different image.
+const DEFAULT_OG_IMAGE =
+  'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/opengraph/josemadridhome.png'
+
 interface PageProps {
   params: Promise<{ slug: string }>
 }
@@ -51,6 +58,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = post.seoTitle ?? `${post.title} | The Heat Index`
   const description = post.seoDescription ?? post.excerpt
   const url = `${SITE_URL}/heat-index/${post.slug}`
+  // The post's own cover image is the share image; never a generated card.
+  const ogImage = post.coverImage ?? DEFAULT_OG_IMAGE
 
   return {
     title,
@@ -64,15 +73,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       publishedTime: post.publishedAt?.toISOString(),
       modifiedTime: post.updatedAt.toISOString(),
       tags: post.tags,
-      ...(post.coverImage
-        ? { images: [{ url: post.coverImage, alt: post.coverImageAlt ?? post.title }] }
-        : {}),
+      images: [{ url: ogImage, alt: post.coverImageAlt ?? post.title }],
     },
     twitter: {
       card: 'summary_large_image',
       title: post.title,
       description,
-      ...(post.coverImage ? { images: [post.coverImage] } : {}),
+      images: [ogImage],
     },
   }
 }
@@ -189,7 +196,7 @@ export default async function PostDetailPage({ params }: PageProps) {
       url: SITE_URL,
       logo: {
         '@type': 'ImageObject',
-        url: `${SITE_URL}/images/shared/jose-madrid-salsa-logo.png`,
+        url: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/jose-madrid-salsa-logo.webp',
       },
     },
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },

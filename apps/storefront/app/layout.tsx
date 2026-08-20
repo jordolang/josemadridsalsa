@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     description: 'Premium gourmet salsas made with the finest ingredients. Order online for delivery.',
     images: [
       {
-        url: 'https://www.josemadrid.net/images/opengraph/josemadridhome.png',
+        url: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/opengraph/josemadridhome.png',
         width: 1200,
         height: 630,
         alt: 'Jose Madrid Salsa',
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Jose Madrid Salsa - Premium Gourmet Salsa',
     description: 'Premium gourmet salsas made with the finest ingredients.',
-    images: ['https://www.josemadrid.net/images/opengraph/josemadridhome.png'],
+    images: ['https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/opengraph/josemadridhome.png'],
   },
   robots: {
     index: true,

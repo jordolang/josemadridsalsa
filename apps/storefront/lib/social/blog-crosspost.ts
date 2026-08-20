@@ -211,6 +211,113 @@ export function buildTwitterText(
   return `${base}${suffix}`
 }
 
+/**
+ * Image formats Google Business Profile accepts for a local post photo. A
+ * cross-post's media exists for Google Business alone: publishToFacebook only
+ * posts photos when there is no linkUrl, and an article cross-post always has
+ * one, so Facebook keeps its link card either way. Attaching a format Google
+ * rejects would fail the whole post, so an unsupported cover is left off and the
+ * post publishes without a photo, exactly as it does today.
+ */
+const GOOGLE_POST_IMAGE_TYPES = ['image/jpeg', 'image/png']
+
+/** Google rejects a local post photo over 5 MB, which fails the whole post. */
+const GOOGLE_POST_MAX_BYTES = 5 * 1024 * 1024
+
+const EXTENSION_MIME_TYPES: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  avif: 'image/avif',
+}
+
+/** Last path segment of an image URL, ignoring any query string. */
+export function filenameFromUrl(url: string): string {
+  try {
+    const path = new URL(url).pathname
+    return decodeURIComponent(path.slice(path.lastIndexOf('/') + 1)) || 'cover-image'
+  } catch {
+    return 'cover-image'
+  }
+}
+
+/** Best-effort MIME type from a URL's file extension. */
+export function mimeTypeFromUrl(url: string): string | null {
+  const ext = filenameFromUrl(url).split('.').pop()?.toLowerCase()
+  return (ext && EXTENSION_MIME_TYPES[ext]) || null
+}
+
+/**
+ * Attach the article's cover image to its cross-post as a real Media row so
+ * publishToAccount hands the URL to Google Business as a post photo.
+ *
+ * The image is not re-uploaded: Google fetches the blob URL itself, so the row
+ * only has to record what that URL is. Size and type come from a HEAD request
+ * where the host answers one, falling back to the file extension.
+ *
+ * Any previously attached image is unlinked, so changing a post's cover and
+ * re-running the cross-post does not leave the old one behind.
+ */
+async function syncCoverMedia(
+  socialPostId: string,
+  coverImage: string | null,
+  alt: string | null,
+): Promise<void> {
+  let mediaId: string | null = null
+
+  if (coverImage) {
+    let mimeType = mimeTypeFromUrl(coverImage)
+    let fileSize = 0
+    try {
+      const head = await fetch(coverImage, { method: 'HEAD' })
+      if (head.ok) {
+        mimeType = head.headers.get('content-type')?.split(';')[0].trim() || mimeType
+        fileSize = Number(head.headers.get('content-length')) || 0
+      }
+    } catch {
+      // Unreachable host: fall back to the extension and let the publish attempt
+      // surface the real failure rather than blocking the cross-post here.
+    }
+
+    // A size of 0 means the host did not report one; attempt the attach and let
+    // Google's own response be the authority rather than guessing it too large.
+    const tooLarge = fileSize > GOOGLE_POST_MAX_BYTES
+    if (mimeType && GOOGLE_POST_IMAGE_TYPES.includes(mimeType) && !tooLarge) {
+      const existing = await prisma.media.findFirst({ where: { url: coverImage } })
+      const media =
+        existing ??
+        (await prisma.media.create({
+          data: {
+            url: coverImage,
+            filename: filenameFromUrl(coverImage),
+            mimeType,
+            fileSize,
+            alt,
+          },
+        }))
+      mediaId = media.id
+      await prisma.socialMediaPostMedia.upsert({
+        where: { postId_mediaId: { postId: socialPostId, mediaId } },
+        create: { postId: socialPostId, mediaId, order: 0 },
+        update: { order: 0 },
+      })
+    } else {
+      const reason = tooLarge
+        ? `is ${Math.round(fileSize / 1024 / 1024)} MB, over Google's 5 MB limit`
+        : `is ${mimeType ?? 'an unknown type'}, and Google Business accepts only JPEG or PNG`
+      console.warn(
+        `[blog-crosspost] cover image ${reason}, so the Google Business post will publish without a photo: ${coverImage}`,
+      )
+    }
+  }
+
+  await prisma.socialMediaPostMedia.deleteMany({
+    where: { postId: socialPostId, ...(mediaId ? { NOT: { mediaId } } : {}) },
+  })
+}
+
 export type CrosspostResult = {
   platform: SocialMediaPlatform
   accountId: string
@@ -293,6 +400,8 @@ export async function crosspostBlogPost(
       hashtags: tags,
     },
   })
+
+  await syncCoverMedia(social.id, post.coverImage, post.coverImageAlt ?? post.title)
 
   const results: CrosspostResult[] = []
   for (const account of eligible) {

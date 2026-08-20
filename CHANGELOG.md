@@ -68,6 +68,32 @@ the root `package.json` is canonical.
 
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
+### Fixed
+- **Blog posts now share their own cover image, not a generated red card.** The Heat Index route
+  carried a file-based `opengraph-image.tsx` that rendered a title-on-red-gradient card and ignored
+  the post's cover image entirely — it even read `coverImage` from the database and then never drew
+  it. Next.js only applies a file-based Open Graph image when the page's own metadata has no
+  `openGraph.images` key at all, and `generateMetadata` set that key *conditionally*, so any post
+  without a cover image silently fell through to the red card. Because a blog cross-post publishes a
+  link and lets the network scrape the page for its preview, that card is what Facebook and X
+  cached. `og:image` and `twitter:image` are now always set — the cover image when present, a
+  branded default otherwise — and the generated card has been removed.
+- **Google Business cross-posts now carry the article's cover photo.** `crosspostBlogPost` built a
+  `SocialMediaPost` with text, link and hashtags but never created the `SocialMediaPostMedia` rows
+  the publisher reads, so `mediaUrls` was always empty and `publishToGoogleMyBusiness` — which only
+  sets `body.media` when it has one — published a summary with no image. The cover image is now
+  recorded as a `Media` row and linked to the cross-post, reusing an existing row for the same URL
+  and unlinking a superseded cover. Google Business accepts only JPEG and PNG and caps a post photo
+  at 5 MB, so a cover that fails either bound (a WebP, after the blob migration) is deliberately left
+  unattached and logged rather than sent to fail the whole post. Facebook is unaffected: it still
+  posts the article as a link card.
+
+- **Corrected three doubled image URLs from the Vercel Blob migration.** A find/replace produced
+  `.../sitehttps://.../site/images/opengraph/josemadridhome.png` in the site-wide Open Graph and
+  Twitter image, and `${SITE_URL}https://...` in the Heat Index JSON-LD publisher logo. All three
+  would have 404'd on deploy, taking out the default share image for every page that does not set
+  its own.
+
 ### Added
 - **Form Capture — photograph a paper form and it becomes ledger entries.** Most of this company's revenue has never passed through a system: shows and farmers markets are settled on paper, and QuickBooks only ever sees invoiced customers — 29.8% of filed gross receipts in 2023, 27.0% in 2024. Rather than wait for the paper habit to change, the photo is now the input. A new `FormCapture`/`FormCaptureLine` pair records the image, an extraction pass reads it, and approval writes `LedgerEntry` rows with `source = FORM_CAPTURE`, which the existing `enqueueLedgerEntries` sweep already carries into QuickBooks — no new sync code.
 

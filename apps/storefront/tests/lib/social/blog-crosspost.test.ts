@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, afterEach, expect, it, vi, beforeEach } from 'vitest'
 
 const { prismaMock, publishToAccountMock } = vi.hoisted(() => ({
   prismaMock: {
@@ -6,6 +6,8 @@ const { prismaMock, publishToAccountMock } = vi.hoisted(() => ({
     socialAccount: { findMany: vi.fn() },
     socialMediaPost: { upsert: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
     socialPostPublish: { findMany: vi.fn() },
+    media: { findFirst: vi.fn(), create: vi.fn() },
+    socialMediaPostMedia: { upsert: vi.fn(), deleteMany: vi.fn() },
   },
   publishToAccountMock: vi.fn(),
 }))
@@ -23,6 +25,8 @@ import {
   crosspostBlogPost,
   getBlogCrosspostStatus,
   CROSSPOST_PLATFORMS,
+  filenameFromUrl,
+  mimeTypeFromUrl,
 } from '@/lib/social/blog-crosspost'
 
 describe('markdownToPlainText', () => {
@@ -205,6 +209,8 @@ const samplePost = {
   subtitle: null,
   content: 'A body long enough to matter.',
   tags: ['salsa', 'zanesville'],
+  coverImage: 'https://blob.example.com/heat-index/y-bridge.jpg',
+  coverImageAlt: 'The Y-Bridge at dusk',
 }
 
 describe('crosspostBlogPost', () => {
@@ -215,6 +221,21 @@ describe('crosspostBlogPost', () => {
     prismaMock.socialMediaPost.upsert.mockResolvedValue({ id: 's1', publishedAt: null })
     prismaMock.socialMediaPost.update.mockResolvedValue({})
     prismaMock.socialPostPublish.findMany.mockResolvedValue([])
+    prismaMock.media.findFirst.mockResolvedValue(null)
+    prismaMock.media.create.mockResolvedValue({ id: 'm1' })
+    prismaMock.socialMediaPostMedia.upsert.mockResolvedValue({})
+    prismaMock.socialMediaPostMedia.deleteMany.mockResolvedValue({ count: 0 })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ 'content-type': 'image/jpeg', 'content-length': '714585' }),
+      }),
+    )
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('throws when the blog post does not exist', async () => {
@@ -340,6 +361,150 @@ describe('crosspostBlogPost', () => {
     expect(prismaMock.socialMediaPost.update).toHaveBeenCalledWith({
       where: { id: 's1' },
       data: { status: 'PUBLISHED', publishedAt: firstPublishedAt },
+    })
+  })
+})
+
+describe('cover image media', () => {
+  it('derives a filename from a blob URL, ignoring the query string', () => {
+    expect(filenameFromUrl('https://blob.example.com/heat-index/img-0215.jpg?v=2')).toBe(
+      'img-0215.jpg',
+    )
+    expect(filenameFromUrl('not a url')).toBe('cover-image')
+  })
+
+  it('maps known extensions to MIME types and returns null otherwise', () => {
+    expect(mimeTypeFromUrl('https://x.test/a.JPG')).toBe('image/jpeg')
+    expect(mimeTypeFromUrl('https://x.test/a.png')).toBe('image/png')
+    expect(mimeTypeFromUrl('https://x.test/a.webp')).toBe('image/webp')
+    expect(mimeTypeFromUrl('https://x.test/a.heic')).toBeNull()
+  })
+})
+
+describe('crosspostBlogPost cover media', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    prismaMock.blogPost.findUnique.mockResolvedValue(samplePost)
+    prismaMock.socialMediaPost.findUnique.mockResolvedValue(null)
+    prismaMock.socialMediaPost.upsert.mockResolvedValue({ id: 's1', publishedAt: null })
+    prismaMock.socialMediaPost.update.mockResolvedValue({})
+    prismaMock.socialPostPublish.findMany.mockResolvedValue([])
+    prismaMock.media.findFirst.mockResolvedValue(null)
+    prismaMock.media.create.mockResolvedValue({ id: 'm1' })
+    prismaMock.socialMediaPostMedia.upsert.mockResolvedValue({})
+    prismaMock.socialMediaPostMedia.deleteMany.mockResolvedValue({ count: 0 })
+    prismaMock.socialAccount.findMany.mockResolvedValue([
+      { id: 'g1', platform: 'GOOGLE_MY_BUSINESS', accountName: 'Zanesville' },
+    ])
+    publishToAccountMock.mockResolvedValue({ success: true })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ 'content-type': 'image/jpeg', 'content-length': '714585' }),
+      }),
+    )
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('attaches the cover image so Google Business receives a photo', async () => {
+    await crosspostBlogPost('p1', ['g1'])
+
+    expect(prismaMock.media.create).toHaveBeenCalledWith({
+      data: {
+        url: 'https://blob.example.com/heat-index/y-bridge.jpg',
+        filename: 'y-bridge.jpg',
+        mimeType: 'image/jpeg',
+        fileSize: 714585,
+        alt: 'The Y-Bridge at dusk',
+      },
+    })
+    expect(prismaMock.socialMediaPostMedia.upsert).toHaveBeenCalledWith({
+      where: { postId_mediaId: { postId: 's1', mediaId: 'm1' } },
+      create: { postId: 's1', mediaId: 'm1', order: 0 },
+      update: { order: 0 },
+    })
+  })
+
+  it('reuses an existing Media row rather than duplicating it on re-run', async () => {
+    prismaMock.media.findFirst.mockResolvedValueOnce({ id: 'existing' })
+    await crosspostBlogPost('p1', ['g1'])
+    expect(prismaMock.media.create).not.toHaveBeenCalled()
+    expect(prismaMock.socialMediaPostMedia.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { postId_mediaId: { postId: 's1', mediaId: 'existing' } },
+      }),
+    )
+  })
+
+  it('unlinks a previous cover image when the post switches to a new one', async () => {
+    await crosspostBlogPost('p1', ['g1'])
+    expect(prismaMock.socialMediaPostMedia.deleteMany).toHaveBeenCalledWith({
+      where: { postId: 's1', NOT: { mediaId: 'm1' } },
+    })
+  })
+
+  it('skips a WebP cover, which Google Business rejects, and attaches nothing', async () => {
+    prismaMock.blogPost.findUnique.mockResolvedValueOnce({
+      ...samplePost,
+      coverImage: 'https://blob.example.com/site/images/shared/salsa-bowl.webp',
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ 'content-type': 'image/webp', 'content-length': '112090' }),
+      }),
+    )
+
+    await crosspostBlogPost('p1', ['g1'])
+
+    expect(prismaMock.media.create).not.toHaveBeenCalled()
+    expect(prismaMock.socialMediaPostMedia.upsert).not.toHaveBeenCalled()
+    expect(prismaMock.socialMediaPostMedia.deleteMany).toHaveBeenCalledWith({
+      where: { postId: 's1' },
+    })
+  })
+
+  it('skips a cover over Google\u2019s 5 MB limit rather than failing the whole post', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({
+          'content-type': 'image/jpeg',
+          'content-length': String(6 * 1024 * 1024),
+        }),
+      }),
+    )
+
+    await crosspostBlogPost('p1', ['g1'])
+
+    expect(prismaMock.media.create).not.toHaveBeenCalled()
+    expect(prismaMock.socialMediaPostMedia.upsert).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the file extension when the HEAD request fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')))
+
+    await crosspostBlogPost('p1', ['g1'])
+
+    expect(prismaMock.media.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ mimeType: 'image/jpeg', fileSize: 0 }),
+      }),
+    )
+  })
+
+  it('attaches nothing when the post has no cover image', async () => {
+    prismaMock.blogPost.findUnique.mockResolvedValueOnce({ ...samplePost, coverImage: null })
+    await crosspostBlogPost('p1', ['g1'])
+    expect(prismaMock.media.create).not.toHaveBeenCalled()
+    expect(prismaMock.socialMediaPostMedia.deleteMany).toHaveBeenCalledWith({
+      where: { postId: 's1' },
     })
   })
 })
