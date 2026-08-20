@@ -61,6 +61,11 @@ export const adminNavigation: NavItem[] = [
         permission: 'products:read',
       },
       {
+        label: 'Collections',
+        href: '/admin/collections',
+        permission: 'products:read',
+      },
+      {
         label: 'Tags',
         href: '/admin/tags',
         permission: 'content:read',
@@ -158,6 +163,11 @@ export const adminNavigation: NavItem[] = [
       {
         label: 'FAQs',
         href: '/admin/content/faqs',
+        permission: 'content:write',
+      },
+      {
+        label: 'Polls',
+        href: '/admin/content/polls',
         permission: 'content:write',
       },
       {
@@ -307,6 +317,11 @@ export const adminNavigation: NavItem[] = [
         href: '/admin/analytics/retention',
         permission: 'analytics:read',
       },
+      {
+        label: 'Attribution',
+        href: '/admin/analytics/attribution',
+        permission: 'analytics:read',
+      },
     ],
   },
   {
@@ -416,6 +431,11 @@ export const adminNavigation: NavItem[] = [
       {
         label: 'General',
         href: '/admin/settings',
+        permission: 'settings:read',
+      },
+      {
+        label: 'Store',
+        href: '/admin/settings/store',
         permission: 'settings:read',
       },
       {

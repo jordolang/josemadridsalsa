@@ -125,6 +125,20 @@ describe('rankByTurnover', () => {
     expect(rows.map((r) => r.productId)).toEqual(['dead', 'slow', 'fast', 'empty'])
   })
 
+  it('does not sink uncosted dead stock beneath a trivially cheap known item', () => {
+    // A missing cost is not "worth zero": the uncosted product holds far more units and must not
+    // rank below a single cheap costed jar just because its value is unknown.
+    const rows = rankByTurnover(
+      [
+        { ...product({ productId: 'cheap-known', currentStock: 1, unitsSold: 0 }), unitCostCents: 50 },
+        product({ productId: 'uncosted-pile', currentStock: 100, unitCostCents: null, unitsSold: 0 }),
+      ],
+      30
+    )
+    // Value is compared only when both are known; here it falls back to units on hand.
+    expect(rows.map((r) => r.productId)).toEqual(['uncosted-pile', 'cheap-known'])
+  })
+
   it('breaks ties among dead products by capital tied up', () => {
     const rows = rankByTurnover(
       [

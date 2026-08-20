@@ -18,6 +18,8 @@ import { getFundraiserPriceOverrides } from '@/lib/fundraising/pricing.server'
 import { createOrderAccessToken } from '@/lib/orders/access-token'
 import { validateDiscountCode } from '@/lib/discounts'
 import { validateGiftCertificate } from '@/lib/gift-certificates'
+import { ATTRIBUTION_COOKIE, parseAttributionCookie } from '@/lib/analytics/attribution'
+import { getStoreSettings, isBelowMinimumOrder, formatMinimumOrder } from '@/lib/store-settings'
 
 const CheckoutSchema = z.object({
   items: z
@@ -70,8 +72,16 @@ const generateOrderNumber = () => {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if user is authenticated (optional - guests can checkout)
+    // Check if user is authenticated (guests may be allowed to checkout — see store settings)
     const user = await getCurrentUser()
+
+    const storeSettings = await getStoreSettings()
+    if (!user && !storeSettings.allowGuestCheckout) {
+      return NextResponse.json(
+        { error: 'Please sign in to place your order.' },
+        { status: 401 }
+      )
+    }
 
     const json = await request.json()
     const parsed = CheckoutSchema.safeParse(json)
@@ -128,6 +138,15 @@ export async function POST(request: NextRequest) {
         productSku: product.sku,
         productImage: product.featuredImage ?? undefined,
       })
+    }
+
+    // Minimum order is assessed on the goods subtotal (before discounts and shipping), so a
+    // discount code cannot be used to duck under the threshold.
+    if (isBelowMinimumOrder(Math.round(subtotal * 100), storeSettings.minimumOrderCents)) {
+      return NextResponse.json(
+        { error: `Orders must total at least ${formatMinimumOrder(storeSettings.minimumOrderCents)}.` },
+        { status: 400 }
+      )
     }
 
     // Validate the discount code against the server-computed subtotal. The client sends
@@ -354,12 +373,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // First-touch marketing attribution, carried from the visitor's landing in a cookie. Parsing
+    // never throws and returns null when the cookie is absent or empty, so a direct or offline
+    // order simply records nothing. Spread so only the fields that exist are written.
+    const attribution =
+      parseAttributionCookie(request.cookies.get(ATTRIBUTION_COOKIE)?.value) ?? undefined
+
     const order = await prisma.order.create({
       data: {
         orderNumber: generateOrderNumber(),
         userId: user?.id ?? undefined,
         guestEmail: user ? undefined : customer.email,
         guestPhone: customer.phone,
+        ...(attribution ?? {}),
         shippingMethod: finalShippingMethod,
         customerNotes: notes ?? undefined,
         subtotal: toDecimal(subtotal),

@@ -3,6 +3,7 @@ import { Mail, Phone, MapPin } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { ContactForm } from '@/components/store/contact-form'
 import { createMetadata } from '@/lib/metadata'
+import { getStoreSettings } from '@/lib/store-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,33 +14,46 @@ export const metadata: Metadata = createMetadata({
   pathname: '/contact',
 })
 
-const supportPhone = process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? '(740) 521-4304'
-const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? 'mike@josemadridsalsa.com'
-const headquartersLocation =
-  process.env.NEXT_PUBLIC_HQ_LOCATION ?? '601 Putnam Ave, Zanesville, OH 43701'
+export default async function ContactPage() {
+  // Store-managed identity wins; env vars and the historical hardcoded values are the
+  // fallbacks so the page keeps rendering before an admin fills the settings in.
+  const settings = await getStoreSettings()
 
-const contactDetails = [
-  {
-    icon: Mail,
-    label: 'Email',
-    value: supportEmail,
-    href: `mailto:${supportEmail}`,
-  },
-  {
-    icon: Phone,
-    label: 'Phone',
-    value: supportPhone,
-    href: `tel:${supportPhone.replace(/[^+\d]/g, '')}`,
-  },
-  {
-    icon: MapPin,
-    label: 'Headquarters',
-    value: headquartersLocation,
-    href: `https://maps.google.com/?q=${encodeURIComponent(headquartersLocation)}`,
-  },
-]
+  const supportEmail =
+    settings.supportEmail ?? process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? 'mike@josemadridsalsa.com'
+  const supportPhone =
+    settings.supportPhone ?? process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? '(740) 521-4304'
+  const headquartersLocation =
+    settings.businessAddress ??
+    process.env.NEXT_PUBLIC_HQ_LOCATION ??
+    '601 Putnam Ave, Zanesville, OH 43701'
+  const businessName = settings.businessName?.trim() || null
+  // Lead with the business name when it's been set, so the identity field is actually shown.
+  const fullLocation = businessName
+    ? `${businessName}, ${headquartersLocation}`
+    : headquartersLocation
 
-export default function ContactPage() {
+  const contactDetails = [
+    {
+      icon: Mail,
+      label: 'Email',
+      value: supportEmail,
+      href: `mailto:${supportEmail}`,
+    },
+    {
+      icon: Phone,
+      label: 'Phone',
+      value: supportPhone,
+      href: `tel:${supportPhone.replace(/[^+\d]/g, '')}`,
+    },
+    {
+      icon: MapPin,
+      label: 'Headquarters',
+      value: fullLocation,
+      href: `https://maps.google.com/?q=${encodeURIComponent(fullLocation)}`,
+    },
+  ]
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero */}

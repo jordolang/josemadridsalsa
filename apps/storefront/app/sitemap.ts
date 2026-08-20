@@ -109,6 +109,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.4,
     },
     {
+      url: `${baseUrl}/polls`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.6,
+    },
+    {
       url: `${baseUrl}/forms`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
@@ -274,6 +280,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   } catch (error) {
     console.error('Failed to fetch heat-index posts for sitemap:', error)
+  }
+
+  try {
+    const polls = await prisma.poll.findMany({
+      // Invite-only polls stay out of the sitemap: the access code in the share
+      // link is their only protection, and a crawled URL would not carry it.
+      where: {
+        visibility: 'PUBLIC',
+        noIndex: false,
+        OR: [{ status: 'PUBLISHED' }, { status: 'SCHEDULED', publishedAt: { lte: new Date() } }],
+      },
+      select: { slug: true, updatedAt: true },
+    })
+    polls.forEach((poll) => {
+      urls.push({
+        url: `${baseUrl}/polls/${poll.slug}`,
+        lastModified: poll.updatedAt,
+        changeFrequency: 'weekly',
+        priority: 0.5,
+      })
+    })
+  } catch (error) {
+    console.error('Failed to fetch polls for sitemap:', error)
   }
 
   try {

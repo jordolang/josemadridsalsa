@@ -163,6 +163,45 @@ model Category {
   @@map("categories")
 }
 
+/// A curated, marketing-facing group of products — "Gift Sets", "New Arrivals", "Staff Picks".
+/// Unlike a Category (a taxonomy each product belongs to exactly one of), a Collection is a
+/// hand-picked set: a product can appear in many collections and a collection holds many products,
+/// so the relation is many-to-many through `CollectionProduct` (which also carries the display order
+/// within the collection).
+model Collection {
+  id              String              @id @default(cuid())
+  name            String              @unique
+  slug            String              @unique
+  description     String?
+  image           String?
+  metaTitle       String?
+  metaDescription String?
+  ogImage         String?
+  isActive        Boolean             @default(true)
+  sortOrder       Int                 @default(0)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  products        CollectionProduct[]
+
+  @@map("collections")
+}
+
+model CollectionProduct {
+  id           String     @id @default(cuid())
+  collectionId String
+  productId    String
+  /// Position of the product within this collection, so a collection can be arranged by hand.
+  sortOrder    Int        @default(0)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, productId])
+  // No separate index on collectionId: the composite unique above already leads with it, so a
+  // lookup by collectionId alone uses that index. productId is not a prefix, so it needs its own.
+  @@index([productId])
+  @@map("collection_products")
+}
+
 model Product {
   id                     String                  @id @default(cuid())
   name                   String
@@ -199,6 +238,7 @@ model Product {
   stockStatus            StockStatus             @default(IN_STOCK)
   unitsPerCase           Int                     @default(12)
   cartItems              CartItem[]
+  collectionProducts     CollectionProduct[]
   eventManifestItems     EventManifestItem[]
   fundraiserProducts     FundraiserProduct[]
   fundraiserTeamProducts FundraiserTeamProduct[]
@@ -580,6 +620,19 @@ model Order {
   paymentProvider          PaymentProvider?       @default(STRIPE)
   providerPaymentId        String?
   abandonedCartId          String?
+  /// First-touch marketing attribution, captured when the visitor first lands on the site and
+  /// carried to the order through a cookie (see `lib/analytics/attribution.ts`). Every field is
+  /// nullable and never inferred: a direct visit, an offline order (POS/manual/phone/event), and
+  /// any order placed before this feature simply have none.
+  utmSource                String?
+  utmMedium                String?
+  utmCampaign              String?
+  utmTerm                  String?
+  utmContent               String?
+  /// The referring site's host (e.g. `google.com`), or null for a direct/typed-in visit.
+  referrer                 String?
+  /// The path of the first page the visitor landed on (query string stripped).
+  landingPage              String?
   supportMessages          FundraiserMessage[]
   giftCertificateUsages    GiftCertificateUsage[]
   giftCertificates         GiftCertificate[]
@@ -610,6 +663,8 @@ model Order {
   @@index([abandonedCartId])
   @@index([fulfillmentStatus])
   @@index([salesChannel])
+  @@index([utmSource])
+  @@index([utmCampaign])
   @@map("orders")
 }
 
@@ -1178,6 +1233,41 @@ model ShippingSettings {
   updatedBy             User?    @relation(fields: [updatedById], references: [id])
 
   @@map("shipping_settings")
+}
+
+/// Store-wide settings — one global row, keyed by `singleton` like ShippingSettings. Each field
+/// drives real behaviour (see `lib/store-settings.ts`): the checkout controls gate the checkout
+/// routes, the identity fields feed the contact page, the low-stock default seeds new products, and
+/// the legal bodies override the built-in Terms/Privacy/Returns prose when set.
+model StoreSettings {
+  id        String @id @default(cuid())
+  singleton String @unique @default("singleton")
+
+  // Checkout controls
+  allowGuestCheckout Boolean @default(true)
+  /// Minimum order subtotal in whole cents; 0 means no minimum.
+  minimumOrderCents  Int     @default(0)
+
+  // Store identity (shown on the storefront; null falls back to the built-in defaults)
+  businessName    String?
+  supportEmail    String?
+  supportPhone    String?
+  businessAddress String?
+
+  // Operational defaults
+  /// The low-stock threshold a newly created product gets when none is specified.
+  defaultLowStockThreshold Int @default(5)
+
+  // Legal page bodies (plain text / Markdown-ish). Null → the built-in static page is shown.
+  termsContent   String?
+  privacyContent String?
+  returnsContent String?
+
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("store_settings")
 }
 
 model Permission {
@@ -4709,6 +4799,174 @@ model Redirect {
 
   @@index([isActive])
   @@map("cms_redirects")
+}
+
+/// PUBLIC polls are listed on /polls and readable by anyone. INVITE_ONLY polls
+/// are unlisted and only open to someone holding the poll's access code, which
+/// travels in the share link as `?key=`.
+enum PollVisibility {
+  PUBLIC
+  INVITE_ONLY
+}
+
+enum PollQuestionType {
+  /// Radio pills — exactly one option.
+  SINGLE_CHOICE
+  /// Checkbox pills — "select every one that applies".
+  MULTI_CHOICE
+  /// One-line answer.
+  SHORT_TEXT
+  /// Multi-line comment, capped by `maxLength`.
+  LONG_TEXT
+  /// 1..`ratingMax` scale.
+  RATING
+}
+
+/// When a voter may see the tallies.
+enum PollResultsVisibility {
+  HIDDEN
+  AFTER_VOTE
+  ALWAYS
+}
+
+model Poll {
+  id                  String                @id @default(cuid())
+  slug                String                @unique
+  title               String
+  subtitle            String?
+  /// Intro copy shown above the questions.
+  description         String?
+  imageUrl            String?
+  imageAlt            String?
+  /// Tailwind-ish accent key ("salsa", "verde", "amber", ...) used to theme the card.
+  accentColor         String?
+  status              ContentStatus         @default(DRAFT)
+  visibility          PollVisibility        @default(PUBLIC)
+  /// Share secret for INVITE_ONLY polls. Null for public ones.
+  accessCode          String?               @unique
+  featured            Boolean               @default(false)
+  sortOrder           Int                   @default(0)
+  publishedAt         DateTime?
+  /// Voting window. Outside it the poll renders read-only.
+  startsAt            DateTime?
+  endsAt              DateTime?
+  resultsVisibility   PollResultsVisibility @default(AFTER_VOTE)
+  /// Whether the same browser may answer more than once.
+  allowMultipleSubmissions Boolean          @default(false)
+  /// Offer an optional email field on the response form.
+  collectEmail        Boolean               @default(false)
+  /// Overrides the built-in participation/promotional-use advisory.
+  consentNotice       String?
+  thankYouMessage     String?
+  closedMessage       String?
+  seoTitle            String?
+  seoDescription      String?
+  noIndex             Boolean               @default(false)
+  /// Denormalised tally so the index can show participation without loading answers.
+  responseCount       Int                   @default(0)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  questions           PollQuestion[]
+  responses           PollResponse[]
+
+  @@index([status, visibility])
+  @@index([status, featured, sortOrder])
+  @@map("polls")
+}
+
+model PollQuestion {
+  id            String           @id @default(cuid())
+  pollId        String
+  poll          Poll             @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  sortOrder     Int              @default(0)
+  type          PollQuestionType @default(SINGLE_CHOICE)
+  prompt        String
+  helpText      String?
+  imageUrl      String?
+  imageAlt      String?
+  isRequired    Boolean          @default(false)
+  /// Character cap for SHORT_TEXT/LONG_TEXT answers.
+  maxLength     Int              @default(1500)
+  placeholder   String?
+  /// MULTI_CHOICE bounds. Null means unbounded.
+  minSelections Int?
+  maxSelections Int?
+  /// Adds a free-text "Other" entry alongside the options.
+  allowOther    Boolean          @default(false)
+  /// Top of the scale for RATING questions.
+  ratingMax     Int              @default(5)
+  options       PollOption[]
+  answers       PollAnswer[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([pollId, sortOrder])
+  @@map("poll_questions")
+}
+
+model PollOption {
+  id          String       @id @default(cuid())
+  questionId  String
+  question    PollQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  sortOrder   Int          @default(0)
+  label       String
+  description String?
+  imageUrl    String?
+  /// Single emoji shown on the pill.
+  emoji       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([questionId, sortOrder])
+  @@map("poll_options")
+}
+
+model PollResponse {
+  id                 String       @id @default(cuid())
+  pollId             String
+  poll               Poll         @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  /// Required, but any non-empty value is accepted — visitors are told a first
+  /// name alone is fine.
+  firstName          String
+  lastName           String?
+  email              String?
+  /// The voter asked to be credited anonymously if we quote them publicly.
+  anonymousRequested Boolean      @default(false)
+  /// The voter ticked the promotional-use advisory.
+  consentAcknowledged Boolean     @default(false)
+  /// Signed-in voter, when there was one. Plain id, no relation, so the User
+  /// model stays untouched.
+  userId             String?
+  /// SHA-256 of IP + salt. Repeat-submission guard only; never displayed.
+  ipHash             String?
+  userAgent          String?
+  submittedAt        DateTime     @default(now())
+  answers            PollAnswer[]
+
+  @@index([pollId, submittedAt])
+  @@index([pollId, ipHash])
+  @@map("poll_responses")
+}
+
+model PollAnswer {
+  id         String       @id @default(cuid())
+  responseId String
+  response   PollResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  questionId String
+  question   PollQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  /// Chosen PollOption ids for SINGLE_CHOICE/MULTI_CHOICE.
+  optionIds  String[]     @default([])
+  /// Free text for SHORT_TEXT/LONG_TEXT.
+  textValue  String?
+  /// Free text captured by an option list's "Other" entry.
+  otherText  String?
+  /// 1..ratingMax for RATING.
+  rating     Int?
+  createdAt  DateTime     @default(now())
+
+  @@unique([responseId, questionId])
+  @@index([questionId])
+  @@map("poll_answers")
 }
 
 /// A photographed paper form on its way to becoming ledger rows.
