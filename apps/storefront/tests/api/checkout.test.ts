@@ -23,6 +23,9 @@ vi.mock('@/lib/prisma', () => {
     abandonedCart: {
       updateMany: vi.fn(),
     },
+    storeSettings: {
+      findUnique: vi.fn(),
+    },
   }
   return {
     prisma: mockPrismaClient,

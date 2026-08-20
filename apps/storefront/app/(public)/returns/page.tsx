@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { createMetadata } from '@/lib/metadata';
+import { LegalPage } from '@/components/store/legal-page';
+import { getStoreSettings } from '@/lib/store-settings';
 
 export const metadata: Metadata = createMetadata({
   title: 'Return Policy - Jose Madrid Salsa',
@@ -9,15 +11,14 @@ export const metadata: Metadata = createMetadata({
 
 export const dynamic = 'force-dynamic';
 
-export default function ReturnPolicyPage() {
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-6">Return Policy</h1>
-          <p className="text-sm text-muted-foreground mb-10">Last updated: {new Date().getFullYear()}</p>
+export default async function ReturnPolicyPage() {
+  const settings = await getStoreSettings();
 
-          <div className="prose prose-slate dark:prose-invert max-w-none">
+  return (
+    <LegalPage title="Return Policy" content={settings.returnsContent}>
+      <p className="text-sm text-muted-foreground mb-10">Last updated: {new Date().getFullYear()}</p>
+
+      <div className="prose prose-slate dark:prose-invert max-w-none">
             <p>
               We want you to be completely satisfied with your purchase from Jose Madrid Salsa. If you would like to
               return a product, please review the terms below.
@@ -63,9 +64,7 @@ export default function ReturnPolicyPage() {
               If you have questions about our return policy or need assistance with your order, please contact us at
               <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a>. We are here to help.
             </p>
-          </div>
-        </div>
       </div>
-    </div>
+    </LegalPage>
   );
 }

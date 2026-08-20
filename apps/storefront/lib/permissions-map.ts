@@ -429,6 +429,11 @@ export const adminNavigation: NavItem[] = [
         permission: 'settings:read',
       },
       {
+        label: 'Store',
+        href: '/admin/settings/store',
+        permission: 'settings:read',
+      },
+      {
         label: 'My Profile',
         href: '/admin/settings/profile',
       },

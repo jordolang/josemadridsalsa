@@ -3,6 +3,7 @@ import { requirePermission } from '@/lib/rbac';
 import { ok, fail, parsePagination } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import prisma from '@/lib/prisma';
+import { getStoreSettings } from '@/lib/store-settings';
 
 /**
  * GET /api/admin/products
@@ -134,6 +135,9 @@ export async function POST(req: NextRequest) {
       return fail('A product with this SKU already exists', 409);
     }
 
+    // Seed the low-stock threshold from the store default when the form leaves it blank.
+    const storeSettings = await getStoreSettings();
+
     // Create product
     const product = await prisma.product.create({
       data: {
@@ -145,7 +149,7 @@ export async function POST(req: NextRequest) {
         compareAtPrice,
         costPrice,
         inventory: inventory ?? 0,
-        lowStockThreshold: lowStockThreshold ?? 5,
+        lowStockThreshold: lowStockThreshold ?? storeSettings.defaultLowStockThreshold,
         weight,
         dimensions,
         heatLevel,

@@ -26,6 +26,9 @@ vi.mock('@/lib/prisma', () => {
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    storeSettings: {
+      findUnique: vi.fn(),
+    },
     $transaction: vi.fn((callback) => {
       if (typeof callback === 'function') {
         return callback(mockPrisma)
