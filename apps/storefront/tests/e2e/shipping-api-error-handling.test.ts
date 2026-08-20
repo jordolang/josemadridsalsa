@@ -20,6 +20,20 @@ import prisma from '@/lib/prisma'
  * 3. API timeout/network error
  * 4. API returns empty rates
  * 5. Checkout completion with fallback rates
+ *
+ * KNOWN LIMITATION — read before trusting a green run.
+ *
+ * The scenarios below set and unset `SHIPPING_API_KEY` inside *this* Vitest process,
+ * but the endpoint under test runs in a separate server process that read its
+ * environment at startup. Those mutations therefore never reach it. What the
+ * scenarios actually assert is that the endpoint stays available and returns usable
+ * rates under whatever configuration the server already has — which in CI is the
+ * missing-origin estimate path, taken identically by every case here.
+ *
+ * So these pass without exercising the carrier failures they are named for. They are
+ * still worth running as availability checks, but a green result is NOT evidence that
+ * an invalid key or a carrier outage degrades gracefully. Proving that needs a server
+ * started per configuration, or a controllable carrier stub inside the server process.
  */
 
 /**

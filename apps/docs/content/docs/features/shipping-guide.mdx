@@ -300,7 +300,10 @@ Returns `{ valid: boolean, errors: string[] }`.
 The calculate-shipping endpoint validates with Zod:
 - `items`: non-empty array of `{ productId: CUID, quantity: positive int }`
 - `shippingAddress.state`: exactly 2 letters
-- `shippingAddress.postalCode`: minimum 5 characters
+- `shippingAddress.postalCode`: required, whitespace trimmed; minimum 5 characters when
+  `country` is `US`. Shorter formats are accepted for other countries — Australian
+  postcodes are four digits, and rejecting them blocked international quotes the
+  calculator has a published rate for.
 - `shippingAddress.country`: defaults to `US`
 
 ---

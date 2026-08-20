@@ -136,6 +136,44 @@ SKIP_EMAIL_SENDING=true
 
 ⚠️ **Important**: Never commit real API keys. Always use test mode keys and add `.env.test` to `.gitignore`.
 
+### Opting into the database-backed tests
+
+Four suites — `tests/integration/inventory-alerts`, `tests/integration/import-export-round-trip`,
+`tests/integration/checkout-reservation-flow` and `tests/api/cms-page-save` — create, mutate and
+delete rows. They run **only** when `RUN_INTEGRATION_TESTS` is set, and skip otherwise:
+
+```bash
+RUN_INTEGRATION_TESTS=true npx vitest run tests/integration tests/api/cms-page-save.test.ts
+```
+
+Setting `DATABASE_URL` alone is deliberately **not** enough. `@prisma/client` loads
+`apps/storefront/.env` itself, so `DATABASE_URL` is set on every developer machine — gating on it
+meant a plain `npm run test` pointed these suites at whatever database that file names, usually
+shared dev. There they fail (their assertions assume they own the data) and, worse, write to rows
+other people rely on. CI sets the flag against a throwaway Postgres.
+
+Point `DATABASE_URL` at a database you can afford to lose before setting the flag. A disposable one:
+
+```bash
+docker run -d --name jms-test-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=jms_test -p 55432:5432 postgres:16
+export DATABASE_URL="postgresql://postgres:postgres@localhost:55432/jms_test"
+npx prisma db push
+```
+
+### Opting into the shipping E2E suite
+
+The five files under `tests/e2e` that exercise `/api/checkout/calculate-shipping` need a running
+server and are gated on `E2E_BASE_URL`. They skip when it is unset:
+
+```bash
+npm run build && npm run start          # in one shell
+E2E_BASE_URL=http://localhost:3000 npx vitest run tests/e2e   # in another
+```
+
+They also need a seeded catalogue (`npm run db:seed`) and expect the estimate path, so leave
+`SHIPPING_API_KEY` unset. CI runs them as a gating step.
+
 ## Running Tests
 
 ### Vitest (Unit/Integration/Component Tests)

@@ -11,7 +11,12 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import prisma from '@/lib/prisma'
 import { reserveInventory, releaseInventory, deductReservedInventory } from '@/lib/inventory-manager'
 
-const runIntegration = !!(process.env.DATABASE_URL || process.env.RUN_INTEGRATION_TESTS)
+// These tests create, mutate and delete rows, so they need a database they own.
+// DATABASE_URL cannot signal that: @prisma/client loads apps/storefront/.env
+// itself, so it is set on every developer machine and used to point this suite
+// at shared dev — where the assertions below fail against real data and the
+// writes land on rows someone else cares about. CI opts in explicitly.
+const runIntegration = !!process.env.RUN_INTEGRATION_TESTS
 
 describe.skipIf(!runIntegration)('Checkout Reservation Flow', () => {
   let testProduct: any

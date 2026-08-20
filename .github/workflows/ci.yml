@@ -38,6 +38,10 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/jms_test
       DATABASE_URL_UNPOOLED: postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/jms_test
+      # The database-backed tests create and delete rows, so they run only where the
+      # database is disposable. This throwaway Postgres is; a developer's .env is not,
+      # which is why they opt in on this flag rather than on DATABASE_URL being present.
+      RUN_INTEGRATION_TESTS: 'true'
 
     steps:
       - name: Checkout code
@@ -108,6 +112,44 @@ jobs:
         run: npm run build
         env:
           SKIP_ENV_VALIDATION: true
+
+      # The shipping E2E files are gated on E2E_BASE_URL (tests/helpers/e2e.ts) and need a
+      # live server plus a product catalogue. Seeding runs here, after the unit and
+      # integration suite has already used the empty database, so the extra rows cannot
+      # perturb it. With no SHIPPING_API_KEY and no configured origin the calculator takes
+      # its estimate path, which is the behaviour these tests assert against.
+      - name: Seed catalogue for shipping E2E
+        run: npm run db:seed --workspace=@jose-madrid/storefront
+
+      - name: Run shipping E2E suite
+        working-directory: apps/storefront
+        env:
+          E2E_BASE_URL: http://localhost:3000
+        run: |
+          npm run start > /tmp/storefront-e2e.log 2>&1 &
+          echo $! > /tmp/storefront-e2e.pid
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/ || true)
+            case "$code" in
+              200|307|404) echo "storefront ready after ${i}s"; break ;;
+            esac
+            if [ "$i" -eq 60 ]; then
+              echo "storefront failed to start within 60s"
+              cat /tmp/storefront-e2e.log
+              exit 1
+            fi
+            sleep 1
+          done
+          npx vitest run \
+            tests/e2e/checkout-shipping-calculator.test.ts \
+            tests/e2e/checkout-shipping-flow.test.ts \
+            tests/e2e/international-shipping.test.ts \
+            tests/e2e/shipping-api-error-handling.test.ts \
+            tests/e2e/shipping-performance.test.ts
+
+      - name: Stop storefront
+        if: always()
+        run: kill "$(cat /tmp/storefront-e2e.pid)" 2>/dev/null || true
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
