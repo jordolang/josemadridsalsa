@@ -120,7 +120,7 @@ the root `package.json` is canonical.
   literal (`${SITE_URL}/images/x.png`) is reported for review rather than rewritten, since replacing
   only the path strands the variable in front of an absolute URL — the second way that same bug
   reached the repository.
-### Changed
+
 - **CI now runs the shipping E2E suite instead of silently skipping it.** The five files under
   `tests/e2e` that exercise `/api/checkout/calculate-shipping` are gated on `E2E_BASE_URL`, which
   was set nowhere — not in CI, not in any script — so all 45 of their assertions had never executed;
