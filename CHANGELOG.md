@@ -13,6 +13,33 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Added
+- **Data & Charts (`/admin/data`)** — a self-serve report builder over the business's own data. An
+  admin picks a data source, measures, a breakdown, a time grain and filters, and reads the result as
+  a chart or a spreadsheet. A typed registry (`lib/data-studio/`) describes what can be asked and the
+  UI is generated from it, so a new question needs no new route and no SQL console exists to secure.
+  Four datasets ship: the bookkeeping ledger, the attested revenue anchors, fundraiser history from
+  the archive (2011 onwards, measured in jars) and the mileage log.
+
+  Three decisions are load-bearing rather than incidental:
+
+  - **Per-dataset permissions.** `data:read` opens the section; each dataset additionally requires its
+    domain permission, re-checked server-side on every run and export. A single blanket permission
+    would have been a privilege escalation — `STAFF` holds `analytics:read` but deliberately not
+    `financials:read`, and a generic query layer gated only on its own permission would have handed
+    them the ledger anyway.
+  - **`null` means *not recorded*, never zero.** Aggregation happens in TypeScript, not via `_sum`,
+    because SQL would have to drop rows with a missing value (losing their revenue) or coalesce it to
+    zero (reporting unknown cost as pure profit). Unknown counts are reported beside every total and
+    blanks render as an em dash. Truncating a scan withholds the totals outright instead of showing a
+    partial sum as final.
+  - **Buckets are cut in `America/New_York`.** Vercel runs `TZ=UTC`, so a sale at 8pm ET on 31
+    December would otherwise bucket into the next tax year. `grain.ts` reuses the DST-safe primitives
+    already in `lib/timeclock.ts`, and every report and export states its timezone.
+
+  Bases are compared, never summed: a spec names exactly one dataset, so a total that mixes ledger
+  rows with filed-return figures is unexpressible rather than merely discouraged.
+
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
 ### Added

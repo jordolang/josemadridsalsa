@@ -259,6 +259,24 @@ export const adminNavigation: NavItem[] = [
     ],
   },
   {
+    label: 'Data & Charts',
+    href: '/admin/data',
+    icon: 'Table2',
+    permission: 'data:read',
+    children: [
+      {
+        label: 'Datasets',
+        href: '/admin/data',
+        permission: 'data:read',
+      },
+      {
+        label: 'New report',
+        href: '/admin/data/new',
+        permission: 'data:read',
+      },
+    ],
+  },
+  {
     label: 'Analytics',
     href: '/admin/analytics',
     icon: 'BarChart3',
