@@ -195,3 +195,8 @@ apps/storefront/public/images/home/hero-video.mp4
 
 # Ad-hoc analysis scripts — never commit
 *.tmp.ts
+
+# Per-machine cache of what has been uploaded to Vercel Blob by `npm run images:sync`.
+# Content-hash keyed, so losing it only causes a harmless re-upload.
+.image-sync-manifest.json
+.image-migration-map.json

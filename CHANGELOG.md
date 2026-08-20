@@ -14,6 +14,32 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Image hosting on Vercel Blob, with WebP conversion (`images:sync`, `images:migrate`).** Images do
+  not belong in git — the repo already carries 201 MB across 152 committed files, and history is
+  permanent, so deleting them later reclaims nothing. Two commands move image hosting off the repo.
+
+  `images:sync` uploads from a folder outside the repo (`~/Desktop/jms-images` by default) and
+  optionally attaches each image to its product, matching the filename against slug, then SKU, then
+  product name. An ambiguous name match links nothing and says so — attaching a photo to the wrong
+  product is worse than not attaching it. `images:migrate` moves the existing `public/images` tree
+  and repoints all ~179 references, in both the root-relative and absolute forms the codebase uses,
+  across code, `Product.featuredImage`, `Product.images` and `BlogPost.coverImage`.
+
+  Conversion to WebP at quality 82 is the default and measured a **93% reduction** on real product
+  photos (3.36 MB → 0.25 MB across three images). Three categories are deliberately exempt: Open
+  Graph images, because WebP support across social crawlers is inconsistent and a WebP OG image
+  renders as a blank card on several of them; animated GIFs, which would silently lose their
+  animation; and files already `.webp`/`.avif`.
+
+  Both commands are dry-run by default — they write to a live store and a live database, so nothing
+  happens without `--apply`. Both are content-hash keyed, so re-running is free and cannot duplicate.
+  Uploads use `addRandomSuffix: false`, so a replaced image keeps its URL and every listing pointing
+  at it updates at once with no deploy. `images:migrate` never deletes a local file: keeping them
+  means a missed reference degrades to the old image rather than a 404.
+
+  Also documents `BLOB_READ_WRITE_TOKEN`, previously undocumented despite gating every upload path
+  in the app.
+
 - **Data & Charts (`/admin/data`)** — a self-serve report builder over the business's own data. An
   admin picks a data source, measures, a breakdown, a time grain and filters, and reads the result as
   a chart or a spreadsheet. A typed registry (`lib/data-studio/`) describes what can be asked and the
