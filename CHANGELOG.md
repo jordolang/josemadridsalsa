@@ -128,6 +128,14 @@ the root `package.json` is canonical.
   these files end in `.test.ts`. CI now seeds the catalogue after the unit and integration suite has
   finished with the empty database, starts the built storefront, and runs those files as a gating
   step. Both shipping fixes below were found by turning them on.
+- **The database-backed tests now opt in explicitly instead of keying off `DATABASE_URL`.** Their
+  gate was meant to mean "an isolated database is available", but `@prisma/client` loads
+  `apps/storefront/.env` itself, so `DATABASE_URL` is set on every developer machine — and the four
+  files that create, mutate and delete rows were quietly running against shared dev. There they both
+  failed (their assertions assume they own the data: one counted two alert emails and got twelve,
+  because dev has six admins) and wrote to rows other people rely on, including deleting the CMS
+  `home` page. They now run only when `RUN_INTEGRATION_TESTS` is set, which CI sets against its
+  throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
 - **A PO Box order placed after a street-address order to the same ZIP was quoted a carrier that
