@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { poll: pollFields, questions } = createSchema.parse({
       poll: body,
-      questions: body.questions ?? [],
+      questions: body?.questions ?? [],
     })
 
     // One transaction, so a failed question write cannot leave a half-built poll.

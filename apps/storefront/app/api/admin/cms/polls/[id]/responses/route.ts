@@ -98,12 +98,15 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         ]
       })
 
-      return new NextResponse(toCsv(headers, rows.map((row) => row.map(defuseFormula))), {
-        headers: {
-          'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="poll-${poll.slug}-responses.csv"`,
-        },
-      })
+      return new NextResponse(
+        toCsv(headers.map(defuseFormula), rows.map((row) => row.map(defuseFormula))),
+        {
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': `attachment; filename="poll-${poll.slug}-responses.csv"`,
+          },
+        }
+      )
     }
 
     return ok({

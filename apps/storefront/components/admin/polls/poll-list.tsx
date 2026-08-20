@@ -161,7 +161,7 @@ export function PollList({ polls, canWrite }: { polls: AdminPollRow[]; canWrite:
             {polls.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                  No polls yet. Create the first one.
+                  {canWrite ? 'No polls yet. Create the first one.' : 'No polls yet.'}
                 </TableCell>
               </TableRow>
             )}

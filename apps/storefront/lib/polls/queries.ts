@@ -183,6 +183,11 @@ export async function getPollResults(pollId: string): Promise<PollQuestionResult
       const comments: PollQuestionResult['comments'] = []
 
       const liveOptionIds = new Set(question.options.map((option) => option.id))
+      const isChoice = question.type === 'SINGLE_CHOICE' || question.type === 'MULTI_CHOICE'
+      // An answer keeps its "other" text after the editor turns the box off or
+      // retypes the question; counting it then would invent a choice the poll
+      // no longer offers.
+      const countsOther = isChoice && question.allowOther
       let otherVotes = 0
 
       for (const answer of question.answers) {
@@ -194,7 +199,9 @@ export async function getPollResults(pollId: string): Promise<PollQuestionResult
         // are not an average of anything the question now asks.
         const rating = question.type === 'RATING' ? answer.rating : null
 
-        const hasText = Boolean(answer.textValue?.trim() || answer.otherText?.trim())
+        const hasText = Boolean(
+          answer.textValue?.trim() || (countsOther && answer.otherText?.trim())
+        )
         if (chosen.length === 0 && !hasText && rating == null) continue
         answered += 1
 
@@ -205,9 +212,10 @@ export async function getPollResults(pollId: string): Promise<PollQuestionResult
           ratingTotal += rating
           ratingCount += 1
         }
-        if (answer.otherText?.trim()) otherVotes += 1
+        const otherText = countsOther ? answer.otherText?.trim() : undefined
+        if (otherText) otherVotes += 1
 
-        const text = answer.textValue?.trim() || answer.otherText?.trim()
+        const text = answer.textValue?.trim() || otherText
         // Someone who asked to stay anonymous was promised we would take their
         // name and contact details out before their words appeared publicly.
         // Their answer could name themselves inside the text, and no automatic

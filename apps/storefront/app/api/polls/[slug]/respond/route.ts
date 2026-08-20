@@ -14,16 +14,26 @@ export const dynamic = 'force-dynamic'
 type Ctx = { params: Promise<{ slug: string }> }
 
 /**
- * The stored form of a respondent's IP.
+ * The stored form of a respondent's IP, or null when it cannot be stored safely.
  *
  * Keyed with a server secret rather than a plain digest: the IPv4 space is
  * small enough that a bare SHA-256 of a known poll id and an address can be
  * enumerated back to the address by anyone holding a database dump. HMAC with a
  * secret that never leaves the server makes the stored value useless without
  * it, while still matching for the repeat-submission check.
+ *
+ * With no secret configured there is no safe value to store, so this returns
+ * null: the repeat-submission guard goes quiet rather than the response table
+ * filling with enumerable addresses. A misconfigured environment should not
+ * turn a privacy promise into a leak, and should not turn a visitor away
+ * either.
  */
-function hashAddress(pollId: string, ip: string): string {
-  const secret = process.env.MASTER_KEY ?? process.env.NEXTAUTH_SECRET ?? ''
+function hashAddress(pollId: string, ip: string): string | null {
+  const secret = process.env.MASTER_KEY || process.env.NEXTAUTH_SECRET
+  if (!secret) {
+    console.warn('[polls] no MASTER_KEY or NEXTAUTH_SECRET: storing no address hash')
+    return null
+  }
   return createHmac('sha256', secret).update(`poll:${pollId}:${ip}`).digest('hex')
 }
 
@@ -100,7 +110,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
 
     const ipHash = hashAddress(poll.id, ip)
-    if (!poll.allowMultipleSubmissions && ip !== 'unknown') {
+    if (!poll.allowMultipleSubmissions && ip !== 'unknown' && ipHash) {
       const already = await prisma.pollResponse.findFirst({
         where: { pollId: poll.id, ipHash },
         select: { id: true },

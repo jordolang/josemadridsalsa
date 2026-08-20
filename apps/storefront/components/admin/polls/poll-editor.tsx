@@ -166,31 +166,29 @@ interface SavedQuestion {
   }[]
 }
 
-/** Turn the API's saved question tree back into editor state. */
-function fromSavedQuestions(questions: SavedQuestion[]): EditorQuestion[] {
-  return questions.map((question) => ({
-    id: question.id,
-    key: question.id,
-    type: question.type,
-    prompt: question.prompt,
-    helpText: question.helpText ?? '',
-    imageUrl: question.imageUrl ?? '',
-    imageAlt: question.imageAlt ?? '',
-    isRequired: question.isRequired,
-    maxLength: question.maxLength,
-    placeholder: question.placeholder ?? '',
-    minSelections: question.minSelections?.toString() ?? '',
-    maxSelections: question.maxSelections?.toString() ?? '',
-    allowOther: question.allowOther,
-    ratingMax: question.ratingMax,
-    options: question.options.map((option) => ({
-      id: option.id,
-      label: option.label,
-      description: option.description ?? '',
-      imageUrl: option.imageUrl ?? '',
-      emoji: option.emoji ?? '',
-    })),
-  }))
+/**
+ * Copy the database ids from a save back onto the editor's own state.
+ *
+ * Matched by position, because the save posted the questions in exactly this
+ * order and the API returns them by `sortOrder`. Only ids move across; every
+ * edited value stays as the editor has it, so a change typed while the save was
+ * in flight survives. A question the editor added after the request went out
+ * has no counterpart and simply keeps no id, so the next save creates it.
+ */
+function withSavedIds(current: EditorQuestion[], saved: SavedQuestion[]): EditorQuestion[] {
+  return current.map((question, index) => {
+    const match = saved[index]
+    if (!match) return question
+    return {
+      ...question,
+      id: match.id,
+      key: match.id,
+      options: question.options.map((option, optionIndex) => {
+        const savedOption = match.options[optionIndex]
+        return savedOption ? { ...option, id: savedOption.id } : option
+      }),
+    }
+  })
 }
 
 /** `datetime-local` wants `YYYY-MM-DDTHH:mm` in local time; the API speaks ISO. */
@@ -333,12 +331,16 @@ export function PollEditor({
       if (!response.ok) throw new Error(payload.error ?? 'Could not save the poll')
       toast.success('Poll saved')
       setPoll((current) => ({ ...current, accessCode: payload.poll?.accessCode ?? null }))
-      // Adopt the saved tree, ids and all. `router.refresh()` re-renders the
+      // Take the ids the save assigned. `router.refresh()` re-renders the
       // server component but leaves this state alone, so without this a
       // question created by the save would still look new to a second save —
       // which would delete the row just created and cascade away its answers.
+      //
+      // Only the ids are copied, position by position, in the order the request
+      // sent them: an edit typed while the request was in flight stays put
+      // instead of being replaced by the snapshot the request was built from.
       if (payload.poll?.questions) {
-        setQuestions(fromSavedQuestions(payload.poll.questions))
+        setQuestions((current) => withSavedIds(current, payload.poll.questions))
       }
       router.refresh()
     } catch (error) {
@@ -389,6 +391,7 @@ export function PollEditor({
         </p>
       )}
 
+      <fieldset disabled={!canWrite} className="contents">
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="settings">Poll</TabsTrigger>
@@ -967,6 +970,7 @@ export function PollEditor({
           <ResponsesPanel pollId={poll.id} />
         </TabsContent>
       </Tabs>
+      </fieldset>
 
       <AlertDialog
         open={pendingQuestionRemoval !== null}
@@ -1087,8 +1091,8 @@ function ResponsesPanel({ pollId }: { pollId: string }) {
 
       {truncated && (
         <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-          This poll has more responses than can be shown at once. You are seeing the newest{' '}
-          {rows.length}, and the export covers the same set.
+          This view and its export are capped at {rows.length} responses. You are seeing the newest
+          ones; anything older is not included.
         </p>
       )}
 

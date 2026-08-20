@@ -48,16 +48,30 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     const current = await prisma.poll.findUnique({
       where: { id },
-      select: { visibility: true, accessCode: true, _count: { select: { questions: true } } },
+      select: {
+        status: true,
+        visibility: true,
+        accessCode: true,
+        startsAt: true,
+        endsAt: true,
+        _count: { select: { questions: true } },
+      },
     })
     if (!current) return fail('Not found', 404)
 
-    // A published poll with no questions collects nothing but names, and still
-    // counts each visitor as a participant.
-    const goingLive = fields.status === 'PUBLISHED' || fields.status === 'SCHEDULED'
+    // Both checks below judge the poll as it will be after this PATCH, not just
+    // the fields it carries: a partial update can otherwise walk a live poll
+    // into a state the create path would have rejected.
+    const status = fields.status ?? current.status
     const questionCount = questions ? questions.length : current._count.questions
-    if (goingLive && questionCount === 0) {
+    if ((status === 'PUBLISHED' || status === 'SCHEDULED') && questionCount === 0) {
       return fail('Add at least one question before publishing this poll', 422)
+    }
+
+    const startsAt = fields.startsAt !== undefined ? fields.startsAt : current.startsAt
+    const endsAt = fields.endsAt !== undefined ? fields.endsAt : current.endsAt
+    if (startsAt && endsAt && endsAt <= startsAt) {
+      return fail('The closing time has to be after the opening time', 422)
     }
 
     let accessCode = current.accessCode
