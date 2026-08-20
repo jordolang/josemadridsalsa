@@ -18,6 +18,7 @@ import { getFundraiserPriceOverrides } from '@/lib/fundraising/pricing.server'
 import { createOrderAccessToken } from '@/lib/orders/access-token'
 import { validateDiscountCode } from '@/lib/discounts'
 import { validateGiftCertificate } from '@/lib/gift-certificates'
+import { ATTRIBUTION_COOKIE, parseAttributionCookie } from '@/lib/analytics/attribution'
 
 const CheckoutSchema = z.object({
   items: z
@@ -354,12 +355,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // First-touch marketing attribution, carried from the visitor's landing in a cookie. Parsing
+    // never throws and returns null when the cookie is absent or empty, so a direct or offline
+    // order simply records nothing. Spread so only the fields that exist are written.
+    const attribution =
+      parseAttributionCookie(request.cookies.get(ATTRIBUTION_COOKIE)?.value) ?? undefined
+
     const order = await prisma.order.create({
       data: {
         orderNumber: generateOrderNumber(),
         userId: user?.id ?? undefined,
         guestEmail: user ? undefined : customer.email,
         guestPhone: customer.phone,
+        ...(attribution ?? {}),
         shippingMethod: finalShippingMethod,
         customerNotes: notes ?? undefined,
         subtotal: toDecimal(subtotal),

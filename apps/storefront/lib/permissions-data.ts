@@ -39,6 +39,10 @@ export const permissionDefinitions: PermissionDefinition[] = [
   // Analytics
   { name: 'analytics:read', description: 'View analytics and reports', category: 'ANALYTICS' },
   { name: 'analytics:export', description: 'Export analytics data', category: 'ANALYTICS' },
+  // Gates the Data Studio section itself. Each dataset additionally requires its own domain
+  // permission (financials:read, users:read, …), enforced server-side in the executor — so this is
+  // an entry ticket, never a blanket read across every domain the registry can reach.
+  { name: 'data:read', description: 'Build and view charts in the Data Studio', category: 'ANALYTICS' },
 
   // Settings
   { name: 'settings:read', description: 'View settings', category: 'SETTINGS' },
@@ -133,6 +137,7 @@ export const defaultRolePermissions: Record<UserRole, string[]> = {
     'content:read',
     'content:write',
     'analytics:read',
+    'data:read',
     'messaging:read',
     'messaging:reply',
     'messaging:assign',

@@ -7,6 +7,7 @@ import { deductReservedInventoryOnceInTx, releaseInventory, checkAndUpdateAlerts
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { createOrderAccessToken } from '@/lib/orders/access-token'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
+import { creditPurchaseLoyaltyPoints } from '@/lib/loyalty'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 const CaptureSchema = z.object({
@@ -207,6 +208,9 @@ export async function POST(request: NextRequest) {
         // Credit the fundraiser. Idempotent and safe to race with the payment webhook,
         // which completes the same order in parallel and now credits it too.
         await creditFundraiserCommission(tx, order!.id)
+
+        // Award purchase loyalty points, idempotent on the order and safe to race the webhook.
+        await creditPurchaseLoyaltyPoints(tx, order!.id)
 
         // Deduct reserved inventory. The payment webhook completes the same order
         // in parallel and deducts the same items, so skip any item it already

@@ -13,6 +13,7 @@ This file defines the **mandatory standards** for every AI agent, automated assi
 - [Testing Guidelines](#testing-guidelines)
 - [Commit & Pull Request Guidelines](#commit--pull-request-guidelines)
 - [Documentation Standards](#documentation-standards)
+- [Search & Indexing Rules](#search--indexing-rules)
 - [Configuration & Environment Notes](#configuration--environment-notes)
 - [Security & Non-Negotiables](#security--non-negotiables)
 - [Repository Organization Rules](#repository-organization-rules)
@@ -175,6 +176,36 @@ Every PR must include:
 - **No stray docs elsewhere** — do not create `.md` files in `app/`, `lib/`, `scripts/`, or the repo root beyond the allowed files above. One-off verification reports and session summaries do not belong in the repository.
 - **Versioning:** Maintain `CHANGELOG.md` with entries under `[Unreleased]` during development; tag on release.
 - **No real values** in documentation — use placeholder names for env vars, never actual keys or passwords.
+
+---
+
+## Search & Indexing Rules
+
+Google's own guidance, bound to this repository. These apply to **every** change that adds, moves, or removes a public URL — an agent that ships a page Google cannot find has not finished the task.
+
+### Adding new content
+
+- **Register the URL in the sitemap.** New public routes go in `apps/storefront/app/sitemap.ts`; collections (products, recipes, blog posts, locations) are generated from Prisma there, so extend the query rather than hardcoding a row. A page missing from the sitemap is a page you have asked Google not to crawl.
+- **Decide crawlability deliberately, never by default.** Pages that must stay out of search get `robots: { index: false }` in their metadata; crawlers are kept out of whole trees via `app/robots.ts` and the `SeoConfiguration.robotsTxt` row. `/admin/` and `/api/` stay disallowed. Know which tool you are reaching for: `noindex` keeps a reachable page out of the index, `robots.txt` stops the crawl entirely — a page blocked in robots.txt cannot be read, so a `noindex` tag on it will never be seen.
+- **Meta title 30–60 characters, meta description 160 or fewer.** Enforced for blog posts in `lib/blog/schemas.ts` against the effective values (`seoTitle ?? title`, `seoDescription ?? excerpt`); hold every other page to the same numbers.
+- **Hand off the steps you cannot perform.** Agents have no Search Console access. Finish by telling the human, explicitly, to run **URL Inspection** on the new URL to confirm Google can fetch it, and to check a few weeks later that the site's indexed-page count is rising.
+
+### Adding new properties
+
+- Prefer **one responsive site** that adapts to any device. If a separate mobile or regional property is ever introduced, it must be added to Search Console and connected to the existing site with `<link rel="alternate">` tags.
+- Pages targeted at a specific country or language follow Google's international/multilingual guidelines (hreflang, not duplicated untagged content).
+
+### Changing the domain
+
+- A domain change is never a code-only change. Update `SeoConfiguration.siteUrl` (the base URL for sitemap, robots, and canonicals) and every hardcoded canonical in the same change — then tell the human to point Google at the new location with Search Console's **Change of Address** tool.
+
+### Removing a page
+
+- **Default:** delete or 301-redirect the page and let Google notice it and drop it. This is the correct path for almost every removal.
+- **Urgent only** (wrong, private, or damaging content is live): remove it from the web first, then tell the human to use the **Removals** tool — an agent cannot run it.
+- To keep a page online but out of results, use `noindex` rather than deletion.
+
+> **Never report a Search Console step as done.** List URL Inspection, Removals, and Change of Address as handoff items for the human, always.
 
 ---
 

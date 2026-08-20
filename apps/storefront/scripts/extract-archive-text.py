@@ -21,10 +21,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-try:
-    import openpyxl
-except ImportError:
-    openpyxl = None
+from _spreadsheet import read_sheets
+
 try:
     import docx  # python-docx
 except ImportError:
@@ -89,15 +87,11 @@ def extract_via_textutil(path: Path) -> str:
 
 
 def extract_spreadsheet(path: Path) -> str:
-    if openpyxl is None or path.suffix.lower() == ".xls":
-        return ""  # legacy .xls needs xlrd; rare enough to leave for OCR/manual
     try:
-        wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
         chunks: list[str] = []
-        for name in wb.sheetnames:
-            ws = wb[name]
+        for name, rows in read_sheets(path):
             chunks.append(f"# {name}")
-            for row in ws.iter_rows(values_only=True):
+            for row in rows:
                 cells = [str(c) for c in row if c not in (None, "")]
                 if cells:
                     chunks.append("\t".join(cells))

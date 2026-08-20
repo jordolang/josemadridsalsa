@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getConnection } from '@/lib/quickbooks/connection'
-import { drainQueue, enqueuePaidOrders, enqueueRefunds } from '@/lib/quickbooks/sync'
+import {
+  drainQueue,
+  enqueueLedgerEntries,
+  enqueuePaidOrders,
+  enqueueRefunds,
+} from '@/lib/quickbooks/sync'
 import { isAuthorizedCronRequest } from '@/lib/cron/auth'
 
 /**
@@ -28,8 +33,11 @@ export async function GET(request: Request) {
   try {
     const enqueued = await enqueuePaidOrders()
     const refundsEnqueued = await enqueueRefunds()
+    // Ledger rows that never became an order — cash and show takings, hand-entered expenses,
+    // imported statement lines — posted as journal entries.
+    const ledgerEnqueued = await enqueueLedgerEntries()
     const tally = await drainQueue()
-    return NextResponse.json({ enqueued, refundsEnqueued, ...tally })
+    return NextResponse.json({ enqueued, refundsEnqueued, ledgerEnqueued, ...tally })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'QuickBooks sync failed'
     console.error('[cron/quickbooks-sync]', error)

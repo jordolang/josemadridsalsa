@@ -247,6 +247,11 @@ export const adminNavigation: NavItem[] = [
         permission: 'orders:write',
       },
       {
+        label: 'Contact Database',
+        href: '/admin/fundraisers/contacts',
+        permission: 'users:read',
+      },
+      {
         label: 'Import Fundraisers',
         href: '/admin/fundraisers/import',
         permission: 'content:write',
@@ -255,6 +260,24 @@ export const adminNavigation: NavItem[] = [
         label: 'Import Participants',
         href: '/admin/fundraisers/participants/import',
         permission: 'content:write',
+      },
+    ],
+  },
+  {
+    label: 'Data & Charts',
+    href: '/admin/data',
+    icon: 'Table2',
+    permission: 'data:read',
+    children: [
+      {
+        label: 'Datasets',
+        href: '/admin/data',
+        permission: 'data:read',
+      },
+      {
+        label: 'New report',
+        href: '/admin/data/new',
+        permission: 'data:read',
       },
     ],
   },
@@ -287,6 +310,11 @@ export const adminNavigation: NavItem[] = [
       {
         label: 'Retention & Repeat Purchase',
         href: '/admin/analytics/retention',
+        permission: 'analytics:read',
+      },
+      {
+        label: 'Attribution',
+        href: '/admin/analytics/attribution',
         permission: 'analytics:read',
       },
     ],
