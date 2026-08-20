@@ -70,6 +70,7 @@ vi.mock('@/lib/prisma', () => {
     order: { create: mockOrderCreate },
     user: { findUnique: vi.fn(async () => null) },
     abandonedCart: { updateMany: vi.fn() },
+    storeSettings: { findUnique: vi.fn(async () => null) },
   }
   return { prisma: client, db: client, default: client }
 })

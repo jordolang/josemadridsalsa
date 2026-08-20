@@ -225,6 +225,50 @@ export async function getCategories() {
 }
 
 /**
+ * Get an active collection by slug with its active products, in the curated order.
+ *
+ * Mirrors the product mapping used by `getProducts` (Decimals → numbers) so the result drops
+ * straight into the same `ProductCard`. Returns null when the collection does not exist or is
+ * inactive. Inactive products in the collection are filtered out rather than shown.
+ */
+export async function getCollectionBySlug(slug: string) {
+  try {
+    const collection = await prisma.collection.findFirst({
+      where: { slug, isActive: true },
+      include: {
+        products: {
+          where: { product: { isActive: true } },
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            product: {
+              include: {
+                category: true,
+                productTags: { include: { tag: true } },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (!collection) return null
+
+    const products = collection.products.map(({ product }) => ({
+      ...product,
+      price: parseFloat(String(product.price)),
+      compareAtPrice: product.compareAtPrice ? parseFloat(String(product.compareAtPrice)) : null,
+      costPrice: product.costPrice ? parseFloat(String(product.costPrice)) : null,
+      weight: product.weight ? parseFloat(String(product.weight)) : null,
+    }))
+
+    return { collection, products }
+  } catch (error: unknown) {
+    console.error('Error fetching collection:', error)
+    throw new Error(`Failed to fetch collection: ${getErrorMessage(error)}`)
+  }
+}
+
+/**
  * Get total count of products matching filters (for pagination)
  */
 export async function getProductsCount(filters: Omit<ProductFilters, 'take' | 'skip' | 'sortOrder'> = {}) {

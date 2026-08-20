@@ -163,18 +163,14 @@ export default async function RetentionPage({
                       {formatCohortMonth(row.cohort)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{row.cohortSize}</TableCell>
+                    {/* analyseCohorts fills every row to maxOffset + 1, so each already spans all
+                        columns; not-yet-observable offsets are null and render as an em dash. */}
                     {row.retentionByOffset.map((ratio, offset) => (
                       <TableCell
                         key={offset}
                         className={`text-right tabular-nums ${heatStyle(ratio)}`}
                       >
                         {formatRetention(ratio)}
-                      </TableCell>
-                    ))}
-                    {/* Pad rectangular: offsets this cohort never reaches stay blank. */}
-                    {offsets.slice(row.retentionByOffset.length).map((offset) => (
-                      <TableCell key={`pad-${offset}`} className="text-right text-muted-foreground/40">
-                        —
                       </TableCell>
                     ))}
                   </TableRow>

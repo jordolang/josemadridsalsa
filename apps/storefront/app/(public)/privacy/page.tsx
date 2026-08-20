@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { createMetadata } from '@/lib/metadata';
+import { LegalPage } from '@/components/store/legal-page';
+import { getStoreSettings } from '@/lib/store-settings';
 
 export const metadata: Metadata = createMetadata({
   title: 'Privacy Policy - Jose Madrid Salsa',
@@ -7,15 +9,16 @@ export const metadata: Metadata = createMetadata({
   pathname: '/privacy',
 });
 
-export default function PrivacyPolicyPage() {
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-6">Privacy Policy</h1>
-          <p className="text-sm text-muted-foreground mb-10">Last updated: 2026</p>
+export const dynamic = 'force-dynamic';
 
-          <div className="prose prose-slate dark:prose-invert max-w-none">
+export default async function PrivacyPolicyPage() {
+  const settings = await getStoreSettings();
+
+  return (
+    <LegalPage title="Privacy Policy" content={settings.privacyContent}>
+      <p className="text-sm text-muted-foreground mb-10">Last updated: 2026</p>
+
+      <div className="prose prose-slate dark:prose-invert max-w-none">
             <p>
               This Privacy Policy describes how we collect, use, and disclose your information when you use our
               website and services. By accessing or using our site, you agree to the collection and use of
@@ -93,10 +96,8 @@ export default function PrivacyPolicyPage() {
               If you have questions about this Privacy Policy or our data practices, please contact us at
               <a href="mailto:mike@josemadridsalsa.com"> mike@josemadridsalsa.com</a>.
             </p>
-          </div>
-        </div>
       </div>
-    </div>
+    </LegalPage>
   );
 }
 

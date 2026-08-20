@@ -31,7 +31,7 @@ const productSchema = z.object({
   compareAtPrice: z.string().optional(),
   costPrice: z.string().optional(),
   inventory: z.string().min(0, 'Inventory must be 0 or greater'),
-  lowStockThreshold: z.string().min(0, 'Low stock threshold must be 0 or greater'),
+  lowStockThreshold: z.string().optional(),
   weight: z.string().optional(),
   heatLevel: z.enum(['MILD', 'MEDIUM', 'HOT', 'EXTRA_HOT', 'FRUIT']),
   ingredients: z.string().optional(),
@@ -79,7 +79,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
       compareAtPrice: product?.compareAtPrice?.toString() || '',
       costPrice: product?.costPrice?.toString() || '',
       inventory: product?.inventory.toString() || '0',
-      lowStockThreshold: product?.lowStockThreshold.toString() || '5',
+      lowStockThreshold: product?.lowStockThreshold?.toString() ?? '',
       weight: product?.weight?.toString() || '',
       heatLevel: product?.heatLevel || 'MILD',
       ingredients: product?.ingredients.join(', ') || '',
@@ -112,7 +112,10 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
         compareAtPrice: data.compareAtPrice ? parseFloat(data.compareAtPrice) : null,
         costPrice: data.costPrice ? parseFloat(data.costPrice) : null,
         inventory: parseInt(data.inventory),
-        lowStockThreshold: parseInt(data.lowStockThreshold),
+        // Left blank → omit so the API applies the store-wide default low-stock threshold.
+        lowStockThreshold: data.lowStockThreshold?.trim()
+          ? parseInt(data.lowStockThreshold)
+          : undefined,
         weight: data.weight ? parseFloat(data.weight) : null,
         heatLevel: data.heatLevel,
         ingredients: data.ingredients
@@ -350,6 +353,9 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
             <Input
               id="lowStockThreshold"
               type="number"
+              // Only new products fall back to the store default when left blank; on an existing
+              // product the field is pre-filled, so no "Store default" affordance is shown.
+              placeholder={product ? undefined : 'Store default'}
               {...register('lowStockThreshold')}
             />
           </div>

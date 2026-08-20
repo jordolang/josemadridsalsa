@@ -1,0 +1,57 @@
+---
+title: Store Settings
+description: Admin-editable, store-wide controls for checkout rules, business identity, operational defaults, and legal pages — each wired to real storefront behaviour.
+---
+
+Store Settings is the one screen for the store-wide switches that used to live in code or environment
+variables. It lives at **Admin → Settings → Store** (`/admin/settings/store`) and is gated on the
+existing `settings:read` (view) and `settings:write` (save) permissions — no new permission seed is
+required.
+
+Every control here is wired to real behaviour. Nothing on this screen is decorative configuration:
+change a value and the storefront changes with it, immediately.
+
+## What you can control
+
+### Checkout controls
+
+- **Allow guest checkout** — when off, a signed-out shopper is stopped at checkout with a prompt to
+  sign in, across all three online payment routes (card, PayPal, and Square/Cash App). When on (the
+  default), guests check out as before.
+- **Minimum order amount** — orders whose **goods subtotal** is below this amount are rejected at
+  checkout with a clear message. The check runs on the subtotal *before* discounts and shipping, so a
+  discount code can't be used to slip under the minimum. Leave it blank (or `0`) for no minimum.
+
+### Store identity
+
+Business name, support email, support phone, and business address. The public **Contact** page reads
+these first; if a field is blank it falls back to the previous `NEXT_PUBLIC_SUPPORT_EMAIL` /
+`NEXT_PUBLIC_SUPPORT_PHONE` / `NEXT_PUBLIC_HQ_LOCATION` environment variables, and finally to the
+built-in defaults. So the page keeps rendering exactly as before until you save a value.
+
+### Operational defaults
+
+- **Default low-stock threshold** — the low-stock threshold a newly created product inherits when the
+  product form leaves it blank. Previously hardcoded to `5`.
+
+### Legal pages
+
+Optional custom bodies for the **Terms of Service**, **Privacy Policy**, and **Return Policy** pages.
+When you save text for one, that text replaces the built-in copy on the public page; leave a field
+blank to keep the curated default. Saved content is rendered as **plain text** (line breaks
+preserved), never as HTML, so nothing typed here can inject markup into a public page.
+
+## How it works
+
+Settings are stored in a single-row `store_settings` table, keyed by a `singleton` column exactly like
+`shipping_settings`. All reads go through `lib/store-settings.ts`, whose `getStoreSettings()` accessor:
+
+- merges the saved row over a set of safe defaults, so a partially-filled row is fine;
+- returns the defaults when the row does not exist yet **or** the table has not been migrated,
+  so every reader (checkout, contact page, product create) works before the first save; and
+- is wrapped in React `cache`, so the several callers in one request share a single query.
+
+The row is created lazily the first time an admin saves (an upsert), and each save writes an audit-log
+entry. The pure helpers `isBelowMinimumOrder` and `formatMinimumOrder` are unit-tested.
+
+Migration: `20260815140000_add_store_settings` (additive — a new table only).

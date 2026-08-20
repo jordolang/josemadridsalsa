@@ -151,6 +151,29 @@ acquired last month has no "three months later" column). The math is in
 `lib/analytics/cohort-retention.ts`; the query in `cohort-retention.server.ts` reuses the same
 sales filter as the other reports. Read-only, gated on `analytics:read`.
 
+### Attribution (UTM)
+
+`/admin/analytics/attribution` (Analytics → Attribution) answers where orders come from, by
+**first-touch** UTM source, medium, campaign, or referrer.
+
+- **How it's captured:** there is no server-side cart, so attribution rides in a cookie. The
+  `AttributionTracker` client component (mounted in the public layout) records the `utm_*` params,
+  the external referrer host, and the landing path into a `jms_attribution` cookie the first time a
+  visitor lands with anything to attribute — a purely direct visit is left uncaptured so a later
+  campaign click can still be the first touch. `POST /api/checkout` reads that cookie and writes the
+  fields onto the `Order` (`utmSource/utmMedium/utmCampaign/utmTerm/utmContent`, `referrer`,
+  `landingPage`); parsing never throws, so a bad cookie can't break checkout.
+- **How it reports:** orders are grouped by the chosen dimension into orders, revenue, and average
+  order value, ranked by revenue. Orders with no captured source are their own **Direct / none**
+  row (never folded into a campaign), and the headline states the share of orders that carried any
+  UTM source — attribution is only ever as complete as capture, and offline/pre-feature orders are
+  honestly direct.
+
+Capture logic is in `lib/analytics/attribution.ts` (pure, tested) + `attribution.client.ts`; the
+report math is in `lib/analytics/utm-report.ts` and the query in `utm-report.server.ts`. Read-only,
+gated on `analytics:read`. Migration `20260815120000_add_order_attribution` adds the nullable
+columns (no backfill — existing orders are simply direct).
+
 ### Date Range Filtering
 
 The `lib/analytics/date-range.ts` utility provides predefined date ranges:
