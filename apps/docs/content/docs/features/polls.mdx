@@ -1,0 +1,109 @@
+---
+title: Community Polls
+description: Visitor-facing polls at /polls, built and controlled from the admin content section
+---
+
+# Community Polls
+
+Polls let staff ask visitors a question — a flavour vote, a fundraising survey, an open-ended
+"what should we make next" — and collect the answers without anyone needing an account. The public
+pages live at `/polls`, reachable from the **footer of every page** and deliberately absent from the
+top navigation.
+
+## How a visitor experiences it
+
+- `/polls` lists every published public poll as a card. Poll images are framed to a fixed 16:10 crop,
+  so any aspect ratio lands tidily; a poll without an image gets its accent gradient instead.
+- `/polls/[slug]` shows one poll. Each question renders as pill-shaped controls sized for a finger
+  (48px minimum), with real radio/checkbox inputs underneath so keyboards and screen readers behave.
+- Answers are given by tapping a pill, ticking several pills ("select as many as apply"), typing a
+  comment (capped per question, 1500 characters maximum), or choosing a point on a rating scale.
+- Only a **first name** is required. A last name is offered as explicitly optional. An email field
+  appears only when the poll asks for one, and is optional even then.
+- Above the name fields, every poll shows the participation advisory: answers may be used
+  promotionally or internally and can be seen by people who do not share the respondent's views.
+  A prominent **"Keep me anonymous"** button records a request to strip identifying details, and a
+  required checkbox confirms the visitor read the notice.
+- Results appear after voting, always, or never — the admin decides per poll. Quoted comments are
+  credited as "First L." or "Anonymous", never with a full surname.
+
+## Admin
+
+**Content → Polls** (`/admin/content/polls`, permission `content:read` to view, `content:write` to
+change).
+
+| Tab | What it controls |
+| --- | --- |
+| Poll | Title, URL, subtitle, intro, image (from the Media Library) and alt text, accent colour, status, visibility, results visibility, publish/open/close times, one-answer-per-device, email field, search indexing |
+| Questions | The question builder: answer style, prompt, help text, per-question image, required flag, character limit, selection bounds, an optional "something else" box, and the option list with emoji, description and image per option |
+| Responses | Every answer received, newest first, with the anonymity request shown next to each name, plus a CSV export |
+
+### Visibility
+
+- **Public** — listed on `/polls`, in the sitemap, open to anyone including guests who arrive by
+  accident.
+- **Invite only** — unlisted, excluded from the sitemap, marked `noindex`, and reachable only through
+  a share link carrying the poll's access code (`/polls/slug?key=…`). Saving a poll as invite-only
+  mints the code; switching it back to public clears it, which invalidates old links.
+
+### Editing a live poll
+
+Questions and options keep their ids when edited, so answers already recorded stay attached. Deleting
+a question deletes the answers to it — the confirmation on the poll list says so before anything is
+removed.
+
+## Architecture
+
+<Files>
+  <Folder name="app/(public)/polls" defaultOpen>
+    <File name="page.tsx" />
+    <Folder name="[slug]">
+      <File name="page.tsx" />
+    </Folder>
+  </Folder>
+  <Folder name="app/admin/content/polls">
+    <File name="page.tsx" />
+    <Folder name="[id]">
+      <File name="page.tsx" />
+    </Folder>
+  </Folder>
+  <Folder name="components/polls">
+    <File name="poll-card.tsx" />
+    <File name="poll-form.tsx" />
+    <File name="poll-results.tsx" />
+    <File name="poll-share.tsx" />
+  </Folder>
+  <Folder name="lib/polls">
+    <File name="admin.ts" />
+    <File name="constants.ts" />
+    <File name="queries.ts" />
+    <File name="schemas.ts" />
+  </Folder>
+</Files>
+
+### API
+
+| Route | Method | Access |
+| --- | --- | --- |
+| `/api/polls/[slug]/respond` | POST | Public. Rate limited to 5 submissions per IP per 10 minutes, with a honeypot field and a one-response-per-device check |
+| `/api/admin/cms/polls` | GET, POST | `content:read` / `content:write` |
+| `/api/admin/cms/polls/[id]` | GET, PATCH, DELETE | `content:read` / `content:write` |
+| `/api/admin/cms/polls/[id]/responses` | GET | `content:read`. Add `?format=csv` to download |
+
+### Data model
+
+`Poll` → `PollQuestion` → `PollOption`, with `PollResponse` → `PollAnswer` holding the submissions.
+Question types are `SINGLE_CHOICE`, `MULTI_CHOICE`, `SHORT_TEXT`, `LONG_TEXT` and `RATING`. A
+response stores `anonymousRequested` and `consentAcknowledged` alongside the name, so whoever writes
+promotional copy can see what the respondent asked for. IP addresses are stored only as a salted
+SHA-256 hash, used for the repeat-submission check and never displayed.
+
+## Search indexing
+
+`/polls` and every published public poll are registered in `app/sitemap.ts`. Invite-only and
+`noIndex` polls are excluded there and carry `robots: { index: false }` in their page metadata.
+
+<Callout type="warn">
+  After publishing a new poll, run **URL Inspection** on its URL in Google Search Console — no agent
+  can do this — and check a few weeks later that the indexed-page count is rising.
+</Callout>

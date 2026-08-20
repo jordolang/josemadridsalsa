@@ -4711,6 +4711,174 @@ model Redirect {
   @@map("cms_redirects")
 }
 
+/// PUBLIC polls are listed on /polls and readable by anyone. INVITE_ONLY polls
+/// are unlisted and only open to someone holding the poll's access code, which
+/// travels in the share link as `?key=`.
+enum PollVisibility {
+  PUBLIC
+  INVITE_ONLY
+}
+
+enum PollQuestionType {
+  /// Radio pills — exactly one option.
+  SINGLE_CHOICE
+  /// Checkbox pills — "select every one that applies".
+  MULTI_CHOICE
+  /// One-line answer.
+  SHORT_TEXT
+  /// Multi-line comment, capped by `maxLength`.
+  LONG_TEXT
+  /// 1..`ratingMax` scale.
+  RATING
+}
+
+/// When a voter may see the tallies.
+enum PollResultsVisibility {
+  HIDDEN
+  AFTER_VOTE
+  ALWAYS
+}
+
+model Poll {
+  id                  String                @id @default(cuid())
+  slug                String                @unique
+  title               String
+  subtitle            String?
+  /// Intro copy shown above the questions.
+  description         String?
+  imageUrl            String?
+  imageAlt            String?
+  /// Tailwind-ish accent key ("salsa", "verde", "amber", ...) used to theme the card.
+  accentColor         String?
+  status              ContentStatus         @default(DRAFT)
+  visibility          PollVisibility        @default(PUBLIC)
+  /// Share secret for INVITE_ONLY polls. Null for public ones.
+  accessCode          String?               @unique
+  featured            Boolean               @default(false)
+  sortOrder           Int                   @default(0)
+  publishedAt         DateTime?
+  /// Voting window. Outside it the poll renders read-only.
+  startsAt            DateTime?
+  endsAt              DateTime?
+  resultsVisibility   PollResultsVisibility @default(AFTER_VOTE)
+  /// Whether the same browser may answer more than once.
+  allowMultipleSubmissions Boolean          @default(false)
+  /// Offer an optional email field on the response form.
+  collectEmail        Boolean               @default(false)
+  /// Overrides the built-in participation/promotional-use advisory.
+  consentNotice       String?
+  thankYouMessage     String?
+  closedMessage       String?
+  seoTitle            String?
+  seoDescription      String?
+  noIndex             Boolean               @default(false)
+  /// Denormalised tally so the index can show participation without loading answers.
+  responseCount       Int                   @default(0)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  questions           PollQuestion[]
+  responses           PollResponse[]
+
+  @@index([status, visibility])
+  @@index([status, featured, sortOrder])
+  @@map("polls")
+}
+
+model PollQuestion {
+  id            String           @id @default(cuid())
+  pollId        String
+  poll          Poll             @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  sortOrder     Int              @default(0)
+  type          PollQuestionType @default(SINGLE_CHOICE)
+  prompt        String
+  helpText      String?
+  imageUrl      String?
+  imageAlt      String?
+  isRequired    Boolean          @default(false)
+  /// Character cap for SHORT_TEXT/LONG_TEXT answers.
+  maxLength     Int              @default(1500)
+  placeholder   String?
+  /// MULTI_CHOICE bounds. Null means unbounded.
+  minSelections Int?
+  maxSelections Int?
+  /// Adds a free-text "Other" entry alongside the options.
+  allowOther    Boolean          @default(false)
+  /// Top of the scale for RATING questions.
+  ratingMax     Int              @default(5)
+  options       PollOption[]
+  answers       PollAnswer[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([pollId, sortOrder])
+  @@map("poll_questions")
+}
+
+model PollOption {
+  id          String       @id @default(cuid())
+  questionId  String
+  question    PollQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  sortOrder   Int          @default(0)
+  label       String
+  description String?
+  imageUrl    String?
+  /// Single emoji shown on the pill.
+  emoji       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([questionId, sortOrder])
+  @@map("poll_options")
+}
+
+model PollResponse {
+  id                 String       @id @default(cuid())
+  pollId             String
+  poll               Poll         @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  /// Required, but any non-empty value is accepted — visitors are told a first
+  /// name alone is fine.
+  firstName          String
+  lastName           String?
+  email              String?
+  /// The voter asked to be credited anonymously if we quote them publicly.
+  anonymousRequested Boolean      @default(false)
+  /// The voter ticked the promotional-use advisory.
+  consentAcknowledged Boolean     @default(false)
+  /// Signed-in voter, when there was one. Plain id, no relation, so the User
+  /// model stays untouched.
+  userId             String?
+  /// SHA-256 of IP + salt. Repeat-submission guard only; never displayed.
+  ipHash             String?
+  userAgent          String?
+  submittedAt        DateTime     @default(now())
+  answers            PollAnswer[]
+
+  @@index([pollId, submittedAt])
+  @@index([pollId, ipHash])
+  @@map("poll_responses")
+}
+
+model PollAnswer {
+  id         String       @id @default(cuid())
+  responseId String
+  response   PollResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  questionId String
+  question   PollQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  /// Chosen PollOption ids for SINGLE_CHOICE/MULTI_CHOICE.
+  optionIds  String[]     @default([])
+  /// Free text for SHORT_TEXT/LONG_TEXT.
+  textValue  String?
+  /// Free text captured by an option list's "Other" entry.
+  otherText  String?
+  /// 1..ratingMax for RATING.
+  rating     Int?
+  createdAt  DateTime     @default(now())
+
+  @@unique([responseId, questionId])
+  @@index([questionId])
+  @@map("poll_answers")
+}
+
 /// A photographed paper form on its way to becoming ledger rows.
 ///
 /// The business still runs on paper: show settlement sheets, mileage logs, receipts. Rather than

@@ -10,6 +10,7 @@ import {
   Megaphone,
   Menu,
   PanelBottom,
+  Vote,
   Search,
   Sparkles,
 } from 'lucide-react'
@@ -37,7 +38,7 @@ interface Tile {
 
 async function counts() {
   try {
-    const [pages, banners, announcements, faqs, sections, redirects, media, posts] =
+    const [pages, banners, announcements, faqs, sections, redirects, media, posts, polls] =
       await Promise.all([
         prisma.page.count(),
         prisma.banner.count(),
@@ -47,8 +48,9 @@ async function counts() {
         prisma.redirect.count(),
         prisma.media.count(),
         prisma.blogPost.count(),
+        prisma.poll.count(),
       ])
-    return { pages, banners, announcements, faqs, sections, redirects, media, posts }
+    return { pages, banners, announcements, faqs, sections, redirects, media, posts, polls }
   } catch (error) {
     if (!isMissingTableError(error)) {
       console.error('[cms] failed to load content counts:', error)
@@ -89,6 +91,13 @@ export default async function ContentHub() {
       icon: HelpCircle,
       hint: 'Questions and answers shown across the site',
       count: stats?.faqs,
+    },
+    {
+      href: '/admin/content/polls',
+      label: 'Polls',
+      icon: Vote,
+      hint: 'Ask visitors a question — linked from the site footer',
+      count: stats?.polls,
     },
     {
       href: '/admin/content/navigation',
