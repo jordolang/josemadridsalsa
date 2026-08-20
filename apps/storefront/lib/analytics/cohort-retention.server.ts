@@ -28,11 +28,11 @@ function normaliseEmail(email: string | null): string | null {
   return cleaned.length > 0 ? cleaned : null
 }
 
-export async function getCohortReport(
-  range: AnalyticsRangeKey,
-  now: Date = new Date()
-): Promise<CohortReport> {
-  const { start, end } = getDateRange(range)
+export async function getCohortReport(range: AnalyticsRangeKey): Promise<CohortReport> {
+  // One timestamp for both halves: the query window and the cohort observability are derived from
+  // the same `now`, so they cannot land in different months if the call straddles a boundary.
+  const now = new Date()
+  const { start, end } = getDateRange(range, now)
 
   // Same sales definition as the margin and orders reports, so buyer counts never disagree.
   const orderFilter: Prisma.OrderWhereInput = {

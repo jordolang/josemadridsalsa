@@ -56,7 +56,12 @@ export default async function InventoryTurnoverPage({
   const { summary, products, days, uncostedProductCount } = await getTurnoverReport(range)
 
   const slowMoverCount = products.filter((p) => p.slowMover).length
-  const coveragePct = Math.round(summary.coverageRatio * 100)
+  // The exact ratio decides the caveat, and the number shown must agree with it. Truncate (never
+  // round) to one decimal so incomplete coverage cannot display as "100%" beside the warning.
+  const coverageComplete = summary.coverageRatio >= 1
+  const coveragePct = coverageComplete
+    ? '100'
+    : (Math.floor(summary.coverageRatio * 1000) / 10).toFixed(1)
 
   return (
     <div className="space-y-8">
@@ -116,7 +121,7 @@ export default async function InventoryTurnoverPage({
       </div>
 
       {/* The caveat travels with the value figures, the same rule as the margin page. */}
-      {coveragePct < 100 && summary.totalStockUnits > 0 && (
+      {!coverageComplete && summary.totalStockUnits > 0 && (
         <Card className="border-amber-300 bg-amber-50/60 p-4 dark:bg-amber-950/20">
           <p className="text-sm text-foreground">
             <AlertTriangle className="mr-2 inline h-4 w-4 text-amber-600" />

@@ -204,11 +204,16 @@ function compareSlowest(a: ProductTurnover, b: ProductTurnover): number {
   if (a.noSales !== b.noSales) return a.noSales ? -1 : 1
 
   if (a.noSales && b.noSales) {
-    // Both dead: the one tying up more capital is the bigger problem. Fall back to units, then
-    // stock, when neither has a known value.
-    const av = a.stockValueCents ?? 0
-    const bv = b.stockValueCents ?? 0
-    if (av !== bv) return bv - av
+    // Both dead: the one tying up more capital is the bigger problem. Compare value only when
+    // both are known — a missing cost is not "worth zero", and treating it as zero would sink
+    // uncosted dead stock below a trivially cheap known item. Otherwise fall back to units on hand.
+    if (
+      a.stockValueCents !== null &&
+      b.stockValueCents !== null &&
+      a.stockValueCents !== b.stockValueCents
+    ) {
+      return b.stockValueCents - a.stockValueCents
+    }
     return b.currentStock - a.currentStock
   }
 
