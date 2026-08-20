@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   cleanOrgName,
   isBusinessEmail,
+  looksLikeSalsaFlavors,
   normalizeFundraiser,
   parseFormDate,
   type RawFundraiser,
@@ -118,5 +119,65 @@ describe('normalizeFundraiser', () => {
     expect(n.notes).toMatch(/blank order-form template/i)
     // A template folder must not become the org name.
     expect(n.organizationName).toBe('order form $6')
+  })
+})
+
+describe('looksLikeSalsaFlavors', () => {
+  it('accepts the order-form template, whose flavors all name a heat level', () => {
+    expect(
+      looksLikeSalsaFlavors({
+        'Raspberry Mild': 34,
+        'Peach Mild': 41,
+        'Cherry Chocolate Hot': 4,
+        'Mango Habanero Hot': 22,
+      })
+    ).toBe(true)
+  })
+
+  it('rejects coordinator names picked up off a tracking sheet', () => {
+    expect(looksLikeSalsaFlavors({ Randy: 6, Cheryl: 9078, Karen: 19249 })).toBe(false)
+    expect(looksLikeSalsaFlavors({ 'Mandy Boyd': 2023, 'Miranda Galloway': 7214 })).toBe(false)
+  })
+
+  it('rejects an empty column set', () => {
+    expect(looksLikeSalsaFlavors({})).toBe(false)
+  })
+})
+
+describe('normalizeFundraiser — multi-campaign tracking sheets', () => {
+  // "5 year completed JMSFundraisers.xlsx" alone claimed 7,172,093 jars: the
+  // extractor read a roster of coordinators as one campaign's flavor columns.
+  const trackingRaw: RawFundraiser = {
+    sourceFile: '03 Fundraisers/Undated/5 year completed JMSFundraisers.xlsx',
+    sourceMd5: 'm3',
+    year: null,
+    folderOrg: null,
+    fileBase: '5 year completed JMSFundraisers',
+    shape: 'ORDER_FORM',
+    totalJars: 7172093,
+    labels: { organization: 'Moundbuilders DeMolay' },
+    flavors: { Randy: 6, Cheryl: 9078, Karen: 19249, Amanda: 45769 },
+  }
+
+  it('demotes the sheet to UNKNOWN and drops its rolled-up figures', () => {
+    const n = normalizeFundraiser(trackingRaw)
+    expect(n.formType).toBe('UNKNOWN')
+    expect(n.totalJars).toBeNull()
+    expect(n.orderCount).toBeNull()
+    expect(n.flavorsJson).toBeNull()
+    expect(n.notes).toMatch(/tracking sheet/i)
+  })
+
+  it('leaves a genuine order form untouched', () => {
+    const n = normalizeFundraiser({
+      ...trackingRaw,
+      sourceFile: '03 Fundraisers/2021/Tinora/Tinora Order 4-23-21.xlsx',
+      totalJars: 690,
+      labels: { organization: 'Tinora Middle School', date: '4/23/21' },
+      flavors: { 'Raspberry Mild': 34, 'Peach Mild': 41, 'Cherry Hot': 16 },
+    })
+    expect(n.formType).toBe('ORDER_FORM')
+    expect(n.totalJars).toBe(690)
+    expect(n.notes).toBeNull()
   })
 })

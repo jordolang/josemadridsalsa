@@ -8,6 +8,7 @@ import { deductReservedInventoryOnceInTx, releaseInventory, checkAndUpdateAlerts
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
 import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
+import { creditPurchaseLoyaltyPoints } from '@/lib/loyalty'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 const CompleteSchema = z.object({
@@ -269,6 +270,10 @@ export async function POST(request: Request) {
             amount: credit.amount,
           })
         }
+
+        // Award purchase loyalty points. Idempotent on the order and safe to race with the
+        // Stripe webhook, which completes the same order in parallel and awards them too.
+        await creditPurchaseLoyaltyPoints(tx, order!.id)
 
         // Deduct reserved inventory for each item inside the same transaction.
         // The Stripe webhook completes the same order in parallel and deducts the

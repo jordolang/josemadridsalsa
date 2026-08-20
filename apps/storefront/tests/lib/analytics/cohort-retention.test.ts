@@ -96,6 +96,17 @@ describe('analyseCohorts — retention grid', () => {
     expect(jan.retentionByOffset[1]).toBe(0)
   })
 
+  it('does not throw when now precedes every cohort (future-dated data)', () => {
+    // now is months before the only order — observable offset is negative. Must degrade to an
+    // unobservable single column, not throw on a negative array length.
+    const now = new Date('2024-01-15T00:00:00Z')
+    const result = analyseCohorts([order('a', '2024-05-01T00:00:00Z')], now)
+    expect(result.maxOffset).toBe(0)
+    expect(result.cohorts).toHaveLength(1)
+    expect(result.cohorts[0].cohort).toBe('2024-05')
+    expect(result.cohorts[0].retentionByOffset).toEqual([null])
+  })
+
   it('orders cohorts chronologically', () => {
     const now = new Date('2024-06-15T00:00:00Z')
     const orders = [

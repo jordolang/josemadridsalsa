@@ -1,0 +1,160 @@
+---
+title: Fundraiser Contact Database
+description: The deduplicated database of past fundraising organizations recovered from the document archive, with editable records, an on/off switch, and one-click re-signup outreach
+---
+
+# Fundraiser Contact Database
+
+Every organization that has ever run a Jose Madrid salsa fundraiser, consolidated into one
+editable record each, at `/admin/fundraisers/contacts`.
+
+This is the outreach list. It exists to answer one question — *who has fundraised with us
+before, and how do we ask them back?* — and it ships with the button that does the asking.
+
+## Where the data comes from
+
+Four sources feed it, and they are not the same kind of record.
+
+| Source | What it is | Imported as |
+|---|---|---|
+| `ArchivedFundraiser` | Order-form spreadsheets from `03 Fundraisers`, one row per *file* | Grouped into one record per organization, jars summed |
+| `Fundraiser list.csv` | The 2016-era Constant Contact coordinator list | Folded onto matching organizations by email, else standalone |
+| `completed fundraisers.csv` | A strict subset of the above who completed a campaign | A note on the existing record |
+| `Fundraiser website customers *.csv` | Storefront customer export | Standalone and **inactive** — see below |
+
+The website export holds people who *bought through* a group, not the coordinator who ran it.
+Inviting them to run a fundraiser would be addressed to someone who once bought a jar of
+salsa, so they are imported switched off. They are searchable and can be turned on
+individually, but no bulk send reaches them by default.
+
+### Why there are no dollar figures
+
+The order forms record jar counts. They carry no line totals, and the archive spans `$6.00
+forms`, `8$ forms`, and $10-per-jar eras. Any revenue number here would be a per-jar price
+assumption multiplied by a jar count and presented as history. The database stores jars and
+order counts, and the admin UI says so.
+
+## Building and rebuilding the list
+
+```bash
+npm run fundraisers:build-contacts --workspace @jose-madrid/storefront
+```
+
+Dry run by default: it prints the consolidated totals, the source breakdown, and the top
+organizations by jars without writing anything. Add `--commit` to persist, and `--archive
+<path>` if the document archive is not at `../../Documents`.
+
+Re-running is safe. Records are keyed on a hidden `dedupeKey` — the normalized email, or
+`org:<organizationKey>` for archive organizations — rather than on the organization name, so
+correcting a group's spelling in the admin does not fork a duplicate on the next run.
+
+A re-import **refreshes** the archive-derived columns (jars, order counts, campaign count,
+years, source files) because those are recomputed from the archive and are authoritative. It
+**never** touches `isActive`, `status`, `notes`, or the solicitation counters — those are the
+admin's, and an import must not reverse a toggle or re-arm a contact marked do-not-contact.
+Contact details only fill blanks, so a corrected address is not overwritten by a stale one.
+
+### What gets dropped
+
+The archive's fundraiser tree mixes real campaigns with blank templates (`16 Flavors`, `order
+form $6`), per-year rollup workbooks (`2018 Fundraisers for filing`, `2024 Fundraiser
+Totals`), and undated dumping folders. Each of those produced an `ArchivedFundraiser` row with
+an organization name taken from its filename.
+
+`isNonOrganizationName()` drops them by asking whether *every* token in the name comes from
+the archive's filing vocabulary, rather than matching one pattern per filename. "Fundraisers
+2022" reduces to nothing but filing words. "Anderson HS Band" and "FFA Fruit Sale
+Participation Donation" both keep tokens that carry real identity. The rule is unit-tested in
+`tests/lib/fundraising/contact-consolidate.test.ts` against both lists.
+
+## The admin list
+
+`/admin/fundraisers/contacts` requires `users:read`; editing requires `users:write` and
+sending requires `content:write`.
+
+- **Search** across organization, contact name, email, and phone. Phone search strips
+  formatting first, so `(740) 521-4304` matches a stored `7405214304`.
+- **Filter** by active state, outreach status, source, whether an email is on file, whether
+  the record has recovered campaign history, and campaign year.
+- **Sort** any column. Nullable columns push blanks to the end in both directions so the
+  thousand history-less mailing-list contacts do not monopolise the first page.
+- **Toggle** a contact on or off per row, or in bulk from the selection — **Set N active** /
+  **Set N inactive**. Off keeps the recovered history and excludes the record from outreach.
+- **Select** the whole page from the header checkbox, which shows a dash when the page is only
+  partly selected. Once the page is fully ticked, a banner offers *"Select all N matching these
+  filters"*, which pulls every matching id — across all pages — so a filtered segment can be
+  switched on or off in one action. The ids endpoint returns at most 10,000; beyond that the
+  banner says plainly that only the first N of M are selected rather than claiming the whole
+  set.
+- **Edit** organization, contact name, email, phone, status, and notes. Sales rollups are
+  shown read-only, because a re-import recomputes them.
+
+Selection survives paging — picking contacts across pages is the point — but is cleared when a
+filter changes, so the send button can never act on rows that are no longer on screen.
+
+Bulk actions always send explicit ids. The bulk route deliberately does not accept a filter: a
+filter re-resolved on the server could match a different set than the operator was looking at,
+and the route's whole safety property is that it only touches rows someone chose. Selections
+larger than the route's per-request cap are chunked by the client rather than rejected.
+
+## Sending the re-signup invitation
+
+Select contacts, then **Invite N to sign up**. Each recipient gets a personalized email
+quoting their own history ("Hardin Valley Middle School Band sold 3,838 jars with us in
+2025"), a link to `/fundraise`, and a working unsubscribe link.
+
+Safeguards, in order:
+
+1. The dialog opens by running the `dryRun` preflight and shows the count the server actually
+   resolves — after suppression, unsubscribes, duplicate coordinators, and missing addresses —
+   so the number on the confirm button is the number of emails that will be sent. This matters
+   most when the selection covers rows the page never loaded: counting in the browser would
+   understate a 2,000-contact selection badly. It will not arm until the operator ticks an
+   acknowledgement against that count, and it lists sample addresses so a wrong filter is
+   visible. A dry run writes no outreach-log rows.
+2. `POST /api/admin/fundraiser-contacts/solicit` refuses to send without `confirm: true` in
+   the body. `dryRun: true` resolves and reports the same recipient set without contacting the
+   mail provider.
+3. Inactive contacts and anyone marked `DO_NOT_CONTACT` are excluded by the query.
+4. Every address is checked against `EmailSuppression` and `UnsubscribePreference` at send
+   time.
+5. Addresses are deduplicated across the **whole selection**, not per request.
+   `POST /solicit/preview` resolves eligibility once — it sends nothing, so it can answer for
+   the entire list in one call — and returns the deduplicated ids the dialog then sends in
+   chunks. Deduplicating per chunk instead would mail a coordinator who runs two groups twice,
+   once for each chunk their rows landed in. `FundraiserContact.email` is not unique on
+   purpose, so this is a real case, not a theoretical one.
+6. Sends are paced to stay under the mail provider's rate limit, and the client sends at most
+   200 contacts per request. A whole-database selection would otherwise run for twenty minutes
+   in a single request and be killed part-way through with no record of who had been mailed.
+   Progress is shown as chunks complete. A failure part-way through is terminal — it reports
+   how many invitations went out and how many did not, and asks the operator to re-select the
+   uninvited contacts. It deliberately does not offer a retry, because retrying from the first
+   chunk would mail everyone who already received one.
+
+Every contact produces a `FundraiserOutreachLog` row, including the skips. A suppressed
+address needs to read as *deliberately not mailed*, not as an absence that invites a retry.
+A successful send stamps `lastSolicitedAt`, increments `solicitationCount`, and advances
+`NEW` to `CONTACTED` — a contact that already responded or converted keeps that status, since
+a follow-up is not a downgrade of what is known about them.
+
+<Callout type="warn">
+  The largest email source is a Constant Contact list created in 2016 with **implied**
+  permission. Mailing a decade-old implied-consent list in one burst is a deliverability and
+  CAN-SPAM risk regardless of the compliance plumbing above. Warm up in batches, watch bounce
+  and complaint rates, and stop if they climb.
+</Callout>
+
+## Compliance
+
+The solicitation is commercial email, and it is built accordingly: a `List-Unsubscribe` header
+with `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, a matching unsubscribe link in the
+footer resolving to the same tokenized URL, a plain statement of why the recipient is being
+emailed, and the business postal address. The address is read from `BUSINESS_POSTAL_ADDRESS`
+and the reply-to from `FUNDRAISING_REPLY_TO`; both fall back to production values.
+
+## Related
+
+- [Email Marketing](/docs/features/email-marketing) — campaigns, suppression, and unsubscribe handling
+- [Lead Generation](/docs/features/lead-generation) — cold outreach to schools that have *not* fundraised before
+- [Customers](/docs/features/customers) — the general customer book

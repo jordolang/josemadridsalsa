@@ -63,6 +63,22 @@ describe('classifySensitivity', () => {
     expect(classifySensitivity('03 Fundraisers/2024/1099 form.pdf', '03 Fundraisers')).toBe('SENSITIVE')
   })
 
+  it('marks QuickBooks company files and backups sensitive', () => {
+    // A .qbw/.qbb is the whole general ledger; the folder name never says so.
+    expect(
+      classifySensitivity(
+        '01 Financial/QuickBooks Desktop (legacy)/Jose Madrid Salsa.QBB',
+        '01 Financial'
+      )
+    ).toBe('SENSITIVE')
+    expect(
+      classifySensitivity(
+        '01 Financial/QuickBooks Desktop (legacy)/Michael Zakany LLC.QBW',
+        '01 Financial'
+      )
+    ).toBe('SENSITIVE')
+  })
+
   it('leaves ordinary business files internal, not sensitive', () => {
     expect(classifySensitivity('06 Products/labels/mango.pdf', '06 Products')).toBe('INTERNAL')
     expect(classifySensitivity('01 Financial/Mileage/2020/Master.xlsx', '01 Financial')).toBe('INTERNAL')

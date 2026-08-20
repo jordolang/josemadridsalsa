@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest'
-import { isLive, matchesPath } from '@/lib/cms/queries'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { isLive, matchesPath, getSitemapLandingPages } from '@/lib/cms/queries'
+import prisma from '@/lib/prisma'
+
+vi.mock('@/lib/prisma', () => ({
+  default: { page: { findMany: vi.fn() } },
+  prisma: { page: { findMany: vi.fn() } },
+}))
+
+const findMany = vi.mocked(prisma.page.findMany)
 
 describe('isLive', () => {
   const hour = 60 * 60 * 1000
@@ -70,5 +78,69 @@ describe('matchesPath', () => {
 
   it('ignores blank entries', () => {
     expect(matchesPath(['  '], '/products')).toBe(false)
+  })
+})
+
+describe('getSitemapLandingPages', () => {
+  const hour = 60 * 60 * 1000
+  const updatedAt = new Date('2026-08-01T00:00:00.000Z')
+
+  beforeEach(() => {
+    findMany.mockReset()
+  })
+
+  it('asks the database only for indexable landing pages', async () => {
+    findMany.mockResolvedValue([])
+
+    await getSitemapLandingPages()
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          kind: 'LANDING',
+          status: { in: ['PUBLISHED', 'SCHEDULED'] },
+          noIndex: false,
+        },
+      })
+    )
+  })
+
+  it('returns the slug and last-modified date of a live page', async () => {
+    findMany.mockResolvedValue([
+      { slug: 'summer-sale', status: 'PUBLISHED', publishedAt: null, updatedAt },
+    ] as never)
+
+    await expect(getSitemapLandingPages()).resolves.toEqual([
+      { slug: 'summer-sale', updatedAt },
+    ])
+  })
+
+  it('withholds a scheduled page until its publish time', async () => {
+    findMany.mockResolvedValue([
+      {
+        slug: 'not-yet',
+        status: 'SCHEDULED',
+        publishedAt: new Date(Date.now() + hour),
+        updatedAt,
+      },
+      {
+        slug: 'already-out',
+        status: 'SCHEDULED',
+        publishedAt: new Date(Date.now() - hour),
+        updatedAt,
+      },
+    ] as never)
+
+    const pages = await getSitemapLandingPages()
+
+    expect(pages.map((page) => page.slug)).toEqual(['already-out'])
+  })
+
+  it('degrades to an empty list when the CMS tables are missing', async () => {
+    findMany.mockRejectedValue(
+      Object.assign(new Error('table does not exist'), { code: 'P2021' })
+    )
+
+    await expect(getSitemapLandingPages()).resolves.toEqual([])
   })
 })

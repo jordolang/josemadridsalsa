@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search } from 'lucide-react'
+import { ArrowRight, Search } from 'lucide-react'
 
 import {
   CommandDialog,
@@ -11,6 +11,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from '@/components/ui/command'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,10 +23,12 @@ import {
 
 /**
  * One box that finds anything: order number, RMA, customer, email, phone, SKU, tracking
- * number, product name, campaign, coupon code.
+ * number, product name, campaign, coupon code — and, for free text, every document,
+ * archive record and page of website content the operator is allowed to see.
  *
  * Opens on ⌘K / Ctrl-K from anywhere in the admin. Results come from the server so ranking
- * and permissions are decided in one place; this component only renders them.
+ * and permissions are decided in one place; this component only renders them. The palette
+ * shows the top few per section; Enter on the last row opens the full-results page.
  */
 export function GlobalSearch() {
   const router = useRouter()
@@ -98,15 +101,16 @@ export function GlobalSearch() {
         <kbd className="hidden rounded border px-1.5 text-[0.65rem] sm:inline">⌘K</kbd>
       </Button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      {/* Results arrive already matched and ranked by the server, and their cmdk values are
+          ids. Left on, cmdk's client-side filter scores "order-clx123" against the typed
+          query, matches nothing, and empties the whole list. */}
+      <CommandDialog open={open} onOpenChange={setOpen} shouldFilter={false}>
         <CommandInput
-          placeholder="Order number, customer, email, SKU, tracking, RMA…"
+          placeholder="Order, customer, fundraiser, document title, SKU, tracking…"
           value={query}
           onValueChange={setQuery}
         />
         <CommandList>
-          {/* cmdk filters client-side by default; results are already ranked server-side,
-              so every returned item is shown as-is. */}
           {!isSearchable(query) ? (
             <CommandEmpty>Type at least two characters.</CommandEmpty>
           ) : isLoading ? (
@@ -114,24 +118,43 @@ export function GlobalSearch() {
           ) : results.length === 0 ? (
             <CommandEmpty>No matches for “{query}”.</CommandEmpty>
           ) : (
-            grouped.map(([entity, items]) => (
-              <CommandGroup key={entity} heading={ENTITY_LABELS[entity]}>
-                {items.map((item) => (
-                  <CommandItem
-                    key={`${item.entity}-${item.id}`}
-                    value={`${item.entity}-${item.id}`}
-                    onSelect={() => go(item.href)}
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm">{item.title}</p>
-                      {item.subtitle && (
-                        <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
-                      )}
-                    </div>
-                  </CommandItem>
-                ))}
+            <>
+              {grouped.map(([entity, items]) => (
+                <CommandGroup key={entity} heading={ENTITY_LABELS[entity]}>
+                  {items.map((item) => (
+                    <CommandItem
+                      key={`${item.entity}-${item.id}`}
+                      value={`${item.entity}-${item.id}`}
+                      onSelect={() => go(item.href)}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm">{item.title}</p>
+                        {item.subtitle && (
+                          <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
+                        )}
+                        {/* Present only when the query matched inside the record rather than
+                            its name — otherwise a hit on a scanned file looks arbitrary. */}
+                        {item.excerpt && (
+                          <p className="truncate text-xs italic text-muted-foreground">
+                            {item.excerpt}
+                          </p>
+                        )}
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ))}
+              <CommandSeparator />
+              <CommandGroup>
+                <CommandItem
+                  value="see-all-results"
+                  onSelect={() => go(`/admin/search?q=${encodeURIComponent(query)}`)}
+                >
+                  <ArrowRight className="size-4" />
+                  <span className="text-sm">See all results for “{query}”</span>
+                </CommandItem>
               </CommandGroup>
-            ))
+            </>
           )}
         </CommandList>
       </CommandDialog>

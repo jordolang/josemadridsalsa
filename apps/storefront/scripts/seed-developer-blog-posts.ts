@@ -43,17 +43,19 @@ This platform is not a template. It is a custom-built, full-stack commerce, mark
 
 That is not a website. That is a small SaaS company.
 
-## What it costs to hire someone to build this
+## What it would cost to replace
 
-If you posted this scope on Upwork or to a U.S. agency, the conservative numbers look like this:
+Here is where I have to correct myself, because I used to put a much bigger number here. Multiplying my hours by a contractor's hourly rate produces six figures, and it is the wrong sum. Nobody buys hours. They buy a working store, and this one has never been sold, quoted, or asked after — no order history, no traffic record, nothing to underwrite a price with. A thing is worth what someone will pay for it.
 
-- **Solo senior full-stack developer (U.S.)**: $120–$200/hr.
-- **Hours to build, conservatively**: 1,200–1,800.
-- **Total**: **$144,000 to $360,000** in development cost alone.
+So the honest way to size it is replacement cost — what this business would actually pay to have the same thing stood up by someone else:
 
-That does not include design, copywriting, QA, deployment, or the ongoing labor of *keeping it running* — which is where most companies actually go broke.
+- **A themed Shopify or BigCommerce store with paid apps**: $1,500–$5,000, and it would do a fraction of what this does.
+- **An independent developer rebuilding this feature set to spec**: $8,000–$18,000, working from a finished reference rather than an open-ended discovery phase.
+- **All of it at once — storefront, fundraising, admin, iOS app — as one fixed-price project**: $20,000–$30,000, and that is a ceiling, not a quote.
 
-If you wanted a small agency to do it, you would be quoted between **$250,000 and $600,000** with a six-to-nine month timeline and you would still be doing change orders for everything past the original spec.
+Under $30,000, then. That is the real number, and it is still more than a small salsa company would ever have spent on software.
+
+None of it includes design, copywriting, QA, deployment, or the ongoing labor of *keeping it running* — which is where most companies actually go broke.
 
 ## What "for free" actually means
 

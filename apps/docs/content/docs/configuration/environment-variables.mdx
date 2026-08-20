@@ -69,6 +69,8 @@ DATABASE_URL_UNPOOLED="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/jos
 |---|---|---|
 | `RESEND_API_KEY` | Yes | Resend API key (`re_...`) |
 | `FROM_EMAIL` | No | Default sender address. Defaults to `orders@josemadridsalsa.com`. |
+| `BUSINESS_POSTAL_ADDRESS` | No | Physical mailing address printed in marketing-email footers, as CAN-SPAM requires. Defaults to the Zanesville address. |
+| `FUNDRAISING_REPLY_TO` | No | Reply-to address on fundraiser re-signup invitations. Defaults to the owner's address. |
 
 ## Google Services
 
@@ -90,6 +92,29 @@ DATABASE_URL_UNPOOLED="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/jos
 |---|---|---|
 | `UPLOADTHING_SECRET` | For uploads | UploadThing secret key |
 | `UPLOADTHING_APP_ID` | For uploads | UploadThing application ID |
+| `BLOB_READ_WRITE_TOKEN` | For image hosting | Read/write token for the `josemadridsalsa-blob` Vercel Blob store. Powers the Developer Console file explorer (`/admin/developer/files`), the product image uploader, and the `images:sync` / `images:migrate` scripts. Get it from **Vercel → Storage → josemadridsalsa-blob**. Without it, every blob upload path is disabled and returns 503. |
+
+## QuickBooks Online
+
+The Client ID and Secret are optional here — the preferred place to enter them is
+**Admin → Settings → Integrations**, which stores the secret encrypted in the database. These
+variables exist as a fallback and are read only when no admin-entered credentials are present.
+
+`QUICKBOOKS_ENVIRONMENT` has no admin-panel equivalent and **must** be set to reach real company
+data: it defaults to `sandbox`, and the Connect button on the integrations page connects to
+whichever environment it names. Left unset in production, the flow completes successfully against
+an Intuit *sandbox* company and syncs nothing real.
+
+| Variable | Required | Description |
+|---|---|---|
+| `QUICKBOOKS_ENVIRONMENT` | To reach live books | `sandbox` (default) or `production`. Selects both the Intuit API host and which stored credential set is used. |
+| `QUICKBOOKS_CLIENT_ID` | No | Intuit app Client ID. Fallback only; admin-entered credentials win. |
+| `QUICKBOOKS_CLIENT_SECRET` | No | Intuit app Client Secret. Fallback only; admin-entered credentials win. |
+
+The redirect URI is derived from `NEXTAUTH_URL` as `{NEXTAUTH_URL}/api/integrations/quickbooks/callback`
+and must be registered verbatim in the Intuit app. Sandbox and production keys are different pairs,
+and credentials are stored per environment — production keys saved while the app is in sandbox mode
+are filed under `sandbox` and will not work.
 
 ## Analytics
 

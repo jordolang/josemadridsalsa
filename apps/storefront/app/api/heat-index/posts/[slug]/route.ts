@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { ok, fail, notFound, serverError } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
-import { blogPostUpdateSchema } from '@/lib/blog/schemas'
+import { blogPostUpdateSchema, checkPostSeo } from '@/lib/blog/schemas'
 import { publishBlogPost } from '@/lib/blog/publish'
 import { crosspostAccountIdsSchema, crosspostBlogPost } from '@/lib/social/blog-crosspost'
 import prisma from '@/lib/prisma'
@@ -54,6 +54,12 @@ export async function PATCH(
 
     const existing = await prisma.blogPost.findUnique({ where: { slug } })
     if (!existing) return notFound('Post not found')
+
+    // Check the SEO rules against the post as it will be after the patch: a
+    // partial update (e.g. flipping status to PUBLISHED) still has to satisfy
+    // them, using the stored values for whatever the patch omits.
+    const seoError = checkPostSeo({ ...existing, ...parsed.data })
+    if (seoError) return fail(seoError)
 
     if (parsed.data.slug && parsed.data.slug !== slug) {
       const taken = await prisma.blogPost.findUnique({ where: { slug: parsed.data.slug } })
