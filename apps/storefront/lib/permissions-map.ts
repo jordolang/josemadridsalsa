@@ -166,6 +166,11 @@ export const adminNavigation: NavItem[] = [
         permission: 'content:write',
       },
       {
+        label: 'Polls',
+        href: '/admin/content/polls',
+        permission: 'content:write',
+      },
+      {
         label: 'Navigation',
         href: '/admin/content/navigation',
         permission: 'content:write',

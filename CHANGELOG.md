@@ -14,6 +14,36 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Community polls (`/polls`), built and controlled from Content → Polls.** A poll is a small,
+  self-contained way to ask visitors a question, and it needed to live where a curious visitor finds
+  it rather than where the shop's navigation competes for attention: the polls hub is linked from the
+  footer of every page and deliberately absent from the top menu.
+
+  Visitors answer without an account. Each question renders as pill-shaped controls with a real
+  radio or checkbox underneath, sized for a finger at 48px, so the same markup serves a tap, a click
+  and a keyboard. Questions come in five styles — pick one, pick as many as apply, a short answer, a
+  long comment capped at 1500 characters, and a rating scale — and any of them can carry its own
+  image and an optional "something else" box.
+
+  Only a first name is required, and only in the sense that the field cannot be blank: no length
+  rule, with the placeholder text saying a last name is welcome but optional. Above the name fields
+  every poll carries the participation advisory — answers are appreciated, and may be used
+  promotionally or internally where people who do not share the respondent's views will see them —
+  next to a prominent button asking us to keep them anonymous if we quote them. That request is
+  stored on the response and honoured everywhere a name is rendered, including the admin's own
+  export, so whoever writes the copy sees it rather than having to remember it.
+
+  Admins get the whole surface: create and edit polls, upload or pick images for the poll, each
+  question and each option, reorder questions, set selection bounds, choose an accent colour, decide
+  whether results show always, after voting, or never, and set open/close times. Visibility is either
+  public — listed on `/polls` and in the sitemap — or invite only, which is unlisted, `noindex`, and
+  reachable only through a share link carrying the poll's access code. Editing a live poll keeps
+  question and option ids, so answers already collected stay attached to what they answered.
+
+  The public endpoint is rate limited to 5 submissions per IP per 10 minutes, carries a honeypot, and
+  by default accepts one response per device. IP addresses are stored only as a salted SHA-256 hash,
+  for that check alone.
+
 - **Image hosting on Vercel Blob, with WebP conversion (`images:sync`, `images:migrate`).** Images do
   not belong in git — the repo already carries 201 MB across 152 committed files, and history is
   permanent, so deleting them later reclaims nothing. Two commands move image hosting off the repo.
