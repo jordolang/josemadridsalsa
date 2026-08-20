@@ -565,6 +565,10 @@ model Order {
   /// Null means not a fundraiser order, or not yet credited — never zero. The rate is editable
   /// afterwards, so recomputing this later would disagree with what was really handed over.
   fundraiserCommission     Decimal?               @db.Decimal(10, 2)
+  /// Set once, by whichever path marks the order paid first. The claim on this column is what
+  /// stops purchase loyalty points being awarded twice when a webhook and a completion route
+  /// race — the same guard `commissionCreditedAt` gives the fundraiser credit.
+  loyaltyPointsAwardedAt   DateTime?
   fundraiserId             String?
   importSource             String?
   importBatchId            String?
@@ -1715,6 +1719,10 @@ enum QuickBooksEntityType {
   ITEM
   SALES_RECEIPT
   REFUND_RECEIPT
+  /// A ledger row posted as a double-entry JournalEntry. Used for money that never became an
+  /// order — cash and show takings, hand-entered expenses, imported statement rows — because
+  /// there is no customer or line detail to build a SalesReceipt from.
+  JOURNAL_ENTRY
 }
 
 enum QuickBooksSyncStatus {
@@ -1796,6 +1804,15 @@ model QuickBooksSettings {
   /// no line detail, so anything less than a whole-order refund needs one
   /// designated item to land on.
   refundItemId             String?
+  /// Chart-of-accounts mapping for the bookkeeping ledger, keyed by `LedgerCategory`:
+  /// `{ PRODUCT_SALES: { accountId, accountName, offsetId, offsetName }, … }`.
+  ///
+  /// Json rather than a table because it is a small fixed-key map edited on one screen, and a
+  /// row per category would need a migration every time a category is added. The *names* feed
+  /// the journal-entry file export, which a human reviews before importing; the *ids* are what
+  /// the automated journal sync requires — and it blocks rather than guessing when one is
+  /// missing, because a posted entry against the wrong account is silent and hard to unpick.
+  ledgerAccountMap         Json?
   /// Orders before this date are left out of the books entirely.
   syncStartDate            DateTime?
   /// Master switch. Off until the accounts above are mapped.
@@ -4229,6 +4246,111 @@ enum ArchivedFundraiserFormType {
   UNKNOWN
 }
 
+model FundraiserContact {
+  id String @id @default(cuid())
+
+  /// Stable identity for re-import: the normalized email, else `org:<organizationKey>`.
+  /// Hidden from the admin UI on purpose — matching on `organizationName` would fork a
+  /// duplicate the moment someone corrects a group's spelling, and re-running the archive
+  /// consolidation is expected to be safe.
+  dedupeKey String @unique
+
+  organizationName String
+  contactName      String?
+  /// Lowercased. Indexed, not unique: one coordinator can legitimately run two groups, and
+  /// forcing uniqueness would collapse them into a single record. The send path dedupes
+  /// recipients by address instead, so a shared coordinator is still only mailed once.
+  email            String?
+  /// Digits only, as stored in the archive forms; formatted for display, never for dialing logic.
+  phone            String?
+
+  /// Lifetime jars ordered across every campaign matched to this organization. Jars rather
+  /// than dollars because the archive's per-jar price varied by era ($6, $8, $10 form runs)
+  /// and no order form records a line total, so revenue cannot be recovered without guessing.
+  totalJars       Int       @default(0)
+  /// Underlying customer orders, summed from the order-export sheets that record them.
+  totalOrders     Int       @default(0)
+  /// Number of distinct archive campaign files matched to this organization.
+  campaignCount   Int       @default(0)
+  firstCampaignAt DateTime?
+  lastCampaignAt  DateTime?
+  /// Campaign years seen, ascending. Denormalized so the admin list can show "2019, 2021-2023"
+  /// without a join back to the archive rows.
+  years           Int[]
+
+  /// Admin's on/off switch. False hides the row from outreach selection without deleting the
+  /// recovered history, which is the whole point of keeping the archive immutable.
+  isActive Boolean                 @default(true)
+  status   FundraiserContactStatus @default(NEW)
+
+  lastSolicitedAt   DateTime?
+  solicitationCount Int       @default(0)
+
+  source      FundraiserContactSource @default(ARCHIVE_ORDER_FORM)
+  /// Every archive file or CSV this record drew from, for provenance when a merge looks wrong.
+  sourceFiles String[]
+  notes       String?
+
+  importBatchId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  outreach FundraiserOutreachLog[]
+
+  @@index([isActive, status])
+  @@index([email])
+  @@index([organizationName])
+  @@index([lastSolicitedAt])
+  @@map("fundraiser_contacts")
+}
+
+enum FundraiserContactStatus {
+  NEW
+  CONTACTED
+  RESPONDED
+  CONVERTED
+  DO_NOT_CONTACT
+}
+
+enum FundraiserContactSource {
+  ARCHIVE_ORDER_FORM
+  ARCHIVE_ORDER_EXPORT
+  CONSTANT_CONTACT
+  WEBSITE_EXPORT
+  MANUAL
+}
+
+/// One solicitation send attempt. Written for failures as well as successes so a retry can
+/// tell "never attempted" from "attempted and bounced", and so the admin list can show why a
+/// contact was skipped (suppressed, unsubscribed, no email) rather than silently omitting it.
+model FundraiserOutreachLog {
+  id        String                   @id @default(cuid())
+  contactId String
+  email     String
+  subject   String
+  status    FundraiserOutreachStatus
+  /// Provider message id on success; null otherwise.
+  messageId String?
+  error     String?
+  /// Admin user who triggered the send.
+  sentById  String?
+  createdAt DateTime                 @default(now())
+
+  contact FundraiserContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("fundraiser_outreach_logs")
+}
+
+enum FundraiserOutreachStatus {
+  SENT
+  FAILED
+  SKIPPED_SUPPRESSED
+  SKIPPED_NO_EMAIL
+}
+
 /// A single show or farmers-market day's sales, recovered from the yearly sales
 /// sheets in `04 Shows & Events` (e.g. "2025 Show Sales", "2025 Farmers Market").
 /// One row per event day. Dollar sales here are the crew's own tallies, not QBO
@@ -4319,6 +4441,29 @@ model LedgerEntry {
   @@map("ledger_entries")
 }
 
+/// One upload of a bank or card statement. Ledger rows created from it carry `source: IMPORT`
+/// and `sourceId` set to this batch's id, so an import can be reviewed — or undone — as a unit.
+model LedgerImportBatch {
+  id           String   @id @default(cuid())
+  /// The uploaded file's name, purely so a person recognises which import this was.
+  filename     String
+  /// Which account the statement came from, e.g. "Chase business checking". Part of the row
+  /// content hash: the same amount on the same day is a different transaction on a different
+  /// account, and without this the second account's rows would be swallowed as duplicates.
+  accountLabel String
+  /// Rows read from the file, rows actually written, and rows the reviewer left out. Kept as
+  /// counts rather than derived later, because entries can be edited or deleted afterwards and
+  /// the record of what this import did should not change with them.
+  rowsParsed   Int      @default(0)
+  rowsImported Int      @default(0)
+  rowsSkipped  Int      @default(0)
+  importedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("ledger_import_batches")
+}
+
 enum LedgerDirection {
   INCOME
   EXPENSE
@@ -4331,6 +4476,9 @@ enum LedgerSource {
   FUNDRAISER
   MANUAL
   IMPORT
+  /// Read off a photographed paper form via `FormCapture`. Distinct from MANUAL:
+  /// a person confirmed the number, but the number came off a document we still hold.
+  FORM_CAPTURE
 }
 
 /// Income and expense categories. Contra items (refunds, discounts) are stored as EXPENSE so a
@@ -4596,4 +4744,133 @@ model Redirect {
 
   @@index([isActive])
   @@map("cms_redirects")
+}
+
+/// A photographed paper form on its way to becoming ledger rows.
+///
+/// The business still runs on paper: show settlement sheets, mileage logs, receipts. Rather than
+/// wait for that habit to change, a photo of the form is the input. Extraction reads it, a person
+/// confirms only what the machine was unsure about, and approval writes `LedgerEntry` rows that the
+/// existing QuickBooks sync already knows how to post.
+///
+/// The document itself is never discarded — `fileUrl` stays as the evidence behind every figure.
+model FormCapture {
+  id               String            @id @default(cuid())
+  formType         CaptureFormType
+  status           CaptureStatus     @default(UPLOADED)
+
+  /// The stored photo/PDF. This is the audit trail; do not delete it after posting.
+  fileUrl          String
+  fileName         String?
+  mimeType         String?
+  /// SHA-256 of the uploaded bytes. Unique, so re-uploading the identical photo is rejected
+  /// instead of quietly double-posting the same money.
+  fileHash         String            @unique
+
+  /// The date written *on the form*, not the upload date. Null until extraction finds one.
+  capturedOn       DateTime?
+  /// Optional link to the show this form came from. Plain id, matching `LedgerEntry.enteredById`,
+  /// to keep `FeaturedEvent` untouched.
+  eventId          String?
+
+  uploadedById     String
+  uploadedAt       DateTime          @default(now())
+
+  extractedAt      DateTime?
+  /// The exact model id that read the form, so a future re-read is comparable.
+  extractionModel  String?
+  /// The unedited model output, kept for audit even after a human corrects the lines.
+  rawExtraction    Json?
+  extractionError  String?
+  /// Lowest line confidence on the form; the gate for auto-approval.
+  minConfidence    Decimal?          @db.Decimal(4, 3)
+  /// The total printed on the form, when it states one. Reconciled against the sum of lines.
+  statedTotalCents Int?
+  /// True when the stated total matches the line sum. Null when the form states no total.
+  reconciled       Boolean?
+
+  reviewedById     String?
+  reviewedAt       DateTime?
+  reviewNotes      String?
+  /// Set when this form looks like a re-photograph of one already captured (same type, date and
+  /// event). Advisory only — the reviewer decides.
+  duplicateOfId    String?
+
+  postedAt         DateTime?
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  lines            FormCaptureLine[]
+
+  @@index([status])
+  @@index([formType, capturedOn])
+  @@index([eventId])
+  @@index([uploadedById])
+  @@map("form_captures")
+}
+
+/// One money line read off a captured form. Each becomes at most one `LedgerEntry`.
+model FormCaptureLine {
+  id            String          @id @default(cuid())
+  captureId     String
+  /// Order on the form, 1-based, so a reviewer reads the screen in the order the paper reads.
+  lineNumber    Int
+
+  /// The row label as it appears on the form ("Cash", "Credit", "Booth fee", "Mileage").
+  label         String
+  direction     LedgerDirection
+  category      LedgerCategory
+  /// Cents, always positive; `direction` carries the sign. Matches `LedgerEntry.amountCents`.
+  amountCents   Int
+  /// Units where the form records them (jars sold, miles driven). Not money.
+  quantity      Int?
+
+  /// Model confidence for this line, 0.000–1.000. Null on a line a person added by hand.
+  confidence    Decimal?        @db.Decimal(4, 3)
+  /// Exactly what the model read, before parsing. The audit trail for a corrected figure.
+  rawValue      String?
+  /// True once a human changed any field on this line.
+  edited        Boolean         @default(false)
+  /// Excluded lines are kept (so the form still reads whole) but never posted.
+  excluded      Boolean         @default(false)
+
+  /// The ledger row this line produced. Unique: a line can never post twice.
+  ledgerEntryId String?         @unique
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  capture       FormCapture     @relation(fields: [captureId], references: [id], onDelete: Cascade)
+
+  @@unique([captureId, lineNumber])
+  @@index([captureId])
+  @@map("form_capture_lines")
+}
+
+/// The kinds of paper this business actually produces. Each maps to an extraction spec in
+/// `lib/form-capture/form-specs.ts`.
+enum CaptureFormType {
+  SHOW_SETTLEMENT
+  FARMERS_MARKET
+  FUNDRAISER_ORDER
+  MILEAGE_LOG
+  EXPENSE_RECEIPT
+  OTHER
+}
+
+enum CaptureStatus {
+  UPLOADED
+  EXTRACTING
+  /// Extraction succeeded but something needs a person: a low-confidence line, or a stated
+  /// total that does not match the sum of lines.
+  NEEDS_REVIEW
+  /// Cleared for posting — either auto-approved or confirmed by a reviewer.
+  APPROVED
+  /// Ledger rows written. Terminal.
+  POSTED
+  /// Extraction failed. Re-runnable.
+  FAILED
+  /// A person judged the form unusable or a duplicate. Terminal, never posts.
+  REJECTED
 }

@@ -45,6 +45,11 @@ const SENSITIVE_KEYWORDS = [
   'ui income',
   'unemployment',
   'bank statement',
+  // QuickBooks Desktop company files and backups. A single one of these holds
+  // the entire general ledger — payroll, bank accounts, every customer — so it
+  // is sensitive wherever it is filed.
+  '.qbw',
+  '.qbb',
 ]
 
 /**

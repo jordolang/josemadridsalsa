@@ -13,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2, Plus, Save, Trash2, X } from 'lucide-react'
+import Link from 'next/link'
+import { Download, Loader2, Plus, Save, Trash2, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
 import {
@@ -21,6 +22,7 @@ import {
   LEDGER_CATEGORY_VALUES,
   CATEGORY_DIRECTION,
 } from '@/lib/financials/ledger'
+import LedgerExportPanel from './LedgerExportPanel'
 
 interface Entry {
   id: string
@@ -72,7 +74,14 @@ const EMPTY_FORM: FormState = {
 
 const PAGE_SIZE = 100
 
-export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
+export default function LedgerClient({
+  canWrite,
+  initialQuery = '',
+}: {
+  canWrite: boolean
+  /** Seeds the text filter so a link can point at one entry — see the ledger page. */
+  initialQuery?: string
+}) {
   const [entries, setEntries] = useState<Entry[]>([])
   const [summary, setSummary] = useState<Summary>({ incomeCents: 0, expenseCents: 0, netCents: 0 })
   const [totalCount, setTotalCount] = useState(0)
@@ -84,7 +93,7 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
   const [to, setTo] = useState('')
   const [direction, setDirection] = useState('all')
   const [category, setCategory] = useState('all')
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(initialQuery)
   const [page, setPage] = useState(1)
   // The server owns the page size; mirror what it reports rather than hard-coding a second copy.
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
@@ -92,6 +101,7 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
 
   // Add/edit form
   const [form, setForm] = useState<FormState | null>(null)
+  const [showExport, setShowExport] = useState(false)
 
   // Apply a filter change and return to page 1 in the same update, so exactly one request goes out
   // (rather than one for the old page and another after a separate reset).
@@ -100,16 +110,26 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
     setPage(1)
   }
 
+  /**
+   * The filters, without the page. Shared by the list request and the export so a download is
+   * literally the rows on screen rather than a second, drifting interpretation of the same
+   * controls.
+   */
+  const filterParams = useMemo(() => {
+    const p = new URLSearchParams()
+    if (from) p.set('from', from)
+    if (to) p.set('to', to)
+    if (direction !== 'all') p.set('direction', direction)
+    if (category !== 'all') p.set('category', category)
+    if (q.trim()) p.set('q', q.trim())
+    return p
+  }, [from, to, direction, category, q])
+
   const load = useCallback(async () => {
     const requestId = ++requestRef.current
     setLoading(true)
     try {
-      const p = new URLSearchParams()
-      if (from) p.set('from', from)
-      if (to) p.set('to', to)
-      if (direction !== 'all') p.set('direction', direction)
-      if (category !== 'all') p.set('category', category)
-      if (q.trim()) p.set('q', q.trim())
+      const p = new URLSearchParams(filterParams)
       p.set('page', String(page))
 
       const res = await fetch(`/api/admin/financials/ledger?${p.toString()}`)
@@ -129,7 +149,7 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
     } finally {
       if (requestId === requestRef.current) setLoading(false)
     }
-  }, [from, to, direction, category, q, page])
+  }, [filterParams, page])
 
   useEffect(() => {
     load()
@@ -248,12 +268,32 @@ export default function LedgerClient({ canWrite }: { canWrite: boolean }) {
           <h1 className="text-3xl font-bold">Bookkeeping Ledger</h1>
           <p className="text-muted-foreground">Every dollar in and out — one running total.</p>
         </div>
-        {canWrite && (
-          <Button onClick={startAdd}>
-            <Plus className="mr-2 h-4 w-4" /> Add entry
+        <div className="flex gap-2">
+          {canWrite && (
+            <Button variant="outline" asChild>
+              <Link href="/admin/financials/ledger/import">
+                <Upload className="mr-2 h-4 w-4" /> Import statement
+              </Link>
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => setShowExport((v) => !v)}>
+            <Download className="mr-2 h-4 w-4" /> Export
           </Button>
-        )}
+          {canWrite && (
+            <Button onClick={startAdd}>
+              <Plus className="mr-2 h-4 w-4" /> Add entry
+            </Button>
+          )}
+        </div>
       </div>
+
+      {showExport && (
+        <LedgerExportPanel
+          filters={filterParams}
+          onClose={() => setShowExport(false)}
+          onExported={load}
+        />
+      )}
 
       {/* Summary */}
       <div className="grid gap-4 sm:grid-cols-3">

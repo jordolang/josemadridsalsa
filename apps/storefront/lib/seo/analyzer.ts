@@ -30,10 +30,15 @@ export interface SeoAnalysis {
   recommendations: string[]
 }
 
-const TITLE_MIN = 30
-const TITLE_MAX = 60
-const DESC_MIN = 70
-const DESC_MAX = 160
+/**
+ * Snippet-length thresholds. Exported so that editors and write-path validation
+ * enforce exactly what the analyzer scores — a value the schema accepts must
+ * never be one the analyzer then flags.
+ */
+export const TITLE_MIN = 30
+export const TITLE_MAX = 60
+export const DESC_MIN = 70
+export const DESC_MAX = 160
 const SLUG_MAX = 75
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 

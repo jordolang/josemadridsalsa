@@ -6,6 +6,7 @@ import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { PAID_PAYMENT_STATUS } from '@/lib/payments/status'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
+import { creditPurchaseLoyaltyPoints } from '@/lib/loyalty'
 import { reverseFundraiserCommission } from '@/lib/fundraising/reverse-commission'
 
 export const runtime = 'nodejs'
@@ -172,6 +173,9 @@ export async function POST(request: Request) {
           // webhook arriving before the completion route left the group unpaid for that
           // sale. Idempotent on the order, so whichever path wins credits it once.
           await creditFundraiserCommission(tx, order.id)
+
+          // Award purchase loyalty points, idempotent on the order like the credit above.
+          await creditPurchaseLoyaltyPoints(tx, order.id)
         })
 
         // Send confirmation email (non-blocking)

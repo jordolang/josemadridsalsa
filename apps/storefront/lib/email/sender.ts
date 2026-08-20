@@ -23,6 +23,13 @@ interface SendEmailOptions {
   text?: string
   from?: string
   replyTo?: string
+  /**
+   * Extra MIME headers. Bulk marketing mail needs `List-Unsubscribe` and
+   * `List-Unsubscribe-Post` to stay out of spam folders at Gmail and Yahoo, and those cannot
+   * be expressed as body content. Passed through to Resend and to the SMTP fallback alike so
+   * a send is equally compliant whichever path it takes.
+   */
+  headers?: Record<string, string>
 }
 
 interface EmailRecipientData {
@@ -102,6 +109,7 @@ export async function sendEmail(
       html: options.html,
       text: options.text,
       ...(options.replyTo ? { replyTo: options.replyTo } : {}),
+      ...(options.headers ? { headers: options.headers } : {}),
     })
 
     if (!error) {
@@ -134,6 +142,7 @@ export async function sendEmail(
       subject: options.subject,
       html: options.html,
       text: options.text,
+      ...(options.headers ? { headers: options.headers } : {}),
     })) as nodemailer.SentMessageInfo
 
     return { success: true, messageId: info.messageId }

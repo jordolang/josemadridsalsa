@@ -1,0 +1,127 @@
+---
+title: Image Hosting
+description: Upload images to Vercel Blob as WebP and link them to products, without committing anything to the repo.
+---
+
+Images do not belong in git. The repo already carries 201 MB of committed images across 152 files,
+and git history is permanent — deleting them later reclaims nothing. Everything new goes to the
+`josemadridsalsa-blob` store instead.
+
+Two commands cover it: `images:sync` for new images, `images:migrate` for the ones already in the
+repo.
+
+## Before anything works
+
+Set `BLOB_READ_WRITE_TOKEN` in `apps/storefront/.env.local`. Get it from
+**Vercel → Storage → `josemadridsalsa-blob`**. Without it every upload path is disabled and returns
+503 — including the Developer Console file explorer.
+
+## Adding new images
+
+Drop them in `~/Desktop/jms-images` and run:
+
+```bash
+npm run images:sync --workspace @jose-madrid/storefront
+```
+
+That is a **dry run**. It prints exactly what would be uploaded, what each file compresses to, and
+which product it would attach to. Nothing happens until you add `--apply`.
+
+```bash
+# upload
+npm run images:sync --workspace @jose-madrid/storefront -- --apply
+
+# upload and attach to matching products
+npm run images:sync --workspace @jose-madrid/storefront -- --link --apply
+
+# ...as the main product photo rather than an extra one
+npm run images:sync --workspace @jose-madrid/storefront -- --link --featured --apply
+
+# a different folder and a different blob prefix
+npm run images:sync --workspace @jose-madrid/storefront -- ~/Downloads/shoot --prefix marketing --apply
+```
+
+The source folder is outside the repo, so nothing you drop there can ever bloat git or the
+deployment.
+
+### How a file finds its product
+
+`--link` matches the filename against the catalogue, in order of how deliberate the identifier is:
+
+1. **slug** — `mango-habanero.png` → the product with slug `mango-habanero`
+2. **SKU** — `JMS-MH-16.png`
+3. **product name** — `Mango Habanero.png`
+
+`Mango Habanero (2).png` matches too; the `(2)` that macOS appends to a second copy is stripped.
+
+An **ambiguous** name match links nothing and says so. Attaching a photo to the wrong product is
+worse than not attaching it.
+
+## Migrating the images already in the repo
+
+```bash
+# see the whole plan, change nothing
+npm run images:migrate --workspace @jose-madrid/storefront
+
+# stage 1 — upload and write the mapping file
+npm run images:migrate --workspace @jose-madrid/storefront -- --upload
+
+# stage 2 — repoint every reference in code and the database
+npm run images:migrate --workspace @jose-madrid/storefront -- --rewrite
+```
+
+Run it in two stages the first time so the uploads are verified before ~179 references move.
+
+It rewrites both forms the codebase uses — root-relative (`/images/x.png`) and absolute
+(`https://www.josemadrid.net/images/x.png`) — and updates `Product.featuredImage`,
+`Product.images` and `BlogPost.coverImage`.
+
+**Local files are never deleted.** They are already permanent in git history, so removing them
+reclaims nothing, and keeping them means a missed reference degrades to the old image rather than
+a 404. Delete them in a separate commit once you have verified the site.
+
+## What gets converted, and what does not
+
+Images are converted to **WebP at quality 82** by default. On real product photos this measured a
+**93% reduction** — 3.36 MB across three images became 0.25 MB.
+
+Three categories are deliberately left in their original format:
+
+- **Open Graph images** (any path containing `opengraph`, `og`, or `favicon`). WebP support across
+  social crawlers — Facebook, X, LinkedIn, iMessage — is inconsistent to absent, and a WebP OG
+  image renders as a blank card on several of them.
+- **Animated GIFs.** Converting to still WebP would silently drop the animation.
+- **Files already `.webp` or `.avif`.** Re-encoding only loses quality.
+
+Pass `--no-webp` to switch conversion off entirely.
+
+<Callout type="info">
+`next/image` already converts to WebP on the fly for anything rendered through `<Image>`, so
+conversion is not what speeds those up. It matters for the payload everywhere else — email
+templates, raw `<img>` tags — and for the size of the blob store itself.
+</Callout>
+
+## Why re-running is safe
+
+Both commands are **content-hash keyed**. A file whose bytes have not changed is skipped, so
+re-running costs nothing and cannot duplicate anything.
+
+A file whose bytes *have* changed keeps the same blob pathname, because uploads use
+`addRandomSuffix: false`. The public URL never moves — so replacing a product photo is just
+dropping the new version in the folder and re-running. Every listing already pointing at that URL
+updates at once, with no deploy.
+
+The per-machine caches (`.image-sync-manifest.json`, `.image-migration-map.json`) are gitignored.
+Losing one only causes a harmless re-upload.
+
+## Uploading by hand
+
+For one-off files, the Developer Console has a full file explorer at **`/admin/developer/files`** —
+browse, upload (up to 500 MB per file, client-side so it bypasses the 4.5 MB serverless limit),
+copy URL, delete. Requires the `developer:blob` permission.
+
+Images uploaded there are **not** converted to WebP; that only happens through the scripts.
+
+## Related
+
+- [Environment Variables](/docs/configuration/environment-variables) — `BLOB_READ_WRITE_TOKEN`

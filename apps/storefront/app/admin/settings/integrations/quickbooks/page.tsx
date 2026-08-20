@@ -9,6 +9,18 @@ import { logAudit } from '@/lib/audit'
 import { createMetadata } from '@/lib/metadata'
 import { getConnectionStatus } from '@/lib/quickbooks/connection'
 import { listAccounts, listItems } from '@/lib/quickbooks/client'
+import {
+  getLedgerAccountMap,
+  saveLedgerAccountMap,
+} from '@/lib/quickbooks/ledger-account-settings'
+import { unmappedCategories, type LedgerAccountMapSetting } from '@/lib/quickbooks/ledger-accounts'
+import {
+  CATEGORY_DIRECTION,
+  LEDGER_CATEGORY_LABELS,
+  LEDGER_CATEGORY_VALUES,
+} from '@/lib/financials/ledger'
+import { DEFAULT_ACCOUNT_MAP } from '@/lib/financials/ledger-export'
+import type { LedgerCategory } from '@prisma/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -104,6 +116,74 @@ async function saveSettingsAction(formData: FormData) {
   revalidatePath('/admin/settings/integrations/quickbooks')
 }
 
+/**
+ * Save the bookkeeping-ledger chart-of-accounts mapping.
+ *
+ * The form asks for one cash/clearing account, one inventory account, and the account each
+ * category is booked to. Those are **expanded here into a fully explicit per-category map** with
+ * both sides filled in, rather than being resolved later at post time. Two reasons: the stored map
+ * then says exactly what will happen, so the sync's "refuse rather than guess" rule needs no
+ * exceptions; and a person who changes the clearing account later can see which categories moved.
+ *
+ * Cost of goods offsets against inventory, not cash — the money for that stock left the bank when
+ * the ingredients were bought, and crediting cash again would count the same payment twice.
+ */
+async function saveLedgerAccountsAction(formData: FormData) {
+  'use server'
+
+  const user = await getCurrentUser()
+  if (!user || !(await hasPermission(user, 'api_keys:manage'))) {
+    redirect('/admin')
+  }
+
+  const status = await getConnectionStatus()
+  if (!status.connected) redirect('/admin/settings/integrations')
+
+  const value = (key: string) => {
+    const raw = formData.get(key)
+    const trimmed = typeof raw === 'string' ? raw.trim() : ''
+    return trimmed.length > 0 ? trimmed : null
+  }
+
+  // Names are stored beside the ids so the file exports can print a real account name rather
+  // than falling back to a suggestion, and so the mapping stays readable if QuickBooks is
+  // unreachable when someone opens this page.
+  let names = new Map<string, string>()
+  try {
+    names = new Map((await listAccounts()).map((a) => [a.Id, a.Name]))
+  } catch {
+    // A saved mapping is still correct without the names; the export falls back to its defaults.
+  }
+
+  const clearingId = value('ledgerClearingAccountId')
+  const inventoryId = value('ledgerInventoryAccountId')
+
+  const map: LedgerAccountMapSetting = {}
+  for (const category of LEDGER_CATEGORY_VALUES) {
+    const accountId = value(`ledgerAccount_${category}`)
+    const offsetId = category === 'COGS' ? inventoryId : clearingId
+    if (!accountId && !offsetId) continue
+    map[category as LedgerCategory] = {
+      accountId,
+      accountName: accountId ? (names.get(accountId) ?? null) : null,
+      offsetId,
+      offsetName: offsetId ? (names.get(offsetId) ?? null) : null,
+    }
+  }
+
+  await saveLedgerAccountMap(status.realmId, map)
+
+  await logAudit({
+    userId: user.id,
+    action: 'quickbooks.ledger-accounts-update',
+    entityType: 'QuickBooksSettings',
+    entityId: status.realmId,
+    changes: { mapped: LEDGER_CATEGORY_VALUES.length - unmappedCategories(map).length },
+  })
+
+  revalidatePath('/admin/settings/integrations/quickbooks')
+}
+
 async function retryFailedAction() {
   'use server'
 
@@ -144,6 +224,12 @@ export default async function QuickBooksSettingsPage() {
   const settings = await prisma.quickBooksSettings.findUnique({
     where: { realmId: status.realmId },
   })
+  const ledgerAccounts = await getLedgerAccountMap(status.realmId)
+  const ledgerUnmapped = unmappedCategories(ledgerAccounts)
+  // Every category shares one clearing account except COGS, so reading either back is just a
+  // matter of finding a category that carries it.
+  const clearingAccountId = ledgerAccounts.PRODUCT_SALES?.offsetId ?? ''
+  const inventoryAccountId = ledgerAccounts.COGS?.offsetId ?? ''
 
   // The company may be unreachable (expired refresh token, network); the page
   // still has to render so the operator can see why.
@@ -301,6 +387,109 @@ export default async function QuickBooksSettingsPage() {
         </Card>
       </form>
 
+      <form action={saveLedgerAccountsAction}>
+        <Card className="space-y-6 p-6">
+          <div>
+            <h2 className="text-xl font-semibold">Bookkeeping ledger accounts</h2>
+            <p className="text-sm text-muted-foreground">
+              Where each ledger category is booked. This drives two things: the journal-entry file
+              you can download from{' '}
+              <Link href="/admin/financials/ledger" className="underline">
+                Financials → Ledger
+              </Link>
+              , and the automatic posting of money that never became an order — cash and show
+              takings, hand-entered expenses, imported statement rows. Website orders are not
+              affected; they post as sales receipts using the mapping above.
+            </p>
+          </div>
+
+          {ledgerUnmapped.length > 0 && (
+            <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              {ledgerUnmapped.length} of {LEDGER_CATEGORY_VALUES.length} categories are not fully
+              mapped. Ledger rows in those categories are held rather than posted at a guessed
+              account. The downloadable file still works — it falls back to a suggested account
+              name for you to check.
+            </p>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="ledgerClearingAccountId">Cash / clearing account</Label>
+              <select
+                id="ledgerClearingAccountId"
+                name="ledgerClearingAccountId"
+                defaultValue={clearingAccountId}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Not mapped</option>
+                {accounts.map((a) => (
+                  <option key={a.Id} value={a.Id}>
+                    {a.Name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                The other side of every entry: where money in lands and money out comes from.
+                Usually Undeposited Funds or a bank account.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ledgerInventoryAccountId">Inventory asset account</Label>
+              <select
+                id="ledgerInventoryAccountId"
+                name="ledgerInventoryAccountId"
+                defaultValue={inventoryAccountId}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Not mapped</option>
+                {accounts.map((a) => (
+                  <option key={a.Id} value={a.Id}>
+                    {a.Name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                The other side for cost of goods only. Cost of goods is offset against inventory,
+                not cash — that money left the bank when the stock was bought.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {LEDGER_CATEGORY_VALUES.map((category) => (
+              <div key={category} className="space-y-2">
+                <Label htmlFor={`ledgerAccount_${category}`} className="flex items-center gap-2">
+                  {LEDGER_CATEGORY_LABELS[category]}
+                  <Badge variant="outline" className="text-[10px]">
+                    {CATEGORY_DIRECTION[category] === 'INCOME' ? 'in' : 'out'}
+                  </Badge>
+                </Label>
+                <select
+                  id={`ledgerAccount_${category}`}
+                  name={`ledgerAccount_${category}`}
+                  defaultValue={ledgerAccounts[category]?.accountId ?? ''}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Not mapped</option>
+                  {accounts.map((a) => (
+                    <option key={a.Id} value={a.Id}>
+                      {a.Name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Suggested: {DEFAULT_ACCOUNT_MAP[category].account}
+                  {category === 'SALES_TAX_COLLECTED' && ' — a liability, not income'}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <Button type="submit">Save ledger accounts</Button>
+        </Card>
+      </form>
+
       <Card className="space-y-4 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -312,7 +501,7 @@ export default async function QuickBooksSettingsPage() {
           {(tally.FAILED ?? 0) + (tally.BLOCKED ?? 0) > 0 && (
             <form action={retryFailedAction}>
               <Button type="submit" variant="outline" size="sm">
-                Retry {(tally.FAILED ?? 0) + (tally.BLOCKED ?? 0)} held order(s)
+                Retry {(tally.FAILED ?? 0) + (tally.BLOCKED ?? 0)} held item(s)
               </Button>
             </form>
           )}
@@ -345,12 +534,20 @@ export default async function QuickBooksSettingsPage() {
                   >
                     {record.status}
                   </Badge>
-                  <Link
-                    href={`/admin/orders/${record.entityId}`}
-                    className="font-medium hover:underline"
-                  >
-                    Order {record.entityId}
-                  </Link>
+                  {/* A journal-entry row's id is a ledger entry, not an order — sending someone
+                      to /admin/orders/<ledger id> would show them a 404 and no way to act. */}
+                  {record.entityType === 'JOURNAL_ENTRY' ? (
+                    <Link href="/admin/financials/ledger" className="font-medium hover:underline">
+                      Ledger entry {record.entityId}
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/admin/orders/${record.entityId}`}
+                      className="font-medium hover:underline"
+                    >
+                      Order {record.entityId}
+                    </Link>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     {record.attempts} attempt(s)
                   </span>

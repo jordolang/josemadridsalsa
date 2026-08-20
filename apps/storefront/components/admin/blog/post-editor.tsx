@@ -25,6 +25,8 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { MediaUploader, MediaPreview } from './media-uploader'
 import { SocialCrosspostPanel } from './social-crosspost-panel'
+import { checkPostSeo } from '@/lib/blog/schemas'
+import { TITLE_MIN, TITLE_MAX, DESC_MAX } from '@/lib/seo/analyzer'
 
 type Status = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED'
 type PostLayout = 'STANDARD' | 'LONGFORM' | 'GALLERY' | 'VIDEO' | 'MINIMAL'
@@ -154,6 +156,24 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
     setDirty(true)
   }
 
+  // What a crawler actually renders: the override when set, else the post's own
+  // title/excerpt. Counters and the save guard both read these, not the raw fields.
+  const effectiveSeoTitle = (form.seoTitle || form.title).trim()
+  const effectiveSeoDescription = (form.seoDescription || form.excerpt).trim()
+  const titleOutOfRange =
+    effectiveSeoTitle.length < TITLE_MIN || effectiveSeoTitle.length > TITLE_MAX
+  const descriptionTooLong = effectiveSeoDescription.length > DESC_MAX
+  const seoIssue = checkPostSeo({
+    status: form.status,
+    title: form.title,
+    excerpt: form.excerpt,
+    seoTitle: form.seoTitle || null,
+    seoDescription: form.seoDescription || null,
+  })
+  // Opened on mount when the post already breaks a rule, and forced open when a
+  // save is blocked — otherwise the author owns the toggle.
+  const [seoOpen, setSeoOpen] = useState(titleOutOfRange || descriptionTooLong)
+
   useEffect(() => {
     const ta = contentRef.current
     if (!ta) return
@@ -222,6 +242,13 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
   }
 
   async function save() {
+    // Blocked client-side so the author sees which rule failed before a round
+    // trip; the API enforces the same rules regardless of this check.
+    if (seoIssue) {
+      toast.error(seoIssue)
+      setSeoOpen(true)
+      return
+    }
     setSaving(true)
     try {
       const payload = {
@@ -536,25 +563,74 @@ export function PostEditor({ initial = {}, series, categories, mode }: PostEdito
           </div>
         )}
 
-        <details className="rounded-2xl border border-border p-4">
-          <summary className="cursor-pointer font-semibold">SEO overrides</summary>
+        <details
+          className="rounded-2xl border border-border p-4"
+          open={seoOpen}
+          onToggle={(e) => setSeoOpen(e.currentTarget.open)}
+        >
+          <summary className="cursor-pointer font-semibold">
+            SEO overrides
+            {(titleOutOfRange || descriptionTooLong) && (
+              <span className="ml-2 text-xs font-medium text-destructive">
+                needs attention before publishing
+              </span>
+            )}
+          </summary>
           <div className="mt-4 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Left blank, search engines use the post title and excerpt. Whichever is used must be{' '}
+              {TITLE_MIN}–{TITLE_MAX} characters for the title and no more than {DESC_MAX} for the
+              description — publishing is blocked otherwise.
+            </p>
             <div>
-              <label className="block text-sm font-semibold mb-1.5">SEO title (optional)</label>
+              <div className="flex items-baseline justify-between mb-1.5">
+                <label className="block text-sm font-semibold">SEO title (optional)</label>
+                <span
+                  className={`text-xs tabular-nums ${
+                    titleOutOfRange ? 'text-destructive' : 'text-muted-foreground'
+                  }`}
+                >
+                  {effectiveSeoTitle.length}/{TITLE_MAX}
+                  {form.seoTitle ? '' : ' (from title)'}
+                </span>
+              </div>
               <Input
                 value={form.seoTitle}
                 onChange={(e) => update('seoTitle', e.target.value)}
-                maxLength={200}
+                maxLength={TITLE_MAX}
               />
+              {titleOutOfRange && (
+                <p className="mt-1 text-xs text-destructive">
+                  {effectiveSeoTitle.length < TITLE_MIN
+                    ? `Too short — add ${TITLE_MIN - effectiveSeoTitle.length} more characters to use the full search snippet.`
+                    : `Too long — Google truncates past ${TITLE_MAX} characters.`}
+                </p>
+              )}
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1.5">SEO description (optional)</label>
+              <div className="flex items-baseline justify-between mb-1.5">
+                <label className="block text-sm font-semibold">SEO description (optional)</label>
+                <span
+                  className={`text-xs tabular-nums ${
+                    descriptionTooLong ? 'text-destructive' : 'text-muted-foreground'
+                  }`}
+                >
+                  {effectiveSeoDescription.length}/{DESC_MAX}
+                  {form.seoDescription ? '' : ' (from excerpt)'}
+                </span>
+              </div>
               <Textarea
                 value={form.seoDescription}
                 onChange={(e) => update('seoDescription', e.target.value)}
                 rows={2}
-                maxLength={500}
+                maxLength={DESC_MAX}
               />
+              {descriptionTooLong && (
+                <p className="mt-1 text-xs text-destructive">
+                  The excerpt is {effectiveSeoDescription.length} characters and will be truncated —
+                  write an SEO description of {DESC_MAX} characters or fewer, or shorten the excerpt.
+                </p>
+              )}
             </div>
           </div>
         </details>

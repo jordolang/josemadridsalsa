@@ -1,3 +1,5 @@
+import type { LoyaltyTier, Prisma } from '@prisma/client'
+
 import { prisma } from '@/lib/prisma'
 
 /**
@@ -177,6 +179,112 @@ export async function awardPurchasePoints(userId: string, orderTotal: number, or
     `Earned ${points} points from order`,
     orderId
   );
+}
+
+export interface PurchasePointsCredit {
+  awarded: boolean
+  /** Zero unless this call is the one that awarded. */
+  points: number
+  reason?: 'guest-order' | 'no-points' | 'already-awarded'
+}
+
+/**
+ * Award purchase loyalty points for an order that was just marked paid. Exactly once.
+ *
+ * The same six paths that credit fundraiser commission mark an order paid — three completion
+ * routes and three payment webhooks — and each pair races the other. Points are earned from
+ * whichever wins, so the award claims `Order.loyaltyPointsAwardedAt` before it touches the
+ * loyalty account, exactly as `creditFundraiserCommission` claims `commissionCreditedAt`. The
+ * claim is a conditional `updateMany`, not a read-then-write: two callers arriving together
+ * both see a null column, but only one update matches, and the loser stops with a count of
+ * zero. Points then accrue by increment, so a concurrent redemption cannot be overwritten.
+ *
+ * Points are earned on the merchandise actually paid for — `subtotal - discountAmount`,
+ * excluding tax and shipping — mirroring the base the fundraiser commission is figured on.
+ *
+ * Only registered customers earn: the loyalty account is keyed by `User`, so a guest order
+ * (`userId` null) earns nothing and creates no account.
+ *
+ * Call inside the same transaction that marks the order paid, on that transaction's client. A
+ * rolled-back payment must take its points with it. The account is upserted on that client too
+ * — never through `getOrCreateLoyaltyAccount`, which uses the singleton and would not roll back.
+ */
+export async function creditPurchaseLoyaltyPoints(
+  tx: Prisma.TransactionClient,
+  orderId: string
+): Promise<PurchasePointsCredit> {
+  const order = await tx.order.findUnique({
+    where: { id: orderId },
+    select: {
+      userId: true,
+      subtotal: true,
+      discountAmount: true,
+      loyaltyPointsAwardedAt: true,
+    },
+  })
+
+  if (!order?.userId) {
+    return { awarded: false, points: 0, reason: 'guest-order' }
+  }
+
+  if (order.loyaltyPointsAwardedAt) {
+    return { awarded: false, points: 0, reason: 'already-awarded' }
+  }
+
+  const spent = Number(order.subtotal) - Number(order.discountAmount)
+  const points = Math.floor(spent * POINTS_PER_DOLLAR)
+
+  // A fully discounted order buys nothing and earns nothing; skip before claiming so it does
+  // not leave a zero-point transaction behind.
+  if (points <= 0) {
+    return { awarded: false, points: 0, reason: 'no-points' }
+  }
+
+  // Claim the order in one write. Only the caller whose update matches a still-null column
+  // proceeds, which is what makes this safe to run from a webhook and a completion route at
+  // once.
+  const claim = await tx.order.updateMany({
+    where: { id: orderId, loyaltyPointsAwardedAt: null },
+    data: { loyaltyPointsAwardedAt: new Date() },
+  })
+
+  if (claim.count === 0) {
+    return { awarded: false, points: 0, reason: 'already-awarded' }
+  }
+
+  // Upsert on the transaction client so the account is created and credited atomically with the
+  // claim, and rolls back with a failed payment. The unique `userId` makes this race-safe.
+  const account = await tx.loyaltyAccount.upsert({
+    where: { userId: order.userId },
+    create: { userId: order.userId },
+    update: {},
+  })
+
+  await tx.pointTransaction.create({
+    data: {
+      accountId: account.id,
+      type: 'EARNED_PURCHASE',
+      points,
+      description: `Earned ${points} points from order`,
+      orderId,
+    },
+  })
+
+  const newLifetimePoints = account.lifetimePoints + points
+  const newTier = (await calculateTier(newLifetimePoints)) as LoyaltyTier
+  const tierChanged = newTier !== account.tier
+
+  await tx.loyaltyAccount.update({
+    where: { id: account.id },
+    data: {
+      pointsBalance: { increment: points },
+      lifetimePoints: { increment: points },
+      tier: newTier,
+      ...(tierChanged && { tierUpdatedAt: new Date() }),
+    },
+  })
+
+  return { awarded: true, points }
 }
 
 /**

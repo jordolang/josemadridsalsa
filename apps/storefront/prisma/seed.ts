@@ -451,8 +451,8 @@ async function main() {
       weight: 16.0,
       categoryId: fruitCategory.id,
       isFeatured: true,
-      images: ['/images/new-products/strawberry-mild.jpeg'],
-      featuredImage: '/images/new-products/strawberry-mild.jpeg',
+      images: ['/images/new-products/strawberry-mild.png'],
+      featuredImage: '/images/new-products/strawberry-mild.png',
       searchKeywords: ['strawberry', 'fruit', 'mild', 'sweet'],
     },
     {
