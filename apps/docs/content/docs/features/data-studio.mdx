@@ -1,0 +1,142 @@
+---
+title: Data & Charts
+description: A self-serve report builder over the business's own data — pick a source, a measure, a time grain and filters, then chart, table, print or export the result
+---
+
+# Data & Charts
+
+`/admin/data` is a self-serve report builder. An admin picks a data source, one or more measures, an
+optional breakdown, a time grain and filters, and gets a result they can read as a chart or a
+spreadsheet.
+
+It exists because reporting used to mean writing a page. `/admin/analytics/*` and
+`/admin/financials/*` each hard-code one metric set and one date vocabulary, so a new question needed
+a new route. The studio answers questions that were never anticipated, without new code.
+
+## Architecture
+
+<Files>
+  <Folder name="lib/data-studio" defaultOpen>
+    <File name="types.ts" />
+    <File name="registry.ts" />
+    <File name="schemas.ts" />
+    <File name="grain.ts" />
+    <File name="aggregate.ts" />
+    <File name="execute.server.ts" />
+    <File name="display.ts" />
+    <Folder name="datasets">
+      <File name="ledger.ts" />
+      <File name="revenue-anchors.ts" />
+      <File name="archived-fundraisers.ts" />
+      <File name="mileage.ts" />
+    </Folder>
+  </Folder>
+  <Folder name="app/admin/data">
+    <File name="page.tsx" />
+    <File name="new/page.tsx" />
+    <Folder name="_components">
+      <File name="ReportBuilder.tsx" />
+      <File name="ReportViewer.tsx" />
+      <File name="ReportChart.tsx" />
+      <File name="ReportTable.tsx" />
+      <File name="ReportKpis.tsx" />
+    </Folder>
+  </Folder>
+</Files>
+
+A typed **registry** describes what can be asked; the UI is generated from it and a single executor
+answers. There is no SQL console and no raw SQL — a question is a `QuerySpec` validated against the
+registry, so only field names a dataset declares ever reach Prisma.
+
+Adding a dataset is one module under `datasets/` plus one line in `registry.ts`.
+
+## Datasets
+
+| Dataset | Basis | Time axis | Notes |
+| --- | --- | --- | --- |
+| Bookkeeping ledger | `ledger` | `date` (day→year) | Orders, refunds, archived show takings, hand-entered and imported rows |
+| Attested revenue | `summary` | `year` | Filed Schedule C / year-end P&L figures from `lib/financials/anchors.ts` |
+| Fundraiser history | `operational` | `year` | 2011 onwards, measured in **jars** — the source forms carry no dollar totals |
+| Mileage log | `operational` | `tripDate` (day→year) | Miles, driver, trip type, and any booth sales recorded alongside |
+
+### Bases are compared, never summed
+
+Each dataset declares a `basis`. QuickBooks already contains the rows the sync pushed to it, and a
+filed P&L already covers periods the ledger partly covers — so adding figures across bases
+double-counts. A `QuerySpec` names exactly **one** dataset, which makes a cross-basis total
+unexpressible rather than merely discouraged.
+
+To compare the ledger against the filed returns, use
+[the reconciliation scoreboard](/docs/features/bookkeeping-ledger), which understands the evidence
+grades (`FILED`, `PL`, `PARTIAL`, `FLOOR`) and knows a `FLOOR` year is a lower bound.
+
+## Permissions
+
+Two checks, and both are enforced server-side on every run and export:
+
+- **`data:read`** — may open the section at all.
+- **the dataset's own permission** — `financials:read` for the ledger and attested revenue,
+  `content:read` for fundraiser history, `analytics:read` for mileage.
+
+The second is not optional polish. `STAFF` holds `analytics:read` but deliberately not
+`financials:read`; a generic query layer gated only on its own permission would hand them the ledger
+anyway. The dataset catalog hides what the caller cannot open, but hiding a card is presentation —
+`execute.server.ts` re-checks the permission regardless of what the client asked for.
+
+## Two rules that shape every number
+
+### `null` means *not recorded*, never zero
+
+Aggregation happens in TypeScript, not in SQL. `_sum` would have to either drop rows with a missing
+value — losing the revenue attached to them — or coalesce that value to zero, which reports an item of
+unknown cost as pure profit. Instead each measure reads a row to `number | null`, and the fold keeps
+"unknown" as its own outcome: it is excluded from the total and counted in `meta.unknownCounts`, shown
+beneath the figure. A blank cell renders as an em dash so a reader can tell it from a real zero.
+
+This is the same rule `lib/analytics/margin-report.ts` records for margin.
+
+### Buckets are cut in the business's timezone
+
+Vercel runs functions with `TZ=UTC`; the business is in Zanesville, Ohio. A sale rung up at 8pm ET on
+31 December is stored as 01:00 UTC on 1 January — bucketed in UTC it lands in the wrong **tax year**.
+`grain.ts` therefore derives every bucket key from the business-local reading of the instant, reusing
+the DST-safe primitives in `lib/timeclock.ts`. The timezone is printed on every report and export
+header, because a year-end total is meaningless without knowing which midnight it used.
+
+Every bucket in the window is emitted, zeros included: a series that skips an empty month silently
+joins November to January and draws a trend that never happened.
+
+## Truncation is an error, not a footnote
+
+Each dataset declares a `rowCap`, queried as `take: rowCap + 1` so overflow is detectable. For an
+aggregated view, overflowing withholds the totals entirely and asks for a narrower range — a truncated
+sum is a wrong number wearing the costume of a right one.
+
+## Charts
+
+Charts render through the shared shadcn primitive in `components/ui/chart.tsx`. Two constraints:
+
+- `ChartContainer` already wraps `ResponsiveContainer`; nesting another yields a zero-height chart.
+- Series keys are **synthetic** (`s0`, `s1`, …), never the column ids. `ChartStyle` interpolates each
+  config key into a `<style dangerouslySetInnerHTML>` as `--color-${key}`, and a chart split by a
+  dimension has database values as column ids — a counterparty or driver name. The real name travels
+  in `ChartConfig.label`, which React renders as text.
+
+## Testing
+
+<Files>
+  <Folder name="tests/lib/data-studio" defaultOpen>
+    <File name="grain.test.ts" />
+    <File name="aggregate.test.ts" />
+    <File name="schemas.test.ts" />
+    <File name="registry.test.ts" />
+    <File name="display.test.ts" />
+  </Folder>
+  <Folder name="tests/components/admin">
+    <File name="DataStudioViewer.test.tsx" />
+  </Folder>
+</Files>
+
+`registry.test.ts` is worth calling out: a semantic layer's characteristic failure is not a crash but
+a typo that yields a plausible wrong number, so it asserts that every dataset names a permission that
+exists, that no measure selects a field it never reads, and that `STAFF` cannot see the ledger.

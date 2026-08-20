@@ -27,6 +27,7 @@ import {
   Settings,
   Share2,
   ShoppingCart,
+  Table2,
   Terminal,
   TrendingUp,
   Undo2,
@@ -82,6 +83,7 @@ const iconMap: Record<string, LucideIcon> = {
   Lock,
   Mail,
   Terminal,
+  Table2,
 }
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {

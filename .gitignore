@@ -73,7 +73,11 @@ backstage/
 josemadridsalsa/
 
 # Data files
-data/
+# Anchored to the repo root for the same reason as /Documents/ below: unanchored, `data/` matched
+# any nested directory named `data`, which silently excluded the admin routes at
+# app/admin/data/ and app/api/admin/data/ — they type-checked and tested locally but could
+# never be committed or deployed.
+/data/
 public/location-photos.json
 
 # Business documents (local only — multi-GB scans/exports, never commit)
