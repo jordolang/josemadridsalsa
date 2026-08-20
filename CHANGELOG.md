@@ -757,6 +757,45 @@ the root `package.json` is canonical.
 - **Front-page hydration stability** — Event ticker dates and review selection no longer render with client/server-only randomness that can trigger React hydration text mismatches.
 - **Header logo preload warning** — Removed the forced priority preload for the small navigation logo.
 
+### Security
+- **Closed every open Dependabot advisory (31) and all but one npm-audit finding, and fixed the
+  reason the previous rounds of pinning had not worked.** The repository already carried override
+  blocks meant to hold vulnerable transitive packages at patched versions, but three of them sat in
+  `apps/storefront/package.json` and `apps/docs/package.json` — and npm only honours `overrides`
+  from the *root* package.json of a workspaces monorepo. Those blocks were silently inert, which is
+  why advisories against `path-to-regexp`, `ajv`, `smol-toml` and `fast-uri` stayed open while the
+  file appeared to address them; the storefront block's `"nodemailer": "$nodemailer"` reference had
+  likewise never resolved. The security-relevant pins now live in the root block, which is the only
+  place they take effect.
+
+  Patched, all as transitive dependencies: `nanoid` 3.3.16 → 3.3.18, `js-yaml` 3.15.0 → 3.15.1 and
+  4.1.1/4.3.0 → 4.3.1, `brace-expansion` 1.1.16 → 1.1.18, 2.1.2 → 2.1.4 and 5.0.8 → 5.0.9, `undici`
+  (5.28.4, 5.29.0, 6.27.0, 7.28.0 → 6.28.0/7.29.0, retiring the 5.x line), `fast-uri` 3.1.4 → 3.1.5,
+  `minimatch` 10.1.1 → 10.2.5, `esbuild` 0.27.7 → 0.28.1, `effect` 3.17.7 → 3.21.0, `tar` → 7.5.22
+  (critical), `path-to-regexp` → 6.3.0/8.4.2, `ajv` → 8.20.0, and `smol-toml` → 1.8.0. `uuid` 8.3.2,
+  reachable only through `exceljs`, was raised to 11.1.1; the advisory concerns `v3`/`v5`/`v6` with a
+  caller-supplied buffer and `exceljs` calls only `v4()`, so it was never exploitable here, but the
+  bump closes the alert rather than leaving it standing on a rationale.
+
+  `@axe-core/cli` was removed from the storefront's devDependencies. It pulled in `chromedriver` and
+  `extract-zip`, whose symlink path-traversal advisory has no patched release, and nothing invoked
+  it — no npm script, no CI workflow, no config. Deleting the dependency is the only available fix;
+  `npx @axe-core/cli` still works if accessibility scanning is wanted later.
+
+  `google-auth-library` is now pinned to a single copy (10.9.1). `google-gax` and `googleapis-common`
+  pin it at exactly 10.5.0 while the storefront needs `^10.6.1`, and a second copy makes the two
+  `UserRefreshClient` types nominally distinct, which breaks `tsc` in `lib/google-analytics-reports.ts`.
+
+  One advisory is deliberately left open: `deepmerge-ts` is pinned to an exact 7.1.5 by
+  `@prisma/config`, so clearing it means forcing a major bump on the Prisma CLI — which runs
+  `prisma migrate deploy` during the Vercel build. It is development-scoped, Dependabot has
+  auto-dismissed it, and the risk of breaking deploy-time migrations outweighs the finding.
+
+  The lockfile was updated with a targeted `npm update` of the affected packages rather than a full
+  regeneration. A clean re-resolve applies the overrides correctly but floats 534 packages to the
+  newest version their ranges allow — including Amplitude/rrweb session replay and `@easypost/api` —
+  which is a far larger change than a security patch should carry. The targeted update moves 47.
+
 ---
 
 ## [1.10.1] — 2026-04-18 — Prisma Error Utilities & Credential Vault Refactor

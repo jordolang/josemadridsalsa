@@ -24,13 +24,33 @@ const shippingCache = new Map<string, ShippingCacheEntry>()
 
 function getShippingCacheKey(
   items: Array<{ productId: string; quantity: number }>,
-  address: { city: string; state: string; postalCode: string }
+  address: {
+    address1: string
+    address2?: string
+    city: string
+    state: string
+    postalCode: string
+    country: string
+  }
 ): string {
   const itemsKey = items
     .map((i) => `${i.productId}:${i.quantity}`)
     .sort()
     .join(',')
-  return `${itemsKey}|${address.city}|${address.state}|${address.postalCode}`
+  // The street lines and country are part of the key because they change the
+  // quote: a PO Box is USPS-only, and country selects the international rate.
+  // Keying on city/state/ZIP alone meant the first quote for a ZIP was served
+  // to every later address in it — so a PO Box order that arrived after a
+  // street-address order was quoted a carrier that cannot deliver to it.
+  return [
+    itemsKey,
+    address.address1,
+    address.address2 ?? '',
+    address.city,
+    address.state,
+    address.postalCode,
+    address.country,
+  ].join('|')
 }
 
 function pruneShippingCache(): void {
