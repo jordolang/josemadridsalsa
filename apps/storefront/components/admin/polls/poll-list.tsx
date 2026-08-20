@@ -43,10 +43,22 @@ export interface AdminPollRow {
   title: string
   status: string
   visibility: string
+  /** Share secret for invite-only polls; the public link 404s without it. */
+  accessCode: string | null
   featured: boolean
   responseCount: number
   questionCount: number
   updatedAt: string
+}
+
+/**
+ * The poll's address on the site. An invite-only poll needs its access code in
+ * the link — without it the page 404s, which is the point of the setting.
+ */
+function publicHref(poll: AdminPollRow): string {
+  return poll.visibility === 'INVITE_ONLY' && poll.accessCode
+    ? `/polls/${poll.slug}?key=${encodeURIComponent(poll.accessCode)}`
+    : `/polls/${poll.slug}`
 }
 
 /** Turns a title into the slug the poll's public URL uses. */
@@ -65,7 +77,7 @@ function slugify(value: string): string {
  * Creating a poll here only asks for a title: the new poll opens straight into
  * the editor, where the questions and everything else live.
  */
-export function PollList({ polls }: { polls: AdminPollRow[] }) {
+export function PollList({ polls, canWrite }: { polls: AdminPollRow[]; canWrite: boolean }) {
   const router = useRouter()
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
@@ -125,10 +137,12 @@ export function PollList({ polls }: { polls: AdminPollRow[] }) {
             only through their share link.
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New poll
-        </Button>
+        {canWrite && (
+          <Button onClick={() => setCreating(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New poll
+          </Button>
+        )}
       </div>
 
       <div className="mt-6 overflow-x-auto">
@@ -183,18 +197,20 @@ export function PollList({ polls }: { polls: AdminPollRow[] }) {
                       </Link>
                     </Button>
                     <Button asChild variant="ghost" size="icon" title="View on the site">
-                      <Link href={`/polls/${poll.slug}`} target="_blank">
+                      <Link href={publicHref(poll)} target="_blank">
                         <ExternalLink className="h-4 w-4" />
                       </Link>
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title="Delete"
-                      onClick={() => setPendingDelete(poll)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    {canWrite && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Delete"
+                        onClick={() => setPendingDelete(poll)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

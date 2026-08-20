@@ -59,14 +59,19 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       accessCode = null
     }
 
-    await prisma.poll.update({
-      where: { id },
-      data: { ...fields, ...(accessCode !== current.accessCode ? { accessCode } : {}) },
+    // The poll's own fields and its question tree go in together: a question
+    // write that fails must not leave the settings half-saved. The access code
+    // is written whenever visibility is part of the payload, so two overlapping
+    // visibility changes cannot leave a public poll holding a live share code.
+    await prisma.$transaction(async (tx) => {
+      await tx.poll.update({
+        where: { id },
+        data: { ...fields, ...(fields.visibility !== undefined ? { accessCode } : {}) },
+      })
+      if (questions) {
+        await savePollQuestions(id, questions, tx)
+      }
     })
-
-    if (questions) {
-      await savePollQuestions(id, questions)
-    }
 
     await logAudit({
       userId: user.id,

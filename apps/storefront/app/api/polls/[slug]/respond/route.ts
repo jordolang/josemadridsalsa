@@ -71,6 +71,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       )
     }
 
+    // The form requires the acknowledgement checkbox; enforce it here too, so a
+    // response we might quote publicly always carries a real acknowledgement.
+    if (!body.consentAcknowledged) {
+      return fail(
+        'Please confirm you have read how your answers may be used before sending them.',
+        422
+      )
+    }
+
     const errors = validateAnswers(poll.questions, body.answers)
     if (errors.length > 0) {
       return fail(errors[0].message, 422, { errors })
@@ -89,22 +98,26 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const user = await getCurrentUser().catch(() => null)
 
+    // Keep only what the question actually asked for. Without this a crafted
+    // request could attach `textValue` to a multiple-choice question, and the
+    // results page would publish it as a quoted comment.
     const answersToStore = body.answers
       .map((answer) => {
         const question = poll.questions.find((candidate) => candidate.id === answer.questionId)
         if (!question) return null
-        const textValue = answer.textValue?.trim() || null
-        const otherText = answer.otherText?.trim() || null
-        if (answer.optionIds.length === 0 && !textValue && !otherText && answer.rating == null) {
+
+        const isChoice = question.type === 'SINGLE_CHOICE' || question.type === 'MULTI_CHOICE'
+        const isText = question.type === 'SHORT_TEXT' || question.type === 'LONG_TEXT'
+
+        const optionIds = isChoice ? answer.optionIds : []
+        const textValue = isText ? answer.textValue?.trim() || null : null
+        const otherText = isChoice && question.allowOther ? answer.otherText?.trim() || null : null
+        const rating = question.type === 'RATING' ? (answer.rating ?? null) : null
+
+        if (optionIds.length === 0 && !textValue && !otherText && rating == null) {
           return null
         }
-        return {
-          questionId: answer.questionId,
-          optionIds: answer.optionIds,
-          textValue,
-          otherText,
-          rating: answer.rating ?? null,
-        }
+        return { questionId: answer.questionId, optionIds, textValue, otherText, rating }
       })
       .filter((answer): answer is NonNullable<typeof answer> => answer !== null)
 
@@ -114,7 +127,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
           pollId: poll.id,
           firstName: body.firstName.trim(),
           lastName: body.lastName?.trim() || null,
-          email: body.email?.trim() || null,
+          // The poll decides whether an email is collected at all; a direct
+          // caller does not get to store one the form never offered.
+          email: poll.collectEmail ? body.email?.trim() || null : null,
           anonymousRequested: body.anonymousRequested,
           consentAcknowledged: body.consentAcknowledged,
           userId: user?.id ?? null,

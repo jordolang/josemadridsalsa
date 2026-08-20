@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import prisma from '@/lib/prisma'
 import { createMetadata } from '@/lib/metadata'
-import { requirePermission } from '@/lib/rbac'
+import { getCurrentUser, hasPermission, requirePermission } from '@/lib/rbac'
 import { isMissingTableError } from '@/lib/prisma-errors'
 import { PollList, type AdminPollRow } from '@/components/admin/polls/poll-list'
 
@@ -25,6 +25,7 @@ async function loadPolls(): Promise<AdminPollRow[]> {
       title: poll.title,
       status: poll.status,
       visibility: poll.visibility,
+      accessCode: poll.accessCode,
       featured: poll.featured,
       responseCount: poll._count.responses,
       questionCount: poll._count.questions,
@@ -40,7 +41,8 @@ async function loadPolls(): Promise<AdminPollRow[]> {
 
 export default async function AdminPollsPage() {
   await requirePermission('content:read')
-  const polls = await loadPolls()
+  const [polls, user] = await Promise.all([loadPolls(), getCurrentUser()])
+  const canWrite = await hasPermission(user, 'content:write')
 
   return (
     <div className="space-y-6">
@@ -51,7 +53,7 @@ export default async function AdminPollsPage() {
           of every page.
         </p>
       </div>
-      <PollList polls={polls} />
+      <PollList polls={polls} canWrite={canWrite} />
     </div>
   )
 }

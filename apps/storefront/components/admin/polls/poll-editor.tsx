@@ -31,6 +31,16 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Table,
   TableBody,
   TableCell,
@@ -163,6 +173,10 @@ export function PollEditor({
   const [questions, setQuestions] = useState(initialQuestions)
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState('settings')
+  const [pendingQuestionRemoval, setPendingQuestionRemoval] = useState<{
+    key: string
+    prompt: string
+  } | null>(null)
 
   // The polls table links straight to #responses; open that tab when it does.
   useEffect(() => {
@@ -617,9 +631,16 @@ export function PollEditor({
                     variant="ghost"
                     size="icon"
                     title="Remove question"
-                    onClick={() =>
-                      setQuestions((current) => current.filter((_, i) => i !== index))
-                    }
+                    onClick={() => {
+                      // A saved question takes its answers with it when the poll
+                      // is saved, so ask first. A question added in this session
+                      // has nothing to lose.
+                      if (question.id) {
+                        setPendingQuestionRemoval({ key: question.key, prompt: question.prompt })
+                      } else {
+                        setQuestions((current) => current.filter((_, i) => i !== index))
+                      }
+                    }}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
@@ -855,6 +876,35 @@ export function PollEditor({
           <ResponsesPanel pollId={poll.id} />
         </TabsContent>
       </Tabs>
+
+      <AlertDialog
+        open={pendingQuestionRemoval !== null}
+        onOpenChange={(open) => !open && setPendingQuestionRemoval(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this question?</AlertDialogTitle>
+            <AlertDialogDescription>
+              “{pendingQuestionRemoval?.prompt || 'This question'}” has been saved, so any answers
+              people have already given to it are deleted when you save the poll. Export the
+              responses first if you want to keep them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setQuestions((current) =>
+                  current.filter((question) => question.key !== pendingQuestionRemoval?.key)
+                )
+                setPendingQuestionRemoval(null)
+              }}
+            >
+              Remove question
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -896,6 +946,7 @@ interface ResponseRow {
 function ResponsesPanel({ pollId }: { pollId: string }) {
   const [rows, setRows] = useState<ResponseRow[]>([])
   const [questions, setQuestions] = useState<{ id: string; prompt: string }[]>([])
+  const [truncated, setTruncated] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -907,6 +958,7 @@ function ResponsesPanel({ pollId }: { pollId: string }) {
       const payload = await response.json()
       setRows(payload.responses ?? [])
       setQuestions(payload.questions ?? [])
+      setTruncated(Boolean(payload.truncated))
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load the responses')
@@ -941,6 +993,13 @@ function ResponsesPanel({ pollId }: { pollId: string }) {
           </a>
         </Button>
       </div>
+
+      {truncated && (
+        <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          This poll has more responses than can be shown at once. You are seeing the newest{' '}
+          {rows.length}, and the export covers the same set.
+        </p>
+      )}
 
       {rows.length === 0 ? (
         <p className="mt-6 text-sm text-muted-foreground">Nobody has answered yet.</p>

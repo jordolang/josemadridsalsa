@@ -58,8 +58,10 @@ export default async function PollPage({ params, searchParams }: PageProps) {
 
   const accent = accentClasses(poll.accentColor)
   const state = pollWindowState(poll)
-  const showResultsNow = poll.resultsVisibility === 'ALWAYS' || state !== 'OPEN'
-  const results = poll.resultsVisibility === 'HIDDEN' ? [] : showResultsNow ? await getPollResults(poll.id) : []
+  // Only an ALWAYS poll publishes its tallies to someone who has not voted —
+  // including after it closes. AFTER_VOTE polls show them in the form's
+  // thank-you panel instead.
+  const results = poll.resultsVisibility === 'ALWAYS' ? await getPollResults(poll.id) : []
 
   return (
     <main className="bg-stone-50 pb-16">
@@ -174,7 +176,7 @@ export default async function PollPage({ params, searchParams }: PageProps) {
               {state === 'NOT_STARTED' ? 'This poll opens soon' : 'This poll has closed'}
             </h2>
             <p className="mx-auto mt-2 max-w-xl text-stone-600">
-              {poll.closedMessage ??
+              {(state === 'CLOSED' ? poll.closedMessage : null) ??
                 (state === 'NOT_STARTED'
                   ? 'Come back when it opens — we would love to hear from you.'
                   : 'Thank you to everyone who took part. Here is where things landed.')}

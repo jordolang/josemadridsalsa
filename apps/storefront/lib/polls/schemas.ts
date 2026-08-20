@@ -88,6 +88,16 @@ export const pollQuestionInputSchema = z
         message: 'The minimum cannot be greater than the maximum',
       })
     }
+    // A minimum above the number of answers on offer can never be satisfied,
+    // so the poll would reject every submission.
+    const available = question.options.length + (question.allowOther ? 1 : 0)
+    if (isChoice && question.minSelections != null && question.minSelections > available) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['minSelections'],
+        message: `Only ${available} answers are on offer, so the minimum cannot be higher`,
+      })
+    }
   })
 
 export const pollCreateSchema = z.object({
@@ -194,6 +204,20 @@ export function validateAnswers(
   const errors: AnswerValidationError[] = []
   const byQuestion = new Map(answers.map((answer) => [answer.questionId, answer]))
 
+  // A question answered twice would collapse to one entry here but hit the
+  // (responseId, questionId) unique index on insert, so reject it as bad input
+  // rather than letting it surface as a server error.
+  if (byQuestion.size !== answers.length) {
+    const seen = new Set<string>()
+    for (const answer of answers) {
+      if (seen.has(answer.questionId)) {
+        errors.push({ questionId: answer.questionId, message: 'This question was answered twice' })
+      }
+      seen.add(answer.questionId)
+    }
+    return errors
+  }
+
   for (const question of questions) {
     const answer = byQuestion.get(question.id)
     const optionIds = answer?.optionIds ?? []
@@ -205,6 +229,11 @@ export function validateAnswers(
     const unknown = optionIds.filter((id) => !validIds.has(id))
     if (unknown.length > 0) {
       errors.push({ questionId: question.id, message: 'That choice is not on this question' })
+      continue
+    }
+    // The same option sent twice would otherwise be tallied as two votes.
+    if (new Set(optionIds).size !== optionIds.length) {
+      errors.push({ questionId: question.id, message: 'Each choice can only be picked once' })
       continue
     }
 

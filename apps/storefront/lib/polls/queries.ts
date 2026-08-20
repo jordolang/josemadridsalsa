@@ -160,18 +160,26 @@ export async function getPollResults(pollId: string): Promise<PollQuestionResult
       let ratingCount = 0
       const comments: PollQuestionResult['comments'] = []
 
+      const liveOptionIds = new Set(question.options.map((option) => option.id))
+
       for (const answer of question.answers) {
-        const hasChoice = answer.optionIds.length > 0
+        // Ignore ids for options the editor has since removed, and count a
+        // repeated id once: both would otherwise inflate the denominator and
+        // make the percentages lie.
+        const chosen = Array.from(new Set(answer.optionIds)).filter((id) => liveOptionIds.has(id))
+        // A question retyped away from RATING keeps its old rating values; they
+        // are not an average of anything the question now asks.
+        const rating = question.type === 'RATING' ? answer.rating : null
+
         const hasText = Boolean(answer.textValue?.trim() || answer.otherText?.trim())
-        const hasRating = answer.rating != null
-        if (!hasChoice && !hasText && !hasRating) continue
+        if (chosen.length === 0 && !hasText && rating == null) continue
         answered += 1
 
-        for (const optionId of answer.optionIds) {
+        for (const optionId of chosen) {
           counts.set(optionId, (counts.get(optionId) ?? 0) + 1)
         }
-        if (answer.rating != null) {
-          ratingTotal += answer.rating
+        if (rating != null) {
+          ratingTotal += rating
           ratingCount += 1
         }
 

@@ -34,16 +34,19 @@ export async function POST(req: NextRequest) {
     const user = await requirePermission('content:write')
     const { questions, ...pollFields } = createSchema.parse(await req.json())
 
-    const poll = await prisma.poll.create({
-      data: {
-        ...pollFields,
-        accessCode: pollFields.visibility === 'INVITE_ONLY' ? generateAccessCode() : null,
-      },
+    // One transaction, so a failed question write cannot leave a half-built poll.
+    const poll = await prisma.$transaction(async (tx) => {
+      const created = await tx.poll.create({
+        data: {
+          ...pollFields,
+          accessCode: pollFields.visibility === 'INVITE_ONLY' ? generateAccessCode() : null,
+        },
+      })
+      if (questions.length > 0) {
+        await savePollQuestions(created.id, questions, tx)
+      }
+      return created
     })
-
-    if (questions.length > 0) {
-      await savePollQuestions(poll.id, questions)
-    }
 
     await logAudit({
       userId: user.id,

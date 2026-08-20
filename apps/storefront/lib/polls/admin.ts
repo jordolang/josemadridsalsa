@@ -1,5 +1,6 @@
 import { randomBytes } from 'crypto'
 import { ZodError } from 'zod'
+import type { Prisma } from '@prisma/client'
 import prisma from '@/lib/prisma'
 import type { PollQuestionInput } from './schemas'
 
@@ -24,9 +25,16 @@ export function generateAccessCode(): string {
  */
 export async function savePollQuestions(
   pollId: string,
-  questions: PollQuestionInput[]
+  questions: PollQuestionInput[],
+  /**
+   * Transaction client from an enclosing `$transaction`. Passing one keeps the
+   * poll's own fields and its question tree in a single atomic write; without
+   * it this opens its own transaction.
+   */
+  client?: Prisma.TransactionClient
 ): Promise<void> {
-  const existing = await prisma.pollQuestion.findMany({
+  const db = client ?? prisma
+  const existing = await db.pollQuestion.findMany({
     where: { pollId },
     select: { id: true, options: { select: { id: true } } },
   })
@@ -38,7 +46,7 @@ export async function savePollQuestions(
     .filter((question) => !keptQuestionIds.has(question.id))
     .map((question) => question.id)
 
-  await prisma.$transaction(async (tx) => {
+  const write = async (tx: Prisma.TransactionClient) => {
     if (removedQuestionIds.length > 0) {
       await tx.pollQuestion.deleteMany({ where: { id: { in: removedQuestionIds } } })
     }
@@ -92,7 +100,13 @@ export async function savePollQuestions(
         }
       }
     }
-  })
+  }
+
+  if (client) {
+    await write(client)
+  } else {
+    await prisma.$transaction(write)
+  }
 }
 
 /**
@@ -110,6 +124,10 @@ export function describeWriteError(error: unknown): { message: string; status: n
     }
   }
   const err = error as { message?: string; status?: number; code?: string }
+  // `requirePermission` throws a plain Error, so without this an unauthenticated
+  // or forbidden request would be reported as a server fault.
+  if (err?.message?.includes('Unauthorized')) return { message: err.message, status: 401 }
+  if (err?.message?.includes('Forbidden')) return { message: err.message, status: 403 }
   if (err?.code === 'P2002') return { message: 'A poll with that URL already exists', status: 409 }
   if (err?.code === 'P2025') return { message: 'Not found', status: 404 }
   return { message: err?.message ?? 'Request failed', status: err?.status ?? 500 }

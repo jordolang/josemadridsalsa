@@ -11,6 +11,7 @@ import {
   ANONYMOUS_REQUEST_LABEL,
   FIRST_NAME_PLACEHOLDER,
   LAST_NAME_PLACEHOLDER,
+  MAX_NAME_LENGTH,
   accentClasses,
 } from '@/lib/polls/constants'
 import type { PollQuestionResult } from '@/lib/polls/queries'
@@ -118,10 +119,14 @@ export function PollForm({
       return
     }
     const selected = answer.optionIds.includes(optionId)
+    // The server counts a filled "something else" box as one of the choices, so
+    // the limit here has to count it too or the form would post a payload the
+    // server then rejects.
+    const otherCounts = question.allowOther && answer.otherText.trim() !== '' ? 1 : 0
     if (
       !selected &&
       question.maxSelections != null &&
-      answer.optionIds.length >= question.maxSelections
+      answer.optionIds.length + otherCounts >= question.maxSelections
     ) {
       setFieldErrors((current) => ({
         ...current,
@@ -136,20 +141,38 @@ export function PollForm({
     })
   }
 
-  const requiredUnanswered = useMemo(
+  /**
+   * Questions the visitor cannot yet submit: a required one left blank, or a
+   * multi-choice one outside the bounds the admin set. Each carries the message
+   * shown against that question.
+   */
+  const blockingQuestions = useMemo<[string, string][]>(
     () =>
-      questions.filter((question) => {
-        if (!question.isRequired) return false
+      questions.flatMap<[string, string]>((question) => {
         const answer = answerFor(question.id)
-        switch (question.type) {
-          case 'SINGLE_CHOICE':
-          case 'MULTI_CHOICE':
-            return answer.optionIds.length === 0 && answer.otherText.trim() === ''
-          case 'RATING':
-            return answer.rating == null
-          default:
-            return answer.textValue.trim() === ''
+        const chosen =
+          answer.optionIds.length +
+          (question.allowOther && answer.otherText.trim() !== '' ? 1 : 0)
+
+        if (question.type === 'MULTI_CHOICE' && chosen > 0) {
+          if (question.minSelections != null && chosen < question.minSelections) {
+            return [[question.id, `Please choose at least ${question.minSelections}`]]
+          }
+          if (question.maxSelections != null && chosen > question.maxSelections) {
+            return [[question.id, `Please choose no more than ${question.maxSelections}`]]
+          }
         }
+
+        if (!question.isRequired) return []
+
+        const blank =
+          question.type === 'SINGLE_CHOICE' || question.type === 'MULTI_CHOICE'
+            ? chosen === 0
+            : question.type === 'RATING'
+              ? answer.rating == null
+              : answer.textValue.trim() === ''
+
+        return blank ? [[question.id, 'This one needs an answer']] : []
       }),
     // `answers` drives every branch above; `questions` is stable per poll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -166,12 +189,8 @@ export function PollForm({
       errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
-    if (requiredUnanswered.length > 0) {
-      setFieldErrors(
-        Object.fromEntries(
-          requiredUnanswered.map((question) => [question.id, 'This one needs an answer'])
-        )
-      )
+    if (blockingQuestions.length > 0) {
+      setFieldErrors(Object.fromEntries(blockingQuestions))
       setError('A couple of questions still need an answer.')
       errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
@@ -461,6 +480,7 @@ export function PollForm({
               onChange={(event) => setFirstName(event.target.value)}
               placeholder={FIRST_NAME_PLACEHOLDER}
               autoComplete="given-name"
+              maxLength={MAX_NAME_LENGTH}
               required
               className="mt-1 h-12 text-base"
             />
@@ -475,6 +495,7 @@ export function PollForm({
               onChange={(event) => setLastName(event.target.value)}
               placeholder={LAST_NAME_PLACEHOLDER}
               autoComplete="family-name"
+              maxLength={MAX_NAME_LENGTH}
               className="mt-1 h-12 text-base"
             />
           </div>

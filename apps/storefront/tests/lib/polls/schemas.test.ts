@@ -67,6 +67,28 @@ describe('pollQuestionInputSchema', () => {
     expect(parsed.options).toEqual([])
   })
 
+  it('rejects a minimum no answer could satisfy', () => {
+    expect(() =>
+      pollQuestionInputSchema.parse({
+        type: 'MULTI_CHOICE',
+        prompt: 'Pick three',
+        minSelections: 3,
+        options: [{ label: 'a' }, { label: 'b' }],
+      })
+    ).toThrow()
+
+    // The same minimum is fine once an "other" box supplies the third answer.
+    expect(() =>
+      pollQuestionInputSchema.parse({
+        type: 'MULTI_CHOICE',
+        prompt: 'Pick three',
+        minSelections: 3,
+        allowOther: true,
+        options: [{ label: 'a' }, { label: 'b' }],
+      })
+    ).not.toThrow()
+  })
+
   it('rejects a minimum above the maximum', () => {
     expect(() =>
       pollQuestionInputSchema.parse({
@@ -153,6 +175,21 @@ describe('validateAnswers', () => {
   it('rejects an answer to a question the poll does not have', () => {
     const errors = validateAnswers([question()], [answer({ questionId: 'ghost' })])
     expect(errors[0].message).toMatch(/not part of this poll/)
+  })
+
+  it('rejects the same question answered twice', () => {
+    const errors = validateAnswers(
+      [question()],
+      [answer({ optionIds: ['o1'] }), answer({ optionIds: ['o2'] })]
+    )
+    expect(errors).toHaveLength(1)
+    expect(errors[0].message).toMatch(/answered twice/)
+  })
+
+  it('rejects the same option picked twice', () => {
+    const multi = question({ type: 'MULTI_CHOICE' })
+    const errors = validateAnswers([multi], [answer({ optionIds: ['o1', 'o1'] })])
+    expect(errors[0].message).toMatch(/only be picked once/)
   })
 
   it('reports every problem at once', () => {

@@ -13,6 +13,17 @@ type Ctx = { params: Promise<{ id: string }> }
 const MAX_ROWS = 2000
 
 /**
+ * Stop a spreadsheet treating a respondent's answer as a formula.
+ *
+ * The cells here are public input, and Excel and Sheets both execute a cell
+ * that opens with `=`, `+`, `-`, `@`, or a control character. Quoting alone —
+ * all `toCsv` does — does not prevent that, so prefix a single quote.
+ */
+function defuseFormula(cell: string): string {
+  return /^[=+\-@\t\r]/.test(cell) ? `'${cell}` : cell
+}
+
+/**
  * GET /api/admin/cms/polls/[id]/responses — the answers behind a poll.
  *
  * `?format=csv` downloads the same data as a spreadsheet, one row per
@@ -50,7 +61,11 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     )
 
     const formatAnswer = (answer: (typeof responses)[number]['answers'][number]): string => {
-      const parts = answer.optionIds.map((optionId) => optionLabels.get(optionId) ?? optionId)
+      // An option the editor has since deleted has no label left; say so rather
+      // than printing a raw id nobody can interpret.
+      const parts = answer.optionIds.map(
+        (optionId) => optionLabels.get(optionId) ?? '(removed option)'
+      )
       if (answer.rating != null) parts.push(String(answer.rating))
       if (answer.textValue) parts.push(answer.textValue)
       if (answer.otherText) parts.push(`Other: ${answer.otherText}`)
@@ -83,7 +98,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         ]
       })
 
-      return new NextResponse(toCsv(headers, rows), {
+      return new NextResponse(toCsv(headers, rows.map((row) => row.map(defuseFormula))), {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
           'Content-Disposition': `attachment; filename="poll-${poll.slug}-responses.csv"`,
