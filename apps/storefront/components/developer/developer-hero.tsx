@@ -133,7 +133,7 @@ export function DeveloperHero({ content }: DeveloperHeroProps) {
                     </div>
                   ) : (
                     <Image
-                      src="/images/developer/jordan-lang.png"
+                      src="https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/developer/jordan-lang.webp"
                       alt="Jordan Lang — Developer of Jose Madrid Salsa"
                       fill
                       className="object-cover object-center"

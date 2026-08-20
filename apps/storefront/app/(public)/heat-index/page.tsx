@@ -166,7 +166,7 @@ export default async function HeatIndexPage() {
 
           <div className="relative min-h-[360px] overflow-hidden rounded-lg border border-white/40 bg-salsa-950 shadow-[0_30px_80px_rgba(69,10,10,0.28)]">
             <Image
-              src="/images/shared/salsa-bowl.png"
+              src="https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/salsa-bowl.webp"
               alt="Fresh salsa bowl with tomatoes and peppers"
               fill
               priority

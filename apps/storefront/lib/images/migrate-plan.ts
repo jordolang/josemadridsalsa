@@ -18,7 +18,7 @@ export interface LocalImage {
 }
 
 export interface MigrationEntry {
-  /** The reference as it appears in code and the database, e.g. `/images/shared/salsa-bowl.png`. */
+  /** The reference as it appears in code and the database, e.g. `https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/salsa-bowl.webp`. */
   localRef: string
   /** Where it lands in the blob store, e.g. `site/images/shared/salsa-bowl.webp`. */
   blobPathname: string

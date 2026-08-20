@@ -19,7 +19,7 @@ const textFallbacks = {
   difficulty: 'Easy',
 }
 
-const imageFallback = '/images/shared/salsa-bowl.png'
+const imageFallback = 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/salsa-bowl.webp'
 
 const difficultyColors: Record<string, string> = {
   Easy: 'bg-green-100 text-green-800',

@@ -13,7 +13,7 @@ interface CampaignHeaderProps {
   className?: string
 }
 
-const FALLBACK_LOGO = '/images/shared/logo-image.png'
+const FALLBACK_LOGO = 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/logo-image.webp'
 
 export function CampaignHeader({
   title,

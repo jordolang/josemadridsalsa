@@ -224,7 +224,7 @@ export default async function Home() {
                 <div className="relative">
                   <div className="relative h-64 sm:h-80 md:h-96 w-full lg:h-[500px]">
                     <Image
-                      src="/images/shared/salsa-bowl.png"
+                      src="https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/salsa-bowl.webp"
                       alt="Fresh ingredients for salsa"
                       fill
                       className="rounded-2xl object-contain"
@@ -319,7 +319,7 @@ export default async function Home() {
                 <div className="relative flex justify-center lg:justify-start">
                   <div className="relative w-56 sm:w-72 lg:w-96" style={{ aspectRatio: '1000 / 733' }}>
                     <Image
-                      src="/images/shared/fundraising-icon.png"
+                      src="https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/fundraising-icon.webp"
                       alt="Jose Madrid Salsa Fundraising"
                       fill
                       className="object-contain drop-shadow-xl"

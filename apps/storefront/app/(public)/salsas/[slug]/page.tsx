@@ -9,7 +9,7 @@ type ProductPageProps = {
   params: Promise<{ slug: string }>
 }
 
-const imageFallback = '/images/shared/salsa-bowl.png'
+const imageFallback = 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/salsa-bowl.webp'
 
 const loadProduct = async (slug: string): Promise<Product | null> => {
   if (!process.env.DATABASE_URL) {

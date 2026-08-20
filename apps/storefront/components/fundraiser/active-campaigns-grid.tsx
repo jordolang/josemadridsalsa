@@ -17,7 +17,7 @@ export interface ActiveCampaignsGridProps {
   className?: string
 }
 
-const DEFAULT_MASCOT = '/images/shared/fundraising-icon.png'
+const DEFAULT_MASCOT = 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/fundraising-icon.webp'
 
 interface CampaignCard {
   id: string

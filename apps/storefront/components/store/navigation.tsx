@@ -332,7 +332,7 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
           >
             <span className={cn("relative flex-shrink-0", isHome ? "h-[66px] w-[66px]" : "h-11 w-11")}>
               <Image
-                src="/images/shared/logo-image.png"
+                src="https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/logo-image.webp"
                 alt="Jose Madrid Salsa"
                 fill
                 sizes={isHome ? "66px" : "44px"}

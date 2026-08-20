@@ -94,7 +94,7 @@ function StorefrontPostcard({ className = '' }: { className?: string }) {
       <div className="bg-[#f6efdc] p-3 pb-2.5 rounded-sm shadow-2xl ring-1 ring-black/25">
         <div className="relative overflow-hidden rounded-[2px]">
           <Image
-            src="/images/laperla/la-perla-storefront.jpg"
+            src="https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/laperla/la-perla-storefront.webp"
             alt="The La Perla Tortilla Factory storefront at 2742 Hill Ave in Toledo, Ohio"
             width={915}
             height={885}
@@ -128,7 +128,7 @@ export default function LaPerlaTortillaFactoryPage() {
         <div className="relative container mx-auto px-4 py-20 lg:py-28">
           <div className="max-w-6xl mx-auto grid lg:grid-cols-[auto_1fr_auto] items-center gap-10 lg:gap-12">
             <Image
-              src="/images/laperla/la-perla-logo.webp"
+              src="https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/laperla/la-perla-logo.webp"
               alt="La Perla Tortilla Factory — Open to Public"
               width={900}
               height={883}

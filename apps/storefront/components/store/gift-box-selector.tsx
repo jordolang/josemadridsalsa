@@ -32,28 +32,28 @@ const giftBoxOptions: GiftBoxOption[] = [
     name: 'Choose 3 Pack',
     size: 3,
     price: 23.00,
-    image: '/images/new-products/3-product-box.jpeg',
+    image: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/3-product-box.webp',
   },
   {
     id: 'choose-5',
     name: 'Choose 5 Pack',
     size: 5,
     price: 28.00,
-    image: '/images/new-products/6-products.jpeg',
+    image: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/6-products.webp',
   },
   {
     id: 'choose-6',
     name: 'Choose 6 Pack',
     size: 6,
     price: 32.00,
-    image: '/images/new-products/6-products.jpeg',
+    image: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/6-products.webp',
   },
   {
     id: 'choose-12',
     name: 'Choose 12 Pack',
     size: 12,
     price: 60.00,
-    image: '/images/new-products/12-products.jpeg',
+    image: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/12-products.webp',
   },
 ]
 

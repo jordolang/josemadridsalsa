@@ -42,7 +42,7 @@ function HeatIndexBentoCard({
   const tone = CARD_TONES[index] ?? CARD_TONES[0]
   const date = formatDate(post.publishedAt)
   const isFeature = index === 0
-  const imageSrc = post.coverImage ?? '/images/shared/salsa-bowl.png'
+  const imageSrc = post.coverImage ?? 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/salsa-bowl.webp'
 
   return (
     <Link

@@ -142,7 +142,7 @@ export function ScrollVideoHeroHome({ panels }: { panels?: HeroPanel[] } = {}) {
         <video
           ref={videoRef}
           src="/images/home/hero-video-scrub.mp4"
-          poster="/images/home/hero-video-poster.jpg"
+          poster="https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/home/hero-video-poster.webp"
           muted
           playsInline
           preload="auto"

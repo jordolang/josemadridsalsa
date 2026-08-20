@@ -24,8 +24,8 @@ interface PageProps {
   params: Promise<{ slug: string }>
 }
 
-const DEFAULT_COVER = '/images/shared/Hero-Image-Mike.png'
-const DEFAULT_LOGO = '/images/shared/fundraising-icon.png'
+const DEFAULT_COVER = 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/Hero-Image-Mike.webp'
+const DEFAULT_LOGO = 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/fundraising-icon.webp'
 
 async function getFundraiser(slug: string) {
   return prisma.fundraiser.findUnique({

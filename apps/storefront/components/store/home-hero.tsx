@@ -8,7 +8,7 @@ export function HomeHero() {
       className="relative isolate min-h-[calc(100svh-8rem)] w-full max-w-[100vw] touch-pan-y overflow-hidden overscroll-x-none bg-[#070503] text-white md:aspect-[1536/871] md:min-h-0"
     >
       <Image
-        src="/images/home/jose-madrid-home-hero-reference.png"
+        src="https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/home/jose-madrid-home-hero-reference.webp"
         alt=""
         fill
         priority
