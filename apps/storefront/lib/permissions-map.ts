@@ -307,6 +307,11 @@ export const adminNavigation: NavItem[] = [
         href: '/admin/analytics/retention',
         permission: 'analytics:read',
       },
+      {
+        label: 'Attribution',
+        href: '/admin/analytics/attribution',
+        permission: 'analytics:read',
+      },
     ],
   },
   {
