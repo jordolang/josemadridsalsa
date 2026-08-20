@@ -48,9 +48,17 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     const current = await prisma.poll.findUnique({
       where: { id },
-      select: { visibility: true, accessCode: true },
+      select: { visibility: true, accessCode: true, _count: { select: { questions: true } } },
     })
     if (!current) return fail('Not found', 404)
+
+    // A published poll with no questions collects nothing but names, and still
+    // counts each visitor as a participant.
+    const goingLive = fields.status === 'PUBLISHED' || fields.status === 'SCHEDULED'
+    const questionCount = questions ? questions.length : current._count.questions
+    if (goingLive && questionCount === 0) {
+      return fail('Add at least one question before publishing this poll', 422)
+    }
 
     let accessCode = current.accessCode
     if (fields.visibility === 'INVITE_ONLY' && !current.accessCode) {

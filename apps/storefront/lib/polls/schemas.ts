@@ -13,6 +13,13 @@ import {
  * of these first.
  */
 
+/**
+ * Ceiling on questions per poll. The public response payload is capped at the
+ * same number, so a poll can never grow past what an answer is allowed to
+ * carry.
+ */
+export const MAX_QUESTIONS = 100
+
 const contentStatus = z.enum(['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'])
 const visibility = z.enum(['PUBLIC', 'INVITE_ONLY'])
 const resultsVisibility = z.enum(['HIDDEN', 'AFTER_VOTE', 'ALWAYS'])
@@ -100,9 +107,9 @@ export const pollQuestionInputSchema = z
     }
   })
 
-export const pollCreateSchema = z.object({
+const pollFieldsSchema = z.object({
   slug: slugSchema,
-  title: z.string().min(1, 'Give the poll a title').max(200),
+  title: z.string().trim().min(1, 'Give the poll a title').max(200),
   subtitle: nullableText(300),
   description: nullableText(5000),
   imageUrl: imageUrlSchema,
@@ -121,19 +128,40 @@ export const pollCreateSchema = z.object({
   consentNotice: nullableText(2000),
   thankYouMessage: nullableText(1000),
   closedMessage: nullableText(1000),
-  seoTitle: nullableText(200),
-  seoDescription: nullableText(500),
+  // Search-result limits, matching what the rest of the site is held to: a
+  // title outside 30–60 characters gets truncated or padded by Google, and a
+  // description over 160 is cut off.
+  seoTitle: z
+    .string()
+    .trim()
+    .min(30, 'A meta title works best at 30–60 characters')
+    .max(60, 'A meta title works best at 30–60 characters')
+    .nullable()
+    .optional(),
+  seoDescription: nullableText(160),
   noIndex: z.boolean().default(false),
 })
+
+/** A window that closes before it opens can never accept a single answer. */
+const openBeforeClose = (poll: { startsAt?: Date | null; endsAt?: Date | null }) =>
+  !poll.startsAt || !poll.endsAt || poll.endsAt > poll.startsAt
+
+const windowMessage = {
+  path: ['endsAt'],
+  message: 'The closing time has to be after the opening time',
+}
+
+export const pollCreateSchema = pollFieldsSchema.refine(openBeforeClose, windowMessage)
 
 /**
  * Update payload. Questions are optional: the editor saves the poll's own
  * fields and its question tree together, but a quick status change need not
  * resend the whole tree.
  */
-export const pollUpdateSchema = pollCreateSchema.partial().extend({
-  questions: z.array(pollQuestionInputSchema).optional(),
-})
+export const pollUpdateSchema = pollFieldsSchema
+  .partial()
+  .extend({ questions: z.array(pollQuestionInputSchema).max(MAX_QUESTIONS).optional() })
+  .refine(openBeforeClose, windowMessage)
 
 export type PollCreateInput = z.infer<typeof pollCreateSchema>
 export type PollUpdateInput = z.infer<typeof pollUpdateSchema>
@@ -164,7 +192,7 @@ export const pollResponseSchema = z.object({
   consentAcknowledged: z.boolean().default(false),
   accessCode: z.string().max(120).optional(),
   website: z.string().max(200).optional(),
-  answers: z.array(pollAnswerInputSchema).max(100).default([]),
+  answers: z.array(pollAnswerInputSchema).max(MAX_QUESTIONS).default([]),
 })
 
 export type PollResponseInput = z.infer<typeof pollResponseSchema>
@@ -239,10 +267,12 @@ export function validateAnswers(
 
     switch (question.type) {
       case 'SINGLE_CHOICE': {
-        const chose = optionIds.length > 0 || (question.allowOther && otherText !== '')
-        if (optionIds.length > 1) {
+        // "Something else" is an answer like any other here, so an option plus
+        // a filled other box is two answers to a pick-one question.
+        const count = optionIds.length + (question.allowOther && otherText !== '' ? 1 : 0)
+        if (count > 1) {
           errors.push({ questionId: question.id, message: 'Pick just one answer' })
-        } else if (question.isRequired && !chose) {
+        } else if (question.isRequired && count === 0) {
           errors.push({ questionId: question.id, message: 'Please choose an answer' })
         }
         break

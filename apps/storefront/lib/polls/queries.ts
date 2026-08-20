@@ -42,17 +42,38 @@ export const pollDetailInclude = {
 
 export type PollDetail = Prisma.PollGetPayload<{ include: typeof pollDetailInclude }>
 
-/** Polls anyone may see listed: published, public, not archived. */
-export const listablePollFilter: Prisma.PollWhereInput = {
-  status: 'PUBLISHED',
-  visibility: 'PUBLIC',
+/**
+ * Whether a poll's status means "live".
+ *
+ * SCHEDULED counts once its publication time has passed, matching how the rest
+ * of the CMS treats scheduled content — nothing flips the row to PUBLISHED, so
+ * without this a scheduled poll would never appear.
+ */
+export function isPollPublished(
+  poll: { status: string; publishedAt?: Date | null },
+  now: Date = new Date()
+): boolean {
+  if (poll.status === 'PUBLISHED') return true
+  return poll.status === 'SCHEDULED' && poll.publishedAt != null && poll.publishedAt <= now
 }
 
-/** The published polls shown on /polls, featured first. */
+/** Prisma equivalent of `isPollPublished`, for use in a `where`. */
+export function publishedPollFilter(now: Date = new Date()): Prisma.PollWhereInput {
+  return {
+    OR: [{ status: 'PUBLISHED' }, { status: 'SCHEDULED', publishedAt: { lte: now } }],
+  }
+}
+
+/** Polls anyone may see listed: live, public, not archived. */
+export function listablePollFilter(now: Date = new Date()): Prisma.PollWhereInput {
+  return { visibility: 'PUBLIC', ...publishedPollFilter(now) }
+}
+
+/** The live polls shown on /polls, featured first. */
 export const getListedPolls = cache(async (): Promise<PollCard[]> => {
   try {
     return await prisma.poll.findMany({
-      where: listablePollFilter,
+      where: listablePollFilter(),
       orderBy: [{ featured: 'desc' }, { sortOrder: 'asc' }, { publishedAt: 'desc' }, { createdAt: 'desc' }],
       select: pollCardSelect,
     })
@@ -80,10 +101,10 @@ export type PollWindowState = 'OPEN' | 'NOT_STARTED' | 'CLOSED' | 'UNPUBLISHED'
 
 /** Whether a poll is currently accepting answers, and why not when it isn't. */
 export function pollWindowState(
-  poll: Pick<PollDetail, 'status' | 'startsAt' | 'endsAt'>,
+  poll: Pick<PollDetail, 'status' | 'startsAt' | 'endsAt'> & { publishedAt?: Date | null },
   now: Date = new Date()
 ): PollWindowState {
-  if (poll.status !== 'PUBLISHED') return 'UNPUBLISHED'
+  if (!isPollPublished(poll, now)) return 'UNPUBLISHED'
   if (poll.startsAt && poll.startsAt > now) return 'NOT_STARTED'
   if (poll.endsAt && poll.endsAt <= now) return 'CLOSED'
   return 'OPEN'
@@ -97,13 +118,14 @@ export function pollWindowState(
  * without it the page 404s rather than confirming the poll exists.
  */
 export function canViewPoll(
-  poll: Pick<PollDetail, 'status' | 'visibility' | 'accessCode'>,
-  suppliedCode?: string | null
+  poll: Pick<PollDetail, 'status' | 'visibility' | 'accessCode'> & { publishedAt?: Date | null },
+  suppliedCode?: string | null,
+  now: Date = new Date()
 ): boolean {
-  if (poll.status === 'ARCHIVED') return false
-  if (poll.visibility === 'PUBLIC') return poll.status === 'PUBLISHED'
+  if (!isPollPublished(poll, now)) return false
+  if (poll.visibility === 'PUBLIC') return true
   if (!poll.accessCode) return false
-  return suppliedCode === poll.accessCode && poll.status === 'PUBLISHED'
+  return suppliedCode === poll.accessCode
 }
 
 export interface PollOptionTally {
@@ -161,6 +183,7 @@ export async function getPollResults(pollId: string): Promise<PollQuestionResult
       const comments: PollQuestionResult['comments'] = []
 
       const liveOptionIds = new Set(question.options.map((option) => option.id))
+      let otherVotes = 0
 
       for (const answer of question.answers) {
         // Ignore ids for options the editor has since removed, and count a
@@ -182,9 +205,15 @@ export async function getPollResults(pollId: string): Promise<PollQuestionResult
           ratingTotal += rating
           ratingCount += 1
         }
+        if (answer.otherText?.trim()) otherVotes += 1
 
         const text = answer.textValue?.trim() || answer.otherText?.trim()
-        if (text && comments.length < MAX_PUBLIC_COMMENTS) {
+        // Someone who asked to stay anonymous was promised we would take their
+        // name and contact details out before their words appeared publicly.
+        // Their answer could name themselves inside the text, and no automatic
+        // redaction is reliable, so their words are kept for staff to quote
+        // deliberately rather than published here. Their votes still count.
+        if (text && !answer.response.anonymousRequested && comments.length < MAX_PUBLIC_COMMENTS) {
           comments.push({
             text,
             name: displayName(answer.response),
@@ -193,7 +222,11 @@ export async function getPollResults(pollId: string): Promise<PollQuestionResult
         }
       }
 
-      const votesCast = Array.from(counts.values()).reduce((sum, count) => sum + count, 0)
+      // "Something else" answers are votes too: leaving them out of the
+      // denominator would show one option as 100% when half the room picked
+      // something the poll did not list.
+      const votesCast =
+        Array.from(counts.values()).reduce((sum, count) => sum + count, 0) + otherVotes
 
       return {
         questionId: question.id,
@@ -201,16 +234,20 @@ export async function getPollResults(pollId: string): Promise<PollQuestionResult
         type: question.type,
         answerCount: answered,
         averageRating: ratingCount > 0 ? Math.round((ratingTotal / ratingCount) * 10) / 10 : null,
-        options: question.options.map((option) => {
-          const count = counts.get(option.id) ?? 0
-          return {
+        options: [
+          ...question.options.map((option) => ({
             optionId: option.id,
             label: option.label,
             emoji: option.emoji,
-            count,
-            percent: votesCast > 0 ? Math.round((count / votesCast) * 1000) / 10 : 0,
-          }
-        }),
+            count: counts.get(option.id) ?? 0,
+          })),
+          ...(otherVotes > 0
+            ? [{ optionId: 'other', label: 'Something else', emoji: null, count: otherVotes }]
+            : []),
+        ].map((option) => ({
+          ...option,
+          percent: votesCast > 0 ? Math.round((option.count / votesCast) * 1000) / 10 : 0,
+        })),
         comments,
       }
     })

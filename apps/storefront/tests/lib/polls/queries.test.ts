@@ -1,11 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { canViewPoll, displayName, pollWindowState } from '@/lib/polls/queries'
+import { canViewPoll, displayName, isPollPublished, pollWindowState } from '@/lib/polls/queries'
 
 const published = { status: 'PUBLISHED' as const, visibility: 'PUBLIC' as const, accessCode: null }
 
 describe('canViewPoll', () => {
   it('lets anyone see a published public poll', () => {
     expect(canViewPoll(published)).toBe(true)
+  })
+
+  it('opens a scheduled poll once its publication time has passed', () => {
+    const now = new Date('2026-06-15T12:00:00Z')
+    const scheduled = { ...published, status: 'SCHEDULED' as const }
+    expect(canViewPoll({ ...scheduled, publishedAt: new Date('2026-06-01T00:00:00Z') }, null, now)).toBe(
+      true
+    )
+    expect(canViewPoll({ ...scheduled, publishedAt: new Date('2026-07-01T00:00:00Z') }, null, now)).toBe(
+      false
+    )
+    expect(canViewPoll({ ...scheduled, publishedAt: null }, null, now)).toBe(false)
   })
 
   it('hides a draft or archived poll', () => {
@@ -55,6 +67,30 @@ describe('pollWindowState', () => {
 
   it('reports an unpublished poll as unpublished, window or not', () => {
     expect(pollWindowState({ status: 'DRAFT', startsAt: null, endsAt: null }, now)).toBe('UNPUBLISHED')
+  })
+})
+
+describe('isPollPublished', () => {
+  const now = new Date('2026-06-15T12:00:00Z')
+
+  it('accepts a published poll whatever its publication date', () => {
+    expect(isPollPublished({ status: 'PUBLISHED', publishedAt: null }, now)).toBe(true)
+  })
+
+  it('holds a scheduled poll until its time comes', () => {
+    expect(
+      isPollPublished({ status: 'SCHEDULED', publishedAt: new Date('2026-06-16T00:00:00Z') }, now)
+    ).toBe(false)
+    expect(
+      isPollPublished({ status: 'SCHEDULED', publishedAt: new Date('2026-06-14T00:00:00Z') }, now)
+    ).toBe(true)
+  })
+
+  it('never accepts a draft or archived poll', () => {
+    expect(isPollPublished({ status: 'DRAFT', publishedAt: new Date('2020-01-01') }, now)).toBe(false)
+    expect(isPollPublished({ status: 'ARCHIVED', publishedAt: new Date('2020-01-01') }, now)).toBe(
+      false
+    )
   })
 })
 

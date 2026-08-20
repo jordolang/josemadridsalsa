@@ -4,13 +4,16 @@ import prisma from '@/lib/prisma'
 import { ok, fail } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
 import { logAudit } from '@/lib/audit'
-import { pollCreateSchema, pollQuestionInputSchema } from '@/lib/polls/schemas'
+import { MAX_QUESTIONS, pollCreateSchema, pollQuestionInputSchema } from '@/lib/polls/schemas'
 import { describeWriteError, generateAccessCode, savePollQuestions } from '@/lib/polls/admin'
 
 export const dynamic = 'force-dynamic'
 
-const createSchema = pollCreateSchema.extend({
-  questions: z.array(pollQuestionInputSchema).default([]),
+// `pollCreateSchema` carries a cross-field refinement, so the questions are
+// parsed alongside it rather than by extending the object.
+const createSchema = z.object({
+  poll: pollCreateSchema,
+  questions: z.array(pollQuestionInputSchema).max(MAX_QUESTIONS).default([]),
 })
 
 /** GET /api/admin/cms/polls — every poll, featured first, with its counts. */
@@ -32,7 +35,11 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const user = await requirePermission('content:write')
-    const { questions, ...pollFields } = createSchema.parse(await req.json())
+    const body = await req.json()
+    const { poll: pollFields, questions } = createSchema.parse({
+      poll: body,
+      questions: body.questions ?? [],
+    })
 
     // One transaction, so a failed question write cannot leave a half-built poll.
     const poll = await prisma.$transaction(async (tx) => {

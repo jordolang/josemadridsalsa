@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import { createMetadata } from '@/lib/metadata'
-import { requirePermission } from '@/lib/rbac'
+import { getCurrentUser, hasPermission, requirePermission } from '@/lib/rbac'
 import { PollEditor, type EditorQuestion } from '@/components/admin/polls/poll-editor'
 
 export const metadata: Metadata = createMetadata({
@@ -14,8 +14,9 @@ export const metadata: Metadata = createMetadata({
 export const dynamic = 'force-dynamic'
 
 export default async function EditPollPage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission('content:write')
+  await requirePermission('content:read')
   const { id } = await params
+  const canWrite = await hasPermission(await getCurrentUser(), 'content:write')
 
   const poll = await prisma.poll.findUnique({
     where: { id },
@@ -84,6 +85,7 @@ export default async function EditPollPage({ params }: { params: Promise<{ id: s
         responseCount: poll.responseCount,
       }}
       questions={questions}
+      canWrite={canWrite}
     />
   )
 }

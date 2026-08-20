@@ -437,7 +437,8 @@ export function PollForm({
               </div>
             )}
 
-            {question.allowOther && (
+            {question.allowOther &&
+              (question.type === 'SINGLE_CHOICE' || question.type === 'MULTI_CHOICE') && (
               <div className="mt-3">
                 <label className="text-sm font-medium text-stone-700" htmlFor={`other-${question.id}`}>
                   Something else? Tell us here

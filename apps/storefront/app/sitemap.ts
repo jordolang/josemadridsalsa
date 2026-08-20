@@ -286,7 +286,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const polls = await prisma.poll.findMany({
       // Invite-only polls stay out of the sitemap: the access code in the share
       // link is their only protection, and a crawled URL would not carry it.
-      where: { status: 'PUBLISHED', visibility: 'PUBLIC', noIndex: false },
+      where: {
+        visibility: 'PUBLIC',
+        noIndex: false,
+        OR: [{ status: 'PUBLISHED' }, { status: 'SCHEDULED', publishedAt: { lte: new Date() } }],
+      },
       select: { slug: true, updatedAt: true },
     })
     polls.forEach((poll) => {

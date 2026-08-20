@@ -127,6 +127,13 @@ describe('validateAnswers', () => {
     expect(errors[0].message).toMatch(/not on this question/)
   })
 
+  it('counts a filled "other" box against a pick-one question', () => {
+    const q = question({ allowOther: true })
+    expect(
+      validateAnswers([q], [answer({ optionIds: ['o1'], otherText: 'and this' })])[0].message
+    ).toMatch(/just one/)
+  })
+
   it('rejects two choices on a pick-one question', () => {
     const errors = validateAnswers([question()], [answer({ optionIds: ['o1', 'o2'] })])
     expect(errors[0].message).toMatch(/just one/)

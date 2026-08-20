@@ -142,6 +142,57 @@ const emptyQuestion = (key: string): EditorQuestion => ({
   ],
 })
 
+/** Shape of a question as the API returns it after a save. */
+interface SavedQuestion {
+  id: string
+  type: EditorQuestion['type']
+  prompt: string
+  helpText: string | null
+  imageUrl: string | null
+  imageAlt: string | null
+  isRequired: boolean
+  maxLength: number
+  placeholder: string | null
+  minSelections: number | null
+  maxSelections: number | null
+  allowOther: boolean
+  ratingMax: number
+  options: {
+    id: string
+    label: string
+    description: string | null
+    imageUrl: string | null
+    emoji: string | null
+  }[]
+}
+
+/** Turn the API's saved question tree back into editor state. */
+function fromSavedQuestions(questions: SavedQuestion[]): EditorQuestion[] {
+  return questions.map((question) => ({
+    id: question.id,
+    key: question.id,
+    type: question.type,
+    prompt: question.prompt,
+    helpText: question.helpText ?? '',
+    imageUrl: question.imageUrl ?? '',
+    imageAlt: question.imageAlt ?? '',
+    isRequired: question.isRequired,
+    maxLength: question.maxLength,
+    placeholder: question.placeholder ?? '',
+    minSelections: question.minSelections?.toString() ?? '',
+    maxSelections: question.maxSelections?.toString() ?? '',
+    allowOther: question.allowOther,
+    ratingMax: question.ratingMax,
+    options: question.options.map((option) => ({
+      id: option.id,
+      label: option.label,
+      description: option.description ?? '',
+      imageUrl: option.imageUrl ?? '',
+      emoji: option.emoji ?? '',
+    })),
+  }))
+}
+
 /** `datetime-local` wants `YYYY-MM-DDTHH:mm` in local time; the API speaks ISO. */
 function toLocalInput(iso: string): string {
   if (!iso) return ''
@@ -164,9 +215,12 @@ function fromLocalInput(value: string): string | null {
 export function PollEditor({
   poll: initialPoll,
   questions: initialQuestions,
+  canWrite,
 }: {
   poll: EditorPoll
   questions: EditorQuestion[]
+  /** False for staff who may read content but not change it. */
+  canWrite: boolean
 }) {
   const router = useRouter()
   const [poll, setPoll] = useState(initialPoll)
@@ -279,6 +333,13 @@ export function PollEditor({
       if (!response.ok) throw new Error(payload.error ?? 'Could not save the poll')
       toast.success('Poll saved')
       setPoll((current) => ({ ...current, accessCode: payload.poll?.accessCode ?? null }))
+      // Adopt the saved tree, ids and all. `router.refresh()` re-renders the
+      // server component but leaves this state alone, so without this a
+      // question created by the save would still look new to a second save —
+      // which would delete the row just created and cascade away its answers.
+      if (payload.poll?.questions) {
+        setQuestions(fromSavedQuestions(payload.poll.questions))
+      }
       router.refresh()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not save the poll')
@@ -308,16 +369,25 @@ export function PollEditor({
               Preview
             </Link>
           </Button>
-          <Button onClick={save} disabled={saving}>
-            {saving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            Save poll
-          </Button>
+          {canWrite && (
+            <Button onClick={save} disabled={saving}>
+              {saving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Save poll
+            </Button>
+          )}
         </div>
       </div>
+
+      {!canWrite && (
+        <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          You have view-only access to content. You can read the poll and its responses, including
+          the CSV export, but changes cannot be saved.
+        </p>
+      )}
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
@@ -652,9 +722,19 @@ export function PollEditor({
                   <Label>Answer style</Label>
                   <Select
                     value={question.type}
-                    onValueChange={(value) =>
-                      updateQuestion(index, { type: value as EditorQuestion['type'] })
-                    }
+                    onValueChange={(value) => {
+                      const type = value as EditorQuestion['type']
+                      const isChoice = type === 'SINGLE_CHOICE' || type === 'MULTI_CHOICE'
+                      // The "other" box and the selection bounds only mean
+                      // something on a choice question; carrying them over would
+                      // show the visitor a field whose answer is then discarded.
+                      updateQuestion(index, {
+                        type,
+                        ...(isChoice
+                          ? {}
+                          : { allowOther: false, minSelections: '', maxSelections: '' }),
+                      })
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -699,6 +779,17 @@ export function PollEditor({
                 value={question.imageUrl}
                 onChange={(url) => updateQuestion(index, { imageUrl: url })}
               />
+
+              {question.imageUrl && (
+                <div>
+                  <Label>Image description</Label>
+                  <Input
+                    value={question.imageAlt}
+                    onChange={(event) => updateQuestion(index, { imageAlt: event.target.value })}
+                    placeholder="Describes the image for screen readers"
+                  />
+                </div>
+              )}
 
               {(question.type === 'SHORT_TEXT' || question.type === 'LONG_TEXT') && (
                 <div className="grid gap-4 sm:grid-cols-2">

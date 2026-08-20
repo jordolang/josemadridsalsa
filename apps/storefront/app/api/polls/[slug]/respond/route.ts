@@ -1,9 +1,9 @@
+import { createHmac } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import prisma from '@/lib/prisma'
 import { ok, fail, serverError } from '@/lib/api'
-import { hashValue } from '@/lib/crypto'
-import { checkRateLimit } from '@/lib/email/rate-limit'
+import { checkRateLimit } from '@/lib/rate-limit/distributed'
 import { getCurrentUser } from '@/lib/rbac'
 import { pollResponseSchema, validateAnswers } from '@/lib/polls/schemas'
 import { canViewPoll, getPollResults, pollWindowState } from '@/lib/polls/queries'
@@ -12,6 +12,20 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 type Ctx = { params: Promise<{ slug: string }> }
+
+/**
+ * The stored form of a respondent's IP.
+ *
+ * Keyed with a server secret rather than a plain digest: the IPv4 space is
+ * small enough that a bare SHA-256 of a known poll id and an address can be
+ * enumerated back to the address by anyone holding a database dump. HMAC with a
+ * secret that never leaves the server makes the stored value useless without
+ * it, while still matching for the repeat-submission check.
+ */
+function hashAddress(pollId: string, ip: string): string {
+  const secret = process.env.MASTER_KEY ?? process.env.NEXTAUTH_SECRET ?? ''
+  return createHmac('sha256', secret).update(`poll:${pollId}:${ip}`).digest('hex')
+}
 
 /**
  * POST /api/polls/[slug]/respond
@@ -25,17 +39,17 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const { slug } = await ctx.params
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
 
-    const { allowed, retryAfterMs } = checkRateLimit(`poll-response:${ip}`, {
+    // The distributed limiter, so the five-per-window budget is shared across
+    // serverless instances rather than reset by every cold start.
+    const { allowed, resetIn } = await checkRateLimit({
+      identifier: `poll-response:${ip}`,
       maxRequests: 5,
-      windowMs: 10 * 60 * 1000,
+      windowSeconds: 10 * 60,
     })
     if (!allowed) {
       return NextResponse.json(
         { error: 'That is a lot of answers in a short time. Please try again in a few minutes.' },
-        {
-          status: 429,
-          headers: { 'Retry-After': String(Math.ceil((retryAfterMs || 600_000) / 1000)) },
-        }
+        { status: 429, headers: { 'Retry-After': String(Math.max(resetIn, 1)) } }
       )
     }
 
@@ -85,7 +99,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return fail(errors[0].message, 422, { errors })
     }
 
-    const ipHash = hashValue(`poll:${poll.id}:${ip}`)
+    const ipHash = hashAddress(poll.id, ip)
     if (!poll.allowMultipleSubmissions && ip !== 'unknown') {
       const already = await prisma.pollResponse.findFirst({
         where: { pollId: poll.id, ipHash },

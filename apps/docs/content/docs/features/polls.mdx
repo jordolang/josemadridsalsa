@@ -25,7 +25,11 @@ top navigation.
   A prominent **"Keep me anonymous"** button records a request to strip identifying details, and a
   required checkbox confirms the visitor read the notice.
 - Results appear after voting, always, or never — the admin decides per poll. Quoted comments are
-  credited as "First L." or "Anonymous", never with a full surname.
+  credited as "First L.", never with a full surname.
+- A respondent who asks to stay anonymous has their votes counted but their written answers kept out
+  of the public results entirely. The form promises to remove names and contact details before their
+  words appear publicly, and an answer can name its author inside the text — so staff quote those
+  deliberately from the admin rather than the page publishing them automatically.
 
 ## Admin
 
@@ -38,7 +42,13 @@ change).
 | Questions | The question builder: answer style, prompt, help text, per-question image, required flag, character limit, selection bounds, an optional "something else" box, and the option list with emoji, description and image per option |
 | Responses | Every answer received, newest first, with the anonymity request shown next to each name, plus a CSV export |
 
-### Visibility
+### Status and visibility
+
+A poll goes live when its status is **Published**, or **Scheduled** with a publication time that has
+passed — nothing rewrites the row, so the "live" test is evaluated on read, the same way the rest of
+the CMS treats scheduled content. A poll cannot be published or scheduled until it has at least one
+question. Meta titles are held to 30–60 characters and descriptions to 160, matching every other
+page on the site.
 
 - **Public** — listed on `/polls`, in the sitemap, open to anyone including guests who arrive by
   accident.
@@ -85,18 +95,28 @@ removed.
 
 | Route | Method | Access |
 | --- | --- | --- |
-| `/api/polls/[slug]/respond` | POST | Public. Rate limited to 5 submissions per IP per 10 minutes, with a honeypot field and a one-response-per-device check |
+| `/api/polls/[slug]/respond` | POST | Public. Rate limited to 5 submissions per IP per 10 minutes through the distributed limiter, with a honeypot field and a repeat-submission check |
 | `/api/admin/cms/polls` | GET, POST | `content:read` / `content:write` |
 | `/api/admin/cms/polls/[id]` | GET, PATCH, DELETE | `content:read` / `content:write` |
 | `/api/admin/cms/polls/[id]/responses` | GET | `content:read`. Add `?format=csv` to download |
+
+Staff with `content:read` but not `content:write` can open a poll and its responses, including the
+CSV export, in a view-only mode with the save control hidden.
 
 ### Data model
 
 `Poll` → `PollQuestion` → `PollOption`, with `PollResponse` → `PollAnswer` holding the submissions.
 Question types are `SINGLE_CHOICE`, `MULTI_CHOICE`, `SHORT_TEXT`, `LONG_TEXT` and `RATING`. A
 response stores `anonymousRequested` and `consentAcknowledged` alongside the name, so whoever writes
-promotional copy can see what the respondent asked for. IP addresses are stored only as a salted
-SHA-256 hash, used for the repeat-submission check and never displayed.
+promotional copy can see what the respondent asked for. IP addresses are stored only as an HMAC
+keyed with a server secret, used for the repeat-submission check and never displayed — a bare digest
+of an address would be enumerable by anyone holding a database dump.
+
+<Callout>
+  The repeat-submission check is keyed on the requesting address, so it is a courtesy guard rather
+  than an identity check: a household behind one router shares it, and a determined visitor can
+  change networks. That is a deliberate trade — a stricter check would lock out shared connections.
+</Callout>
 
 ## Search indexing
 
