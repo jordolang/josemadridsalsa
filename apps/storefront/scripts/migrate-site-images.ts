@@ -153,19 +153,38 @@ async function main() {
     for (const entry of entries) {
       const sourcePath = path.join(PUBLIC_DIR, entry.localRef.replace(/^\//, ''))
       if (!options.apply) {
-        console.log(`  plan  ${entry.localRef}  →  ${entry.blobPathname}`)
+        console.log(
+          `  plan  ${entry.localRef}  →  ${entry.originalBlobPathname}${entry.converted ? ` + ${entry.blobPathname}` : ''}`
+        )
         continue
       }
 
-      const body = await convert(sourcePath, entry.converted)
-      const result = await put(entry.blobPathname, body, {
+      // The original is always uploaded under its own name, and the conversion beside it. A
+      // consumer that cannot read WebP — a social crawler, Google Business — then still has a URL
+      // to point at, and nothing is lost by the migration that was not already in git.
+      const original = await convert(sourcePath, false)
+      const originalPut = await put(entry.originalBlobPathname, original, {
         access: 'public',
         addRandomSuffix: false,
         allowOverwrite: true,
       })
-      uploadedBytes += body.byteLength
-      storeBaseUrl ??= new URL(result.url).origin
-      console.log(`  up    ${entry.localRef}  →  ${mb(body.byteLength)}`)
+      uploadedBytes += original.byteLength
+      storeBaseUrl ??= new URL(originalPut.url).origin
+
+      if (entry.converted) {
+        const webp = await convert(sourcePath, true)
+        await put(entry.blobPathname, webp, {
+          access: 'public',
+          addRandomSuffix: false,
+          allowOverwrite: true,
+        })
+        uploadedBytes += webp.byteLength
+        console.log(
+          `  up    ${entry.localRef}  →  ${mb(original.byteLength)} original + ${mb(webp.byteLength)} webp`
+        )
+      } else {
+        console.log(`  up    ${entry.localRef}  →  ${mb(original.byteLength)}`)
+      }
     }
     if (options.apply) {
       console.log(`\nUploaded ${mb(uploadedBytes)} (was ${mb(summary.bytes)}).`)
@@ -179,6 +198,10 @@ async function main() {
   }
 
   map = buildRewriteMap(entries, storeBaseUrl, SITE_ORIGINS)
+  // A blog cover is a crawler-facing image: it is the article's og:image and the photo a Google
+  // Business cross-post attaches, and neither reliably accepts WebP. Covers resolve to the
+  // original upload; the page itself loses nothing, because next/image re-encodes on the fly.
+  const originalMap = buildRewriteMap(entries, storeBaseUrl, SITE_ORIGINS, 'original')
 
   if (options.apply && options.upload) {
     await writeFile(
@@ -198,9 +221,13 @@ async function main() {
   console.log('\nCode:')
   let codeFiles = 0
   let codeRefs = 0
+  const review: Array<{ file: string; ref: string; count: number }> = []
   for (const file of await collectCodeFiles()) {
     const before = await readFile(file, 'utf8')
-    const { text, replacements } = rewriteText(before, map)
+    const { text, replacements, needsReview } = rewriteText(before, map)
+    for (const r of needsReview) {
+      review.push({ file: path.relative(process.cwd(), file), ref: r.ref, count: r.count })
+    }
     if (!replacements.length) continue
 
     codeFiles += 1
@@ -211,6 +238,12 @@ async function main() {
     if (options.apply) await writeFile(file, text, 'utf8')
   }
   console.log(`  ${codeRefs} reference(s) across ${codeFiles} file(s)`)
+
+  if (review.length) {
+    console.log('\nNeeds review — a path inside a template literal, left unchanged:')
+    for (const r of review) console.log(`  ${r.file}  ${r.ref}  (${r.count})`)
+    console.log('  Replacing only the path would leave the variable stranded before an absolute URL.')
+  }
 
   // ---- stage 3: rewrite database ----
   console.log('\nDatabase:')
@@ -246,7 +279,7 @@ async function main() {
       select: { id: true, title: true, coverImage: true },
     })
     for (const post of posts) {
-      const rewritten = rewriteText(post.coverImage ?? '', map)
+      const rewritten = rewriteText(post.coverImage ?? '', originalMap)
       if (!rewritten.replacements.length) continue
 
       dbRows += 1

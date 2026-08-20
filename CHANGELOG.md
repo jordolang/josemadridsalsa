@@ -98,7 +98,50 @@ the root `package.json` is canonical.
 
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
+### Changed
+- **The image migration now keeps the original alongside the WebP, and blog covers point at it.**
+  Conversion used to replace: `salsa-bowl.png` became `salsa-bowl.webp` and the PNG existed only in
+  git history. Anything that cannot read WebP therefore had no URL to fall back to — which is not
+  hypothetical, because a blog cover is the article's `og:image` and the photo a Google Business
+  cross-post attaches, and Google accepts only JPEG or PNG. Migrating the covers had quietly made
+  six of nineteen posts ineligible for a Google Business photo.
+
+  `planFile` now records `originalBlobPathname` beside `blobPathname`, the upload stage puts both,
+  and `buildRewriteMap` takes a variant so a consumer can ask for either. Code and product images
+  resolve to the WebP as before; `BlogPost.coverImage` resolves to the original. The page loses
+  nothing by that, because covers render through `next/image`, which re-encodes on the fly. The
+  trade is storage: 233 images are now held in both formats rather than one.
+
+  Preserving originals also made a latent bug certain, so it is fixed here. `rewriteText` matched a
+  reference anywhere it appeared, and a migrated URL ends with the very key that produced it — so a
+  second pass re-prefixed its own output into `.../sitehttps://.../site/images/...`. That had
+  already reached the repository. Matching now requires a leading delimiter, which makes the rewrite
+  idempotent; a full dry run over the migrated tree reports zero changes. A path inside a template
+  literal (`${SITE_URL}/images/x.png`) is reported for review rather than rewritten, since replacing
+  only the path strands the variable in front of an absolute URL — the second way that same bug
+  reached the repository.
+### Changed
+- **CI now runs the shipping E2E suite instead of silently skipping it.** The five files under
+  `tests/e2e` that exercise `/api/checkout/calculate-shipping` are gated on `E2E_BASE_URL`, which
+  was set nowhere — not in CI, not in any script — so all 45 of their assertions had never executed;
+  the Playwright step could not cover them either, since its `testMatch` is `**/*.spec.ts` while
+  these files end in `.test.ts`. CI now seeds the catalogue after the unit and integration suite has
+  finished with the empty database, starts the built storefront, and runs those files as a gating
+  step. Both shipping fixes below were found by turning them on.
+
 ### Fixed
+- **A PO Box order placed after a street-address order to the same ZIP was quoted a carrier that
+  cannot deliver to it.** `/api/checkout/calculate-shipping` caches quotes for five minutes, but its
+  cache key was built from the cart plus city, state and ZIP only — the street lines and the country
+  were left out. The calculator does detect a PO Box and restrict it to USPS, and it does price
+  non-US destinations on the international rate; the cache simply served the first answer for a ZIP
+  to every later address in it. So a PO Box shipment that followed an ordinary one to the same ZIP
+  came back as "Standard Shipping", and a foreign address could be handed a domestic quote. The key
+  now includes `address1`, `address2` and `country`.
+- **International shipping rejected any postal code shorter than five characters.** The request
+  schema applied the US five-digit ZIP floor to every country, so Australia's four-digit postcodes —
+  and every other shorter format — returned HTTP 422 even though the calculator has a published
+  international rate for them. The five-character rule now applies only when `country` is `US`.
 - **Blog posts now share their own cover image, not a generated red card.** The Heat Index route
   carried a file-based `opengraph-image.tsx` that rendered a title-on-red-gradient card and ignored
   the post's cover image entirely — it even read `coverImage` from the database and then never drew
