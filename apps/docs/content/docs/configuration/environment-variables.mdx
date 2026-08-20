@@ -92,6 +92,7 @@ DATABASE_URL_UNPOOLED="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/jos
 |---|---|---|
 | `UPLOADTHING_SECRET` | For uploads | UploadThing secret key |
 | `UPLOADTHING_APP_ID` | For uploads | UploadThing application ID |
+| `BLOB_READ_WRITE_TOKEN` | For image hosting | Read/write token for the `josemadridsalsa-blob` Vercel Blob store. Powers the Developer Console file explorer (`/admin/developer/files`), the product image uploader, and the `images:sync` / `images:migrate` scripts. Get it from **Vercel → Storage → josemadridsalsa-blob**. Without it, every blob upload path is disabled and returns 503. |
 
 ## QuickBooks Online
 
