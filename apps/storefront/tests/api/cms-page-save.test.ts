@@ -12,7 +12,8 @@ import { NextRequest } from 'next/server'
  * built-in copy — which no type check would catch.
  *
  * Runs against the dev database; permissions and audit logging are stubbed
- * because they are not what is under test here.
+ * because they are not what is under test here. Skipped when no DATABASE_URL
+ * is present.
  */
 
 vi.mock('@/lib/rbac', () => ({
@@ -31,17 +32,10 @@ const prisma = (await import('@/lib/prisma')).default
 const SLUG = 'home'
 let pageId: string
 
-beforeAll(async () => {
-  await prisma.page.deleteMany({ where: { slug: SLUG } })
-  const page = await prisma.page.create({
-    data: { slug: SLUG, title: 'Homepage', kind: 'SYSTEM', status: 'DRAFT' },
-  })
-  pageId = page.id
-})
-
-afterAll(async () => {
-  await prisma.page.deleteMany({ where: { slug: SLUG } })
-})
+// Vitest does not load .env, so a plain `vitest` run has no DATABASE_URL and
+// every Prisma call fails datasource validation. Skip the file in that case
+// instead of failing it — same gate the other database-backed tests use.
+const runIntegration = !!(process.env.DATABASE_URL || process.env.RUN_INTEGRATION_TESTS)
 
 function patchRequest(body: unknown) {
   return new NextRequest(`https://store.example.com/api/admin/cms/pages/${pageId}`, {
@@ -51,7 +45,19 @@ function patchRequest(body: unknown) {
   })
 }
 
-describe('saving a page through the editor', () => {
+describe.skipIf(!runIntegration)('saving a page through the editor', () => {
+  beforeAll(async () => {
+    await prisma.page.deleteMany({ where: { slug: SLUG } })
+    const page = await prisma.page.create({
+      data: { slug: SLUG, title: 'Homepage', kind: 'SYSTEM', status: 'DRAFT' },
+    })
+    pageId = page.id
+  })
+
+  afterAll(async () => {
+    await prisma.page.deleteMany({ where: { slug: SLUG } })
+  })
+
   it('stores system sections under their registry key and publishes them', async () => {
     // Exactly the payload components/admin/cms/page-editor.tsx sends.
     const response = await PATCH(
