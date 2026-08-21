@@ -172,6 +172,21 @@ export function parseLabelIngredients(labelText: string): ParsedLabel {
   return { ingredients, warnings }
 }
 
+/**
+ * Check an `ingredients` value straight off a request body.
+ *
+ * Returns the error to report, or null when there is nothing wrong. Every product write path goes
+ * through this rather than repeating the check, so a new endpoint gets the same guarantee by
+ * calling one function. A non-array is left to the caller's own shape validation.
+ */
+export function validateIngredientsInput(value: unknown): string | null {
+  if (!Array.isArray(value)) return null
+
+  const unbalanced = findUnbalancedIngredient(value.filter((v): v is string => typeof v === 'string'))
+
+  return unbalanced ? `${UNBALANCED_INGREDIENTS_MESSAGE} Check: "${unbalanced}"` : null
+}
+
 /** The first ingredient whose sub-ingredient group never closes, or undefined when all are sound. */
 export function findUnbalancedIngredient(ingredients: string[]): string | undefined {
   return ingredients.find((ingredient) => !hasBalancedParentheses(ingredient))

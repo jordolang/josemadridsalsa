@@ -3,10 +3,7 @@ import { requirePermission } from '@/lib/rbac';
 import { ok, fail } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import prisma from '@/lib/prisma';
-import {
-  UNBALANCED_INGREDIENTS_MESSAGE,
-  findUnbalancedIngredient,
-} from '@/lib/ingredients';
+import { validateIngredientsInput } from '@/lib/ingredients';
 
 /**
  * GET /api/admin/products/[id]
@@ -77,11 +74,9 @@ export async function PATCH(
 
     // The admin form and the CSV import both check this, but the API is what actually guarantees
     // it: a group left open here is stored with the wrong grouping and published from there.
-    if (Array.isArray(body.ingredients)) {
-      const unbalanced = findUnbalancedIngredient(body.ingredients);
-      if (unbalanced) {
-        return fail(`${UNBALANCED_INGREDIENTS_MESSAGE} Check: "${unbalanced}"`, 400);
-      }
+    const ingredientsError = validateIngredientsInput(body.ingredients);
+    if (ingredientsError) {
+      return fail(ingredientsError, 400);
     }
 
     // If SKU is being changed, check for duplicates

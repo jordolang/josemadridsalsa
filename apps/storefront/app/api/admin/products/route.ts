@@ -4,10 +4,7 @@ import { ok, fail, parsePagination } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import prisma from '@/lib/prisma';
 import { getStoreSettings } from '@/lib/store-settings';
-import {
-  UNBALANCED_INGREDIENTS_MESSAGE,
-  findUnbalancedIngredient,
-} from '@/lib/ingredients';
+import { validateIngredientsInput } from '@/lib/ingredients';
 
 /**
  * GET /api/admin/products
@@ -132,11 +129,9 @@ export async function POST(req: NextRequest) {
 
     // The admin form and the CSV import both check this, but the API is what actually guarantees
     // it: a group left open here is stored with the wrong grouping and published from there.
-    if (Array.isArray(ingredients)) {
-      const unbalanced = findUnbalancedIngredient(ingredients);
-      if (unbalanced) {
-        return fail(`${UNBALANCED_INGREDIENTS_MESSAGE} Check: "${unbalanced}"`, 400);
-      }
+    const ingredientsError = validateIngredientsInput(ingredients);
+    if (ingredientsError) {
+      return fail(ingredientsError, 400);
     }
 
     // Check for duplicate SKU
@@ -219,6 +214,13 @@ export async function PATCH(req: NextRequest) {
 
     if (!updates || typeof updates !== 'object') {
       return fail('updates must be an object', 400);
+    }
+
+    // updates goes to updateMany as-is, so a malformed statement here would land on every
+    // product named in the request at once.
+    const bulkIngredientsError = validateIngredientsInput(updates.ingredients);
+    if (bulkIngredientsError) {
+      return fail(bulkIngredientsError, 400);
     }
 
     // Perform bulk update

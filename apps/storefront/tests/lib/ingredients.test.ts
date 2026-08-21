@@ -6,6 +6,7 @@ import {
   formatIngredientStatement,
   findUnbalancedIngredient,
   hasBalancedParentheses,
+  validateIngredientsInput,
   parseIngredientStatement,
   parseLabelIngredients,
   splitIngredientList,
@@ -97,6 +98,29 @@ describe('findUnbalancedIngredient', () => {
     expect(
       findUnbalancedIngredient(['Water', 'Diced Tomatoes (Tomatoes, Citric Acid', 'Salt('])
     ).toBe('Diced Tomatoes (Tomatoes, Citric Acid')
+  })
+})
+
+describe('validateIngredientsInput', () => {
+  it('accepts a sound list', () => {
+    expect(
+      validateIngredientsInput(['Diced Tomatoes (Tomatoes, Citric Acid)', 'Water'])
+    ).toBeNull()
+  })
+
+  it('reports the entry whose group never closes', () => {
+    const error = validateIngredientsInput(['Water', 'Diced Tomatoes (Tomatoes, Citric Acid'])
+
+    expect(error).toContain('Diced Tomatoes (Tomatoes, Citric Acid')
+  })
+
+  it('leaves a non-array to the caller\'s own shape validation', () => {
+    expect(validateIngredientsInput(undefined)).toBeNull()
+    expect(validateIngredientsInput('Water, Salt')).toBeNull()
+  })
+
+  it('ignores non-string entries rather than throwing on them', () => {
+    expect(validateIngredientsInput(['Water', 42, null])).toBeNull()
   })
 })
 
