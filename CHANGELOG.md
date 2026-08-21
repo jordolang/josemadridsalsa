@@ -148,6 +148,27 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
+- **Ingredient lists dropped the parentheses printed on the jar, turning sub-ingredients into
+  headline ingredients.** The label scraper (`scripts/parse-ingredients.cjs`) split the statement on
+  every comma, stripped `(`/`)`, lower-cased what was left and de-duplicated it, so
+  `Diced Tomatoes (Tomatoes, Citric Acid, Calcium Chloride)` was stored as four peer ingredients —
+  reading as though citric acid were the second-largest ingredient in the jar rather than something
+  that comes with the tomatoes. The salsa detail page compounded it by printing the sub-ingredients
+  *before* their ingredient and without the parentheses at all.
+
+  Parsing and formatting now live in `lib/ingredients.ts` and keep the statement exactly as printed:
+  splitting is parenthesis-aware (commas inside a group stay with the ingredient they belong to),
+  nesting, order, casing and repeated names are preserved, and the trailing "and" conjunction is
+  restored on display. The scraper is now `scripts/parse-ingredients.ts`; it reads through the column
+  breaks OCR leaves mid-statement and, rather than publishing text it cannot vouch for, reports
+  labels whose scan has no ingredient statement, no closing period, or an unclosed parenthesis.
+
+  The same flattening ran on every other write path, so each now splits parenthesis-aware too: the
+  admin product form (which re-mangled the statement on any save) and the CSV/Excel product import.
+  `db:seed:nutrition` additionally writes the label statement back to `Product.ingredients`, which
+  feeds search, product feeds, the TikTok Shop export and the AI index — run it to correct the
+  stored listings.
+
 - **Dark mode rendered several sections as light text on a light background.** The `verde` and
   `chile` colour scales in `apps/storefront/tailwind.config.ts` stopped at `900`, so every
   `dark:*-verde-950` / `dark:*-chile-950` utility referenced a shade that did not exist and Tailwind

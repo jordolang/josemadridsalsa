@@ -20,6 +20,7 @@ import { ShareContent } from '@/types/sharing'
 import { generateHashtags } from '@/lib/sharing/metadata-extractor'
 import { RecentlyViewedProducts } from '@/components/store/recently-viewed'
 import { NutritionalInfo } from '@/components/products/NutritionalInfo'
+import { formatIngredientStatement, toIngredientList } from '@/lib/ingredients'
 
 type NutritionalInfoData = {
   id: string
@@ -166,11 +167,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   }
 
   const formattedIngredients = product.productIngredients
-    ?.map((pi) => {
-      const qualifier = pi.qualifier ? `${pi.qualifier} ` : ''
-      return `${qualifier}${pi.ingredient.name}`
-    })
-    .join(', ')
+    ? formatIngredientStatement(toIngredientList(product.productIngredients))
+    : ''
 
   return (
     <main className="min-h-screen bg-background">

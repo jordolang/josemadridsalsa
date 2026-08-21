@@ -2,6 +2,7 @@ import Papa from 'papaparse';
 import ExcelJS from 'exceljs';
 import { z } from 'zod';
 import { getErrorMessage } from '@/lib/errors';
+import { splitIngredientList } from '@/lib/ingredients';
 
 // Product import schema for validation
 export const ProductImportSchema = z.object({
@@ -229,12 +230,10 @@ export function validateProducts(
       // Parse and validate with Zod
       const parsed = ProductImportSchema.parse(row);
 
-      // Handle ingredients (convert string to array)
+      // Handle ingredients (convert string to array). Paren-aware so a
+      // sub-ingredient list like "Tomatoes (Water, Citric Acid)" survives.
       const ingredients = parsed.ingredients
-        ? parsed.ingredients
-            .split(',')
-            .map(i => i.trim())
-            .filter(i => i.length > 0)
+        ? splitIngredientList(parsed.ingredients)
         : [];
 
       // Handle images (convert string to array)
