@@ -77,26 +77,34 @@ function fitToBudget(fields: AttributionFields): string | null {
 }
 
 /**
- * Record the first meaningful touch, once.
- *
- * No-op when the cookie already exists (first touch wins) or when this landing carries no marketing
- * signal (a purely direct visit is left uncaptured so a later campaign click can be the first
- * touch). Safe to call on every page load.
+ * The first-touch fields for the *current* landing, or null when this landing carries no marketing
+ * signal. Snapshotting these in memory at mount (before any consent choice) is what lets a visitor
+ * who lands from a UTM link, navigates, and *then* accepts still be attributed to that link — by the
+ * time they accept, `window.location` no longer has the campaign params. Holding them in memory
+ * (never persisted until acceptance) keeps the consent contract intact.
  */
-export function captureFirstTouchAttribution(): void {
-  if (typeof window === 'undefined') return
-  // Respect the cookie-consent choice: capture only once the visitor has accepted.
-  if (!hasAnalyticsConsent()) return
-  if (attributionCookieExists()) return
-
+export function buildFirstTouchSnapshot(): AttributionFields | null {
+  if (typeof window === 'undefined') return null
   const fields = buildAttribution({
     params: new URLSearchParams(window.location.search),
     referrer: document.referrer || null,
     landingPage: window.location.pathname || null,
     selfHost: window.location.host || null,
   })
+  return hasAttribution(fields) ? fields : null
+}
 
-  if (!hasAttribution(fields)) return
+/**
+ * Persist a first-touch snapshot to the cookie, once.
+ *
+ * No-op unless the visitor has accepted cookies, the cookie is absent (first touch wins), and the
+ * snapshot actually carries a marketing signal. Safe to call repeatedly.
+ */
+export function persistFirstTouch(fields: AttributionFields | null): void {
+  if (typeof window === 'undefined') return
+  if (!hasAnalyticsConsent()) return
+  if (attributionCookieExists()) return
+  if (!fields || !hasAttribution(fields)) return
 
   const encoded = fitToBudget(fields)
   if (encoded === null) return
@@ -104,4 +112,13 @@ export function captureFirstTouchAttribution(): void {
   const expires = new Date(Date.now() + ATTRIBUTION_MAX_AGE_DAYS * 24 * 60 * 60 * 1000).toUTCString()
   const secure = window.location.protocol === 'https:' ? '; Secure' : ''
   document.cookie = `${ATTRIBUTION_COOKIE}=${encoded}; path=/; expires=${expires}; SameSite=Lax${secure}`
+}
+
+/**
+ * Record the first meaningful touch for the current landing, once. Convenience over
+ * {@link buildFirstTouchSnapshot} + {@link persistFirstTouch} for callers that don't need to hold a
+ * snapshot across a navigation.
+ */
+export function captureFirstTouchAttribution(): void {
+  persistFirstTouch(buildFirstTouchSnapshot())
 }

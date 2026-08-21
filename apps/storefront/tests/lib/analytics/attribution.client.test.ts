@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { ATTRIBUTION_COOKIE } from '@/lib/analytics/attribution'
 import {
+  buildFirstTouchSnapshot,
   captureFirstTouchAttribution,
+  persistFirstTouch,
   readCookieConsent,
   removeAttributionCookie,
 } from '@/lib/analytics/attribution.client'
@@ -78,6 +80,38 @@ describe('removeAttributionCookie', () => {
     expect(getCookie(ATTRIBUTION_COOKIE)).not.toBeNull()
 
     removeAttributionCookie()
+    expect(getCookie(ATTRIBUTION_COOKIE)).toBeNull()
+  })
+})
+
+describe('snapshot survives navigation before consent', () => {
+  it('persists the landing UTM even after the URL has changed, once consent is accepted', () => {
+    // Land from a campaign link with consent not yet chosen — nothing is written.
+    window.history.replaceState({}, '', '/?utm_source=facebook&utm_campaign=spring')
+    const snapshot = buildFirstTouchSnapshot()
+    expect(getCookie(ATTRIBUTION_COOKIE)).toBeNull()
+
+    // Navigate away (params gone), then accept.
+    window.history.replaceState({}, '', '/products/mango')
+    window.localStorage.setItem(CONSENT_KEY, 'accepted')
+    persistFirstTouch(snapshot)
+
+    const raw = getCookie(ATTRIBUTION_COOKIE)
+    expect(raw).not.toBeNull()
+    const decoded = decodeURIComponent(raw as string)
+    expect(decoded).toContain('facebook')
+    expect(decoded).toContain('spring')
+  })
+
+  it('does not persist a snapshot while consent is still unset or rejected', () => {
+    window.history.replaceState({}, '', '/?utm_source=facebook')
+    const snapshot = buildFirstTouchSnapshot()
+
+    persistFirstTouch(snapshot) // no choice yet
+    expect(getCookie(ATTRIBUTION_COOKIE)).toBeNull()
+
+    window.localStorage.setItem(CONSENT_KEY, 'rejected')
+    persistFirstTouch(snapshot)
     expect(getCookie(ATTRIBUTION_COOKIE)).toBeNull()
   })
 })

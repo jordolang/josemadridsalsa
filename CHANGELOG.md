@@ -154,9 +154,20 @@ the root `package.json` is canonical.
 ### Fixed
 - **Attribution and collections follow-ups from post-merge review.**
   - *A crafted UTM value could break checkout.* A `?utm_source=%00…` link put a NUL byte into the attribution cookie; PostgreSQL rejects `0x00` in a text column, so `order.create` threw and every Stripe checkout carrying that cookie failed until it expired. Attribution fields now strip control characters (NUL and the rest of the C0 range plus DEL) in one `sanitizeField` helper, applied both when the cookie is written and when it is read back for the order.
-  - *PayPal/Venmo and Square/Cash App orders lost their attribution.* The first-touch cookie was only read in the Stripe checkout route, so orders paid through the other providers recorded as Direct/none despite carrying it. All three online checkout routes now read and persist attribution identically.
+  - *PayPal/Venmo and Square/Cash App orders lost their attribution.* The first-touch cookie was only read in the Stripe checkout route, so orders paid through the other providers were recorded as Direct/none despite carrying it. All three online checkout routes now read and persist attribution identically.
   - *Attribution ignored the cookie-consent choice.* The marketing cookie was written on landing regardless of consent. It is now written only after the visitor accepts, and an existing cookie is cleared if they reject — driven by the banner's existing `cookie-consent-change` event.
   - *Collections admin fixes.* The admin list is typed against the real `Collection` shape instead of `any[]`; it pages through all collections rather than silently showing only the first 100; the collection slug is validated as a single URL-safe segment in both API routes (a value like `gift/sets` would have left the storefront page unreachable); and the changelog now names the actual `products:read`/`products:write` permissions the API enforces.
+
+- **Search-result metadata on `/laperla` and `/live` fell outside the documented limits.** The
+  La Perla page's title ran 67 characters and its description 223, so Google truncated the
+  description partway through "the stone-ground white corn" — cutting off the Jose Madrid Salsa
+  connection that is the page's reason for existing. The `/live` title ran only 24 characters.
+  Both now sit inside the 30–60 title / 160-character description range; La Perla's street address
+  moves out of the description and stays available in the page's structured data.
+- **`/live` built its metadata by hand instead of through `createMetadata`.** It was the only one
+  of these public pages declaring a bare `Metadata` object, so it shipped without the OpenGraph and
+  Twitter card tags its siblings get and fell back to the default share image with no card markup.
+  It now goes through the shared helper like the rest of the `(public)` routes.
 
 - **Dark mode rendered several sections as light text on a light background.** The `verde` and
   `chile` colour scales in `apps/storefront/tailwind.config.ts` stopped at `900`, so every
