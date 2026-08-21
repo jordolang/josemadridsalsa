@@ -1226,6 +1226,24 @@ model ShippingSettings {
   originAddress         Json?
   defaultCarrier        String?
   enabledCarriers       String[] @default([])
+
+  // Flat-rate presets for the estimate/fallback rate path — the numbers quoted when live carrier
+  // rates are unavailable (no API key, origin unset, carrier outage). All amounts are whole cents.
+  // Any field left null falls back to the built-in default in `lib/shipping/rate-config.ts`, so the
+  // quoted price is unchanged until an admin overrides it.
+  /// Base flat rate for a domestic order, in cents.
+  flatRateCents              Int?
+  /// Weight-surcharge base, in cents, applied once an order exceeds the threshold weight.
+  weightSurchargeBaseCents   Int?
+  /// Weight-surcharge amount per pound over the threshold, in cents.
+  weightSurchargePerLbCents  Int?
+  /// Weight (in whole pounds) above which the weight surcharge replaces the flat rate.
+  weightSurchargeThresholdLb Int?
+  /// Flat international rate, in cents.
+  internationalRateCents     Int?
+  /// Per-state cost multipliers for remote destinations, e.g. { "AK": 1.5, "HI": 1.5, "PR": 2.0 }.
+  stateSurcharges            Json?
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
   updatedById           String?

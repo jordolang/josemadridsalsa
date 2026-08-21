@@ -67,29 +67,36 @@ If the carrier API fails or returns no rates, the system falls back to estimate-
 
 ## Rate Configuration
 
-Default rates (used for fallback calculations):
+The flat-rate presets used for the estimate/fallback path are **admin-configurable** under
+**Settings → Shipping → Flat-rate presets**. They are stored on the `ShippingSettings` singleton (as
+whole cents) and read at quote time by `lib/shipping/rate-config.ts`; live carrier rates, when
+available, are still used ahead of them. Every field is optional and falls back to the built-in
+default below, so an unconfigured store quotes exactly what it always did. Shipping is charged on
+every order — there is no free-shipping path.
+
+Built-in defaults:
 
 | Method | Cost | Delivery |
 | --- | --- | --- |
 | Standard | $6.99 | 3-5 business days |
 | International | $24.99 | 7-14 business days |
-| Free | $0.00 | Orders over threshold |
 
 ### Weight-Based Pricing
 
-For orders over 5 lbs, shipping switches from flat-rate to weight-based:
+For orders over the threshold weight (default 5 lb), shipping switches from flat-rate to
+weight-based when that is higher:
 
 ```ts
 baseCost = Math.max(
-  FLAT_RATE.cost,
-  WEIGHT_BASED.baseRate + (totalWeight - 5) * WEIGHT_BASED.perPound
+  flatRate,
+  weightSurchargeBase + (totalPounds - thresholdLb) * weightSurchargePerLb
 )
-// baseRate: $4.99, perPound: $0.50
+// defaults: flatRate $6.99, base $4.99, perPound $0.50, threshold 5 lb
 ```
 
 ### State Multipliers
 
-Remote locations have higher shipping costs:
+Remote destinations carry a configurable cost multiplier (defaults below):
 
 | State | Multiplier |
 | --- | --- |
