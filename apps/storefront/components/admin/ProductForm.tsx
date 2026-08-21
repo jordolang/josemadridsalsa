@@ -20,7 +20,11 @@ import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Loader2, Save, X } from 'lucide-react'
 import type { Product, Category } from '@prisma/client'
-import { parseIngredientStatement } from '@/lib/ingredients'
+import {
+  UNBALANCED_INGREDIENTS_MESSAGE,
+  hasBalancedParentheses,
+  parseIngredientStatement,
+} from '@/lib/ingredients'
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -35,7 +39,12 @@ const productSchema = z.object({
   lowStockThreshold: z.string().optional(),
   weight: z.string().optional(),
   heatLevel: z.enum(['MILD', 'MEDIUM', 'HOT', 'EXTRA_HOT', 'FRUIT']),
-  ingredients: z.string().optional(),
+  // A statement whose groups do not close would be stored with the wrong grouping and
+  // published from there to the storefront, feeds, search and SEO.
+  ingredients: z
+    .string()
+    .optional()
+    .refine((value) => !value || hasBalancedParentheses(value), UNBALANCED_INGREDIENTS_MESSAGE),
   categoryId: z.string().min(1, 'Category is required'),
   featuredImage: z.string().optional(),
   images: z.string().optional(),

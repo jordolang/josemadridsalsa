@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseCSV } from '@/lib/product-import'
+import { parseCSV, validateProducts } from '@/lib/product-import'
 
 describe('Product Import - CSV Parsing', () => {
   describe('parseCSV', () => {
@@ -77,5 +77,40 @@ Test Product,test-product,TEST-001,9.99,MILD,Hot Sauces`
       expect(result.data?.[0]).toHaveProperty('slug')
       expect(result.data?.[0].name).toBe('Test Product')
     })
+  })
+})
+
+describe('Product Import - ingredient statements', () => {
+  const row = (ingredients: string) => ({
+    name: 'Original Mild',
+    slug: 'original-mild',
+    sku: 'JMS-MILD-001',
+    price: '7.99',
+    heatLevel: 'MILD',
+    categoryId: 'cat-1',
+    ingredients,
+  })
+  const categories = new Map([['mild salsa', 'cat-1']])
+
+  it('keeps sub-ingredients attached to the ingredient they belong to', () => {
+    const result = validateProducts(
+      [row('Diced Tomatoes (Tomatoes, Citric Acid), Water and Spices.')],
+      categories
+    )
+
+    expect(result.validationErrors ?? []).toEqual([])
+    expect(result.data?.[0].ingredients).toEqual([
+      'Diced Tomatoes (Tomatoes, Citric Acid)',
+      'Water',
+      'Spices',
+    ])
+  })
+
+  it('rejects a statement whose sub-ingredient group never closes', () => {
+    // Importing it would persist the wrong grouping and publish it from there.
+    const result = validateProducts([row('Diced Tomatoes (Tomatoes, Citric Acid, Water')], categories)
+
+    expect(result.data ?? []).toEqual([])
+    expect(result.validationErrors?.[0].errors.join(' ')).toContain('ingredients')
   })
 })

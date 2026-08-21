@@ -2,7 +2,11 @@ import Papa from 'papaparse';
 import ExcelJS from 'exceljs';
 import { z } from 'zod';
 import { getErrorMessage } from '@/lib/errors';
-import { parseIngredientStatement } from '@/lib/ingredients';
+import {
+  UNBALANCED_INGREDIENTS_MESSAGE,
+  hasBalancedParentheses,
+  parseIngredientStatement,
+} from '@/lib/ingredients';
 
 // Product import schema for validation
 export const ProductImportSchema = z.object({
@@ -16,7 +20,10 @@ export const ProductImportSchema = z.object({
   inventory: z.coerce.number().int().min(0).default(0),
   lowStockThreshold: z.coerce.number().int().min(0).default(5),
   heatLevel: z.enum(['MILD', 'MEDIUM', 'HOT', 'EXTRA_HOT', 'FRUIT']),
-  ingredients: z.string().optional(), // Will be split into array
+  ingredients: z
+    .string()
+    .optional()
+    .refine((value) => !value || hasBalancedParentheses(value), UNBALANCED_INGREDIENTS_MESSAGE), // Split into an array once valid
   categoryId: z.string().optional(),
   categoryName: z.string().optional(), // Alternative to categoryId
   barcode: z.string().optional().nullable(),

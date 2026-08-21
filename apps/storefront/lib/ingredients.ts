@@ -172,6 +172,10 @@ export function parseLabelIngredients(labelText: string): ParsedLabel {
   return { ingredients, warnings }
 }
 
+/** Shown when a written statement has a sub-ingredient group that never closes. */
+export const UNBALANCED_INGREDIENTS_MESSAGE =
+  'Every "(" in the ingredients must be closed by a matching ")" — check the sub-ingredient groups.'
+
 /**
  * Split a written-out ingredient statement into one ingredient per entry.
  *
