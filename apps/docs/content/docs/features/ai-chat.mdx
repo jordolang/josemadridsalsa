@@ -1,0 +1,24 @@
+---
+title: AI chat
+description: Picante chat launcher, AI support, and live-team handoff behavior.
+---
+
+# AI chat
+
+The public storefront includes an AI assistant for product, fundraising, wholesale, and order-support questions. Picante, the animated pepper mascot at the bottom-right of the page, is the chat launcher.
+
+## Launcher behavior
+
+- Picante walks within a bounded track along the bottom-right portion of the viewport.
+- Clicking or keyboard-activating Picante opens the existing chat panel.
+- Picante returns to an idle pose while the panel is open.
+- Visitors who request reduced motion see a stationary idle pose.
+- The launcher remains inside mobile safe areas and does not block the rest of the page.
+
+## Chat behavior
+
+The launcher changes only how the panel opens. AI messages, business-hours lookup, and live-team handoff continue through the existing chat APIs. Closing the panel returns Picante to the launcher state.
+
+## Asset
+
+The storefront uses an optimized three-row derivative at `public/images/ai-chat/picante-spritesheet.webp`, containing only idle and left/right walking frames. The complete version 2 pet package remains the source asset outside the website bundle.

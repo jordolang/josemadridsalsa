@@ -1,0 +1,131 @@
+.track {
+  position: fixed;
+  right: max(0.75rem, env(safe-area-inset-right));
+  bottom: max(0.25rem, env(safe-area-inset-bottom));
+  width: clamp(13.75rem, 42vw, 27.5rem);
+  height: clamp(5.75rem, 10vh, 7rem);
+  pointer-events: none;
+}
+
+.launcher {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 5.75rem;
+  height: 6.75rem;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: right 8s linear, filter 160ms ease, transform 160ms ease;
+}
+
+.launcher:hover {
+  filter: drop-shadow(0 0.5rem 0.65rem rgb(0 0 0 / 0.22));
+  transform: translateY(-0.2rem);
+}
+
+.launcher:focus-visible {
+  border-radius: 1rem;
+  outline: 3px solid rgb(234 88 12);
+  outline-offset: 3px;
+}
+
+.atLeft {
+  right: calc(100% - 5.75rem);
+}
+
+.atRight {
+  right: 0;
+}
+
+.sprite {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: block;
+  width: 5.75rem;
+  height: 6.23rem;
+  background-image: url('/images/ai-chat/picante-spritesheet.webp');
+  background-repeat: no-repeat;
+  background-size: 800% 300%;
+  image-rendering: auto;
+}
+
+.idle {
+  background-position-y: 0%;
+}
+
+.walkRight {
+  background-position-y: 50%;
+}
+
+.walkLeft {
+  background-position-y: 100%;
+}
+
+.frame0 { background-position-x: 0%; }
+.frame1 { background-position-x: 14.2857%; }
+.frame2 { background-position-x: 28.5714%; }
+.frame3 { background-position-x: 42.8571%; }
+.frame4 { background-position-x: 57.1429%; }
+.frame5 { background-position-x: 71.4286%; }
+.frame6 { background-position-x: 85.7143%; }
+.frame7 { background-position-x: 100%; }
+
+.prompt {
+  position: absolute;
+  right: 4.3rem;
+  bottom: 4.7rem;
+  width: max-content;
+  border: 1px solid rgb(28 25 23 / 0.14);
+  border-radius: 999px 999px 0.2rem 999px;
+  padding: 0.35rem 0.62rem;
+  color: rgb(68 64 60);
+  background: rgb(255 255 255 / 0.94);
+  box-shadow: 0 0.35rem 1rem rgb(0 0 0 / 0.12);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transform: translateY(0.2rem);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.launcher:hover .prompt,
+.launcher:focus-visible .prompt {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 640px) {
+  .track {
+    right: max(0.35rem, env(safe-area-inset-right));
+    width: min(75vw, 20rem);
+  }
+
+  .launcher,
+  .sprite {
+    width: 4.85rem;
+  }
+
+  .launcher {
+    height: 5.85rem;
+  }
+
+  .sprite {
+    height: 5.25rem;
+  }
+
+  .atLeft {
+    right: calc(100% - 4.85rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .launcher {
+    transition: filter 160ms ease;
+  }
+}

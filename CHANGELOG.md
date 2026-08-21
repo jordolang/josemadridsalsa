@@ -14,6 +14,11 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Picante AI chat launcher.** The storefront's floating chat pill is replaced by the animated
+  José Madrid Salsa pepper mascot. Picante walks within a bounded bottom-right track, opens the
+  existing AI/live-handoff panel when clicked or keyboard-activated, idles while chat is open, and
+  remains stationary when the visitor requests reduced motion.
+
 - **Community polls (`/polls`), built and controlled from Content → Polls.** A poll is a small,
   self-contained way to ask visitors a question, and it needed to live where a curious visitor finds
   it rather than where the shop's navigation competes for attention: the polls hub is linked from the

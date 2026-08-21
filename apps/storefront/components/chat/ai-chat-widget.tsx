@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Bot, Headphones, Loader2, MessageCircle, Send, Sparkles, User, X } from 'lucide-react'
+import { Bot, Headphones, Loader2, Send, Sparkles, User, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { PicanteChatLauncher } from '@/components/chat/picante-chat-launcher'
 
 type ChatMessage = {
   id: string
@@ -237,9 +238,9 @@ export function AiChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
+    <div className="pointer-events-none fixed inset-0 z-50">
       {isOpen && (
-        <div className="w-[480px] max-w-[calc(100vw-3rem)] overflow-hidden rounded-3xl border border-border bg-card shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
+        <div className="pointer-events-auto fixed bottom-28 right-3 w-[480px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-3xl border border-border bg-card shadow-2xl ring-1 ring-black/5 sm:right-6 dark:ring-white/10">
           <div className="flex items-center justify-between bg-gradient-to-r from-salsa-600 via-salsa-500 to-chile-500 px-4 py-3 text-white">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/80">
@@ -260,7 +261,7 @@ export function AiChatWidget() {
             </button>
           </div>
 
-          <div className="flex h-[600px] flex-col justify-between">
+          <div className="flex h-[min(600px,calc(100dvh-9rem))] flex-col justify-between">
             {mode === 'handoff-form' ? (
               <HandoffForm
                 businessOpen={businessOpen ?? true}
@@ -345,14 +346,7 @@ export function AiChatWidget() {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={handleToggle}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-salsa-600 text-white shadow-lg transition hover:bg-salsa-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-salsa-500"
-        aria-label={isOpen ? 'Close chat window' : 'Open chat window'}
-      >
-        {isOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
-      </button>
+      <PicanteChatLauncher isOpen={isOpen} onToggle={handleToggle} />
     </div>
   )
 }
