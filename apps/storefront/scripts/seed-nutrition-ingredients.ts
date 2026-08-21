@@ -8,6 +8,8 @@
  */
 import { PrismaClient } from '@prisma/client'
 
+import { formatIngredientName } from '@/lib/ingredients'
+
 // ─── Nutrition data per product slug ────────────────────────────────────────
 // Values extracted from OCR'd product labels. All products are 13 oz (369g).
 // Serving Size: 2 Tbsp (30ml), 13 servings per container
@@ -658,6 +660,17 @@ export async function seedNutritionAndIngredients(prisma: PrismaClient) {
         })
         ingredientLinkCount++
       }
+
+      // Keep Product.ingredients (used by feeds, search and the AI index) in
+      // step with the relational rows, sub-ingredient parentheses included.
+      await prisma.product.update({
+        where: { id: product.id },
+        data: {
+          ingredients: ingredients.map((entry) =>
+            formatIngredientName(entry.name, entry.qualifier)
+          ),
+        },
+      })
     } else {
       console.warn(`  ⚠ No ingredient data for: ${product.slug}`)
     }
