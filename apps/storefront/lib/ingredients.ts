@@ -60,6 +60,13 @@ export function toIngredientList(entries: IngredientEntry[]): string[] {
  * Join label parts into the statement as printed: comma-separated with "and"
  * before the final ingredient, closed by a period.
  * e.g. `Diced Tomatoes (Tomatoes, Citric Acid), Water and Spices.`
+ *
+ * The conjunction is written without an Oxford comma. A few labels print one — Black Bean Corn
+ * Poblano ends "Spices, Salt, and Citric Acid." where Original Mild ends "(From Concentrate) and
+ * Spices." — and the ingredients are stored as a list, so which style a jar used is not something
+ * this can know. Reproducing it would mean storing the statement text per product; that was
+ * weighed and declined, since the comma misleads nobody and every ingredient, sub-ingredient,
+ * parenthesis and position is exact either way.
  */
 export function formatIngredientStatement(parts: string[]): string {
   const cleaned = parts.map((part) => part.trim()).filter(Boolean)
