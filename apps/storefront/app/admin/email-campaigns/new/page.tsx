@@ -46,7 +46,13 @@ async function getActiveDiscountCodes() {
 export default async function NewCampaignPage({
   searchParams,
 }: {
-  searchParams: Promise<{ templateId?: string }>
+  searchParams: Promise<{
+    templateId?: string
+    /** Template key (e.g. `event_invitation`) for callers that know the key, not the row id. */
+    template?: string
+    name?: string
+    subject?: string
+  }>
 }) {
   const user = await getCurrentUser()
 
@@ -54,12 +60,18 @@ export default async function NewCampaignPage({
     redirect('/admin')
   }
 
-  const [{ templateId }, templates, mailingLists, discountCodes] = await Promise.all([
-    searchParams,
-    getTemplates(),
-    getMailingLists(),
-    getActiveDiscountCodes(),
-  ])
+  const [{ templateId, template, name, subject }, templates, mailingLists, discountCodes] =
+    await Promise.all([
+      searchParams,
+      getTemplates(),
+      getMailingLists(),
+      getActiveDiscountCodes(),
+    ])
+
+  // An explicit id wins; otherwise fall back to looking the key up in the list
+  // we already loaded, so no extra query is needed.
+  const resolvedTemplateId =
+    templateId ?? templates.find((t) => t.key === template)?.id
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -74,7 +86,9 @@ export default async function NewCampaignPage({
         templates={templates}
         mailingLists={mailingLists}
         discountCodes={discountCodes}
-        initialTemplateId={templateId}
+        initialTemplateId={resolvedTemplateId}
+        initialName={name}
+        initialSubject={subject}
       />
     </div>
   )
