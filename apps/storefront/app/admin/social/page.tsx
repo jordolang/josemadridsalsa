@@ -188,6 +188,8 @@ export default async function SocialMediaPage({
     igAccounts?: string
     notice?: string
     error?: string
+    /** Prefilled composer body, e.g. from the Events week grid's Share menu. */
+    content?: string
   }>
 }) {
   const user = await getCurrentUser()
@@ -217,7 +219,9 @@ export default async function SocialMediaPage({
   if (params.tab === 'shops') {
     redirect('/admin/feeds?tab=shops')
   }
-  const initialTab = (params.tab as DashboardTab) || 'overview'
+  // A prefilled body only makes sense on the composer, so it selects that tab.
+  const composePrefill = params.content?.slice(0, 2000)
+  const initialTab = (params.tab as DashboardTab) || (composePrefill ? 'compose' : 'overview')
   const connectedPlatform = params.connected
   const linkedInstagramCount = params.igAccounts ? Number(params.igAccounts) : 0
   const noticeMessage = params.notice
@@ -294,6 +298,7 @@ export default async function SocialMediaPage({
         canSchedule={canSchedule}
         canPublish={canPublish}
         initialTab={initialTab}
+        initialContent={composePrefill}
       />
     </div>
   )
