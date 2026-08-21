@@ -20,7 +20,7 @@ import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Loader2, Save, X } from 'lucide-react'
 import type { Product, Category } from '@prisma/client'
-import { splitIngredientList } from '@/lib/ingredients'
+import { parseIngredientStatement } from '@/lib/ingredients'
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -119,9 +119,10 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
           : undefined,
         weight: data.weight ? parseFloat(data.weight) : null,
         heatLevel: data.heatLevel,
-        // Paren-aware: sub-ingredients such as "Tomatoes (Water, Citric Acid)"
-        // must stay attached to the ingredient they belong to.
-        ingredients: data.ingredients ? splitIngredientList(data.ingredients) : [],
+        // Parsed as a written statement, so pasting the label verbatim works: sub-ingredients
+        // stay inside their parentheses, and the closing period and final "and" are not stored
+        // as part of the last ingredient.
+        ingredients: data.ingredients ? parseIngredientStatement(data.ingredients) : [],
         categoryId: data.categoryId,
         featuredImage: data.featuredImage || null,
         images: data.images

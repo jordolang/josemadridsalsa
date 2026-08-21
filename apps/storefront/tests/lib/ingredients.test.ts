@@ -5,6 +5,7 @@ import {
   formatIngredientName,
   formatIngredientStatement,
   hasBalancedParentheses,
+  parseIngredientStatement,
   parseLabelIngredients,
   splitIngredientList,
   toIngredientList,
@@ -110,6 +111,46 @@ describe('hasBalancedParentheses', () => {
     expect(hasBalancedParentheses('Tomatoes (Water, Citric Acid')).toBe(false)
     expect(hasBalancedParentheses('Tomatoes) Water')).toBe(false)
   })
+
+  it('rejects a group closed by the wrong delimiter', () => {
+    // The strawberry scan reads "Calcium Chloride}" where the label prints "Calcium Chloride)".
+    // Counting depth alone would call this balanced and publish it as label copy.
+    expect(hasBalancedParentheses('Tomatoes (Water, Citric Acid}')).toBe(false)
+    expect(hasBalancedParentheses('Tomatoes [Water, Citric Acid)')).toBe(false)
+    expect(hasBalancedParentheses('Sauce (Oil (Canola Oil), Whey)')).toBe(true)
+  })
+})
+
+describe('parseIngredientStatement', () => {
+  it('reads back a statement pasted exactly as the label prints it', () => {
+    expect(
+      parseIngredientStatement('Diced Tomatoes (Tomatoes, Citric Acid), Water and Spices.')
+    ).toEqual(['Diced Tomatoes (Tomatoes, Citric Acid)', 'Water', 'Spices'])
+  })
+
+  it('does not leave the conjunction or the period on the last ingredient', () => {
+    // Otherwise the storefront renders "... and and Spices.." on the next page load.
+    const ingredients = parseIngredientStatement('Water, Garlic and Spices.')
+
+    expect(ingredients[ingredients.length - 1]).toBe('Spices')
+    expect(formatIngredientStatement(ingredients)).toBe('Water, Garlic and Spices.')
+  })
+
+  it('handles an Oxford comma before the conjunction', () => {
+    expect(parseIngredientStatement('Spices, Salt, and Citric Acid.')).toEqual([
+      'Spices',
+      'Salt',
+      'Citric Acid',
+    ])
+  })
+
+  it('leaves an ordinary comma-separated list alone', () => {
+    expect(parseIngredientStatement('Tomatoes, Onions, Garlic')).toEqual([
+      'Tomatoes',
+      'Onions',
+      'Garlic',
+    ])
+  })
 })
 
 describe('parseLabelIngredients', () => {
@@ -189,5 +230,45 @@ describe('parseLabelIngredients', () => {
     const { warnings } = parseLabelIngredients('Ingredients: Tomatillos, Onions, Salt')
 
     expect(warnings.some((warning) => warning.includes('no closing period'))).toBe(true)
+  })
+
+  it('warns when OCR closed a group with the wrong delimiter', () => {
+    const { warnings } = parseLabelIngredients(
+      'Ingredients: Diced Tomatoes (Tomatoes, Citric Acid, Calcium Chloride}, Water and Salt.'
+    )
+
+    expect(warnings.some((warning) => warning.includes('unbalanced parentheses'))).toBe(true)
+  })
+
+  it('stops at a wide gap rather than reading on into other label copy', () => {
+    // The cilantro scans put border marks and marketing copy below the statement.
+    const { ingredients, warnings } = parseLabelIngredients(
+      'Ingredients: Green Chilies (Chilies, Salt), Onions, Cilantro,\n\nJy\n\nOL\n\nAlways Great over Chicken, Pork or Fish.'
+    )
+
+    expect(ingredients).toEqual(['Green Chilies (Chilies, Salt)', 'Onions', 'Cilantro'])
+    expect(warnings.some((warning) => warning.includes('no closing period'))).toBe(true)
+  })
+
+  it('warns when a sentence one blank line down was read as ingredients', () => {
+    // Too narrow a gap for the layout rule, so the copy is caught by how it reads.
+    const { warnings } = parseLabelIngredients(
+      'Ingredients: Onions, Cilantro,\n\nAlways Great over Chicken, Pork or Fish.'
+    )
+
+    expect(warnings.some((warning) => warning.includes('reads as label copy'))).toBe(true)
+  })
+
+  it('does not mistake a real sub-ingredient group for label copy', () => {
+    // "Contains 2% or less Water" is printed inside the parentheses on the queso label.
+    const { ingredients, warnings } = parseLabelIngredients(
+      'Ingredients: Cheddar Cheese Sauce (Oil (Canola Oil, Soybean Oil), Contains 2% or less Water) and Salt.'
+    )
+
+    expect(warnings).toEqual([])
+    expect(ingredients).toEqual([
+      'Cheddar Cheese Sauce (Oil (Canola Oil, Soybean Oil), Contains 2% or less Water)',
+      'Salt',
+    ])
   })
 })

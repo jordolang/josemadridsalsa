@@ -12,8 +12,9 @@
 
 // OCR sometimes prints a brace or bracket where the label has a paren, so all
 // three count as sub-ingredient delimiters.
-const OPENERS = new Set(['(', '[', '{'])
-const CLOSERS = new Set([')', ']', '}'])
+const CLOSER_FOR: Record<string, string> = { '(': ')', '[': ']', '{': '}' }
+const OPENERS = new Set(Object.keys(CLOSER_FOR))
+const CLOSERS = new Set(Object.values(CLOSER_FOR))
 
 // Headers that follow the ingredient statement on a Jose Madrid label.
 const STATEMENT_TERMINATORS =
@@ -22,6 +23,12 @@ const STATEMENT_TERMINATORS =
 // A statement never runs longer than this. The cap keeps a label whose OCR lost
 // the closing period from swallowing the rest of the page.
 const MAX_STATEMENT_LINES = 15
+
+// A line this short is border decoration the scan misread, not an ingredient.
+const JUNK_LINE_LENGTH = 2
+
+// How many blank or junk lines the statement may span before it is treated as finished.
+const MAX_GAP_LINES = 2
 
 export interface IngredientEntry {
   sortOrder: number
@@ -64,17 +71,22 @@ export function formatIngredientStatement(parts: string[]): string {
   return `${cleaned.slice(0, -1).join(', ')} and ${last}.`
 }
 
-/** True when every `(`, `[` and `{` in the text is closed in order. */
+/**
+ * True when every `(`, `[` and `{` is closed in order by its own closer.
+ *
+ * The delimiter type matters, not just the nesting depth: the strawberry scan reads
+ * `Calcium Chloride}` where the label prints `Calcium Chloride)`, and counting depth alone would
+ * call that balanced and publish it as regulated label copy.
+ */
 export function hasBalancedParentheses(text: string): boolean {
-  let depth = 0
+  const expected: string[] = []
+
   for (const char of text) {
-    if (OPENERS.has(char)) depth++
-    else if (CLOSERS.has(char)) {
-      depth--
-      if (depth < 0) return false
-    }
+    if (OPENERS.has(char)) expected.push(CLOSER_FOR[char])
+    else if (CLOSERS.has(char) && expected.pop() !== char) return false
   }
-  return depth === 0
+
+  return expected.length === 0
 }
 
 /**
@@ -131,8 +143,7 @@ export function parseLabelIngredients(labelText: string): ParsedLabel {
     }
   }
 
-  const parts = splitIngredientList(extracted.statement).map(cleanPart).filter(Boolean)
-  const ingredients = splitTrailingConjunction(parts).map(cleanPart).filter(Boolean)
+  const ingredients = parseIngredientStatement(extracted.statement)
 
   const warnings: string[] = []
   if (!extracted.closed) {
@@ -146,15 +157,34 @@ export function parseLabelIngredients(labelText: string): ParsedLabel {
     if (!hasBalancedParentheses(ingredient)) {
       warnings.push(`unbalanced parentheses in "${ingredient}"`)
     }
+    if (looksLikeProse(ingredient)) {
+      warnings.push(`"${ingredient}" reads as label copy rather than an ingredient`)
+    }
   }
 
   return { ingredients, warnings }
+}
+
+/**
+ * Split a written-out ingredient statement into one ingredient per entry.
+ *
+ * Accepts the statement exactly as it is printed or pasted — `A (a1, a2), B, C and D.` — and
+ * undoes only the sentence assembly: the closing period, the conjunction before the final
+ * ingredient, and the `and` an Oxford comma leaves stranded at the front of a part.
+ * `formatIngredientStatement` puts those back.
+ */
+export function parseIngredientStatement(statement: string): string[] {
+  const withoutPeriod = statement.trim().replace(/\.\s*$/, '')
+  const parts = splitIngredientList(withoutPeriod).map(cleanPart).filter(Boolean)
+
+  return splitTrailingConjunction(parts).map(cleanPart).filter(Boolean)
 }
 
 function extractStatement(labelText: string): { statement: string; closed: boolean } | null {
   const lines = labelText.split('\n')
   const collected: string[] = []
   let started = false
+  let gap = 0
 
   for (const rawLine of lines) {
     const line = rawLine.trim()
@@ -170,10 +200,21 @@ function extractStatement(labelText: string): { statement: string; closed: boole
 
     // The nutrition panel always follows the statement.
     if (STATEMENT_TERMINATORS.test(line)) break
-    if (line) collected.push(line)
 
-    // The statement runs to its closing period; blank lines before that are OCR
-    // column breaks, not the end of it.
+    // A blank line, or the stray one- and two-character marks OCR reads off the label border,
+    // is a column break rather than the end of the statement — so long as there is only one of
+    // them. A wider gap means the scan has moved on to other copy, and reading past it would
+    // publish marketing text as ingredients.
+    if (line.length <= JUNK_LINE_LENGTH) {
+      gap++
+      if (gap >= MAX_GAP_LINES && hasBalancedParentheses(collected.join(' '))) break
+      continue
+    }
+
+    gap = 0
+    collected.push(line)
+
+    // The statement runs to its closing period.
     if (topLevelIndexOf(collected.join(' '), '.') !== -1) break
     if (collected.length >= MAX_STATEMENT_LINES) break
   }
@@ -193,6 +234,35 @@ function extractStatement(labelText: string): { statement: string; closed: boole
   const statement = (end === -1 ? joined : joined.slice(0, end)).trim()
 
   return statement ? { statement, closed: end !== -1 } : null
+}
+
+/**
+ * Does this read as label copy rather than an ingredient?
+ *
+ * Ingredients are printed in title case on these labels, so a lower-case word outside the
+ * parentheses means the scan has run into a sentence — `Always Great over Chicken, Pork or Fish.`
+ * sits one blank line below the statement on the cilantro labels and would otherwise be published
+ * as two ingredients. Sub-ingredient groups are exempt: `Oil (Contains 2% or less Water)` is real.
+ */
+function looksLikeProse(ingredient: string): boolean {
+  return outsideGroups(ingredient)
+    .split(/\s+/)
+    .filter((word) => /^\p{L}/u.test(word))
+    .some((word) => /^\p{Ll}/u.test(word))
+}
+
+/** The text of an ingredient with every parenthesised group removed, nesting included. */
+function outsideGroups(text: string): string {
+  let depth = 0
+  let outside = ''
+
+  for (const char of text) {
+    if (OPENERS.has(char)) depth++
+    else if (CLOSERS.has(char)) depth = Math.max(0, depth - 1)
+    else if (depth === 0) outside += char
+  }
+
+  return outside
 }
 
 /** Strip OCR gutter marks and the conjunction an Oxford comma leaves behind. */

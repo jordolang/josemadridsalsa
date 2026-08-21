@@ -178,10 +178,16 @@ the root `package.json` is canonical.
   nesting, order, casing and repeated names are preserved, and the trailing "and" conjunction is
   restored on display. The scraper is now `scripts/parse-ingredients.ts`; it reads through the column
   breaks OCR leaves mid-statement and, rather than publishing text it cannot vouch for, reports
-  labels whose scan has no ingredient statement, no closing period, or an unclosed parenthesis.
+  labels whose scan has no ingredient statement, no closing period, a group closed by the wrong
+  delimiter, or an entry that reads as label copy rather than an ingredient — the cilantro labels
+  print "Always Great over Chicken, Pork or Fish." right below the statement. 18 of the 30 scans
+  come through clean; the rest are named for re-scanning.
 
-  The same flattening ran on every other write path, so each now splits parenthesis-aware too: the
-  admin product form (which re-mangled the statement on any save) and the CSV/Excel product import.
+  The same flattening ran on every other write path, so each now parses the written statement
+  instead: the admin product form (which re-mangled the statement on any save) and the CSV/Excel
+  product import. Both accept a label pasted verbatim — the closing period and the final "and" are
+  undone on the way in and put back on the way out, rather than stored as part of the last
+  ingredient.
   `db:seed:nutrition` additionally writes the label statement back to `Product.ingredients`, which
   feeds search, product feeds, the TikTok Shop export and the AI index — run it to correct the
   stored listings.
