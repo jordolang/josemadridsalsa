@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import Link from 'next/link'
 import { BOOKING_STATUSES, isDeadStatus, statusStyle } from './_components/event-status'
+import WhereIsJoseWeek from './_components/WhereIsJoseWeek'
 import {
   DEFAULT_FILTERS,
   filterEvents,
@@ -290,18 +291,22 @@ export default function EventsPage() {
             <p className="text-sm text-muted-foreground">Special events marked for the "Where is Jose?" feature</p>
           </div>
         </div>
-        {whereIsJoseEvents.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground/60" />
-            <p>No "Where is Jose?" events scheduled</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {whereIsJoseEvents.map(event => (
-              <EventCard key={event.id} event={event} onRefresh={fetchEvents} />
-            ))}
-          </div>
-        )}
+        <WhereIsJoseWeek events={events} loading={loading} onRefresh={fetchEvents} />
+
+        <div className="mt-6 border-t pt-6">
+          {whereIsJoseEvents.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground/60" />
+              <p>No "Where is Jose?" events scheduled</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {whereIsJoseEvents.map(event => (
+                <EventCard key={event.id} event={event} onRefresh={fetchEvents} />
+              ))}
+            </div>
+          )}
+        </div>
       </Card>
 
       {/* Booking pipeline */}

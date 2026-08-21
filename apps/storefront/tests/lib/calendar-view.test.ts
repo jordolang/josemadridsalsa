@@ -4,6 +4,11 @@ import {
   MAX_EVENT_SPAN_DAYS,
   dayKey,
   eventDays,
+  shiftWeek,
+  weekBounds,
+  weekDays,
+  weekRangeLabel,
+  weekStart,
   weekendDays,
   weekendStart,
 } from '@/lib/events/calendar-view'
@@ -81,5 +86,67 @@ describe('eventDays', () => {
 
   it('collapses to the start day for an unparseable end', () => {
     expect(eventDays(iso(2026, 7, 24), 'not-a-date').map(dayKey)).toEqual(['2026-07-24'])
+  })
+})
+
+describe('weekDays', () => {
+  it('returns Sunday through Saturday of the containing week', () => {
+    // Thu 2026-08-20 sits in the week of Sun 2026-08-16.
+    expect(weekDays(at(2026, 8, 20)).map(dayKey)).toEqual([
+      '2026-08-16',
+      '2026-08-17',
+      '2026-08-18',
+      '2026-08-19',
+      '2026-08-20',
+      '2026-08-21',
+      '2026-08-22',
+    ])
+  })
+
+  it('treats Sunday as the first day of its own week, not the last', () => {
+    expect(dayKey(weekDays(at(2026, 8, 16))[0])).toBe('2026-08-16')
+  })
+
+  it('ignores the time of day', () => {
+    expect(dayKey(weekStart(at(2026, 8, 20, 23)))).toBe('2026-08-16')
+  })
+})
+
+describe('shiftWeek', () => {
+  it('steps backwards a week at a time', () => {
+    expect(dayKey(shiftWeek(at(2026, 8, 20), -1))).toBe('2026-08-09')
+  })
+
+  it('steps forwards a week at a time', () => {
+    expect(dayKey(shiftWeek(at(2026, 8, 20), 2))).toBe('2026-08-30')
+  })
+
+  it('crosses a year boundary', () => {
+    expect(dayKey(shiftWeek(at(2026, 12, 30), 1))).toBe('2027-01-03')
+  })
+})
+
+describe('weekBounds', () => {
+  it('is half-open, so the next Sunday belongs to the next week', () => {
+    const { start, end } = weekBounds(at(2026, 8, 20))
+    expect(dayKey(start)).toBe('2026-08-16')
+    expect(dayKey(end)).toBe('2026-08-23')
+    expect(end.getTime() - start.getTime()).toBe(7 * 86_400_000)
+  })
+})
+
+describe('weekRangeLabel', () => {
+  it('collapses the repeated month', () => {
+    expect(weekRangeLabel(at(2026, 8, 20))).toBe('Aug 16 – 22, 2026')
+  })
+
+  it('spells out both months across a month boundary', () => {
+    // Week of Sun 2026-08-30 runs into September.
+    expect(weekRangeLabel(at(2026, 8, 31))).toBe('Aug 30 – Sep 5, 2026')
+  })
+
+  it('spells out both years across a year boundary', () => {
+    // Week of Sun 2026-12-27 runs into 2027.
+    expect(weekRangeLabel(at(2026, 12, 28))).toBe('Dec 27, 2026 – Jan 2, 2027')
   })
 })

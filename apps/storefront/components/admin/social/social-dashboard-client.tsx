@@ -45,6 +45,8 @@ type Props = {
   canSchedule: boolean
   canPublish: boolean
   initialTab?: DashboardTab
+  /** Prefilled composer body, threaded through from the ?content= query param. */
+  initialContent?: string
 }
 
 export function SocialDashboardClient({
@@ -61,6 +63,7 @@ export function SocialDashboardClient({
   canSchedule,
   canPublish,
   initialTab = 'overview',
+  initialContent,
 }: Props) {
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab)
 
@@ -85,6 +88,7 @@ export function SocialDashboardClient({
           accounts={accounts}
           canSchedule={canSchedule}
           canPublish={canPublish}
+          initialContent={initialContent}
         />
       )}
 

@@ -152,6 +152,16 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
+- **Search-result metadata on `/laperla` and `/live` fell outside the documented limits.** The
+  La Perla page's title ran 67 characters and its description 223, so Google truncated the
+  description partway through "the stone-ground white corn" — cutting off the Jose Madrid Salsa
+  connection that is the page's reason for existing. The `/live` title ran only 24 characters.
+  Both now sit inside the 30–60 title / 160-character description range; La Perla's street address
+  moves out of the description and stays available in the page's structured data.
+- **`/live` built its metadata by hand instead of through `createMetadata`.** It was the only one
+  of these public pages declaring a bare `Metadata` object, so it shipped without the OpenGraph and
+  Twitter card tags its siblings get and fell back to the default share image with no card markup.
+  It now goes through the shared helper like the rest of the `(public)` routes.
 - **Dark mode rendered several sections as light text on a light background.** The `verde` and
   `chile` colour scales in `apps/storefront/tailwind.config.ts` stopped at `900`, so every
   `dark:*-verde-950` / `dark:*-chile-950` utility referenced a shade that did not exist and Tailwind
