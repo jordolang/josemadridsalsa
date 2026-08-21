@@ -21,7 +21,7 @@ describe('resolveRateConfig', () => {
       weightSurchargeBaseCents: null,
       weightSurchargePerLbCents: undefined,
       weightSurchargeThresholdLb: -3, // invalid → default
-      internationalCents: null as never,
+      internationalRateCents: null,
       stateSurcharges: null,
     })
     expect(config.flatRateCents).toBe(799) // overridden
@@ -72,6 +72,10 @@ describe('parseStateSurcharges', () => {
     // The key behaviour: a saved-but-empty map is "no surcharge", NOT the default map restored.
     expect(parseStateSurcharges({}, fallback)).toEqual({})
     expect(parseStateSurcharges({ zz: -1, bad: 'x' }, fallback)).toEqual({})
+  })
+
+  it('drops an absurdly large multiplier that would overflow a quote to Infinity', () => {
+    expect(parseStateSurcharges({ AK: 1e6, HI: 2 }, fallback)).toEqual({ HI: 2 })
   })
 })
 

@@ -24,28 +24,37 @@ import { resolveRateConfig } from '@/lib/shipping/rate-config'
 import { CheckCircle2, XCircle, Truck } from 'lucide-react'
 import { ShippingRatePreview } from './ShippingRatePreview'
 
-/** Dollars string → whole cents, or null when blank/invalid (falls back to the built-in default). */
+// Safe upper bounds. Money is stored in a Prisma `Int` (cents), so cap it well under the 2^31-1
+// column limit; an out-of-range field is treated as blank (→ the built-in default) rather than
+// overflowing the column on save or producing an unusable quote.
+const MAX_RATE_CENTS = 100_000_00 // $100,000
+const MAX_THRESHOLD_LB = 100_000
+const MAX_MULTIPLIER = 100
+
+/** Dollars string → whole cents, or null when blank/invalid/out of range (falls back to the default). */
 function dollarsToCents(value: FormDataEntryValue | null): number | null {
   const s = String(value ?? '').trim()
   if (!s) return null
   const n = Number(s)
-  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : null
+  if (!Number.isFinite(n) || n < 0) return null
+  const cents = Math.round(n * 100)
+  return cents <= MAX_RATE_CENTS ? cents : null
 }
 
-/** Whole-number string → int, or null when blank/invalid. */
+/** Whole-number string → int, or null when blank/invalid/out of range. */
 function toIntOrNull(value: FormDataEntryValue | null): number | null {
   const s = String(value ?? '').trim()
   if (!s) return null
   const n = Number(s)
-  return Number.isInteger(n) && n >= 0 ? n : null
+  return Number.isInteger(n) && n >= 0 && n <= MAX_THRESHOLD_LB ? n : null
 }
 
-/** Multiplier string → positive number, or null when blank/invalid. */
+/** Multiplier string → positive number, or null when blank/invalid/out of range. */
 function toMultiplierOrNull(value: FormDataEntryValue | null): number | null {
   const s = String(value ?? '').trim()
   if (!s) return null
   const n = Number(s)
-  return Number.isFinite(n) && n > 0 ? n : null
+  return Number.isFinite(n) && n > 0 && n <= MAX_MULTIPLIER ? n : null
 }
 
 type ConnectionStatus = 'connected' | 'not_configured' | 'error'
@@ -490,6 +499,7 @@ export default async function ShippingSettingsPage() {
                   type="number"
                   step="0.01"
                   min="0"
+                  max="100000"
                   defaultValue={dollars(rateConfig.flatRateCents)}
                   disabled={!canManage}
                 />
@@ -503,6 +513,7 @@ export default async function ShippingSettingsPage() {
                   type="number"
                   step="0.01"
                   min="0"
+                  max="100000"
                   defaultValue={dollars(rateConfig.internationalRateCents)}
                   disabled={!canManage}
                 />
@@ -526,6 +537,7 @@ export default async function ShippingSettingsPage() {
                     type="number"
                     step="1"
                     min="0"
+                    max="100000"
                     defaultValue={String(rateConfig.weightSurchargeThresholdLb)}
                     disabled={!canManage}
                   />
@@ -538,6 +550,7 @@ export default async function ShippingSettingsPage() {
                     type="number"
                     step="0.01"
                     min="0"
+                    max="100000"
                     defaultValue={dollars(rateConfig.weightSurchargeBaseCents)}
                     disabled={!canManage}
                   />
@@ -550,6 +563,7 @@ export default async function ShippingSettingsPage() {
                     type="number"
                     step="0.01"
                     min="0"
+                    max="100000"
                     defaultValue={dollars(rateConfig.weightSurchargePerLbCents)}
                     disabled={!canManage}
                   />
@@ -575,6 +589,7 @@ export default async function ShippingSettingsPage() {
                       type="number"
                       step="0.1"
                       min="0"
+                      max="100"
                       defaultValue={rateConfig.stateSurcharges[state]?.toString() ?? ''}
                       disabled={!canManage}
                     />

@@ -549,8 +549,8 @@ export async function calculateShipping(
 
     console.warn('[Shipping Calculator] Falling back to estimate-based rates')
 
-    // Return estimate rates rather than failing checkout
-    return calculateEstimateRates(input, true)
+    // Return estimate rates rather than failing checkout — with the admin's configured presets.
+    return calculateEstimateRates(input, true, rateConfig)
   }
 }
 

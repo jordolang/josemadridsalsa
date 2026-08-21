@@ -54,6 +54,13 @@ export interface StoredRateConfig {
   stateSurcharges?: unknown
 }
 
+/**
+ * Sane upper bound for a state cost multiplier. Anything above this is a data-entry mistake, and
+ * without a cap a huge value would overflow `rate × multiplier` to `Infinity` and reach checkout as
+ * an unusable shipping cost, so an out-of-range multiplier is dropped (that state quotes at ×1).
+ */
+export const MAX_STATE_MULTIPLIER = 100
+
 /** A non-negative integer stored value, or the default when the stored value is absent/invalid. */
 function intOrDefault(value: number | null | undefined, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.round(value) : fallback
@@ -76,7 +83,12 @@ export function parseStateSurcharges(
   if (typeof value !== 'object' || Array.isArray(value)) return fallback
   const out: Record<string, number> = {}
   for (const [state, multiplier] of Object.entries(value as Record<string, unknown>)) {
-    if (typeof multiplier === 'number' && Number.isFinite(multiplier) && multiplier > 0) {
+    if (
+      typeof multiplier === 'number' &&
+      Number.isFinite(multiplier) &&
+      multiplier > 0 &&
+      multiplier <= MAX_STATE_MULTIPLIER
+    ) {
       out[state.toUpperCase()] = multiplier
     }
   }
