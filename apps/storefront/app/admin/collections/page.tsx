@@ -53,29 +53,41 @@ export default function CollectionsPage() {
     try {
       const all: CollectionListItem[] = []
       const seen = new Set<string>()
-      // Walk pages until the last one — a short page, or once we've collected the API's reported
-      // total. `total` (always returned by the endpoint) bounds the loop, so there is no arbitrary
-      // page cap that could silently hide the tail. Offset paging over a set that changes between
-      // requests could repeat a row shifted across a page boundary, so de-dupe by id.
-      let total = Infinity
-      for (let page = 1; all.length < total; page++) {
-        const response = await fetch(`/api/admin/collections?page=${page}&limit=${PAGE_SIZE}`)
-        if (!response.ok) {
-          setLoadError(true)
-          return
-        }
-        const data = await response.json()
-        const batch: CollectionListItem[] = data.collections || []
+
+      const addUnique = (batch: CollectionListItem[]) => {
         for (const c of batch) {
           if (!seen.has(c.id)) {
             seen.add(c.id)
             all.push(c)
           }
         }
-        if (typeof data.total === 'number') total = data.total
-        // A short page is the last page — stop even if a concurrent insert bumped `total`.
-        if (batch.length < PAGE_SIZE) break
       }
+
+      // Fetch page 1, then derive a fixed page count from the reported total and fetch the rest.
+      // Bounding by the initial total (rather than looping on a live `all.length < total`) makes
+      // termination deterministic — a set that keeps growing during paging can't spin the loop —
+      // while still sizing to the real data so nothing is silently capped. Offset paging over a
+      // changing set could repeat a row shifted across a page boundary, so de-dupe by id.
+      const firstResponse = await fetch(`/api/admin/collections?page=1&limit=${PAGE_SIZE}`)
+      if (!firstResponse.ok) {
+        setLoadError(true)
+        return
+      }
+      const firstData = await firstResponse.json()
+      addUnique(firstData.collections || [])
+      const total = typeof firstData.total === 'number' ? firstData.total : all.length
+      const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+      for (let page = 2; page <= pageCount; page++) {
+        const response = await fetch(`/api/admin/collections?page=${page}&limit=${PAGE_SIZE}`)
+        if (!response.ok) {
+          setLoadError(true)
+          return
+        }
+        const data = await response.json()
+        addUnique(data.collections || [])
+      }
+
       setCollections(all)
       setLoadError(false)
     } catch (error) {
