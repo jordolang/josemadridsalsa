@@ -138,6 +138,15 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
+- **Dark mode rendered several sections as light text on a light background.** The `verde` and
+  `chile` colour scales in `apps/storefront/tailwind.config.ts` stopped at `900`, so every
+  `dark:*-verde-950` / `dark:*-chile-950` utility referenced a shade that did not exist and Tailwind
+  emitted no rule for it at all. The affected blocks kept their light `-50` background in dark mode
+  while the CSS-variable text colours (`text-foreground`, `text-muted-foreground`) correctly flipped
+  to near-white — most visibly the homepage "Fundraise With Jose!" fundraising promo, whose body
+  copy was effectively invisible. Both scales now define `950` (`#052e16` and `#451a03`), which
+  restores the intended dark backgrounds for the promo, the gift-box quick add, the location map
+  fade, and the developer console's stats, changelog, timeline, and skills panels.
 - **A PO Box order placed after a street-address order to the same ZIP was quoted a carrier that
   cannot deliver to it.** `/api/checkout/calculate-shipping` caches quotes for five minutes, but its
   cache key was built from the cart plus city, state and ZIP only — the street lines and the country

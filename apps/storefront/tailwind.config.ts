@@ -33,7 +33,8 @@ const config: Config = {
   				'600': '#16a34a',
   				'700': '#15803d',
   				'800': '#166534',
-  				'900': '#14532d'
+  				'900': '#14532d',
+  				'950': '#052e16'
   			},
   			chile: {
   				'50': '#fffbeb',
@@ -45,7 +46,8 @@ const config: Config = {
   				'600': '#d97706',
   				'700': '#b45309',
   				'800': '#92400e',
-  				'900': '#78350f'
+  				'900': '#78350f',
+  				'950': '#451a03'
   			},
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
