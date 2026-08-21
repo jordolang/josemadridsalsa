@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **The FAQ page is reachable from the main navigation.** `/faq` already rendered the questions and
+  categories managed in Content → FAQs, and it was already in the sitemap, but nothing on the site
+  linked to it — a visitor could only arrive by typing the URL. It now sits under About in the
+  header, on desktop and mobile.
 - **Picante AI chat launcher.** The storefront's floating chat pill is replaced by the animated
   José Madrid Salsa pepper mascot. Picante walks within a bounded bottom-right track, opens the
   existing AI/live-handoff panel when clicked or keyboard-activated, idles while chat is open, and

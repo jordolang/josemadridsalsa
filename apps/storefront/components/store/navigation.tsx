@@ -85,6 +85,7 @@ const NAV_GROUPS: NavGroup[] = [
       { name: "The Heat Index", href: "/heat-index", description: "Stories, recipes, road notes, and salsa lore" },
       { name: "Recipes", href: "/recipes", description: "Cooking with our salsas" },
       { name: "Find Us", href: "/find-us", description: "Retailers near you" },
+      { name: "FAQ", href: "/faq", description: "Ordering, shipping, fundraising and wholesale answers" },
     ],
   },
   {
