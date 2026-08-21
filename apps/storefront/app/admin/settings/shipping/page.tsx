@@ -20,8 +20,42 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { ALLOWED_CARRIERS, CARRIER_LABELS } from '@/lib/shipping-carriers'
 import { getShippingRates, type ShipmentRequest } from '@/lib/shipping-api'
+import { resolveRateConfig } from '@/lib/shipping/rate-config'
 import { CheckCircle2, XCircle, Truck } from 'lucide-react'
 import { ShippingRatePreview } from './ShippingRatePreview'
+
+// Safe upper bounds. Money is stored in a Prisma `Int` (cents), so cap it well under the 2^31-1
+// column limit; an out-of-range field is treated as blank (→ the built-in default) rather than
+// overflowing the column on save or producing an unusable quote.
+const MAX_RATE_CENTS = 100_000_00 // $100,000
+const MAX_THRESHOLD_LB = 100_000
+const MAX_MULTIPLIER = 100
+
+/** Dollars string → whole cents, or null when blank/invalid/out of range (falls back to the default). */
+function dollarsToCents(value: FormDataEntryValue | null): number | null {
+  const s = String(value ?? '').trim()
+  if (!s) return null
+  const n = Number(s)
+  if (!Number.isFinite(n) || n < 0) return null
+  const cents = Math.round(n * 100)
+  return cents <= MAX_RATE_CENTS ? cents : null
+}
+
+/** Whole-number string → int, or null when blank/invalid/out of range. */
+function toIntOrNull(value: FormDataEntryValue | null): number | null {
+  const s = String(value ?? '').trim()
+  if (!s) return null
+  const n = Number(s)
+  return Number.isInteger(n) && n >= 0 && n <= MAX_THRESHOLD_LB ? n : null
+}
+
+/** Multiplier string → positive number, or null when blank/invalid/out of range. */
+function toMultiplierOrNull(value: FormDataEntryValue | null): number | null {
+  const s = String(value ?? '').trim()
+  if (!s) return null
+  const n = Number(s)
+  return Number.isFinite(n) && n > 0 && n <= MAX_MULTIPLIER ? n : null
+}
 
 type ConnectionStatus = 'connected' | 'not_configured' | 'error'
 
@@ -222,6 +256,50 @@ async function previewShippingRates(formData: FormData) {
   }
 }
 
+async function saveRatePresets(formData: FormData) {
+  'use server'
+
+  const user = await getCurrentUser()
+  if (!user || !(await hasPermission(user, 'settings:write'))) {
+    throw new Error('Unauthorized')
+  }
+
+  // Only the three remote states have a multiplier today; a blank field drops that state, so it
+  // quotes at ×1. The whole map is stored explicitly (even when empty) so clearing every field
+  // means "no surcharge" — storing null here would instead be read back as the built-in defaults.
+  const surcharges: Record<string, number> = {}
+  for (const state of ['AK', 'HI', 'PR'] as const) {
+    const value = toMultiplierOrNull(formData.get(`surcharge_${state}`))
+    if (value !== null) surcharges[state] = value
+  }
+
+  // Touches only the rate-preset columns, so origin and carrier settings are left untouched.
+  const presetData = {
+    flatRateCents: dollarsToCents(formData.get('flatRate')),
+    weightSurchargeBaseCents: dollarsToCents(formData.get('weightBase')),
+    weightSurchargePerLbCents: dollarsToCents(formData.get('weightPerLb')),
+    weightSurchargeThresholdLb: toIntOrNull(formData.get('weightThreshold')),
+    internationalRateCents: dollarsToCents(formData.get('internationalRate')),
+    stateSurcharges: surcharges,
+  }
+
+  const settings = await prisma.shippingSettings.upsert({
+    where: { singleton: 'singleton' },
+    create: { ...presetData, updatedById: user.id },
+    update: { ...presetData, updatedById: user.id },
+  })
+
+  await logAudit({
+    userId: user.id,
+    action: 'shipping_settings.rate_presets',
+    entityType: 'ShippingSettings',
+    entityId: settings.id,
+    changes: { ...presetData, stateSurcharges: surcharges },
+  })
+
+  revalidatePath('/admin/settings/shipping')
+}
+
 export default async function ShippingSettingsPage() {
   const user = await getCurrentUser()
 
@@ -242,6 +320,10 @@ export default async function ShippingSettingsPage() {
     zipCode?: string
     country?: string
   } | null
+
+  // Effective rate presets (stored values merged over the built-in defaults) for the form defaults.
+  const rateConfig = resolveRateConfig(settings)
+  const dollars = (cents: number) => (cents / 100).toFixed(2)
 
   const availableCarriers = ALLOWED_CARRIERS.map((c) => ({
     value: c,
@@ -392,6 +474,134 @@ export default async function ShippingSettingsPage() {
                   <Button type="submit">Save shipping settings</Button>
                 </div>
               </>
+            )}
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Flat-rate presets</CardTitle>
+          <CardDescription>
+            The rates quoted when a live carrier rate isn&apos;t available — no API key, an unset
+            origin, or a carrier outage. Live EasyPost rates, when available, are used ahead of
+            these. Leave a field blank to use the built-in default.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={saveRatePresets} className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="flatRate">Flat rate ($)</Label>
+                <Input
+                  id="flatRate"
+                  name="flatRate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100000"
+                  defaultValue={dollars(rateConfig.flatRateCents)}
+                  disabled={!canManage}
+                />
+                <p className="text-xs text-muted-foreground">Base domestic rate for a light order.</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="internationalRate">International rate ($)</Label>
+                <Input
+                  id="internationalRate"
+                  name="internationalRate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100000"
+                  defaultValue={dollars(rateConfig.internationalRateCents)}
+                  disabled={!canManage}
+                />
+                <p className="text-xs text-muted-foreground">Flat rate for any non-US destination.</p>
+              </div>
+            </div>
+
+            <fieldset className="space-y-4">
+              <legend className="text-sm font-medium text-foreground">Heavy-order surcharge</legend>
+              <p className="text-xs text-muted-foreground">
+                Above the threshold weight, the base flat rate is replaced by{' '}
+                <span className="whitespace-nowrap">base + per-pound × pounds-over-threshold</span>{' '}
+                when that is higher.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="weightThreshold">Threshold (lb)</Label>
+                  <Input
+                    id="weightThreshold"
+                    name="weightThreshold"
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="100000"
+                    defaultValue={String(rateConfig.weightSurchargeThresholdLb)}
+                    disabled={!canManage}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="weightBase">Base ($)</Label>
+                  <Input
+                    id="weightBase"
+                    name="weightBase"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100000"
+                    defaultValue={dollars(rateConfig.weightSurchargeBaseCents)}
+                    disabled={!canManage}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="weightPerLb">Per pound ($)</Label>
+                  <Input
+                    id="weightPerLb"
+                    name="weightPerLb"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100000"
+                    defaultValue={dollars(rateConfig.weightSurchargePerLbCents)}
+                    disabled={!canManage}
+                  />
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset className="space-y-4">
+              <legend className="text-sm font-medium text-foreground">Remote-state multipliers</legend>
+              <p className="text-xs text-muted-foreground">
+                The domestic rate is multiplied by this for the listed destinations. Leave blank for
+                no surcharge (×1).
+              </p>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {(['AK', 'HI', 'PR'] as const).map((state) => (
+                  <div key={state} className="space-y-2">
+                    <Label htmlFor={`surcharge_${state}`}>
+                      {state === 'AK' ? 'Alaska' : state === 'HI' ? 'Hawaii' : 'Puerto Rico'} (×)
+                    </Label>
+                    <Input
+                      id={`surcharge_${state}`}
+                      name={`surcharge_${state}`}
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      defaultValue={rateConfig.stateSurcharges[state]?.toString() ?? ''}
+                      disabled={!canManage}
+                    />
+                  </div>
+                ))}
+              </div>
+            </fieldset>
+
+            {canManage && (
+              <div className="flex justify-end">
+                <Button type="submit">Save rate presets</Button>
+              </div>
             )}
           </form>
         </CardContent>

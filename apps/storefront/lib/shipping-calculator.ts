@@ -12,6 +12,14 @@ import {
 import { prisma } from './prisma'
 import { describeMissingOrigin, getShippingOrigin } from './shipping/origin'
 import { packJars } from './shipping/jar-packing'
+import {
+  DEFAULT_RATE_CONFIG,
+  estimateDomesticCost,
+  flatEstimateCost,
+  getShippingRateConfig,
+  internationalCost,
+  type ShippingRateConfig,
+} from './shipping/rate-config'
 
 /**
  * One line of an order, as the shipping calculator needs it.
@@ -150,36 +158,15 @@ export function buildShippingItems<T extends { productId: string; quantity: numb
 }
 
 /**
- * Shipping rate configuration
- * Can be moved to database for dynamic configuration
+ * Estimated delivery windows for the estimate/fallback path. These are descriptive copy, not
+ * prices, so they stay here — the configurable *money* (flat rate, weight surcharge, international
+ * rate, state multipliers) now lives on the `ShippingSettings` singleton via
+ * `lib/shipping/rate-config.ts`.
  */
-const SHIPPING_RATES = {
-  // Flat rate shipping
-  FLAT_RATE: {
-    cost: 6.99,
-    estimatedDays: '3-5 business days',
-  },
-
-  // Weight-based shipping (per pound)
-  WEIGHT_BASED: {
-    baseRate: 4.99,
-    perPound: 0.5,
-    estimatedDays: '3-5 business days',
-  },
-
-  // International shipping (flat rate for simplicity)
-  INTERNATIONAL: {
-    cost: 24.99,
-    estimatedDays: '7-14 business days',
-  },
-
-  // State-specific rates (for states with higher shipping costs)
-  STATE_MULTIPLIERS: {
-    AK: 1.5, // Alaska
-    HI: 1.5, // Hawaii
-    PR: 2.0, // Puerto Rico
-  } as Record<string, number>,
-}
+const ESTIMATED_DAYS = {
+  standard: '3-5 business days',
+  international: '7-14 business days',
+} as const
 
 // The origin now comes from `lib/shipping/origin.ts`, which reads the admin setting first and the
 // environment second. It replaced a constant here that defaulted to `123 Main St, San Francisco,
@@ -382,16 +369,17 @@ function calculateParcelDimensions(
  */
 function calculateEstimateRates(
   input: ShippingCalculationInput,
-  markAsFallback = false
+  markAsFallback = false,
+  config: ShippingRateConfig = DEFAULT_RATE_CONFIG
 ): ShippingCalculationResult {
-  const { items, shippingAddress, subtotal } = input
+  const { items, shippingAddress } = input
 
   // International shipping
   if (shippingAddress.country !== 'US') {
     return {
-      shippingCost: SHIPPING_RATES.INTERNATIONAL.cost,
+      shippingCost: internationalCost(config),
       shippingMethod: 'International Shipping',
-      estimatedDelivery: SHIPPING_RATES.INTERNATIONAL.estimatedDays,
+      estimatedDelivery: ESTIMATED_DAYS.international,
       fallback: markAsFallback,
     }
   }
@@ -404,23 +392,13 @@ function calculateEstimateRates(
   // the original bug was exactly two paths measuring weight their own way.
   const totalPounds = calculateOrderParcel(items).weight / OUNCES_PER_POUND
 
-  // Base shipping cost (flat rate)
-  let baseCost = SHIPPING_RATES.FLAT_RATE.cost
-
-  // Apply weight-based pricing if items are heavy
-  if (totalPounds > WEIGHT_SURCHARGE_THRESHOLD_LB) {
-    baseCost = Math.max(
-      baseCost,
-      SHIPPING_RATES.WEIGHT_BASED.baseRate +
-        (totalPounds - WEIGHT_SURCHARGE_THRESHOLD_LB) * SHIPPING_RATES.WEIGHT_BASED.perPound
-    )
-  }
-
-  // Apply state multiplier for remote locations
-  const stateMultiplier =
-    SHIPPING_RATES.STATE_MULTIPLIERS[shippingAddress.state.toUpperCase()] || 1.0
-
-  const finalCost = baseCost * stateMultiplier
+  // Flat rate, bumped to the weight-based price over the threshold, then scaled by the state
+  // multiplier — all driven by the admin-configurable rate config.
+  const finalCost = estimateDomesticCost({
+    pounds: totalPounds,
+    state: shippingAddress.state,
+    config,
+  })
 
   // Build the single available option based on address type.
   // Standard shipping is the only method offered.
@@ -428,8 +406,8 @@ function calculateEstimateRates(
     {
       // Only USPS can deliver to a PO Box
       method: isPoBox ? 'USPS Ground Advantage' : 'Standard Shipping',
-      cost: parseFloat(finalCost.toFixed(2)),
-      estimatedDays: SHIPPING_RATES.FLAT_RATE.estimatedDays,
+      cost: finalCost,
+      estimatedDays: ESTIMATED_DAYS.standard,
     },
   ]
 
@@ -458,12 +436,16 @@ function calculateEstimateRates(
 export async function calculateShipping(
   input: ShippingCalculationInput
 ): Promise<ShippingCalculationResult> {
-  const { items, shippingAddress, subtotal } = input
+  const { items, shippingAddress } = input
+
+  // Admin-configurable flat-rate presets for any estimate/fallback below. Live carrier rates, when
+  // available, are used ahead of these and are unaffected. Never throws — defaults on any DB issue.
+  const rateConfig = await getShippingRateConfig()
 
   // For international shipping, fall back to estimate rates for now
   // TODO: Add international shipping API support
   if (shippingAddress.country !== 'US') {
-    return calculateEstimateRates(input, false)
+    return calculateEstimateRates(input, false, rateConfig)
   }
 
   // No origin means no honest carrier rate. Estimates are used instead and say so via `fallback`,
@@ -471,7 +453,7 @@ export async function calculateShipping(
   const originResult = await getShippingOrigin()
   if (!originResult.ok) {
     console.error(`[Shipping Calculator] ${describeMissingOrigin(originResult.missing)}`)
-    return calculateEstimateRates(input, true)
+    return calculateEstimateRates(input, true, rateConfig)
   }
 
   try {
@@ -514,7 +496,7 @@ export async function calculateShipping(
         // If no USPS rates available, fall back to estimates
         if (filteredRates.length === 0) {
           console.warn('[Shipping Calculator] No USPS rates available for PO Box, using estimates')
-          return calculateEstimateRates(input, true)
+          return calculateEstimateRates(input, true, rateConfig)
         }
       }
 
@@ -547,7 +529,7 @@ export async function calculateShipping(
     } else {
       // No rates returned - fall back to estimates
       console.warn('[Shipping Calculator] No rates returned from API, using estimates')
-      return calculateEstimateRates(input, true)
+      return calculateEstimateRates(input, true, rateConfig)
     }
   } catch (error) {
     console.error('[Shipping Calculator] Error calculating shipping:', error)
@@ -567,8 +549,8 @@ export async function calculateShipping(
 
     console.warn('[Shipping Calculator] Falling back to estimate-based rates')
 
-    // Return estimate rates rather than failing checkout
-    return calculateEstimateRates(input, true)
+    // Return estimate rates rather than failing checkout — with the admin's configured presets.
+    return calculateEstimateRates(input, true, rateConfig)
   }
 }
 
@@ -580,14 +562,13 @@ export async function getShippingEstimate(params: {
   state: string
   country?: string
 }): Promise<number> {
+  const config = await getShippingRateConfig()
+
   if (params.country && params.country !== 'US') {
-    return SHIPPING_RATES.INTERNATIONAL.cost
+    return internationalCost(config)
   }
 
-  const stateMultiplier =
-    SHIPPING_RATES.STATE_MULTIPLIERS[params.state.toUpperCase()] || 1.0
-
-  return parseFloat((SHIPPING_RATES.FLAT_RATE.cost * stateMultiplier).toFixed(2))
+  return flatEstimateCost(params.state, config)
 }
 
 /**
