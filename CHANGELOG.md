@@ -14,21 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
-- **A week-by-week calendar inside the Events tab's "Where is Jose?" card.** The tab already listed
-  the flagged events and there was a month grid on a separate page, but nothing let you look at a
-  single week and work in it. The card now opens on the current week: flagged events render solid,
-  every other booked show renders dimmed beside them so an empty-looking week is distinguishable
-  from a week with shows nobody has promoted yet, and application deadlines sit on the day they
-  fall. Weeks page backwards and forwards without limit — arrows, five week buttons for longer
-  jumps, "This week", and a date picker — and the list of flagged events stays below the grid.
+- **Configurable flat-rate shipping presets.** The rates the estimate/fallback path quotes — when a live carrier rate isn't available (no API key, an unset warehouse origin, a PO Box with no USPS rate, or a carrier outage) — were hardcoded constants in the calculator. They are now editable under **Settings → Shipping → Flat-rate presets**: the base flat rate, the heavy-order surcharge (threshold weight, base, and per-pound amount), the flat international rate, and the per-state multipliers for remote destinations (Alaska, Hawaii, Puerto Rico). Live EasyPost rates, when available, are still used ahead of these and are unaffected.
 
-  Clicking a day opens a panel for it: the day's events with their status, time and location; edit,
-  manifest and financials links; a one-click toggle to promote or demote a show from "Where is
-  Jose?"; and an add-event button that prefills the date and the flag. Each event can be shared —
-  details and link to the clipboard, a single-event `.ics`, a social post draft, or an email
-  campaign started from the Event Invitation template. The whole week exports as `.ics` or as the
-  20-column Show-import CSV, and every "Where is Jose?" event exports as one `.ics` covering all
-  dates.
+  The values live on the `ShippingSettings` singleton as whole cents (migration `20260821140000_add_shipping_rate_presets`, additive nullable columns) and are read at quote time by `lib/shipping/rate-config.ts`, which merges the stored row over the built-in defaults — so any field left blank falls back to exactly the number the calculator used before, and an unconfigured store's quotes don't change. The resolver never throws: a database problem falls through to the defaults so a quote is always available, the same posture as the origin resolver. The rate math and config resolution are pure and fully tested, and the move was verified to leave every existing shipping quote byte-for-byte identical (the calculator's `toFixed` rounding is preserved). Shipping is still charged on every order — there is no free-shipping path. The rate-preset form writes only its own columns, so saving presets leaves the origin and carrier settings untouched.
+
 - **The FAQ page is reachable from the main navigation.** `/faq` already rendered the questions and
   categories managed in Content → FAQs, and it was already in the sitemap, but nothing on the site
   linked to it — a visitor could only arrive by typing the URL. It now sits under About in the
