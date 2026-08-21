@@ -45,6 +45,10 @@ describe('resolveRateConfig', () => {
     expect(config.weightSurchargeThresholdLb).toBe(3)
     expect(config.stateSurcharges).toEqual({ AK: 2, HI: 1.25 }) // upcased
   })
+
+  it('keeps a saved-but-empty surcharge map as no surcharge (not the defaults)', () => {
+    expect(resolveRateConfig({ stateSurcharges: {} }).stateSurcharges).toEqual({})
+  })
 })
 
 describe('parseStateSurcharges', () => {
@@ -57,11 +61,17 @@ describe('parseStateSurcharges', () => {
     })
   })
 
-  it('falls back for a non-object, array, or empty result', () => {
+  it('falls back only when the value is absent or malformed', () => {
     expect(parseStateSurcharges(null, fallback)).toBe(fallback)
+    expect(parseStateSurcharges(undefined, fallback)).toBe(fallback)
     expect(parseStateSurcharges('nope', fallback)).toBe(fallback)
     expect(parseStateSurcharges(['AK'], fallback)).toBe(fallback)
-    expect(parseStateSurcharges({ zz: -1 }, fallback)).toBe(fallback) // nothing valid
+  })
+
+  it('honours an explicit object, even when it filters down to empty (admin cleared all → ×1)', () => {
+    // The key behaviour: a saved-but-empty map is "no surcharge", NOT the default map restored.
+    expect(parseStateSurcharges({}, fallback)).toEqual({})
+    expect(parseStateSurcharges({ zz: -1, bad: 'x' }, fallback)).toEqual({})
   })
 })
 

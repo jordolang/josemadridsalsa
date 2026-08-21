@@ -255,8 +255,9 @@ async function saveRatePresets(formData: FormData) {
     throw new Error('Unauthorized')
   }
 
-  // Only the three remote states have a multiplier today; a blank field drops that state (and an
-  // all-blank map falls back to the built-in defaults). Kept to the states the calculator shipped.
+  // Only the three remote states have a multiplier today; a blank field drops that state, so it
+  // quotes at ×1. The whole map is stored explicitly (even when empty) so clearing every field
+  // means "no surcharge" — storing null here would instead be read back as the built-in defaults.
   const surcharges: Record<string, number> = {}
   for (const state of ['AK', 'HI', 'PR'] as const) {
     const value = toMultiplierOrNull(formData.get(`surcharge_${state}`))
@@ -270,7 +271,7 @@ async function saveRatePresets(formData: FormData) {
     weightSurchargePerLbCents: dollarsToCents(formData.get('weightPerLb')),
     weightSurchargeThresholdLb: toIntOrNull(formData.get('weightThreshold')),
     internationalRateCents: dollarsToCents(formData.get('internationalRate')),
-    stateSurcharges: Object.keys(surcharges).length > 0 ? surcharges : Prisma.JsonNull,
+    stateSurcharges: surcharges,
   }
 
   const settings = await prisma.shippingSettings.upsert({

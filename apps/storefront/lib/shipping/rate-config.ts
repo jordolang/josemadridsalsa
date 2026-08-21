@@ -61,20 +61,26 @@ function intOrDefault(value: number | null | undefined, fallback: number): numbe
 
 /**
  * Read a stored state-surcharge map, keeping only entries whose value is a finite multiplier > 0.
- * A malformed JSON blob falls back to the default map rather than throwing or zeroing a rate.
+ *
+ * The distinction that matters: an **absent** value (null/undefined — the store never configured
+ * surcharges) falls back to the default map, but an **explicit object** the admin saved is honoured
+ * as-is, *including an empty one*. That's how clearing every multiplier means "no surcharge (×1)"
+ * rather than silently restoring the built-in AK/HI/PR defaults. A non-object/array blob is
+ * malformed and also falls back rather than zeroing a rate.
  */
 export function parseStateSurcharges(
   value: unknown,
   fallback: Record<string, number>
 ): Record<string, number> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback
+  if (value === null || value === undefined) return fallback
+  if (typeof value !== 'object' || Array.isArray(value)) return fallback
   const out: Record<string, number> = {}
   for (const [state, multiplier] of Object.entries(value as Record<string, unknown>)) {
     if (typeof multiplier === 'number' && Number.isFinite(multiplier) && multiplier > 0) {
       out[state.toUpperCase()] = multiplier
     }
   }
-  return Object.keys(out).length > 0 ? out : fallback
+  return out
 }
 
 /** Merge a stored (partially-null) row over the built-in defaults into a complete config. */
