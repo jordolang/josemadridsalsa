@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getIndexedContent } from '@/lib/ai-rag/content-cache'
 import { searchContent, formatContextForLLM } from '@/lib/ai-rag/retriever'
+import { PICANTE_SYSTEM_PROMPT } from '@/lib/ai-chat/persona'
 import { getCurrentUser } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import {
@@ -32,8 +33,7 @@ const ChatRequestSchema = z.object({
 })
 
 const PROVIDER = process.env.AI_CHAT_PROVIDER?.toLowerCase() ?? 'openai'
-const BASE_SYSTEM_PROMPT =
-  'You are the Jose Madrid Salsa assistant. Help customers with product questions, fundraising, wholesale partnerships, and order support. Keep answers concise and friendly, and direct users to /fundraising, /wholesale, or /contact when helpful. Use the provided context information to answer questions accurately. If you don\'t know something, say so rather than making it up.'
+const BASE_SYSTEM_PROMPT = PICANTE_SYSTEM_PROMPT
 
 function withSystemPrompt(messages: ChatMessage[], context?: string): ChatMessage[] {
   const hasSystemMessage = messages.some((message) => message.role === 'system')

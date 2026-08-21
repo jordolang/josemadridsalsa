@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { PicanteChatLauncher } from '@/components/chat/picante-chat-launcher'
+import { PICANTE_INITIAL_MESSAGE } from '@/lib/ai-chat/persona'
 
 type ChatMessage = {
   id: string
@@ -19,8 +20,7 @@ type Mode = 'ai' | 'handoff-form' | 'live' | 'offline-sent'
 const INITIAL_MESSAGE: ChatMessage = {
   id: 'assistant-welcome',
   role: 'assistant',
-  content:
-    "Hi there! I'm the Jose Madrid Salsa assistant. Ask about flavors, fundraising, wholesale orders, or anything else you need. If you'd rather speak with a human, tap “Talk to a human” below.",
+  content: PICANTE_INITIAL_MESSAGE,
 }
 
 const LIVE_POLL_MS = 3000
@@ -88,7 +88,7 @@ export function AiChatWidget() {
                     ? m.senderLabel ?? 'Jose Madrid Salsa team'
                     : m.senderType === 'SYSTEM'
                       ? 'System'
-                      : 'AI assistant',
+                      : 'Picante',
               }))
             const existing = new Set(prev.map((p) => p.id))
             const next = [...prev]
@@ -105,7 +105,7 @@ export function AiChatWidget() {
             {
               id: `system-${Date.now()}`,
               role: 'system',
-              content: 'The live chat was closed. You’re back with the AI assistant.',
+              content: 'The live chat was closed. You’re back with Picante.',
             },
           ])
         }
@@ -244,11 +244,11 @@ export function AiChatWidget() {
           <div className="flex items-center justify-between bg-gradient-to-r from-salsa-600 via-salsa-500 to-chile-500 px-4 py-3 text-white">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/80">
-                {mode === 'live' ? 'Live chat' : 'AI assistant'}
+                {mode === 'live' ? 'Live chat' : 'Picante'}
               </p>
               <p className="flex items-center gap-2 text-base font-semibold">
                 {mode === 'live' ? <Headphones className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-                {mode === 'live' ? 'You’re chatting with our team' : 'Chat with Jose Madrid Salsa'}
+                {mode === 'live' ? 'You’re chatting with our team' : 'Your pepper-penguin salsa pal'}
               </p>
             </div>
             <button
