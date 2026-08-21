@@ -209,7 +209,7 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     { name: 'Diced Tomatoes', qualifier: 'Tomatoes, Citric Acid, Calcium Chloride' },
     { name: 'Crushed Tomatoes', qualifier: 'Tomatoes, Citric Acid' },
     { name: 'Green Chilies', qualifier: 'Chilies, Salt, Vinegar, Calcium Chloride' },
-    { name: 'Black Beans', qualifier: 'Black Beans, Water, Salt, Calcium Chloride, Ferrous Gluconate' },
+    { name: 'Black Beans', qualifier: 'Black Beans, Water, Salt, Calcium Chloride, Ferrus Gluconate' },
     { name: 'Corn', qualifier: 'Corn, Water, Sugar, Salt' },
     { name: 'Onions' },
     { name: 'Poblano Peppers' },
@@ -251,7 +251,7 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     { name: 'Garlic' },
     { name: 'Spices' },
     { name: 'Red Chili' },
-    { name: 'Habanero' },
+    { name: 'Habanera' },
     { name: 'Lime Juice', qualifier: 'From Concentrate' },
     { name: 'Cooking Sherry' },
   ],
@@ -296,12 +296,12 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     },
     {
       name: 'Cheddar Cheese Sauce',
-      // The jar prints "Whey, Vegetable of Vinegar, Salt" — a misprint on the label itself,
-      // confirmed against the scan. Kept as "Vegetable Oil, Vinegar" (the evident intent and the
-      // long-standing value here) rather than publishing the garbled phrase. Confirm with the
-      // label printer, then make this match whichever way the jar is corrected.
+      // "Vegetable of Vinegar" is what the jar prints — confirmed at high magnification on two
+      // separate scans. It is a misprint in the label artwork, almost certainly for "Vegetable
+      // Oil, Vinegar", and is reproduced here because the listing follows the label. Correct it
+      // here once the artwork is corrected, not before.
       qualifier:
-        'Oil (Contains one or more of Canola Oil, Soybean Oil, Sunflower Oil), Contains 2% or less Water, Corn Starch-Modified, Cheddar Cheese (Cultured Milk, Salt, Enzymes, Annatto Color), Whey, Vegetable Oil, Vinegar, Salt, Sodium Phosphate, Nonfat Dry Milk, Cellulose Gel, Mono- and Diglycerides, Corn Starch, Lactylate, Cream, Cellulose Gum, Carotenal Color, Anhydrous Wheat, Yeast Extract, Lactic Acid, Citric Acid, Annatto Color, Xanthem Gum, Acetic Acid, Natural Flavors',
+        'Oil (Contains one or more of Canola Oil, Soybean Oil, Sunflower Oil), Contains 2% or less Water, Corn Starch-Modified, Cheddar Cheese (Cultured Milk, Salt, Enzymes, Annatto Color), Whey, Vegetable of Vinegar, Salt, Sodium Phosphate, Nonfat Dry Milk, Cellulose Gel, Mono- and Diglycerides, Corn Starch, Lactylate, Cream, Cellulose Gum, Carotenal Color, Anhydrous Wheat, Yeast Extract, Lactic Acid, Citric Acid, Annatto Color, Xanthem Gum, Acetic Acid, Natural Flavors',
     },
     { name: 'Roasted Red Peppers', qualifier: 'Red Peppers, Water, Citric Acid, Salt' },
     { name: 'Onions' },
@@ -371,7 +371,7 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     { name: 'Water' },
     { name: 'Crushed Tomatoes', qualifier: 'Tomatoes, Citric Acid' },
     { name: 'Onions' },
-    { name: 'Habanero Peppers' },
+    { name: 'Habenero Peppers' },
     { name: 'Cider Vinegar' },
     { name: 'White Vinegar' },
     { name: 'All Spice' },
@@ -477,7 +477,7 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     { name: 'Raspberries' },
     { name: 'Chipotlé Peppers', qualifier: 'Red Peppers, Water, Citric Acid, Salt' },
     { name: 'Cider Vinegar' },
-    { name: 'Jalapeño Peppers' },
+    { name: 'Jalepeño Peppers' },
     { name: 'Onions' },
     { name: 'Smoke Flavor' },
     { name: 'Honey' },
@@ -552,7 +552,7 @@ const ingredientData: Record<string, IngredientEntry[]> = {
 
   // ─── Spanish Verde line ─────────────────────────
   'spanish-verde-mild': [
-    { name: 'Tomatillos' },
+    { name: 'Tomatillas' },
     { name: 'Chilies', qualifier: 'Chilies, Salt, Vinegar, Calcium Chloride' },
     { name: 'Onions' },
     { name: 'Water' },
@@ -565,7 +565,7 @@ const ingredientData: Record<string, IngredientEntry[]> = {
   ],
 
   'spanish-verde-hot': [
-    { name: 'Tomatillos' },
+    { name: 'Tomatillas' },
     { name: 'Chilies', qualifier: 'Chilies, Salt, Vinegar, Calcium Chloride' },
     { name: 'Onions' },
     { name: 'Water' },
@@ -578,7 +578,7 @@ const ingredientData: Record<string, IngredientEntry[]> = {
   ],
 
   'spanish-verde-xx-hot': [
-    { name: 'Tomatillos' },
+    { name: 'Tomatillas' },
     { name: 'Green Chilies', qualifier: 'Chilies, Salt, Vinegar, Calcium Chloride' },
     { name: 'Onions' },
     { name: 'Jalapeño Peppers' },
