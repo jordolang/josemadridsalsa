@@ -202,6 +202,25 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
+- **Eight products listed ingredients that did not match the jar.** The eight label scans OCR could
+  not read had been filled in by hand, and seven of the eight had drifted from the printed label —
+  five substantively. Chipotle Con Queso listed 11 of the cheese sauce's ~25 sub-ingredients, with
+  Cream and Anhydrous Wheat both absent on a product whose allergen line declares Milk and Wheat.
+  Raspberry BBQ Chipotle listed Sugar and Salt, which the jar does not contain, and omitted Green
+  Chilies, Jalapeño Peppers and Smoke Flavor, which it does. Chipotle Hot named Roasted Red Peppers
+  where the jar says Chipotlé Peppers and dropped Spices; Spanish Verde Hot named Serrano Peppers
+  where the jar says Jalapeño; Spanish Verde XX Hot omitted Garlic outright.
+
+  All eight were re-read from the full-resolution scans and now match ingredient for ingredient, in
+  label order. Two label misspellings are corrected rather than reproduced; the queso jar's
+  "Vegetable of Vinegar" is a misprint on the label itself and is flagged in place rather than
+  guessed at. The scan text for those eight is transcribed by hand, so all 26 real labels now parse
+  clean — the only skips left are the four `choose-*` files, which are bundle photos, not labels.
+- **The label scans for those eight products are now WebP and live with the rest of the labels.**
+  They arrived at the repository root, which holds config and the standard docs only. They are named
+  to the same slug convention as their siblings, so the existing matcher and aliases reach their
+  products with no new configuration, and they replace the JPEGs they duplicate rather than
+  doubling each product's gallery.
 - **Ingredient lists dropped the parentheses printed on the jar, turning sub-ingredients into
   headline ingredients.** The label scraper (`scripts/parse-ingredients.cjs`) split the statement on
   every comma, stripped `(`/`)`, lower-cased what was left and de-duplicated it, so
