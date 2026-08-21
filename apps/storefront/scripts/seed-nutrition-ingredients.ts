@@ -682,8 +682,21 @@ export async function seedNutritionAndIngredients(prisma: PrismaClient) {
     }
   }
 
+  // 5. Drop ingredients nothing links to any more.
+  //
+  // Ingredients are upserted by name, so correcting a spelling to match the jar — "Tomatillos"
+  // to the "Tomatillas" the Verde labels print — creates a new row and relinks the products,
+  // leaving the old one behind with no links. This script is the only writer of the table, so an
+  // unlinked row can only be one of those leftovers.
+  const { count: orphanCount } = await prisma.ingredient.deleteMany({
+    where: { products: { none: {} } },
+  })
+
   console.log(`\n✅ Created ${nutritionCount} nutritional info records`)
   console.log(`✅ Created ${ingredientLinkCount} product-ingredient links`)
+  if (orphanCount > 0) {
+    console.log(`✅ Removed ${orphanCount} ingredients left unlinked by a rename`)
+  }
   console.log('\nSeed complete!')
 }
 
