@@ -13,11 +13,24 @@ export const metadata: Metadata = createMetadata({
   pathname: '/admin/events/new',
 })
 
-export default async function NewEventPage() {
+/** `date=YYYY-MM-DD` only; anything else is ignored rather than guessed at. */
+const DATE_PARAM = /^\d{4}-\d{2}-\d{2}$/
+
+export default async function NewEventPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string; whereIsJose?: string }>
+}) {
   const user = await getCurrentUser()
   if (!user || !(await hasPermission(user, 'events:write'))) {
     redirect('/admin')
   }
+
+  // Prefill from the week grid's "add an event on this day". No trailing Z:
+  // the form parses this in the browser's timezone, and a UTC instant would
+  // land the show on the previous evening for anyone west of the meridian.
+  const { date, whereIsJose } = await searchParams
+  const startDate = date && DATE_PARAM.test(date) ? `${date}T00:00:00` : null
 
   return (
     <div className="space-y-6">
@@ -32,7 +45,14 @@ export default async function NewEventPage() {
           <p className="text-muted-foreground">Add an event and its staff and contacts.</p>
         </div>
       </div>
-      <EventForm />
+      <EventForm
+        event={{
+          title: '',
+          displayPriority: 0,
+          startDate,
+          isWhereIsJose: whereIsJose === '1',
+        }}
+      />
     </div>
   )
 }

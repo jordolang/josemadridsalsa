@@ -57,6 +57,9 @@ interface CampaignFormProps {
   mailingLists: MailingList[]
   discountCodes: DiscountCodeOption[]
   initialTemplateId?: string
+  /** Seeded from the query string when another admin page starts a campaign. */
+  initialName?: string
+  initialSubject?: string
 }
 
 type RecipientsSource = 'list' | 'csv' | 'text' | 'paste'
@@ -77,6 +80,8 @@ export function CampaignForm({
   mailingLists,
   discountCodes,
   initialTemplateId,
+  initialName,
+  initialSubject,
 }: CampaignFormProps) {
   const router = useRouter()
   const initialTemplate =
@@ -105,7 +110,7 @@ export function CampaignForm({
       : {},
   )
   const [customSubject, setCustomSubject] = useState<string>(
-    initialTemplate?.subject ?? '',
+    initialSubject ?? initialTemplate?.subject ?? '',
   )
 
   const detectedVariables = useMemo(() => {
@@ -217,6 +222,7 @@ export function CampaignForm({
               id="name"
               name="name"
               required
+              defaultValue={initialName}
               placeholder="e.g., November Newsletter 2025"
             />
           </div>

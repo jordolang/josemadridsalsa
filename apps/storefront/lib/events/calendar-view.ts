@@ -1,4 +1,13 @@
-import { addDays, eachDayOfInterval, format, startOfDay } from 'date-fns'
+import {
+  addDays,
+  addWeeks,
+  eachDayOfInterval,
+  format,
+  isSameMonth,
+  isSameYear,
+  startOfDay,
+  startOfWeek,
+} from 'date-fns'
 
 /** Map key for a calendar cell. */
 export const dayKey = (d: Date) => format(d, 'yyyy-MM-dd')
@@ -47,4 +56,46 @@ export function eventDays(startDate: string, endDate?: string | null): Date[] {
         : parsedEnd
 
   return eachDayOfInterval({ start, end })
+}
+
+/**
+ * Sunday of the week containing `date`. Sunday-first matches the month grid's
+ * Sun–Sat header, so the two views line up.
+ */
+export const weekStart = (date: Date) => startOfWeek(startOfDay(date))
+
+/** The seven days of the week containing `date`, Sunday first. */
+export function weekDays(date: Date): Date[] {
+  const start = weekStart(date)
+  return eachDayOfInterval({ start, end: addDays(start, 6) })
+}
+
+/** The week `offset` weeks away from the one containing `date`. */
+export const shiftWeek = (date: Date, offset: number) => weekStart(addWeeks(date, offset))
+
+/**
+ * Half-open [start, end) bounds for a week, for querying events that overlap
+ * it. Half-open so an event starting at midnight on the following Sunday
+ * belongs to the next week and is not counted twice.
+ */
+export function weekBounds(date: Date): { start: Date; end: Date } {
+  const start = weekStart(date)
+  return { start, end: addDays(start, 7) }
+}
+
+/**
+ * "Aug 16 – 22, 2026", collapsing the repeated month and year. Weeks that
+ * straddle a boundary spell both sides out: "Aug 30 – Sep 5, 2026".
+ */
+export function weekRangeLabel(date: Date): string {
+  const start = weekStart(date)
+  const end = addDays(start, 6)
+
+  if (!isSameYear(start, end)) {
+    return `${format(start, 'MMM d, yyyy')} – ${format(end, 'MMM d, yyyy')}`
+  }
+  if (!isSameMonth(start, end)) {
+    return `${format(start, 'MMM d')} – ${format(end, 'MMM d, yyyy')}`
+  }
+  return `${format(start, 'MMM d')} – ${format(end, 'd, yyyy')}`
 }

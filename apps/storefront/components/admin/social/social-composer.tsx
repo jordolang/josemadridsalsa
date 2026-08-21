@@ -55,6 +55,8 @@ type Props = {
   accounts: SocialAccountInfo[]
   canSchedule: boolean
   canPublish: boolean
+  /** Seeds the post body. Used when another admin page hands off a draft. */
+  initialContent?: string
 }
 
 const INITIAL_STATE: SocialComposerState = { status: 'idle' }
@@ -70,9 +72,15 @@ type MediaAttachment = {
   filename: string
 }
 
-export function SocialComposer({ action, accounts, canSchedule, canPublish }: Props) {
+export function SocialComposer({
+  action,
+  accounts,
+  canSchedule,
+  canPublish,
+  initialContent,
+}: Props) {
   const [state, formAction] = useActionState(action, INITIAL_STATE)
-  const [content, setContent] = useState('')
+  const [content, setContent] = useState(initialContent ?? '')
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<SocialMediaPlatform>>(new Set())
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
   const [hashtags, setHashtags] = useState('')
