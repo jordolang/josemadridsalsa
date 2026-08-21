@@ -144,6 +144,18 @@ describe('parseIngredientStatement', () => {
     ])
   })
 
+  it('keeps an ingredient whose name merely starts with "and"', () => {
+    // The conjunction strip requires whitespace after "and", so "Andouille" is not a prefix match.
+    expect(parseIngredientStatement('Onions, Spices, and Andouille Sausage.')).toEqual([
+      'Onions',
+      'Spices',
+      'Andouille Sausage',
+    ])
+    expect(parseIngredientStatement('Andouille Sausage, Onions and Spices.')[0]).toBe(
+      'Andouille Sausage'
+    )
+  })
+
   it('leaves an ordinary comma-separated list alone', () => {
     expect(parseIngredientStatement('Tomatoes, Onions, Garlic')).toEqual([
       'Tomatoes',
