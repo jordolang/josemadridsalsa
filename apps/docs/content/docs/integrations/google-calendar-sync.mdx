@@ -1,0 +1,148 @@
+---
+title: Google Calendar Two-Way Sync
+description: OAuth-backed two-way sync between "Where is Jose?" events and the public Google Calendar
+---
+
+# Google Calendar Two-Way Sync
+
+Keeps the `FeaturedEvent` records flagged **"Where is Jose?"** and the company Google
+Calendar in agreement, in both directions. Managed from the Google Calendar card at the
+top of **Admin → Events**.
+
+This is separate from the read-only [Google Calendar](/docs/integrations/google-calendar)
+integration, which fetches the same calendar with an API key and cannot write. Both can
+run at once; only this one needs OAuth.
+
+## Why it matters
+
+The public `/where-is-jose` page renders the Google Calendar feed, not the database.
+Until an event reaches the calendar, flagging it "Where is Jose?" changes nothing a
+customer sees. **Pushing to Google is the publish step.**
+
+## What crosses, and what does not
+
+<Callout type="warn">
+Only events flagged `isWhereIsJose` are pushed. `FeaturedEvent` also holds the booking
+pipeline — shows applied to, waitlisted, or declined, along with booth fees — and the
+target calendar is public. Pushing everything would publish all of it.
+</Callout>
+
+| Direction | What moves |
+|---|---|
+| Website → Google | Events flagged "Where is Jose?": title, description, location, dates |
+| Google → Website | Every event in the sync window, created as a flagged event |
+| Website → Google | Removal, when an event is unflagged |
+| Google → Website | **Never a deletion.** A removal on the calendar unlinks the pair only |
+
+A `FeaturedEvent` owns its staff, contacts, product manifest, and show financials.
+Deleting the calendar entry must not take a season of financials with it, so a remote
+deletion clears `googleEventId` and leaves the record standing.
+
+## Conflicts
+
+An event is *locally dirty* when `updatedAt > googleSyncedAt`, and *remotely dirty* when
+Google's `etag` differs from the stored `googleEtag`. When both are true, the connection's
+conflict policy decides:
+
+| Policy | Behaviour |
+|---|---|
+| `ASK` (default) | Neither copy is touched. The event is marked `CONFLICT` and listed in the admin card with **Keep this site's** / **Keep Google's** |
+| `LOCAL_WINS` | The website's copy overwrites Google's |
+| `GOOGLE_WINS` | Google's copy overwrites the website's |
+
+Every sync write sets `googleSyncedAt` in the same update as the content change. If it
+lagged, its own write would bump `updatedAt` and every synced event would look dirty
+forever.
+
+## All-day events
+
+`FeaturedEvent.isAllDay` is a stored column, not an inference. An all-day event's
+`startDate` sits on **UTC midnight of the calendar date**; Google speaks bare
+`YYYY-MM-DD` with an *exclusive* end, while we store an inclusive last day.
+
+The column exists because the instant alone cannot carry the distinction once a
+UTC-hosted server and an Eastern-time office disagree about which moment is midnight.
+
+## Sync window
+
+Each run reconciles one year back and two years forward. A bounded window rather than an
+incremental `syncToken`: the volume is a few dozen shows a year, and a sync token adds an
+expiry path exercised too rarely to stay correct.
+
+## Environment variables
+
+No new variables. The integration reuses:
+
+| Variable | Description |
+|----------|-------------|
+| `GOOGLE_CLIENT_ID` | OAuth client, shared with sign-in and Google Business |
+| `GOOGLE_CLIENT_SECRET` | OAuth client secret |
+| `GOOGLE_CALENDAR_ID` | The calendar to sync |
+| `NEXTAUTH_URL` | Used to build the OAuth redirect URI |
+
+## Setup
+
+<Steps>
+
+### Enable the Calendar API
+
+In Google Cloud Console, enable **Google Calendar API** for the same project that owns
+`GOOGLE_CLIENT_ID`.
+
+### Add the scope to the consent screen
+
+Add `https://www.googleapis.com/auth/calendar.events`. The narrower `calendar.events` is
+deliberate — the sync writes events on one existing calendar and never manages calendars
+or reads ACLs.
+
+### Add the redirect URI
+
+Add `{NEXTAUTH_URL}/api/admin/events/google/callback` to the OAuth client's authorised
+redirect URIs, for every environment that will connect.
+
+### Connect
+
+In **Admin → Events**, press **Connect** on the Google Calendar card and grant access.
+Requires the `events:sync-calendar` permission.
+
+### Sync
+
+Press **Sync now**. The card reports what went up, what came down, and anything that
+needs a decision.
+
+</Steps>
+
+<Callout type="warn">
+If Google returns no refresh token the connection is refused rather than stored — it
+would expire within the hour and could not renew. This happens when the account has
+already granted these scopes; remove the app under the Google account's permissions and
+connect again.
+</Callout>
+
+## Endpoints
+
+| Route | Purpose |
+|---|---|
+| `GET /api/admin/events/google/status` | Connection state and last-run counts |
+| `GET /api/admin/events/google/connect` | Returns the consent URL, sets the state cookie |
+| `GET /api/admin/events/google/callback` | Stores tokens, redirects back to Events |
+| `POST /api/admin/events/google/sync` | Runs one full reconciliation |
+| `PATCH /api/admin/events/google/settings` | Sets the conflict policy |
+| `POST /api/admin/events/google/resolve` | Settles one flagged conflict |
+| `POST /api/admin/events/google/disconnect` | Deletes the stored tokens |
+
+Disconnecting leaves both the calendar entries and the local `googleEventId` values in
+place, so reconnecting the same calendar resumes the pairs instead of duplicating shows.
+
+## Key files
+
+| File | Purpose |
+|------|---------|
+| `lib/events/google-sync-rules.ts` | Which action a local/remote pair needs. Pure |
+| `lib/events/google-event-mapping.ts` | Field translation both ways. Pure |
+| `lib/events/google-calendar-client.ts` | OAuth, token refresh, the four API calls |
+| `lib/events/google-calendar-sync.ts` | The reconciler and conflict resolution |
+| `app/admin/events/_components/GoogleCalendarPanel.tsx` | The admin card |
+
+The two pure modules carry the logic that is expensive to get wrong and are tested
+directly, without a network.

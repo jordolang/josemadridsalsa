@@ -1483,6 +1483,22 @@ model FeaturedEvent {
   /// key. Never match on event name: names repeat across years and across
   /// monthly variants of one series.
   externalId              String?
+  /// True for a date-only show ("Saturday", not "Saturday at 10am"). Stored
+  /// rather than inferred: the instant alone cannot tell the two apart once a
+  /// UTC-hosted server and an Eastern-time office disagree about midnight.
+  isAllDay                Boolean            @default(false)
+  /// Google's etag for the linked calendar event at the moment the two sides
+  /// last agreed. A different etag on the next sync means Google's copy moved.
+  googleEtag              String?
+  /// When the two sides last agreed. Set on every sync write, push or pull, so
+  /// `updatedAt > googleSyncedAt` means "edited here since then" — `updatedAt`
+  /// alone would also count the sync's own write.
+  googleSyncedAt          DateTime?
+  /// Set when a sync could not settle this event: both sides changed and the
+  /// conflict policy is ASK, or the last push failed.
+  googleSyncState         GoogleSyncState    @default(IN_SYNC)
+  /// The failure, verbatim, when googleSyncState is PUSH_FAILED.
+  googleSyncError         String?
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
   eventTags               EventTag[]
@@ -1514,6 +1530,55 @@ enum EventSource {
   MANUAL
   GOOGLE_CALENDAR
   FESTIVALNET
+}
+
+/// How a two-sided edit is settled when the website and Google Calendar have
+/// both changed an event since the last sync.
+enum GoogleCalendarConflictPolicy {
+  /// The website's copy overwrites Google's.
+  LOCAL_WINS
+  /// Google's copy overwrites the website's.
+  GOOGLE_WINS
+  /// Neither is touched; the event is flagged for someone to decide.
+  ASK
+}
+
+enum GoogleSyncState {
+  IN_SYNC
+  /// Both sides changed and the policy is ASK. Waiting on a human.
+  CONFLICT
+  /// The last attempt to write this event to Google failed.
+  PUSH_FAILED
+}
+
+/// The OAuth link to the Google Calendar that the public "Where is Jose?" page
+/// reads. One row: there is a single company calendar. Tokens are encrypted at
+/// rest with the same helper the credential vault uses.
+model GoogleCalendarConnection {
+  id              String                       @id @default(cuid())
+  /// The calendar written to and read from, e.g. an address or a calendar id.
+  calendarId      String                       @unique
+  /// The Google account that granted access, shown as "Connected as ...".
+  googleEmail     String?
+  accessToken     String
+  accessTokenIv   String
+  refreshToken    String
+  refreshTokenIv  String
+  tokenExpiresAt  DateTime?
+  scopes          String[]
+  conflictPolicy  GoogleCalendarConflictPolicy @default(ASK)
+  lastPullAt      DateTime?
+  lastPushAt      DateTime?
+  /// Counts from the last run, for the admin panel.
+  lastPullCount   Int                          @default(0)
+  lastPushCount   Int                          @default(0)
+  isActive        Boolean                      @default(true)
+  connectionError String?
+  connectedById   String?
+  createdAt       DateTime                     @default(now())
+  updatedAt       DateTime                     @updatedAt
+
+  @@map("google_calendar_connections")
 }
 
 /// People from our team assigned to attend/work an event.

@@ -26,6 +26,28 @@ the root `package.json` is canonical.
   (`mango-mild-salsa` and `spanish-verde-mild` are both salsas), so a photo named after the flavour
   finds its product. A relaxed match that fits two products still links nothing.
 
+- **Configurable flat-rate shipping presets.** The rates the estimate/fallback path quotes — when a live carrier rate isn't available (no API key, an unset warehouse origin, a PO Box with no USPS rate, or a carrier outage) — were hardcoded constants in the calculator. They are now editable under **Settings → Shipping → Flat-rate presets**: the base flat rate, the heavy-order surcharge (threshold weight, base, and per-pound amount), the flat international rate, and the per-state multipliers for remote destinations (Alaska, Hawaii, Puerto Rico). Live EasyPost rates, when available, are still used ahead of these and are unaffected.
+
+  The values live on the `ShippingSettings` singleton as whole cents (migration `20260821140000_add_shipping_rate_presets`, additive nullable columns) and are read at quote time by `lib/shipping/rate-config.ts`, which merges the stored row over the built-in defaults — so any field left blank falls back to exactly the number the calculator used before, and an unconfigured store's quotes don't change. The resolver never throws: a database problem falls through to the defaults so a quote is always available, the same posture as the origin resolver. The rate math and config resolution are pure and fully tested, and the move was verified to leave every existing shipping quote byte-for-byte identical (the calculator's `toFixed` rounding is preserved). Shipping is still charged on every order — there is no free-shipping path. The rate-preset form writes only its own columns, so saving presets leaves the origin and carrier settings untouched.
+- **Two-way Google Calendar sync, so the "Where is Jose?" flag finally reaches customers.**
+  `/where-is-jose` renders the Google Calendar feed, not the database, so flagging an event in
+  the admin changed nothing a visitor saw. Pushing to the calendar is the publish step, and it
+  now happens: flagged events go up, shows added on the calendar come back down as flagged
+  events, and unflagging one takes it off the public calendar again.
+
+  Only flagged events are ever pushed. `FeaturedEvent` also holds the booking pipeline — shows
+  applied to, waitlisted, or declined, with their booth fees — and the target calendar is
+  public, so pushing everything would publish all of it. In the other direction Google can
+  never delete a local record: an event owns its staff, contacts, manifest and show
+  financials, so a removal on the calendar unlinks the pair and leaves the record standing.
+
+  When an event changed in both places since the last sync, the connection's conflict policy
+  decides — the website wins, Google wins, or (the default) neither is touched and the event
+  is listed in the admin card with "Keep this site's" / "Keep Google's". Connect, sync,
+  policy, conflicts and disconnect all live in the Google Calendar card on Admin → Events,
+  which replaces the old status-only panel. Setup is documented under Integrations → Google
+  Calendar Two-Way Sync; it needs the `calendar.events` scope added in Google Cloud.
+
 - **A week-by-week calendar inside the Events tab's "Where is Jose?" card.** The tab already listed
   the flagged events and there was a month grid on a separate page, but nothing let you look at a
   single week and work in it. The card now opens on the current week: flagged events render solid,
@@ -207,6 +229,22 @@ the root `package.json` is canonical.
   feeds search, product feeds, the TikTok Shop export and the AI index — run it to correct the
   stored listings.
 
+- **All-day shows could export on the wrong day.** Whether an event was all-day was inferred
+  from its start falling on midnight — but "midnight" meant the server's timezone, which is UTC
+  on Vercel and Eastern on a developer's machine. The same event classified differently
+  depending on where the code ran. `FeaturedEvent` now carries an `isAllDay` column, backfilled
+  from how the existing rows were written, and the ICS exporter reads UTC parts so the calendar
+  date cannot shift under it.
+- **Search-result metadata on `/laperla` and `/live` fell outside the documented limits.** The
+  La Perla page's title ran 67 characters and its description 223, so Google truncated the
+  description partway through "the stone-ground white corn" — cutting off the Jose Madrid Salsa
+  connection that is the page's reason for existing. The `/live` title ran only 24 characters.
+  Both now sit inside the 30–60 title / 160-character description range; La Perla's street address
+  moves out of the description and stays available in the page's structured data.
+- **`/live` built its metadata by hand instead of through `createMetadata`.** It was the only one
+  of these public pages declaring a bare `Metadata` object, so it shipped without the OpenGraph and
+  Twitter card tags its siblings get and fell back to the default share image with no card markup.
+  It now goes through the shared helper like the rest of the `(public)` routes.
 - **Dark mode rendered several sections as light text on a light background.** The `verde` and
   `chile` colour scales in `apps/storefront/tailwind.config.ts` stopped at `900`, so every
   `dark:*-verde-950` / `dark:*-chile-950` utility referenced a shade that did not exist and Tailwind
