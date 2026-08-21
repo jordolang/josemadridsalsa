@@ -25,7 +25,7 @@ import { homedir } from 'node:os'
 import path from 'node:path'
 import { list, put } from '@vercel/blob'
 import { PrismaClient } from '@prisma/client'
-import { LABEL_FILENAME_ALIASES } from '../lib/images/label-aliases'
+import { LABEL_FILENAME_ALIASES } from '@/lib/images/label-aliases'
 import {
   buildPlan,
   isImageFile,
@@ -273,34 +273,41 @@ async function main() {
 
     console.log('')
     for (const item of plan) {
-      if (item.decision === 'SKIP_UNCHANGED') continue
+      // An unchanged file still needs its link applied: a label uploaded while it matched no
+      // product gets one once an alias is added, and re-running the command is how that lands.
+      let url = item.existingUrl
 
-      const collected = byName.get(item.source.fileName)!
-      // Re-prepared rather than held in memory: a full shoot would otherwise sit in RAM at once.
-      const prepared = await prepare(
-        collected.sourcePath,
-        collected.originalName,
-        options.prefix,
-        options.webp
-      )
+      if (item.decision !== 'SKIP_UNCHANGED') {
+        const collected = byName.get(item.source.fileName)!
+        // Re-prepared rather than held in memory: a full shoot would otherwise sit in RAM at once.
+        const prepared = await prepare(
+          collected.sourcePath,
+          collected.originalName,
+          options.prefix,
+          options.webp
+        )
 
-      // addRandomSuffix:false keeps the filename in the URL, so links stay predictable and a
-      // re-upload replaces the image everywhere it is already referenced.
-      const result = await put(item.blobPathname, prepared.buffer, {
-        access: 'public',
-        addRandomSuffix: false,
-        allowOverwrite: true,
-      })
+        // addRandomSuffix:false keeps the filename in the URL, so links stay predictable and a
+        // re-upload replaces the image everywhere it is already referenced.
+        const result = await put(item.blobPathname, prepared.buffer, {
+          access: 'public',
+          addRandomSuffix: false,
+          allowOverwrite: true,
+        })
 
-      manifest[item.blobPathname] = {
-        sha256: item.source.sha256,
-        url: result.url,
-        sizeBytes: item.source.sizeBytes,
-        uploadedAt: new Date().toISOString(),
+        manifest[item.blobPathname] = {
+          sha256: item.source.sha256,
+          url: result.url,
+          sizeBytes: item.source.sizeBytes,
+          uploadedAt: new Date().toISOString(),
+        }
+        url = result.url
+        console.log(`  uploaded ${result.url}`)
       }
-      console.log(`  uploaded ${result.url}`)
 
-      if (!item.match || item.linkAction === 'NONE' || item.linkAction === 'ALREADY_LINKED') continue
+      if (!url || !item.match || item.linkAction === 'NONE' || item.linkAction === 'ALREADY_LINKED') {
+        continue
+      }
 
       const { product } = item.match
       if (item.linkAction === 'FEATURED') {
@@ -312,13 +319,13 @@ async function main() {
 
         await prisma.product.update({
           where: { id: product.id },
-          data: { featuredImage: result.url, images: carried.filter((u) => u !== result.url) },
+          data: { featuredImage: url, images: carried.filter((u) => u !== url) },
         })
         console.log(`    featured on ${product.name}`)
       } else {
         await prisma.product.update({
           where: { id: product.id },
-          data: { images: { push: result.url } },
+          data: { images: { push: url } },
         })
         console.log(`    added to ${product.name}`)
       }

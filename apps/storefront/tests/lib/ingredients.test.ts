@@ -156,6 +156,22 @@ describe('parseIngredientStatement', () => {
     )
   })
 
+  it('keeps a compound name whose "and" is part of the ingredient', () => {
+    // "Natural and Artificial Flavors" is one regulated ingredient, not two.
+    expect(parseIngredientStatement('Water, Natural and Artificial Flavors.')).toEqual([
+      'Water',
+      'Natural and Artificial Flavors',
+    ])
+  })
+
+  it('splits at the conjunction before a compound name, not inside it', () => {
+    expect(parseIngredientStatement('Water, Garlic and Natural and Artificial Flavors.')).toEqual([
+      'Water',
+      'Garlic',
+      'Natural and Artificial Flavors',
+    ])
+  })
+
   it('leaves an ordinary comma-separated list alone', () => {
     expect(parseIngredientStatement('Tomatoes, Onions, Garlic')).toEqual([
       'Tomatoes',

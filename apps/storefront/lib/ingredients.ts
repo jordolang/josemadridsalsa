@@ -284,11 +284,39 @@ function cleanPart(part: string): string {
     .trim()
 }
 
+/**
+ * Ingredient names that contain "and" and are one ingredient, not two.
+ *
+ * The trailing conjunction is normally a list separator — "Spices, Salt and Citric Acid" is three
+ * ingredients — but a handful of standard names carry "and" inside them. Splitting
+ * "Natural and Artificial Flavors" would publish two ingredients that do not exist. Compared
+ * case-insensitively against the whole part.
+ */
+const COMPOUND_INGREDIENT_NAMES = [
+  'natural and artificial flavors',
+  'natural and artificial flavor',
+  'artificial and natural flavors',
+  'artificial and natural flavor',
+  'mono- and diglycerides',
+  'mono and diglycerides',
+]
+
 /** Turn a final `"Salt and Citric Acid"` part into two ingredients. */
 function splitTrailingConjunction(parts: string[]): string[] {
   if (parts.length === 0) return parts
 
-  const last = parts[parts.length - 1]
+  const last = parts[parts.length - 1].trim()
+
+  // A compound name ending the statement is one ingredient, so the split — if any — belongs at
+  // the conjunction before it, not at the "and" inside it.
+  const compound = COMPOUND_INGREDIENT_NAMES.find((name) => last.toLowerCase().endsWith(name))
+  if (compound) {
+    const before = last.slice(0, last.length - compound.length).replace(/\s+and\s+$/i, '').trim()
+    const name = last.slice(last.length - compound.length).trim()
+
+    return before ? [...parts.slice(0, -1), before, name] : parts
+  }
+
   const index = topLevelIndexOf(last, ' and ', { last: true })
   if (index === -1) return parts
 
