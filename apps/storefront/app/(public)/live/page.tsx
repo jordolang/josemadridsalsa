@@ -3,11 +3,13 @@ import Link from 'next/link'
 import { Facebook, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getLiveStatus } from '@/lib/live/facebook-live'
+import { createMetadata } from '@/lib/metadata'
 
-export const metadata: Metadata = {
-  title: 'Live | Jose Madrid Salsa',
+export const metadata: Metadata = createMetadata({
+  title: 'Jose Madrid Salsa Live - Events, Markets & Kitchen',
   description: 'Watch Jose Madrid Salsa live from events, markets, and the kitchen.',
-}
+  pathname: '/live',
+})
 
 export default async function LivePage() {
   const status = await getLiveStatus()

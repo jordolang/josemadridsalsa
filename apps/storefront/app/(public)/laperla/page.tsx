@@ -24,9 +24,9 @@ import { createMetadata } from '@/lib/metadata';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = createMetadata({
-  title: 'La Perla Tortilla Factory - Toledo, OH | Maker of Jose Madrid Chips',
+  title: 'La Perla Tortilla Factory - Toledo, OH | Jose Madrid Chips',
   description:
-    'La Perla Tortilla Factory at 2742 Hill Ave in Toledo, Ohio makes fresh corn tortillas, tortilla chips, and Mexican ingredients — including the stone-ground white corn chips paired with Jose Madrid Salsa. Open to the public.',
+    'La Perla Tortilla Factory in Toledo, Ohio makes the stone-ground white corn chips paired with Jose Madrid Salsa, plus fresh tortillas and Mexican ingredients.',
   pathname: '/laperla',
 });
 
