@@ -57,10 +57,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!existing) return fail('Collection not found', 404)
 
     // Enforce the URL-safe slug rule only when the slug is actually being changed, so a legacy
-    // slug that predates the rule doesn't block editing the rest of the collection.
+    // slug that predates the rule doesn't block editing the rest of the collection. Persist the
+    // parsed (trimmed) value, not the raw input, so the stored slug matches the /collections/[slug]
+    // exact-match lookup.
     if (data.slug !== undefined && data.slug !== existing.slug) {
       const check = slugSchema.safeParse(data.slug)
       if (!check.success) return fail('Invalid collection data', 400, check.error.issues)
+      data.slug = check.data
     }
 
     // When the product set is supplied, replace it wholesale so the new order sticks; the scalar
