@@ -7,11 +7,33 @@ import {
   type AttributionFields,
 } from './attribution'
 
+/** localStorage key the cookie-consent banner writes ('accepted' | 'rejected' | unset). */
+const COOKIE_CONSENT_KEY = 'cookie-consent'
+
+/**
+ * Whether the visitor has accepted cookies. Attribution is a marketing/analytics cookie, so it is
+ * only written on explicit acceptance — never before a choice is made, and never after a rejection.
+ * Reads defensively: a private-mode/SecurityError localStorage throw is treated as "no consent".
+ */
+function hasAnalyticsConsent(): boolean {
+  try {
+    return window.localStorage.getItem(COOKIE_CONSENT_KEY) === 'accepted'
+  } catch {
+    return false
+  }
+}
+
 /** Whether the first-touch cookie is already present (client-side). */
 function attributionCookieExists(): boolean {
   return document.cookie
     .split(';')
     .some((c) => c.trim().startsWith(`${ATTRIBUTION_COOKIE}=`))
+}
+
+/** Expire the attribution cookie — used when the visitor rejects cookies after one was written. */
+export function removeAttributionCookie(): void {
+  if (typeof document === 'undefined') return
+  document.cookie = `${ATTRIBUTION_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
 }
 
 /**
@@ -53,6 +75,8 @@ function fitToBudget(fields: AttributionFields): string | null {
  */
 export function captureFirstTouchAttribution(): void {
   if (typeof window === 'undefined') return
+  // Respect the cookie-consent choice: capture only once the visitor has accepted.
+  if (!hasAnalyticsConsent()) return
   if (attributionCookieExists()) return
 
   const fields = buildAttribution({

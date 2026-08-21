@@ -151,3 +151,40 @@ describe('parseAttributionCookie — defensive', () => {
     expect(parseAttributionCookie(raw)).toEqual(fields({ utmSource: 'x' }))
   })
 })
+
+describe('control-character sanitisation (PostgreSQL-safe)', () => {
+  const NUL = String.fromCharCode(0)
+  const DEL = String.fromCharCode(0x7f)
+  const CONTROL = /[\u0000-\u001f\u007f]/
+
+  it('strips a NUL from a UTM param at build time', () => {
+    const built = buildAttribution({
+      params: new URLSearchParams([['utm_source', `ev${NUL}il`]]),
+      referrer: null,
+      landingPage: null,
+      selfHost: null,
+    })
+    expect(built.utmSource).toBe('evil')
+    expect(built.utmSource).not.toMatch(CONTROL)
+  })
+
+  it('strips control characters from a value read back out of a tampered cookie', () => {
+    const raw = encodeURIComponent(
+      JSON.stringify({ utmCampaign: `${NUL}spring ${DEL}sale${NUL}` })
+    )
+    const parsed = parseAttributionCookie(raw)
+    // NUL/DEL removed, the interior space and surrounding text kept, then trimmed.
+    expect(parsed).toEqual(fields({ utmCampaign: 'spring sale' }))
+    expect(parsed?.utmCampaign).not.toMatch(CONTROL)
+  })
+
+  it('drops a field that is nothing but control characters', () => {
+    const built = buildAttribution({
+      params: new URLSearchParams([['utm_medium', `${NUL}${DEL}`]]),
+      referrer: null,
+      landingPage: null,
+      selfHost: null,
+    })
+    expect(built.utmMedium).toBeNull()
+  })
+})

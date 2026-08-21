@@ -15,6 +15,7 @@ import { getReferralFromCode } from '@/lib/fundraising/referral-tracker'
 import { fundraiserUnitPrice } from '@/lib/fundraising/pricing'
 import { getFundraiserPriceOverrides } from '@/lib/fundraising/pricing.server'
 import { getStoreSettings, isBelowMinimumOrder, formatMinimumOrder } from '@/lib/store-settings'
+import { ATTRIBUTION_COOKIE, parseAttributionCookie } from '@/lib/analytics/attribution'
 
 const PayPalCheckoutSchema = z.object({
   items: z
@@ -251,6 +252,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // First-touch marketing attribution, carried from the visitor's landing in a cookie — read
+      // and written here just like the Stripe route, so a PayPal/Venmo order isn't recorded as
+      // Direct/none despite carrying the cookie. Parsing never throws and returns null when absent.
+      const attribution =
+        parseAttributionCookie(request.cookies.get(ATTRIBUTION_COOKIE)?.value) ?? undefined
+
       // Create the order in DB
       const order = await prisma.order.create({
         data: {
@@ -258,6 +265,7 @@ export async function POST(request: NextRequest) {
           userId: user?.id ?? undefined,
           guestEmail: user ? undefined : customer.email,
           guestPhone: customer.phone,
+          ...(attribution ?? {}),
           shippingMethod: finalShippingMethod,
           customerNotes: notes ?? undefined,
           subtotal: toDecimal(subtotal),

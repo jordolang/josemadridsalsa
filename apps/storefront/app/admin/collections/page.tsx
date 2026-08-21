@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import type { Collection } from '@prisma/client'
 import Image from 'next/image'
 import { Edit, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -32,24 +33,41 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
+/** A collection as the list endpoint returns it: the model plus its product count. */
+type CollectionListItem = Collection & { _count: { products: number } }
+
+// The list API caps each page at 100; walk pages until we have them all so a shop with more than
+// 100 collections doesn't silently lose the tail from the admin grid.
+const PAGE_SIZE = 100
+
 export default function CollectionsPage() {
-  const [collections, setCollections] = useState<any[]>([])
+  const [collections, setCollections] = useState<CollectionListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [editing, setEditing] = useState<any>(null)
-  const [deleting, setDeleting] = useState<any>(null)
+  const [editing, setEditing] = useState<CollectionListItem | null>(null)
+  const [deleting, setDeleting] = useState<CollectionListItem | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const fetchCollections = async () => {
     try {
-      const response = await fetch('/api/admin/collections')
-      if (!response.ok) {
-        setLoadError(true)
-        return
+      const all: CollectionListItem[] = []
+      let page = 1
+      // Stop when a page comes back short of the cap (the last page) or the reported total is reached.
+      for (;;) {
+        const response = await fetch(`/api/admin/collections?page=${page}&limit=${PAGE_SIZE}`)
+        if (!response.ok) {
+          setLoadError(true)
+          return
+        }
+        const data = await response.json()
+        const batch: CollectionListItem[] = data.collections || []
+        all.push(...batch)
+        const total: number = typeof data.total === 'number' ? data.total : all.length
+        if (batch.length < PAGE_SIZE || all.length >= total) break
+        page += 1
       }
-      const data = await response.json()
-      setCollections(data.collections || [])
+      setCollections(all)
       setLoadError(false)
     } catch (error) {
       console.error('Failed to fetch collections:', error)
