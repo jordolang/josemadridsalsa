@@ -4,6 +4,10 @@ import { ok, fail, parsePagination } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import prisma from '@/lib/prisma';
 import { getStoreSettings } from '@/lib/store-settings';
+import {
+  UNBALANCED_INGREDIENTS_MESSAGE,
+  findUnbalancedIngredient,
+} from '@/lib/ingredients';
 
 /**
  * GET /api/admin/products
@@ -124,6 +128,15 @@ export async function POST(req: NextRequest) {
     // Validate required fields
     if (!name || !slug || !sku || price === undefined) {
       return fail('Missing required fields: name, slug, sku, price', 400);
+    }
+
+    // The admin form and the CSV import both check this, but the API is what actually guarantees
+    // it: a group left open here is stored with the wrong grouping and published from there.
+    if (Array.isArray(ingredients)) {
+      const unbalanced = findUnbalancedIngredient(ingredients);
+      if (unbalanced) {
+        return fail(`${UNBALANCED_INGREDIENTS_MESSAGE} Check: "${unbalanced}"`, 400);
+      }
     }
 
     // Check for duplicate SKU

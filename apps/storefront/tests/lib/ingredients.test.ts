@@ -4,6 +4,7 @@ import {
   formatIngredient,
   formatIngredientName,
   formatIngredientStatement,
+  findUnbalancedIngredient,
   hasBalancedParentheses,
   parseIngredientStatement,
   parseLabelIngredients,
@@ -82,6 +83,20 @@ describe('formatIngredientStatement', () => {
     expect(formatIngredientStatement(['Tomatillos'])).toBe('Tomatillos.')
     expect(formatIngredientStatement([])).toBe('')
     expect(formatIngredientStatement(['  '])).toBe('')
+  })
+})
+
+describe('findUnbalancedIngredient', () => {
+  it('returns nothing when every group closes', () => {
+    expect(
+      findUnbalancedIngredient(['Diced Tomatoes (Tomatoes, Citric Acid)', 'Water'])
+    ).toBeUndefined()
+  })
+
+  it('names the first ingredient whose group never closes', () => {
+    expect(
+      findUnbalancedIngredient(['Water', 'Diced Tomatoes (Tomatoes, Citric Acid', 'Salt('])
+    ).toBe('Diced Tomatoes (Tomatoes, Citric Acid')
   })
 })
 

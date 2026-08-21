@@ -172,6 +172,11 @@ export function parseLabelIngredients(labelText: string): ParsedLabel {
   return { ingredients, warnings }
 }
 
+/** The first ingredient whose sub-ingredient group never closes, or undefined when all are sound. */
+export function findUnbalancedIngredient(ingredients: string[]): string | undefined {
+  return ingredients.find((ingredient) => !hasBalancedParentheses(ingredient))
+}
+
 /** Shown when a written statement has a sub-ingredient group that never closes. */
 export const UNBALANCED_INGREDIENTS_MESSAGE =
   'Every "(" in the ingredients must be closed by a matching ")" — check the sub-ingredient groups.'
