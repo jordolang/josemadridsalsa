@@ -8,7 +8,9 @@ import { collectionProductRows, slugSchema } from '@/lib/collections'
 
 const collectionSchema = z.object({
   name: z.string().min(1),
-  slug: slugSchema,
+  // Lenient here (validated conditionally below) so a collection whose stored slug predates the
+  // URL-safe rule can still be edited — the form resubmits the existing slug on every save.
+  slug: z.string().min(1),
   description: z.string().nullable().optional(),
   image: z.string().url().nullable().optional(),
   isActive: z.boolean().optional(),
@@ -53,6 +55,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const existing = await prisma.collection.findUnique({ where: { id } })
     if (!existing) return fail('Collection not found', 404)
+
+    // Enforce the URL-safe slug rule only when the slug is actually being changed, so a legacy
+    // slug that predates the rule doesn't block editing the rest of the collection.
+    if (data.slug !== undefined && data.slug !== existing.slug) {
+      const check = slugSchema.safeParse(data.slug)
+      if (!check.success) return fail('Invalid collection data', 400, check.error.issues)
+    }
 
     // When the product set is supplied, replace it wholesale so the new order sticks; the scalar
     // fields update alongside it in one transaction. When it is omitted, only the scalar fields

@@ -10,17 +10,27 @@ import {
 /** localStorage key the cookie-consent banner writes ('accepted' | 'rejected' | unset). */
 const COOKIE_CONSENT_KEY = 'cookie-consent'
 
+export type CookieConsent = 'accepted' | 'rejected' | null
+
+/**
+ * The visitor's stored cookie-consent choice, or null when they haven't chosen yet. Reads
+ * defensively: a private-mode/SecurityError localStorage throw is treated as "no choice".
+ */
+export function readCookieConsent(): CookieConsent {
+  try {
+    const value = window.localStorage.getItem(COOKIE_CONSENT_KEY)
+    return value === 'accepted' || value === 'rejected' ? value : null
+  } catch {
+    return null
+  }
+}
+
 /**
  * Whether the visitor has accepted cookies. Attribution is a marketing/analytics cookie, so it is
  * only written on explicit acceptance — never before a choice is made, and never after a rejection.
- * Reads defensively: a private-mode/SecurityError localStorage throw is treated as "no consent".
  */
 function hasAnalyticsConsent(): boolean {
-  try {
-    return window.localStorage.getItem(COOKIE_CONSENT_KEY) === 'accepted'
-  } catch {
-    return false
-  }
+  return readCookieConsent() === 'accepted'
 }
 
 /** Whether the first-touch cookie is already present (client-side). */

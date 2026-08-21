@@ -52,9 +52,13 @@ export default function CollectionsPage() {
   const fetchCollections = async () => {
     try {
       const all: CollectionListItem[] = []
+      const seen = new Set<string>()
       let page = 1
-      // Stop when a page comes back short of the cap (the last page) or the reported total is reached.
-      for (;;) {
+      // Walk pages until the last one (a short page). Offset paging over a set that changes between
+      // requests could otherwise repeat a row that shifted across a page boundary, so de-dupe by id;
+      // MAX_PAGES caps the loop far above any real catalogue as a runaway guard.
+      const MAX_PAGES = 100
+      for (; page <= MAX_PAGES; page++) {
         const response = await fetch(`/api/admin/collections?page=${page}&limit=${PAGE_SIZE}`)
         if (!response.ok) {
           setLoadError(true)
@@ -62,10 +66,13 @@ export default function CollectionsPage() {
         }
         const data = await response.json()
         const batch: CollectionListItem[] = data.collections || []
-        all.push(...batch)
-        const total: number = typeof data.total === 'number' ? data.total : all.length
-        if (batch.length < PAGE_SIZE || all.length >= total) break
-        page += 1
+        for (const c of batch) {
+          if (!seen.has(c.id)) {
+            seen.add(c.id)
+            all.push(c)
+          }
+        }
+        if (batch.length < PAGE_SIZE) break
       }
       setCollections(all)
       setLoadError(false)
