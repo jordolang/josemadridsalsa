@@ -14,6 +14,18 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **The jar labels are now product photos.** `npm run images:labels` uploads the flat label scans in
+  `public/images/unused/new-products/labels` to Blob as WebP and appends each one to its product's
+  gallery, so the label sits beside the jar shot instead of only existing in the repo. It is
+  `images:sync` in a label-specific mode: the blob prefix is `products/labels/`, a label is always
+  appended and never becomes the main product photo, and filenames get one extra chance to reach
+  their product through `lib/images/label-aliases.ts` — the scans were named from the jar artwork,
+  before the catalogue slugs settled. Dry run by default, as with every other image command.
+
+  Filename matching also now ignores a trailing `salsa`, which the catalogue applies inconsistently
+  (`mango-mild-salsa` and `spanish-verde-mild` are both salsas), so a photo named after the flavour
+  finds its product. A relaxed match that fits two products still links nothing.
+
 - **The FAQ page is reachable from the main navigation.** `/faq` already rendered the questions and
   categories managed in Content → FAQs, and it was already in the sitemap, but nothing on the site
   linked to it — a visitor could only arrive by typing the URL. It now sits under About in the
@@ -109,6 +121,11 @@ the root `package.json` is canonical.
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
 ### Changed
+- **The salsa detail gallery shows a photo whole rather than cropping it to a square.** The main
+  image and its thumbnails used `object-cover`, which is fine for a jar shot and useless for a
+  label: the scans are roughly 2.4:1, so the ingredient panel fell outside the frame entirely. Both
+  now use `object-contain`, matching `components/products/ImageGallery`.
+
 - **The image migration now keeps the original alongside the WebP, and blog covers point at it.**
   Conversion used to replace: `salsa-bowl.png` became `salsa-bowl.webp` and the PNG existed only in
   git history. Anything that cannot read WebP therefore had no URL to fall back to — which is not

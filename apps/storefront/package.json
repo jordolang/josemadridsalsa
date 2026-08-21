@@ -35,6 +35,7 @@
     "email:mass-send": "tsx scripts/send-mass-email.ts",
     "fresh": "npm run clean && npm install && npm run dev",
     "fundraisers:build-contacts": "tsx scripts/build-fundraiser-contacts.ts",
+    "images:labels": "tsx scripts/sync-images.ts public/images/unused/new-products/labels --labels --link",
     "images:migrate": "tsx scripts/migrate-site-images.ts",
     "images:sync": "tsx scripts/sync-images.ts",
     "ledger:backfill": "tsx scripts/backfill-ledger.ts",

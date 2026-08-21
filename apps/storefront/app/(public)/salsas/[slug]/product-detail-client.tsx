@@ -177,11 +177,13 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           {/* Image Gallery */}
           <div className="space-y-4">
             <div className="relative aspect-square bg-card rounded-2xl overflow-hidden surface-shadow">
+              {/* contain, not cover: a flat label scan is much wider than the square frame, and
+                  cropping it would cut off the ingredient panel. Matches ImageGallery. */}
               <Image
                 src={allImages[selectedImage]}
                 alt={product.name}
                 fill
-                className="object-cover"
+                className="object-contain"
                 priority
               />
             </div>
@@ -198,7 +200,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                         : 'border-transparent hover:border-salsa-300'
                     )}
                   >
-                    <Image src={img} alt={`${product.name} view ${idx + 1}`} fill className="object-cover" />
+                    <Image src={img} alt={`${product.name} view ${idx + 1}`} fill className="object-contain" />
                   </button>
                 ))}
               </div>
