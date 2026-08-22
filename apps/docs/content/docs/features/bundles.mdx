@@ -1,0 +1,59 @@
+---
+title: Product Bundles
+description: Sell a fixed set of products together at one set price, priced and enforced server-side at checkout.
+---
+
+A **bundle** is a fixed set of products sold together at one set price — "buy these together for
+$X". Unlike a [Collection](/docs/features/collections) (a marketing grouping where each product
+keeps its own price), a bundle carries its own `price`, and at checkout it expands into its
+component order lines with that price prorated across them.
+
+## How it's priced (server-side, anti-tamper)
+
+The client only ever sends `{ bundleId, quantity }`. The server loads the bundle definition,
+expands it into one order line per component product, and splits the bundle price across those
+lines — exactly the posture used for fundraiser price overrides and the server-side shipping
+recompute. Nothing about the price comes from the browser.
+
+- `lib/bundles.ts` — `allocateBundlePrices` splits the bundle price across components in **integer
+  cents** with the largest-remainder method, weighted by each component's catalogue value
+  (`price × quantity`), so the component line totals sum back to the bundle price **to the cent**. A
+  component whose cents don't divide evenly by its unit count is returned as **two lines** so that
+  every line satisfies `unitPrice × quantity === totalPrice` exactly — refund/return math multiplies
+  `unitPrice × quantity`, so a single rounded per-unit price would drift a cent on a full return.
+  It's pure and fully unit-tested. `bundleProductRows` builds the join rows; `bundleSavings` is the
+  saving versus buying separately.
+- `lib/bundles.server.ts` — `resolveBundleSelections` loads the bundles, validates them (a missing,
+  inactive, empty, or unavailable-component bundle is a clean 400, not a wrong charge), and returns
+  ready-to-use order lines, per-component inventory reservations, and the subtotal.
+- All three online checkout routes (`/api/checkout`, `/api/checkout/paypal/create-order`,
+  `/api/checkout/square/create-order`) call it identically. Because a bundle becomes **real
+  component order lines**, inventory reservation, tax, margin (`unitCost` snapshot), fulfilment and
+  returns all work per-product with no special cases. Each order line is tagged with `bundleId` /
+  `bundleName` for reporting.
+
+Why not a synthetic "bundle product": that would duplicate inventory and break per-component stock,
+fulfilment, and margin. Why not a discount code: a code is order-global and untyped per product, so
+it can't express "this specific set at this price".
+
+## Admin
+
+**Admin → Products → Bundles** (`/admin/bundles`, gated on `products:read` / `products:write`).
+Create and edit bundles — name, slug, description, image, **price**, SEO fields, active flag, and a
+searchable product picker where each chosen product gets a quantity. Mirrors the Collections admin.
+Deleting a bundle detaches its products (the join rows cascade) and never deletes the products.
+
+## Storefront
+
+`/bundles/[slug]` shows an active bundle: its price, the saving versus buying separately, and what's
+inside, with an **Add Bundle to Cart** button. The cart holds the bundle as a single line at its set
+price; at checkout it is submitted as `{ bundleId, quantity }` and the server re-prices it. If a
+component goes inactive or out of stock the bundle is shown but not purchasable. Active bundles are
+listed in the sitemap.
+
+## Data model
+
+`Bundle` and `BundleProduct` (a join with `quantity` + `sortOrder`) mirror
+`Collection`/`CollectionProduct`, plus `Bundle.price`. `OrderItem` gains nullable `bundleId` /
+`bundleName` tags. Migration `20260822120000_add_product_bundles` (additive). No new permission seed
+— bundles reuse the existing `products:*` permissions.

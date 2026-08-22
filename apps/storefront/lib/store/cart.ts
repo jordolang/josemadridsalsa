@@ -12,6 +12,65 @@ export interface CartItem {
   sku: string
   heatLevel: string
   maxQuantity?: number
+  /**
+   * Present when this line is a bundle rather than a single product. `id` is `bundle:<bundleId>`,
+   * `price` is the bundle's set price, and `bundle` carries what it expands into so checkout can
+   * send `{ bundleId, quantity }` (the server re-prices it) and the drawer can show its contents.
+   */
+  bundle?: {
+    bundleId: string
+    /**
+     * What the bundle expands into: each component product, how many are in one bundle, and its
+     * prorated per-unit price (so the tax/shipping preview can be computed). The order-create
+     * routes recompute all of this server-side from the bundle definition — these values are for
+     * display and preview only, never trusted for the final charge.
+     */
+    components: Array<{ productId: string; quantity: number; unitPrice: number }>
+  }
+}
+
+/** The cart line id for a bundle, namespaced so it never collides with a product id. */
+export function bundleCartId(bundleId: string): string {
+  return `bundle:${bundleId}`
+}
+
+/** Split cart lines into the checkout payload: standalone products vs bundle selections. */
+export function toCheckoutSelections(items: CartItem[]): {
+  items: Array<{ productId: string; quantity: number }>
+  bundles: Array<{ bundleId: string; quantity: number }>
+} {
+  const productItems: Array<{ productId: string; quantity: number }> = []
+  const bundles: Array<{ bundleId: string; quantity: number }> = []
+  for (const item of items) {
+    if (item.bundle) {
+      bundles.push({ bundleId: item.bundle.bundleId, quantity: item.quantity })
+    } else {
+      productItems.push({ productId: item.id, quantity: item.quantity })
+    }
+  }
+  return { items: productItems, bundles }
+}
+
+/**
+ * Flatten cart lines to real product items for the tax/shipping **preview** endpoints (which only
+ * understand product ids). A bundle line becomes its component products at their combined quantity;
+ * quantities for the same product are merged. The order-create routes are authoritative on the
+ * bundle's actual price — a preview computed from component list prices is only an estimate.
+ */
+export function toPreviewItems(
+  items: CartItem[]
+): Array<{ productId: string; quantity: number; price: number }> {
+  const lines: Array<{ productId: string; quantity: number; price: number }> = []
+  for (const item of items) {
+    if (item.bundle) {
+      for (const c of item.bundle.components) {
+        lines.push({ productId: c.productId, quantity: c.quantity * item.quantity, price: c.unitPrice })
+      }
+    } else {
+      lines.push({ productId: item.id, quantity: item.quantity, price: item.price })
+    }
+  }
+  return lines
 }
 
 interface CartStore {

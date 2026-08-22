@@ -9,6 +9,8 @@ import type { Prisma } from '@prisma/client'
 vi.mock('@/lib/prisma', () => ({ default: {} }))
 
 import {
+  aggregateReservations,
+  deductReservedInventoryForItemsInTx,
   deductReservedInventoryInTx,
   deductReservedInventoryOnceInTx,
 } from '@/lib/inventory-manager'
@@ -164,6 +166,43 @@ describe('Inventory deduction idempotency (oversell race)', () => {
     await expect(
       deductReservedInventoryOnceInTx({ productId: 'prod-salsa', quantity: 1 }, store.tx)
     ).rejects.toThrow(/orderId/)
+  })
+
+  // Regression for the bundle duplicate-product case: a product can appear on more than one
+  // order line (bought standalone *and* as a bundle component, or in two bundles). The per-line
+  // idempotency guard keys on (product, order), so deducting line by line would record the first
+  // line and skip the rest, stranding their reserved quantity forever. The shared helper sums per
+  // product and deducts the total once.
+  it('deducts the summed quantity once for a product that appears on multiple order lines', async () => {
+    const store = makeFakeTx(seedProduct())
+    const orderId = 'order-bundle'
+
+    const results = await deductReservedInventoryForItemsInTx(
+      [
+        { productId: 'prod-salsa', quantity: 2 }, // standalone line
+        { productId: 'prod-salsa', quantity: 3 }, // same product, bundle component line
+      ],
+      { orderId, notes: `Payment completed for order ${orderId}` },
+      store.tx
+    )
+
+    expect(results).toHaveLength(1) // one product → one deduction
+    expect(store.getProduct().inventory).toBe(95) // 100 - (2 + 3), not 100 - 2
+    expect(store.getProduct().stockReserved).toBe(1) // 6 reserved - 5 deducted
+    expect(store.orderCompletionCount(orderId)).toBe(1)
+  })
+
+  it('aggregateReservations sums duplicate products into one entry, keeping the first metadata', () => {
+    expect(
+      aggregateReservations([
+        { productId: 'a', quantity: 2, notes: 'standalone', userId: 'u1' },
+        { productId: 'b', quantity: 1, notes: 'bundle' },
+        { productId: 'a', quantity: 3, notes: 'bundle' },
+      ])
+    ).toEqual([
+      { productId: 'a', quantity: 5, notes: 'standalone', userId: 'u1' },
+      { productId: 'b', quantity: 1, notes: 'bundle' },
+    ])
   })
 
   // Drift guard: the whole point of the shared helper is that no finalize path calls

@@ -4,7 +4,7 @@ import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { getProvider } from '@/lib/payments'
 import { Prisma, PaymentStatus, OrderStatus } from '@prisma/client'
-import { deductReservedInventoryOnceInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
+import { deductReservedInventoryForItemsInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
 import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
@@ -275,34 +275,23 @@ export async function POST(request: Request) {
         // Stripe webhook, which completes the same order in parallel and awards them too.
         await creditPurchaseLoyaltyPoints(tx, order!.id)
 
-        // Deduct reserved inventory for each item inside the same transaction.
-        // The Stripe webhook completes the same order in parallel and deducts the
-        // same items, so skip any item it already recorded — deductReservedInventoryOnceInTx
-        // is idempotent per order item. Without it a second deduction either throws
-        // (the reservation is gone) or silently consumes another customer's
-        // reservation, overselling the product.
-        for (const item of order!.items) {
-          const result = await deductReservedInventoryOnceInTx(
+        // Deduct reserved inventory for the order's items inside the same transaction,
+        // aggregated per product. The Stripe webhook completes the same order in parallel
+        // and deducts the same items, so this skips any product it already recorded —
+        // deductReservedInventoryForItemsInTx is idempotent per (product, order). Without it
+        // a second deduction either throws (the reservation is gone) or silently consumes
+        // another customer's reservation, overselling the product.
+        itemDeductions.push(
+          ...(await deductReservedInventoryForItemsInTx(
+            order!.items,
             {
-              productId: item.productId,
-              quantity: item.quantity,
               orderId: order!.id,
               userId: order!.userId || undefined,
               notes: `Payment completed for order ${order!.id}`,
             },
             tx
-          )
-
-          if (!result) {
-            continue
-          }
-
-          itemDeductions.push({
-            productId: item.productId,
-            newInventory: result.newInventory,
-            lowStockThreshold: result.product.lowStockThreshold,
-          })
-        }
+          ))
+        )
 
         // Redeem the codes now that the order is paid. Deferring redemption to this
         // point means an abandoned checkout never burns a gift balance or consumes a

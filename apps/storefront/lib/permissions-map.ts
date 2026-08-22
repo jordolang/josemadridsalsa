@@ -66,6 +66,11 @@ export const adminNavigation: NavItem[] = [
         permission: 'products:read',
       },
       {
+        label: 'Bundles',
+        href: '/admin/bundles',
+        permission: 'products:read',
+      },
+      {
         label: 'Tags',
         href: '/admin/tags',
         permission: 'content:read',
