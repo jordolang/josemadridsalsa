@@ -17,7 +17,10 @@ recompute. Nothing about the price comes from the browser.
 
 - `lib/bundles.ts` — `allocateBundlePrices` splits the bundle price across components in **integer
   cents** with the largest-remainder method, weighted by each component's catalogue value
-  (`price × quantity`), so the component line totals sum back to the bundle price **to the cent**.
+  (`price × quantity`), so the component line totals sum back to the bundle price **to the cent**. A
+  component whose cents don't divide evenly by its unit count is returned as **two lines** so that
+  every line satisfies `unitPrice × quantity === totalPrice` exactly — refund/return math multiplies
+  `unitPrice × quantity`, so a single rounded per-unit price would drift a cent on a full return.
   It's pure and fully unit-tested. `bundleProductRows` builds the join rows; `bundleSavings` is the
   saving versus buying separately.
 - `lib/bundles.server.ts` — `resolveBundleSelections` loads the bundles, validates them (a missing,

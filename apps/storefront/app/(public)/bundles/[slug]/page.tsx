@@ -40,17 +40,24 @@ export default async function BundlePage({ params }: PageProps) {
   const { bundle, components, available, retailTotal, savings } = result
 
   // Prorate the bundle price across components the same way checkout will, so the cart line and the
-  // tax/shipping preview line up with the eventual (authoritative) server-side charge.
+  // tax/shipping preview line up with the eventual (authoritative) server-side charge. The allocator
+  // may split a component into two lines to keep unitPrice × quantity exact, so fold each product's
+  // lines back into a single preview entry (one per product, its full per-bundle quantity).
   const allocated = allocateBundlePrices(
     components.map((c) => ({ productId: c.product.id, basePrice: c.product.price, quantity: c.quantity })),
     bundle.price,
     1
   )
-  const cartComponents = allocated.map((a) => ({
-    productId: a.productId,
-    quantity: components.find((c) => c.product.id === a.productId)!.quantity,
-    unitPrice: a.unitPrice,
-  }))
+  const cartComponents = components.map((c) => {
+    const shareCents = allocated
+      .filter((a) => a.productId === c.product.id)
+      .reduce((sum, a) => sum + Math.round(a.totalPrice * 100), 0)
+    return {
+      productId: c.product.id,
+      quantity: c.quantity,
+      unitPrice: Math.round(shareCents / c.quantity) / 100,
+    }
+  })
 
   // Most bundles buildable from current stock — the tightest component wins.
   const maxBundles = available

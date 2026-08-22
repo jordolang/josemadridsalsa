@@ -339,19 +339,42 @@ async function reserveInventorySingleTransaction(
 }
 
 /**
+ * Collapse reservations to one entry per product, summing quantities. `reserveMultipleProducts`
+ * validates each entry against the same pre-reservation snapshot, so two entries for the same product
+ * (e.g. a product bought standalone *and* as a bundle component) would each pass validation against
+ * the full available stock and then over-reserve. Aggregating first makes the validation see the
+ * combined demand. Product-level metadata (userId/orderId/notes) is taken from the first entry.
+ */
+export function aggregateReservations(reservations: InventoryReservation[]): InventoryReservation[] {
+  const byProduct = new Map<string, InventoryReservation>();
+  for (const r of reservations) {
+    const existing = byProduct.get(r.productId);
+    if (existing) {
+      existing.quantity += r.quantity;
+    } else {
+      byProduct.set(r.productId, { ...r });
+    }
+  }
+  return [...byProduct.values()];
+}
+
+/**
  * Reserve inventory for multiple products (bulk operation).
  * Uses a single Serializable transaction for atomic all-or-nothing behavior.
  * If any product has insufficient stock, the entire reservation fails and rolls back.
  * Retries up to 3 times on serialization conflicts (P2034).
  */
 export async function reserveMultipleProducts(reservations: InventoryReservation[]) {
+  // Collapse duplicate products first: validation below reads the same snapshot per entry, so two
+  // entries for one product would each pass against full stock and then over-reserve.
+  const aggregated = aggregateReservations(reservations);
   return withSerializableRetry(() =>
     prisma.$transaction(
       async (tx) => {
         const results = [];
 
         // Step 1: Validate all products have sufficient stock BEFORE reserving anything
-        for (const reservation of reservations) {
+        for (const reservation of aggregated) {
           const product = await tx.product.findUnique({
             where: { id: reservation.productId },
             select: {
@@ -377,7 +400,7 @@ export async function reserveMultipleProducts(reservations: InventoryReservation
         }
 
         // Step 2: If ALL validations pass, reserve inventory for ALL products atomically
-        for (const reservation of reservations) {
+        for (const reservation of aggregated) {
           const result = await reserveInventorySingleTransaction(reservation, tx);
           results.push({ success: true, ...result });
         }
@@ -643,6 +666,52 @@ export async function deductReservedInventoryOnceInTx(
   }
 
   return deductReservedInventoryInTx(reservation, tx);
+}
+
+/**
+ * Deduct reserved inventory for a completed order's items, aggregating by product first.
+ *
+ * An order can carry more than one line for the same product — a product bought standalone *and* as
+ * a bundle component, or one appearing in two bundles. The per-item idempotency guard in
+ * {@link deductReservedInventoryOnceInTx} keys only on `(productId, orderId)`, so deducting line by
+ * line would record the first line's quantity and then skip every later line for that product,
+ * leaving the remaining reservation stuck forever. Summing per product and deducting once matches the
+ * guard exactly. Returns the per-product results (skips already-deducted products) so the caller can
+ * fire inventory alerts after the transaction commits.
+ */
+export async function deductReservedInventoryForItemsInTx(
+  items: Array<{ productId: string; quantity: number }>,
+  context: { orderId: string; userId?: string; notes: string },
+  tx: Prisma.TransactionClient
+): Promise<Array<{ productId: string; newInventory: number; lowStockThreshold: number }>> {
+  const quantityByProduct = new Map<string, number>();
+  for (const item of items) {
+    quantityByProduct.set(
+      item.productId,
+      (quantityByProduct.get(item.productId) ?? 0) + item.quantity
+    );
+  }
+
+  const results: Array<{ productId: string; newInventory: number; lowStockThreshold: number }> = [];
+  for (const [productId, quantity] of quantityByProduct) {
+    const result = await deductReservedInventoryOnceInTx(
+      {
+        productId,
+        quantity,
+        orderId: context.orderId,
+        userId: context.userId,
+        notes: context.notes,
+      },
+      tx
+    );
+    if (!result) continue;
+    results.push({
+      productId,
+      newInventory: result.newInventory,
+      lowStockThreshold: result.product.lowStockThreshold,
+    });
+  }
+  return results;
 }
 
 /**

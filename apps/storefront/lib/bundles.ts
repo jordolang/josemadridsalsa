@@ -46,9 +46,9 @@ export interface AllocatedBundleLine {
   productId: string
   /** Units of this product on the order = component quantity × number of bundles. */
   quantity: number
-  /** Per-unit price (2 dp) derived from the allocated total; `totalPrice` is authoritative. */
+  /** Per-unit price (2 dp). `unitPrice × quantity === totalPrice` exactly for every line. */
   unitPrice: number
-  /** This component's exact share of the bundle total, in dollars (2 dp). */
+  /** This line's exact share of the bundle total, in dollars (2 dp). */
   totalPrice: number
 }
 
@@ -76,8 +76,12 @@ const toCents = (dollars: number) => Math.round(dollars * 100)
  * When every component has a zero/absent base price the weight falls back to unit count, so a
  * bundle of cost-price-unknown items still splits sensibly rather than dividing by zero.
  *
- * `unitPrice` is the line total divided by its unit count, rounded to a displayable 2 dp; the
- * `totalPrice` is the exact allocated share and is what the order subtotal is summed from.
+ * A component's allocated cents rarely divide evenly by its unit count, so each component is emitted
+ * as **at most two lines** — one carrying the leftover `+1` cents and one at the base per-unit
+ * price — chosen so that every returned line satisfies `unitPrice × quantity === totalPrice` to the
+ * cent. This matters because refund/return math multiplies `unitPrice × quantity` (see
+ * `lib/orders/return-resolution.ts`, `returns.ts`, `settle-return.server.ts`); a single stored
+ * `unitPrice` that didn't divide the line total evenly would drift a cent on a full return.
  */
 export function allocateBundlePrices(
   components: BundleComponentForPricing[],
@@ -110,12 +114,37 @@ export function allocateBundlePrices(
     remaining -= 1
   }
 
-  return components.map((c, i) => {
+  // Split each component's allocated cents into whole per-unit prices so that, for every line,
+  // unitPrice × quantity === totalPrice exactly. A component whose cents don't divide evenly by its
+  // unit count becomes two lines: `extra` units one cent dearer, the rest at the base per-unit price.
+  const lines: AllocatedBundleLine[] = []
+  components.forEach((c, i) => {
     const quantity = c.quantity * bundleQuantity
-    const totalPrice = centsByIndex[i] / 100
-    const unitPrice = quantity > 0 ? Math.round(centsByIndex[i] / quantity) / 100 : 0
-    return { productId: c.productId, quantity, unitPrice, totalPrice }
+    if (quantity <= 0) return
+    const cents = centsByIndex[i]
+    const base = Math.floor(cents / quantity)
+    const extra = cents - base * quantity // 0 .. quantity-1
+
+    if (extra > 0) {
+      lines.push({
+        productId: c.productId,
+        quantity: extra,
+        unitPrice: (base + 1) / 100,
+        totalPrice: ((base + 1) * extra) / 100,
+      })
+    }
+    const baseQuantity = quantity - extra
+    if (baseQuantity > 0) {
+      lines.push({
+        productId: c.productId,
+        quantity: baseQuantity,
+        unitPrice: base / 100,
+        totalPrice: (base * baseQuantity) / 100,
+      })
+    }
   })
+
+  return lines
 }
 
 /** The customer's saving versus buying the components separately, in dollars (0 if none). */

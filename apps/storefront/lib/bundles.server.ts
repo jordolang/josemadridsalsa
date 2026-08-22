@@ -80,7 +80,9 @@ export async function resolveBundleSelections(
   const bundleMap = new Map(bundles.map((b) => [b.id, b]))
 
   const orderItems: BundleOrderItem[] = []
-  const reservations: Array<{ productId: string; quantity: number }> = []
+  // Reservations are keyed by product so a product that appears in more than one bundle — or is
+  // split across two lines by the penny allocation — reserves its total once, not per line.
+  const reservationByProduct = new Map<string, number>()
   let subtotal = 0
 
   for (const [bundleId, quantity] of quantityByBundle) {
@@ -121,10 +123,18 @@ export async function resolveBundleSelections(
         bundleId: bundle.id,
         bundleName: bundle.name,
       })
-      reservations.push({ productId: line.productId, quantity: line.quantity })
+      reservationByProduct.set(
+        line.productId,
+        (reservationByProduct.get(line.productId) ?? 0) + line.quantity
+      )
       subtotal += line.totalPrice
     }
   }
+
+  const reservations = [...reservationByProduct].map(([productId, quantity]) => ({
+    productId,
+    quantity,
+  }))
 
   return { orderItems, reservations, subtotal: Math.round(subtotal * 100) / 100 }
 }
