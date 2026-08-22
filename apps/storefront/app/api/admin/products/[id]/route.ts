@@ -3,6 +3,7 @@ import { requirePermission } from '@/lib/rbac';
 import { ok, fail } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import prisma from '@/lib/prisma';
+import { validateIngredientsInput } from '@/lib/ingredients';
 
 /**
  * GET /api/admin/products/[id]
@@ -70,6 +71,13 @@ export async function PATCH(
 
     // Parse request body
     const body = await req.json();
+
+    // The admin form and the CSV import both check this, but the API is what actually guarantees
+    // it: a group left open here is stored with the wrong grouping and published from there.
+    const ingredientsError = validateIngredientsInput(body.ingredients);
+    if (ingredientsError) {
+      return fail(ingredientsError, 400);
+    }
 
     // If SKU is being changed, check for duplicates
     if (body.sku && body.sku !== existingProduct.sku) {

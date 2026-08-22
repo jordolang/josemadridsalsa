@@ -20,6 +20,7 @@ import { ShareContent } from '@/types/sharing'
 import { generateHashtags } from '@/lib/sharing/metadata-extractor'
 import { RecentlyViewedProducts } from '@/components/store/recently-viewed'
 import { NutritionalInfo } from '@/components/products/NutritionalInfo'
+import { formatIngredientStatement, toIngredientList } from '@/lib/ingredients'
 
 type NutritionalInfoData = {
   id: string
@@ -166,11 +167,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   }
 
   const formattedIngredients = product.productIngredients
-    ?.map((pi) => {
-      const qualifier = pi.qualifier ? `${pi.qualifier} ` : ''
-      return `${qualifier}${pi.ingredient.name}`
-    })
-    .join(', ')
+    ? formatIngredientStatement(toIngredientList(product.productIngredients))
+    : ''
 
   return (
     <main className="min-h-screen bg-background">
@@ -179,11 +177,13 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           {/* Image Gallery */}
           <div className="space-y-4">
             <div className="relative aspect-square bg-card rounded-2xl overflow-hidden surface-shadow">
+              {/* contain, not cover: a flat label scan is much wider than the square frame, and
+                  cropping it would cut off the ingredient panel. Matches ImageGallery. */}
               <Image
                 src={allImages[selectedImage]}
                 alt={product.name}
                 fill
-                className="object-cover"
+                className="object-contain"
                 priority
               />
             </div>
@@ -200,7 +200,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                         : 'border-transparent hover:border-salsa-300'
                     )}
                   >
-                    <Image src={img} alt={`${product.name} view ${idx + 1}`} fill className="object-cover" />
+                    <Image src={img} alt={`${product.name} view ${idx + 1}`} fill className="object-contain" />
                   </button>
                 ))}
               </div>

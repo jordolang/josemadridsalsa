@@ -1,55 +1,7 @@
-VvVvVvVyVvVyVvVyVyv
+Transcribed by hand from the full-resolution label scan in
+public/images/unused/new-products/labels/. The tesseract pass on this label was too
+damaged to parse; re-running scrape-ingredients.sh would overwrite this with the bad text.
 
-Use as a sauce, for chicken, pork,
-OF fish. Also sreat as a dip,
+Ingredients: Diced Tomatoes (Tomatoes, Citric Acid, Calcium Chloride), Crushed Tomatoes (Tomatoes, Citric Acid), Green Chilies (Chilies, Salt, Vinegar, Calcium Chloride), Raspberries, Chipotlé Peppers (Red Peppers, Water, Citric Acid, Salt), Cider Vinegar, Jalepeño Peppers, Onions, Smoke Flavor, Honey, Spices and Garlic.
 
-More t recipes
-
-Chilies, Salt, oe
-_ available: . x berries, Chipotlé Peppers
-on Website MATE ale itric Acid, Salt), Cider
-
-ex
-
-I)
-
-fetcetey bic
-
-eae
-
-lll
-
-oo
-
-pers, Onions, Sua Flavor,
-
-Ha, i sand Garlic.
-
-ox
-
-—
-ms
-
-=:
-
-‘ill i) : Nution = Amounl/Serving % DV" AmountServing % DV"
-
-| ‘act:
-
-| % 3 Sening Size 2 Tbls. Total Fat_ 09% Wothae oth | Fat_g ie _ Oaiatal ik
-
-AFTER OPENING i ALO ; Gon) sara rl
-m Mal |
-
-| | Servings 13 TransFat 09 0%
-SS SS SS S| |
-
-U RASPBERRY BBQ CHIPOTLE }} | Fatcal.o Cholest. Omg 9% Sugar2g
-
-*Percent Daily Value (DV) are Sodium 64mg 3% Protein Omg
-NET. WT. 13 OZ. (369 g.)
-
-NO |
-based on a 2,000 calorie diet. Vitamin A 4% + Vitamin C 1% + Calcium 1% « Iron 2% «
-
-UNI Y
+Nutrition Facts

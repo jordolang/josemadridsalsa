@@ -14,10 +14,55 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **The jar labels are now product photos.** `npm run images:labels` uploads the flat label scans in
+  `public/images/unused/new-products/labels` to Blob as WebP and appends each one to its product's
+  gallery, so the label sits beside the jar shot instead of only existing in the repo. It is
+  `images:sync` in a label-specific mode: the blob prefix is `products/labels/`, a label is always
+  appended and never becomes the main product photo, and filenames get one extra chance to reach
+  their product through `lib/images/label-aliases.ts` — the scans were named from the jar artwork,
+  before the catalogue slugs settled. Dry run by default, as with every other image command.
+
+  Filename matching also now ignores a trailing `salsa`, which the catalogue applies inconsistently
+  (`mango-mild-salsa` and `spanish-verde-mild` are both salsas), so a photo named after the flavour
+  finds its product. A relaxed match that fits two products still links nothing.
+
 - **Configurable flat-rate shipping presets.** The rates the estimate/fallback path quotes — when a live carrier rate isn't available (no API key, an unset warehouse origin, a PO Box with no USPS rate, or a carrier outage) — were hardcoded constants in the calculator. They are now editable under **Settings → Shipping → Flat-rate presets**: the base flat rate, the heavy-order surcharge (threshold weight, base, and per-pound amount), the flat international rate, and the per-state multipliers for remote destinations (Alaska, Hawaii, Puerto Rico). Live EasyPost rates, when available, are still used ahead of these and are unaffected.
 
   The values live on the `ShippingSettings` singleton as whole cents (migration `20260821140000_add_shipping_rate_presets`, additive nullable columns) and are read at quote time by `lib/shipping/rate-config.ts`, which merges the stored row over the built-in defaults — so any field left blank falls back to exactly the number the calculator used before, and an unconfigured store's quotes don't change. The resolver never throws: a database problem falls through to the defaults so a quote is always available, the same posture as the origin resolver. The rate math and config resolution are pure and fully tested, and the move was verified to leave every existing shipping quote byte-for-byte identical (the calculator's `toFixed` rounding is preserved). Shipping is still charged on every order — there is no free-shipping path. The rate-preset form writes only its own columns, so saving presets leaves the origin and carrier settings untouched.
+- **Two-way Google Calendar sync, so the "Where is Jose?" flag finally reaches customers.**
+  `/where-is-jose` renders the Google Calendar feed, not the database, so flagging an event in
+  the admin changed nothing a visitor saw. Pushing to the calendar is the publish step, and it
+  now happens: flagged events go up, shows added on the calendar come back down as flagged
+  events, and unflagging one takes it off the public calendar again.
 
+  Only flagged events are ever pushed. `FeaturedEvent` also holds the booking pipeline — shows
+  applied to, waitlisted, or declined, with their booth fees — and the target calendar is
+  public, so pushing everything would publish all of it. In the other direction Google can
+  never delete a local record: an event owns its staff, contacts, manifest and show
+  financials, so a removal on the calendar unlinks the pair and leaves the record standing.
+
+  When an event changed in both places since the last sync, the connection's conflict policy
+  decides — the website wins, Google wins, or (the default) neither is touched and the event
+  is listed in the admin card with "Keep this site's" / "Keep Google's". Connect, sync,
+  policy, conflicts and disconnect all live in the Google Calendar card on Admin → Events,
+  which replaces the old status-only panel. Setup is documented under Integrations → Google
+  Calendar Two-Way Sync; it needs the `calendar.events` scope added in Google Cloud.
+
+- **A week-by-week calendar inside the Events tab's "Where is Jose?" card.** The tab already listed
+  the flagged events and there was a month grid on a separate page, but nothing let you look at a
+  single week and work in it. The card now opens on the current week: flagged events render solid,
+  every other booked show renders dimmed beside them so an empty-looking week is distinguishable
+  from a week with shows nobody has promoted yet, and application deadlines sit on the day they
+  fall. Weeks page backwards and forwards without limit — arrows, five week buttons for longer
+  jumps, "This week", and a date picker — and the list of flagged events stays below the grid.
+
+  Clicking a day opens a panel for it: the day's events with their status, time and location; edit,
+  manifest and financials links; a one-click toggle to promote or demote a show from "Where is
+  Jose?"; and an add-event button that prefills the date and the flag. Each event can be shared —
+  details and link to the clipboard, a single-event `.ics`, a social post draft, or an email
+  campaign started from the Event Invitation template. The whole week exports as `.ics` or as the
+  20-column Show-import CSV, and every "Where is Jose?" event exports as one `.ics` covering all
+  dates.
 - **The FAQ page is reachable from the main navigation.** `/faq` already rendered the questions and
   categories managed in Content → FAQs, and it was already in the sitemap, but nothing on the site
   linked to it — a visitor could only arrive by typing the URL. It now sits under About in the
@@ -113,6 +158,11 @@ the root `package.json` is canonical.
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
 ### Changed
+- **The salsa detail gallery shows a photo whole rather than cropping it to a square.** The main
+  image and its thumbnails used `object-cover`, which is fine for a jar shot and useless for a
+  label: the scans are roughly 2.4:1, so the ingredient panel fell outside the frame entirely. Both
+  now use `object-contain`, matching `components/products/ImageGallery`.
+
 - **The image migration now keeps the original alongside the WebP, and blog covers point at it.**
   Conversion used to replace: `salsa-bowl.png` became `salsa-bowl.webp` and the PNG existed only in
   git history. Anything that cannot read WebP therefore had no URL to fall back to — which is not

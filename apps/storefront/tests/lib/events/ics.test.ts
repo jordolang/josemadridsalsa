@@ -3,7 +3,6 @@ import {
   buildIcs,
   eventLocationLine,
   icsStatusFor,
-  inferAllDay,
   toIcsEvent,
   type ExportableEvent,
   type IcsEvent,
@@ -15,10 +14,13 @@ const at = (y: number, m: number, d: number, h = 0, min = 0) =>
 
 const NOW = new Date(Date.UTC(2026, 7, 21, 10, 30, 0))
 
+/** All-day events obey the storage invariant: UTC midnight of the calendar date. */
+const allDayAt = (y: number, m: number, d: number) => new Date(Date.UTC(y, m - 1, d))
+
 const baseEvent = (overrides: Partial<IcsEvent> = {}): IcsEvent => ({
   uid: 'event-abc@josemadrid.net',
   title: 'Zanesville Festival',
-  start: at(2026, 8, 29),
+  start: allDayAt(2026, 8, 29),
   allDay: true,
   ...overrides,
 })
@@ -60,20 +62,26 @@ describe('all-day events', () => {
   })
 
   it('spans a multi-day show through the day after its last day', () => {
-    const ics = build([baseEvent({ end: at(2026, 8, 31) })])
+    const ics = build([baseEvent({ end: allDayAt(2026, 8, 31) })])
     expect(ics).toContain('DTSTART;VALUE=DATE:20260829')
     expect(ics).toContain('DTEND;VALUE=DATE:20260901')
   })
 
-  it('does not shift the date through UTC', () => {
-    // 8pm local on the 29th is the 30th in UTC east of the meridian and the
-    // 29th west of it; an all-day value must stay on the 29th either way.
-    const ics = build([baseEvent({ start: at(2026, 8, 29, 20) })])
+  it('reads the date from UTC parts, so the host timezone cannot shift it', () => {
+    // The suite runs in the developer's zone and the export runs on a UTC
+    // host. Both must emit the 29th for an event stored on the 29th.
+    const ics = build([baseEvent({ start: allDayAt(2026, 8, 29) })])
     expect(ics).toContain('DTSTART;VALUE=DATE:20260829')
+    expect(ics).toContain('DTEND;VALUE=DATE:20260830')
+  })
+
+  it('crosses a month boundary correctly', () => {
+    const ics = build([baseEvent({ start: allDayAt(2026, 8, 31) })])
+    expect(ics).toContain('DTEND;VALUE=DATE:20260901')
   })
 
   it('collapses an end that precedes the start to a single day', () => {
-    const ics = build([baseEvent({ end: at(2026, 8, 20) })])
+    const ics = build([baseEvent({ end: allDayAt(2026, 8, 20) })])
     expect(ics).toContain('DTEND;VALUE=DATE:20260830')
   })
 })
@@ -173,14 +181,29 @@ describe('icsStatusFor', () => {
   })
 })
 
-describe('inferAllDay', () => {
-  it('treats local midnight as all-day', () => {
-    expect(inferAllDay(at(2026, 8, 29))).toBe(true)
+describe('all-day comes from the column, not from the clock', () => {
+  const base: ExportableEvent = {
+    id: 'evt1',
+    title: 'Zanesville Festival',
+    description: null,
+    location: 'Main St',
+    startDate: at(2026, 8, 29, 10),
+    endDate: null,
+    isAllDay: false,
+    bookingStatus: 'CONFIRMED',
+  }
+
+  it('honours isAllDay even when the start carries a time', () => {
+    // A UTC-hosted server and an Eastern-time office disagree about which
+    // instant is midnight, so the stored flag is the only reliable answer.
+    expect(toIcsEvent({ ...base, isAllDay: true }, 'https://x.test').allDay).toBe(true)
   })
 
-  it('treats any wall-clock time as timed', () => {
-    expect(inferAllDay(at(2026, 8, 29, 0, 30))).toBe(false)
-    expect(inferAllDay(at(2026, 8, 29, 10))).toBe(false)
+  it('honours a timed event that happens to start at midnight', () => {
+    expect(
+      toIcsEvent({ ...base, startDate: allDayAt(2026, 8, 29), isAllDay: false }, 'https://x.test')
+        .allDay
+    ).toBe(false)
   })
 })
 
@@ -193,8 +216,9 @@ describe('toIcsEvent', () => {
     venue: 'Riverside Park',
     city: 'Zanesville',
     state: 'OH',
-    startDate: at(2026, 8, 29),
+    startDate: allDayAt(2026, 8, 29),
     endDate: null,
+    isAllDay: true,
     bookingStatus: 'APPLIED',
   }
 

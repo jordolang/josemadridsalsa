@@ -8,6 +8,8 @@
  */
 import { PrismaClient } from '@prisma/client'
 
+import { formatIngredientName } from '@/lib/ingredients'
+
 // ─── Nutrition data per product slug ────────────────────────────────────────
 // Values extracted from OCR'd product labels. All products are 13 oz (369g).
 // Serving Size: 2 Tbsp (30ml), 13 servings per container
@@ -207,7 +209,7 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     { name: 'Diced Tomatoes', qualifier: 'Tomatoes, Citric Acid, Calcium Chloride' },
     { name: 'Crushed Tomatoes', qualifier: 'Tomatoes, Citric Acid' },
     { name: 'Green Chilies', qualifier: 'Chilies, Salt, Vinegar, Calcium Chloride' },
-    { name: 'Black Beans', qualifier: 'Black Beans, Water, Salt, Calcium Chloride, Ferrous Gluconate' },
+    { name: 'Black Beans', qualifier: 'Black Beans, Water, Salt, Calcium Chloride, Ferrus Gluconate' },
     { name: 'Corn', qualifier: 'Corn, Water, Sugar, Salt' },
     { name: 'Onions' },
     { name: 'Poblano Peppers' },
@@ -249,7 +251,7 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     { name: 'Garlic' },
     { name: 'Spices' },
     { name: 'Red Chili' },
-    { name: 'Habanero' },
+    { name: 'Habanera' },
     { name: 'Lime Juice', qualifier: 'From Concentrate' },
     { name: 'Cooking Sherry' },
   ],
@@ -294,12 +296,16 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     },
     {
       name: 'Cheddar Cheese Sauce',
+      // "Vegetable of Vinegar" is what the jar prints — confirmed at high magnification on two
+      // separate scans. It is a misprint in the label artwork, almost certainly for "Vegetable
+      // Oil, Vinegar", and is reproduced here because the listing follows the label. Correct it
+      // here once the artwork is corrected, not before.
       qualifier:
-        'Oil, Water, Corn Starch-Modified, Cheddar Cheese (Cultured Milk, Salt, Enzymes, Annatto Color), Whey, Vegetable Oil, Vinegar, Salt, Sodium Phosphate, Nonfat Dry Milk, Natural Flavors',
+        'Oil (Contains one or more of Canola Oil, Soybean Oil, Sunflower Oil), Contains 2% or less Water, Corn Starch-Modified, Cheddar Cheese (Cultured Milk, Salt, Enzymes, Annatto Color), Whey, Vegetable of Vinegar, Salt, Sodium Phosphate, Nonfat Dry Milk, Cellulose Gel, Mono- and Diglycerides, Corn Starch, Lactylate, Cream, Cellulose Gum, Carotenal Color, Anhydrous Wheat, Yeast Extract, Lactic Acid, Citric Acid, Annatto Color, Xanthem Gum, Acetic Acid, Natural Flavors',
     },
     { name: 'Roasted Red Peppers', qualifier: 'Red Peppers, Water, Citric Acid, Salt' },
     { name: 'Onions' },
-    { name: 'Natural Hickory Smoke Flavoring', qualifier: 'Water, Hickory Smoke Concentrate' },
+    { name: 'Natural Hickory Smoke Flavoring', qualifier: 'water, hickory smoke concentrate' },
     { name: 'Spices' },
     { name: 'Salt' },
     { name: 'Citric Acid' },
@@ -309,12 +315,13 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     { name: 'Diced Tomatoes', qualifier: 'Tomatoes, Citric Acid, Calcium Chloride' },
     { name: 'Crushed Tomatoes', qualifier: 'Tomatoes, Citric Acid' },
     { name: 'Green Chilies', qualifier: 'Chilies, Salt, Vinegar, Calcium Chloride' },
-    { name: 'Roasted Red Peppers', qualifier: 'Red Peppers, Water, Citric Acid, Salt' },
+    { name: 'Chipotlé Peppers', qualifier: 'Red Peppers, Water, Citric Acid, Salt' },
     { name: 'Onions' },
     { name: 'Cider Vinegar' },
     { name: 'Water' },
-    { name: 'Natural Hickory Smoke Flavoring' },
+    { name: 'Natural Smoke Flavor' },
     { name: 'Garlic' },
+    { name: 'Spices' },
     { name: 'Honey' },
     { name: 'Salt' },
   ],
@@ -325,7 +332,7 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     { name: 'Green Chilies', qualifier: 'Chilies, Salt, Vinegar, Calcium Chloride' },
     { name: 'Onions' },
     { name: 'Cilantro' },
-    { name: 'Jalapeno Peppers' },
+    { name: 'Jalapeño Peppers' },
     { name: 'Lemon Juice', qualifier: 'From Concentrate' },
     { name: 'Lime Juice', qualifier: 'From Concentrate' },
     { name: 'Garlic' },
@@ -339,7 +346,7 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     { name: 'Green Chilies', qualifier: 'Chilies, Salt, Vinegar, Calcium Chloride' },
     { name: 'Onions' },
     { name: 'Cilantro' },
-    { name: 'Jalapeno Peppers' },
+    { name: 'Jalapeño Peppers' },
     { name: 'Lemon Juice', qualifier: 'From Concentrate' },
     { name: 'Lime Juice', qualifier: 'From Concentrate' },
     { name: 'Garlic' },
@@ -364,7 +371,7 @@ const ingredientData: Record<string, IngredientEntry[]> = {
     { name: 'Water' },
     { name: 'Crushed Tomatoes', qualifier: 'Tomatoes, Citric Acid' },
     { name: 'Onions' },
-    { name: 'Habanero Peppers' },
+    { name: 'Habenero Peppers' },
     { name: 'Cider Vinegar' },
     { name: 'White Vinegar' },
     { name: 'All Spice' },
@@ -466,16 +473,16 @@ const ingredientData: Record<string, IngredientEntry[]> = {
   'raspberry-bbq-chipotle': [
     { name: 'Diced Tomatoes', qualifier: 'Tomatoes, Citric Acid, Calcium Chloride' },
     { name: 'Crushed Tomatoes', qualifier: 'Tomatoes, Citric Acid' },
+    { name: 'Green Chilies', qualifier: 'Chilies, Salt, Vinegar, Calcium Chloride' },
     { name: 'Raspberries' },
-    { name: 'Chipotle Peppers', qualifier: 'Chipotle Peppers, Water, Tomato Puree, Vinegar, Salt, Sugar, Garlic, Vegetable Oil' },
-    { name: 'Onions' },
+    { name: 'Chipotlé Peppers', qualifier: 'Red Peppers, Water, Citric Acid, Salt' },
     { name: 'Cider Vinegar' },
-    { name: 'Sugar' },
-    { name: 'Natural Hickory Smoke Flavoring' },
+    { name: 'Jalepeño Peppers' },
+    { name: 'Onions' },
+    { name: 'Smoke Flavor' },
     { name: 'Honey' },
-    { name: 'Garlic' },
     { name: 'Spices' },
-    { name: 'Salt' },
+    { name: 'Garlic' },
   ],
 
   'roasted-garlic-olives': [
@@ -545,11 +552,11 @@ const ingredientData: Record<string, IngredientEntry[]> = {
 
   // ─── Spanish Verde line ─────────────────────────
   'spanish-verde-mild': [
-    { name: 'Tomatillos' },
+    { name: 'Tomatillas' },
     { name: 'Chilies', qualifier: 'Chilies, Salt, Vinegar, Calcium Chloride' },
     { name: 'Onions' },
     { name: 'Water' },
-    { name: 'Jalapeno Peppers' },
+    { name: 'Jalapeño Peppers' },
     { name: 'Cilantro' },
     { name: 'Lime Juice', qualifier: 'From Concentrate' },
     { name: 'Garlic' },
@@ -558,11 +565,11 @@ const ingredientData: Record<string, IngredientEntry[]> = {
   ],
 
   'spanish-verde-hot': [
-    { name: 'Tomatillos' },
+    { name: 'Tomatillas' },
     { name: 'Chilies', qualifier: 'Chilies, Salt, Vinegar, Calcium Chloride' },
     { name: 'Onions' },
     { name: 'Water' },
-    { name: 'Serrano Peppers' },
+    { name: 'Jalapeño Peppers' },
     { name: 'Cilantro' },
     { name: 'Lime Juice', qualifier: 'From Concentrate' },
     { name: 'Garlic' },
@@ -571,17 +578,18 @@ const ingredientData: Record<string, IngredientEntry[]> = {
   ],
 
   'spanish-verde-xx-hot': [
-    { name: 'Tomatillos' },
-    { name: 'Chilies', qualifier: 'Chilies, Salt, Vinegar, Calcium Chloride' },
+    { name: 'Tomatillas' },
+    { name: 'Green Chilies', qualifier: 'Chilies, Salt, Vinegar, Calcium Chloride' },
     { name: 'Onions' },
-    { name: 'Jalapeno Peppers' },
+    { name: 'Jalapeño Peppers' },
     { name: 'Habanero Peppers' },
     { name: 'Lime Juice', qualifier: 'From Concentrate' },
     { name: 'Water' },
     { name: 'Cilantro' },
-    { name: 'Concentrated Pepper Oil' },
-    { name: 'Salt' },
+    { name: 'Concentrated Capsicum Oil' },
+    { name: 'Garlic' },
     { name: 'Spices' },
+    { name: 'Salt' },
   ],
 }
 
@@ -658,13 +666,37 @@ export async function seedNutritionAndIngredients(prisma: PrismaClient) {
         })
         ingredientLinkCount++
       }
+
+      // Keep Product.ingredients (used by feeds, search and the AI index) in
+      // step with the relational rows, sub-ingredient parentheses included.
+      await prisma.product.update({
+        where: { id: product.id },
+        data: {
+          ingredients: ingredients.map((entry) =>
+            formatIngredientName(entry.name, entry.qualifier)
+          ),
+        },
+      })
     } else {
       console.warn(`  ⚠ No ingredient data for: ${product.slug}`)
     }
   }
 
+  // 5. Drop ingredients nothing links to any more.
+  //
+  // Ingredients are upserted by name, so correcting a spelling to match the jar — "Tomatillos"
+  // to the "Tomatillas" the Verde labels print — creates a new row and relinks the products,
+  // leaving the old one behind with no links. This script is the only writer of the table, so an
+  // unlinked row can only be one of those leftovers.
+  const { count: orphanCount } = await prisma.ingredient.deleteMany({
+    where: { products: { none: {} } },
+  })
+
   console.log(`\n✅ Created ${nutritionCount} nutritional info records`)
   console.log(`✅ Created ${ingredientLinkCount} product-ingredient links`)
+  if (orphanCount > 0) {
+    console.log(`✅ Removed ${orphanCount} ingredients left unlinked by a rename`)
+  }
   console.log('\nSeed complete!')
 }
 

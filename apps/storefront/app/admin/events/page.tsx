@@ -11,7 +11,6 @@ import {
   ListFilter,
   MapPin,
   Plus,
-  RefreshCw,
   Search,
   Trash2,
   Upload,
@@ -41,6 +40,7 @@ import {
 import Link from 'next/link'
 import { BOOKING_STATUSES, isDeadStatus, statusStyle } from './_components/event-status'
 import WhereIsJoseWeek from './_components/WhereIsJoseWeek'
+import GoogleCalendarPanel from './_components/GoogleCalendarPanel'
 import {
   DEFAULT_FILTERS,
   filterEvents,
@@ -67,6 +67,8 @@ interface FeaturedEvent {
   /** Prisma serialises Decimal as a string over the wire. */
   boothFee?: string | number | null
   source?: string | null
+  googleSyncState?: string | null
+  googleSyncError?: string | null
   manifest?: { status: string } | null
   _count?: { staff: number; contacts: number }
 }
@@ -96,15 +98,12 @@ const startOfDayLocal = (d: Date) =>
 export default function EventsPage() {
   const [events, setEvents] = useState<FeaturedEvent[]>([])
   const [loading, setLoading] = useState(true)
-  const [syncing, setSyncing] = useState(false)
-  const [isConnected, setIsConnected] = useState(false)
   const [filters, setFilters] = useState<EventFilterState>(DEFAULT_FILTERS)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
 
   useEffect(() => {
     fetchEvents()
-    checkCalendarStatus()
   }, [])
 
   async function fetchEvents() {
@@ -118,43 +117,6 @@ export default function EventsPage() {
       console.error('Failed to fetch events:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function checkCalendarStatus() {
-    try {
-      const response = await fetch('/api/admin/events/calendar-status')
-      if (response.ok) {
-        const data = await response.json()
-        setIsConnected(data.connected)
-      }
-    } catch {
-      // silently ignore — status badge will just show Not Connected
-    }
-  }
-
-  async function handleSync() {
-    setSyncing(true)
-    try {
-      const response = await fetch('/api/admin/events/calendar-sync', {
-        method: 'POST',
-      })
-      const data = await response.json().catch(() => null)
-      if (response.ok) {
-        toast.success(
-          `Calendar synced: ${data?.created ?? 0} added, ${data?.updated ?? 0} updated${
-            data?.skipped ? `, ${data.skipped} skipped (manually edited)` : ''
-          }`
-        )
-        await fetchEvents()
-      } else {
-        toast.error(data?.error || 'Failed to sync calendar')
-      }
-    } catch (error) {
-      console.error('Failed to sync calendar:', error)
-      toast.error('Failed to sync calendar')
-    } finally {
-      setSyncing(false)
     }
   }
 
@@ -250,10 +212,6 @@ export default function EventsPage() {
               Import
             </Button>
           </Link>
-          <Button onClick={handleSync} disabled={syncing || !isConnected} variant="outline">
-            <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-            Sync Calendar
-          </Button>
           <Link href="/admin/events/new">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -263,25 +221,7 @@ export default function EventsPage() {
         </div>
       </div>
 
-      {/* Sync Status Card */}
-      <Card className="p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-xl font-semibold mb-2">Google Calendar Integration</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Sync events from your Google Calendar to display on your website
-            </p>
-            <Badge className={isConnected ? 'bg-primary/10 text-primary' : 'bg-yellow-100 text-yellow-800'}>
-              {isConnected ? 'Connected' : 'Not Connected'}
-            </Badge>
-          </div>
-          {!isConnected && (
-            <p className="text-sm text-muted-foreground mt-2">
-              Set <code className="text-xs bg-muted px-1 py-0.5 rounded">GOOGLE_CALENDAR_ID</code> in your environment variables to enable calendar sync.
-            </p>
-          )}
-        </div>
-      </Card>
+      <GoogleCalendarPanel events={events} onRefresh={fetchEvents} />
 
       {/* Where is Jose Section */}
       <Card className="p-6">

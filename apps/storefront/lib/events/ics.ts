@@ -96,18 +96,21 @@ function toUtcStamp(date: Date): string {
 }
 
 /**
- * DATE in the local calendar: 20260829.
+ * DATE for an all-day event: 20260829.
  *
- * All-day values are deliberately *not* converted to UTC. A show on Aug 29 in
- * Ohio is on Aug 29 everywhere; running it through UTC would slide an evening
- * event onto the following day.
+ * Read from UTC parts, because of the storage invariant an all-day event obeys:
+ * **`startDate` sits on UTC midnight of the calendar date.** That is how the
+ * Google ingest writes a bare `YYYY-MM-DD` and how the backfill classified the
+ * existing rows. Reading local parts instead would render the previous day for
+ * anyone west of UTC — including a developer in Ohio, though not the UTC server
+ * that ships the file, which is exactly the kind of split that hides in review.
  */
 function toDateStamp(date: Date): string {
-  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`
+  return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}`
 }
 
 function addOneDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
+  return new Date(date.getTime() + 86_400_000)
 }
 
 function line(name: string, value: string): string {
@@ -175,16 +178,8 @@ export interface ExportableEvent {
   state?: string | null
   startDate: Date
   endDate: Date | null
+  isAllDay: boolean
   bookingStatus: EventBookingStatus | string
-}
-
-/**
- * FeaturedEvent has no all-day flag, so we infer one: a start sitting exactly
- * on local midnight came from a date-only source (the Google ICS sync, a CSV
- * import) rather than from someone typing a start time.
- */
-export function inferAllDay(start: Date): boolean {
-  return start.getHours() === 0 && start.getMinutes() === 0 && start.getSeconds() === 0
 }
 
 /** Best available human location: the free-text field, else the parsed parts. */
@@ -202,7 +197,7 @@ export function toIcsEvent(event: ExportableEvent, siteUrl: string): IcsEvent {
     location: eventLocationLine(event),
     start: event.startDate,
     end: event.endDate,
-    allDay: inferAllDay(event.startDate),
+    allDay: event.isAllDay,
     url: `${siteUrl.replace(/\/$/, '')}/where-is-jose`,
     status: icsStatusFor(String(event.bookingStatus)),
   }
