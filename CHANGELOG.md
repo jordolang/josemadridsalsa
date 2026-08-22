@@ -202,6 +202,20 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
+- **The listings now reproduce the jar, including where the jar is wrong.** An earlier pass
+  corrected two label misspellings on the way in; the standing rule is that the label is the
+  authority, so those are reproduced instead. Every one of the 26 label scans was then compared
+  against the data it ships with, and all remaining differences resolved in the label's favour:
+  the Verde jars print "Tomatillas", Black Bean Corn Poblano prints "Ferrus Gluconate", Cherry Hot
+  prints "Habanera", Jamaican Jerk prints "Habenero Peppers", Raspberry BBQ prints "Jalepeño
+  Peppers", and the queso prints "Whey, Vegetable of Vinegar, Salt" — a misprint in the artwork,
+  confirmed at high magnification on two separate scans, and now reproduced rather than silently
+  read as the evident intent.
+
+  Scanner noise is not label content and was corrected in the other direction: `Ghilies`,
+  `Gooking Sherry`, `Calcium Chioride`, `Caicium`, `Tematoes`, `Galcium` and `Jalapefio` are
+  character substitutions the OCR invented, and each was verified against the printed panel before
+  being fixed in the scan text. All 26 products now match their label ingredient for ingredient.
 - **Eight products listed ingredients that did not match the jar.** The eight label scans OCR could
   not read had been filled in by hand, and seven of the eight had drifted from the printed label —
   five substantively. Chipotle Con Queso listed 11 of the cheese sauce's ~25 sub-ingredients, with
