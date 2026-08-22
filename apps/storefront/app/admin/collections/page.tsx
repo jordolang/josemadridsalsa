@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import type { Collection } from '@prisma/client'
 import Image from 'next/image'
 import { Edit, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -32,24 +33,62 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
+/** A collection as the list endpoint returns it: the model plus its product count. */
+type CollectionListItem = Collection & { _count: { products: number } }
+
+// The list API caps each page at 100; walk pages until we have them all so a shop with more than
+// 100 collections doesn't silently lose the tail from the admin grid.
+const PAGE_SIZE = 100
+
 export default function CollectionsPage() {
-  const [collections, setCollections] = useState<any[]>([])
+  const [collections, setCollections] = useState<CollectionListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [editing, setEditing] = useState<any>(null)
-  const [deleting, setDeleting] = useState<any>(null)
+  const [editing, setEditing] = useState<CollectionListItem | null>(null)
+  const [deleting, setDeleting] = useState<CollectionListItem | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const fetchCollections = async () => {
     try {
-      const response = await fetch('/api/admin/collections')
-      if (!response.ok) {
+      const all: CollectionListItem[] = []
+      const seen = new Set<string>()
+
+      const addUnique = (batch: CollectionListItem[]) => {
+        for (const c of batch) {
+          if (!seen.has(c.id)) {
+            seen.add(c.id)
+            all.push(c)
+          }
+        }
+      }
+
+      // Fetch page 1, then derive a fixed page count from the reported total and fetch the rest.
+      // Bounding by the initial total (rather than looping on a live `all.length < total`) makes
+      // termination deterministic — a set that keeps growing during paging can't spin the loop —
+      // while still sizing to the real data so nothing is silently capped. Offset paging over a
+      // changing set could repeat a row shifted across a page boundary, so de-dupe by id.
+      const firstResponse = await fetch(`/api/admin/collections?page=1&limit=${PAGE_SIZE}`)
+      if (!firstResponse.ok) {
         setLoadError(true)
         return
       }
-      const data = await response.json()
-      setCollections(data.collections || [])
+      const firstData = await firstResponse.json()
+      addUnique(firstData.collections || [])
+      const total = typeof firstData.total === 'number' ? firstData.total : all.length
+      const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+      for (let page = 2; page <= pageCount; page++) {
+        const response = await fetch(`/api/admin/collections?page=${page}&limit=${PAGE_SIZE}`)
+        if (!response.ok) {
+          setLoadError(true)
+          return
+        }
+        const data = await response.json()
+        addUnique(data.collections || [])
+      }
+
+      setCollections(all)
       setLoadError(false)
     } catch (error) {
       console.error('Failed to fetch collections:', error)

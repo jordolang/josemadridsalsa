@@ -202,72 +202,12 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
-- **The listings now reproduce the jar, including where the jar is wrong.** An earlier pass
-  corrected two label misspellings on the way in; the standing rule is that the label is the
-  authority, so those are reproduced instead. Every one of the 26 label scans was then compared
-  against the data it ships with, and all remaining differences resolved in the label's favour:
-  the Verde jars print "Tomatillas", Black Bean Corn Poblano prints "Ferrus Gluconate", Cherry Hot
-  prints "Habanera", Jamaican Jerk prints "Habenero Peppers", Raspberry BBQ prints "Jalepeño
-  Peppers", and the queso prints "Whey, Vegetable of Vinegar, Salt" — a misprint in the artwork,
-  confirmed at high magnification on two separate scans, and now reproduced rather than silently
-  read as the evident intent.
+- **Attribution and collections follow-ups from post-merge review.**
+  - *A crafted UTM value could break checkout.* A `?utm_source=%00…` link put a NUL byte into the attribution cookie; PostgreSQL rejects `0x00` in a text column, so `order.create` threw and every Stripe checkout carrying that cookie failed until it expired. Attribution fields now strip control characters (NUL and the rest of the C0 range plus DEL) in one `sanitizeField` helper, applied both when the cookie is written and when it is read back for the order.
+  - *PayPal/Venmo and Square/Cash App orders lost their attribution.* The first-touch cookie was only read in the Stripe checkout route, so orders paid through the other providers were recorded as Direct/none despite carrying it. All three online checkout routes now read and persist attribution identically.
+  - *Attribution ignored the cookie-consent choice.* The marketing cookie was written on landing regardless of consent. It is now written only after the visitor accepts, and an existing cookie is cleared if they reject — driven by the banner's existing `cookie-consent-change` event.
+  - *Collections admin fixes.* The admin list is typed against the real `Collection` shape instead of `any[]`; it pages through all collections rather than silently showing only the first 100; the collection slug is validated as a single URL-safe segment in both API routes (a value like `gift/sets` would have left the storefront page unreachable); and the changelog now names the actual `products:read`/`products:write` permissions the API enforces.
 
-  Scanner noise is not label content and was corrected in the other direction: `Ghilies`,
-  `Gooking Sherry`, `Calcium Chioride`, `Caicium`, `Tematoes`, `Galcium` and `Jalapefio` are
-  character substitutions the OCR invented, and each was verified against the printed panel before
-  being fixed in the scan text. All 26 products now match their label ingredient for ingredient.
-- **Eight products listed ingredients that did not match the jar.** The eight label scans OCR could
-  not read had been filled in by hand, and seven of the eight had drifted from the printed label —
-  five substantively. Chipotle Con Queso listed 11 of the cheese sauce's ~25 sub-ingredients, with
-  Cream and Anhydrous Wheat both absent on a product whose allergen line declares Milk and Wheat.
-  Raspberry BBQ Chipotle listed Sugar and Salt, which the jar does not contain, and omitted Green
-  Chilies, Jalapeño Peppers and Smoke Flavor, which it does. Chipotle Hot named Roasted Red Peppers
-  where the jar says Chipotlé Peppers and dropped Spices; Spanish Verde Hot named Serrano Peppers
-  where the jar says Jalapeño; Spanish Verde XX Hot omitted Garlic outright.
-
-  All eight were re-read from the full-resolution scans and now match ingredient for ingredient, in
-  label order. Two label misspellings are corrected rather than reproduced; the queso jar's
-  "Vegetable of Vinegar" is a misprint on the label itself and is flagged in place rather than
-  guessed at. The scan text for those eight is transcribed by hand, so all 26 real labels now parse
-  clean — the only skips left are the four `choose-*` files, which are bundle photos, not labels.
-- **The label scans for those eight products are now WebP and live with the rest of the labels.**
-  They arrived at the repository root, which holds config and the standard docs only. They are named
-  to the same slug convention as their siblings, so the existing matcher and aliases reach their
-  products with no new configuration, and they replace the JPEGs they duplicate rather than
-  doubling each product's gallery.
-- **Ingredient lists dropped the parentheses printed on the jar, turning sub-ingredients into
-  headline ingredients.** The label scraper (`scripts/parse-ingredients.cjs`) split the statement on
-  every comma, stripped `(`/`)`, lower-cased what was left and de-duplicated it, so
-  `Diced Tomatoes (Tomatoes, Citric Acid, Calcium Chloride)` was stored as four peer ingredients —
-  reading as though citric acid were the second-largest ingredient in the jar rather than something
-  that comes with the tomatoes. The salsa detail page compounded it by printing the sub-ingredients
-  *before* their ingredient and without the parentheses at all.
-
-  Parsing and formatting now live in `lib/ingredients.ts` and keep the statement exactly as printed:
-  splitting is parenthesis-aware (commas inside a group stay with the ingredient they belong to),
-  nesting, order, casing and repeated names are preserved, and the trailing "and" conjunction is
-  restored on display. The scraper is now `scripts/parse-ingredients.ts`; it reads through the column
-  breaks OCR leaves mid-statement and, rather than publishing text it cannot vouch for, reports
-  labels whose scan has no ingredient statement, no closing period, a group closed by the wrong
-  delimiter, or an entry that reads as label copy rather than an ingredient — the cilantro labels
-  print "Always Great over Chicken, Pork or Fish." right below the statement. 18 of the 30 scans
-  come through clean; the rest are named for re-scanning.
-
-  The same flattening ran on every other write path, so each now parses the written statement
-  instead: the admin product form (which re-mangled the statement on any save) and the CSV/Excel
-  product import. Both accept a label pasted verbatim — the closing period and the final "and" are
-  undone on the way in and put back on the way out, rather than stored as part of the last
-  ingredient.
-  `db:seed:nutrition` additionally writes the label statement back to `Product.ingredients`, which
-  feeds search, product feeds, the TikTok Shop export and the AI index — run it to correct the
-  stored listings.
-
-- **All-day shows could export on the wrong day.** Whether an event was all-day was inferred
-  from its start falling on midnight — but "midnight" meant the server's timezone, which is UTC
-  on Vercel and Eastern on a developer's machine. The same event classified differently
-  depending on where the code ran. `FeaturedEvent` now carries an `isAllDay` column, backfilled
-  from how the existing rows were written, and the ICS exporter reads UTC parts so the calendar
-  date cannot shift under it.
 - **Search-result metadata on `/laperla` and `/live` fell outside the documented limits.** The
   La Perla page's title ran 67 characters and its description 223, so Google truncated the
   description partway through "the stone-ground white corn" — cutting off the Jose Madrid Salsa
@@ -278,6 +218,7 @@ the root `package.json` is canonical.
   of these public pages declaring a bare `Metadata` object, so it shipped without the OpenGraph and
   Twitter card tags its siblings get and fell back to the default share image with no card markup.
   It now goes through the shared helper like the rest of the `(public)` routes.
+
 - **Dark mode rendered several sections as light text on a light background.** The `verde` and
   `chile` colour scales in `apps/storefront/tailwind.config.ts` stopped at `900`, so every
   `dark:*-verde-950` / `dark:*-chile-950` utility referenced a shade that did not exist and Tailwind
@@ -505,7 +446,7 @@ the root `package.json` is canonical.
 
 - **Collections — curated product groups** — a new admin section (`/admin/collections`, under Products) for hand-picked, marketing-facing groups of products like "Gift Sets", "New Arrivals", or "Staff Picks", distinct from the Category taxonomy. Where a product belongs to exactly one Category, it can appear in **many** Collections and a Collection holds many products, so the relation is many-to-many through a `CollectionProduct` join that also stores each product's display order within the collection.
 
-  Admins create and edit collections (name, slug, description, image, SEO fields, active flag, sort order) with a searchable product multi-select; products keep the order they're selected in. The API (`app/api/admin/collections/**`, gated on `content:read`/`content:write`, audit-logged) mirrors the categories handlers and adds product-set syncing; deleting a collection detaches its products (the join rows cascade) and never deletes the products themselves. On the storefront, `/collections/[slug]` renders a collection's active products, in order, through the same `ProductCard` grid as the catalog, with per-collection SEO metadata. The slug and join-row logic live in `lib/collections.ts` (pure, tested); migration `20260815130000_add_collections` adds the two tables. Gated on the existing `products:read` nav visibility — no permission seed.
+  Admins create and edit collections (name, slug, description, image, SEO fields, active flag, sort order) with a searchable product multi-select; products keep the order they're selected in. The API (`app/api/admin/collections/**`, gated on `products:read`/`products:write`, audit-logged) mirrors the categories handlers and adds product-set syncing; deleting a collection detaches its products (the join rows cascade) and never deletes the products themselves. On the storefront, `/collections/[slug]` renders a collection's active products, in order, through the same `ProductCard` grid as the catalog, with per-collection SEO metadata. The slug and join-row logic live in `lib/collections.ts` (pure, tested); migration `20260815130000_add_collections` adds the two tables. Gated on the existing `products:read` nav visibility — no permission seed.
 
 - **Inventory turnover & slow-movers report** — a new analytics page (`/admin/analytics/inventory-turnover`, under Analytics → Turnover & Slow Movers) answering two questions the platform could not: how fast stock is selling, and what is sitting still. It reports an overall turnover ratio — how many times the shelf sold through in the window, annualised — and days on hand to clear current stock at that pace, then a per-product table ranked **slowest-first**: products holding stock with no sales lead, followed by the longest days of supply. The slow-mover flag fires past 90 days of supply, or immediately when a product holds stock and sold nothing.
 

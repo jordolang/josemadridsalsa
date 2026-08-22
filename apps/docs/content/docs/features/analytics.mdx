@@ -160,9 +160,17 @@ sales filter as the other reports. Read-only, gated on `analytics:read`.
   `AttributionTracker` client component (mounted in the public layout) records the `utm_*` params,
   the external referrer host, and the landing path into a `jms_attribution` cookie the first time a
   visitor lands with anything to attribute — a purely direct visit is left uncaptured so a later
-  campaign click can still be the first touch. `POST /api/checkout` reads that cookie and writes the
-  fields onto the `Order` (`utmSource/utmMedium/utmCampaign/utmTerm/utmContent`, `referrer`,
-  `landingPage`); parsing never throws, so a bad cookie can't break checkout.
+  campaign click can still be the first touch.
+- **Consent-gated:** the cookie is a marketing/analytics cookie, so it is written **only after the
+  visitor accepts** cookies (the `cookie-consent` choice the banner stores). The tracker reconciles
+  on mount and on the banner's `cookie-consent-change` event: it captures once consent is accepted,
+  and **removes** any existing `jms_attribution` cookie if the visitor rejects.
+- **Persisted on every online order:** all three online checkout routes — `POST /api/checkout`
+  (card/Stripe), `POST /api/checkout/paypal/create-order` (PayPal/Venmo), and
+  `POST /api/checkout/square/create-order` (Square/Cash App) — read that cookie and write the fields
+  onto the `Order` (`utmSource/utmMedium/utmCampaign/utmTerm/utmContent`, `referrer`, `landingPage`).
+  Parsing is defensive and control-characters are stripped, so a bad or tampered cookie can't break
+  checkout.
 - **How it reports:** orders are grouped by the chosen dimension into orders, revenue, and average
   order value, ranked by revenue. Orders with no captured source are their own **Direct / none**
   row (never folded into a campaign), and the headline states the share of orders that carried any
