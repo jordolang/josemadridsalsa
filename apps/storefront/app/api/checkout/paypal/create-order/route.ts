@@ -16,8 +16,10 @@ import { fundraiserUnitPrice } from '@/lib/fundraising/pricing'
 import { getFundraiserPriceOverrides } from '@/lib/fundraising/pricing.server'
 import { getStoreSettings, isBelowMinimumOrder, formatMinimumOrder } from '@/lib/store-settings'
 import { ATTRIBUTION_COOKIE, parseAttributionCookie } from '@/lib/analytics/attribution'
+import { resolveBundleSelections, BundleCheckoutError } from '@/lib/bundles.server'
 
-const PayPalCheckoutSchema = z.object({
+const PayPalCheckoutSchema = z
+  .object({
   items: z
     .array(
       z.object({
@@ -25,7 +27,16 @@ const PayPalCheckoutSchema = z.object({
         quantity: z.number().int().positive(),
       })
     )
-    .min(1, 'Cart is empty'),
+    .default([]),
+  // Bundles: id + quantity only; the server expands and prices them (anti-tamper, as elsewhere).
+  bundles: z
+    .array(
+      z.object({
+        bundleId: z.string().cuid(),
+        quantity: z.number().int().positive(),
+      })
+    )
+    .optional(),
   customer: z.object({
     email: z.string().email(),
     firstName: z.string().min(1),
@@ -43,7 +54,11 @@ const PayPalCheckoutSchema = z.object({
   discountCode: z.string().optional(),
   shippingMethod: z.string().optional(),
   referralCode: z.string().optional(),
-})
+  })
+  .refine((data) => data.items.length > 0 || (data.bundles?.length ?? 0) > 0, {
+    message: 'Cart is empty',
+    path: ['items'],
+  })
 
 const toDecimal = (value: number) =>
   new Prisma.Decimal(value.toFixed(2))
@@ -77,7 +92,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, customer, shipping, notes, shippingMethod, referralCode } = parsed.data
+    const { items, bundles, customer, shipping, notes, shippingMethod, referralCode } = parsed.data
 
     // Validate products exist
     const productIds = items.map((item) => item.productId)
@@ -125,6 +140,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Bundles: server-expanded into priced component lines (client sent only id + quantity).
+    const resolvedBundles = await resolveBundleSelections(bundles)
+    orderItems.push(...resolvedBundles.orderItems)
+    subtotal += resolvedBundles.subtotal
+
     if (isBelowMinimumOrder(Math.round(subtotal * 100), storeSettings.minimumOrderCents)) {
       return NextResponse.json(
         { error: `Orders must total at least ${formatMinimumOrder(storeSettings.minimumOrderCents)}.` },
@@ -136,12 +156,18 @@ export async function POST(request: NextRequest) {
     let reservationResults: Awaited<ReturnType<typeof reserveMultipleProducts>>
     try {
       reservationResults = await reserveMultipleProducts(
-        items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          userId: user?.id,
-          notes: 'PayPal checkout reservation',
-        }))
+        [
+          ...items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            notes: 'PayPal checkout reservation',
+          })),
+          ...resolvedBundles.reservations.map((r) => ({
+            productId: r.productId,
+            quantity: r.quantity,
+            notes: 'PayPal bundle checkout reservation',
+          })),
+        ].map((r) => ({ ...r, userId: user?.id }))
       )
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unable to reserve inventory'
@@ -378,6 +404,9 @@ export async function POST(request: NextRequest) {
       throw postReservationError
     }
   } catch (error) {
+    if (error instanceof BundleCheckoutError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[PayPal Checkout] Create order error:', error)
     return NextResponse.json(
       { error: 'Unable to initiate PayPal checkout. Please try again.' },

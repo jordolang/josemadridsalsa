@@ -11,7 +11,7 @@ import {
   useStripe,
 } from '@stripe/react-stripe-js'
 import { useRouter } from 'next/navigation'
-import { useCartStore } from '@/lib/store/cart'
+import { useCartStore, toCheckoutSelections, toPreviewItems } from '@/lib/store/cart'
 import { formatPrice } from '@/lib/utils'
 import { isShippingAddressReadyForRates } from '@/lib/checkout/shipping-address'
 import { Input } from '@/components/ui/input'
@@ -193,10 +193,7 @@ function ExpressCheckout({ items, formState, total, discountCode, giftCertificat
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((item) => ({
-            productId: item.id,
-            quantity: item.quantity,
-          })),
+          ...toCheckoutSelections(items),
           customer: {
             email: billingDetails?.email || formState.email || '',
             firstName: billingDetails?.name?.split(' ')[0] || formState.firstName || '',
@@ -472,11 +469,9 @@ function CheckoutForm() {
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          items: items.map((item) => ({
-            productId: item.id,
-            quantity: item.quantity,
-            price: item.price,
-          })),
+          // Bundles expand to their component products (with prorated prices) so the tax estimate
+          // covers them; the order-create route is authoritative on the final amount.
+          items: toPreviewItems(items),
           shippingAddress: {
             address1: form.address1,
             address2: form.address2 || undefined,
@@ -528,10 +523,8 @@ function CheckoutForm() {
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          items: items.map((item) => ({
-            productId: item.id,
-            quantity: item.quantity,
-          })),
+          // Bundles expand to their component products so shipping weight includes them.
+          items: toPreviewItems(items).map(({ productId, quantity }) => ({ productId, quantity })),
           shippingAddress: {
             address1: form.address1,
             address2: form.address2 || undefined,
@@ -711,10 +704,7 @@ function CheckoutForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((item) => ({
-            productId: item.id,
-            quantity: item.quantity,
-          })),
+          ...toCheckoutSelections(items),
           customer: {
             email: selectedPaymentMethod === 'link' ? (linkEmail || formState.email) : formState.email,
             firstName: formState.firstName,

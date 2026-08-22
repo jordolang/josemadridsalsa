@@ -20,8 +20,10 @@ import { validateDiscountCode } from '@/lib/discounts'
 import { validateGiftCertificate } from '@/lib/gift-certificates'
 import { ATTRIBUTION_COOKIE, parseAttributionCookie } from '@/lib/analytics/attribution'
 import { getStoreSettings, isBelowMinimumOrder, formatMinimumOrder } from '@/lib/store-settings'
+import { resolveBundleSelections, BundleCheckoutError } from '@/lib/bundles.server'
 
-const CheckoutSchema = z.object({
+const CheckoutSchema = z
+  .object({
   items: z
     .array(
       z.object({
@@ -29,7 +31,17 @@ const CheckoutSchema = z.object({
         quantity: z.number().int().positive(),
       })
     )
-    .min(1, 'Cart is empty'),
+    .default([]),
+  // Bundles are sent as id + quantity only; the server expands them and prices each component,
+  // for the same anti-tamper reason discount/shipping amounts are never accepted from the client.
+  bundles: z
+    .array(
+      z.object({
+        bundleId: z.string().cuid(),
+        quantity: z.number().int().positive(),
+      })
+    )
+    .optional(),
   customer: z.object({
     email: z.string().email(),
     firstName: z.string().min(1),
@@ -53,7 +65,11 @@ const CheckoutSchema = z.object({
   // NOTE: shippingCost is intentionally NOT accepted from the client.
   // Shipping cost is always recalculated server-side to prevent tampering.
   referralCode: z.string().optional(),
-})
+  })
+  .refine((data) => data.items.length > 0 || (data.bundles?.length ?? 0) > 0, {
+    message: 'Cart is empty',
+    path: ['items'],
+  })
 
 const toDecimal = (value: number) =>
   new Prisma.Decimal(value.toFixed(2))
@@ -93,7 +109,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, customer, shipping, notes, discountCode, giftCertificateCode, recoveryToken, shippingMethod, referralCode } = parsed.data
+    const { items, bundles, customer, shipping, notes, discountCode, giftCertificateCode, recoveryToken, shippingMethod, referralCode } = parsed.data
 
     const productIds = items.map((item) => item.productId)
     const products = await prisma.product.findMany({
@@ -140,6 +156,13 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Bundles: the server loads each bundle, expands it into component lines, and prorates the
+    // bundle price across them — the client only sent an id and a quantity. Their component
+    // products are reserved and taxed exactly like standalone lines.
+    const resolvedBundles = await resolveBundleSelections(bundles)
+    orderItems.push(...resolvedBundles.orderItems)
+    subtotal += resolvedBundles.subtotal
+
     // Minimum order is assessed on the goods subtotal (before discounts and shipping), so a
     // discount code cannot be used to duck under the threshold.
     if (isBelowMinimumOrder(Math.round(subtotal * 100), storeSettings.minimumOrderCents)) {
@@ -178,12 +201,19 @@ export async function POST(request: NextRequest) {
     let reservationResults: Awaited<ReturnType<typeof reserveMultipleProducts>>
     try {
       reservationResults = await reserveMultipleProducts(
-        items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          userId: user?.id,
-          notes: 'Checkout reservation',
-        }))
+        [
+          ...items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            notes: 'Checkout reservation',
+          })),
+          // Each bundle component is real stock and must be reserved like any other line.
+          ...resolvedBundles.reservations.map((r) => ({
+            productId: r.productId,
+            quantity: r.quantity,
+            notes: 'Bundle checkout reservation',
+          })),
+        ].map((r) => ({ ...r, userId: user?.id }))
       )
     } catch (error: any) {
       return NextResponse.json(
@@ -542,6 +572,11 @@ export async function POST(request: NextRequest) {
       throw postReservationError
     }
   } catch (error) {
+    // A bad bundle (missing/inactive/unavailable) is the shopper's request being invalid, not a
+    // server fault — surface its message with a 400 rather than a generic 500.
+    if (error instanceof BundleCheckoutError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('Checkout error:', error)
     return NextResponse.json(
       { error: 'Unable to initiate checkout. Please try again.' },

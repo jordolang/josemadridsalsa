@@ -14,6 +14,12 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Product bundles — sell a fixed set of products together at one set price.** A bundle (e.g. a "Gift Set" of three salsas) is defined in **Admin → Products → Bundles** with a price and a list of component products and quantities, and shown on the storefront at `/bundles/[slug]` with an Add-to-Cart button and the saving versus buying separately. Distinct from a Collection (a marketing grouping at each product's own price), a bundle carries its own price.
+
+  The pricing is enforced **server-side and anti-tamper**: the browser only ever sends `{ bundleId, quantity }`; the three online checkout routes load the bundle, expand it into one order line per component product, and split the bundle price across those lines in integer cents (largest-remainder, weighted by each product's catalogue value) so the line totals sum back to the bundle price to the cent — the same posture as the fundraiser price overrides. Because a bundle becomes **real component order lines**, inventory reservation, tax, margin (`unitCost` snapshot), fulfilment and returns all work per-product with no special cases, and each line is tagged with `bundleId`/`bundleName` for reporting. A missing, inactive, empty, or unavailable-component bundle fails checkout cleanly (400) rather than charging a wrong or partial bundle.
+
+  The proration and slug/row helpers live in `lib/bundles.ts` (pure, fully tested); `lib/bundles.server.ts` resolves selections into order lines, reservations, and a subtotal. Models `Bundle` + `BundleProduct` mirror `Collection`/`CollectionProduct` (migration `20260822120000_add_product_bundles`, additive; `OrderItem` gains nullable `bundleId`/`bundleName`). Admin is gated on the existing `products:read`/`products:write` — no new permission seed. Active bundles are added to the sitemap.
+
 - **The jar labels are now product photos.** `npm run images:labels` uploads the flat label scans in
   `public/images/unused/new-products/labels` to Blob as WebP and appends each one to its product's
   gallery, so the label sits beside the jar shot instead of only existing in the repo. It is
