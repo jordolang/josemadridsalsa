@@ -57,6 +57,17 @@ vi.mock('@/lib/inventory-manager', () => ({
       newInventory: 97,
     })
   ),
+  deductReservedInventoryForItemsInTx: vi.fn(
+    async (items: Array<{ productId: string; quantity: number }>) => {
+      const byProduct = new Map<string, number>()
+      for (const it of items) byProduct.set(it.productId, (byProduct.get(it.productId) ?? 0) + it.quantity)
+      return [...byProduct.keys()].map((productId) => ({
+        productId,
+        newInventory: 97,
+        lowStockThreshold: 10,
+      }))
+    }
+  ),
   checkAndUpdateAlerts: vi.fn(() => Promise.resolve()),
 }))
 

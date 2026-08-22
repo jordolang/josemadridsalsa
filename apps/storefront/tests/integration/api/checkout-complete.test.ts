@@ -63,6 +63,26 @@ const mockDeductReservedInventoryInTx = vi.fn(() =>
 
 vi.mock('@/lib/inventory-manager', () => ({
   deductReservedInventoryOnceInTx: (...args: unknown[]) => mockDeductReservedInventoryInTx(...args),
+  // Mirrors the real helper: aggregate the order's items by product, then deduct once each via the
+  // same underlying mock, so the per-product call assertions below still hold.
+  deductReservedInventoryForItemsInTx: async (
+    items: Array<{ productId: string; quantity: number }>,
+    context: { orderId: string; userId?: string; notes: string },
+    tx: unknown
+  ) => {
+    const byProduct = new Map<string, number>()
+    for (const it of items) byProduct.set(it.productId, (byProduct.get(it.productId) ?? 0) + it.quantity)
+    const results: Array<{ productId: string; newInventory: number; lowStockThreshold: number }> = []
+    for (const [productId, quantity] of byProduct) {
+      const r = await mockDeductReservedInventoryInTx(
+        { productId, quantity, orderId: context.orderId, userId: context.userId, notes: context.notes },
+        tx
+      )
+      if (!r) continue
+      results.push({ productId, newInventory: r.newInventory, lowStockThreshold: r.product.lowStockThreshold })
+    }
+    return results
+  },
   releaseInventory: vi.fn(() => Promise.resolve()),
   checkAndUpdateAlerts: vi.fn(() => Promise.resolve()),
 }))
