@@ -154,7 +154,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const inWishlist = isInWishlist(product.id)
   const inComparison = isInComparison(product.id)
 
-  const allImages = [product.featuredImage, ...product.images]
+  // product.images normally already leads with featuredImage, so dedupe rather than show it twice
+  const allImages = [...new Set([product.featuredImage, ...product.images])]
   const heatRating = getSalsaHeatRating(product.name, product.heatLevel)
   const productUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.josemadrid.net'}/salsas/${product.slug}`
   const shareContent: ShareContent = {

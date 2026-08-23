@@ -211,6 +211,22 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
+- **Every product's gallery showed the same jar photo two or three times.** Two separate causes,
+  both fixed. In the data, 26 of the 28 products carried a second copy of their front-of-jar
+  studio shot: the same photograph re-uploaded to `products/` alongside the `featuredImage` it
+  duplicates (Clovis Medium carried two). The copies are re-encodes, sometimes at a different
+  resolution or with the background knocked out to transparency, so they are byte-different and
+  URL-different — nothing comparing strings could have caught them. They were found by comparing
+  decoded pixels, and removed from `Product.images` (155 entries down to 128) after each was
+  confirmed visually; near-misses that are genuinely different photographs of the same jar —
+  Pineapple Mild's second angle, Strawberry Mild's older label — were kept. The 27 orphaned
+  files were then deleted from Blob storage (128 objects under `products/` down to 101), after
+  confirming nothing else in either database or the repo referenced them.
+
+  In the code, the product page built its gallery as `[featuredImage, ...images]` while `images`
+  already leads with `featuredImage`, so the featured photo was rendered twice on every product
+  regardless of the data. The list is now deduplicated.
+
 - **Attribution and collections follow-ups from post-merge review.**
   - *A crafted UTM value could break checkout.* A `?utm_source=%00…` link put a NUL byte into the attribution cookie; PostgreSQL rejects `0x00` in a text column, so `order.create` threw and every Stripe checkout carrying that cookie failed until it expired. Attribution fields now strip control characters (NUL and the rest of the C0 range plus DEL) in one `sanitizeField` helper, applied both when the cookie is written and when it is read back for the order.
   - *PayPal/Venmo and Square/Cash App orders lost their attribution.* The first-touch cookie was only read in the Stripe checkout route, so orders paid through the other providers were recorded as Direct/none despite carrying it. All three online checkout routes now read and persist attribution identically.
@@ -237,6 +253,14 @@ the root `package.json` is canonical.
   copy was effectively invisible. Both scales now define `950` (`#052e16` and `#451a03`), which
   restores the intended dark backgrounds for the promo, the gift-box quick add, the location map
   fade, and the developer console's stats, changelog, timeline, and skills panels.
+- **`npm run db:migrate` could not run at all: the shadow database failed on
+  `20260810040000_drop_email_webhooks`.** The `email_webhooks` table was created by `db push` and
+  never by a migration, so it is absent from any database built by replaying the migration history
+  — the shadow database Prisma creates for `migrate dev`, a fresh clone, or a rebuilt production.
+  The migration counted and dropped it unconditionally, so the replay died with P3006/P1014 and
+  every migration after it was unreachable. It now checks `to_regclass` first and no-ops when the
+  table is already absent, the same two-guard shape the later `drop_email_segments` and
+  `drop_product_variants` migrations use; the refuse-if-non-empty guard is unchanged.
 - **A PO Box order placed after a street-address order to the same ZIP was quoted a carrier that
   cannot deliver to it.** `/api/checkout/calculate-shipping` caches quotes for five minutes, but its
   cache key was built from the cart plus city, state and ZIP only — the street lines and the country
