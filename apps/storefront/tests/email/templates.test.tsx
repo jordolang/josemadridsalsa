@@ -227,10 +227,9 @@ describe('Email Templates - Comprehensive Rendering Tests', () => {
     const props = {
       name: 'Alice Williams',
       email: 'alice.williams@example.com',
+      company: 'Center Stage Dance Studio',
       phone: '(512) 555-1234',
       message: 'I would like to inquire about wholesale pricing for your products.',
-      submittedAt: 'February 17, 2024 at 2:30 PM',
-      unsubscribeUrl: 'https://example.com/unsubscribe',
     }
 
     it('should render with all props', async () => {
@@ -243,7 +242,7 @@ describe('Email Templates - Comprehensive Rendering Tests', () => {
     it('should include required contact information', async () => {
       const html = await render(<ContactFormEmail {...props} />)
 
-      expect(html).toContain('New Contact Form Submission')
+      expect(html).toContain('Contact form submission')
       expect(html).toContain('Alice Williams')
       expect(html).toContain('alice.williams@example.com')
       expect(html).toContain('wholesale pricing')
@@ -252,7 +251,14 @@ describe('Email Templates - Comprehensive Rendering Tests', () => {
     it('should include preview text', async () => {
       const html = await render(<ContactFormEmail {...props} />)
 
-      expect(html).toContain('New contact form submission from Alice Williams')
+      expect(html).toContain('A user has submitted the contact form on Jose Madrid Salsa')
+    })
+
+    it('should include company name when provided', async () => {
+      const html = await render(<ContactFormEmail {...props} />)
+
+      expect(html).toContain('Company name:')
+      expect(html).toContain('Center Stage Dance Studio')
     })
 
     it('should include phone number when provided', async () => {
@@ -261,18 +267,11 @@ describe('Email Templates - Comprehensive Rendering Tests', () => {
       expect(html).toContain('(512) 555-1234')
     })
 
-    it('should include timestamp when provided', async () => {
+    it('should link the sender address and offer the store link', async () => {
       const html = await render(<ContactFormEmail {...props} />)
 
-      expect(html).toContain('February 17, 2024 at 2:30 PM')
-    })
-
-    it('should include reply button with mailto link', async () => {
-      const html = await render(<ContactFormEmail {...props} />)
-
-      expect(html).toContain('Reply to')
-      expect(html).toContain('Alice Williams')
       expect(html).toContain('mailto:alice.williams@example.com')
+      expect(html).toContain('Open store')
     })
 
     it('should work without optional props', async () => {
@@ -284,7 +283,7 @@ describe('Email Templates - Comprehensive Rendering Tests', () => {
 
       const html = await render(<ContactFormEmail {...minimalProps} />)
 
-      expect(html).toContain('New Contact Form Submission')
+      expect(html).toContain('Contact form submission')
       expect(html).toContain('Alice Williams')
       expect(html).toContain('alice.williams@example.com')
     })
@@ -322,14 +321,17 @@ describe('Email Templates - Comprehensive Rendering Tests', () => {
       message: 'Test message',
     }
 
+    // `subscriberFacing` marks the templates that go to a customer and therefore must
+    // carry an unsubscribe link. The contact form notification is an internal alert sent
+    // only to the business inbox, so it has nothing to unsubscribe from.
     const templates = [
-      { name: 'Order Confirmation', component: OrderConfirmationEmail, props: orderConfirmationProps },
-      { name: 'Shipping Notification', component: ShippingNotificationEmail, props: shippingNotificationProps },
-      { name: 'Delivery Confirmation', component: DeliveryConfirmationEmail, props: deliveryConfirmationProps },
-      { name: 'Contact Form', component: ContactFormEmail, props: contactFormProps },
+      { name: 'Order Confirmation', component: OrderConfirmationEmail, props: orderConfirmationProps, subscriberFacing: true },
+      { name: 'Shipping Notification', component: ShippingNotificationEmail, props: shippingNotificationProps, subscriberFacing: true },
+      { name: 'Delivery Confirmation', component: DeliveryConfirmationEmail, props: deliveryConfirmationProps, subscriberFacing: true },
+      { name: 'Contact Form', component: ContactFormEmail, props: contactFormProps, subscriberFacing: false },
     ]
 
-    templates.forEach(({ name, component: Component, props }) => {
+    templates.forEach(({ name, component: Component, props, subscriberFacing }) => {
       describe(`${name} - Common Structure`, () => {
         it('should have proper HTML email structure', async () => {
           const html = await render(<Component {...props} />)
@@ -353,7 +355,7 @@ describe('Email Templates - Comprehensive Rendering Tests', () => {
           expect(html).toContain('josemadrid.net')
         })
 
-        it('should include unsubscribe functionality', async () => {
+        it.runIf(subscriberFacing)('should include unsubscribe functionality', async () => {
           const html = await render(<Component {...props} />)
 
           expect(html).toMatch(/unsubscribe/i)

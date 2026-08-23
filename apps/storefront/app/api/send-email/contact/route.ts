@@ -11,11 +11,13 @@ export const dynamic = 'force-dynamic'
 const ContactFormSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
   email: z.string().email('Invalid email address').max(320),
+  company: z.string().max(200).optional(),
   phone: z.string().max(30).optional(),
   message: z.string().min(1, 'Message is required').max(5000),
+  // Page the form was submitted from, used in the notification subject line.
+  sourcePage: z.string().max(120).optional(),
   submittedAt: z.string().optional(),
   userId: z.string().optional(),
-  unsubscribeUrl: z.string().url().optional(),
 })
 
 // API route for sending contact form emails
@@ -51,7 +53,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { name, email, phone, message, submittedAt, userId, unsubscribeUrl } = parsed.data
+    const { name, email, company, phone, message, sourcePage, submittedAt, userId } = parsed.data
     const receivedAt = submittedAt || new Date().toISOString()
 
     const conversation = await prisma.conversation.create({
@@ -65,6 +67,7 @@ export async function POST(request: Request) {
               body: [
                 `Name: ${name}`,
                 `Email: ${email}`,
+                company ? `Company: ${company}` : null,
                 phone ? `Phone: ${phone}` : null,
                 `Submitted: ${receivedAt}`,
                 '',
@@ -81,21 +84,11 @@ export async function POST(request: Request) {
       },
     })
 
-    // Prepare email data
-    const emailProps = {
-      name,
-      email,
-      phone,
-      message,
-      submittedAt: receivedAt,
-      unsubscribeUrl,
-    }
-
     // Send email to company
     const result = await sendEmail({
       to: 'mike@josemadridsalsa.com',
-      subject: `New Contact Form Submission from ${name}`,
-      react: ContactFormEmail(emailProps),
+      subject: `${email} submitted the form from your ${sourcePage || 'Contact'} page`,
+      react: ContactFormEmail({ name, email, company, phone, message }),
       type: 'contact-form',
       userId,
       replyTo: email,

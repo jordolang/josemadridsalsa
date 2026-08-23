@@ -54,12 +54,7 @@ export async function POST(req: NextRequest) {
       await sendEmail({
         to: 'mike@josemadridsalsa.com',
         subject: `[Developer Page] ${subject}`,
-        react: ContactFormEmail({
-          name,
-          email,
-          message,
-          submittedAt: new Date().toISOString(),
-        }),
+        react: ContactFormEmail({ name, email, message }),
         type: 'developer-contact',
         replyTo: email,
       })

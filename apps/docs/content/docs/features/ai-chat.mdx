@@ -1,6 +1,6 @@
 ---
 title: AI chat
-description: Picante chat launcher, AI support, and live-team handoff behavior.
+description: Picante chat launcher, AI support, contact form, and live-team handoff behavior.
 ---
 
 # AI chat
@@ -18,6 +18,24 @@ The public storefront includes Picante, a playful pepper-penguin AI companion fo
 ## Chat behavior
 
 Picante introduces himself by name and responds with a concise, upbeat character voice that uses occasional pepper and penguin wordplay. Accuracy and clarity take priority over jokes, and Picante avoids mascot banter during sensitive support or human handoffs. Business-hours lookup and live-team handoff continue through the existing chat APIs. Closing the panel returns Picante to the launcher state.
+
+## Contact form
+
+Below Picante's opening message sits an **"Or fill out a contact form by clicking here"** button, for visitors who would rather leave their details than have a conversation. It swaps the panel to a standard contact form:
+
+| Field | Required |
+| --- | --- |
+| Full Name | Yes |
+| Email Address | Yes |
+| Company name | No |
+| Phone number | No |
+| Comments / questions | Yes |
+
+Submitting posts to `POST /api/send-email/contact` with `sourcePage: 'Picante Chat'`, the same endpoint the public `/contact` page uses. The submission is rate limited by IP (5 per minute), validated with Zod, stored as a `Conversation`, and emailed to the business inbox with the sender's address as reply-to. On success the panel shows a confirmation; closing it returns the visitor to Picante, and "Back to chat" does the same from the form.
+
+The notification email (`emails/contact-form.tsx`) mirrors the layout the office already works from: logo, a "Contact form submission" heading, a labelled **Details** block, the comment body, and an "Open store" button. Its subject is `<email> submitted the form from your <page> page`, where the page comes from the optional `sourcePage` field. Because this email is an internal alert to the business inbox rather than a subscriber email, it carries no footer unsubscribe link; the `List-Unsubscribe` header applied by `lib/email/client.ts` is unchanged.
+
+This is separate from the "Talk to a human" handoff, which opens a live chat thread during business hours instead of sending mail.
 
 ## Asset
 
