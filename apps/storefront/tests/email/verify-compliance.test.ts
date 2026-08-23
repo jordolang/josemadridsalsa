@@ -197,18 +197,21 @@ describe('Email Compliance - Unsubscribe Links in Footer', () => {
     expect(html).toContain('/unsubscribe')
   })
 
-  it('should include unsubscribe link in contact form email footer', async () => {
+  // The contact form notification is an internal alert delivered only to the business
+  // inbox (both routes that send it hardcode mike@josemadridsalsa.com), so there is no
+  // subscription behind it and no footer unsubscribe link. The List-Unsubscribe header
+  // is still applied by the email client — see the header suite above.
+  it('should not carry a footer unsubscribe link in the internal contact form email', async () => {
     const html = await render(
       ContactFormEmail({
         name: 'John Doe',
         email: 'john@example.com',
         message: 'Test message',
-        unsubscribeUrl: 'https://example.com/unsubscribe?email=test@example.com',
       })
     )
 
-    expect(html).toContain('Unsubscribe')
-    expect(html).toContain('/unsubscribe')
+    expect(html).not.toContain('Unsubscribe')
+    expect(html).toContain('Contact form submission')
   })
 
   it('should use default unsubscribe link (#) when URL not provided', async () => {

@@ -19,109 +19,84 @@ describe('ContactFormEmail', () => {
     it('should render contact form email with all required fields', async () => {
       const html = await render(<ContactFormEmail {...baseProps} />)
 
-      expect(html).toContain('New Contact Form Submission')
+      expect(html).toContain('Contact form submission')
       expect(html).toContain('John Smith')
       expect(html).toContain('john.smith@example.com')
       expect(html).toContain('wholesale pricing')
     })
 
-    it('should include preview text with sender name', async () => {
+    it('should include preview text naming the store', async () => {
       const html = await render(<ContactFormEmail {...baseProps} />)
 
-      expect(html).toContain('New contact form submission from John Smith')
+      expect(html).toContain('A user has submitted the contact form on Jose Madrid Salsa')
     })
 
-    it('should include contact information section', async () => {
+    it('should include the details section with its labels', async () => {
       const html = await render(<ContactFormEmail {...baseProps} />)
 
-      expect(html).toContain('Contact Information')
-      expect(html).toContain('Name:')
-      expect(html).toContain('Email:')
+      expect(html).toContain('Details')
+      expect(html).toContain('Full Name:')
+      expect(html).toContain('Email Address:')
+      expect(html).toContain('Comments / questions:')
     })
 
-    it('should include message section', async () => {
+    it('should include the submitted message', async () => {
       const html = await render(<ContactFormEmail {...baseProps} />)
 
-      expect(html).toContain('Message')
       expect(html).toContain(baseProps.message)
     })
 
-    it('should include reply button', async () => {
+    it('should include the open store call to action', async () => {
       const html = await render(<ContactFormEmail {...baseProps} />)
 
-      expect(html).toContain('Reply to <!-- -->John Smith')
-      expect(html).toContain('mailto:john.smith@example.com')
+      expect(html).toContain('Open store')
+    })
+
+    it('should accept a custom store name', async () => {
+      const html = await render(<ContactFormEmail {...baseProps} storeName={'Jose Madrid Fundraising'} />)
+
+      expect(html).toContain('A user has submitted the contact form on Jose Madrid Fundraising')
     })
   })
 
   describe('optional props', () => {
-    it('should include phone number when provided', async () => {
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          phone={'(512) 555-1234'}
-        />
-      )
+    it('should include company name when provided', async () => {
+      const html = await render(<ContactFormEmail {...baseProps} company={'Center Stage Dance Studio'} />)
 
-      expect(html).toContain('Phone:')
+      expect(html).toContain('Company name:')
+      expect(html).toContain('Center Stage Dance Studio')
+    })
+
+    it('should not include company section when not provided', async () => {
+      const html = await render(<ContactFormEmail {...baseProps} />)
+
+      expect(html).not.toContain('Company name:')
+    })
+
+    it('should include phone number when provided', async () => {
+      const html = await render(<ContactFormEmail {...baseProps} phone={'(512) 555-1234'} />)
+
+      expect(html).toContain('Phone number:')
       expect(html).toContain('(512) 555-1234')
     })
 
     it('should not include phone section when not provided', async () => {
       const html = await render(<ContactFormEmail {...baseProps} />)
 
-      expect(html).not.toContain('Phone:')
-    })
-
-    it('should include submission timestamp when provided', async () => {
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          submittedAt={'February 17, 2024 at 2:30 PM'}
-        />
-      )
-
-      expect(html).toContain('Submitted:')
-      expect(html).toContain('February 17, 2024 at 2:30 PM')
-    })
-
-    it('should not include submitted section when not provided', async () => {
-      const html = await render(<ContactFormEmail {...baseProps} />)
-
-      expect(html).not.toContain('Submitted:')
-    })
-
-    it('should include unsubscribe URL when provided', async () => {
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          unsubscribeUrl={'https://example.com/unsubscribe'}
-        />
-      )
-
-      expect(html).toContain('https://example.com/unsubscribe')
-    })
-
-    it('should use default unsubscribe URL when not provided', async () => {
-      const html = await render(<ContactFormEmail {...baseProps} />)
-
-      // Should have a fallback unsubscribe link
-      expect(html).toMatch(/unsubscribe/i)
+      expect(html).not.toContain('Phone number:')
     })
 
     it('should handle all optional fields provided together', async () => {
       const html = await render(
         <ContactFormEmail
           {...baseProps}
+          company={'Center Stage Dance Studio'}
           phone={'(512) 555-1234'}
-          submittedAt={'February 17, 2024 at 2:30 PM'}
-          unsubscribeUrl={'https://example.com/unsubscribe'}
         />
       )
 
+      expect(html).toContain('Center Stage Dance Studio')
       expect(html).toContain('(512) 555-1234')
-      expect(html).toContain('February 17, 2024 at 2:30 PM')
-      expect(html).toContain('https://example.com/unsubscribe')
     })
   })
 
@@ -141,12 +116,7 @@ describe('ContactFormEmail', () => {
       ]
 
       for (const email of emails) {
-        const html = await render(
-          ContactFormEmail({
-            ...baseProps,
-            email,
-          })
-        )
+        const html = await render(ContactFormEmail({ ...baseProps, email }))
 
         expect(html).toContain(email)
         expect(html).toContain(`mailto:${email}`)
@@ -165,38 +135,24 @@ I have a few questions:
 
 Thanks!`
 
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          message={multilineMessage}
-        />
-      )
+      const html = await render(<ContactFormEmail {...baseProps} message={multilineMessage} />)
 
       expect(html).toContain('Hello,')
       expect(html).toContain('wholesale prices')
       expect(html).toContain('bulk discounts')
       expect(html).toContain('Thanks!')
+      expect(html).toContain('pre-wrap')
     })
 
     it('should handle short messages', async () => {
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          message={'Hello!'}
-        />
-      )
+      const html = await render(<ContactFormEmail {...baseProps} message={'Hello!'} />)
 
       expect(html).toContain('Hello!')
     })
 
     it('should handle long messages', async () => {
       const longMessage = 'A'.repeat(1000)
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          message={longMessage}
-        />
-      )
+      const html = await render(<ContactFormEmail {...baseProps} message={longMessage} />)
 
       expect(html).toContain(longMessage)
     })
@@ -207,12 +163,7 @@ Price: $50.00
 Special: <special> & "quoted"
 Symbols: © ® ™`
 
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          message={specialMessage}
-        />
-      )
+      const html = await render(<ContactFormEmail {...baseProps} message={specialMessage} />)
 
       expect(html).toContain('test@example.com')
       expect(html).toContain('$50.00')
@@ -221,12 +172,7 @@ Symbols: © ® ™`
     it('should handle unicode characters in message', async () => {
       const unicodeMessage = 'Hola! ¿Cómo estás? 你好 🌶️'
 
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          message={unicodeMessage}
-        />
-      )
+      const html = await render(<ContactFormEmail {...baseProps} message={unicodeMessage} />)
 
       expect(html).toContain('Hola')
       expect(html).toContain('🌶️')
@@ -238,53 +184,31 @@ Symbols: © ® ™`
       const html = await render(<ContactFormEmail {...baseProps} />)
 
       expect(html).toContain('John Smith')
-      expect(html).toContain('Reply to <!-- -->John Smith')
     })
 
     it('should handle names with special characters', async () => {
-      const specialNames = [
-        "O'Brien",
-        'García-López',
-        'van der Berg',
-        'José María',
-        'Jean-François',
-      ]
+      const specialNames = ["O'Brien", 'García-López', 'van der Berg', 'José María', 'Jean-François']
 
       for (const name of specialNames) {
-        const html = await render(
-          ContactFormEmail({
-            ...baseProps,
-            name,
-          })
-        )
+        const html = await render(ContactFormEmail({ ...baseProps, name }))
 
-        expect(html).toMatch(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, '.*')))
-        expect(html).toContain('Reply to')
+        expect(html).toMatch(
+          new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, '.*'))
+        )
       }
     })
 
     it('should handle long names', async () => {
       const longName = 'Christopher Alexander Montgomery-Fitzpatrick III'
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          name={longName}
-        />
-      )
+      const html = await render(<ContactFormEmail {...baseProps} name={longName} />)
 
       expect(html).toContain('Christopher Alexander')
     })
 
     it('should handle single-word names', async () => {
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          name={'Madonna'}
-        />
-      )
+      const html = await render(<ContactFormEmail {...baseProps} name={'Madonna'} />)
 
       expect(html).toContain('Madonna')
-      expect(html).toContain('Reply to <!-- -->Madonna')
     })
   })
 
@@ -299,31 +223,17 @@ Symbols: © ® ™`
       ]
 
       for (const phone of phoneFormats) {
-        const html = await render(
-          ContactFormEmail({
-            ...baseProps,
-            phone,
-          })
-        )
+        const html = await render(ContactFormEmail({ ...baseProps, phone }))
 
         expect(html).toContain(phone)
       }
     })
 
     it('should handle international phone numbers', async () => {
-      const internationalPhones = [
-        '+44 20 7946 0958',
-        '+52 55 1234 5678',
-        '+61 2 1234 5678',
-      ]
+      const internationalPhones = ['+44 20 7946 0958', '+52 55 1234 5678', '+61 2 1234 5678']
 
       for (const phone of internationalPhones) {
-        const html = await render(
-          ContactFormEmail({
-            ...baseProps,
-            phone,
-          })
-        )
+        const html = await render(ContactFormEmail({ ...baseProps, phone }))
 
         expect(html).toContain(phone)
       }
@@ -335,6 +245,7 @@ Symbols: © ® ™`
       const html = await render(<ContactFormEmail {...baseProps} />)
 
       expect(html).toContain('Jose Madrid Salsa')
+      expect(html).toContain('jose-madrid-salsa-logo.png')
     })
 
     it('should have proper email structure', async () => {
@@ -351,109 +262,47 @@ Symbols: © ® ™`
     it('should include descriptive text', async () => {
       const html = await render(<ContactFormEmail {...baseProps} />)
 
-      expect(html).toContain('received a new message')
-      expect(html).toContain('contact form')
-    })
-
-    it('should include call to action', async () => {
-      const html = await render(<ContactFormEmail {...baseProps} />)
-
-      expect(html).toContain('Reply to this message')
+      expect(html).toContain('A user has submitted the contact form on')
     })
   })
 
   describe('edge cases', () => {
     it('should handle empty message', async () => {
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          message={''}
-        />
-      )
+      const html = await render(<ContactFormEmail {...baseProps} message={''} />)
 
-      expect(html).toContain('New Contact Form Submission')
+      expect(html).toContain('Contact form submission')
       expect(html).toContain('John Smith')
     })
 
     it('should handle message with only whitespace', async () => {
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          message={'   \n\n   '}
-        />
-      )
+      const html = await render(<ContactFormEmail {...baseProps} message={'   \n\n   '} />)
 
-      expect(html).toContain('Message')
+      expect(html).toContain('Comments / questions:')
     })
 
     it('should handle very short names', async () => {
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          name={'Jo'}
-        />
-      )
+      const html = await render(<ContactFormEmail {...baseProps} name={'Jo'} />)
 
       expect(html).toContain('Jo')
     })
 
     it('should handle email addresses with plus signs', async () => {
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          email={'user+newsletter@example.com'}
-        />
-      )
+      const html = await render(<ContactFormEmail {...baseProps} email={'user+newsletter@example.com'} />)
 
       expect(html).toContain('user+newsletter@example.com')
       expect(html).toContain('mailto:user+newsletter@example.com')
     })
   })
 
-  describe('timestamp formatting', () => {
-    it('should handle different timestamp formats', async () => {
-      const timestamps = [
-        'February 17, 2024',
-        '2024-02-17',
-        'Feb 17, 2024 at 2:30 PM',
-        '17/02/2024 14:30',
-        'Friday, February 17, 2024',
-      ]
-
-      for (const submittedAt of timestamps) {
-        const html = await render(
-          ContactFormEmail({
-            ...baseProps,
-            submittedAt,
-          })
-        )
-
-        expect(html).toContain(submittedAt)
-      }
-    })
-  })
-
   describe('mailto link generation', () => {
-    it('should create correct mailto link in reply button', async () => {
+    it('should create a mailto link for the sender address', async () => {
       const html = await render(<ContactFormEmail {...baseProps} />)
 
-      expect(html).toContain('mailto:john.smith@example.com')
-    })
-
-    it('should create mailto link in contact information section', async () => {
-      const html = await render(<ContactFormEmail {...baseProps} />)
-
-      // Email should be clickable in the details section
       expect(html).toMatch(/mailto:john\.smith@example\.com/g)
     })
 
     it('should handle special characters in email for mailto', async () => {
-      const html = await render(
-        <ContactFormEmail
-          {...baseProps}
-          email={'user+test@example.com'}
-        />
-      )
+      const html = await render(<ContactFormEmail {...baseProps} email={'user+test@example.com'} />)
 
       expect(html).toContain('mailto:user+test@example.com')
     })

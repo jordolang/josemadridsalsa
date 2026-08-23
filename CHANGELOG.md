@@ -14,6 +14,24 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Contact form in the Picante chat.** The chat's opening message now carries an
+  "Or fill out a contact form by clicking here" button beneath it, for visitors who would rather
+  leave their details than have a conversation. It swaps the panel to a standard contact form —
+  Full Name, Email Address, Company name, Phone number, and Comments / questions — and posts to
+  the existing `POST /api/send-email/contact` endpoint, so the submission is rate limited, stored
+  as a `Conversation`, and emailed to mike@josemadridsalsa.com with the sender's address as
+  reply-to.
+
+  The contact notification email was rebuilt to match the layout of the legacy BigCommerce store's
+  contact email that the office already works from: logo, "Contact form submission" heading, a
+  labelled **Details** block, the comment body, and an "Open store" button, with the subject line
+  `<email> submitted the form from your <page> page`. The route accepts two new optional fields,
+  `company` and `sourcePage` (the latter naming the page in the subject), and the shared template
+  is also used by the public `/contact` page and the developer contact form.
+
+  The notification is an internal alert to the business inbox rather than a subscriber email, so
+  it carries no footer unsubscribe link; the `List-Unsubscribe` header the email client applies is
+  unchanged, and the template suites now mark it explicitly as not subscriber-facing.
 - **Native macOS administration app.** An ARM64 SwiftUI shell now opens the complete,
   permission-aware production admin panel with persistent WebKit sign-in, connection state,
   native navigation controls, and shortcuts for Command Center, Operations, and Growth & Field.

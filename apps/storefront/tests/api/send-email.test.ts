@@ -38,6 +38,7 @@ vi.mock('@/lib/email/rate-limit', () => ({
 
 // Import the mocked functions
 import { sendEmail as mockSendEmail } from '@/lib/email/client'
+import { ContactFormEmail } from '@/emails/contact-form'
 import { prisma } from '@/lib/prisma'
 import { checkRateLimit as mockCheckRateLimit, validateServiceApiKey as mockValidateServiceApiKey } from '@/lib/email/rate-limit'
 
@@ -155,12 +156,53 @@ describe('Send Email API', () => {
       expect(mockSendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'mike@josemadridsalsa.com',
-          subject: 'New Contact Form Submission from John Doe',
+          subject: 'john@example.com submitted the form from your Contact page',
           type: 'contact-form',
           userId: 'user-123',
           replyTo: 'john@example.com',
         })
       )
+    })
+
+    it('should include the company name and source page in the notification', async () => {
+      const request = new NextRequest('http://localhost/api/send-email/contact', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'Annette Osinski',
+          email: 'annette@example.com',
+          company: 'Center Stage Dance Studio',
+          phone: '716-907-3301',
+          message: 'I would like to do your fundraiser.',
+          sourcePage: 'Picante Chat',
+        }),
+      })
+
+      const response = await ContactPOST(request)
+
+      expect(response.status).toBe(200)
+      expect(mockSendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'mike@josemadridsalsa.com',
+          subject: 'annette@example.com submitted the form from your Picante Chat page',
+          replyTo: 'annette@example.com',
+        })
+      )
+      expect(ContactFormEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Annette Osinski',
+          email: 'annette@example.com',
+          company: 'Center Stage Dance Studio',
+          phone: '716-907-3301',
+          message: 'I would like to do your fundraiser.',
+        })
+      )
+      expect(vi.mocked(prisma.conversation.create).mock.calls[0][0]).toMatchObject({
+        data: {
+          messages: {
+            create: [expect.objectContaining({ body: expect.stringContaining('Company: Center Stage Dance Studio') })],
+          },
+        },
+      })
     })
 
     it('should use default submittedAt if not provided', async () => {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Bot, Headphones, Loader2, Send, Sparkles, User, X } from 'lucide-react'
+import { Bot, CheckCircle2, Headphones, Loader2, Mail, Send, Sparkles, User, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,7 +15,7 @@ type ChatMessage = {
   senderLabel?: string
 }
 
-type Mode = 'ai' | 'handoff-form' | 'live' | 'offline-sent'
+type Mode = 'ai' | 'handoff-form' | 'live' | 'offline-sent' | 'contact-form' | 'contact-sent'
 
 const INITIAL_MESSAGE: ChatMessage = {
   id: 'assistant-welcome',
@@ -244,11 +244,21 @@ export function AiChatWidget() {
           <div className="flex items-center justify-between bg-gradient-to-r from-salsa-600 via-salsa-500 to-chile-500 px-4 py-3 text-white">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/80">
-                {mode === 'live' ? 'Live chat' : 'Picante'}
+                {mode === 'live' ? 'Live chat' : mode === 'contact-form' || mode === 'contact-sent' ? 'Contact us' : 'Picante'}
               </p>
               <p className="flex items-center gap-2 text-base font-semibold">
-                {mode === 'live' ? <Headphones className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-                {mode === 'live' ? 'You’re chatting with our team' : 'Your pepper-penguin salsa pal'}
+                {mode === 'live' ? (
+                  <Headphones className="h-4 w-4" />
+                ) : mode === 'contact-form' || mode === 'contact-sent' ? (
+                  <Mail className="h-4 w-4" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                {mode === 'live'
+                  ? 'You’re chatting with our team'
+                  : mode === 'contact-form' || mode === 'contact-sent'
+                    ? 'Send us a message'
+                    : 'Your pepper-penguin salsa pal'}
               </p>
             </div>
             <button
@@ -282,11 +292,36 @@ export function AiChatWidget() {
                 hoursLabel={hoursLabel}
                 onClose={handleToggle}
               />
+            ) : mode === 'contact-form' ? (
+              <ContactForm onCancel={() => setMode('ai')} onSent={() => setMode('contact-sent')} />
+            ) : mode === 'contact-sent' ? (
+              <ContactSent
+                onClose={() => {
+                  // Drop back to the chat so reopening the widget doesn't land on the
+                  // confirmation screen, which has no route back to Picante.
+                  setMode('ai')
+                  handleToggle()
+                }}
+              />
             ) : (
               <>
                 <div className="space-y-3 overflow-y-auto px-4 py-4 text-sm text-foreground">
                   {messages.map((message) => (
-                    <MessageBubble key={message.id} message={message} />
+                    <div key={message.id} className="space-y-3">
+                      <MessageBubble message={message} />
+                      {message.id === INITIAL_MESSAGE.id && mode === 'ai' ? (
+                        <div className="flex justify-start">
+                          <button
+                            type="button"
+                            onClick={() => setMode('contact-form')}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-salsa-200 bg-salsa-50 px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-salsa-700 transition hover:bg-salsa-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-salsa-500 dark:border-salsa-800 dark:bg-salsa-950 dark:text-salsa-200 dark:hover:bg-salsa-900"
+                          >
+                            <Mail className="h-3.5 w-3.5 shrink-0" />
+                            Or fill out a contact form by clicking here
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   ))}
                   {isLoading && mode === 'ai' ? (
                     <div className="flex justify-start">
@@ -489,6 +524,146 @@ function OfflineSent({ hoursLabel, onClose }: { hoursLabel: string; onClose: () 
         <p className="text-base font-semibold text-foreground">Got it — we’ll be in touch.</p>
         <p className="mt-1 text-muted-foreground">
           Our hours are {hoursLabel}. Someone from the team will follow up by email as soon as we’re back.
+        </p>
+      </div>
+      <Button onClick={onClose}>Close</Button>
+    </div>
+  )
+}
+
+function ContactForm({ onCancel, onSent }: { onCancel: () => void; onSent: () => void }) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [company, setCompany] = useState('')
+  const [phone, setPhone] = useState('')
+  const [message, setMessage] = useState('')
+  const [isSending, setIsSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (isSending) return
+    setIsSending(true)
+    setError(null)
+    try {
+      const response = await fetch('/api/send-email/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          company: company.trim() || undefined,
+          phone: phone.trim() || undefined,
+          message: message.trim(),
+          sourcePage: 'Picante Chat',
+          submittedAt: new Date().toISOString(),
+        }),
+      })
+      if (response.status === 429) {
+        throw new Error('Too many requests. Please try again in a few minutes.')
+      }
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(typeof data?.error === 'string' ? data.error : 'Something went wrong. Please try again.')
+      }
+      onSent()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 text-sm">
+      <div className="rounded-xl bg-muted px-3 py-2 text-xs text-muted-foreground">
+        Fill this out and it lands straight in our inbox. We&apos;ll reply by email.
+      </div>
+      <label className="text-xs font-medium">
+        Full Name
+        <Input
+          className="mt-1"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          maxLength={200}
+          autoComplete="name"
+          required
+          disabled={isSending}
+        />
+      </label>
+      <label className="text-xs font-medium">
+        Email Address
+        <Input
+          type="email"
+          className="mt-1"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          maxLength={320}
+          autoComplete="email"
+          required
+          disabled={isSending}
+        />
+      </label>
+      <label className="text-xs font-medium">
+        Company name <span className="text-muted-foreground">(optional)</span>
+        <Input
+          className="mt-1"
+          value={company}
+          onChange={(event) => setCompany(event.target.value)}
+          maxLength={200}
+          autoComplete="organization"
+          disabled={isSending}
+        />
+      </label>
+      <label className="text-xs font-medium">
+        Phone number <span className="text-muted-foreground">(optional)</span>
+        <Input
+          type="tel"
+          className="mt-1"
+          value={phone}
+          onChange={(event) => setPhone(event.target.value)}
+          maxLength={30}
+          autoComplete="tel"
+          disabled={isSending}
+        />
+      </label>
+      <label className="text-xs font-medium">
+        Comments / questions
+        <Textarea
+          rows={4}
+          maxLength={5000}
+          className="mt-1"
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          required
+          disabled={isSending}
+          placeholder="How can we help?"
+        />
+      </label>
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      <div className="mt-auto flex justify-end gap-2 pt-2">
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={isSending}>
+          Back to chat
+        </Button>
+        <Button type="submit" className="bg-salsa-600 hover:bg-salsa-700" disabled={isSending}>
+          {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+          Send message
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function ContactSent({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-8 text-center text-sm">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600">
+        <CheckCircle2 className="h-6 w-6" />
+      </div>
+      <div>
+        <p className="text-base font-semibold text-foreground">Message sent!</p>
+        <p className="mt-1 text-muted-foreground">
+          Thanks for reaching out — we&apos;ll get back to you by email as soon as we can.
         </p>
       </div>
       <Button onClick={onClose}>Close</Button>
