@@ -229,6 +229,13 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
+- **The mobile "Live chats" tab covered the admin controls underneath it.** On a phone the tab is
+  pinned to the right edge at mid-height, where it sat on top of the edit and delete buttons in
+  Admin → Reusable sections (and any other right-aligned action at that height). It can now be
+  dragged: press and move it to slide it anywhere along the edge, or across the screen's midpoint
+  to switch it to the left edge. The chosen spot is saved per device in `localStorage`, the pulse
+  animation pauses while dragging, and a drag no longer opens the queue panel on release. Tap
+  behaviour and the desktop pill are unchanged.
 - **Every product's gallery showed the same jar photo two or three times.** Two separate causes,
   both fixed. In the data, 26 of the 28 products carried a second copy of their front-of-jar
   studio shot: the same photograph re-uploaded to `products/` alongside the `featuredImage` it
