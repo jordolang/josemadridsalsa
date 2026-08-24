@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Bell, Headphones, Loader2, Send, X } from 'lucide-react'
+import { Bell, GripVertical, Headphones, Loader2, RotateCcw, Send, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,6 +11,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { useLiveChatDock } from '@/hooks/use-live-chat-dock'
 
 const QUEUE_POLL_MS = 5000
 const THREAD_POLL_MS = 2500
@@ -47,6 +49,10 @@ export function LiveChatNotifier() {
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
   const seenWaitingIds = useRef<Set<string>>(new Set())
   const initialLoad = useRef(true)
+  // The tab is only a fixed vertical pill on phones; on desktop it stays the
+  // bottom-right pill the stylesheet already places.
+  const isMobile = useIsMobile()
+  const dock = useLiveChatDock(isMobile)
 
   useEffect(() => {
     let cancelled = false
@@ -129,13 +135,27 @@ export function LiveChatNotifier() {
   return (
     <>
       <button
+        ref={dock.ref}
         type="button"
         onClick={() => {
+          // A press that turned into a drag repositions the tab; it must not
+          // also open the queue.
+          if (dock.consumeDrag()) return
           setOpenPanel(true)
           void requestBrowserPermission()
         }}
+        onPointerDown={dock.onPointerDown}
+        onKeyDown={dock.onKeyDown}
+        style={dock.style}
+        data-dock-side={dock.position.side}
+        data-dragging={dock.dragging ? 'true' : undefined}
         className="fixed bottom-6 right-6 z-40 flex h-12 items-center gap-2 rounded-full bg-salsa-600 px-4 text-white shadow-lg transition hover:bg-salsa-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-salsa-300"
         aria-label="Open live chat queue"
+        title={
+          isMobile
+            ? 'Open live chat queue — drag to move it, or use the arrow keys'
+            : 'Open live chat queue'
+        }
       >
         <Headphones className="h-5 w-5" />
         <span className="text-sm font-medium">Live chats</span>
@@ -172,6 +192,15 @@ export function LiveChatNotifier() {
               <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
                 <p className="mb-2 font-medium">Tip</p>
                 <p>Logged-in admins all share access to past chats from the Messages page.</p>
+                {isMobile ? (
+                  <p className="mt-2 flex items-start gap-1">
+                    <GripVertical className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+                    <span>
+                      Drag the Live chats tab to move it up, down, or to the other edge if it
+                      covers a button.
+                    </span>
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => void requestBrowserPermission()}
@@ -179,6 +208,15 @@ export function LiveChatNotifier() {
                 >
                   <Bell className="h-3 w-3" /> Enable browser notifications
                 </button>
+                {isMobile ? (
+                  <button
+                    type="button"
+                    onClick={dock.reset}
+                    className="mt-2 inline-flex items-center gap-1 text-salsa-600 hover:text-salsa-700"
+                  >
+                    <RotateCcw className="h-3 w-3" /> Reset tab position
+                  </button>
+                ) : null}
               </div>
             </div>
             <div className="rounded-lg border border-border bg-card">
