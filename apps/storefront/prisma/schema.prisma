@@ -602,6 +602,13 @@ model Order {
   /// Set once, by whichever path marks the order paid first. The claim on this column is what
   /// stops purchase loyalty points being awarded twice when a webhook and a completion route
   /// race — the same guard `commissionCreditedAt` gives the fundraiser credit.
+  /// Set the moment an order's inventory reservation is handed back, by whichever path
+  /// gets there first — a failed payment confirmation, a provider capture failure, or the
+  /// expire-pending-orders sweep. Release is not idempotent on its own (reservations are
+  /// taken before the order row exists, so the InventoryTransaction rows carry no orderId),
+  /// and releasing twice would silently under-count `Product.stockReserved`. Every release
+  /// path claims this field first and only proceeds if the claim was theirs.
+  inventoryReleasedAt      DateTime?
   loyaltyPointsAwardedAt   DateTime?
   fundraiserId             String?
   importSource             String?

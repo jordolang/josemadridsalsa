@@ -27,6 +27,16 @@ export const STALE_RETURN_HOURS = 72
  */
 export const STUCK_WEBHOOK_MINUTES = 30
 
+/**
+ * How long an unpaid order may hold its inventory reservation before the sweep takes it back.
+ *
+ * A card is confirmed in the browser within seconds, so anything still PENDING hours later
+ * is an abandoned tab, a payment that failed without the page reporting back, or a customer
+ * who gave up. Two hours is far past any live attempt while still leaving room for the
+ * retry-payment flow, which refuses cancelled orders and so has to run before the sweep does.
+ */
+export const PENDING_ORDER_EXPIRY_HOURS = 2
+
 /** How many order numbers to name before switching to a count. */
 const NAMED_EXAMPLES = 3
 
