@@ -36,6 +36,14 @@ jobs:
           --health-retries 5
 
     env:
+      # Node sizes its old-space heap from available memory and lands on ~2 GB on a
+      # GitHub runner. Both the TypeScript pass and `next build` over this codebase now
+      # exceed that — each died with "Reached heap limit" while main was still passing
+      # by a few megabytes, so any PR that adds files tipped them over. Set once for the
+      # job so every Node step gets it; the root scripts run turbo with --env-mode=loose,
+      # so it reaches tsc and next. The Dockerfiles raise the same limit for the same
+      # reason. ubuntu-latest runners have 16 GB.
+      NODE_OPTIONS: --max-old-space-size=8192
       DATABASE_URL: postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/jms_test
       DATABASE_URL_UNPOOLED: postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/jms_test
       # The database-backed tests create and delete rows, so they run only where the
