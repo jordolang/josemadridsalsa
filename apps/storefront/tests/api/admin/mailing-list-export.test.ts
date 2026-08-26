@@ -53,6 +53,7 @@ type Query = {
   take?: number
   skip?: number
   cursor?: unknown
+  where?: Record<string, unknown>
   select?: Record<string, unknown>
   include?: unknown
 }
@@ -87,10 +88,16 @@ describe('mailing list CSV export', () => {
     expect(first.take).toBeLessThanOrEqual(BATCH)
     expect(first.cursor).toBeUndefined()
 
+    // A keyset predicate rather than a Prisma `cursor`. Backpressure can park
+    // the stream between pages; a cursor has to locate the boundary row, so an
+    // admin deleting that subscriber meanwhile would end the read early and
+    // hand back a truncated file that still looks complete.
     const second = subscriberFindMany.mock.calls[1][0] as Query
-    expect(second.skip).toBe(1)
-    expect(second.cursor).toEqual({
-      listId_email: { listId: 'list-1', email: page(0, BATCH)[BATCH - 1].email },
+    expect(second.skip).toBeUndefined()
+    expect(second.cursor).toBeUndefined()
+    expect(second.where).toMatchObject({
+      listId: 'list-1',
+      email: { gt: page(0, BATCH)[BATCH - 1].email },
     })
   })
 

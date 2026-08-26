@@ -25,6 +25,14 @@ const campaignDelete = vi.fn(async () => ({}))
 const recipientCreateMany = vi.fn(async ({ data }: { data: unknown[] }) => ({
   count: data.length,
 }))
+const recipientCount = vi.fn(async () => 0)
+const recipientUpdateMany = vi.fn(async () => ({ count: 0 }))
+const campaignFindUnique = vi.fn(async () => ({
+  id: 'campaign-1',
+  status: 'DRAFT',
+  totalRecipients: 0,
+  startedAt: null,
+}))
 
 vi.mock('@/lib/prisma', () => {
   const client = {
@@ -32,11 +40,16 @@ vi.mock('@/lib/prisma', () => {
     mailingListSubscriber: { findMany: subscriberFindMany, count: subscriberCount },
     emailTemplate: { findUnique: templateFindUnique },
     emailCampaign: {
+      findUnique: campaignFindUnique,
       create: campaignCreate,
       update: campaignUpdate,
       delete: campaignDelete,
     },
-    emailRecipient: { createMany: recipientCreateMany },
+    emailRecipient: {
+      createMany: recipientCreateMany,
+      count: recipientCount,
+      updateMany: recipientUpdateMany,
+    },
     discountCode: { findMany: vi.fn(async () => []) },
   }
   return { prisma: client, default: client }
@@ -54,7 +67,9 @@ vi.mock('@/lib/email/queue', () => ({
   triggerCampaignContinuation: vi.fn(async () => undefined),
 }))
 
-const { createCampaign } = await import('@/app/admin/email-campaigns/actions')
+const { createCampaign, launchCampaign } = await import(
+  '@/app/admin/email-campaigns/actions'
+)
 
 /** Subscribers as the narrowed `select` returns them. */
 function page(start: number, size: number) {
@@ -82,6 +97,7 @@ type Query = {
   take?: number
   skip?: number
   cursor?: unknown
+  where?: Record<string, unknown>
   select?: Record<string, unknown>
   include?: unknown
 }
@@ -116,13 +132,31 @@ describe('createCampaign from a mailing list', () => {
     expect(first.take).toBeLessThanOrEqual(BATCH)
     expect(first.cursor).toBeUndefined()
 
-    // A cursor, not a growing `skip`: offsetting deep into a 22k list rescans
-    // every row it steps over.
+    // A keyset predicate, not a growing `skip` (which rescans every row it
+    // steps over) and not a Prisma `cursor` (which has to locate the boundary
+    // row, so deleting that subscriber mid-run would end the read early).
     const second = subscriberFindMany.mock.calls[1][0] as Query
-    expect(second.skip).toBe(1)
-    expect(second.cursor).toEqual({
-      listId_email: { listId: 'list-1', email: page(0, BATCH)[BATCH - 1].email },
+    expect(second.skip).toBeUndefined()
+    expect(second.cursor).toBeUndefined()
+    expect(second.where).toMatchObject({
+      listId: 'list-1',
+      email: { gt: page(0, BATCH)[BATCH - 1].email },
     })
+  })
+
+  it('keeps reading after the boundary subscriber is deleted mid-run', async () => {
+    subscriberCount.mockResolvedValue(1500)
+    subscriberFindMany
+      .mockResolvedValueOnce(page(0, BATCH))
+      .mockResolvedValueOnce(page(BATCH, 500))
+
+    await createCampaign(listForm())
+
+    // A `cursor` on a row that no longer exists returns nothing, silently
+    // dropping every subscriber past that point. `gt` does not care.
+    const second = subscriberFindMany.mock.calls[1][0] as Query
+    expect(second.where!.email).toEqual({ gt: page(0, BATCH)[BATCH - 1].email })
+    expect(recipientCreateMany).toHaveBeenCalledTimes(2)
   })
 
   it('writes recipients in batches rather than one nested create', async () => {
@@ -200,6 +234,18 @@ describe('createCampaign from a mailing list', () => {
     expect(subscriberFindMany).not.toHaveBeenCalled()
   })
 
+  it('rolls the campaign back when the read materialises nobody', async () => {
+    // The count saw subscribers; by the time the read ran they had all gone.
+    subscriberCount.mockResolvedValue(1200)
+    subscriberFindMany.mockResolvedValueOnce([])
+
+    const result = await createCampaign(listForm())
+
+    expect(result).toMatchObject({ error: 'No valid recipients found' })
+    expect(campaignDelete).toHaveBeenCalledWith({ where: { id: 'campaign-1' } })
+    expect(campaignUpdate).not.toHaveBeenCalled()
+  })
+
   it('rolls the campaign back when a recipient batch fails', async () => {
     subscriberCount.mockResolvedValue(1500)
     subscriberFindMany
@@ -213,5 +259,40 @@ describe('createCampaign from a mailing list', () => {
     // recipient-less DRAFT would sit in the list looking like a success.
     expect(result).toMatchObject({ error: 'Failed to create campaign' })
     expect(campaignDelete).toHaveBeenCalledWith({ where: { id: 'campaign-1' } })
+  })
+})
+
+describe('launchCampaign', () => {
+  it('refuses a draft whose recipients were only half written', async () => {
+    // A create killed by a timeout or a deployment leaves the batches that
+    // landed and nothing to undo them.
+    campaignFindUnique.mockResolvedValue({
+      id: 'campaign-1',
+      status: 'DRAFT',
+      totalRecipients: 22_000,
+      startedAt: null,
+    })
+    recipientCount.mockResolvedValue(9_000)
+
+    const result = await launchCampaign('campaign-1')
+
+    expect(result.error).toContain('9000 of 22000')
+    expect(recipientUpdateMany).not.toHaveBeenCalled()
+    expect(campaignUpdate).not.toHaveBeenCalled()
+  })
+
+  it('launches a draft whose recipients are all present', async () => {
+    campaignFindUnique.mockResolvedValue({
+      id: 'campaign-1',
+      status: 'DRAFT',
+      totalRecipients: 22_000,
+      startedAt: null,
+    })
+    recipientCount.mockResolvedValue(22_000)
+
+    const result = await launchCampaign('campaign-1')
+
+    expect(result).toMatchObject({ success: true })
+    expect(campaignUpdate).toHaveBeenCalled()
   })
 })

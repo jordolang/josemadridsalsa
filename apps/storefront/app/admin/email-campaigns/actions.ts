@@ -116,16 +116,19 @@ async function insertRecipientsFromList(
 
   for (;;) {
     const batch = await prisma.mailingListSubscriber.findMany({
-      where: { listId, status: 'SUBSCRIBED' },
-      // `(listId, email)` is unique, so email totally orders a single list and
-      // the cursor rides the index the filter already uses. `createdAt` cannot
-      // cursor: a CSV import stamps thousands of rows with the same value, so
-      // rows would repeat or be skipped.
+      where: {
+        listId,
+        status: 'SUBSCRIBED',
+        // Keyset, not a Prisma `cursor`: a cursor has to locate the boundary
+        // row, so an admin removing that subscriber between pages would end the
+        // read early and silently drop everyone after it. `(listId, email)` is
+        // unique, so email totally orders a single list and this predicate
+        // rides the index the filter already uses. `createdAt` cannot page: a
+        // CSV import stamps thousands of rows with the same value.
+        ...(cursorEmail === undefined ? {} : { email: { gt: cursorEmail } }),
+      },
       orderBy: { email: 'asc' },
       take: RECIPIENT_BATCH_SIZE,
-      ...(cursorEmail === undefined
-        ? {}
-        : { cursor: { listId_email: { listId, email: cursorEmail } }, skip: 1 }),
       select: {
         email: true,
         firstName: true,
@@ -296,6 +299,12 @@ export async function createCampaign(formData: FormData) {
       throw error
     }
 
+    if (insertedCount === 0) {
+      // Everyone matched by the count left before the read reached them.
+      await prisma.emailCampaign.delete({ where: { id: campaign.id } }).catch(() => {})
+      return { error: 'No valid recipients found', parseErrors }
+    }
+
     if (insertedCount !== totalRecipients) {
       await prisma.emailCampaign.update({
         where: { id: campaign.id },
@@ -335,6 +344,21 @@ export async function launchCampaign(campaignId: string) {
 
     if (campaign.status !== 'DRAFT') {
       return { error: 'Campaign must be in DRAFT status to launch' }
+    }
+
+    // Recipients are materialised in batches, so a create that was killed
+    // part-way — a timeout, a deployment, a crash — can leave a draft holding
+    // only the batches that landed while `totalRecipients` still advertises the
+    // whole list. Nothing else in the app adds or removes recipient rows, so a
+    // short count is proof of that, and launching anyway would quietly send to
+    // a partial audience and report it as a complete run.
+    const materialised = await prisma.emailRecipient.count({ where: { campaignId } })
+    if (materialised !== campaign.totalRecipients) {
+      return {
+        error:
+          `Campaign is incomplete: ${materialised} of ${campaign.totalRecipients} recipients were saved. ` +
+          'Delete it and create it again before launching.',
+      }
     }
 
     // Recover any recipients left mid-flight by a previously interrupted run.

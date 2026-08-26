@@ -61,19 +61,20 @@ export async function GET(
       async pull(controller) {
         try {
           const batch = await prisma.mailingListSubscriber.findMany({
-            where: { listId: id },
-            // `(listId, email)` is unique, so email totally orders a single
-            // list and the cursor rides the index the filter already uses.
-            // `createdAt` cannot cursor: a CSV import stamps thousands of rows
-            // with the same value, so rows would repeat or be skipped.
+            where: {
+              listId: id,
+              // Keyset, not a Prisma `cursor`: backpressure can park this
+              // stream between pages, and a cursor has to locate the boundary
+              // row, so an admin removing that subscriber meanwhile would end
+              // the read early and hand back a truncated file that still looks
+              // complete. `(listId, email)` is unique, so email totally orders
+              // a single list and this predicate rides the index the filter
+              // already uses. `createdAt` cannot page: a CSV import stamps
+              // thousands of rows with the same value.
+              ...(cursorEmail === undefined ? {} : { email: { gt: cursorEmail } }),
+            },
             orderBy: { email: 'asc' },
             take: BATCH_SIZE,
-            ...(cursorEmail === undefined
-              ? {}
-              : {
-                  cursor: { listId_email: { listId: id, email: cursorEmail } },
-                  skip: 1,
-                }),
             // `customFields` is deliberately absent: the importer parks every
             // unmapped column of the source CSV there, and no output column
             // reads it.
