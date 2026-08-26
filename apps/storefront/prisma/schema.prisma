@@ -202,46 +202,6 @@ model CollectionProduct {
   @@map("collection_products")
 }
 
-/// A fixed set of products sold together at one set price — "buy these together for $X". Unlike a
-/// Collection (a marketing grouping at each product's own price), a Bundle carries `price`, and at
-/// checkout it expands into its component line items with that price prorated across them, so stock,
-/// margin, fulfilment and returns stay per-product. Shape mirrors Collection/CollectionProduct.
-model Bundle {
-  id              String          @id @default(cuid())
-  name            String          @unique
-  slug            String          @unique
-  description     String?
-  image           String?
-  /// The total price for one of this bundle, in dollars — prorated across components at checkout.
-  price           Decimal         @db.Decimal(10, 2)
-  metaTitle       String?
-  metaDescription String?
-  ogImage         String?
-  isActive        Boolean         @default(true)
-  sortOrder       Int             @default(0)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  products        BundleProduct[]
-
-  @@map("bundles")
-}
-
-model BundleProduct {
-  id        String  @id @default(cuid())
-  bundleId  String
-  productId String
-  /// How many of this product one bundle contains (a bundle can hold several of the same item).
-  quantity  Int     @default(1)
-  /// Position of the product within the bundle, so it can be arranged by hand.
-  sortOrder Int     @default(0)
-  bundle    Bundle  @relation(fields: [bundleId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@unique([bundleId, productId])
-  @@index([productId])
-  @@map("bundle_products")
-}
-
 model Product {
   id                     String                  @id @default(cuid())
   name                   String
@@ -277,7 +237,6 @@ model Product {
   stockReserved          Int                     @default(0)
   stockStatus            StockStatus             @default(IN_STOCK)
   unitsPerCase           Int                     @default(12)
-  bundleProducts         BundleProduct[]
   cartItems              CartItem[]
   collectionProducts     CollectionProduct[]
   eventManifestItems     EventManifestItem[]
@@ -845,10 +804,6 @@ model OrderItem {
   productName       String
   productSku        String
   productImage      String?
-  /// Set when this line came from a bundle: the bundle's id and a name snapshot, so an order can
-  /// show "part of the Gift Set bundle" and reporting can group the lines. Null for a normal line.
-  bundleId          String?
-  bundleName        String?
   createdAt         DateTime            @default(now())
   order             Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product           Product             @relation(fields: [productId], references: [id])

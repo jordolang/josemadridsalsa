@@ -204,6 +204,20 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Removed
+- **Product bundles.** The fixed-product-set feature added in #460 is withdrawn: the public
+  `/bundles` listing and detail pages, the admin editor and its API routes, `lib/bundles*`, the
+  add-to-cart button, the `Bundle`/`BundleProduct` models and the `bundleId`/`bundleName` tags on
+  order lines. `/bundles` returns to the gift-box selector it was before, where the customer picks
+  their own jars rather than choosing from prebuilt sets.
+
+  The migration that created the tables (`20260822120000_add_product_bundles`) is deliberately
+  left in place and undone by a new one (`20260826000000_remove_product_bundles`) rather than
+  deleted. An applied migration whose directory disappears leaves a row in `_prisma_migrations`
+  with nothing to match, which `prisma migrate deploy` treats as drift and refuses to run past —
+  so deleting it would have failed the next production deploy and stranded the tables. Every
+  statement in the new migration is guarded, because the environments disagree about whether the
+  original ever ran: the development database has no record of it, while anything deployed from
+  main after 478f40cc does.
 - **The Shopify integration, in full.** The legacy store this synced to has been shut down —
   its Admin API answers every call with `402 Unavailable Shop` — so each checkout fired a
   doomed request and stamped a `shopifySyncError` on the order it had just created. No order
