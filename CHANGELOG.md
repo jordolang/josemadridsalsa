@@ -229,6 +229,26 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
+- **A mailing list imported from the customer database could not be opened.** Loading one failed
+  with "Unable to Load Dashboard — An unexpected response was received from the server." The
+  subscribers page read *every* subscriber with *every* column, including the `customFields` blob
+  where the importer parks each unmapped column of the source CSV. A list built from the ~22,000
+  contact customer database is roughly 9 MB of subscriber data in a single RSC payload, past what
+  the serverless function can return — so it returned an error page instead, and the admin error
+  boundary reported the non-RSC response. Every server action on that page hit the same wall,
+  since each one calls `revalidatePath` and re-renders the list into its own response.
+
+  The table is now paged server-side at 100 rows and selects only the six columns it renders, so
+  the payload is flat at ~17 KB per page no matter how large the list is. Sorting takes `email` as
+  a tie-break, because a CSV import stamps thousands of rows with the same `createdAt` and a
+  single sort key let rows shuffle between pages. Row selection, and therefore the bulk actions,
+  are scoped to the visible page and reset when you turn it.
+- **A large CSV import finished half-done.** The importer upserted contacts one at a time — one
+  database round trip per contact — so a list of any real size ran past the function's time limit
+  and left the list partly imported with no error explaining why. Rows now go in a batch of 500
+  inside a single `$transaction`; a batch that fails is retried row by row, so one bad row still
+  only costs that row. The route takes the full 300-second window, and the error report is capped
+  at 100 entries — a CSV mapped to the wrong column used to return one error string per row.
 - **Every product's gallery showed the same jar photo two or three times.** Two separate causes,
   both fixed. In the data, 26 of the 28 products carried a second copy of their front-of-jar
   studio shot: the same photograph re-uploaded to `products/` alongside the `featuredImage` it
