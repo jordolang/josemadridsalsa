@@ -1,6 +1,6 @@
 @media (max-width: 767px) {
   button[aria-label='Open live chat queue'] {
-    top: 50%;
+    top: var(--live-chat-top, 50%);
     right: 0;
     bottom: auto;
     height: auto;
@@ -14,23 +14,16 @@
     writing-mode: vertical-rl;
     translate: 0 -50%;
     transform: rotate(180deg);
-    /* The tab is draggable, so the browser must not claim the gesture for
-       scrolling before the pointer handlers see it. */
     touch-action: none;
-    cursor: grab;
   }
 
-  /* Docked to the left edge: mirror the border and the corner radius. */
-  button[aria-label='Open live chat queue'][data-dock-side='left'] {
+  /* The tab is rotated 180deg, so the flush/rounded sides read mirrored here. */
+  button[aria-label='Open live chat queue'][data-side='left'] {
+    right: auto;
+    left: 0;
     border-left: 1px solid rgb(185 28 28);
     border-right: 0;
     border-radius: 0.5rem 0 0 0.5rem;
-  }
-
-  button[aria-label='Open live chat queue'][data-dragging='true'] {
-    cursor: grabbing;
-    opacity: 0.85;
-    transition: none;
   }
 
   button[aria-label='Open live chat queue'] > span:first-of-type {
@@ -49,6 +42,14 @@
 
   button[aria-label='Open live chat queue']:not([data-dragging='true']):has(> span:nth-of-type(2)) {
     animation: mobile-live-chat-alert 700ms ease-in-out infinite;
+  }
+
+  /* Placed after the alert rule so a drag always wins over the pulse. */
+  button[aria-label='Open live chat queue'][data-dragging='true'],
+  button[aria-label='Open live chat queue'][data-dragging='true']:has(> span:nth-of-type(2)) {
+    animation: none;
+    opacity: 0.85;
+    transition: none;
   }
 }
 

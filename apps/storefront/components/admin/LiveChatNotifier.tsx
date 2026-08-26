@@ -16,6 +16,17 @@ import { useLiveChatDock } from '@/hooks/use-live-chat-dock'
 
 const QUEUE_POLL_MS = 5000
 const THREAD_POLL_MS = 2500
+const TAB_POSITION_KEY = 'admin:live-chat-tab-position'
+const MOBILE_MEDIA_QUERY = '(max-width: 767px)'
+const DRAG_THRESHOLD_PX = 6
+const EDGE_MARGIN_PX = 8
+
+type TabPosition = {
+  side: 'left' | 'right'
+  topPct: number
+}
+
+const DEFAULT_TAB_POSITION: TabPosition = { side: 'right', topPct: 50 }
 
 type QueueThread = {
   id: string
@@ -49,10 +60,8 @@ export function LiveChatNotifier() {
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
   const seenWaitingIds = useRef<Set<string>>(new Set())
   const initialLoad = useRef(true)
-  // The tab is only a fixed vertical pill on phones; on desktop it stays the
-  // bottom-right pill the stylesheet already places.
-  const isMobile = useIsMobile()
-  const dock = useLiveChatDock(isMobile)
+  const tabRef = useRef<HTMLButtonElement | null>(null)
+  const { position, dragging, dragHandlers, wasDragged } = useEdgeTabDrag(tabRef)
 
   useEffect(() => {
     let cancelled = false
@@ -135,27 +144,20 @@ export function LiveChatNotifier() {
   return (
     <>
       <button
-        ref={dock.ref}
+        ref={tabRef}
         type="button"
         onClick={() => {
-          // A press that turned into a drag repositions the tab; it must not
-          // also open the queue.
-          if (dock.consumeDrag()) return
+          if (wasDragged()) return
           setOpenPanel(true)
           void requestBrowserPermission()
         }}
-        onPointerDown={dock.onPointerDown}
-        onKeyDown={dock.onKeyDown}
-        style={dock.style}
-        data-dock-side={dock.position.side}
-        data-dragging={dock.dragging ? 'true' : undefined}
+        {...dragHandlers}
+        style={{ '--live-chat-top': `${position.topPct}%` } as React.CSSProperties}
+        data-side={position.side}
+        data-dragging={dragging ? 'true' : undefined}
         className="fixed bottom-6 right-6 z-40 flex h-12 items-center gap-2 rounded-full bg-salsa-600 px-4 text-white shadow-lg transition hover:bg-salsa-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-salsa-300"
         aria-label="Open live chat queue"
-        title={
-          isMobile
-            ? 'Open live chat queue — drag to move it, or use the arrow keys'
-            : 'Open live chat queue'
-        }
+        title="Live chats — drag to move along the edge"
       >
         <Headphones className="h-5 w-5" />
         <span className="text-sm font-medium">Live chats</span>
@@ -447,4 +449,114 @@ function timeAgo(iso: string): string {
   const hours = Math.round(minutes / 60)
   if (hours < 24) return `${hours}h ago`
   return `${Math.round(hours / 24)}d ago`
+}
+
+function clampTopPct(value: number, tabHeight = 0): number {
+  const viewportHeight = typeof window === 'undefined' ? 0 : window.innerHeight
+  if (viewportHeight <= 0) return Math.min(Math.max(value, 0), 100)
+  const halfTab = ((tabHeight / 2 + EDGE_MARGIN_PX) / viewportHeight) * 100
+  return Math.min(Math.max(value, halfTab), 100 - halfTab)
+}
+
+function readStoredPosition(): TabPosition | null {
+  try {
+    const stored = window.localStorage.getItem(TAB_POSITION_KEY)
+    if (!stored) return null
+    const parsed = JSON.parse(stored) as Partial<TabPosition>
+    if (parsed.side !== 'left' && parsed.side !== 'right') return null
+    if (typeof parsed.topPct !== 'number' || Number.isNaN(parsed.topPct)) return null
+    return { side: parsed.side, topPct: clampTopPct(parsed.topPct) }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Lets the mobile live-chat tab be dragged to any point along the left or right
+ * edge so it never sits on top of the controls underneath it.
+ */
+function useEdgeTabDrag(tabRef: React.RefObject<HTMLButtonElement | null>) {
+  const [position, setPositionState] = useState<TabPosition>(DEFAULT_TAB_POSITION)
+  const [dragging, setDragging] = useState(false)
+  const drag = useRef<{ pointerId: number; startX: number; startY: number; moved: boolean } | null>(null)
+  const draggedRef = useRef(false)
+  // Mirrors `position` so the pointerup handler always saves the latest value,
+  // even when React has not re-rendered between the last move and the release.
+  const positionRef = useRef<TabPosition>(DEFAULT_TAB_POSITION)
+
+  function setPosition(next: TabPosition) {
+    positionRef.current = next
+    setPositionState(next)
+  }
+
+  useEffect(() => {
+    const stored = readStoredPosition()
+    if (!stored) return
+    positionRef.current = stored
+    setPositionState(stored)
+  }, [])
+
+  function handlePointerDown(event: React.PointerEvent<HTMLButtonElement>) {
+    draggedRef.current = false
+    if (event.button !== 0) return
+    if (!window.matchMedia(MOBILE_MEDIA_QUERY).matches) return
+    drag.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+    }
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLButtonElement>) {
+    const state = drag.current
+    if (!state || state.pointerId !== event.pointerId) return
+
+    if (!state.moved) {
+      const travelled = Math.hypot(event.clientX - state.startX, event.clientY - state.startY)
+      if (travelled < DRAG_THRESHOLD_PX) return
+      state.moved = true
+      draggedRef.current = true
+      setDragging(true)
+      tabRef.current?.setPointerCapture(event.pointerId)
+    }
+
+    const tabHeight = tabRef.current?.offsetHeight ?? 0
+    setPosition({
+      side: event.clientX < window.innerWidth / 2 ? 'left' : 'right',
+      topPct: clampTopPct((event.clientY / window.innerHeight) * 100, tabHeight),
+    })
+  }
+
+  function endDrag(event: React.PointerEvent<HTMLButtonElement>) {
+    const state = drag.current
+    if (!state || state.pointerId !== event.pointerId) return
+    drag.current = null
+    if (!state.moved) return
+    setDragging(false)
+    tabRef.current?.releasePointerCapture(event.pointerId)
+    try {
+      window.localStorage.setItem(TAB_POSITION_KEY, JSON.stringify(positionRef.current))
+    } catch {
+      // position is a convenience; a full storage quota is not worth failing on
+    }
+  }
+
+  return {
+    position,
+    dragging,
+    // A drag ends with a click event on the button — swallow it so moving the
+    // tab does not also open the queue panel.
+    wasDragged: () => {
+      if (!draggedRef.current) return false
+      draggedRef.current = false
+      return true
+    },
+    dragHandlers: {
+      onPointerDown: handlePointerDown,
+      onPointerMove: handlePointerMove,
+      onPointerUp: endDrag,
+      onPointerCancel: endDrag,
+    },
+  }
 }
