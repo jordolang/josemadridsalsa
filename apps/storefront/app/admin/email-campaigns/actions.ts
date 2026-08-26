@@ -57,6 +57,115 @@ function parseMappingsFromFormData(raw: FormDataEntryValue | null): VariableMapp
   }
 }
 
+/**
+ * Rows moved per round trip when a campaign is built from a mailing list.
+ *
+ * A list built from the customer database runs to tens of thousands of
+ * contacts. Loading them all into this action's memory — and then into a single
+ * nested `create` — is the shape that overran the serverless function on the
+ * list page, so both the read and the write are paged.
+ */
+const RECIPIENT_BATCH_SIZE = 1000
+
+type NewRecipient = {
+  email: string
+  name?: string
+  variables?: Record<string, string>
+}
+
+/** Insert an already-materialised recipient list in bounded batches. */
+async function insertRecipients(
+  campaignId: string,
+  recipients: NewRecipient[],
+): Promise<number> {
+  for (let i = 0; i < recipients.length; i += RECIPIENT_BATCH_SIZE) {
+    await prisma.emailRecipient.createMany({
+      data: recipients.slice(i, i + RECIPIENT_BATCH_SIZE).map((r) => ({
+        campaignId,
+        email: r.email,
+        name: r.name,
+        variables: r.variables,
+        status: 'PENDING' as const,
+      })),
+    })
+  }
+  return recipients.length
+}
+
+/**
+ * Page through a mailing list's subscribers, writing each batch out as
+ * recipients before reading the next. Returns the number actually inserted,
+ * which can differ from a count taken beforehand if someone unsubscribes
+ * mid-run.
+ */
+async function insertRecipientsFromList(
+  campaignId: string,
+  listId: string,
+  mappings: VariableMappings,
+  discountCodes: DiscountCodeMap,
+): Promise<number> {
+  const hasMappings = Object.keys(mappings).length > 0
+  // `customFields` is the importer's dumping ground for every unmapped column
+  // of the source CSV, so it is only worth fetching when a mapping reads it.
+  const needsCustomFields = Object.values(mappings).some(
+    (m) => m.source === 'customField',
+  )
+
+  let inserted = 0
+  let cursorEmail: string | undefined
+
+  for (;;) {
+    const batch = await prisma.mailingListSubscriber.findMany({
+      where: { listId, status: 'SUBSCRIBED' },
+      // `(listId, email)` is unique, so email totally orders a single list and
+      // the cursor rides the index the filter already uses. `createdAt` cannot
+      // cursor: a CSV import stamps thousands of rows with the same value, so
+      // rows would repeat or be skipped.
+      orderBy: { email: 'asc' },
+      take: RECIPIENT_BATCH_SIZE,
+      ...(cursorEmail === undefined
+        ? {}
+        : { cursor: { listId_email: { listId, email: cursorEmail } }, skip: 1 }),
+      select: {
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        customFields: needsCustomFields,
+      },
+    })
+
+    if (batch.length === 0) break
+
+    await prisma.emailRecipient.createMany({
+      data: batch.map((s) => {
+        const subscriber: SubscriberLike = {
+          email: s.email,
+          firstName: s.firstName,
+          lastName: s.lastName,
+          phone: s.phone,
+          customFields: (s.customFields as Record<string, unknown> | null) ?? null,
+        }
+        return {
+          campaignId,
+          email: s.email,
+          name: [s.firstName, s.lastName].filter(Boolean).join(' ') || undefined,
+          variables: hasMappings
+            ? resolveVariablesForRecipient(mappings, subscriber, { discountCodes })
+            : {},
+          status: 'PENDING' as const,
+        }
+      }),
+    })
+    inserted += batch.length
+
+    if (batch.length < RECIPIENT_BATCH_SIZE) break
+    cursorEmail = batch[batch.length - 1].email
+  }
+
+  return inserted
+}
+
 export async function createCampaign(formData: FormData) {
   const user = await getCurrentUser()
   
@@ -88,13 +197,9 @@ export async function createCampaign(formData: FormData) {
       return { error: 'Template not found' }
     }
 
-    type NewRecipient = {
-      email: string
-      name?: string
-      variables?: Record<string, string>
-    }
     let recipientsList: NewRecipient[] = []
     let parseErrors: string[] = []
+    let listRecipientCount = 0
 
     if (recipientsSource === 'list') {
       if (!listId) {
@@ -102,30 +207,15 @@ export async function createCampaign(formData: FormData) {
       }
       const list = await prisma.mailingList.findUnique({
         where: { id: listId },
-        include: {
-          subscribers: {
-            where: { status: 'SUBSCRIBED' },
-          },
-        },
+        select: { id: true },
       })
       if (!list) {
         return { error: 'Mailing list not found' }
       }
-      recipientsList = list.subscribers.map((s) => {
-        const subscriber: SubscriberLike = {
-          email: s.email,
-          firstName: s.firstName,
-          lastName: s.lastName,
-          phone: s.phone,
-          customFields: (s.customFields as Record<string, unknown> | null) ?? null,
-        }
-        return {
-          email: s.email,
-          name: [s.firstName, s.lastName].filter(Boolean).join(' ') || undefined,
-          variables: hasMappings
-            ? resolveVariablesForRecipient(variableMappings, subscriber, { discountCodes })
-            : {},
-        }
+      // Only the size is needed here; the subscribers themselves are streamed
+      // into recipients after the campaign row exists.
+      listRecipientCount = await prisma.mailingListSubscriber.count({
+        where: { listId, status: 'SUBSCRIBED' },
       })
     } else if (recipientsSource === 'csv') {
       const parsed = parseCSV(recipientsData)
@@ -162,7 +252,10 @@ export async function createCampaign(formData: FormData) {
       })
     }
 
-    if (recipientsList.length === 0) {
+    const totalRecipients =
+      recipientsSource === 'list' ? listRecipientCount : recipientsList.length
+
+    if (totalRecipients === 0) {
       return { error: 'No valid recipients found', parseErrors }
     }
 
@@ -174,28 +267,48 @@ export async function createCampaign(formData: FormData) {
         subject,
         status: 'DRAFT',
         listId: recipientsSource === 'list' && listId ? listId : null,
-        totalRecipients: recipientsList.length,
+        totalRecipients,
         createdById: user.id,
         variableMappings: hasMappings
           ? (variableMappings as unknown as Prisma.InputJsonValue)
           : undefined,
-        recipients: {
-          create: recipientsList.map((r) => ({
-            email: r.email,
-            name: r.name,
-            variables: r.variables,
-            status: 'PENDING',
-          })),
-        },
       },
     })
+
+    // Recipients are written separately and in batches. As a nested `create`
+    // they were one statement carrying every row of the list.
+    let insertedCount: number
+    try {
+      insertedCount =
+        recipientsSource === 'list' && listId
+          ? await insertRecipientsFromList(
+              campaign.id,
+              listId,
+              variableMappings,
+              discountCodes,
+            )
+          : await insertRecipients(campaign.id, recipientsList)
+    } catch (error) {
+      // A campaign with no recipients is unusable and would sit in the list
+      // looking like a successful draft, so undo what the nested write used to
+      // make atomic.
+      await prisma.emailCampaign.delete({ where: { id: campaign.id } }).catch(() => {})
+      throw error
+    }
+
+    if (insertedCount !== totalRecipients) {
+      await prisma.emailCampaign.update({
+        where: { id: campaign.id },
+        data: { totalRecipients: insertedCount },
+      })
+    }
     
     revalidatePath('/admin/email-campaigns')
     
     return {
       success: true,
       campaignId: campaign.id,
-      recipientsCount: recipientsList.length,
+      recipientsCount: insertedCount,
       parseErrors: parseErrors.length > 0 ? parseErrors : undefined,
     }
   } catch (error) {
