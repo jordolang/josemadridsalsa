@@ -7,7 +7,6 @@
  *   npm run images:sync -- --link --featured --apply # ...as the main product photo
  *   npm run images:sync -- ~/Downloads/shoot --prefix marketing --apply
  *   npm run images:sync -- --no-webp --apply         # keep original formats
- *   npm run images:labels -- --apply                 # the flat label scans, onto their products
  *
  * Images are converted to WebP by default — typically a 90%+ size reduction, and it applies
  * everywhere, including email templates and raw <img> tags that `next/image` never touches.
@@ -25,7 +24,6 @@ import { homedir } from 'node:os'
 import path from 'node:path'
 import { list, put } from '@vercel/blob'
 import { PrismaClient } from '@prisma/client'
-import { LABEL_FILENAME_ALIASES } from '@/lib/images/label-aliases'
 import {
   buildPlan,
   isImageFile,
@@ -49,8 +47,6 @@ interface Options {
   featured: boolean
   apply: boolean
   webp: boolean
-  /** Label-scan mode: its own prefix and filename aliases, and never the main product photo. */
-  labels: boolean
 }
 
 function parseArgs(argv: string[]): Options {
@@ -64,16 +60,13 @@ function parseArgs(argv: string[]): Options {
   }
 
   const prefixValue = value('prefix')
-  const labels = flag('labels')
   return {
     sourceDir: positional[0] ? path.resolve(positional[0].replace(/^~/, homedir())) : DEFAULT_SOURCE,
-    prefix: (prefixValue ?? (labels ? 'products/labels' : 'products')).replace(/^\/+|\/+$/g, ''),
+    prefix: (prefixValue ?? 'products').replace(/^\/+|\/+$/g, ''),
     link: flag('link'),
-    // A label belongs in the gallery beside the jar photo, never in front of it.
-    featured: flag('featured') && !labels,
+    featured: flag('featured'),
     apply: flag('apply'),
     webp: !flag('no-webp'),
-    labels,
   }
 }
 
@@ -211,7 +204,6 @@ async function main() {
 
   console.log(`Source   ${options.sourceDir}`)
   console.log(`Prefix   ${options.prefix}/`)
-  if (options.labels) console.log('Labels   appended to the product gallery, never featured')
   console.log(`Convert  ${options.webp ? `WebP q${WEBP_QUALITY} (OG images and GIFs kept as-is)` : 'off'}`)
   console.log(`Mode     ${options.apply ? 'APPLY — will upload and write' : 'dry run'}\n`)
 
@@ -244,7 +236,6 @@ async function main() {
       link: options.link,
       featured: options.featured,
       storeBaseUrl,
-      aliases: options.labels ? LABEL_FILENAME_ALIASES : undefined,
     })
 
     for (const item of plan) console.log(describe(item, byName.get(item.source.fileName)!))
@@ -273,41 +264,34 @@ async function main() {
 
     console.log('')
     for (const item of plan) {
-      // An unchanged file still needs its link applied: a label uploaded while it matched no
-      // product gets one once an alias is added, and re-running the command is how that lands.
-      let url = item.existingUrl
+      if (item.decision === 'SKIP_UNCHANGED') continue
 
-      if (item.decision !== 'SKIP_UNCHANGED') {
-        const collected = byName.get(item.source.fileName)!
-        // Re-prepared rather than held in memory: a full shoot would otherwise sit in RAM at once.
-        const prepared = await prepare(
-          collected.sourcePath,
-          collected.originalName,
-          options.prefix,
-          options.webp
-        )
+      const collected = byName.get(item.source.fileName)!
+      // Re-prepared rather than held in memory: a full shoot would otherwise sit in RAM at once.
+      const prepared = await prepare(
+        collected.sourcePath,
+        collected.originalName,
+        options.prefix,
+        options.webp
+      )
 
-        // addRandomSuffix:false keeps the filename in the URL, so links stay predictable and a
-        // re-upload replaces the image everywhere it is already referenced.
-        const result = await put(item.blobPathname, prepared.buffer, {
-          access: 'public',
-          addRandomSuffix: false,
-          allowOverwrite: true,
-        })
+      // addRandomSuffix:false keeps the filename in the URL, so links stay predictable and a
+      // re-upload replaces the image everywhere it is already referenced.
+      const result = await put(item.blobPathname, prepared.buffer, {
+        access: 'public',
+        addRandomSuffix: false,
+        allowOverwrite: true,
+      })
 
-        manifest[item.blobPathname] = {
-          sha256: item.source.sha256,
-          url: result.url,
-          sizeBytes: item.source.sizeBytes,
-          uploadedAt: new Date().toISOString(),
-        }
-        url = result.url
-        console.log(`  uploaded ${result.url}`)
+      manifest[item.blobPathname] = {
+        sha256: item.source.sha256,
+        url: result.url,
+        sizeBytes: item.source.sizeBytes,
+        uploadedAt: new Date().toISOString(),
       }
+      console.log(`  uploaded ${result.url}`)
 
-      if (!url || !item.match || item.linkAction === 'NONE' || item.linkAction === 'ALREADY_LINKED') {
-        continue
-      }
+      if (!item.match || item.linkAction === 'NONE' || item.linkAction === 'ALREADY_LINKED') continue
 
       const { product } = item.match
       if (item.linkAction === 'FEATURED') {
@@ -319,13 +303,13 @@ async function main() {
 
         await prisma.product.update({
           where: { id: product.id },
-          data: { featuredImage: url, images: carried.filter((u) => u !== url) },
+          data: { featuredImage: result.url, images: carried.filter((u) => u !== result.url) },
         })
         console.log(`    featured on ${product.name}`)
       } else {
         await prisma.product.update({
           where: { id: product.id },
-          data: { images: { push: url } },
+          data: { images: { push: result.url } },
         })
         console.log(`    added to ${product.name}`)
       }

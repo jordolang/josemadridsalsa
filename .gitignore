@@ -203,3 +203,13 @@ apps/storefront/public/images/home/hero-video.mp4
 
 # Source images staged for `npm run images:sync`. They belong in Vercel Blob, not git.
 apps/storefront/jms-images/
+
+# Photo working files: Lightroom exports, composition mockups and product shots staged
+# under public/. Nothing in the app or the database references any of them — checked
+# against every source file and every Product.featuredImage/images value — and together
+# they are ~205 MB, which would grow the tracked public/ tree by 61% and count against
+# the serverless bundle limit next.config.mjs already works to stay under. Same rule as
+# jms-images/ above: source images belong in Vercel Blob, not git.
+apps/storefront/public/images/compositions/
+apps/storefront/public/images/lightroom/
+apps/storefront/public/images/salsa-images/
