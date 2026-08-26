@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Bell, Headphones, Loader2, Send, X } from 'lucide-react'
+import { Bell, GripVertical, Headphones, Loader2, RotateCcw, Send, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,6 +11,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { useLiveChatDock } from '@/hooks/use-live-chat-dock'
 
 const QUEUE_POLL_MS = 5000
 const THREAD_POLL_MS = 2500
@@ -192,6 +194,15 @@ export function LiveChatNotifier() {
               <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
                 <p className="mb-2 font-medium">Tip</p>
                 <p>Logged-in admins all share access to past chats from the Messages page.</p>
+                {isMobile ? (
+                  <p className="mt-2 flex items-start gap-1">
+                    <GripVertical className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+                    <span>
+                      Drag the Live chats tab to move it up, down, or to the other edge if it
+                      covers a button.
+                    </span>
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => void requestBrowserPermission()}
@@ -199,6 +210,15 @@ export function LiveChatNotifier() {
                 >
                   <Bell className="h-3 w-3" /> Enable browser notifications
                 </button>
+                {isMobile ? (
+                  <button
+                    type="button"
+                    onClick={dock.reset}
+                    className="mt-2 inline-flex items-center gap-1 text-salsa-600 hover:text-salsa-700"
+                  >
+                    <RotateCcw className="h-3 w-3" /> Reset tab position
+                  </button>
+                ) : null}
               </div>
             </div>
             <div className="rounded-lg border border-border bg-card">

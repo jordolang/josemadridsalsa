@@ -40,7 +40,7 @@
     font-weight: 700;
   }
 
-  button[aria-label='Open live chat queue']:has(> span:nth-of-type(2)) {
+  button[aria-label='Open live chat queue']:not([data-dragging='true']):has(> span:nth-of-type(2)) {
     animation: mobile-live-chat-alert 700ms ease-in-out infinite;
   }
 

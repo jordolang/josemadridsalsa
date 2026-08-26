@@ -10,6 +10,28 @@ interface ImportResult {
   errors: string[]
 }
 
+/**
+ * A 5 MB CSV is tens of thousands of contacts, and each one is a database
+ * round trip. Take the full window rather than dying at the 60s default with
+ * the list half-imported.
+ */
+export const maxDuration = 300
+
+/**
+ * Rows are upserted a batch at a time inside one `$transaction`, which Prisma
+ * sends as a single round trip. Row-by-row upserts meant one round trip each —
+ * enough to blow the function budget long before a 22,000-contact import
+ * finished.
+ */
+const BATCH_SIZE = 500
+
+/**
+ * Every rejected row used to append a string to the response. A CSV mapped to
+ * the wrong column produced one error per row, so the failure report itself
+ * became megabytes of JSON.
+ */
+const MAX_REPORTED_ERRORS = 100
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -72,7 +94,9 @@ export async function POST(
       : null
 
     const result: ImportResult = { imported: 0, skipped: 0, errors: [] }
-    const BATCH_SIZE = 500
+    const recordError = (message: string) => {
+      if (result.errors.length < MAX_REPORTED_ERRORS) result.errors.push(message)
+    }
 
     for (let i = 0; i < parsed.data.length; i += BATCH_SIZE) {
       const batch = parsed.data.slice(i, i + BATCH_SIZE)
@@ -91,7 +115,7 @@ export async function POST(
       for (const row of batch) {
         const rawEmail = row[mapping.email]?.trim()?.toLowerCase()
         if (!rawEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
-          result.errors.push(`Invalid email: ${rawEmail || '(empty)'}`)
+          recordError(`Invalid email: ${rawEmail || '(empty)'}`)
           result.skipped++
           continue
         }
@@ -125,32 +149,43 @@ export async function POST(
         })
       }
 
-      for (const sub of toUpsert) {
-        try {
-          await prisma.mailingListSubscriber.upsert({
-            where: { listId_email: { listId: sub.listId, email: sub.email } },
-            create: {
-              listId: sub.listId,
-              email: sub.email,
-              firstName: sub.firstName,
-              lastName: sub.lastName,
-              phone: sub.phone,
-              source: sub.source,
-              customFields: sub.customFields ?? undefined,
-              tags: sub.tags,
-              status: sub.status,
-            },
-            update: {
-              firstName: sub.firstName ?? undefined,
-              lastName: sub.lastName ?? undefined,
-              phone: sub.phone ?? undefined,
-              customFields: sub.customFields ?? undefined,
-              status: sub.status,
-            },
-          })
-          result.imported++
-        } catch {
-          result.skipped++
+      const upsertFor = (sub: (typeof toUpsert)[number]) =>
+        prisma.mailingListSubscriber.upsert({
+          where: { listId_email: { listId: sub.listId, email: sub.email } },
+          create: {
+            listId: sub.listId,
+            email: sub.email,
+            firstName: sub.firstName,
+            lastName: sub.lastName,
+            phone: sub.phone,
+            source: sub.source,
+            customFields: sub.customFields ?? undefined,
+            tags: sub.tags,
+            status: sub.status,
+          },
+          update: {
+            firstName: sub.firstName ?? undefined,
+            lastName: sub.lastName ?? undefined,
+            phone: sub.phone ?? undefined,
+            customFields: sub.customFields ?? undefined,
+            status: sub.status,
+          },
+        })
+
+      try {
+        await prisma.$transaction(toUpsert.map(upsertFor))
+        result.imported += toUpsert.length
+      } catch {
+        // One bad row rolls the whole batch back, so retry it row by row to
+        // keep the rest of the batch and isolate the row that actually failed.
+        for (const sub of toUpsert) {
+          try {
+            await upsertFor(sub)
+            result.imported++
+          } catch {
+            recordError(`Could not import: ${sub.email}`)
+            result.skipped++
+          }
         }
       }
     }
