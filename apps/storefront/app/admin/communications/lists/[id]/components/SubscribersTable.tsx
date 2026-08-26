@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { MailingListSubscriber, SubscriberStatus } from '@prisma/client'
+import { SubscriberStatus } from '@prisma/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -29,10 +29,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { addSubscriber, removeSubscriber, updateSubscriberStatus } from '../actions'
 import { CsvImportModal } from './CsvImportModal'
 
+/**
+ * The page selects only the columns rendered below — notably not
+ * `customFields`, which holds every unmapped column of the source CSV.
+ */
+export interface SubscriberRow {
+  id: string
+  email: string
+  firstName: string | null
+  lastName: string | null
+  status: SubscriberStatus
+  createdAt: Date
+}
+
 interface SubscribersTableProps {
   listId: string
   listName: string
-  subscribers: MailingListSubscriber[]
+  /** One page of subscribers, not the whole list. */
+  subscribers: SubscriberRow[]
+  total: number
+  page: number
+  pageSize: number
 }
 
 const statusColors: Record<SubscriberStatus, string> = {
@@ -42,7 +59,7 @@ const statusColors: Record<SubscriberStatus, string> = {
   COMPLAINED: 'text-muted-foreground bg-muted/50 border-border',
 }
 
-export function SubscribersTable({ listId, listName, subscribers }: SubscribersTableProps) {
+export function SubscribersTable({ listId, listName, subscribers, total, page, pageSize }: SubscribersTableProps) {
   const [isPending, startTransition] = useTransition()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isImportOpen, setIsImportOpen] = useState(false)
@@ -53,8 +70,12 @@ export function SubscribersTable({ listId, listName, subscribers }: SubscribersT
   const [bulkError, setBulkError] = useState<string | null>(null)
   const router = useRouter()
 
+  // Selection is scoped to the visible page — the rows off-screen were never
+  // sent to the browser, so "select all" cannot mean the whole list.
   const allSelected = subscribers.length > 0 && selected.size === subscribers.length
   const someSelected = selected.size > 0
+  const firstRow = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const lastRow = (page - 1) * pageSize + subscribers.length
 
   const toggleAll = () => {
     if (allSelected) {
@@ -246,7 +267,9 @@ export function SubscribersTable({ listId, listName, subscribers }: SubscribersT
 
       {subscribers.length === 0 ? (
         <div className="rounded-md border p-8 text-center text-muted-foreground">
-          No subscribers yet. Add one manually or import a CSV to get started.
+          {total === 0
+            ? 'No subscribers yet. Add one manually or import a CSV to get started.'
+            : 'No subscribers on this page.'}
         </div>
       ) : (
         <div className="rounded-md border overflow-x-auto">
@@ -321,6 +344,13 @@ export function SubscribersTable({ listId, listName, subscribers }: SubscribersT
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {total > 0 && (
+        <p className="text-sm text-muted-foreground">
+          Showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()} of{' '}
+          {total.toLocaleString()} subscribers
+        </p>
       )}
 
       <CsvImportModal
