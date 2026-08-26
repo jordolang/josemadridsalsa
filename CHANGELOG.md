@@ -232,10 +232,13 @@ the root `package.json` is canonical.
 - **The mobile "Live chats" tab covered the admin controls underneath it.** On a phone the tab is
   pinned to the right edge at mid-height, where it sat on top of the edit and delete buttons in
   Admin → Reusable sections (and any other right-aligned action at that height). It can now be
-  dragged: press and move it to slide it anywhere along the edge, or across the screen's midpoint
-  to switch it to the left edge. The chosen spot is saved per device in `localStorage`, the pulse
-  animation pauses while dragging, and a drag no longer opens the queue panel on release. Tap
-  behaviour and the desktop pill are unchanged.
+  moved: drag it up, down, or across the screen's midpoint to dock on the other edge, or use the
+  arrow keys, so keyboard and switch users can reposition it too. A press only becomes a drag past
+  a 6px threshold, so a tap still opens the queue and the drag that just ended does not also open
+  it. The position is stored per browser as a fraction of the usable track, so it survives rotation
+  and differing screen sizes; storage failures and corrupt values fall back to the original
+  centre-right default. The queue panel explains the gesture and offers a reset. Geometry stays
+  clear of the status bar and the mobile tab bar, and the desktop pill is unchanged.
 - **Every product's gallery showed the same jar photo two or three times.** Two separate causes,
   both fixed. In the data, 26 of the 28 products carried a second copy of their front-of-jar
   studio shot: the same photograph re-uploaded to `products/` alongside the `featuredImage` it
