@@ -54,10 +54,6 @@ vi.mock('@/lib/stripe', () => ({
   })),
 }))
 
-vi.mock('@/lib/shopify/sync', () => ({
-  queueShopifySync: vi.fn(),
-}))
-
 vi.mock('@/lib/tax-calculator', () => ({
   calculateTax: vi.fn(() =>
     Promise.resolve({
@@ -340,7 +336,6 @@ describe('Orders API', () => {
       const { getServerSession } = await import('next-auth')
       const { prisma } = await import('@/lib/prisma')
       const { logAuditWithRequest } = await import('@/lib/audit')
-      const { queueShopifySync } = await import('@/lib/shopify/sync')
 
       vi.mocked(getServerSession).mockResolvedValueOnce({ user: mockUser })
       vi.mocked(prisma.cartItem.findMany).mockResolvedValue([mockCartItem])
@@ -394,9 +389,6 @@ describe('Orders API', () => {
         }),
         request
       )
-
-      // Verify Shopify sync queued
-      expect(queueShopifySync).toHaveBeenCalledWith('claaa1234567890abc')
 
       // Verify Stripe payment intent created
       expect(mockPaymentIntentsCreate).toHaveBeenCalled()

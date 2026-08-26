@@ -1,5 +1,17 @@
 name: Copilot Setup Steps
 
+# Provisions the ephemeral environment GitHub Copilot's coding agent works in.
+# GitHub runs the job below — it must be named `copilot-setup-steps` — and then hands
+# the prepared checkout to the agent. The agent's session has no package-registry
+# access, so anything it needs at runtime has to be installed here.
+#
+# Only `steps`, `permissions`, `runs-on`, `services`, `snapshot` and `timeout-minutes`
+# are honoured on this job; a job-level `env:` block is ignored, which is why the
+# configuration below is written to a file instead.
+#
+# The push/pull_request triggers are a self-test: any edit to this file re-runs the
+# setup so a broken environment surfaces here rather than mid-agent-session.
+
 on:
   workflow_dispatch:
   push:
@@ -9,6 +21,10 @@ on:
     paths:
       - .github/workflows/copilot-setup-steps.yml
 
+concurrency:
+  group: copilot-setup-steps-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   copilot-setup-steps:
     runs-on: ubuntu-latest
@@ -16,6 +32,9 @@ jobs:
     permissions:
       contents: read
 
+    # Disposable Postgres for the agent: the storefront is Prisma-backed, and the
+    # integration suite (inventory, checkout reservation, import/export round-trip)
+    # skips itself without a database it is allowed to write to.
     services:
       postgres:
         image: postgres:16-alpine
@@ -35,6 +54,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      # Node 20 from .nvmrc — the version production runs on. The npm cache keyed on the
+      # root lockfile covers every workspace, since this is a single-lockfile monorepo.
       - name: Setup Node.js environment
         uses: actions/setup-node@v6.5.0
         with:
@@ -45,13 +66,46 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Configure disposable development database
+      # apps/storefront/.env is where every consumer looks: the Prisma CLI (schema lives
+      # in that workspace), next build/start, and vitest, which loads it into process.env.
+      # It has to be a file — env vars exported to $GITHUB_ENV apply to the remaining steps
+      # of this job only and do not survive into the agent's own shell. `.env*` is
+      # gitignored, so the agent cannot commit it by accident.
+      #
+      # The values are throwaway secrets generated per run for a database that is thrown
+      # away with the session. Anything the agent needs against a real service belongs in
+      # Settings -> Secrets and variables -> Agents, which is injected separately.
+      - name: Configure disposable development environment
+        env:
+          DATABASE_URL: postgresql://postgres:copilot@localhost:5432/jms_copilot
         run: |
-          echo "DATABASE_URL=postgresql://postgres:copilot@localhost:5432/jms_copilot" >> "$GITHUB_ENV"
-          echo "DATABASE_URL_UNPOOLED=postgresql://postgres:copilot@localhost:5432/jms_copilot" >> "$GITHUB_ENV"
-          echo "RUN_INTEGRATION_TESTS=true" >> "$GITHUB_ENV"
+          {
+            echo "DATABASE_URL=${DATABASE_URL}"
+            echo "DATABASE_URL_UNPOOLED=${DATABASE_URL}"
+            echo "NEXTAUTH_URL=http://localhost:3000"
+            echo "NEXT_PUBLIC_BASE_URL=http://localhost:3000"
+            echo "NEXTAUTH_SECRET=$(openssl rand -base64 32)"
+            # lib/crypto.ts requires exactly 64 hex characters.
+            echo "MASTER_KEY=$(openssl rand -hex 32)"
+            echo "ENCRYPTION_KEY=$(openssl rand -base64 32)"
+            echo "CRON_SECRET=$(openssl rand -hex 16)"
+            # The database-backed tests only run where the database is disposable.
+            echo "RUN_INTEGRATION_TESTS=true"
+            echo "NEXT_TELEMETRY_DISABLED=1"
+          } > apps/storefront/.env
 
-      - name: Generate Prisma client and initialize database
+          # Also export to this job's own environment for the steps that follow.
+          cat apps/storefront/.env >> "$GITHUB_ENV"
+
+      # `prisma db push` syncs the schema and regenerates the client, so the agent can run
+      # the suite or open Studio immediately.
+      - name: Initialize database schema
+        run: npm run db:push --workspace=@jose-madrid/storefront
+
+      # An empty database makes most of the app dead-end. The catalogue seed provides
+      # products, categories and recipes; the permission seed backs the RBAC checks that
+      # every /admin route and admin API handler runs.
+      - name: Seed catalogue and permissions
         run: |
-          npm run db:generate
-          npm run db:push --workspace=@jose-madrid/storefront
+          npm run db:seed --workspace=@jose-madrid/storefront
+          npm run db:seed:permissions --workspace=@jose-madrid/storefront

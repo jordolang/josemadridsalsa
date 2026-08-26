@@ -159,47 +159,6 @@ describe('matchProduct', () => {
   it('returns null when nothing matches', () => {
     expect(matchProduct('random-photo.png', products)).toBeNull()
   })
-
-  it('ignores a trailing "salsa" the catalogue applies inconsistently', () => {
-    const catalogue = [
-      product({ id: 'm', name: 'Mango Mild Salsa', slug: 'mango-mild-salsa', sku: 'JMS-MM-16' }),
-    ]
-
-    expect(matchProduct('mango-mild.jpg', catalogue)).toMatchObject({ product: { id: 'm' } })
-    expect(matchProduct('mango-mild-salsa.jpg', catalogue)).toMatchObject({ product: { id: 'm' } })
-  })
-
-  it('refuses a relaxed match that fits two products', () => {
-    const dupes = [
-      product({ id: 'a', name: 'Verde', slug: 'verde', sku: 'A' }),
-      product({ id: 'b', name: 'Verde Salsa', slug: 'verde-salsa', sku: 'B' }),
-    ]
-
-    expect(matchProduct('verde-salsa.jpg', dupes)).toMatchObject({ product: { id: 'b' } })
-    expect(matchProduct('verde-x.jpg', dupes)).toBeNull()
-  })
-
-  it('follows an alias when no rule connects the filename to its product', () => {
-    const catalogue = [
-      product({ id: 'o', name: 'Jose Madrid Original Mild', slug: 'jose-madrid-original-mild', sku: 'JMS-MILD-001' }),
-    ]
-
-    expect(matchProduct('original-mild.jpg', catalogue)).toBeNull()
-    expect(
-      matchProduct('original-mild.jpg', catalogue, { 'original-mild': 'jose-madrid-original-mild' })
-    ).toMatchObject({ matchedOn: 'slug', product: { id: 'o' } })
-  })
-
-  it('resolves an alias by name or SKU too, not only by slug', () => {
-    expect(
-      matchProduct('craberry.jpg', products, { craberry: 'Black Bean Corn Poblano' })
-    ).toMatchObject({ matchedOn: 'name', product: { id: 'p2' } })
-  })
-
-  it('still returns null when an alias names a product that does not exist', () => {
-    // A scan for a discontinued flavour must be reported, not attached to something else.
-    expect(matchProduct('craberry.jpg', products, { craberry: 'cranberry' })).toBeNull()
-  })
 })
 
 describe('blobPathnameFor', () => {

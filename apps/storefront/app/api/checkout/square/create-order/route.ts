@@ -14,11 +14,8 @@ import { getReferralFromCode } from '@/lib/fundraising/referral-tracker'
 import { fundraiserUnitPrice } from '@/lib/fundraising/pricing'
 import { getFundraiserPriceOverrides } from '@/lib/fundraising/pricing.server'
 import { getStoreSettings, isBelowMinimumOrder, formatMinimumOrder } from '@/lib/store-settings'
-import { ATTRIBUTION_COOKIE, parseAttributionCookie } from '@/lib/analytics/attribution'
-import { resolveBundleSelections, BundleCheckoutError } from '@/lib/bundles.server'
 
-const SquareCheckoutSchema = z
-  .object({
+const SquareCheckoutSchema = z.object({
   items: z
     .array(
       z.object({
@@ -26,16 +23,7 @@ const SquareCheckoutSchema = z
         quantity: z.number().int().positive(),
       })
     )
-    .default([]),
-  // Bundles: id + quantity only; the server expands and prices them (anti-tamper, as elsewhere).
-  bundles: z
-    .array(
-      z.object({
-        bundleId: z.string().cuid(),
-        quantity: z.number().int().positive(),
-      })
-    )
-    .optional(),
+    .min(1, 'Cart is empty'),
   customer: z.object({
     email: z.string().email(),
     firstName: z.string().min(1),
@@ -52,11 +40,7 @@ const SquareCheckoutSchema = z
   notes: z.string().optional(),
   shippingMethod: z.string().optional(),
   referralCode: z.string().optional(),
-  })
-  .refine((data) => data.items.length > 0 || (data.bundles?.length ?? 0) > 0, {
-    message: 'Cart is empty',
-    path: ['items'],
-  })
+})
 
 const toDecimal = (value: number) =>
   new Prisma.Decimal(value.toFixed(2))
@@ -90,7 +74,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, bundles, customer, shipping, notes, shippingMethod, referralCode } = parsed.data
+    const { items, customer, shipping, notes, shippingMethod, referralCode } = parsed.data
 
     // Validate products exist
     const productIds = items.map((item) => item.productId)
@@ -138,11 +122,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Bundles: server-expanded into priced component lines (client sent only id + quantity).
-    const resolvedBundles = await resolveBundleSelections(bundles)
-    orderItems.push(...resolvedBundles.orderItems)
-    subtotal += resolvedBundles.subtotal
-
     if (isBelowMinimumOrder(Math.round(subtotal * 100), storeSettings.minimumOrderCents)) {
       return NextResponse.json(
         { error: `Orders must total at least ${formatMinimumOrder(storeSettings.minimumOrderCents)}.` },
@@ -154,18 +133,12 @@ export async function POST(request: NextRequest) {
     let reservationResults: Awaited<ReturnType<typeof reserveMultipleProducts>>
     try {
       reservationResults = await reserveMultipleProducts(
-        [
-          ...items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            notes: 'Square/Cash App checkout reservation',
-          })),
-          ...resolvedBundles.reservations.map((r) => ({
-            productId: r.productId,
-            quantity: r.quantity,
-            notes: 'Square/Cash App bundle checkout reservation',
-          })),
-        ].map((r) => ({ ...r, userId: user?.id }))
+        items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          userId: user?.id,
+          notes: 'Square/Cash App checkout reservation',
+        }))
       )
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unable to reserve inventory'
@@ -174,6 +147,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Tracked so the catch below can mark the order as already-released, keeping the
+    // expire-pending-orders sweep from releasing the same reservation twice.
+    let createdOrderId: string | null = null
 
     // Wrap post-reservation logic so we can release on failure
     try {
@@ -276,12 +253,6 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // First-touch marketing attribution, carried from the visitor's landing in a cookie — read
-      // and written here just like the Stripe route, so a Cash App/Square order isn't recorded as
-      // Direct/none despite carrying the cookie. Parsing never throws and returns null when absent.
-      const attribution =
-        parseAttributionCookie(request.cookies.get(ATTRIBUTION_COOKIE)?.value) ?? undefined
-
       // Create the order in DB
       const order = await prisma.order.create({
         data: {
@@ -289,7 +260,6 @@ export async function POST(request: NextRequest) {
           userId: user?.id ?? undefined,
           guestEmail: user ? undefined : customer.email,
           guestPhone: customer.phone,
-          ...(attribution ?? {}),
           shippingMethod: finalShippingMethod,
           customerNotes: notes ?? undefined,
           subtotal: toDecimal(subtotal),
@@ -316,6 +286,8 @@ export async function POST(request: NextRequest) {
           items: true,
         },
       })
+
+      createdOrderId = order.id
 
       await emitOrderCreated({
         id: order.id,
@@ -364,12 +336,21 @@ export async function POST(request: NextRequest) {
           console.error('[Square Checkout] Failed to release reservation:', releaseError)
         }
       }
+      // The reservation is back, but the order row survives this failure as PENDING.
+      // Mark it so the expire-pending-orders sweep does not release it a second time.
+      if (createdOrderId) {
+        await prisma.order
+          .updateMany({
+            where: { id: createdOrderId, inventoryReleasedAt: null },
+            data: { inventoryReleasedAt: new Date() },
+          })
+          .catch((markError) =>
+            console.error('[Square Checkout] Failed to mark reservation released:', markError)
+          )
+      }
       throw postReservationError
     }
   } catch (error) {
-    if (error instanceof BundleCheckoutError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
     console.error('[Square Checkout] Create order error:', error)
     return NextResponse.json(
       { error: 'Unable to initiate Cash App checkout. Please try again.' },

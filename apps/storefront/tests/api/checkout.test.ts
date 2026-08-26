@@ -68,10 +68,6 @@ vi.mock('@/lib/payments', () => ({
   })),
 }))
 
-vi.mock('@/lib/shopify/sync', () => ({
-  queueShopifySync: vi.fn(),
-}))
-
 vi.mock('@/lib/inventory-manager', () => ({
   reserveMultipleProducts: vi.fn(() =>
     Promise.resolve([
@@ -412,25 +408,6 @@ describe('Checkout API', () => {
       const data = await response.json()
 
       expect(data.clientSecret).toBe('test_secret')
-    })
-
-    it('should queue Shopify sync', async () => {
-      const { prisma } = await import('@/lib/prisma')
-      const { getServerSession } = await import('next-auth')
-      const { queueShopifySync } = await import('@/lib/shopify/sync')
-
-      vi.mocked(getServerSession).mockResolvedValueOnce(null)
-      vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
-      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
-
-      const request = new NextRequest('http://localhost/api/checkout', {
-        method: 'POST',
-        body: JSON.stringify(validCheckoutData),
-      })
-
-      await POST(request)
-
-      expect(queueShopifySync).toHaveBeenCalledWith('order-123')
     })
 
     it('should handle errors gracefully', async () => {

@@ -586,8 +586,8 @@ model Order {
   /// (for example) PAID + PARTIALLY_FULFILLED without either field lying. Always write this
   /// through `lib/orders/fulfillment.ts` so it cannot drift from `status`.
   fulfillmentStatus        FulfillmentStatus      @default(UNFULFILLED)
-  /// Where the order originated. Derived from paymentChannel/fundraiserId/shopifyOrderId/
-  /// importSource at creation time — see `lib/orders/sales-channel.ts` for the precedence.
+  /// Where the order originated. Derived from paymentChannel/fundraiserId/importSource
+  /// at creation time — see `lib/orders/sales-channel.ts` for the precedence.
   salesChannel             SalesChannel           @default(WEBSITE)
   subtotal                 Decimal                @db.Decimal(10, 2)
   shippingCost             Decimal                @default(0) @db.Decimal(10, 2)
@@ -620,12 +620,6 @@ model Order {
   stripePaymentId          String?
   customerNotes            String?
   adminNotes               String?
-  shopifyOrderId           String?                @unique
-  shopifyOrderName         String?
-  shopifyFinancialStatus   String?
-  shopifyFulfillmentStatus String?
-  shopifySyncedAt          DateTime?
-  shopifySyncError         String?
   createdAt                DateTime               @default(now())
   updatedAt                DateTime               @updatedAt
   shippedAt                DateTime?
@@ -2759,22 +2753,6 @@ model ChatMessage {
   @@map("chat_messages")
 }
 
-model ShippingProvider {
-  id        String               @id @default(cuid())
-  name      String
-  type      ShippingProviderType
-  apiKey    String?
-  apiSecret String?
-  accountId String?
-  isActive  Boolean              @default(true)
-  isDefault Boolean              @default(false)
-  config    Json?
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
-
-  @@map("shipping_providers")
-}
-
 model ShippingCarrier {
   id           String          @id @default(cuid())
   name         String
@@ -3747,7 +3725,7 @@ enum ReturnItemCondition {
 }
 
 /// Where an order came from. Replaces inferring origin from the combination of
-/// paymentChannel, fundraiserId, shopifyOrderId and importSource.
+/// paymentChannel, fundraiserId and importSource.
 enum SalesChannel {
   WEBSITE
   POS
@@ -3995,14 +3973,6 @@ enum ChatRole {
   ASSISTANT
   SYSTEM
   FUNCTION
-}
-
-enum ShippingProviderType {
-  SHOPIFY
-  SHIPSTATION
-  SHIPPO
-  USPS
-  CUSTOM
 }
 
 enum IntegrationType {

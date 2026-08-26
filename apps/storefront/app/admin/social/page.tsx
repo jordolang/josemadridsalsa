@@ -8,7 +8,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { SocialDashboardClient } from '@/components/admin/social/social-dashboard-client'
 import { getPlatformConfigStatus } from '@/lib/social/config'
-import { getAyrshareStatus } from '@/lib/social/ayrshare'
 import { createSocialPost } from './actions'
 import type { SocialAccountInfo, CalendarPost, PlatformMetrics, DashboardTab } from '@/types/social'
 
@@ -212,7 +211,6 @@ export default async function SocialMediaPage({
   } = await getSocialMediaData()
 
   const platformConfig = await getPlatformConfigStatus()
-  const ayrshare = await getAyrshareStatus()
 
   const params = await searchParams
   // Shops moved to the Feeds section — keep old deep links working.
@@ -288,7 +286,6 @@ export default async function SocialMediaPage({
         createPostAction={createSocialPost}
         accounts={accounts}
         platformConfig={platformConfig}
-        ayrshare={ayrshare}
         statusCounts={statusCounts}
         platformFrequency={platformFrequency}
         recentPosts={recentPosts}

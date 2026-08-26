@@ -20,11 +20,6 @@ import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Loader2, Save, X } from 'lucide-react'
 import type { Product, Category } from '@prisma/client'
-import {
-  UNBALANCED_INGREDIENTS_MESSAGE,
-  hasBalancedParentheses,
-  parseIngredientStatement,
-} from '@/lib/ingredients'
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -39,12 +34,7 @@ const productSchema = z.object({
   lowStockThreshold: z.string().optional(),
   weight: z.string().optional(),
   heatLevel: z.enum(['MILD', 'MEDIUM', 'HOT', 'EXTRA_HOT', 'FRUIT']),
-  // A statement whose groups do not close would be stored with the wrong grouping and
-  // published from there to the storefront, feeds, search and SEO.
-  ingredients: z
-    .string()
-    .optional()
-    .refine((value) => !value || hasBalancedParentheses(value), UNBALANCED_INGREDIENTS_MESSAGE),
+  ingredients: z.string().optional(),
   categoryId: z.string().min(1, 'Category is required'),
   featuredImage: z.string().optional(),
   images: z.string().optional(),
@@ -128,10 +118,9 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
           : undefined,
         weight: data.weight ? parseFloat(data.weight) : null,
         heatLevel: data.heatLevel,
-        // Parsed as a written statement, so pasting the label verbatim works: sub-ingredients
-        // stay inside their parentheses, and the closing period and final "and" are not stored
-        // as part of the last ingredient.
-        ingredients: data.ingredients ? parseIngredientStatement(data.ingredients) : [],
+        ingredients: data.ingredients
+          ? data.ingredients.split(',').map((i) => i.trim()).filter(Boolean)
+          : [],
         categoryId: data.categoryId,
         featuredImage: data.featuredImage || null,
         images: data.images
@@ -282,18 +271,14 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
 
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="ingredients">
-              Ingredients (exactly as printed on the label)
+              Ingredients (comma-separated)
             </Label>
             <Textarea
               id="ingredients"
               {...register('ingredients')}
-              placeholder="Diced Tomatoes (Tomatoes, Citric Acid), Onions, Lime Juice (From Concentrate), Spices..."
+              placeholder="Tomatoes, Onions, Jalapeños, Cilantro, Lime..."
               rows={2}
             />
-            <p className="text-xs text-muted-foreground">
-              Separate ingredients with commas. Keep sub-ingredients inside their
-              parentheses — they stay attached to the ingredient before them.
-            </p>
           </div>
         </div>
       </Card>

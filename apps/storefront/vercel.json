@@ -33,6 +33,10 @@
       "schedule": "0 */2 * * *"
     },
     {
+      "path": "/api/cron/expire-pending-orders",
+      "schedule": "20 */2 * * *"
+    },
+    {
       "path": "/api/cron/processor-fees",
       "schedule": "30 */2 * * *"
     },

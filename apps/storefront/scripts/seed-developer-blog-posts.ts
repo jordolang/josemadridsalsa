@@ -38,7 +38,7 @@ This platform is not a template. It is a custom-built, full-stack commerce, mark
 - **Locations**: a geocoded directory of every retailer carrying the product, with maps, search, and photo galleries pulled and optimized at build time.
 - **Recipes, content, and storytelling**: editorial pages, recipe schema for Google, brand storytelling components.
 - **Lead generation pipeline**: scraping, enrichment, deduping, outbound email automation, response tracking.
-- **Integrations**: Shopify, TikTok Shop product export, Stripe, Postmark, Sanity (CMS), Sentry (error tracking), PostHog (analytics), and more.
+- **Integrations**: TikTok Shop product export, Stripe, Postmark, Sanity (CMS), Sentry (error tracking), PostHog (analytics), and more.
 - **Infrastructure**: Vercel deployments, Postgres via Prisma, environment management across preview/production, CI/CD, automated migrations, backup strategy.
 
 That is not a website. That is a small SaaS company.

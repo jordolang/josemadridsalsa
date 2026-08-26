@@ -176,19 +176,6 @@ export default async function OrderDetailPage({
 
   const StatusIcon = STATUS_ICON[order.status] ?? Package
   const statusLabel = STATUS_LABEL[order.status] ?? order.status
-  const shopifyAdminBase =
-    process.env.NEXT_PUBLIC_SHOPIFY_ADMIN_URL ??
-    (process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN || process.env.SHOPIFY_STORE_DOMAIN
-      ? `https://${(process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN || process.env.SHOPIFY_STORE_DOMAIN || '')
-          .replace(/^https?:\/\//, '')
-          .replace(/\/$/, '')}/admin`
-      : null)
-  const normalizedShopifyAdminBase = shopifyAdminBase?.replace(/\/$/, '')
-  const shopifyOrderUrl =
-    normalizedShopifyAdminBase && order.shopifyOrderId
-      ? `${normalizedShopifyAdminBase}/orders/${order.shopifyOrderId}`
-      : null
-
   const actionContext = {
     id: order.id,
     orderNumber: order.orderNumber,
@@ -277,13 +264,6 @@ export default async function OrderDetailPage({
             <StatusIcon className="size-3" />
             {statusLabel}
           </Badge>
-          {shopifyOrderUrl ? (
-            <Button variant="outline" size="sm" asChild>
-              <a href={shopifyOrderUrl} target="_blank" rel="noreferrer">
-                View in Shopify
-              </a>
-            </Button>
-          ) : null}
         </div>
       </div>
 

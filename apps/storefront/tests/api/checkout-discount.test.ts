@@ -19,7 +19,6 @@ vi.mock('@/lib/rbac', () => ({ getCurrentUser: vi.fn(async () => null) }))
 vi.mock('@/lib/audit', () => ({ logAuditWithRequest: vi.fn() }))
 vi.mock('@/lib/rateLimit', () => ({ rateLimit: vi.fn(() => ({ allowed: true, retryAfterMs: 0 })) }))
 vi.mock('@/lib/fundraising/referral-tracker', () => ({ getReferralFromCode: vi.fn(async () => null) }))
-vi.mock('@/lib/shopify/sync', () => ({ queueShopifySync: vi.fn() }))
 
 vi.mock('@/lib/discounts', () => ({ validateDiscountCode: mockValidateDiscountCode }))
 vi.mock('@/lib/gift-certificates', () => ({ validateGiftCertificate: mockValidateGiftCertificate }))

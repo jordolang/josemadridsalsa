@@ -152,41 +152,15 @@ export function nameToSlug(name: string): string {
 }
 
 /**
- * Filename slug -> the identifier to look the product up by.
- *
- * For photo sets named before the catalogue slugs settled, where no rule connects the two.
- * Keyed and valued by `filenameToSlug` form; the value is resolved exactly like a filename, so it
- * can name a slug, a SKU or a product name.
- */
-export type FilenameAliases = Record<string, string>
-
-/**
- * Drop a trailing `salsa` from a slug.
- *
- * The catalogue is inconsistent about the suffix — `mango-mild-salsa` and `spanish-verde-mild` are
- * both salsas — so a photo named after the flavour misses its product half the time.
- */
-function withoutSalsaSuffix(slug: string): string {
-  return slug.replace(/-salsa$/, '')
-}
-
-/**
  * Find the product a filename refers to.
  *
- * Tried in order of how deliberate the identifier is: an explicit alias, then slug (chosen for
- * URLs), then SKU (chosen for inventory), then the product name (incidental), and finally the same
- * comparison ignoring a trailing `salsa`. An ambiguous match returns null rather than picking one —
- * silently attaching a photo to the wrong product is worse than not attaching it.
+ * Tried in order of how deliberate the identifier is: slug (chosen for URLs), then SKU (chosen
+ * for inventory), then the product name (incidental). An ambiguous name match returns null rather
+ * than picking one — silently attaching a photo to the wrong product is worse than not attaching it.
  */
-export function matchProduct(
-  fileName: string,
-  products: ProductRef[],
-  aliases: FilenameAliases = {}
-): ProductMatch | null {
-  const fromFile = filenameToSlug(fileName)
-  if (!fromFile) return null
-
-  const slug = aliases[fromFile] ? nameToSlug(aliases[fromFile]) : fromFile
+export function matchProduct(fileName: string, products: ProductRef[]): ProductMatch | null {
+  const slug = filenameToSlug(fileName)
+  if (!slug) return null
 
   const bySlug = products.find((p) => p.slug.toLowerCase() === slug)
   if (bySlug) return { product: bySlug, matchedOn: 'slug' }
@@ -196,13 +170,6 @@ export function matchProduct(
 
   const byName = products.filter((p) => nameToSlug(p.name) === slug)
   if (byName.length === 1) return { product: byName[0], matchedOn: 'name' }
-
-  const relaxed = withoutSalsaSuffix(slug)
-  const bySlugRelaxed = products.filter((p) => withoutSalsaSuffix(p.slug.toLowerCase()) === relaxed)
-  if (bySlugRelaxed.length === 1) return { product: bySlugRelaxed[0], matchedOn: 'slug' }
-
-  const byNameRelaxed = products.filter((p) => withoutSalsaSuffix(nameToSlug(p.name)) === relaxed)
-  if (byNameRelaxed.length === 1) return { product: byNameRelaxed[0], matchedOn: 'name' }
 
   return null
 }
@@ -258,8 +225,6 @@ export interface BuildPlanInput {
   featured: boolean
   /** Base URL of the blob store, used to predict the URL of a not-yet-uploaded file. */
   storeBaseUrl: string | null
-  /** Filenames that cannot be matched by rule alone. */
-  aliases?: FilenameAliases
 }
 
 /**
@@ -270,7 +235,7 @@ export interface BuildPlanInput {
  * do, which is the right default for something that writes to a live store.
  */
 export function buildPlan(input: BuildPlanInput): FilePlan[] {
-  const { files, manifest, products, prefix, link, featured, storeBaseUrl, aliases } = input
+  const { files, manifest, products, prefix, link, featured, storeBaseUrl } = input
 
   return files
     .slice()
@@ -284,7 +249,7 @@ export function buildPlan(input: BuildPlanInput): FilePlan[] {
       const url =
         existing?.url ?? (storeBaseUrl ? `${storeBaseUrl.replace(/\/+$/, '')}/${blobPathname}` : null)
 
-      const match = matchProduct(source.fileName, products, aliases)
+      const match = matchProduct(source.fileName, products)
 
       let problem: string | null = null
       if (link && !match) {

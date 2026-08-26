@@ -1,97 +1,16 @@
 ---
 title: Feature Flags
-description: Feature flag configuration with GrowthBook
+description: Toggling features on and off via database fields
 ---
 
 
 # Feature Flags
 
-Jose Madrid Salsa includes [GrowthBook](https://www.growthbook.io/) as a feature flag dependency (`@growthbook/growthbook-react`). GrowthBook provides feature flagging and A/B testing capabilities.
-
-## Installation
-
-GrowthBook React SDK is already installed:
-
-```json title="package.json"
-{
-  "dependencies": {
-    "@growthbook/growthbook-react": "^1.6.5"
-  }
-}
-```
-
-## Setup
-
-To use GrowthBook, you need to configure the SDK with your GrowthBook client key. Wrap your application in the GrowthBook provider:
-
-```tsx title="app/layout.tsx (example)"
-import { GrowthBookProvider } from '@growthbook/growthbook-react'
-import { GrowthBook } from '@growthbook/growthbook-react'
-
-const gb = new GrowthBook({
-  apiHost: 'https://cdn.growthbook.io',
-  clientKey: process.env.NEXT_PUBLIC_GROWTHBOOK_CLIENT_KEY,
-  enableDevMode: process.env.NODE_ENV === 'development',
-})
-
-export default function RootLayout({ children }) {
-  return (
-    <GrowthBookProvider growthbook={gb}>
-      {children}
-    </GrowthBookProvider>
-  )
-}
-```
-
-## Usage
-
-### Check a Feature Flag
-
-```tsx
-import { useFeatureIsOn } from '@growthbook/growthbook-react'
-
-function MyComponent() {
-  const showNewCheckout = useFeatureIsOn('new-checkout-flow')
-
-  if (showNewCheckout) {
-    return <NewCheckoutFlow />
-  }
-  return <LegacyCheckout />
-}
-```
-
-### Feature Value
-
-```tsx
-import { useFeatureValue } from '@growthbook/growthbook-react'
-
-function Banner() {
-  const bannerText = useFeatureValue('banner-text', 'Welcome!')
-  return <div>{bannerText}</div>
-}
-```
-
-## Environment Variables
-
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_GROWTHBOOK_CLIENT_KEY` | GrowthBook client key (public, safe for browser) |
-
-## GrowthBook Dashboard
-
-Configure feature flags and experiments in the [GrowthBook dashboard](https://app.growthbook.io):
-
-1. Create a feature (e.g., `new-checkout-flow`)
-2. Set targeting rules (percentage rollout, user attributes, etc.)
-3. Toggle on/off without deploying code
-
-<Callout type="info">
-GrowthBook is included as a dependency but may not be actively configured in all environments. The application functions normally without GrowthBook -- features default to their fallback values.
-</Callout>
+Feature toggling is done with database fields — there is no third-party flagging
+service in the project. A record's `isActive` (or equivalent) column is the switch,
+which means a flag change is an admin action rather than a deploy.
 
 ## Database Feature Flags
-
-In addition to GrowthBook, some features are controlled via database fields:
 
 | Model | Field | Purpose |
 |---|---|---|
@@ -101,3 +20,9 @@ In addition to GrowthBook, some features are controlled via database fields:
 | `PartnerApiKey` | `isActive` | Enable/disable partner API access |
 | `Product` | `isActive` | Show/hide products |
 | `EmailTemplate` | `isActive` | Enable/disable email templates |
+
+<Callout type="info">
+GrowthBook was previously carried as a dependency for flagging and A/B testing but was
+never wired into the app, and has been removed. If percentage rollouts or experiments are
+needed later, that is a fresh integration decision rather than re-enabling dormant code.
+</Callout>

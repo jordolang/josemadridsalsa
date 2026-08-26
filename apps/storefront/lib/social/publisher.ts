@@ -1,7 +1,6 @@
 import type { SocialMediaPlatform } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getValidAccessToken } from './platforms'
-import { isAyrshareConfigured, postViaAyrshare } from './ayrshare'
 
 type PublishResult = {
   success: boolean
@@ -565,54 +564,11 @@ export async function publishToAccount(
 }
 
 /**
- * Publish a post through Ayrshare (easy mode) — one call covers every selected
- * platform, so the owner never registers a developer app.
- */
-async function publishPostViaAyrshare(postId: string): Promise<{
-  results: Array<{ platform: SocialMediaPlatform; accountId: string; result: PublishResult }>
-}> {
-  const post = await prisma.socialMediaPost.findUnique({
-    where: { id: postId },
-    include: { media: { include: { media: true }, orderBy: { order: 'asc' } } },
-  })
-  if (!post) throw new Error('Post not found')
-
-  let content = post.content
-  if (post.hashtags.length > 0) {
-    content = content + '\n\n' + post.hashtags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ')
-  }
-  const mediaUrls = post.media.map((m) => m.media.url)
-
-  const res = await postViaAyrshare({ post: content, platforms: post.platforms, mediaUrls })
-
-  await prisma.socialMediaPost.update({
-    where: { id: postId },
-    data: {
-      status: res.success ? 'PUBLISHED' : 'FAILED',
-      publishedAt: res.success ? new Date() : null,
-    },
-  })
-
-  // Surface one result per selected platform for the UI.
-  const result: PublishResult = res.success
-    ? { success: true, externalPostId: res.id }
-    : { success: false, error: res.error }
-  return {
-    results: post.platforms.map((platform) => ({ platform, accountId: 'ayrshare', result })),
-  }
-}
-
-/**
  * Publish a post to all selected platform accounts
  */
 export async function publishPost(postId: string): Promise<{
   results: Array<{ platform: SocialMediaPlatform; accountId: string; result: PublishResult }>
 }> {
-  // Easy mode: if an Ayrshare key is configured, route everything through it.
-  if (await isAyrshareConfigured()) {
-    return publishPostViaAyrshare(postId)
-  }
-
   const post = await prisma.socialMediaPost.findUnique({
     where: { id: postId },
   })
