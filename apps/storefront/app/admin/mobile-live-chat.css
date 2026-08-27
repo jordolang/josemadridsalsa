@@ -1,6 +1,6 @@
 @media (max-width: 767px) {
   button[aria-label='Open live chat queue'] {
-    top: var(--live-chat-top, 50%);
+    top: 50%;
     right: 0;
     bottom: auto;
     height: auto;
@@ -18,7 +18,7 @@
   }
 
   /* The tab is rotated 180deg, so the flush/rounded sides read mirrored here. */
-  button[aria-label='Open live chat queue'][data-side='left'] {
+  button[aria-label='Open live chat queue'][data-dock-side='left'] {
     right: auto;
     left: 0;
     border-left: 1px solid rgb(185 28 28);
